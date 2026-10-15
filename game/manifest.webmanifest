@@ -1,0 +1,11 @@
+{
+  "name": "AFTERZERO",
+  "short_name": "AFTERZERO",
+  "description": "A sci-fi thriller where you discover, test and rewrite the laws of the world.",
+  "start_url": "./index.html",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#05070a",
+  "theme_color": "#05070a",
+  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}

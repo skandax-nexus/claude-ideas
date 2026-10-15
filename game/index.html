@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#05070a">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="description" content="AFTERZERO - a sci-fi thriller where you discover, test and rewrite the laws of the world.">
+  <title>AFTERZERO</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body data-state="PHYSICAL">
+  <canvas id="game"></canvas>
+  <div id="tint"></div>
+  <div id="vignette"></div>
+
+  <div id="ui">
+    <div id="crosshair"></div>
+    <div id="state"></div>
+    <div id="objective"><small>CURRENT UNDERSTANDING</small><div class="txt"></div></div>
+    <div id="eye"><div class="iris"></div></div>
+    <div id="prompt"></div>
+    <div id="held"></div>
+    <div id="subs"></div>
+    <div id="toast"></div>
+
+    <!-- touch controls (Android) -->
+    <div id="lookzone"></div>
+    <div id="stick"><div class="knob"></div></div>
+    <div id="buttons">
+      <button data-act="use" class="b use">USE</button>
+      <button data-act="jump" class="b jump">JUMP</button>
+      <button data-act="shift" class="b shift">SHIFT</button>
+    </div>
+    <div id="topbtns">
+      <button data-act="laws" class="t">LAWS</button>
+      <button data-act="journal" class="t">LOG</button>
+      <button data-act="pause" class="t">II</button>
+    </div>
+  </div>
+
+  <div id="fade"></div>
+
+  <section class="overlay" id="title">
+    <div class="panel center">
+      <h1>AFTER<span>ZERO</span></h1>
+      <p class="tag">The world has rules. Nobody will tell you what they are.</p>
+      <div class="body">
+        <button class="big" id="begin">BEGIN</button>
+        <button class="big" id="continue">CONTINUE</button>
+        <div class="controls desktop-only">
+          <span><b>WASD</b> move</span><span><b>MOUSE</b> look</span><span><b>SPACE</b> jump</span><span><b>SHIFT</b> run</span>
+          <span><b>E</b> / click use</span><span><b>J</b> log</span><span><b>ESC</b> pause</span>
+        </div>
+        <div class="controls touch-only"><span>Left thumb: move</span><span>Right thumb: look</span><span>Landscape, headphones</span></div>
+        <p class="dim">Headphones recommended. About 25-40 minutes.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="overlay" id="pause">
+    <div class="panel center">
+      <h2>PAUSED</h2>
+      <div class="body">
+        <button class="big" id="resume">RESUME</button>
+        <button id="mute">SOUND ON / OFF</button>
+        <button id="restart">RESTART FROM ZERO</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="overlay" id="laws">
+    <div class="panel wide">
+      <header><h2>DEVICE LAWS</h2><button data-close>&times;</button></header>
+      <div class="body"></div>
+    </div>
+  </section>
+
+  <section class="overlay" id="journal">
+    <div class="panel wide">
+      <header><h2>LOG</h2><button data-close>&times;</button></header>
+      <div class="body"></div>
+    </div>
+  </section>
+
+  <section class="overlay" id="decision">
+    <div class="panel center">
+      <h2>THE MACHINE</h2>
+      <div class="body"></div>
+      <button data-close>NOT YET</button>
+    </div>
+  </section>
+
+  <section class="overlay" id="ending">
+    <div class="panel wide"><div class="body"></div></div>
+  </section>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
