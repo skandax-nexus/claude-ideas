@@ -25,6 +25,8 @@
     <div id="held"></div>
     <div id="subs"></div>
     <div id="toast"></div>
+    <canvas id="minimap"></canvas>
+    <div id="zoombtns"><button data-zoom="-1" aria-label="Zoom in">+</button><button data-zoom="1" aria-label="Zoom out">&minus;</button><button data-act="camera" aria-label="Camera view">&#9673;</button></div>
 
     <!-- touch controls (Android) -->
     <div id="lookzone"></div>
@@ -38,6 +40,7 @@
       <button data-act="laws" class="t">LAWS</button>
       <button data-act="journal" class="t">LOG</button>
       <button data-act="hint" class="t tick">TICK</button>
+      <button data-act="map" class="t">MAP</button>
       <button data-act="pause" class="t">II</button>
     </div>
   </div>
@@ -49,14 +52,17 @@
       <h1>AFTER<span>ZERO</span></h1>
       <p class="tag">The world has rules. Nobody will tell you what they are.</p>
       <div class="body">
-        <button class="big" id="begin">BEGIN</button>
-        <button class="big" id="continue">CONTINUE</button>
+        <button class="big" id="continue">CONTINUE<small id="continueInfo"></small></button>
+        <button class="big" id="begin">NEW GAME<small>Prologue: Station Zero, then the vessel</small></button>
+        <button class="big" id="vessel">THE VESSEL<small>Skip to the generated campaign &middot; 8 decks</small></button>
+        <div class="row"><button id="loadBtn">LOAD</button><button id="settingsBtn">SETTINGS</button></div>
         <div class="controls desktop-only">
           <span><b>WASD</b> move</span><span><b>MOUSE</b> look</span><span><b>SPACE</b> jump</span><span><b>SHIFT</b> run</span>
-          <span><b>E</b> / click use</span><span><b>Q</b> shift room</span><span><b>H</b> ask TICK</span><span><b>J</b> log</span><span><b>ESC</b> pause</span>
+          <span><b>E</b> / click use</span><span><b>Q</b> shift room</span><span><b>H</b> ask TICK</span><span><b>J</b> log</span><span><b>M</b> map</span>
+          <span><b>WHEEL</b> zoom</span><span><b>V</b> camera view</span><span><b>F5</b> quick save</span><span><b>F9</b> quick load</span><span><b>ESC</b> pause</span>
         </div>
-        <div class="controls touch-only"><span>Left thumb: move</span><span>Right thumb: look</span><span>Landscape, headphones</span></div>
-        <p class="dim">A calm puzzle adventure about rooms that can change their own rules. About 30-40 minutes.</p>
+        <div class="controls touch-only"><span>Left thumb: move</span><span>Right thumb: look</span><span>Two fingers: zoom</span><span>Landscape, headphones</span></div>
+        <p class="dim">A calm puzzle adventure about rooms that can change their own rules. Prologue about 35 minutes, the vessel about 5 hours.</p>
       </div>
     </div>
   </section>
@@ -66,8 +72,10 @@
       <h2>PAUSED</h2>
       <div class="body">
         <button class="big" id="resume">RESUME</button>
+        <div class="row"><button id="saveBtn">SAVE GAME</button><button id="loadBtn2">LOAD GAME</button></div>
+        <div class="row"><button id="mapBtn">MAP</button><button id="settingsBtn2">SETTINGS</button></div>
         <button id="mute">SOUND ON / OFF</button>
-        <button id="restart">RESTART FROM ZERO</button>
+        <button id="quit">QUIT TO TITLE</button>
       </div>
     </div>
   </section>
@@ -93,6 +101,39 @@
       <button data-close>NOT YET</button>
     </div>
   </section>
+
+  <section class="overlay" id="saves">
+    <div class="panel">
+      <header><h2 id="savesTitle">SAVE GAME</h2><button data-back>&times;</button></header>
+      <div class="body"></div>
+    </div>
+  </section>
+
+  <section class="overlay" id="settings">
+    <div class="panel">
+      <header><h2>SETTINGS</h2><button data-back>&times;</button></header>
+      <div class="body"></div>
+    </div>
+  </section>
+
+  <section class="overlay" id="map">
+    <div class="panel wide">
+      <header><h2 id="mapTitle">MAP</h2><button data-close>&times;</button></header>
+      <canvas id="bigmap"></canvas>
+      <div class="legend"><span class="lg player">You</span><span class="lg npc">Crew</span><span class="lg sentinel">Sentinel</span><span class="lg item">Item</span><span class="lg token">Law token</span><span class="lg gate">Exit / gate</span><span class="lg beacon">Save beacon</span></div>
+    </div>
+  </section>
+
+  <section class="overlay" id="verdict">
+    <div class="panel center">
+      <h2>THE CHAIR</h2>
+      <p class="dim">Who rewrote the first law at 03:12?</p>
+      <div class="body"></div>
+      <button data-close>NOT YET</button>
+    </div>
+  </section>
+
+  <div id="card"><div class="inner"><small></small><h2></h2><p></p></div></div>
 
   <section class="overlay" id="ending">
     <div class="panel wide"><div class="body"></div></div>

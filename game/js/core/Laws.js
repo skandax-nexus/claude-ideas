@@ -17,6 +17,8 @@ export const TOKENS = {
   HELD: { kind: 'subject', label: 'HELD MATTER' },
   OBSERVER: { kind: 'subject', label: 'OBSERVER' },
   ECHOES: { kind: 'subject', label: 'ECHOES' },
+  TIME: { kind: 'subject', label: 'TIME' },
+  LIGHT: { kind: 'subject', label: 'HARD LIGHT' },
 
   INVERTS: { kind: 'verb', label: 'INVERTS IN' },
   FREEZES: { kind: 'verb', label: 'FREEZES IN' },
@@ -37,9 +39,11 @@ export const GRAMMAR = {
   'OBSERVER FREEZES': { effect: 'observerFrozen', text: 'The Observer cannot move in rooms set to {T}.' },
   'ECHOES SOLIDIFIES': { effect: 'echoSolid', text: 'Echoes become solid in rooms set to {T}.' },
   'ECHOES PERSISTS': { effect: 'echoVisible', text: 'Echoes stay visible in rooms set to {T}.' },
+  'TIME FREEZES': { effect: 'timeStop', text: 'Moving machinery stops dead in rooms set to {T}.' },
+  'LIGHT SOLIDIFIES': { effect: 'lightSolid', text: 'Hard-light outlines carry weight in rooms set to {T}.' },
 };
 
-export const EFFECTS = ['gravityFlip', 'zeroG', 'heldPersists', 'observerFrozen', 'echoSolid', 'echoVisible'];
+export const EFFECTS = ['gravityFlip', 'zeroG', 'heldPersists', 'observerFrozen', 'echoSolid', 'echoVisible', 'timeStop', 'lightSolid'];
 
 export const DEFAULT_LAWS = [{ subject: 'GRAVITY', verb: 'INVERTS', target: 'INVERTED' }, null, null];
 

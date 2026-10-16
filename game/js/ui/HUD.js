@@ -42,7 +42,7 @@ export class HUD {
       return;
     }
     this.onLine?.(s.who);
-    const sp = SPEAKERS[s.who] || SPEAKERS.NONE;
+    const sp = s.name ? { name: s.name, color: s.color || '#23303c' } : SPEAKERS[s.who] || SPEAKERS.NONE;
     const name = sp.name ? `<b style="color:${sp.color}">${sp.name}</b> ` : '';
     const cls = s.who === 'OBSERVER' ? 'obs' : s.who === 'NONE' ? 'narr' : '';
     this.el.subs.innerHTML = `<div class="sub ${cls}">${name}<span style="color:${sp.color}">${s.text}</span></div>`;
@@ -153,7 +153,36 @@ export class HUD {
     document.body.classList.toggle('menu', !!id);
   }
 
+  // A big centred title card (deck arrivals, chapter breaks).
+  card(kicker, title, sub, ms = 3800) {
+    const el = $('#card');
+    el.querySelector('small').textContent = kicker || '';
+    el.querySelector('h2').textContent = title || '';
+    el.querySelector('p').textContent = sub || '';
+    el.classList.add('on');
+    clearTimeout(this._cardT);
+    this._cardT = setTimeout(() => el.classList.remove('on'), ms);
+  }
+
+  // Journal while out on the vessel: progress, the suspects board, logs.
+  renderDeckJournal(game) {
+    const { story, campaign, facts } = game;
+    const deck = story.decks[campaign.deck];
+    const sus = story.cast.map((c) => {
+      const st = facts.get(`clue_${c.id}`);
+      const label = st === 'guilty' ? 'ECHO CONTRADICTS' : st === 'cleared' ? 'ALIBI CONFIRMED' : facts.get(`met_${c.id}`) ? 'MET' : 'UNKNOWN';
+      return `<li><span><b>${c.name}</b> <small>${c.role}${st ? '' : ` &middot; deck ${c.deck + 1}`}</small></span><span class="st ${st || ''}">${label}</span></li>`;
+    }).join('');
+    const logs = game.log.slice().reverse().map((l) => `<li>${l}</li>`).join('') || '<li class="dim">Nothing yet.</li>';
+    $('#journal .body').innerHTML = `
+      <h3>WHERE YOU ARE</h3><p><b>DECK ${campaign.deck + 1} OF 8 &middot; ${deck.name}</b><br><span class="dim">${deck.title} &middot; sector ${campaign.sector + 1} of 4</span></p>
+      <h3>THE QUESTION</h3><p class="dim">Someone on this ship rewrote the core's first law at 03:12 and started the loop. Every crew member has an official record. The echoes don't always agree.</p>
+      <h3>SUSPECTS</h3><ul class="suspects">${sus}</ul>
+      <h3>LOG</h3><ul class="log">${logs}</ul>`;
+  }
+
   renderJournal(game) {
+    if (game.mode === 'deck') return this.renderDeckJournal(game);
     const { facts, objectives, observer } = game;
     const hist = objectives.history
       .map((h, i, a) => `<li class="${i < a.length - 1 ? 'old' : 'cur'}"><span>${h.text}</span><small>${h.because}</small></li>`)

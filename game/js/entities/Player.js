@@ -3,7 +3,7 @@
 // clips through walls, and barrel-rolls around the facing direction when
 // gravity flips so "forward" stays forward.
 import * as THREE from '../../vendor/three.module.min.js';
-import { makeCharacter } from '../world/models.js';
+import { makeHuman, CAST_SPECS } from '../world/humans.js';
 
 const HALF = new THREE.Vector3(0.3, 0.85, 0.3);
 const EYE = 0.68;
@@ -14,11 +14,14 @@ const _m = new THREE.Matrix4();
 export class Player {
   constructor(camera, scene) {
     this.camera = camera;
-    this.model = makeCharacter({ suit: 0xf4f7fa, accent: 0xff8a6a, hair: 0x3a2e2a });
+    this.model = makeHuman(CAST_SPECS.ren);
     if (scene) scene.add(this.model);
     this.facing = new THREE.Vector3(0, 0, -1);
     this.colliders = [];
-    this.camDist = 3.6;
+    this.cam = { dist: 3.6, shoulder: 0.5, lift: 0.35 }; // set from the camera preset
+    this.zoom = 1; // wheel / pinch multiplier
+    this.distNow = 3.6;
+    this.comfort = false; // instant gravity flips, steadier camera
     this.camPos = null;
     this.cinema = null; // { pos: Vector3, target: Vector3 } overrides the camera (trailers)
     this.pos = new THREE.Vector3();
@@ -76,7 +79,7 @@ export class Player {
       if (ang > 1e-4) {
         const cross = new THREE.Vector3().crossVectors(this.U, target);
         const sign = cross.dot(this.H) >= 0 ? 1 : -1;
-        const step = Math.min(ang, dt * 4.2);
+        const step = this.comfort ? ang : Math.min(ang, dt * 4.2);
         this.U.applyAxisAngle(this.H, sign * step).normalize();
         if (ang - step < 1e-3) this.U.copy(target);
       }
@@ -205,7 +208,10 @@ export class Player {
     const up = new THREE.Vector3().copy(this.U).multiplyScalar(Math.cos(this.pitch)).addScaledVector(this.H, -Math.sin(this.pitch));
     const right = new THREE.Vector3().crossVectors(F, up).normalize();
     const head = new THREE.Vector3().copy(this.pos).addScaledVector(this.U, 0.6);
-    const desired = head.clone().addScaledVector(F, -this.camDist).addScaledVector(up, 0.35).addScaledVector(right, 0.5);
+    const wantDist = THREE.MathUtils.clamp(this.cam.dist * this.zoom, 1.4, 12);
+    this.distNow += (wantDist - this.distNow) * (1 - Math.exp(-dt * 8));
+    const k = this.distNow / Math.max(0.1, this.cam.dist);
+    const desired = head.clone().addScaledVector(F, -this.distNow).addScaledVector(up, this.cam.lift * Math.min(2, k)).addScaledVector(right, this.cam.shoulder);
     const dir = desired.clone().sub(head);
     const len = dir.length();
     dir.divideScalar(len);
@@ -220,7 +226,7 @@ export class Player {
       if (altDist > dist + 0.3) { dist = altDist; target = head.clone().addScaledVector(alt, altDist); }
     }
     if (!this.camPos || this.camPos.distanceTo(target) > 6) this.camPos = target.clone();
-    else this.camPos.lerp(target, 1 - Math.exp(-dt * 14));
+    else this.camPos.lerp(target, 1 - Math.exp(-dt * (this.comfort ? 8 : 14)));
     // never let smoothing drag the camera behind a wall
     if (this.camPos.distanceTo(head) > dist + 0.05) this.camPos.copy(target);
     // look slightly past the character's head, so the view stays centred on what's ahead

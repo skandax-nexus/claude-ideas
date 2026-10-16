@@ -17,6 +17,7 @@ export class FactStore {
     this.onEffect = () => {};
     this._evaluating = false;
     this._dirty = false;
+    this.rulesEnabled = true; // the prologue's authored rules; off out on the vessel
   }
 
   get(k) {
@@ -62,7 +63,7 @@ export class FactStore {
   }
 
   evaluateRules() {
-    if (this._evaluating) return;
+    if (this._evaluating || !this.rulesEnabled) return;
     this._evaluating = true;
     try {
       for (let pass = 0; pass < 16; pass++) {

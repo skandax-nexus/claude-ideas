@@ -70,9 +70,9 @@ export function createMaterials() {
     new THREE.MeshBasicMaterial({ color, transparent: opacity < 1, opacity, fog: false });
 
   const m = {
-    wall: std({ map: wallTex, color: 0xffffff }),
+    wall: std({ map: wallTex, bumpMap: wallTex, bumpScale: 1.2, color: 0xffffff }),
     wallDark: std({ map: softTex, color: 0xf6eee4 }),
-    floor: std({ map: floorTex, color: 0xffffff, roughness: 0.75 }),
+    floor: std({ map: floorTex, bumpMap: floorTex, bumpScale: 0.8, color: 0xffffff, roughness: 0.68 }),
     floorDark: std({ map: softTex, color: 0xc9d4de }),
     ceil: std({ map: ceilTex, color: 0xffffff, roughness: 0.95 }),
     metal: std({ map: softTex, color: 0xd4dce5, roughness: 0.5, metalness: 0.1 }),
@@ -92,6 +92,71 @@ export function createMaterials() {
     echoSolid: new THREE.MeshBasicMaterial({ color: 0x29b3c0, transparent: true, opacity: 0.55, depthWrite: false, fog: false }),
     echoLine: new THREE.LineBasicMaterial({ color: 0x1f9aa8, transparent: true, opacity: 0.9, fog: false }),
   };
+  return m;
+}
+
+// Materials for a generated deck, tinted by the deck's palette. Panel
+// textures double as bump maps so walls catch the light along their seams.
+const _deckCache = new Map();
+export function deckMaterials(pal) {
+  const key = JSON.stringify(pal);
+  if (_deckCache.has(key)) return _deckCache.get(key);
+  const tint = (hex, k) => {
+    const c = new THREE.Color(hex);
+    return '#' + c.lerp(new THREE.Color(0xffffff), k).getHexString();
+  };
+  const accent = new THREE.Color(pal.accent);
+  const accentCss = '#' + accent.getHexString();
+  const wallTex = canvasTex(256, (g, s) => {
+    panel(g, s / 2, tint(accentCss, 0.88), tint(accentCss, 0.62));
+    g.drawImage(g.canvas, 0, 0, s / 2, s / 2, s / 2, 0, s / 2, s / 2);
+    g.drawImage(g.canvas, 0, 0, s, s / 2, 0, s / 2, s, s / 2);
+    g.fillStyle = tint(accentCss, 0.55);
+    g.fillRect(0, s * 0.47, s, 3);
+  });
+  const floorTex = canvasTex(256, (g, s) => {
+    panel(g, s, tint(accentCss, 0.8), tint(accentCss, 0.58), false);
+    g.strokeStyle = 'rgba(120,130,140,0.12)';
+    for (let i = 32; i < s; i += 64) {
+      g.beginPath(); g.moveTo(i, 6); g.lineTo(i, s - 6); g.stroke();
+      g.beginPath(); g.moveTo(6, i); g.lineTo(s - 6, i); g.stroke();
+    }
+  });
+  const ceilTex = canvasTex(128, (g, s) => panel(g, s, '#fbfcfd', tint(accentCss, 0.85)));
+  const propTex = canvasTex(128, (g, s) => panel(g, s, tint(accentCss, 0.86), tint(accentCss, 0.6)));
+  const woodTex = canvasTex(64, (g, s) => {
+    panel(g, s, '#efd6ae', '#d9b98a', false);
+    g.strokeStyle = 'rgba(180,140,90,0.25)';
+    for (let i = 6; i < s; i += 10) { g.beginPath(); g.moveTo(0, i); g.lineTo(s, i + 3); g.stroke(); }
+  });
+  const std = (o) => new THREE.MeshStandardMaterial({ roughness: 0.8, metalness: 0, ...o });
+  const basic = (color, opacity = 1, o = {}) => new THREE.MeshBasicMaterial({ color, transparent: opacity < 1, opacity, fog: false, ...o });
+  const m = {
+    trim: std({ color: accent.clone().lerp(new THREE.Color(0xffffff), 0.45), roughness: 0.4, metalness: 0.1 }),
+    trimDark: std({ color: accent.clone().lerp(new THREE.Color(0x3a4656), 0.35), roughness: 0.5 }),
+    panelGlow: basic(new THREE.Color(0xffffff).lerp(new THREE.Color(pal.light), 0.6)),
+    wall: std({ map: wallTex, bumpMap: wallTex, bumpScale: 1.2 }),
+    floor: std({ map: floorTex, bumpMap: floorTex, bumpScale: 0.8, roughness: 0.62 }),
+    ceil: std({ map: ceilTex, roughness: 0.95 }),
+    pit: std({ map: floorTex, color: new THREE.Color(pal.fog).multiplyScalar(0.9) }),
+    prop: std({ map: propTex, bumpMap: propTex, bumpScale: 0.8, roughness: 0.45, metalness: 0.05 }),
+    prop2: std({ map: woodTex }),
+    pillar: std({ map: propTex, color: 0xfff7ee, roughness: 0.55 }),
+    leaf: std({ color: 0x7fcf8f, roughness: 0.9, transparent: true, opacity: 0.92 }),
+    glow: basic(accent),
+    glass: new THREE.MeshStandardMaterial({ color: 0xd8f0ff, transparent: true, opacity: 0.3, roughness: 0.08, depthWrite: false }),
+    door: std({ map: propTex, color: accent.clone().lerp(new THREE.Color(0xffffff), 0.35), roughness: 0.5 }),
+    gate: basic(accent.clone().lerp(new THREE.Color(0xffffff), 0.3), 0.55, { depthWrite: false }),
+    echo: basic(0x3cc4cf, 0.28, { depthWrite: false }),
+    echoSolid: basic(0x29b3c0, 0.6, { depthWrite: false }),
+    echoLine: new THREE.LineBasicMaterial({ color: 0x1f9aa8, transparent: true, opacity: 0.9, fog: false }),
+    light: basic(0xffcf6a, 0.16, { depthWrite: false }),
+    lightSolid: basic(0xffc24a, 0.62, { depthWrite: false }),
+    lightLine: new THREE.LineBasicMaterial({ color: 0xe8a420, transparent: true, opacity: 0.95, fog: false }),
+  };
+  m.metal = m.prop;
+  m.crate = m.prop2;
+  _deckCache.set(key, m);
   return m;
 }
 

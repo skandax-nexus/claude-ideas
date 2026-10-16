@@ -1,7 +1,8 @@
 // Characters you can meet: Juno (engineer who lives on the lab ceiling) and
 // TICK (a little drone companion who doubles as the hint system).
 import * as THREE from '../../vendor/three.module.min.js';
-import { makeCharacter, makeTick } from './models.js';
+import { makeTick } from './models.js';
+import { makeHuman, CAST_SPECS } from './humans.js';
 import { juno as JUNO_LINES, hints } from './story.js';
 
 const JUNO_SPOT = new THREE.Vector3(-5, 0, 2.5);
@@ -9,7 +10,7 @@ const JUNO_SPOT = new THREE.Vector3(-5, 0, 2.5);
 export class Npcs {
   constructor(game) {
     this.g = game;
-    this.juno = makeCharacter({ suit: 0x7ccba0, accent: 0xffc84a, hair: 0x8a4a2a, skin: 0xe8b48e, height: 1.7 });
+    this.juno = makeHuman(CAST_SPECS.juno);
     this.juno.visible = false;
     this.juno.position.copy(JUNO_SPOT);
     game.scene.add(this.juno);
@@ -71,7 +72,7 @@ export class Npcs {
   update(dt, t) {
     const { player, facts, room } = this.g;
     // Juno: lives in the lab once you've met her
-    this.juno.visible = this.junoHere && room !== 'antechamber';
+    this.juno.visible = this.junoHere && room !== 'antechamber' && this.g.mode !== 'deck';
     if (this.dropT >= 0) {
       this.dropT += dt;
       const k = Math.min(1, this.dropT / 0.9);
@@ -88,7 +89,8 @@ export class Npcs {
       }
       this.talkT = Math.max(0, this.talkT - dt);
       this.juno.userData.animate(dt, 0, t);
-      if (this.talkT > 0 && this.g.hud.talking) this.juno.userData.armR.rotation.x = -0.6 + Math.sin(t * 6) * 0.25;
+      this.juno.userData.setTalking?.(this.talkT > 0 && this.g.hud.talking);
+      this.juno.userData.lookAt?.(to.length() < 8 ? player.pos.clone().addScaledVector(player.U, 0.6) : null);
     }
 
     // TICK: hovers over your shoulder, glances at what you're looking at
@@ -102,7 +104,7 @@ export class Npcs {
       this.tick.up.copy(player.U);
       this.tick.lookAt(look);
       this.tick.userData.rotor.rotation.z += dt * 18;
-      const hasHint = hints.some((x) => facts.test(x.when));
+      const hasHint = this.g.mode === 'deck' || hints.some((x) => facts.test(x.when));
       this.tick.userData.eye.material.color.setHex(hasHint && Math.sin(t * 5) > 0.3 ? 0xffffff : 0x7fe8ff);
     }
   }

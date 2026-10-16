@@ -14,6 +14,9 @@ export class Input {
     this.enabled = true;
     this.stick = { id: null, x: 0, y: 0, ox: 0, oy: 0 };
     this.lookTouch = { id: null, x: 0, y: 0 };
+    this.zoom = 0; // accumulated zoom steps (+ out, - in)
+    this.invertY = false;
+    this.pinch = null;
     this.bindKeyboard();
     this.bindMouse();
     if (this.touch) this.bindTouch(ui);
@@ -23,10 +26,13 @@ export class Input {
     const map = {
       KeyE: 'use', KeyF: 'use', KeyH: 'hint', KeyQ: 'shift', KeyR: 'shift', KeyL: 'laws', Tab: 'laws', KeyJ: 'journal',
       Escape: 'pause', Digit1: 'set:PHYSICAL', Digit2: 'set:INVERTED', Digit3: 'set:ECHO',
+      KeyM: 'map', KeyV: 'camera', F5: 'quicksave', F9: 'quickload',
     };
     window.addEventListener('keydown', (e) => {
       if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') return;
-      if (e.code === 'Tab') e.preventDefault();
+      if (e.code === 'Tab' || e.code === 'F5' || e.code === 'F9') e.preventDefault();
+      if (e.code === 'Equal' || e.code === 'NumpadAdd') this.zoom -= 1;
+      if (e.code === 'Minus' || e.code === 'NumpadSubtract') this.zoom += 1;
       if (e.repeat) return;
       this.keys.add(e.code);
       if (e.code === 'Space') this.state.jump = true;
@@ -50,6 +56,10 @@ export class Input {
       if (document.pointerLockElement === this.canvas && e.button === 2) this.actions.push('shift');
     });
     this.canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+    window.addEventListener('wheel', (e) => {
+      if (document.body.classList.contains('menu')) return;
+      this.zoom += Math.sign(e.deltaY);
+    }, { passive: true });
   }
 
   bindTouch(ui) {
@@ -79,14 +89,28 @@ export class Input {
     stickEl.addEventListener('touchend', endStick);
     stickEl.addEventListener('touchcancel', endStick);
 
+    const pinchDist = (e) => Math.hypot(e.targetTouches[0].clientX - e.targetTouches[1].clientX, e.targetTouches[0].clientY - e.targetTouches[1].clientY);
     lookEl.addEventListener('touchstart', (e) => {
       e.preventDefault();
+      if (e.targetTouches.length >= 2) {
+        this.pinch = pinchDist(e);
+        this.lookTouch.id = null;
+        return;
+      }
       if (this.lookTouch.id !== null) return;
       const t = e.changedTouches[0];
       Object.assign(this.lookTouch, { id: t.identifier, x: t.clientX, y: t.clientY });
     }, { passive: false });
     lookEl.addEventListener('touchmove', (e) => {
       e.preventDefault();
+      if (this.pinch && e.targetTouches.length >= 2) {
+        const d = pinchDist(e);
+        if (Math.abs(d - this.pinch) > 28) {
+          this.zoom += d > this.pinch ? -1 : 1;
+          this.pinch = d;
+        }
+        return;
+      }
       for (const t of e.changedTouches) if (t.identifier === this.lookTouch.id) {
         this.look.dx += (t.clientX - this.lookTouch.x) * this.touchSensitivity;
         this.look.dy += (t.clientY - this.lookTouch.y) * this.touchSensitivity;
@@ -95,6 +119,7 @@ export class Input {
       }
     }, { passive: false });
     const endLook = (e) => {
+      if (e.targetTouches.length < 2) this.pinch = null;
       for (const t of e.changedTouches) if (t.identifier === this.lookTouch.id) this.lookTouch.id = null;
     };
     lookEl.addEventListener('touchend', endLook);
@@ -140,8 +165,15 @@ export class Input {
     return this.state;
   }
 
+  consumeZoom() {
+    const z = this.zoom;
+    this.zoom = 0;
+    return z;
+  }
+
   consumeLook() {
     const l = { ...this.look };
+    if (this.invertY) l.dy = -l.dy;
     this.look.dx = this.look.dy = 0;
     return l;
   }

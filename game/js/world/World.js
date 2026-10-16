@@ -4,6 +4,7 @@
 import * as THREE from '../../vendor/three.module.min.js';
 import { createMaterials, boxGeometry, mergeGeometries, textTexture } from './materials.js';
 import * as M from './models.js';
+import { makeHuman, CAST_SPECS } from './humans.js';
 import {
   elements, texts, drifters, cables, interactables, items, tokens, SHADOW,
 } from './maps.js';
@@ -25,6 +26,8 @@ export class World {
     this.tokenMeshes = [];
     this.cableMeshes = [];
     this.drift = [];
+    this.root = new THREE.Group(); // Station Zero; hidden while you are out on the vessel
+    scene.add(this.root);
     this.build();
   }
 
@@ -52,7 +55,7 @@ export class World {
           const edges = new THREE.LineSegments(new THREE.EdgesGeometry(geo), this.mats.echoLine);
           mesh.add(edges);
         }
-        this.scene.add(mesh);
+        this.root.add(mesh);
         this.dynamic.push({ el, mesh, box, cond: compileCondition(el.when) });
       }
     }
@@ -63,7 +66,7 @@ export class World {
       const matName = k.split('|')[1];
       mesh.castShadow = !(matName === 'ceil' || matName === 'glass' || matName.startsWith('strip'));
       mesh.receiveShadow = true;
-      this.scene.add(mesh);
+      this.root.add(mesh);
       geos.forEach((g) => g.dispose());
     }
 
@@ -79,20 +82,20 @@ export class World {
         mesh.rotation.x = Math.PI / 2; // face down
         mesh.rotation.z = Math.PI;
       } else mesh.rotation.y = t.rotY;
-      this.scene.add(mesh);
+      this.root.add(mesh);
       this.textMeshes.push({ t, mesh, cond: compileCondition(t.when) });
     }
 
     for (const d of drifters) {
       const mesh = new THREE.Mesh(boxGeometry(d.size, d.size, d.size, 1), this.mats.crate);
       mesh.position.set(...d.pos);
-      this.scene.add(mesh);
+      this.root.add(mesh);
       this.drift.push({ d, mesh, phase: Math.random() * 6 });
     }
 
     for (const c of cables) {
       const mesh = M.makeCable(c.pts);
-      this.scene.add(mesh);
+      this.root.add(mesh);
       this.cableMeshes.push({ c, mesh, cond: compileCondition(c.when) });
     }
 
@@ -101,7 +104,7 @@ export class World {
     this.buildTokens();
 
     this.stars = M.makeStarfield();
-    this.scene.add(this.stars);
+    this.root.add(this.stars);
   }
 
   buildProps() {
@@ -109,7 +112,7 @@ export class World {
     const add = (id, obj, pos, rotY = 0) => {
       obj.position.set(...pos);
       obj.rotation.y = rotY;
-      this.scene.add(obj);
+      this.root.add(obj);
       P[id] = obj;
       return obj;
     };
@@ -123,9 +126,8 @@ export class World {
     add('socketCore', M.makeCoreItem(), [0, 1.2, 1.7]);
     const lock = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.8, 0.08), new THREE.MeshBasicMaterial({ color: 0x4af0c8 }));
     add('archive_lock', lock, [3, 1.4, -11.95]);
-    const cust = add('custodian', M.makeFigure({ color: 0x6ff0d4 }), [0, 0, -20.5], Math.PI);
-    cust.scale.setScalar(1.1);
-    const other = add('other', M.makeFigure({ color: 0xc7a2ff, opacity: 0.7, wire: false }), [0, 4.5, 14.5]);
+    add('custodian', makeHuman(CAST_SPECS.custodian), [0, 0, -20.5], Math.PI);
+    const other = add('other', makeHuman(CAST_SPECS.other), [0, 4.5, 14.5]);
     other.rotation.z = Math.PI;
     // The shadow lives on the east wall of the lab, and as a figure in echo.
     const wallShadow = M.makeWallShadow();
@@ -138,7 +140,7 @@ export class World {
     for (const it of items) {
       const mesh = it.id === 'key' ? M.makeKeyItem(true) : M.makeCoreItem();
       mesh.position.set(...it.pos);
-      this.scene.add(mesh);
+      this.root.add(mesh);
       this.itemMeshes[it.id] = { it, mesh, cond: compileCondition(it.when) };
     }
   }
@@ -148,7 +150,7 @@ export class World {
       const mesh = M.makeToken(TOKENS[tk.token].label);
       mesh.position.set(...tk.pos);
       if (tk.hang) mesh.rotation.z = Math.PI; // readable from the ceiling
-      this.scene.add(mesh);
+      this.root.add(mesh);
       this.tokenMeshes.push({ tk, mesh });
     }
   }
@@ -200,8 +202,10 @@ export class World {
     P.machine.userData.inner.rotation.z = t * (this.facts.get('machine_activated') ? 2.5 : 0.3);
     P.brain.userData.pulse(t);
     for (const id of ['r0', 'r1', 'r2']) P[id].userData.screen.material.opacity = 0.7 + Math.sin(t * 9 + id.length) * 0.08;
-    P.custodian.userData.mat.opacity = 0.45 + Math.sin(t * 13) * 0.06 + (Math.random() < 0.03 ? -0.3 : 0);
-    P.other.userData.mat.opacity = 0.6 + Math.sin(t * 3) * 0.15;
+    P.custodian.userData.setOpacity?.(0.62 + Math.sin(t * 13) * 0.05 + (Math.random() < 0.03 ? -0.25 : 0));
+    P.other.userData.setOpacity?.(0.6 + Math.sin(t * 3) * 0.12);
+    P.custodian.userData.animate(1 / 60, 0, t);
+    P.other.userData.animate(1 / 60, 0, t);
 
     for (const tm of this.tokenMeshes) {
       tm.mesh.visible = !this.facts.get(`token_${tm.tk.token}`);

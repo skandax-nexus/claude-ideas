@@ -258,7 +258,12 @@ export class Synth {
   toggleMute() {
     if (!this.ctx) return;
     this.muted = !this.muted;
-    this.master.gain.setTargetAtTime(this.muted ? 0 : 0.7, this.ctx.currentTime, 0.05);
+    this.master.gain.setTargetAtTime(this.muted ? 0 : 0.7 * (this.volume ?? 1), this.ctx.currentTime, 0.05);
+  }
+
+  setVolume(v) {
+    this.volume = v;
+    if (this.ctx && !this.muted) this.master.gain.setTargetAtTime(0.7 * v, this.ctx.currentTime, 0.05);
   }
 
   /**

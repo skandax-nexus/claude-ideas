@@ -123,7 +123,7 @@ body.touch .desktop-only { display: none !important; }
 .panel.center { text-align: center; }
 .panel header { display: flex; justify-content: space-between; align-items: center; }
 .panel header button { padding: 6px 14px; font-size: 18px; }
-h1 { font-size: clamp(36px, 8vw, 72px); letter-spacing: 0.22em; margin: 10px 0; font-weight: 800; color: var(--ink); }
+h1 { font-size: clamp(30px, 7vw, 60px); letter-spacing: 0.18em; margin: 10px 0; font-weight: 800; color: var(--ink); }
 h1 span { color: var(--coral); }
 h2 { letter-spacing: 0.14em; font-weight: 800; font-size: 16px; }
 h3 { font-size: 11px; letter-spacing: 0.16em; color: var(--ink-soft); margin: 22px 0 8px; font-weight: 700; border-bottom: 1px solid var(--line); padding-bottom: 6px; }
@@ -174,5 +174,47 @@ li small { display: block; color: var(--ink-soft); font-size: 12px; }
 #ending textarea { display: block; width: 100%; height: 64px; margin-top: 6px; background: #fff; color: var(--ink); border: 1px solid var(--line); border-radius: 12px; font-family: inherit; padding: 10px; user-select: text; }
 .yn { display: flex; gap: 8px; margin-top: 6px; }
 .yn button.sel { background: var(--ink); color: #fff; }
+
+/* v0.3: menus, saves, settings, map, deck cards */
+.row { display: flex; gap: 8px; margin: 8px 0; }
+.row button { flex: 1; }
+#vessel { background: #eef4ff; }
+.slotbtn { display: flex; justify-content: space-between; align-items: center; width: 100%; margin: 8px 0; padding: 14px 16px; text-align: left; }
+.slotbtn b { display: block; font-size: 14px; }
+.slotbtn small { display: block; color: var(--ink-soft); font-weight: 500; font-size: 12px; margin-top: 3px; }
+.slotbtn .tag2 { font-size: 10px; letter-spacing: 0.14em; color: var(--ink-soft); }
+.slotbtn.empty b { color: var(--ink-soft); font-weight: 600; }
+.setting { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 10px; margin: 12px 0; font-size: 14px; font-weight: 600; }
+.setting small { display: block; color: var(--ink-soft); font-weight: 500; font-size: 12px; }
+.setting input[type=range] { width: 150px; accent-color: var(--coral); }
+.seg { display: flex; gap: 4px; flex-wrap: wrap; justify-content: flex-end; }
+.seg button { font-size: 11px; padding: 7px 10px; }
+.seg button.sel { background: var(--ink); color: #fff; border-color: var(--ink); }
+#minimap { position: absolute; right: 16px; bottom: 16px; width: 170px; height: 170px; border-radius: 50%; box-shadow: var(--shadow); display: none; }
+body.minimap #minimap { display: block; }
+body.touch #minimap { width: 120px; height: 120px; top: 110px; bottom: auto; right: 14px; }
+body.minimap #held { bottom: 196px; }
+#bigmap { display: block; width: 100%; height: min(62vh, 560px); background: #eef3f8; border-radius: 16px; margin-top: 10px; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 10px; font-size: 12px; color: var(--ink-soft); }
+.lg::before { content: ""; display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 5px; vertical-align: 0; }
+.lg.player::before { background: #ff7a63; } .lg.npc::before { background: #2f9a64; } .lg.sentinel::before { background: #4f9fe8; }
+.lg.item::before { background: #e0a43a; } .lg.token::before { background: #2fae6a; } .lg.gate::before { background: #7a5fd0; } .lg.beacon::before { background: #22aeb9; }
+#zoombtns { position: absolute; right: 196px; bottom: 18px; display: flex; flex-direction: column; gap: 6px; pointer-events: auto; }
+#zoombtns button { width: 38px; height: 38px; padding: 0; border-radius: 50%; font-size: 18px; line-height: 1; background: rgba(255, 255, 255, 0.85); }
+body:not(.minimap) #zoombtns { right: 18px; bottom: 60px; }
+body.touch #zoombtns { right: auto; left: 50%; transform: translateX(-50%); bottom: 18px; flex-direction: row; }
+#card { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; z-index: 25; opacity: 0; transition: opacity 0.9s; }
+#card.on { opacity: 1; }
+#card .inner { text-align: center; background: rgba(255, 255, 255, 0.86); padding: 26px 40px; border-radius: 24px; box-shadow: 0 20px 60px rgba(40, 60, 90, 0.16); max-width: 86vw; }
+#card small { font-size: 11px; letter-spacing: 0.22em; color: var(--ink-soft); font-weight: 700; }
+#card h2 { font-size: clamp(26px, 5vw, 44px); letter-spacing: 0.16em; margin: 8px 0 4px; color: var(--ink); }
+#card p { margin: 0; color: var(--ink-soft); font-size: 16px; }
+#verdict .body button { margin: 8px 0; }
+.suspects li { display: flex; justify-content: space-between; gap: 10px; }
+.suspects .st { font-size: 11px; font-weight: 700; letter-spacing: 0.1em; padding: 2px 8px; border-radius: 999px; background: rgba(35, 48, 60, 0.06); color: var(--ink-soft); }
+.suspects .st.cleared { background: #e3f6ec; color: #2f8a5a; }
+.suspects .st.guilty { background: #fde9e4; color: #c0553f; }
+body.text-lg .sub { font-size: 19px; }
+body.text-lg #objective .txt { font-size: 17px; }
 
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
