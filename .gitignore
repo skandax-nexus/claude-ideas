@@ -1,2 +1,6 @@
 node_modules/
 tests/screens/
+unity/Tests/bin/
+unity/Tests/obj/
+unity/Tools/*/bin/
+unity/Tools/*/obj/

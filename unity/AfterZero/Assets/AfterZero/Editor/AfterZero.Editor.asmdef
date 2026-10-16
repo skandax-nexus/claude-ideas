@@ -1,0 +1,16 @@
+{
+    "name": "AfterZero.Editor",
+    "rootNamespace": "AfterZero.EditorTools",
+    "references": [
+        "AfterZero.Core",
+        "AfterZero.Runtime"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "autoReferenced": true,
+    "noEngineReferences": false
+}

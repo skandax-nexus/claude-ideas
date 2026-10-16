@@ -4,7 +4,24 @@
 
 You wake in a sealed room with a floating object and no instructions. Touch it and gravity lets go. Touch it again and the room turns over, and a door appears where a wall used to be. The object becomes a device that changes the state of whatever room you stand in (**PHYSICAL**, **INVERTED**, **ECHO**). Then you find out that the device runs on *laws*, and that you can rewrite them.
 
-This repository contains a **playable 3D vertical slice** (desktop and Android browsers) and the full design for the two-hour game.
+This repository contains:
+
+- **`unity/AfterZero/` - the Unity 6 (URP) version** with a stronger story, 11 characters, 8 zones (~245 m × 60 m), three adrenaline chase set-pieces, a hint companion, New Game+ and Android touch controls. Start with [`docs/unity/UNITY_GUIDE.md`](docs/unity/UNITY_GUIDE.md).
+- **`game/` - the original browser prototype** (Three.js): a playable 3D vertical slice for desktop and Android browsers.
+- **`docs/`** - the design for the full game.
+
+## Unity version
+
+| Doc | What's in it |
+|---|---|
+| [UNITY_GUIDE.md](docs/unity/UNITY_GUIDE.md) | Status, 5-minute setup, architecture, art pipeline, Android build |
+| [STORY_BIBLE.md](docs/unity/STORY_BIBLE.md) | The rebuilt story: cast, three acts, twist ladder, choices, four endings |
+| [WORLD_MAPS.md](docs/unity/WORLD_MAPS.md) | Every zone, with plans rendered from the actual level data |
+| [PLAYER_EXPERIENCE.md](docs/unity/PLAYER_EXPERIENCE.md) | Smoothness, adrenaline, player-friendliness, and ethical engagement |
+
+```bash
+cd unity/Tests && dotnet test     # 17 tests over the core systems and all story/level content
+```
 
 ## Play
 
