@@ -119,6 +119,7 @@ export class Input {
     zone.addEventListener('touchend', endStick);
     zone.addEventListener('touchcancel', endStick);
 
+    const pinchDist = (e) => Math.hypot(e.targetTouches[0].clientX - e.targetTouches[1].clientX, e.targetTouches[0].clientY - e.targetTouches[1].clientY);
     lookEl.addEventListener('touchstart', (e) => {
       e.preventDefault();
       if (e.targetTouches.length >= 2) {
@@ -129,7 +130,7 @@ export class Input {
       if (this.lookTouch.id !== null) return;
       const t = e.changedTouches[0];
       const now = performance.now();
-      if (now - (this.lastTap || 0) < 280) this.zoomReset = true; // double tap: back to the normal view
+      if (now - (this.lastTap || 0) < 350) this.zoomReset = true; // double tap: back to the normal view
       this.lastTap = now;
       Object.assign(this.lookTouch, { id: t.identifier, x: t.clientX, y: t.clientY });
     }, { passive: false });

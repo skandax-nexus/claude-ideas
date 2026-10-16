@@ -299,3 +299,8 @@ body.touch #held { top: auto; bottom: 182px; right: 16px; }
   .sw .txtb { padding: 4px 8px; }
   #heroGo { margin: 6px 0 0; padding: 11px; }
 }
+/* touch layering: the look area sits underneath every control */
+body.touch #lookzone, body.touch #stickzone { z-index: 1; }
+#dock, #prompt, #minimap, #buttons, #subs, #toast { z-index: 3; }
+body.touch #subs { width: min(560px, 62vw); }
+body.touch .sub { font-size: 14px; padding: 10px 14px; }

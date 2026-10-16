@@ -37,7 +37,7 @@ const az = (fn, arg) => page.evaluate(fn, arg);
 const sim = (sec) => az((s) => window.AZ.simulate(s), sec);
 const shot = async (name) => {
   await wait(700); // let a real frame render
-  await page.screenshot({ path: path.join(shots, `${name}.png`) });
+  await page.screenshot({ timeout: 180000, path: path.join(shots, `${name}.png`) });
   console.log('  screenshot', name);
 };
 const fact = (k) => az((k) => window.AZ.facts.get(k), k);

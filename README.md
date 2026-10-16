@@ -136,6 +136,7 @@ tests/
 npm test                                   # core systems + generator invariants over many seeds (Node 20+)
 NODE_PATH=$(npm root -g) npm run smoke     # full prologue playthrough in headless Chromium (needs playwright)
 NODE_PATH=$(npm root -g) npm run vessel    # QA bot plays every generated room of 2 seeds (pass a seed count to test more)
+NODE_PATH=$(npm root -g) npm run features  # v0.4 features on desktop and a touch phone: characters, voices, prompts, zoom, stick, dock
 ```
 
 ## Design principle

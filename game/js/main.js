@@ -505,8 +505,8 @@ class Game {
     this.hud.show('settings');
   }
 
-  zoomBy(dir) {
-    const z = THREE.MathUtils.clamp(this.settings.zoom * (dir > 0 ? 1.15 : 1 / 1.15), 0.5, 2.5);
+  zoomBy(steps) {
+    const z = THREE.MathUtils.clamp(this.settings.zoom * Math.pow(1.15, THREE.MathUtils.clamp(steps, -4, 4)), 0.5, 2.5);
     this.settings.zoom = +z.toFixed(3);
     this.player.zoom = this.settings.zoom;
     this.zoomSaveT = 1;
