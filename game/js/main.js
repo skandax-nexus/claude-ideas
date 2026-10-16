@@ -1133,7 +1133,9 @@ class Game {
   frame() {
     const dt = Math.min(0.05, this.clock.getDelta());
     this.time += dt;
-    const active = !this.paused && !this.menu;
+    // on a phone held upright the game waits until you turn it sideways
+    const upright = this.touch && window.innerHeight > window.innerWidth;
+    const active = !this.paused && !this.menu && !upright;
 
     for (const a of this.input.consumeActions()) {
       this.lastEvent = this.time;
@@ -1413,6 +1415,7 @@ class Game {
 
   tickFrame(dt, noRender = false) {
     this.time += dt;
+    this.updateHudMood();
     if (!this.paused && !this.menu) this.step(dt);
     this.updateWorlds(dt, dt);
     this.player.updateCamera(dt);

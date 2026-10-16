@@ -18,7 +18,7 @@ const require = createRequire(import.meta.url);
 const { chromium } = require('playwright');
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'game');
 const OUT = path.resolve(process.argv[2] || 'videos');
-const WHICH = process.argv[3] || 'all';
+const WHICH = process.argv[3] || 'all'; // gameplay | characters | phone | all
 const FFMPEG = process.env.FFMPEG || 'ffmpeg';
 const STILLS = !!process.env.STILLS; // quick check: one still per shot, no video
 const KOKORO = process.env.KOKORO_DIR; // optional: voice the dialogue with tools/voice-lines.py
@@ -121,7 +121,7 @@ window.C = {
     const w = b.room.route[b.i];
     if (!b.entered) {
       b.entered = true;
-      if (w.state && g.engine.state(b.rid) !== w.state) g.shift(w.state);
+      if (w.state && g.engine.state(b.rid) !== w.state) { g.shift(w.state); C.press('.shift'); }
       b.wait = w.wait || 0;
     }
     if (b.wait > 0) { b.wait -= dt; C.keys(); return; }
@@ -138,8 +138,23 @@ window.C = {
     const want = new (g.player.H.constructor)(dx / d, 0, dz / d);
     g.player.H.lerp(want, Math.min(1, dt * 7)).normalize();
     C.keys('KeyW');
-    if (w.jump && g.player.grounded) g.input.state.jump = true;
+    if (w.jump && g.player.grounded) { g.input.state.jump = true; C.press('.jump'); }
   },
+  // phone captures: the thumb stick and buttons move with what the bot does
+  touchUi() {
+    if (!document.body.classList.contains('touch')) return;
+    const st = document.querySelector('#stick'), knob = st.querySelector('.knob'), zone = document.querySelector('#stickzone');
+    const moving = AZ.input.keys.has('KeyW');
+    st.classList.toggle('on', moving);
+    st.style.left = '120px';
+    st.style.top = (zone.clientHeight - 105) + 'px';
+    knob.style.transform = moving ? 'translate(-50%, calc(-50% - 40px))' : 'translate(-50%, -50%)';
+    for (const [sel, t] of Object.entries(C.pressed || {})) {
+      const el = document.querySelector('#buttons ' + sel + ', ' + sel);
+      if (el) el.classList.toggle('down', performance.now() - t < 160);
+    }
+  },
+  press(sel) { (C.pressed ||= {})[sel] = performance.now(); },
   lerp(a, b, k) { return a + (b - a) * Math.max(0, Math.min(1, k)); },
   ease(k) { k = Math.max(0, Math.min(1, k)); return k * k * (3 - 2 * k); },
 };`;
@@ -249,11 +264,17 @@ const FILMS = {
   },
 };
 
+FILMS.phone = { title: 'AFTERZERO-phone-gameplay', phone: true, shots: FILMS.gameplay.shots.slice(4).map((sh, i) => (i === 0 ? { ...sh, setup: 'AZ.hud.show(null); AZ.paused = false; AZ.menu = null; ' + sh.setup } : sh)) };
+
 async function record(film, browser) {
   const dir = path.join(OUT, film.title + '_frames');
   fs.rmSync(dir, { recursive: true, force: true });
   fs.mkdirSync(dir, { recursive: true });
-  const page = await browser.newPage({ viewport: { width: W, height: H } });
+  // phone films: a 20:9 landscape touch screen, so the touch controls are what you see
+  const ctx = film.phone
+    ? await browser.newContext({ viewport: { width: 960, height: 432 }, isMobile: true, hasTouch: true, deviceScaleFactor: 1 })
+    : await browser.newContext({ viewport: { width: W, height: H } });
+  const page = await ctx.newPage();
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
   await page.goto(`http://localhost:${server.address().port}/index.html`);
@@ -285,13 +306,13 @@ async function record(film, browser) {
     const n = Math.round(shot.dur * FPS);
     for (let f = 0; f < n; f++) {
       const skip = STILLS && f !== Math.floor(n * 0.6);
-      await page.evaluate(([src, t, dt, skip, clk]) => { window.__clock = clk; (0, eval)(src)(t); AZ.tickFrame(dt, skip); }, [shot.frame, f / FPS, 1 / FPS, skip, clock + f / FPS]);
+      await page.evaluate(([src, t, dt, skip, clk]) => { window.__clock = clk; (0, eval)(src)(t); AZ.tickFrame(dt, skip); C.touchUi(); }, [shot.frame, f / FPS, 1 / FPS, skip, clock + f / FPS]);
       if (skip) continue;
       await page.screenshot({ path: path.join(dir, String(frame++).padStart(5, '0') + '.jpg'), type: 'jpeg', quality: 88 });
     }
     clock += shot.dur;
   }
-  if (STILLS) { fs.writeFileSync(path.join(OUT, film.title + '.lines.json'), JSON.stringify(await page.evaluate(() => window.__lines), null, 1)); await page.close(); console.log(`  stills in ${dir}${errors.length ? '  page errors: ' + errors.join(' | ') : ''}`); return; }
+  if (STILLS) { fs.writeFileSync(path.join(OUT, film.title + '.lines.json'), JSON.stringify(await page.evaluate(() => window.__lines), null, 1)); await ctx.close(); console.log(`  stills in ${dir}${errors.length ? '  page errors: ' + errors.join(' | ') : ''}`); return; }
   // talk blips for every subtitle line are part of the game; add a soft cue track
   const wavB64 = await page.evaluate(async ([dur, cues]) => {
     const buf = await AZSynth.renderWav(dur, cues);
@@ -305,7 +326,7 @@ async function record(film, browser) {
   const lines = await page.evaluate(() => window.__lines);
   const linesPath = path.join(OUT, film.title + '.lines.json');
   fs.writeFileSync(linesPath, JSON.stringify(lines, null, 1));
-  await page.close();
+  await ctx.close();
   const mp4 = path.join(OUT, film.title + '.mp4');
   const fade = `afade=t=in:d=0.8,afade=t=out:st=${Math.max(0, clock - 1.2)}:d=1.2`;
   let audioArgs = ['-i', wav, '-af', fade];
