@@ -255,6 +255,95 @@ export class Synth {
     this.pluck(mtof(base), this.ctx.currentTime, 0.03, this.sfx);
   }
 
+  // --- interaction sounds (v0.3): every action you take has its own voice ---
+  noise(t, dur, { type = 'bandpass', from = 800, to = 800, q = 1, vol = 0.1 } = {}) {
+    const c = this.ctx;
+    const len = Math.max(1, Math.floor(c.sampleRate * dur));
+    const b = c.createBuffer(1, len, c.sampleRate);
+    const d = b.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = (this.rand() * 2 - 1) * Math.sin((Math.PI * i) / len);
+    const src = c.createBufferSource();
+    src.buffer = b;
+    const f = c.createBiquadFilter();
+    f.type = type;
+    f.Q.value = q;
+    f.frequency.setValueAtTime(from, t);
+    f.frequency.exponentialRampToValueAtTime(Math.max(40, to), t + dur);
+    const g = c.createGain();
+    g.gain.value = vol;
+    src.connect(f).connect(g).connect(this.sfx);
+    src.start(t);
+  }
+  // a terminal waking up: soft data chirps rising into a bell
+  terminal(at) {
+    if (!this.ctx) return;
+    const t = this.now(at);
+    [84, 88, 91, 86, 93].forEach((n, i) => this.osc('triangle', mtof(n), t + i * 0.045, 0.06, 0.025, 0.003, 0.05, this.sfx));
+    this.bell(mtof(79), t + 0.25, 0.04, this.sfx);
+  }
+  // a door gliding open: an airy whoosh with a low hum underneath
+  door(at) {
+    if (!this.ctx) return;
+    const t = this.now(at);
+    this.noise(t, 0.9, { from: 300, to: 2400, q: 0.8, vol: 0.14 });
+    this.osc('sine', mtof(43), t, 0.9, 0.05, 0.05, 0.6, this.sfx);
+    this.pluck(mtof(79), t + 0.75, 0.05, this.sfx);
+  }
+  // a key turning or a core seating: click, then a warm two-note confirmation
+  insert(at) {
+    if (!this.ctx) return;
+    const t = this.now(at);
+    this.noise(t, 0.05, { type: 'highpass', from: 3000, to: 3000, vol: 0.12 });
+    this.osc('sine', mtof(55), t + 0.05, 0.35, 0.08, 0.005, 0.3, this.sfx);
+    [74, 81].forEach((n, i) => this.bell(mtof(n), t + 0.12 + i * 0.1, 0.045, this.sfx));
+  }
+  // a memory beacon saving: a slow shimmering arpeggio
+  beacon(at) {
+    if (!this.ctx) return;
+    const t = this.now(at);
+    [67, 74, 79, 83, 86, 91].forEach((n, i) => this.bell(mtof(n), t + i * 0.06, 0.03, this.sfx));
+    this.noise(t, 1.2, { from: 5000, to: 9000, q: 4, vol: 0.03 });
+  }
+  // a law token: sparkles spiralling up
+  token(at) {
+    if (!this.ctx) return;
+    const t = this.now(at);
+    [79, 83, 86, 91, 95].forEach((n, i) => this.pluck(mtof(n), t + i * 0.05, 0.06, this.sfx));
+    this.bell(mtof(98), t + 0.3, 0.03, this.sfx);
+  }
+  // someone notices you and says hello
+  greet(who, at) {
+    if (!this.ctx) return;
+    const t = this.now(at);
+    const base = { JUNO: 74, TICK: 86, CREW: 69 }[who] ?? 71;
+    this.pluck(mtof(base), t, 0.06, this.sfx);
+    this.pluck(mtof(base + 5), t + 0.12, 0.06, this.sfx);
+  }
+  // jump and land: soft cloth-and-boot thumps
+  jump(at) {
+    if (!this.ctx) return;
+    this.noise(this.now(at), 0.12, { type: 'lowpass', from: 600, to: 1400, vol: 0.06 });
+  }
+  land(at) {
+    if (!this.ctx) return;
+    const t = this.now(at);
+    this.noise(t, 0.1, { type: 'lowpass', from: 500, to: 200, vol: 0.12 });
+    this.osc('sine', 70, t, 0.12, 0.08, 0.004, 0.1, this.sfx);
+  }
+  // menus: a tiny tick on hover, a soft pop on press
+  ui(kind = 'press', at) {
+    if (!this.ctx) return;
+    const t = this.now(at);
+    if (kind === 'hover') this.osc('sine', mtof(96), t, 0.03, 0.012, 0.002, 0.025, this.sfx);
+    else this.osc('triangle', mtof(84), t, 0.06, 0.03, 0.002, 0.05, this.sfx);
+  }
+  // a time sweeper's beam passing close by
+  zap(at) {
+    if (!this.ctx) return;
+    const t = this.now(at);
+    this.noise(t, 0.25, { from: 4000, to: 600, q: 3, vol: 0.08 });
+  }
+
   toggleMute() {
     if (!this.ctx) return;
     this.muted = !this.muted;

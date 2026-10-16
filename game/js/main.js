@@ -27,6 +27,9 @@ import { generateSector, SECTORS_PER_DECK } from './gen/LevelGen.js';
 import { loadSettings, saveSettings, CAMERA_PRESETS, QUALITY } from './ui/Settings.js';
 import { writeSave, readSave, listSaves, latestSave, describeSave, SLOTS } from './ui/Saves.js';
 import { MiniMap } from './ui/MiniMap.js';
+import { Voice } from './audio/Voice.js';
+import { Fx } from './world/Fx.js';
+import { HEROES, OPTIONS, heroSpec, hex } from './ui/Heroes.js';
 
 const VERSION = '0.3.0';
 const BOOT_KEY = 'afterzero.boot';
@@ -59,6 +62,14 @@ function session(fn, fallback = null) {
   } catch {
     return fallback;
   }
+}
+
+// Generated crew get a voice that fits them, varied a little per person.
+function crewVoice(c) {
+  const v = ((c.seed || 0) % 7) - 3;
+  if (c.pronoun?.their === 'her') return { pitch: 1.14 + v * 0.03, gender: 'f', rate: 1.0 };
+  if (c.pronoun?.their === 'his') return { pitch: 0.84 + v * 0.03, gender: 'm', rate: 0.97 };
+  return { pitch: 1.0 + v * 0.03, gender: 'n', rate: 0.99 };
 }
 
 class Game {
@@ -99,6 +110,10 @@ class Game {
     this.input = new Input(this.canvas, document.querySelector('#ui'));
     this.world = new World(this.scene, this.facts, this.engine);
     this.player = new Player(this.camera, this.scene);
+    if (this.settings.hero) this.player.setModel(heroSpec(this.settings.hero));
+    this.voice = new Voice();
+    this.fx = new Fx(this.scene);
+    this.lastEvent = 0;
     this.observer = new Observer(this.scene);
     this.director = new Director(this);
     this.npcs = new Npcs(this);
@@ -121,6 +136,7 @@ class Game {
     this.catching = false;
     this.focus = null;
     this.frameN = 0;
+    this.timers = []; // game-time timers: deterministic in captures and simulations
 
     window.addEventListener('resize', () => this.resize());
     this.applySettings();
@@ -169,7 +185,13 @@ class Game {
       this.deckWorld?.refresh();
       this.dirty = true;
     });
-    this.hud.onLine = (who) => this.audio.talk(who);
+    this.hud.onLine = (who, line) => {
+      this.audio.talk(who);
+      this.lastEvent = this.time;
+      if (line) this.voice.speak(line.text, who, line.voice);
+    };
+    this.hud.onSkip = () => this.voice.stop();
+    this.hud.durFn = (l) => (this.voice.enabled && this.voice.available ? this.voice.duration(l.text, l.who) : 0);
     this.objectives.onChange = (layer) => {
       if (this.mode !== 'station') return;
       this.hud.objective(layer.text);
@@ -200,6 +222,17 @@ class Game {
     }
   }
 
+  after(sec, fn) {
+    this.timers.push({ at: this.time + sec, fn });
+  }
+
+  runTimers() {
+    if (!this.timers.length) return;
+    const due = this.timers.filter((t) => t.at <= this.time);
+    this.timers = this.timers.filter((t) => t.at > this.time);
+    due.forEach((t) => t.fn());
+  }
+
   // --- settings -------------------------------------------------------------
   applySettings() {
     const s = this.settings;
@@ -216,6 +249,7 @@ class Game {
     this.input.touchSensitivity = 0.0065 * s.sensitivity;
     this.input.invertY = s.invertY;
     this.audio.setVolume?.(s.volume);
+    if (this.voice) this.voice.enabled = s.voice !== false;
     document.body.classList.toggle('minimap', s.minimap);
     document.body.classList.toggle('text-lg', s.textSize > 1);
     this.resize();
@@ -262,17 +296,12 @@ class Game {
     document.addEventListener('pointerlockchange', () => {
       if (!document.pointerLockElement && !this.paused && !this.menu && !this.touch) this.openMenu('pause');
     });
-    // zoom buttons
-    for (const b of document.querySelectorAll('[data-zoom]')) {
-      const go = (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        this.zoomBy(+b.dataset.zoom);
-      };
-      b.addEventListener('click', go);
-      b.addEventListener('touchstart', go, { passive: false });
-    }
-    for (const b of document.querySelectorAll('#zoombtns [data-act="camera"]')) b.addEventListener('click', () => this.cycleCamera());
+    $('#heroBtn').onclick = () => this.openHero('title');
+    $('#heroBtn2').onclick = () => this.openHero('pause');
+    // menus answer with a soft tick
+    document.addEventListener('pointerdown', (e) => {
+      if (e.target.closest?.('.overlay button, #dock button')) this.audio.ui('press');
+    });
     this.refreshTitle();
     this.hud.show('title');
     // a load / new game requested before the page reloaded
@@ -298,6 +327,10 @@ class Game {
   // New game / vessel / load. Starting fresh in a page that already played
   // goes through a reload, so no state ever leaks between runs.
   begin(action, slot) {
+    if (!this.started && !this.settings.hero && (action === 'new' || action === 'vessel')) {
+      this.openHero('title', () => this.begin(action, slot));
+      return;
+    }
     if (this.started) {
       session((s) => s.setItem(BOOT_KEY, JSON.stringify({ action, slot })));
       location.reload();
@@ -350,6 +383,7 @@ class Game {
   }
 
   back() {
+    this.player.cinema = null;
     const to = this.menuBack || 'title';
     this.menuBack = null;
     if (to === 'title') {
@@ -390,6 +424,48 @@ class Game {
     this.hud.show('saves');
   }
 
+  // --- character select -----------------------------------------------------
+  openHero(from, then = null) {
+    this.menuBack = from;
+    this.menu = 'hero';
+    this.heroThen = then;
+    this.input.release();
+    if (!this.room) this.enterRoom('antechamber', true);
+    const cur = this.settings.hero || { id: 'ren' };
+    const base = HEROES[cur.id] || HEROES.ren;
+    const spec = heroSpec(cur);
+    const $ = (q) => document.querySelector(q);
+    $('#hero .heroes').innerHTML = Object.entries(HEROES).map(([id, h]) => `<button data-hero="${id}" class="${id === (cur.id || 'ren') ? 'sel' : ''}">${h.name}<small>${h.role.toUpperCase()}</small></button>`).join('');
+    const sw = (k, list, fmt) => `<div class="row2"><span>${fmt}</span><span class="sw">${list.map((v) => k === 'hairStyle'
+      ? `<button class="txtb ${spec[k] === v ? 'sel' : ''}" data-k="${k}" data-v="${v}">${v}</button>`
+      : `<button style="background:${hex(v)}" class="${spec[k] === v ? 'sel' : ''}" data-k="${k}" data-v="${v}" aria-label="${fmt} ${hex(v)}"></button>`).join('')}</span></div>`;
+    $('#hero .custom').innerHTML = `<p class="heroblurb">${base.blurb}</p>` + sw('skin', OPTIONS.skin, 'SKIN') + sw('hair', OPTIONS.hair, 'HAIR') + sw('hairStyle', OPTIONS.hairStyle, 'STYLE') + sw('suit', OPTIONS.suit, 'SUIT');
+    for (const b of document.querySelectorAll('#hero [data-hero]')) b.onclick = () => this.pickHero({ id: b.dataset.hero }, from, then);
+    for (const b of document.querySelectorAll('#hero .sw button')) {
+      b.onclick = () => {
+        const v = b.dataset.k === 'hairStyle' ? b.dataset.v : +b.dataset.v;
+        this.pickHero({ ...(this.settings.hero || { id: 'ren' }), [b.dataset.k]: v }, from, then);
+      };
+    }
+    $('#heroGo').textContent = then ? 'START' : 'DONE';
+    $('#heroGo').onclick = () => {
+      if (!this.settings.hero) this.changeSetting('hero', { id: 'ren' });
+      this.player.cinema = null;
+      this.menu = null;
+      if (then) then();
+      else this.back();
+    };
+    this.hud.show('hero');
+  }
+
+  pickHero(choice, from, then) {
+    this.changeSetting('hero', choice);
+    this.player.setModel(heroSpec(choice));
+    this.buildViewModels();
+    this.audio.ui('press');
+    this.openHero(from, then);
+  }
+
   openSettings(from) {
     this.menuBack = from;
     this.menu = 'settings';
@@ -398,10 +474,11 @@ class Game {
     const seg = (k, opts) => `<span class="seg">${opts.map(([v, l]) => `<button data-k="${k}" data-v="${v}" class="${s[k] === v ? 'sel' : ''}">${l}</button>`).join('')}</span>`;
     const range = (k, min, max, step) => `<input type="range" data-k="${k}" min="${min}" max="${max}" step="${step}" value="${s[k]}">`;
     const toggle = (k) => seg(k, [[true, 'ON'], [false, 'OFF']]);
+    if (s.voice === undefined) s.voice = true;
     document.querySelector('#settings .body').innerHTML = `
       <h3>CAMERA</h3>
       <div class="setting"><span>View<small>V cycles views in game</small></span>${seg('camera', Object.entries(CAMERA_PRESETS).map(([k, p]) => [k, p.label]))}</div>
-      <div class="setting"><span>Zoom<small>Mouse wheel, pinch, or the +/- buttons</small></span>${range('zoom', 0.5, 2.5, 0.05)}</div>
+      <div class="setting"><span>Zoom<small>Pinch with two fingers or use the mouse wheel; double-tap to reset</small></span>${range('zoom', 0.5, 2.5, 0.05)}</div>
       <div class="setting"><span>Field of view</span>${range('fov', 50, 90, 1)}</div>
       <div class="setting"><span>Look sensitivity</span>${range('sensitivity', 0.3, 2.5, 0.05)}</div>
       <div class="setting"><span>Invert look up/down</span>${toggle('invertY')}</div>
@@ -411,7 +488,8 @@ class Game {
       <div class="setting"><span>Minimap</span>${toggle('minimap')}</div>
       <div class="setting"><span>Large subtitles</span>${seg('textSize', [[1, 'NORMAL'], [1.2, 'LARGE']])}</div>
       <h3>SOUND</h3>
-      <div class="setting"><span>Volume</span>${range('volume', 0, 1, 0.05)}</div>`;
+      <div class="setting"><span>Volume</span>${range('volume', 0, 1, 0.05)}</div>
+      <div class="setting"><span>Voiced dialogue<small>${this.voice.available ? 'Characters speak their lines aloud' : 'Not supported on this device'}</small></span>${seg('voice', [[true, 'ON'], [false, 'OFF']])}</div>`;
     for (const b of document.querySelectorAll('#settings .seg button')) {
       b.onclick = () => {
         let v = b.dataset.v;
@@ -538,7 +616,7 @@ class Game {
       this.held = null;
       if (c.sector === 0) {
         this.hud.card(`DECK ${c.deck + 1} OF 8`, deck.name, deck.subtitle, 4200);
-        setTimeout(() => this.hud.say(deck.intro, this.facts), 2600);
+        this.after(2.6, () => this.hud.say(deck.intro, this.facts));
       } else this.hud.card(`${deck.name} · SECTOR ${c.sector + 1} OF 4`, this.level.rooms[lv.order[0]].name, '', 2600);
     }
     this.updateDeckObjective(true);
@@ -615,6 +693,8 @@ class Game {
     if (f.id.startsWith('ditem:')) {
       this.held = f.id.slice(6);
       this.audio.pickup();
+      const ip = this.level.items.find((i) => i.id === this.held)?.pos;
+      if (ip) this.fx.burst(ip, 0xffd27a);
       return;
     }
     if (f.id.startsWith('dnpc:')) {
@@ -623,7 +703,11 @@ class Game {
       n.model.userData.wave?.();
       this.facts.set(`met_${n.crew.id}`);
       const lines = n.n.lines || [{ who: 'CREW', name: n.crew.name.toUpperCase(), color: n.crew.color, text: '...' }];
-      say(lines);
+      const voice = crewVoice(n.crew);
+      this.audio.greet('CREW');
+      const p = n.model.position;
+      this.talkWith = [p.x, p.y + 1.55, p.z];
+      say(lines.map((l) => (l.who === 'CREW' ? { ...l, voice } : l)));
       if (n.n.junoAfter) say([{ who: 'JUNO', text: n.n.junoAfter }]);
       if (beat.kind === 'encounter') {
         this.log.push(`Met ${n.crew.name} (${n.crew.role})${n.n.hologram ? ' - only an echo' : ' - alive'}.`);
@@ -633,6 +717,9 @@ class Game {
     }
     const kind = it.kind;
     if (kind === 'terminal') {
+      this.audio.terminal();
+      const pp = this.player.pos;
+      this.fx.holo(it.pos, Math.atan2(pp.x - it.pos[0], pp.z - it.pos[2]), it.log.title, it.log.text, '#2f7f9e', this.voice.duration(it.log.text, 'NONE') + 1);
       say([{ who: 'NONE', name: it.log.title, color: '#4f6170', text: it.log.text }]);
       if (!flags[`done_${it.id}`]) {
         flags[`done_${it.id}`] = true;
@@ -650,6 +737,8 @@ class Game {
           say([{ who: 'TICK', text: beat.tick }]);
         }
       } else {
+        this.audio.terminal();
+        this.fx.burst(it.pos, 0x3cc4cf, 30, 1.6);
         say([{ who: 'NONE', text: beat.echo }, { who: 'YOU', text: beat.log }]);
         if (!flags[`done_${it.id}`]) {
           flags[`done_${it.id}`] = true;
@@ -670,7 +759,9 @@ class Game {
         flags[`used_${it.needs}`] = true;
         this.deckWorld.setFlag(`open_${it.room}`);
         this.campaign.flags = { ...flags };
-        this.audio.chime();
+        this.audio.insert();
+        this.after(0.28, () => this.audio.door());
+        this.fx.burst(it.pos, 0x7fe0a8, 30, 1.8);
         this.hud.toast(kind === 'lock' ? 'The lock accepts the key.' : 'The core hums. The door opens.');
       } else if (kind === 'lock' && this.held === it.needs) {
         this.audio.deny();
@@ -681,7 +772,8 @@ class Game {
       }
     } else if (kind === 'beacon') {
       this.saveTo('auto');
-      this.audio.chime();
+      this.audio.beacon();
+      this.fx.burst(it.pos, 0x9fe8ff, 40, 1.4);
       this.hud.toast('<small>MEMORY BEACON</small><br>Progress saved.');
     } else if (kind === 'chair') {
       this.openVerdict();
@@ -829,7 +921,9 @@ class Game {
   grantToken(t) {
     if (this.facts.get(`token_${t}`)) return;
     this.facts.set(`token_${t}`);
-    this.audio.chime();
+    this.audio.token();
+    const tk = this.level.tokens.find((x) => x.token === t);
+    if (tk) this.fx.burst(tk.pos, 0x2fae6a, 34, 2);
     this.hud.toast(`LAW TOKEN <b class="tok">${TOKENS[t].label}</b><br><small>${this.touch ? 'LAWS' : '[L]'} to rewrite the device</small>`);
     if (this.mode === 'deck') {
       const lines = {
@@ -946,6 +1040,7 @@ class Game {
       const id = f.id.slice(5);
       this.held = id;
       this.audio.pickup();
+      this.fx.burst(f.pos, 0xffd27a);
       if (id === 'key') this.facts.set('key_taken');
       return;
     }
@@ -954,7 +1049,14 @@ class Game {
     if (!f) return;
     this.lastUse = f.id;
     if (this.mode === 'deck') return this.useDeck(f);
-    if (f.id === 'npc:juno') return this.npcs.talkToJuno();
+    if (f.id === 'npc:juno') {
+      this.audio.greet('JUNO');
+      const j = this.npcs.juno.position;
+      this.talkWith = [j.x, j.y + 1.5, j.z];
+      return this.npcs.talkToJuno();
+    }
+    if (f.id === 'custodian') this.talkWith = [0, 1.75, -20.5];
+    if (['r0', 'r1', 'r2'].includes(f.id)) this.audio.terminal();
     this.director.use(f.id);
   }
 
@@ -1034,8 +1136,13 @@ class Game {
     const active = !this.paused && !this.menu;
 
     for (const a of this.input.consumeActions()) {
+      this.lastEvent = this.time;
       if (a === 'pause') {
-        if (this.menu === 'saves' || this.menu === 'settings') this.back();
+        this.voice.stop();
+        if (this.menu === 'saves' || this.menu === 'settings' || this.menu === 'hero') {
+          this.player.cinema = null;
+          this.back();
+        }
         else if (this.menu) this.closeMenu();
         else if (!this.paused) this.openMenu('pause');
         continue;
@@ -1066,10 +1173,36 @@ class Game {
     }
     const z = this.input.consumeZoom();
     if (z) this.zoomBy(z);
+    if (this.input.zoomReset) {
+      this.input.zoomReset = false;
+      this.settings.zoom = 1;
+      this.player.zoom = 1;
+      this.zoomSaveT = 1;
+    }
+    this.updateHudMood();
     if (this.zoomSaveT > 0 && (this.zoomSaveT -= dt) <= 0) saveSettings(this.settings);
 
     if (active) this.step(dt);
     else this.input.consumeLook();
+    if (this.menu === 'hero') {
+      const p = this.player.pos;
+      const a = 0.35 + Math.sin(this.time * 0.25) * 0.5;
+      const f = new THREE.Vector3(this.player.H.x, 0, this.player.H.z);
+      const yaw = Math.atan2(f.x, f.z) + a;
+      // keep the showcase camera out of walls
+      const head = new THREE.Vector3(p.x, p.y + 0.5, p.z);
+      const dir = new THREE.Vector3(Math.sin(yaw), 0, Math.cos(yaw));
+      this.player.colliders = this.mode === 'deck' ? this.deckWorld.colliders : this.world.colliders;
+      const r = Math.max(1.2, Math.min(2.7, this.player.rayDistance(head, dir, 2.7) - 0.25));
+      const c = { x: p.x + dir.x * r, y: p.y + 0.5, z: p.z + dir.z * r };
+      // look a little to the character's side so they stand clear of the panel
+      const dx = p.x - c.x, dz = p.z - c.z, dl = Math.hypot(dx, dz) || 1;
+      const rx = -dz / dl, rz = dx / dl;
+      const off = window.innerWidth > window.innerHeight ? -0.75 : 0;
+      this.player.cinema = { pos: c, target: { x: p.x + rx * off, y: p.y + 0.2, z: p.z + rz * off }, up: { x: 0, y: 1, z: 0 } };
+      this.player.model.visible = true;
+      this.player.grounded = true; // stand for the portrait, even in a weightless room
+    }
 
     this.updateWorlds(active ? dt : 0, dt);
     this.player.updateCamera(dt);
@@ -1078,7 +1211,26 @@ class Game {
     this.postfx.render();
   }
 
+  // The HUD steps back while you play and comes forward when something happens.
+  updateHudMood() {
+    if ((this.input.lastActivity || 0) > (this.lastActivitySeen || 0)) {
+      this.lastActivitySeen = this.input.lastActivity;
+      this.lastEvent = this.time;
+    }
+    const calm = this.started && !this.menu && !this.hud.talking && this.time - this.lastEvent > 4;
+    document.body.classList.toggle('calm', calm);
+    document.body.classList.toggle('talking', !!this.player.talkTarget);
+    const dock = this.dockEls || (this.dockEls = {
+      laws: document.querySelector('#dock .laws'), hint: document.querySelector('#dock .hint'),
+    });
+    dock.laws?.classList.toggle('off', !this.facts.get('has_device'));
+    dock.hint?.classList.toggle('off', !this.facts.get('has_tick'));
+    dock.hint?.classList.toggle('ready', this.mode === 'deck' || !!this.facts.get('has_tick'));
+  }
+
   updateWorlds(simDt, dt) {
+    this.runTimers();
+    this.fx.update(dt);
     this.world.update(dt, this.time, this.held);
     this.npcs.update(simDt, this.time);
     this.hud.update(simDt);
@@ -1096,7 +1248,13 @@ class Game {
     }
     const colliders = this.mode === 'deck' ? this.deckWorld.colliders : this.world.colliders;
     player.setGravity(engine.gravity(this.room));
+    if (input.jump && player.grounded) this.audio.jump();
+    const wasGrounded = player.grounded, vy = Math.abs(player.vel.y);
     player.update(dt, input, colliders);
+    if (!wasGrounded && player.grounded && vy > 5) this.audio.land();
+    // conversations: frame whoever is talking to you
+    if (!this.hud.talking) this.talkWith = null;
+    player.talkTarget = this.talkWith && !this.settings.comfort ? this.talkWith : null;
 
     const r = this.roomAt(player.pos);
     if (r !== this.room) this.enterRoom(r);
@@ -1140,7 +1298,9 @@ class Game {
     this.audio.setDuck(this.hud.talking);
 
     this.focus = this.findFocus();
-    this.hud.prompt(this.focus && !this.hud.talking ? `${this.touch ? '' : '[E] '}${this.focus.prompt}` : '');
+    const showFocus = this.focus && !this.hud.talking;
+    this.hud.prompt(showFocus ? this.focus.prompt : '');
+    this.placePrompt(showFocus ? this.focus.pos : null);
     const it = this.heldItem();
     this.hud.held(it?.label, it?.echo);
     this.hud.setState(!!facts.get('has_device'), this.room, engine.state(this.room), room.name, engine.locked.has(this.room));
@@ -1158,6 +1318,24 @@ class Game {
       this.dirty = false;
       this.saveT = 3;
     }
+  }
+
+  // The prompt floats over the thing you can use (tap it on touch screens),
+  // and a soft ring marks it in the world.
+  placePrompt(pos) {
+    this.fx.focus(pos, 0xffffff, this.time, this.camera);
+    if (!pos) return;
+    const v = new THREE.Vector3(pos[0], pos[1] + 0.55, pos[2]).project(this.camera);
+    const el = this.hud.el.prompt;
+    if (v.z > 1) {
+      el.classList.remove('on');
+      return;
+    }
+    const w = window.innerWidth, h = window.innerHeight;
+    const x = THREE.MathUtils.clamp((v.x * 0.5 + 0.5) * w, 90, w - 90);
+    const y = THREE.MathUtils.clamp((-v.y * 0.5 + 0.5) * h, 120, h - 140);
+    el.style.left = `${x}px`;
+    el.style.top = `${y}px`;
   }
 
   stepStation(dt) {

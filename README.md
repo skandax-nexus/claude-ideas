@@ -10,6 +10,27 @@ This repository contains:
 - **`game/` - the browser game** (Three.js): the Station Zero prologue plus the generated vessel campaign, for desktop and Android browsers.
 - **`docs/`** - the design for the full game.
 
+## v0.4: choose your character, voiced interactions, controls that stay out of the way
+
+- **Character select:** six heroes (Ren the explorer, Kai the pilot, Asha the engineer, Mira the medic, Leo from security, Noor the scientist), each with adjustable skin tone, hair colour, hairstyle and suit colour.
+  - The choice is previewed live in 3D and can be changed any time from the title or pause menu.
+- **Voiced dialogue**
+  - Every line can be spoken aloud: through the browser's speech engine on the web, or Android's own text-to-speech in the APK.
+  - Each character gets their own voice, including a generated voice for every crew member, and the music ducks under speech.
+  - The videos are voiced offline with the Kokoro neural TTS (`tools/voice-lines.py`).
+- **Interactions you can see and hear**
+  - **Prompts:** the use prompt floats over the object itself, with a soft ring marking it (tap it on touch screens).
+  - **Conversations:** the camera eases into an over-the-shoulder shot, with a soft letterbox.
+  - **Logs:** they play on hologram screens.
+  - **Doors** glide open. Pickups, tokens, saves and records sparkle.
+  - **Sounds:** each action has its own sound — terminals, doors, key and core inserts, beacons, tokens, greetings, jumps, landings and menus.
+- **Zoom by touch:** pinch on phones and the mouse wheel on desktop. Double-tap the look area to reset. There are no zoom buttons.
+- **Integrated controls**
+  - **Joystick:** appears under your left thumb anywhere on the left side.
+  - **Buttons:** a slim jump button and a SHIFT button that shows the current state.
+  - **The dock:** one quiet strip of icons for laws, log, map, TICK and the menu, with key hints on desktop.
+  - **Calm HUD:** dims while you play and brightens when something happens.
+
 ## v0.3: the vessel (about 5½ hours of play)
 
 The browser game is now a full campaign: the 35-minute **Station Zero** prologue, then **the vessel** — 8 generated decks with 4 sectors each, about 5 hours of play. See [docs/VESSEL.md](docs/VESSEL.md).
@@ -36,8 +57,8 @@ The browser game is now a full campaign: the 35-minute **Station Zero** prologue
 
 | | Desktop | Android |
 |---|---|---|
-| Zoom / camera view | mouse wheel, + / -, V | pinch, + / - buttons, ◉ |
-| Map / save / load | M, F5, F9, pause menu | MAP, pause menu |
+| Zoom / camera view | mouse wheel, V | pinch, double-tap to reset |
+| Map / save / load | M, F5, F9, pause menu | dock MAP or tap the minimap, pause menu |
 
 ## v0.2: calm redesign
 

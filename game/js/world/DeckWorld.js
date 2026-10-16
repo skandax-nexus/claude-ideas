@@ -135,7 +135,9 @@ export class DeckWorld {
       this.npcs.push({ n, crew, model, talkT: 0 });
     }
 
+    this.ready = false;
     this.refresh();
+    this.ready = true;
   }
 
   buildInteractable(it) {
@@ -221,7 +223,14 @@ export class DeckWorld {
         d.mesh.material = solid ? this.mats.lightSolid : this.mats.light;
         if (solid) cols.push(d.box);
       } else {
-        d.mesh.visible = present;
+        const isDoor = d.el.id && d.el.id.startsWith('door_');
+        if (isDoor && !present) {
+          // doors glide up into the frame instead of vanishing
+          if (d.openT === undefined) {
+            if (this.ready) d.openT = 0;
+            else d.mesh.visible = false;
+          }
+        } else d.mesh.visible = present;
         if (present && d.el.solid !== false) cols.push(d.box);
       }
     }
@@ -259,6 +268,13 @@ export class DeckWorld {
     if (!this.level) return null;
     const { player } = g;
     let event = null;
+    for (const d of this.dynamic) {
+      if (d.openT === undefined || d.openT >= 1) continue;
+      d.openT = Math.min(1, d.openT + dt * 1.1);
+      const k = d.openT * d.openT * (3 - 2 * d.openT);
+      d.mesh.position.y = k * (d.box.max[1] - d.box.min[1] + 0.1);
+      if (d.openT >= 1) d.mesh.visible = false;
+    }
     for (const [id, im] of Object.entries(this.itemMeshes)) {
       im.mesh.visible = g.held !== id && this.isItemAvailable(id);
       im.mesh.rotation.y = t * 1.2;

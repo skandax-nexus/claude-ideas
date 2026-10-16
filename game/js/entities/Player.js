@@ -22,6 +22,8 @@ export class Player {
     this.zoom = 1; // wheel / pinch multiplier
     this.distNow = 3.6;
     this.comfort = false; // instant gravity flips, steadier camera
+    this.talkTarget = null; // [x, y, z] of whoever you're talking to: the camera frames you both
+    this.talkK = 0;
     this.camPos = null;
     this.cinema = null; // { pos: Vector3, target: Vector3 } overrides the camera (trailers)
     this.pos = new THREE.Vector3();
@@ -36,6 +38,18 @@ export class Player {
     this.bob = 0;
     this.half = HALF;
     this.floatY = 1.25;
+  }
+
+  // Swap the character model (character select); returns the new model.
+  setModel(spec) {
+    const old = this.model;
+    this.model = makeHuman(spec);
+    if (old && old.parent) {
+      old.parent.add(this.model);
+      old.parent.remove(old);
+    }
+    old?.traverse((o) => o.geometry?.dispose?.());
+    return this.model;
   }
 
   place([x, y, z, yaw = 0]) {
@@ -225,12 +239,31 @@ export class Player {
       const altDist = Math.max(0.35, this.rayDistance(head, alt, altLen) - 0.15);
       if (altDist > dist + 0.3) { dist = altDist; target = head.clone().addScaledVector(alt, altDist); }
     }
+    // conversation framing: over your shoulder, looking at whoever is talking
+    this.talkK += ((this.talkTarget ? 1 : 0) - this.talkK) * (1 - Math.exp(-dt * 3));
+    let aim = head.clone().addScaledVector(F, 6);
+    if (this.talkK > 0.01 && this.talkTarget) {
+      const who = new THREE.Vector3(...this.talkTarget);
+      const flat = who.clone().sub(head);
+      flat.y = 0;
+      if (flat.lengthSq() > 0.04) {
+        flat.normalize();
+        const side = new THREE.Vector3().crossVectors(flat, this.U).normalize();
+        const want = head.clone().addScaledVector(flat, -1.7).addScaledVector(side, 0.85).addScaledVector(this.U, 0.25);
+        const d2 = want.clone().sub(head);
+        const l2 = d2.length();
+        d2.divideScalar(l2);
+        const free = Math.max(0.4, this.rayDistance(head, d2, l2) - 0.15);
+        target.lerp(head.clone().addScaledVector(d2, free), this.talkK);
+        aim.lerp(who.clone().lerp(head, 0.3), this.talkK);
+        dist = Math.min(dist, free);
+      }
+    }
     if (!this.camPos || this.camPos.distanceTo(target) > 6) this.camPos = target.clone();
     else this.camPos.lerp(target, 1 - Math.exp(-dt * (this.comfort ? 8 : 14)));
     // never let smoothing drag the camera behind a wall
-    if (this.camPos.distanceTo(head) > dist + 0.05) this.camPos.copy(target);
+    if (this.camPos.distanceTo(head) > Math.max(dist, target.distanceTo(head)) + 0.05) this.camPos.copy(target);
     // look slightly past the character's head, so the view stays centred on what's ahead
-    const aim = head.clone().addScaledVector(F, 6);
     _m.lookAt(this.camPos, aim, up);
     this.camera.quaternion.setFromRotationMatrix(_m);
     this.camera.position.copy(this.camPos);

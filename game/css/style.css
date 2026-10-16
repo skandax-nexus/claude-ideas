@@ -75,7 +75,7 @@ body.menu #ui { visibility: hidden; }
 #objective .txt { font-size: 15px; margin-top: 2px; font-weight: 600; }
 #objective.rewrite .txt { color: var(--physical); }
 
-#eye { position: absolute; left: 50%; top: 16px; transform: translateX(-50%); width: 120px; height: 10px; border-radius: 999px; background: var(--card); box-shadow: var(--shadow); opacity: 0; transition: opacity 0.4s; overflow: hidden; --v: 0; }
+#eye { position: absolute; left: 50%; top: 64px; transform: translateX(-50%); width: 120px; height: 10px; border-radius: 999px; background: var(--card); box-shadow: var(--shadow); opacity: 0; transition: opacity 0.4s; overflow: hidden; --v: 0; }
 #eye.on { opacity: 1; }
 #eye .iris { position: absolute; left: 0; top: 0; bottom: 0; width: calc(var(--v) * 100%); border-radius: 999px; background: linear-gradient(90deg, #7fd8ff, #ffc04a, #ff8a70); transition: width 0.15s; }
 #eye.alert { box-shadow: 0 0 0 2px rgba(255, 138, 112, 0.6), var(--shadow); }
@@ -108,7 +108,6 @@ body.touch #topbtns { display: flex; gap: 8px; position: absolute; left: 50%; tr
 #topbtns .tick { background: #ffd25a; }
 body.touch #held { bottom: auto; top: 70px; right: 16px; }
 body.touch #subs { bottom: 34%; }
-body.touch #prompt { top: 62%; }
 body.touch #objective { top: 60px; max-width: 46vw; }
 body.touch #card { padding-top: 22vh; }
 body.touch #card h2 { font-size: 26px; }
@@ -201,11 +200,7 @@ body.minimap #held { bottom: 196px; }
 .lg::before { content: ""; display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 5px; vertical-align: 0; }
 .lg.player::before { background: #ff7a63; } .lg.npc::before { background: #2f9a64; } .lg.sentinel::before { background: #4f9fe8; }
 .lg.item::before { background: #e0a43a; } .lg.token::before { background: #2fae6a; } .lg.gate::before { background: #7a5fd0; } .lg.beacon::before { background: #22aeb9; }
-#zoombtns { position: absolute; right: 196px; bottom: 18px; display: flex; flex-direction: column; gap: 6px; pointer-events: auto; }
-#zoombtns button { width: 38px; height: 38px; padding: 0; border-radius: 50%; font-size: 18px; line-height: 1; background: rgba(255, 255, 255, 0.85); }
-body:not(.minimap) #zoombtns { right: 18px; bottom: 60px; }
-body.touch #zoombtns { right: auto; left: 50%; transform: translateX(-50%); bottom: 18px; flex-direction: row; }
-#card { position: fixed; inset: 0; display: flex; align-items: flex-start; padding-top: 16vh; justify-content: center; pointer-events: none; z-index: 25; opacity: 0; transition: opacity 0.9s; }
+body:not(.minimap) body.touch #card { position: fixed; inset: 0; display: flex; align-items: flex-start; padding-top: 16vh; justify-content: center; pointer-events: none; z-index: 25; opacity: 0; transition: opacity 0.9s; }
 #card.on { opacity: 1; }
 #card .inner { text-align: center; background: rgba(255, 255, 255, 0.86); padding: 20px 36px; border-radius: 24px; box-shadow: 0 20px 60px rgba(40, 60, 90, 0.16); max-width: 86vw; }
 #card small { font-size: 11px; letter-spacing: 0.22em; color: var(--ink-soft); font-weight: 700; }
@@ -220,3 +215,74 @@ body.text-lg .sub { font-size: 19px; }
 body.text-lg #objective .txt { font-size: 17px; }
 
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+
+/* v0.4: integrated controls --------------------------------------------------- */
+/* the dock: one quiet strip for laws, log, map, TICK and the menu */
+#dock { position: absolute; left: 50%; top: 12px; transform: translateX(-50%); display: flex; gap: 4px; padding: 4px; border-radius: 999px;
+  background: rgba(255, 255, 255, 0.55); box-shadow: 0 6px 20px rgba(40, 60, 90, 0.12); pointer-events: auto; transition: opacity 0.6s; }
+#dock .d { display: flex; align-items: center; gap: 6px; border: none; background: transparent; padding: 6px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; letter-spacing: 0.08em; color: var(--ink-soft); box-shadow: none; }
+#dock .d svg { width: 18px; height: 18px; }
+#dock .d:hover, #dock .d.down { background: rgba(255, 255, 255, 0.9); color: var(--ink); }
+#dock .d kbd { font: 600 10px Inter, sans-serif; color: var(--ink-soft); background: rgba(35, 48, 60, 0.06); padding: 1px 5px; border-radius: 5px; }
+#dock .d.hint { color: #b07a08; }
+#dock .d.hint.ready svg { animation: tickblink 1.2s ease-in-out infinite; }
+#dock .d.laws.off { display: none; }
+@keyframes tickblink { 50% { opacity: 0.35; } }
+body.touch #dock .d kbd, body.touch #dock .d span { display: none; }
+body.touch #dock .d { padding: 9px 12px; }
+body.touch #dock .d svg { width: 20px; height: 20px; }
+body.touch #topbtns { display: none !important; }
+/* calm HUD: while you're moving and nothing new is happening, the HUD steps back */
+#state, #objective, #minimap, #held { transition: opacity 0.8s; }
+body.calm #dock, body.calm #state, body.calm #minimap { opacity: 0.38; }
+body.calm #objective { opacity: 0.5; }
+body.calm #buttons .b { opacity: 0.55; }
+/* the interaction prompt floats over the thing you can use; on touch you tap it */
+#prompt { position: absolute; left: 0; top: 0; transform: translate(-50%, -100%); margin: 0; display: flex; align-items: center; gap: 8px;
+  padding: 8px 14px; border: none; border-radius: 999px; background: rgba(255, 255, 255, 0.94); box-shadow: 0 8px 24px rgba(40, 60, 90, 0.18);
+  font-size: 13px; font-weight: 700; letter-spacing: 0.06em; color: var(--ink); opacity: 0; transition: opacity 0.2s; pointer-events: none; white-space: nowrap; }
+#prompt.on { opacity: 1; }
+body.touch #prompt.on { pointer-events: auto; padding: 12px 18px; font-size: 14px; }
+#prompt kbd { font: 700 11px Inter, sans-serif; background: var(--ink); color: #fff; padding: 2px 7px; border-radius: 6px; }
+#prompt::after { content: ""; position: absolute; left: 50%; bottom: -6px; width: 10px; height: 10px; background: inherit; transform: translateX(-50%) rotate(45deg); border-radius: 2px; }
+body.touch #prompt .txt::before { content: "TAP · "; color: var(--coral); }
+/* conversation: soft letterbox while someone talks to you */
+#letterbox i { position: absolute; left: 0; right: 0; height: 0; background: rgba(250, 252, 254, 0.9); transition: height 0.6s ease; }
+#letterbox i:first-child { top: 0; } #letterbox i:last-child { bottom: 0; }
+body.talking #letterbox i { height: 6vh; }
+body.talking #dock, body.talking #minimap { opacity: 0.2; }
+/* touch: the joystick appears where your thumb lands */
+body.touch #stick { display: none; }
+#stickzone { display: none; }
+body.touch #stickzone { display: block; position: absolute; left: 0; bottom: 0; width: 42%; height: 72%; pointer-events: auto; }
+body.touch #stickzone #stick { display: block; position: absolute; left: 0; top: 0; width: 132px; height: 132px; margin: -66px 0 0 -66px; border-radius: 50%;
+  background: rgba(255, 255, 255, 0.18); border: 2px solid rgba(255, 255, 255, 0.55); opacity: 0.35; transition: opacity 0.25s; pointer-events: none; }
+body.touch #stickzone #stick.on { opacity: 1; }
+#stickzone #stick .knob { width: 54px; height: 54px; background: rgba(255, 255, 255, 0.9); }
+body.touch #buttons { display: block; position: absolute; right: max(18px, env(safe-area-inset-right)); bottom: 20px; width: 170px; height: 150px; pointer-events: none; }
+body.touch #buttons .b { position: absolute; pointer-events: auto; border: none; background: rgba(255, 255, 255, 0.55); box-shadow: 0 6px 18px rgba(40, 60, 90, 0.14); transition: opacity 0.6s, transform 0.1s; }
+body.touch #buttons .use { display: none; }
+body.touch #buttons .jump { right: 0; top: 0; width: 64px; height: 64px; border-radius: 50%; color: var(--ink); display: flex; align-items: center; justify-content: center; }
+body.touch #buttons .jump svg { width: 26px; height: 26px; }
+body.touch #buttons .shift { left: 0; bottom: 0; width: 96px; height: 96px; border-radius: 50%; color: #fff; font-size: 12px; font-weight: 800; letter-spacing: 0.1em;
+  background: radial-gradient(circle at 50% 40%, rgba(255,255,255,0.35), transparent 60%), var(--inverted); opacity: 0.9; }
+body[data-state="INVERTED"].touch #buttons .shift { background: radial-gradient(circle at 50% 40%, rgba(255,255,255,0.35), transparent 60%), var(--echo); }
+body[data-state="ECHO"].touch #buttons .shift { background: radial-gradient(circle at 50% 40%, rgba(255,255,255,0.35), transparent 60%), var(--physical); }
+body.touch #buttons .b.down { transform: scale(0.93); }
+body.touch #minimap { pointer-events: auto; }
+body.touch #held { top: auto; bottom: 182px; right: 16px; }
+/* character select */
+#hero.overlay { justify-content: flex-start; background: linear-gradient(90deg, rgba(240, 245, 250, 0.9) 0%, rgba(240, 245, 250, 0.6) 38%, transparent 60%); backdrop-filter: none; }
+.herop { width: min(440px, 100%); }
+.heroes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 12px 0; }
+.heroes button { padding: 10px 6px; text-align: center; font-size: 13px; }
+.heroes button small { display: block; font-size: 10px; color: var(--ink-soft); font-weight: 600; letter-spacing: 0.08em; margin-top: 2px; }
+.heroes button.sel { background: var(--ink); color: #fff; border-color: var(--ink); }
+.heroes button.sel small { color: rgba(255, 255, 255, 0.7); }
+.custom .row2 { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 10px 0; font-size: 12px; font-weight: 700; letter-spacing: 0.08em; color: var(--ink-soft); }
+.sw { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.sw button { width: 26px; height: 26px; padding: 0; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 0 1px var(--line); }
+.sw button.sel { box-shadow: 0 0 0 2px var(--ink); }
+.sw .txtb { width: auto; height: auto; padding: 6px 10px; border-radius: 999px; font-size: 11px; box-shadow: none; border: 1px solid var(--line); }
+.heroblurb { font-size: 13px; color: var(--ink-soft); min-height: 36px; }
+#heroGo { background: var(--coral); color: #fff; border: none; }

@@ -21,6 +21,7 @@ const OUT = path.resolve(process.argv[2] || 'videos');
 const WHICH = process.argv[3] || 'all';
 const FFMPEG = process.env.FFMPEG || 'ffmpeg';
 const STILLS = !!process.env.STILLS; // quick check: one still per shot, no video
+const KOKORO = process.env.KOKORO_DIR; // optional: voice the dialogue with tools/voice-lines.py
 const FPS = 24, W = 960, H = 540;
 
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.webmanifest': 'application/manifest+json' };
@@ -173,8 +174,11 @@ const FILMS = {
         setup: `C.keys(); C.vessel(${SEED}); C.play({ deck: 0, sector: 0, idx: 0 }); C.card('<h1>THE <span>VESSEL</span></h1><p>Eight generated decks &middot; a crew of seven &middot; one of them started the loop</p>', 'big');`,
         frame: `(t) => { const p = AZ.player.pos; C.orbit(p.x, 2.2, p.z - 5, 9, 2.5, t * 0.18, 1.5); }` },
       { dur: 5, cues: [{ t: 0.3, fx: 'chime' }],
-        setup: `C.card(''); C.free(); C.play({ deck: 0, sector: 0, idx: 0 }, { sectorIntro: true }); AZ.hud.say(AZ.story.decks[0].intro.slice(0, 1), AZ.facts);`,
+        setup: `C.card(''); C.free(); C.play({ deck: 0, sector: 0, idx: 0 }, { sectorIntro: true });`,
         frame: `(t) => { C.step(1 / 24); }` },
+      { dur: 5, cues: [{ t: 0.4, fx: 'terminal' }],
+        setup: `C.vessel(${SEED}); C.play({ deck: 0, sector: 0, idx: 0 }, { laws: false }); const it = AZ.level.interactables.find((i) => i.kind === 'terminal'); const r = AZ.level.rooms[it.room]; AZ.player.place([it.pos[0] + 2.0 * Math.cos(r.spawn[3]), 0.86, it.pos[2] - 2.0 * Math.sin(r.spawn[3]) * 0, r.spawn[3]]); C.free(); ${chip('LOGS PLAY AS HOLOGRAMS')}`,
+        frame: `(t) => { const it = AZ.level.interactables.find((i) => i.kind === 'terminal'); const p = AZ.player.pos; if (t > 0.4 && !AZ._a) { AZ._a = 1; AZ.useDeck({ id: 'deck:' + it.id, it }); } C.cam(p.x + (it.pos[0] - p.x) * 0.1 + 0.8, 2.3, p.z + 2.6, it.pos[0], 2.0, it.pos[2]); }` },
       deckShot('DECK 1 · WALK THE CEILING ACROSS THE GAP', `(r) => r.challenges[0] && r.challenges[0].key === 'pit:gravity'`, 8.5, [{ t: 1.5, fx: 'sweep', args: [true] }, { t: 1.5, state: 'INVERTED' }, { t: 6.5, fx: 'sweep', args: [false] }, { t: 6.5, state: 'PHYSICAL' }]),
       deckShot('DECK 2 · MEMORIES CAN CARRY WEIGHT', `(r) => r.challenges[0] && r.challenges[0].key === 'pit:echo'`, 7, [{ t: 1.2, fx: 'sweep', args: [true] }, { t: 1.2, state: 'ECHO' }], '{ from: 1 }'),
       deckShot('DECK 3 · STOP GRAVITY. FLOAT.', `(r) => r.challenges.some((c) => c.key === 'ledge:zerog')`, 8, [{ t: 0.4, fx: 'chime' }], '{ fromEnd: 4 }'),
@@ -187,8 +191,8 @@ const FILMS = {
         frame: `(t) => { if (t > 1.6 && !AZ._a) { AZ._a = 1; AZ.shift('INVERTED'); } if (t > 2.4) { C.keys('KeyW'); } const s = AZ.deckWorld.sentinels[0]; if (s && t < 3.2) C.cam(AZ.player.pos.x + 3, 4.2, AZ.player.pos.z + 3, s.pos.x, 1.2, s.pos.z); else C.free(); }` }),
       deckShot('DECK 6 · HARD LIGHT HOLDS WHEN YOU TELL IT TO', `(r) => r.challenges.some((c) => c.key === 'ledge:light')`, 8, [{ t: 0.3, fx: 'chime' }], '{ fromEnd: 4 }'),
       { dur: 6.5, cues: [{ t: 0.2, fx: 'pickup' }],
-        setup: `C.vessel(${SEED}); C.keys(); const w = C.find((r) => r.kind === 'encounter', [2, 0]); C.play(w, { laws: false }); const n = AZ.deckWorld.npcs[0]; AZ.player.place([n.model.position.x, 0.86, n.model.position.z, 0]); AZ.player.pos.addScaledVector(AZ.player.H, -2.6); AZ.player.place([AZ.player.pos.x, 0.86, AZ.player.pos.z, AZ.level.rooms[AZ.room].spawn[3]]); const f = AZ.deckWorld.focusCandidates(AZ).find((c) => c.id.startsWith('dnpc')); AZ.useDeck(f); C.card('');`,
-        frame: `(t) => { const m = AZ.deckWorld.npcs[0].model.position; C.orbit(m.x, 1.5, m.z, 3.0, 0.2, 0.6 + t * 0.12, 1.5); }` },
+        setup: `C.vessel(${SEED}); C.keys(); const w = C.find((r) => r.kind === 'encounter', [2, 0]); C.play(w, { laws: false }); const n = AZ.deckWorld.npcs[0]; AZ.player.place([n.model.position.x, 0.86, n.model.position.z, 0]); AZ.player.pos.addScaledVector(AZ.player.H, -2.6); AZ.player.place([AZ.player.pos.x, 0.86, AZ.player.pos.z, AZ.level.rooms[AZ.room].spawn[3]]); const f = AZ.deckWorld.focusCandidates(AZ).find((c) => c.id.startsWith('dnpc')); C.quiet(); AZ.useDeck(f); C.free(); C.card('<div class="chip">CREW TALK TO YOU · THE CAMERA FRAMES THE CONVERSATION</div>');`,
+        frame: `(t) => { const m = AZ.deckWorld.npcs[0].model.position; const p = AZ.player.pos; const d = Math.hypot(m.x - p.x, m.z - p.z) || 1; AZ.player.H.set((m.x - p.x) / d, 0, (m.z - p.z) / d); }` },
       { dur: 5.5, cues: [{ t: 2.0, fx: 'sweep', args: [true] }, { t: 2.0, state: 'ECHO' }, { t: 2.6, fx: 'chime' }],
         setup: `C.vessel(${SEED}); const w = C.find((r) => r.kind === 'contradiction', [1, 0]); C.play(w, { laws: false }); const it = AZ.level.interactables.find((i) => i.kind === 'plaque'); AZ.player.place([it.pos[0], 0.86, it.pos[2], 0]); AZ.player.pos.lerp(new (AZ.player.pos.constructor)(...AZ.level.rooms[AZ.room].spawn), 0.12); AZ.player.place([AZ.player.pos.x, 0.86, AZ.player.pos.z, AZ.level.rooms[AZ.room].spawn[3]]); ${chip('THE RECORD SAYS ONE THING. THE ECHO REMEMBERS ANOTHER.')}`,
         frame: `(t) => { const it = AZ.level.interactables.find((i) => i.kind === 'plaque'); const p = AZ.player.pos; C.cam(p.x + (it.pos[0] - p.x) * 0.25, 2.6, p.z + (it.pos[2] - p.z) * 0.25 + 0.01, it.pos[0], 3.0, it.pos[2]); if (t > 2.0 && !AZ._b) { AZ._b = 1; AZ.shift('ECHO'); } if (t > 2.6 && !AZ._c) { AZ._c = 1; AZ.useDeck({ id: 'deck:' + it.id, it }); } }` },
@@ -209,8 +213,11 @@ const FILMS = {
       { dur: 3, cues: [{ t: 0, state: 'PHYSICAL' }, { t: 0.3, fx: 'chime' }],
         setup: `AZ.hud.show(null); AZ.paused = false; AZ.facts.set('has_device'); AZ.facts.set('left_antechamber'); AZ.facts.set('met_juno'); AZ.facts.set('has_tick'); AZ.player.place([1.5, 0.86, 6, ${PI}]); AZ.enterRoom('lab'); C.card('<h1>THE <span>CAST</span></h1><p>Who you meet aboard the vessel.</p>', 'big');`,
         frame: `(t) => { C.orbit(0, 3, 2, 10, 2, t * 0.2); if (t > 2.6) C.card(''); }` },
+      { dur: 7.5, cues: [0, 1.2, 2.4, 3.6, 4.8, 6.0].map((t) => ({ t, fx: 'blip', args: [880, 0.08] })),
+        setup: `C.quiet(); C.card(''); AZ.player.place([1.5, 0.86, 6, ${PI}]); AZ.openHero('title');`,
+        frame: `(t) => { const ids = ['ren', 'kai', 'asha', 'mira', 'leo', 'noor']; const i = Math.min(5, Math.floor(t / 1.2)); if (AZ._hero !== i) { AZ._hero = i; AZ.pickHero({ id: ids[i] }, 'title', null); } AZ.player.cinema = null; const p = AZ.player.pos; C.orbit(p.x - 0.7, p.y + 0.35, p.z, 2.6, 0.15, 0.5 + t * 0.12, 0.3); }` },
       { dur: 5, cues: [{ t: 0.1, fx: 'pickup' }],
-        setup: `C.quiet(); AZ.npcs.juno.position.set(-5, 0, 2.5); C.card('<div class="lower" style="--c:#ff7a63"><b>REN</b><span>Subject Zero. You. Explorer suit, waking up for the 42nd time.</span></div>');`,
+        setup: `delete AZ._hero; AZ.changeSetting('hero', { id: 'ren' }); AZ.pickHero({ id: 'ren' }, 'title', null); AZ.menu = null; AZ.hud.show(null); C.quiet(); AZ.npcs.juno.position.set(-5, 0, 2.5); C.card('<div class="lower" style="--c:#ff7a63"><b>REN</b><span>Subject Zero. You. Explorer suit, waking up for the 42nd time.</span></div>');`,
         frame: `(t) => { const p = AZ.player.pos; C.orbit(p.x, p.y + 0.5, p.z, C.lerp(2.4, 1.5, t / 5), 0.1, 0.45 - t * 0.25, 0.45); }` },
       { dur: 6, cues: [{ t: 0.1, fx: 'pickup' }],
         setup: `C.quiet(); AZ.npcs.talkToJuno(); C.card('<div class="lower" style="--c:#2f9a64"><b>JUNO HALE</b><span>Engineer. Last one awake. Has been living on the ceiling.</span></div>');`,
@@ -256,6 +263,19 @@ async function record(film, browser) {
   await page.evaluate(async () => { C.gen = await import('./js/gen/LevelGen.js'); });
   await page.addStyleTag({ content: '*{backdrop-filter:none!important}#card{transition:none!important}#objective,#crosshair,#zoombtns{display:none!important}' + (film.title.includes('characters') ? '#minimap{display:none!important}' : '') }); // trailers: keep the frame clean
   await page.evaluate((q) => { AZ.captureMode(); AZ.audio.start = () => {}; AZ.started = true; AZ.saveTo = () => {}; AZ.changeSetting('quality', q); AZ.changeSetting('minimap', true); }, process.env.QUALITY || 'medium');
+  // every spoken line is logged with its time; the voices are rendered offline afterwards
+  await page.evaluate(() => {
+    window.__lines = [];
+    window.__clock = 0;
+    AZ.voice.speak = () => {};
+    AZ.voice.enabled = true;
+    Object.defineProperty(AZ.voice, 'available', { get: () => true });
+    const orig = AZ.hud.onLine;
+    AZ.hud.onLine = (who, line) => {
+      orig(who, line);
+      if (line && line.text) window.__lines.push({ t: window.__clock, who, text: line.text, voice: line.voice || null, name: line.name || null });
+    };
+  });
   let frame = 0, clock = 0;
   const cues = [];
   for (const [i, shot] of film.shots.entries()) {
@@ -265,13 +285,13 @@ async function record(film, browser) {
     const n = Math.round(shot.dur * FPS);
     for (let f = 0; f < n; f++) {
       const skip = STILLS && f !== Math.floor(n * 0.6);
-      await page.evaluate(([src, t, dt, skip]) => { (0, eval)(src)(t); AZ.tickFrame(dt, skip); }, [shot.frame, f / FPS, 1 / FPS, skip]);
+      await page.evaluate(([src, t, dt, skip, clk]) => { window.__clock = clk; (0, eval)(src)(t); AZ.tickFrame(dt, skip); }, [shot.frame, f / FPS, 1 / FPS, skip, clock + f / FPS]);
       if (skip) continue;
       await page.screenshot({ path: path.join(dir, String(frame++).padStart(5, '0') + '.jpg'), type: 'jpeg', quality: 88 });
     }
     clock += shot.dur;
   }
-  if (STILLS) { await page.close(); console.log(`  stills in ${dir}${errors.length ? '  page errors: ' + errors.join(' | ') : ''}`); return; }
+  if (STILLS) { fs.writeFileSync(path.join(OUT, film.title + '.lines.json'), JSON.stringify(await page.evaluate(() => window.__lines), null, 1)); await page.close(); console.log(`  stills in ${dir}${errors.length ? '  page errors: ' + errors.join(' | ') : ''}`); return; }
   // talk blips for every subtitle line are part of the game; add a soft cue track
   const wavB64 = await page.evaluate(async ([dur, cues]) => {
     const buf = await AZSynth.renderWav(dur, cues);
@@ -282,10 +302,22 @@ async function record(film, browser) {
   }, [clock + 0.5, cues]);
   const wav = path.join(OUT, film.title + '.wav');
   fs.writeFileSync(wav, Buffer.from(wavB64, 'base64'));
+  const lines = await page.evaluate(() => window.__lines);
+  const linesPath = path.join(OUT, film.title + '.lines.json');
+  fs.writeFileSync(linesPath, JSON.stringify(lines, null, 1));
   await page.close();
   const mp4 = path.join(OUT, film.title + '.mp4');
-  execFileSync(FFMPEG, ['-y', '-loglevel', 'error', '-framerate', String(FPS), '-i', path.join(dir, '%05d.jpg'), '-i', wav,
-    '-af', `afade=t=in:d=0.8,afade=t=out:st=${Math.max(0, clock - 1.2)}:d=1.2`,
+  const fade = `afade=t=in:d=0.8,afade=t=out:st=${Math.max(0, clock - 1.2)}:d=1.2`;
+  let audioArgs = ['-i', wav, '-af', fade];
+  if (KOKORO && lines.length) {
+    // voice every line, then duck the music under the voices
+    const vox = path.join(OUT, film.title + '.voice.wav');
+    execFileSync('python3', [path.join(path.dirname(fileURLToPath(import.meta.url)), 'voice-lines.py'), linesPath, vox, KOKORO], { stdio: 'inherit' });
+    audioArgs = ['-i', wav, '-i', vox, '-filter_complex',
+      `[1:a]aresample=32000,${fade}[m];[2:a]aresample=32000,apad,asplit[v1][v2];[m][v1]sidechaincompress=threshold=0.015:ratio=6:attack=20:release=450[d];[d][v2]amix=inputs=2:normalize=0:duration=first[a]`,
+      '-map', '0:v', '-map', '[a]'];
+  }
+  execFileSync(FFMPEG, ['-y', '-loglevel', 'error', '-framerate', String(FPS), '-i', path.join(dir, '%05d.jpg'), ...audioArgs,
     '-c:v', 'libx264', '-preset', 'slow', '-crf', '20', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-b:a', '160k', '-shortest', '-movflags', '+faststart', mp4]);
   console.log(`  wrote ${mp4} (${clock}s, ${frame} frames)${errors.length ? '  page errors: ' + errors.join(' | ') : ''}`);
   return mp4;

@@ -42,7 +42,22 @@ export class Input {
     window.addEventListener('blur', () => this.keys.clear());
   }
 
+  // anything the player does wakes the HUD up for a moment
+  activity() {
+    this.lastActivity = performance.now();
+  }
+
   bindMouse() {
+    // the dock, the floating prompt and the minimap also work with a mouse
+    for (const b of document.querySelectorAll('#ui [data-act]')) {
+      b.addEventListener('click', (e) => {
+        if (this.touch) return;
+        e.stopPropagation();
+        const a = b.dataset.act;
+        if (a === 'jump') this.state.jump = true;
+        else this.actions.push(a);
+      });
+    }
     this.canvas.addEventListener('click', () => {
       if (!this.touch && this.enabled && document.pointerLockElement !== this.canvas) this.canvas.requestPointerLock?.();
     });
@@ -64,18 +79,31 @@ export class Input {
 
   bindTouch(ui) {
     document.body.classList.add('touch');
+    // The joystick appears wherever your left thumb lands, and follows it.
+    const zone = ui.querySelector('#stickzone');
     const stickEl = ui.querySelector('#stick');
     const knob = ui.querySelector('#stick .knob');
     const lookEl = ui.querySelector('#lookzone');
     const R = 56;
-    stickEl.addEventListener('touchstart', (e) => {
+    const rest = () => {
+      const r = zone.getBoundingClientRect();
+      stickEl.style.left = `${Math.min(110, r.width * 0.3)}px`;
+      stickEl.style.top = `${r.height - 100}px`;
+    };
+    rest();
+    window.addEventListener('resize', rest);
+    zone.addEventListener('touchstart', (e) => {
       e.preventDefault();
+      if (this.stick.id !== null) return;
       const t = e.changedTouches[0];
-      const r = stickEl.getBoundingClientRect();
-      Object.assign(this.stick, { id: t.identifier, ox: r.left + r.width / 2, oy: r.top + r.height / 2, x: 0, y: 0 });
-      this.moveStick(t, knob, R);
+      const r = zone.getBoundingClientRect();
+      stickEl.style.left = `${t.clientX - r.left}px`;
+      stickEl.style.top = `${t.clientY - r.top}px`;
+      stickEl.classList.add('on');
+      Object.assign(this.stick, { id: t.identifier, ox: t.clientX, oy: t.clientY, x: 0, y: 0 });
+      this.activity();
     }, { passive: false });
-    stickEl.addEventListener('touchmove', (e) => {
+    zone.addEventListener('touchmove', (e) => {
       e.preventDefault();
       for (const t of e.changedTouches) if (t.identifier === this.stick.id) this.moveStick(t, knob, R);
     }, { passive: false });
@@ -84,12 +112,13 @@ export class Input {
         this.stick.id = null;
         this.stick.x = this.stick.y = 0;
         knob.style.transform = 'translate(-50%,-50%)';
+        stickEl.classList.remove('on');
+        rest();
       }
     };
-    stickEl.addEventListener('touchend', endStick);
-    stickEl.addEventListener('touchcancel', endStick);
+    zone.addEventListener('touchend', endStick);
+    zone.addEventListener('touchcancel', endStick);
 
-    const pinchDist = (e) => Math.hypot(e.targetTouches[0].clientX - e.targetTouches[1].clientX, e.targetTouches[0].clientY - e.targetTouches[1].clientY);
     lookEl.addEventListener('touchstart', (e) => {
       e.preventDefault();
       if (e.targetTouches.length >= 2) {
@@ -99,6 +128,9 @@ export class Input {
       }
       if (this.lookTouch.id !== null) return;
       const t = e.changedTouches[0];
+      const now = performance.now();
+      if (now - (this.lastTap || 0) < 280) this.zoomReset = true; // double tap: back to the normal view
+      this.lastTap = now;
       Object.assign(this.lookTouch, { id: t.identifier, x: t.clientX, y: t.clientY });
     }, { passive: false });
     lookEl.addEventListener('touchmove', (e) => {
@@ -127,6 +159,7 @@ export class Input {
 
     for (const b of ui.querySelectorAll('[data-act]')) {
       b.addEventListener('touchstart', (e) => {
+        this.activity();
         e.preventDefault();
         e.stopPropagation();
         const a = b.dataset.act;

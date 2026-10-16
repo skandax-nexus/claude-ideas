@@ -67,6 +67,11 @@ try {
   await wait(1500);
   await shot('00-title');
   await page.click('#begin');
+  await wait(600);
+  await shot('00b-character-select');
+  await page.click('[data-hero="asha"]');
+  await wait(300);
+  await page.click('#heroGo');
   await sim(1.2);
   await shot('01-antechamber');
 
@@ -267,6 +272,8 @@ try {
   await mob.waitForTimeout(1200);
   await mob.evaluate(() => localStorage.clear());
   await mob.tap('#begin');
+  await mob.waitForTimeout(500);
+  await mob.tap('#heroGo');
   await mob.waitForTimeout(1500);
   await mob.screenshot({ path: path.join(shots, '18-android-layout.png') });
   console.log('  screenshot 18-android-layout');

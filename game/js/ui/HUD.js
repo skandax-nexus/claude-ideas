@@ -21,7 +21,7 @@ export class HUD {
   // --- subtitles ---------------------------------------------------------
   say(lines, facts, done) {
     const filtered = lines.filter((l) => !l.when || facts.test(l.when));
-    for (const l of filtered) this.subs.push({ ...l, dur: Math.max(2.2, l.text.length * 0.055) });
+    for (const l of filtered) this.subs.push({ ...l, dur: this.durFn?.(l) || Math.max(2.2, l.text.length * 0.055) });
     if (done) this.subs.push({ done });
     if (this.subT <= 0) this.nextSub();
   }
@@ -41,7 +41,7 @@ export class HUD {
       this.subT = 0;
       return;
     }
-    this.onLine?.(s.who);
+    this.onLine?.(s.who, s);
     const sp = s.name ? { name: s.name, color: s.color || '#23303c' } : SPEAKERS[s.who] || SPEAKERS.NONE;
     const name = sp.name ? `<b style="color:${sp.color}">${sp.name}</b> ` : '';
     const cls = s.who === 'OBSERVER' ? 'obs' : s.who === 'NONE' ? 'narr' : '';
@@ -50,6 +50,7 @@ export class HUD {
   }
 
   skipSub() {
+    this.onSkip?.();
     if (this.subT > 0) this.subT = 0.01;
   }
 
@@ -59,7 +60,9 @@ export class HUD {
 
   // --- small widgets -----------------------------------------------------
   prompt(text) {
-    this.el.prompt.textContent = text || '';
+    const t = this.el.prompt.querySelector('.txt');
+    if (t) t.textContent = text || '';
+    else this.el.prompt.textContent = text || '';
     this.el.prompt.classList.toggle('on', !!text);
   }
 
