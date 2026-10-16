@@ -3,7 +3,7 @@
 // clips through walls, and barrel-rolls around the facing direction when
 // gravity flips so "forward" stays forward.
 import * as THREE from '../../vendor/three.module.min.js';
-import { makeHuman, CAST_SPECS } from '../world/humans.js';
+import { makePlayerModel } from '../world/People.js';
 
 const HALF = new THREE.Vector3(0.3, 0.85, 0.3);
 const EYE = 0.68;
@@ -14,7 +14,7 @@ const _m = new THREE.Matrix4();
 export class Player {
   constructor(camera, scene) {
     this.camera = camera;
-    this.model = makeHuman(CAST_SPECS.ren);
+    this.model = makePlayerModel({ id: 'ren' });
     if (scene) scene.add(this.model);
     this.facing = new THREE.Vector3(0, 0, -1);
     this.colliders = [];
@@ -40,10 +40,12 @@ export class Player {
     this.floatY = 1.25;
   }
 
-  // Swap the character model (character select); returns the new model.
-  setModel(spec) {
+  // Swap the character model (character select: settings.hero); returns the new model.
+  setModel(choice) {
     const old = this.model;
-    this.model = makeHuman(spec);
+    this.model = makePlayerModel(choice);
+    this.model.position.copy(old.position);
+    this.model.quaternion.copy(old.quaternion);
     if (old && old.parent) {
       old.parent.add(this.model);
       old.parent.remove(old);

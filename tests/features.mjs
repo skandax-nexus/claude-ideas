@@ -71,12 +71,12 @@ async function desktop() {
   await page.click('[data-hero="kai"]');
   await page.waitForTimeout(200);
   check(await az(() => AZ.settings.hero.id) === 'kai', 'picking a hero updates the choice');
-  check(await az(() => AZ.player.model.userData.spec?.costume || AZ.player.model.userData.spec) !== undefined, 'player model rebuilt');
-  await page.click('#hero .sw button[data-k="hairStyle"][data-v="long"]');
-  await page.click('#hero .sw button[data-k="skin"]');
+  check(await az(() => AZ.player.model.userData.actor && AZ.player.model.userData.spec.model) === 'vanguard', 'player model rebuilt as the modelled, mo-capped Vanguard');
+  await page.click('#hero .sw button[data-k="tint"]:nth-child(4)');
   await page.waitForTimeout(200);
   const hero = await az(() => AZ.settings.hero);
-  check(hero.id === 'kai' && hero.hairStyle === 'long' && hero.skin !== undefined, 'customising keeps the hero and stores the options', JSON.stringify(hero));
+  check(hero.id === 'kai' && hero.tint === 0xffe0c2, 'suit colour keeps the hero and stores the option', JSON.stringify(hero));
+  check(await az(() => AZ.player.model.userData.spec.tint) === 0xffe0c2, 'suit colour applied to the model');
   check(await az(() => !!AZ.player.model.userData.handL.children.length), 'reality device moved into the new model\'s hand');
   await page.screenshot({ timeout: 180000, path: path.join(shots, 'f01-character-select.png') });
   await page.click('#heroGo');

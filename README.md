@@ -10,6 +10,15 @@ This repository contains:
 - **`game/` - the browser game** (Three.js): the Station Zero prologue plus the generated vessel campaign, for desktop and Android browsers.
 - **`docs/`** - the design for the full game.
 
+## v0.6: modelled, motion-captured characters
+
+Everyone you see is now a professionally modelled, rigged character (Mixamo models from the three.js examples, in `game/assets/characters`) animated with motion capture (`game/js/world/Actors.js`):
+
+- **Cast:** Ren is Michelle (shades, headphones, a real face). Kai, Asha, Leo and Mira wear Vanguard armour, in any suit colour. Noor is a synthetic, and Juno wears green armour. The Custodian, the Other and crew echoes are glowing holograms.
+- **Motion:** idle, walk and run blend smoothly by speed, with the stride matched to ground speed so feet don't slide. There's a leap pose in the air, nods and head-shakes while talking, a head that turns to whoever you're talking to, and a wave.
+- **Retargeting:** clips are retargeted between skeletons through world space, so any Mixamo-rigged `.glb` added to `MODELS` joins the cast.
+- **Fallback:** if the models can't load, the procedural humans (`humans.js`) stand in. The APK and the single-file preview carry the models inline.
+
 ## v0.4: choose your character, voiced interactions, controls that stay out of the way
 
 - **Character select:** six heroes (Ren the explorer, Kai the pilot, Asha the engineer, Mira the medic, Leo from security, Noor the scientist), each with adjustable skin tone, hair colour, hairstyle and suit colour.

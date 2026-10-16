@@ -2,7 +2,7 @@
 // TICK (a little drone companion who doubles as the hint system).
 import * as THREE from '../../vendor/three.module.min.js';
 import { makeTick } from './models.js';
-import { makeHuman, CAST_SPECS } from './humans.js';
+import { makeCastModel } from './People.js';
 import { juno as JUNO_LINES, hints } from './story.js';
 
 const JUNO_SPOT = new THREE.Vector3(-5, 0, 2.5);
@@ -10,7 +10,7 @@ const JUNO_SPOT = new THREE.Vector3(-5, 0, 2.5);
 export class Npcs {
   constructor(game) {
     this.g = game;
-    this.juno = makeHuman(CAST_SPECS.juno);
+    this.juno = makeCastModel('juno');
     this.juno.visible = false;
     this.juno.position.copy(JUNO_SPOT);
     game.scene.add(this.juno);

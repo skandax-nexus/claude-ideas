@@ -23,6 +23,8 @@ Files: `game/js/entities/Player.js`, `unity/.../Player/PlayerCamera.cs`, `Player
 
 ## Characters
 
+**v0.6:** the cast is now modelled, rigged characters driven by motion capture (`game/js/world/Actors.js`, chosen in `game/js/world/People.js`). The procedural humans below remain as the fallback.
+
 **v0.3:** every character is now a procedurally built human (`game/js/world/humans.js`).
 
 - **Body:** realistic proportions, built from lofted limbs and torso on a joint skeleton.

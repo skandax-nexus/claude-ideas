@@ -5,10 +5,9 @@
 import * as THREE from '../../vendor/three.module.min.js';
 import { deckMaterials, boxGeometry, mergeGeometries, textTexture } from './materials.js';
 import * as M from './models.js';
-import { makeHuman, randomCrewSpec } from './humans.js';
+import { makeCrewModel } from './People.js';
 import { TOKENS } from '../core/Laws.js';
 import { compileCondition } from '../core/conditions.js';
-import { mulberry32 } from '../gen/rng.js';
 
 const _v = new THREE.Vector3();
 
@@ -127,8 +126,7 @@ export class DeckWorld {
 
     for (const n of level.npcs) {
       const crew = story.cast.find((c) => c.id === n.crew) || story.captain;
-      const spec = { ...randomCrewSpec(mulberry32(crew.seed)), hologram: !!n.hologram, glow: n.hologram ? crewGlow(crew.color) : undefined };
-      const model = makeHuman(spec);
+      const model = makeCrewModel(crew, { hologram: !!n.hologram, glow: n.hologram ? crewGlow(crew.color) : undefined });
       model.position.set(...n.pos);
       model.rotation.y = n.yaw || 0;
       root.add(model);

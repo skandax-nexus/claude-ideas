@@ -17,7 +17,14 @@ const css = fs.readFileSync('../game/css/style.css', 'utf8');
 const js = fs.readFileSync(out + '/game.js', 'utf8').replace(/<\/script/gi, '<\\/script');
 html = html.replace(/<link rel="manifest"[^>]*>\n?/, '').replace(/<link rel="icon"[^>]*>\n?/, '')
   .replace(/<link rel="stylesheet"[^>]*>/, () => `<style>${css}</style>`)
-  .replace(/<script type="module" src="js\/main.js"><\/script>/, () => `<script>${js}</script>`);
+  .replace(/<script type="module" src="js\/main.js"><\/script>/, () => `<script>${models()}</script><script>${js}</script>`);
+// the character models ride along as data: URIs (fetch can't read file:// in a WebView)
+function models() {
+  const dir = '../game/assets/characters/';
+  const m = {};
+  for (const f of fs.readdirSync(dir).filter((f) => f.endsWith('.glb'))) m[f] = 'data:model/gltf-binary;base64,' + fs.readFileSync(dir + f).toString('base64');
+  return 'window.AZ_MODELS=' + JSON.stringify(m) + ';';
+}
 fs.writeFileSync(out + '/assets/index.html', html);
 JS
 

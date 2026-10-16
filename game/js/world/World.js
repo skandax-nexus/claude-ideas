@@ -4,7 +4,7 @@
 import * as THREE from '../../vendor/three.module.min.js';
 import { createMaterials, boxGeometry, mergeGeometries, textTexture } from './materials.js';
 import * as M from './models.js';
-import { makeHuman, CAST_SPECS } from './humans.js';
+import { makeCastModel } from './People.js';
 import {
   elements, texts, drifters, cables, interactables, items, tokens, SHADOW,
 } from './maps.js';
@@ -107,6 +107,19 @@ export class World {
     this.root.add(this.stars);
   }
 
+  // The Other wears your face: rebuild it when you pick a hero.
+  refreshCast(choice) {
+    const old = this.props.other;
+    if (!old) return;
+    const next = makeCastModel('other', choice);
+    next.position.copy(old.position);
+    next.rotation.copy(old.rotation);
+    next.visible = old.visible;
+    old.parent?.add(next);
+    old.parent?.remove(old);
+    this.props.other = next;
+  }
+
   buildProps() {
     const P = this.props;
     const add = (id, obj, pos, rotY = 0) => {
@@ -126,8 +139,8 @@ export class World {
     add('socketCore', M.makeCoreItem(), [0, 1.2, 1.7]);
     const lock = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.8, 0.08), new THREE.MeshBasicMaterial({ color: 0x4af0c8 }));
     add('archive_lock', lock, [3, 1.4, -11.95]);
-    add('custodian', makeHuman(CAST_SPECS.custodian), [0, 0, -20.5], Math.PI);
-    const other = add('other', makeHuman(CAST_SPECS.other), [0, 4.5, 14.5]);
+    add('custodian', makeCastModel('custodian'), [0, 0, -20.5], Math.PI);
+    const other = add('other', makeCastModel('other'), [0, 4.5, 14.5]);
     other.rotation.z = Math.PI;
     // The shadow lives on the east wall of the lab, and as a figure in echo.
     const wallShadow = M.makeWallShadow();

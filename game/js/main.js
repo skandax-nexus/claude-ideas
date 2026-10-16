@@ -30,6 +30,8 @@ import { MiniMap } from './ui/MiniMap.js';
 import { Voice } from './audio/Voice.js';
 import { Fx } from './world/Fx.js';
 import { HEROES, OPTIONS, heroSpec, hex } from './ui/Heroes.js';
+import { loadActors, actorsReady } from './world/Actors.js';
+import { HERO_LOOKS, SUIT_TINTS, canTint } from './world/People.js';
 
 const VERSION = '0.3.0';
 const BOOT_KEY = 'afterzero.boot';
@@ -110,7 +112,8 @@ class Game {
     this.input = new Input(this.canvas, document.querySelector('#ui'));
     this.world = new World(this.scene, this.facts, this.engine);
     this.player = new Player(this.camera, this.scene);
-    if (this.settings.hero) this.player.setModel(heroSpec(this.settings.hero));
+    if (this.settings.hero) this.player.setModel(this.settings.hero);
+    this.world.refreshCast(this.settings.hero);
     this.voice = new Voice();
     this.fx = new Fx(this.scene);
     this.lastEvent = 0;
@@ -437,14 +440,23 @@ class Game {
     this.input.release();
     if (!this.room) this.enterRoom('antechamber', true);
     const cur = this.settings.hero || { id: 'ren' };
-    const base = HEROES[cur.id] || HEROES.ren;
-    const spec = heroSpec(cur);
     const $ = (q) => document.querySelector(q);
-    $('#hero .heroes').innerHTML = Object.entries(HEROES).map(([id, h]) => `<button data-hero="${id}" class="${id === (cur.id || 'ren') ? 'sel' : ''}">${h.name}<small>${h.role.toUpperCase()}</small></button>`).join('');
-    const sw = (k, list, fmt) => `<div class="row2"><span>${fmt}</span><span class="sw">${list.map((v) => k === 'hairStyle'
-      ? `<button class="txtb ${spec[k] === v ? 'sel' : ''}" data-k="${k}" data-v="${v}">${v}</button>`
-      : `<button style="background:${hex(v)}" class="${spec[k] === v ? 'sel' : ''}" data-k="${k}" data-v="${v}" aria-label="${fmt} ${hex(v)}"></button>`).join('')}</span></div>`;
-    $('#hero .custom').innerHTML = `<p class="heroblurb">${base.blurb}</p>` + sw('skin', OPTIONS.skin, 'SKIN') + sw('hair', OPTIONS.hair, 'HAIR') + sw('hairStyle', OPTIONS.hairStyle, 'STYLE') + sw('suit', OPTIONS.suit, 'SUIT');
+    if (actorsReady()) {
+      const look = HERO_LOOKS[cur.id] || HERO_LOOKS.ren;
+      const tint = cur.tint !== undefined ? cur.tint : look.tint;
+      $('#hero .heroes').innerHTML = Object.entries(HERO_LOOKS).map(([id, h]) => `<button data-hero="${id}" class="${id === (cur.id || 'ren') ? 'sel' : ''}">${h.name}<small>${h.role.toUpperCase()}</small></button>`).join('');
+      $('#hero .custom').innerHTML = `<p class="heroblurb">${look.blurb}</p>` + (canTint(cur)
+        ? `<div class="row2"><span>SUIT</span><span class="sw">${SUIT_TINTS.map((v) => `<button style="background:${hex(v)}" class="${tint === v ? 'sel' : ''}" data-k="tint" data-v="${v}" aria-label="SUIT ${hex(v)}"></button>`).join('')}</span></div>`
+        : '');
+    } else {
+      const base = HEROES[cur.id] || HEROES.ren;
+      const spec = heroSpec(cur);
+      $('#hero .heroes').innerHTML = Object.entries(HEROES).map(([id, h]) => `<button data-hero="${id}" class="${id === (cur.id || 'ren') ? 'sel' : ''}">${h.name}<small>${h.role.toUpperCase()}</small></button>`).join('');
+      const sw = (k, list, fmt) => `<div class="row2"><span>${fmt}</span><span class="sw">${list.map((v) => k === 'hairStyle'
+        ? `<button class="txtb ${spec[k] === v ? 'sel' : ''}" data-k="${k}" data-v="${v}">${v}</button>`
+        : `<button style="background:${hex(v)}" class="${spec[k] === v ? 'sel' : ''}" data-k="${k}" data-v="${v}" aria-label="${fmt} ${hex(v)}"></button>`).join('')}</span></div>`;
+      $('#hero .custom').innerHTML = `<p class="heroblurb">${base.blurb}</p>` + sw('skin', OPTIONS.skin, 'SKIN') + sw('hair', OPTIONS.hair, 'HAIR') + sw('hairStyle', OPTIONS.hairStyle, 'STYLE') + sw('suit', OPTIONS.suit, 'SUIT');
+    }
     for (const b of document.querySelectorAll('#hero [data-hero]')) b.onclick = () => this.pickHero({ id: b.dataset.hero }, from, then);
     for (const b of document.querySelectorAll('#hero .sw button')) {
       b.onclick = () => {
@@ -465,8 +477,9 @@ class Game {
 
   pickHero(choice, from, then) {
     this.changeSetting('hero', choice);
-    this.player.setModel(heroSpec(choice));
+    this.player.setModel(choice);
     this.buildViewModels();
+    this.world.refreshCast(choice);
     this.audio.ui('press');
     this.openHero(from, then);
   }
@@ -1473,7 +1486,9 @@ class Game {
   }
 }
 
-window.addEventListener('DOMContentLoaded', () => {
+window.addEventListener('DOMContentLoaded', async () => {
+  // the modelled cast loads first (a few MB); the procedural cast stands in if it can't
+  await Promise.race([loadActors(), new Promise((r) => setTimeout(r, 15000))]);
   try {
     window.AZ = new Game();
     window.AZSynth = Synth;
