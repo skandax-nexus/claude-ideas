@@ -20,6 +20,7 @@ const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'game
 const OUT = path.resolve(process.argv[2] || 'videos');
 const WHICH = process.argv[3] || 'all';
 const FFMPEG = process.env.FFMPEG || 'ffmpeg';
+const STILLS = !!process.env.STILLS; // quick check: one still per shot, no video
 const FPS = 24, W = 960, H = 540;
 
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.webmanifest': 'application/manifest+json' };
@@ -50,10 +51,15 @@ window.C = {
         #cine .lower{position:absolute;left:36px;bottom:36px;background:rgba(255,255,255,.92);border-radius:18px;padding:14px 22px;
           box-shadow:0 12px 30px rgba(40,60,90,.18);border-left:6px solid var(--c,#ff7a63)}
         #cine .lower b{display:block;font-size:26px;letter-spacing:.06em} #cine .lower span{font-size:15px;color:#5c6b79}
+        body.cine-lower #subs{left:auto;right:28px;bottom:36px;transform:none;width:330px;text-align:right}
+        body.cine-lower #cine .lower{max-width:520px}
+        body.cine-lower #subs .sub{font-size:13px;padding:10px 14px}
+        body.cine-lower #prompt, body.cine-lower #toast{display:none}
         #cine .chip{position:absolute;left:50%;transform:translateX(-50%);top:96px;background:rgba(255,255,255,.9);border-radius:999px;padding:8px 16px;font-weight:700;font-size:13px;letter-spacing:.12em;color:#5c6b79}\`;
       document.head.appendChild(st);
     }
     el.innerHTML = html ? (kind === 'big' ? '<div class="big">' + html + '</div>' : html) : '';
+    document.body.classList.toggle('cine-lower', !!html && html.includes('class="lower"')); // name cards: subtitles step aside
   },
   orbit(cx, cy, cz, r, h, a, ty = cy) {
     AZ.player.cinema = { pos: { x: cx + Math.sin(a) * r, y: cy + h, z: cz + Math.cos(a) * r }, target: { x: cx, y: ty, z: cz }, up: { x: 0, y: 1, z: 0 } };
@@ -93,8 +99,8 @@ const FILMS = {
         setup: `C.card(''); for (const k of ['HELD','PERSISTS']) AZ.facts.set('token_' + k); AZ.openMenu('laws');`,
         frame: `(t) => { if (t > 1.6 && !AZ._h) { AZ._h = 1; AZ.engine.setLaw(1, { subject: 'HELD', verb: 'PERSISTS', target: 'PHYSICAL' }); AZ.hud.lawDraft = null; AZ.hud.renderLaws(AZ, 'LAW 2 INSTALLED'); } }` },
       { dur: 7, cues: [{ t: 0, state: 'PHYSICAL' }, { t: 0.2, threat: 0.7 }, { t: 3.5, fx: 'alert' }],
-        setup: `AZ.closeMenu(); AZ.engine.setState('lab', 'PHYSICAL'); C.quiet(); AZ.player.place([-27.2, 0.86, -6.2, ${PI / 2}]); AZ.enterRoom('hall'); AZ.observer.sightRange = 0; AZ.observer.pos.set(-32.5, 0, -2.4); AZ.observer.mode = 'patrol'; AZ.observer.path = []; C.card('<div class="chip">THE OBSERVER LEARNS HOW YOU PLAY</div>');`,
-        frame: `(t) => { C.cam(C.lerp(-21.5, -23.5, t / 7), C.lerp(4.6, 3.8, t / 7), C.lerp(-7.4, -7.0, t / 7), -30.5, 1.3, -3.6); if (t > 3.5) AZ.observer.suspicion = Math.min(0.9, (t - 3.5) * 0.4); }` },
+        setup: `AZ.closeMenu(); AZ.engine.setState('lab', 'PHYSICAL'); C.quiet(); AZ.player.place([-26.6, 0.86, -7.1, ${PI / 2}]); AZ.enterRoom('hall'); AZ.observer.sightRange = 0; AZ.observer.pos.set(-35.5, 0, -6.2); AZ.observer.mode = 'pause'; AZ.observer.timer = 99; AZ.observer.path = []; C.card('<div class="chip">THE OBSERVER LEARNS HOW YOU PLAY</div>');`,
+        frame: `(t) => { C.cam(C.lerp(-21.0, -23.0, t / 7), C.lerp(3.6, 3.0, t / 7), -6.0, -35.5, 1.3, -6.6); if (t > 3.5) AZ.observer.suspicion = Math.min(0.9, (t - 3.5) * 0.4); }` },
       { dur: 6, cues: [{ t: 0, threat: 0 }, { t: 0.4, state: 'ECHO' }, { t: 0.4, fx: 'sweep', args: [true] }],
         setup: `C.free(); AZ.observer.suspicion = 0; for (const k of ['ECHOES','SOLIDIFIES']) AZ.facts.set('token_' + k); AZ.facts.set('archive_open'); AZ.facts.set('custodian_remembers'); AZ.engine.unlockSlot(3); AZ.engine.setLaw(2, { subject: 'ECHOES', verb: 'SOLIDIFIES', target: 'ECHO' }); C.quiet(); AZ.player.place([0, 0.86, -21.5, 0]); AZ.enterRoom('archive'); AZ.engine.setState('archive', 'ECHO'); C.keys('KeyW'); C.card('<div class="chip">WALK ON A MEMORY</div>');`,
         frame: `(t) => { if (t < 3.4) C.cam(6.5, 2.4, C.lerp(-23.5, -28, t / 3.4), 0, -0.4, C.lerp(-25, -30, t / 3.4)); else C.free(); if (t > 4.6) C.keys(); }` },
@@ -128,8 +134,8 @@ const FILMS = {
         setup: `C.quiet(); AZ.player.place([-18, 0.86, 6, ${PI / 2}]); AZ.enterRoom('hall'); AZ.observer.sightRange = 0; AZ.observer.pos.set(-31, 0, 2.5); AZ.observer.mode = 'pause'; AZ.observer.timer = 99; AZ.observer.lookTarget = { x: -26, z: 6 }; C.card('<div class="lower" style="--c:#4fa8d8"><b>THE OBSERVER</b><span>It learns how you hide, how you run, which laws you use.</span></div>');`,
         frame: `(t) => { AZ.observer.suspicion = t < 2 ? 0 : t < 4 ? 0.6 : 0; AZ.observer.mode = t > 4 && t < 5 ? 'chase' : 'pause'; AZ.observer.timer = 99; C.orbit(-31, 1.6, 2.5, 5, 0.8, 1.2 + t * 0.25, 2); }` },
       { dur: 5, cues: [{ t: 0.1, fx: 'pickup' }, { t: 0.1, state: 'INVERTED' }],
-        setup: `C.quiet(); AZ.observer.mode = 'patrol'; AZ.facts.set('shard_touch', 2); AZ.facts.set('other_gone', false); AZ.player.place([0, 0.86, 23.5, 0]); AZ.enterRoom('antechamber'); C.card('<div class="lower" style="--c:#7a5fd0"><b>THE OTHER</b><span>Stands upside down. Knows your name. Is you, one cycle later.</span></div>');`,
-        frame: `(t) => { C.cam(1.2, 1.4, 18.5 - t * 0.3, 0, 3.4, 14.5); }` },
+        setup: `C.quiet(); AZ.observer.mode = 'patrol'; AZ.facts.set('shard_touch', 2); AZ.facts.set('other_gone', false); AZ.player.place([0.9, 0.86, 24.2, 0]); AZ.enterRoom('antechamber'); AZ.world.props.other.position.set(0, 4.4, 20.2); C.card('<div class="lower" style="--c:#7a5fd0"><b>THE OTHER</b><span>Stands upside down. Knows your name. Is you, one cycle later.</span></div>');`,
+        frame: `(t) => { C.cam(-2.7, 2.2 + t * 0.08, 23.0 - t * 0.12, 0, 3.5, 20.2); }` },
       { dur: 3, cues: [{ t: 0, state: 'PHYSICAL' }, { t: 0.2, fx: 'chime' }],
         setup: `C.quiet(); C.card('<h1>AFTER<span>ZERO</span></h1><p>Every room has rules. Every character remembers.</p>', 'big');`,
         frame: `(t) => { C.orbit(0, 2, 21.5, 3, 1, t * 0.3); }` },
@@ -148,7 +154,7 @@ async function record(film, browser) {
   await page.waitForTimeout(1500);
   await page.evaluate(() => { try { localStorage.clear(); } catch {} });
   await page.evaluate(HELPERS);
-  await page.addStyleTag({ content: '#objective{display:none!important}' }); // trailers: keep the frame clean
+  await page.addStyleTag({ content: '#objective,#crosshair{display:none!important}' }); // trailers: keep the frame clean
   await page.evaluate(() => { AZ.captureMode(); AZ.audio.start = () => {}; });
   let frame = 0, clock = 0;
   const cues = [];
@@ -159,10 +165,12 @@ async function record(film, browser) {
     const n = Math.round(shot.dur * FPS);
     for (let f = 0; f < n; f++) {
       await page.evaluate(([src, t, dt]) => { (0, eval)(src)(t); AZ.tickFrame(dt); }, [shot.frame, f / FPS, 1 / FPS]);
+      if (STILLS && f !== Math.floor(n * 0.6)) continue;
       await page.screenshot({ path: path.join(dir, String(frame++).padStart(5, '0') + '.jpg'), type: 'jpeg', quality: 88 });
     }
     clock += shot.dur;
   }
+  if (STILLS) { await page.close(); console.log(`  stills in ${dir}${errors.length ? '  page errors: ' + errors.join(' | ') : ''}`); return; }
   // talk blips for every subtitle line are part of the game; add a soft cue track
   const wavB64 = await page.evaluate(async ([dur, cues]) => {
     const buf = await AZSynth.renderWav(dur, cues);
