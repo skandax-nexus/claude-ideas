@@ -44,8 +44,8 @@ namespace AfterZero.Core.Content
                 new Box(-5, Lo, -34, 5, Hi, -23.6f), new Box(-1.5f, Lo, -23.6f, 1.5f, Hi, -16));
             r.Locked = true;
             r.Tint = "#8070ff";
-            r.Lights.Add(Light(0, 4.2f, -29, "#8a6cff", 3f, 14));
-            r.Lights.Add(Light(0, 4.2f, -20, "#6a7cff", 1.5f, 8));
+            r.Lights.Add(Light(0, 4.2f, -29, "#d8ccff", 3f, 14));
+            r.Lights.Add(Light(0, 4.2f, -20, "#c8d4ff", 1.5f, 8));
 
             b.Shell("cradle", new Box(-5, 0, -34, 5, 5, -24), new Blueprint.ShellOptions
             {
@@ -57,8 +57,8 @@ namespace AfterZero.Core.Content
             foreach (var (x, z, s) in new[] { (-3.6f, -26.2f, 0.5f), (3.8f, -27f, 0.6f), (-3.2f, -31.8f, 0.4f), (3.4f, -31f, 0.7f), (1f, -25.2f, 0.3f) })
                 b.Add("cradle", x - s / 2, 0, z - s / 2, x + s / 2, s, z + s / 2, "crate", solid: false).Tag = "drift";
 
-            b.Text("cradle", "SUBJECT HOLDING  -  CYCLE 42", 0, 3.6f, -33.95f, 0, 0.32f, "#b9a8ff");
-            b.Text("cradle", "YOU HAVE BEEN HERE BEFORE", 0, 4.95f, -28, 0, 0.42f, "#ff8ad8", ceiling: true);
+            b.Text("cradle", "SUBJECT HOLDING  -  CYCLE 42", 0, 3.6f, -33.95f, 0, 0.32f, "#6f5fcf");
+            b.Text("cradle", "YOU HAVE BEEN HERE BEFORE", 0, 4.95f, -28, 0, 0.42f, "#cf4f8f", ceiling: true);
 
             b.Interactables.Add(new InteractableDef { Id = "shard", Room = "cradle", Kind = "shard", Prompt = "TOUCH", X = 0, Y = 1.7f, Z = -28, Radius = 2.8f, When = "!has_device" });
             b.Interactables.Add(new InteractableDef { Id = "other", Room = "cradle", Kind = "other", X = 0, Y = 5f, Z = -19.5f, Radius = 0, When = "shard_touch >= 2 && !other_gone" });
@@ -71,10 +71,10 @@ namespace AfterZero.Core.Content
         {
             var r = b.Room("lab", "LABORATORY", "I", new[] { 0f, 0.86f, -12f, 0f },
                 new Box(-16, Lo, -16, 16, Hi, 16), new Box(16, Lo, -9.5f, 22, Hi, -6.5f));
-            r.Lights.Add(Light(0, 10.5f, 0, "#cfe6ff", 4f, 30));
+            r.Lights.Add(Light(0, 10.5f, 0, "#4a6a8a", 4f, 30));
             r.Lights.Add(Light(-10, 6, 8, "#ffd29a", 2.4f, 16));
             r.Lights.Add(Light(10, 6, -8, "#9fd8ff", 2.2f, 16));
-            r.Lights.Add(Light(19, 2.6f, -8, "#9b7bff", 1.6f, 7));
+            r.Lights.Add(Light(19, 2.6f, -8, "#d8ccff", 1.6f, 7));
 
             b.Shell("lab", new Box(-16, 0, -16, 16, 12, 16), new Blueprint.ShellOptions
             {
@@ -122,19 +122,19 @@ namespace AfterZero.Core.Content
                 b.Add("lab", x - 0.35f, 0, z, x + 0.35f, 0.02f, z + 0.6f, echo: true, solid: false);
             }
             b.Add("lab", -15, 0.9f, -3.5f, -14.6f, 3.2f, -1, echo: true, solid: false);
-            b.Text("lab", "THE ROOM REMEMBERS", 0, 7, 15.95f, 180, 1.0f, "#5ff", echo: true);
-            b.Text("lab", "STAND WHERE IT ISN'T", 15.88f, 4.5f, -4.5f, 270, 0.6f, "#5ff", echo: true);
-            b.Text("lab", "DO NOT ACTIVATE", -15.95f, 6, 4, 90, 0.8f, "#5ff", echo: true);
-            b.Text("lab", "LAB 0  -  FIELD CONTAINMENT", 0, 8, -15.88f, 0, 0.55f, "#cfe6ff", when: "!machine_activated");
-            b.Text("lab", "VESSEL AFTERZERO  -  LIFE SUPPORT: 1 OCCUPANT", 0, 8, -15.88f, 0, 0.5f, "#ffb36a", when: "machine_activated");
+            b.Text("lab", "THE ROOM REMEMBERS", 0, 7, 15.95f, 180, 1.0f, "#0e7c88", echo: true);
+            b.Text("lab", "STAND WHERE IT ISN'T", 15.88f, 4.5f, -4.5f, 270, 0.6f, "#0e7c88", echo: true);
+            b.Text("lab", "DO NOT ACTIVATE", -15.95f, 6, 4, 90, 0.8f, "#0e7c88", echo: true);
+            b.Text("lab", "LAB 0  -  FIELD CONTAINMENT", 0, 8, -15.88f, 0, 0.55f, "#4a6a8a", when: "!machine_activated");
+            b.Text("lab", "VESSEL AFTERZERO  -  LIFE SUPPORT: 1 OCCUPANT", 0, 8, -15.88f, 0, 0.5f, "#c06a1e", when: "machine_activated");
             b.Text("lab", "ARCHIVE", 0, 5.4f, 15.95f, 180, 0.45f);
-            b.Text("lab", "OBSERVATION", -15.95f, 5.4f, 0, 90, 0.45f, "#ff8a7a");
-            b.Text("lab", "DORMITORY  -  SEALED BY ORDER OF CMDR. BAEL", 15.88f, 5.4f, 0, 270, 0.4f, "#ff6a5a", when: "!lockdown");
+            b.Text("lab", "OBSERVATION", -15.95f, 5.4f, 0, 90, 0.45f, "#c2574a");
+            b.Text("lab", "DORMITORY  -  SEALED BY ORDER OF CMDR. BAEL", 15.88f, 5.4f, 0, 270, 0.4f, "#c2574a", when: "!lockdown");
 
             // shadow passage (behind the east wall)
             b.Shell("lab", new Box(16.4f, 0, -9.5f, 22, 3, -6.5f), new Blueprint.ShellOptions { Skip = { 'W' }, Strip = "stripViolet" });
             b.Add("lab", 21.2f, 0, -8.6f, 21.9f, 1.1f, -7.4f, "metal");
-            b.Text("lab", "RECORDING 0", 21.95f, 1.9f, -8, 270, 0.3f, "#c9b8ff");
+            b.Text("lab", "RECORDING 0", 21.95f, 1.9f, -8, 270, 0.3f, "#6f5fcf");
 
             b.Interactables.Add(new InteractableDef { Id = "r1", Room = "lab", Kind = "terminal", Prompt = "PLAY RECORDING", X = -10, Y = 1.3f, Z = 8.3f });
             b.Interactables.Add(new InteractableDef { Id = "machine", Room = "lab", Kind = "machine", Prompt = "MACHINE", X = 0, Y = 1.3f, Z = -2.9f, Radius = 2.6f });
@@ -166,8 +166,8 @@ namespace AfterZero.Core.Content
             r.Tint = "#ff6050";
             r.Ambience = "dread";
             r.FogDensity = 0.03f;
-            foreach (var x in new[] { -30f, -44f, -58f }) r.Lights.Add(Light(x, 8.5f, 0, "#ff5a4a", 3f, 24, true));
-            r.Lights.Add(Light(-40, 2, 9, "#6a4a8a", 1.4f, 14));
+            foreach (var x in new[] { -30f, -44f, -58f }) r.Lights.Add(Light(x, 8.5f, 0, "#ffd6a0", 3f, 24, true));
+            r.Lights.Add(Light(-40, 2, 9, "#d8ccff", 1.4f, 14));
 
             b.Shell("hall", new Box(-70, 0, -12, -22, 10, 12), new Blueprint.ShellOptions { Open = { ['E'] = O((-2, 2, 0, 4.5f)) }, Strip = "stripRed", Wall = "wallDark" });
             b.Corridor("hall", 'x', new Box(-21.6f, 0, -2, -16.4f, 4.5f, 2), "wallDark");
@@ -191,9 +191,9 @@ namespace AfterZero.Core.Content
             b.HuntZones.Add(zone);
 
             b.Add("hall", -67.6f, 0, -0.6f, -66.4f, 1, 0.6f, "metal"); // core pedestal
-            b.Text("hall", "OBSERVATION HALL  -  DO NOT RUN", -22.05f, 6, 0, 270, 0.45f, "#ff8a7a");
-            b.Text("hall", "IT ONLY KNOWS WHAT YOU TEACH IT", -69.95f, 5, 0, 90, 0.8f, "#5ff", echo: true);
-            b.Text("hall", "17 WAS HERE", -42.08f, 1.6f, 6, 90, 0.5f, "#5ff", echo: true);
+            b.Text("hall", "OBSERVATION HALL  -  DO NOT RUN", -22.05f, 6, 0, 270, 0.45f, "#c2574a");
+            b.Text("hall", "IT ONLY KNOWS WHAT YOU TEACH IT", -69.95f, 5, 0, 90, 0.8f, "#0e7c88", echo: true);
+            b.Text("hall", "17 WAS HERE", -42.08f, 1.6f, 6, 90, 0.5f, "#0e7c88", echo: true);
 
             b.Items.Add(new ItemDef { Id = "core", Room = "hall", Label = "POWER CORE", X = -67, Y = 1.35f, Z = 0, When = "!core_installed" });
             b.Tokens.Add(new TokenDef { Token = "OBSERVER", Room = "hall", X = -25, Y = 1.1f, Z = 9 });
@@ -211,9 +211,9 @@ namespace AfterZero.Core.Content
                 new Box(-14, Lo, 22, 14, Hi, 56), new Box(-2, Lo, 16, 2, Hi, 22));
             r.Tint = "#60f0d0";
             r.KillY = -6;
-            r.Lights.Add(Light(0, 7.5f, 27, "#5af0d0", 3f, 22));
-            r.Lights.Add(Light(0, 7.5f, 50, "#5ad0f0", 2.6f, 18));
-            r.Lights.Add(Light(0, -5, 38, "#2060ff", 2f, 14));
+            r.Lights.Add(Light(0, 7.5f, 27, "#c8fff0", 3f, 22));
+            r.Lights.Add(Light(0, 7.5f, 50, "#c8f0ff", 2.6f, 18));
+            r.Lights.Add(Light(0, -5, 38, "#9fc8ff", 2f, 14));
 
             b.Shell("archive", new Box(-14, 0, 22, 14, 9, 56), new Blueprint.ShellOptions { Open = { ['S'] = O((-2, 2, 0, 4.5f)) }, NoFloor = true, Strip = "stripTeal" });
             b.Corridor("archive", 'z', new Box(-2, 0, 16.4f, 2, 4.5f, 21.6f));
@@ -230,9 +230,9 @@ namespace AfterZero.Core.Content
             foreach (var x in new[] { -12f, -9f, 9f, 12f }) b.Add("archive", x - 0.5f, 0, 23.5f, x + 0.5f, 5, 31, "shelf");
             b.Add("archive", -1, 0, 53.6f, 1, 1, 54.6f, "metal");
             foreach (var x in new[] { -10f, 10f }) b.Add("archive", x - 1.2f, 0, 54.6f, x + 1.2f, 4, 55.6f, "shelf");
-            b.Text("archive", "NO RECORD OF LABORATORY", 0, 6, 55.95f, 180, 0.55f, "#7ff0d0", when: "!custodian_remembers");
-            b.Text("archive", "RECORDS RESTORED: LABORATORY (2 VISITS)", 0, 6, 55.95f, 180, 0.5f, "#7ff0d0", when: "custodian_remembers");
-            b.Text("archive", "MEMORY IS LOAD-BEARING", 0, 2.6f, 33.9f, 0, 0.55f, "#5ff", echo: true);
+            b.Text("archive", "NO RECORD OF LABORATORY", 0, 6, 55.95f, 180, 0.55f, "#24927a", when: "!custodian_remembers");
+            b.Text("archive", "RECORDS RESTORED: LABORATORY (2 VISITS)", 0, 6, 55.95f, 180, 0.5f, "#24927a", when: "custodian_remembers");
+            b.Text("archive", "MEMORY IS LOAD-BEARING", 0, 2.6f, 33.9f, 0, 0.55f, "#0e7c88", echo: true);
 
             b.Interactables.Add(new InteractableDef { Id = "r2", Room = "archive", Kind = "terminal", Prompt = "PLAY RECORDING", X = 0, Y = 1.3f, Z = 53 });
             b.Tokens.Add(new TokenDef { Token = "ALL", Room = "archive", X = -8, Y = 1.1f, Z = 51 });
@@ -250,7 +250,7 @@ namespace AfterZero.Core.Content
             r.Ambience = "warm";
             r.FogDensity = 0.015f;
             foreach (var x in new[] { 30f, 42f, 54f }) r.Lights.Add(Light(x, 4.5f, 0, "#ffb070", 3f, 16));
-            r.Lights.Add(Light(36, 1.2f, 0, "#ff8a40", 1.8f, 6, true)); // the "campfire" heater
+            r.Lights.Add(Light(36, 1.2f, 0, "#b0703a", 1.8f, 6, true)); // the "campfire" heater
 
             b.Shell("dorm", new Box(22, 0, -14, 62, 6, 14), new Blueprint.ShellOptions
             {
@@ -271,12 +271,12 @@ namespace AfterZero.Core.Content
                     b.Add("dorm", x - 1, 1.9f, z0, x + 1, 2.1f, z1, "bunk");
                     b.Add("dorm", x - 1.05f, 0, side > 0 ? 13.4f : -13.6f, x + 1.05f, 2.4f, side > 0 ? 13.6f : -13.4f, "metal");
                     int c = cycles[i * 2 + (side > 0 ? 0 : 1)];
-                    b.Text("dorm", c.ToString(), x, 2.8f, side > 0 ? 13.35f : -13.35f, side > 0 ? 180 : 0, 0.5f, c == 42 ? "#ffffff" : "#ffb070");
+                    b.Text("dorm", c.ToString(), x, 2.8f, side > 0 ? 13.35f : -13.35f, side > 0 ? 180 : 0, 0.5f, c == 42 ? "#25313d" : "#b0703a");
                 }
             }
             b.Add("dorm", 34, 0, -1.5f, 38, 0.9f, 1.5f, "crate"); // table
-            b.Text("dorm", "WE STAYED", 61.95f, 4, 6, 270, 0.6f, "#ffd0a0");
-            b.Text("dorm", "THEY WENT INTO THE MACHINE: 1 2 4 5 6 7 8 10 12 13 14 15 16 18 19 20 21 23 24 25 27 28 29 31 32 34 35 37 39 41", 42, 4.2f, -13.95f, 0, 0.22f, "#5ff", echo: true);
+            b.Text("dorm", "WE STAYED", 61.95f, 4, 6, 270, 0.6f, "#b0703a");
+            b.Text("dorm", "THEY WENT INTO THE MACHINE: 1 2 4 5 6 7 8 10 12 13 14 15 16 18 19 20 21 23 24 25 27 28 29 31 32 34 35 37 39 41", 42, 4.2f, -13.95f, 0, 0.22f, "#0e7c88", echo: true);
 
             // bunk 42 is the last pair's south bunk (x = 56, z = -12)
             b.Interactables.Add(new InteractableDef { Id = "bunk42", Room = "dorm", Kind = "bunk", Prompt = "BUNK 42", X = 56, Y = 1, Z = -10.8f, When = "!seen_bunk42" });
@@ -294,7 +294,7 @@ namespace AfterZero.Core.Content
             r.Ambience = "wind";
             r.KillY = -10;
             r.FogDensity = 0.012f;
-            for (float y = 6; y < 60; y += 14) r.Lights.Add(Light(78, y, 0, y > 40 ? "#a0d0ff" : "#80ffa0", 3f, 22));
+            for (float y = 6; y < 60; y += 14) r.Lights.Add(Light(78, y, 0, y > 40 ? "#3a6a9a" : "#80ffa0", 3f, 22));
 
             b.Shell("spine", new Box(66, 0, -12, 90, 60, 12), new Blueprint.ShellOptions
             {
@@ -310,9 +310,9 @@ namespace AfterZero.Core.Content
             for (float x = 70; x < 84; x += 4) b.Add("spine", x, 14, -1, x + 0.2f, 28, -0.8f, echo: true, solid: false);
             // landing at the top, under the east exit
             b.Add("spine", 84, 51.4f, -4, 90, 52, 4, "metal", id: "spine_landing");
-            b.Text("spine", "CROWN ACCESS", 89.95f, 57.5f, 0, 270, 0.5f, "#a0d0ff");
-            b.Text("spine", "FALL UP", 66.05f, 6, 6, 90, 0.8f, "#5ff", echo: true);
-            b.Text("spine", "FALL DOWN WHERE YOU WANT TO LAND", 78, 58, 11.95f, 180, 0.5f, "#5ff", echo: true);
+            b.Text("spine", "CROWN ACCESS", 89.95f, 57.5f, 0, 270, 0.5f, "#3a6a9a");
+            b.Text("spine", "FALL UP", 66.05f, 6, 6, 90, 0.8f, "#0e7c88", echo: true);
+            b.Text("spine", "FALL DOWN WHERE YOU WANT TO LAND", 78, 58, 11.95f, 180, 0.5f, "#0e7c88", echo: true);
 
             b.Tokens.Add(new TokenDef { Token = "SLOWS", Room = "spine", X = 78, Y = 27.15f, Z = -6 });
             b.Interactables.Add(new InteractableDef { Id = "launch_log", Room = "spine", Kind = "terminal", Prompt = "READ LAUNCH LOG", X = 88.2f, Y = 53.3f, Z = -3, When = "!has_launch_log" });
@@ -338,7 +338,7 @@ namespace AfterZero.Core.Content
             r.Tint = "#ff9050";
             r.Ambience = "storm";
             r.KillY = 44;
-            foreach (var x in new[] { 100f, 116f, 132f, 146f }) r.Lights.Add(Light(x, 60, 0, "#ff9050", 3f, 20, true));
+            foreach (var x in new[] { 100f, 116f, 132f, 146f }) r.Lights.Add(Light(x, 60, 0, "#ffd8b0", 3f, 20, true));
 
             b.Shell("crown", new Box(96, 52, -8, 150, 62, 8), new Blueprint.ShellOptions
             {
@@ -359,7 +359,7 @@ namespace AfterZero.Core.Content
             // field anchor: the Undertow stops here
             b.Add("crown", 136, 52, -8, 136.3f, 52.1f, 8, "stripCool", solid: false);
             b.Add("crown", 146, 52, -8, 146.4f, 62, 8, "forcefield", when: "!bael_resolved", id: "bael_barrier");
-            b.Text("crown", "FIELD ANCHOR", 136.2f, 60, 7.9f, 180, 0.5f, "#7fd8ff");
+            b.Text("crown", "FIELD ANCHOR", 136.2f, 60, 7.9f, 180, 0.5f, "#3a7aa0");
 
             b.Triggers.Add(new TriggerDef { Id = "crown_entered", Room = "crown", When = "!crown_entered", Box = new Box(92, 40, -8, 150, 70, 8), Then = new[] { SetFact("crown_entered"), Play("crown_enter") } });
             b.Chases.Add(new ChaseDef
@@ -383,7 +383,7 @@ namespace AfterZero.Core.Content
             var r = b.Room("core", "THE CORE", "III", new[] { 152f, 52.86f, 0f, 90f }, new Box(150, 40, -10, 172, 70, 10));
             r.Tint = "#ff8ac0";
             r.Ambience = "heart";
-            r.Lights.Add(Light(160, 58, 0, "#ff8ac0", 4f, 22));
+            r.Lights.Add(Light(160, 58, 0, "#ffd6e8", 4f, 22));
             r.Lights.Add(Light(166, 54, 6, "#ffc27a", 2f, 10));
 
             // the west wall is shared with the Crown's east wall; only fill what the Crown doesn't cover

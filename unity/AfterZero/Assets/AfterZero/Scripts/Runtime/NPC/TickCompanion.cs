@@ -94,10 +94,12 @@ namespace AfterZero.Runtime
         public void Init(GameManager g)
         {
             G = g;
-            transform.SetParent(g.Cam.transform, false);
-            transform.localPosition = new Vector3(-0.32f, -0.26f, 0.6f);
+            // third person: the device glows in the character's left hand
+            transform.SetParent(g.Cam.ThirdPerson ? g.Avatar.Hand : g.Cam.transform, false);
+            transform.localPosition = g.Cam.ThirdPerson ? Vector3.zero : new Vector3(-0.32f, -0.26f, 0.6f);
+            transform.localScale = g.Cam.ThirdPerson ? Vector3.one * 1.6f : Vector3.one;
             core = Part("Core", 0.09f, coreMat = Palette.Emissive(Color.white, 3f));
-            shell = Part("Shell", 0.16f, shellMat = Palette.Additive(Palette.Hex("#9a7bff"), 0.45f));
+            shell = Part("Shell", 0.16f, shellMat = Palette.Unlit(Palette.Hex("#9a7bff"), 0.55f));
         }
 
         Transform Part(string n, float s, Material m)
@@ -121,7 +123,7 @@ namespace AfterZero.Runtime
             shell.gameObject.SetActive(on);
             if (!on) return;
             var s = G.RoomState;
-            Color c = s == RealityStates.Echo ? Palette.Hex("#4ff0ff") : s == RealityStates.Inverted ? Palette.Hex("#ff5ab4") : Palette.Hex("#e8f4ff");
+            Color c = s == RealityStates.Echo ? Palette.Hex("#22aeb9") : s == RealityStates.Inverted ? Palette.Hex("#e86a9c") : Palette.Hex("#4f9fe8");
             if (G.Adrenaline.CanSlip || G.Adrenaline.Slipping) c = Color.Lerp(c, Palette.Hex("#ffd040"), 0.5f + Mathf.Sin(Time.unscaledTime * 10) * 0.5f);
             c.a = 0.5f;
             shellMat.SetColor("_BaseColor", c);
@@ -131,7 +133,7 @@ namespace AfterZero.Runtime
             // weapon-style sway from look + motion
             var target = new Vector3(-G.Input.Look.x * 0.004f, -G.Input.Look.y * 0.004f, 0) + Vector3.up * Mathf.Sin(Time.time * 7f) * 0.006f * Mathf.Clamp01(G.Motor.Speed / 4f);
             sway = Vector3.Lerp(sway, target, Time.unscaledDeltaTime * 8f);
-            transform.localPosition = new Vector3(-0.32f, -0.26f, 0.6f) + sway;
+            if (!G.Cam.ThirdPerson) transform.localPosition = new Vector3(-0.32f, -0.26f, 0.6f) + sway;
         }
     }
 }

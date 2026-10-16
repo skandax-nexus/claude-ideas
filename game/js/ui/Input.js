@@ -21,7 +21,7 @@ export class Input {
 
   bindKeyboard() {
     const map = {
-      KeyE: 'use', KeyF: 'use', KeyQ: 'shift', KeyR: 'shift', KeyL: 'laws', Tab: 'laws', KeyJ: 'journal',
+      KeyE: 'use', KeyF: 'use', KeyH: 'hint', KeyQ: 'shift', KeyR: 'shift', KeyL: 'laws', Tab: 'laws', KeyJ: 'journal',
       Escape: 'pause', Digit1: 'set:PHYSICAL', Digit2: 'set:INVERTED', Digit3: 'set:ECHO',
     };
     window.addEventListener('keydown', (e) => {

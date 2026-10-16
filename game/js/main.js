@@ -15,14 +15,16 @@ import { Input } from './ui/Input.js';
 import { HUD } from './ui/HUD.js';
 import { Synth } from './audio/Synth.js';
 import { makeDevice, makeKeyItem, makeCoreItem } from './world/models.js';
+import { Npcs } from './world/Npcs.js';
 
 const SAVE_KEY = 'afterzero.save.v1';
 const VERSION = '0.1.0';
 
+// Bright, soft looks per reality state: daylight, rose dusk, mint memory.
 const THEMES = {
-  PHYSICAL: { fog: 0x0a0e14, sky: 0xbcd0e0, ground: 0x3a3430, hemi: 1.35, density: 0.03, device: 0xe8f4ff },
-  INVERTED: { fog: 0x180812, sky: 0xff9ac0, ground: 0x4a1828, hemi: 1.2, density: 0.034, device: 0xff5ab4 },
-  ECHO: { fog: 0x02161c, sky: 0x60e8ff, ground: 0x003038, hemi: 0.7, density: 0.045, device: 0x4ff0ff },
+  PHYSICAL: { fog: 0xe4edf5, sky: 0xffffff, ground: 0xd5dce4, hemi: 1.25, sun: 1.5, sunColor: 0xfff3e0, density: 0.012, device: 0x6fb8ff },
+  INVERTED: { fog: 0xf5e3ec, sky: 0xfff2f7, ground: 0xe8d3de, hemi: 1.2, sun: 1.3, sunColor: 0xffe2ec, density: 0.013, device: 0xff7aa8 },
+  ECHO: { fog: 0xd8f2f0, sky: 0xf0fffd, ground: 0xc8e6e3, hemi: 1.1, sun: 1.1, sunColor: 0xe6fffb, density: 0.016, device: 0x2bc4cf },
 };
 
 function storage(fn, fallback = null) {
@@ -40,15 +42,25 @@ class Game {
     this.renderer = new THREE.WebGLRenderer({ canvas: this.canvas, antialias: !this.touch, powerPreference: 'high-performance' });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, this.touch ? 1.25 : 2));
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.15;
+    this.renderer.toneMappingExposure = 1.0;
+    this.renderer.shadowMap.enabled = true;
+    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.scene = new THREE.Scene();
-    this.scene.fog = new THREE.FogExp2(0x0a0e14, 0.03);
-    this.scene.background = new THREE.Color(0x05070a);
-    this.camera = new THREE.PerspectiveCamera(72, 1, 0.05, 600);
+    this.scene.fog = new THREE.FogExp2(0xe4edf5, 0.012);
+    this.scene.background = new THREE.Color(0xe4edf5);
+    this.camera = new THREE.PerspectiveCamera(62, 1, 0.05, 600);
     this.scene.add(this.camera);
 
-    this.hemi = new THREE.HemisphereLight(0xbcd0e0, 0x2a2622, 1.0);
+    this.hemi = new THREE.HemisphereLight(0xffffff, 0xd5dce4, 1.25);
     this.scene.add(this.hemi);
+    // a soft "skylight" sun that follows the player so shadows stay crisp and cheap
+    this.sun = new THREE.DirectionalLight(0xfff3e0, 1.5);
+    this.sun.castShadow = true;
+    this.sun.shadow.mapSize.set(this.touch ? 1024 : 2048, this.touch ? 1024 : 2048);
+    Object.assign(this.sun.shadow.camera, { left: -18, right: 18, top: 18, bottom: -18, near: 1, far: 60 });
+    this.sun.shadow.bias = -0.0008;
+    this.sun.shadow.normalBias = 0.03;
+    this.scene.add(this.sun, this.sun.target);
     this.lights = Array.from({ length: 4 }, () => {
       const l = new THREE.PointLight(0xffffff, 0, 20, 1);
       this.scene.add(l);
@@ -60,9 +72,10 @@ class Game {
     this.audio = new Synth();
     this.input = new Input(this.canvas, document.querySelector('#ui'));
     this.world = new World(this.scene, this.facts, this.engine);
-    this.player = new Player(this.camera);
+    this.player = new Player(this.camera, this.scene);
     this.observer = new Observer(this.scene);
     this.director = new Director(this);
+    this.npcs = new Npcs(this);
     this.wire();
     this.buildViewModels();
 
@@ -95,6 +108,7 @@ class Game {
   wire() {
     const { facts, engine } = this;
     facts.onEffect = (e) => {
+      if (e.event && !this.restoring) this.director.event(e.event);
       if (e.log) {
         this.log.push(e.log);
         if (!this.restoring) this.hud.toast(`<small>THEORY LOG</small><br>${e.log}`, 4200);
@@ -118,6 +132,7 @@ class Game {
       this.world.refresh();
       this.dirty = true;
     });
+    this.hud.onLine = (who) => this.audio.talk(who);
     this.objectives.onChange = (layer) => {
       this.hud.objective(layer.text);
       this.audio.blip(330, 0.4, 'triangle', 0.15);
@@ -133,16 +148,17 @@ class Game {
     };
   }
 
+  // The device glows in the character's left hand; carried items in the right.
   buildViewModels() {
+    const hands = this.player.model.userData;
     this.device = makeDevice();
-    this.device.position.set(-0.3, -0.24, -0.55);
-    this.camera.add(this.device);
+    this.device.scale.setScalar(1.6);
+    hands.handL.add(this.device);
     this.heldModels = { key: makeKeyItem(true), core: makeCoreItem() };
     for (const m of Object.values(this.heldModels)) {
-      m.position.set(0.3, -0.26, -0.6);
-      m.scale.setScalar(0.6);
+      m.scale.setScalar(0.7);
       m.visible = false;
-      this.camera.add(m);
+      hands.handR.add(m);
     }
   }
 
@@ -150,7 +166,7 @@ class Game {
     const w = window.innerWidth, h = window.innerHeight;
     this.renderer.setSize(w, h, false);
     this.camera.aspect = w / h;
-    this.camera.fov = w < h ? 85 : 72;
+    this.camera.fov = w < h ? 78 : 62;
     this.camera.updateProjectionMatrix();
   }
 
@@ -295,7 +311,7 @@ class Game {
       if (!d) return (l.intensity = 0);
       l.position.set(d[0], d[1], d[2]);
       l.color.setHex(d[3]);
-      l.intensity = d[4] * 4;
+      l.intensity = d[4] * 2.2;
       l.distance = d[5];
     });
     this.audio.setState(this.engine.state(id));
@@ -336,7 +352,7 @@ class Game {
     this.observer.brain.recordCatch(state);
     this.facts.inc('times_caught');
     this.hud.fade(true);
-    this.audio.blip(70, 0.8, 'sawtooth', 0.3);
+    this.audio.caught();
     setTimeout(() => {
       this.held = null;
       this.observer.reset();
@@ -366,6 +382,7 @@ class Game {
       if (this.held === it.id || !this.world.isItemAvailable(it.id)) continue;
       cands.push({ id: `item:${it.id}`, pos: it.pos, r: 2.2, prompt: `TAKE ${it.label}` });
     }
+    cands.push(...this.npcs.focusCandidates());
     if (this.facts.test('observer_tethered && brain_seen && !observer_faced')) {
       const o = this.observer.pos;
       cands.push({ id: 'observer', pos: [o.x, 2.4, o.z], r: 3.6, prompt: 'FACE IT' });
@@ -389,7 +406,7 @@ class Game {
     if (f && f.id.startsWith('item:')) {
       const id = f.id.slice(5);
       this.held = id;
-      this.audio.blip(880, 0.12);
+      this.audio.pickup();
       if (id === 'key') this.facts.set('key_taken');
       return;
     }
@@ -397,6 +414,7 @@ class Game {
     if (this.hud.talking && (!f || f.id === this.lastUse)) return this.hud.skipSub();
     if (!f) return;
     this.lastUse = f.id;
+    if (f.id === 'npc:juno') return this.npcs.talkToJuno();
     this.director.use(f.id);
   }
 
@@ -456,6 +474,7 @@ class Game {
       }
       if (!active) continue;
       if (a === 'use') this.use();
+      else if (a === 'hint') this.npcs.hint();
       else if (a === 'shift') this.shift();
       else if (a.startsWith('set:')) this.shift(a.slice(4));
     }
@@ -464,8 +483,9 @@ class Game {
     else this.input.consumeLook();
 
     this.world.update(dt, this.time, this.held);
+    this.npcs.update(active ? dt : 0, this.time);
     this.hud.update(active ? dt : 0);
-    this.player.updateCamera();
+    this.player.updateCamera(dt);
     this.updateTheme(dt);
     this.renderer.render(this.scene, this.camera);
   }
@@ -528,6 +548,14 @@ class Game {
       tethered: facts.get('observer_tethered'),
       playerHidden: player.onCeiling() && player.pos.y > 4,
     });
+    if (this.observer.mode === 'chase' && this.lastObserverMode !== 'chase') this.audio.alert();
+    this.lastObserverMode = this.observer.mode;
+    // soft footsteps
+    if (player.grounded) {
+      this.stepDist = (this.stepDist || 0) + player.speed * dt;
+      if (this.stepDist > (player.running ? 2.2 : 1.7)) { this.stepDist = 0; this.audio.footstep(); }
+    }
+    this.audio.setDuck(this.hud.talking);
     const od = player.pos.distanceTo(this.observer.pos);
     const threat = inHall && !facts.get('observer_tethered') ? Math.max(this.observer.suspicion, Math.max(0, 1 - od / 14) * 0.4) : 0;
     this.audio.setThreat(threat);
@@ -562,9 +590,28 @@ class Game {
       this.time += dt;
       this.step(dt);
       this.world.update(dt, this.time, this.held);
+      this.npcs.update(dt, this.time);
       this.hud.update(dt);
     }
-    this.player.updateCamera();
+    this.player.updateCamera(1);
+  }
+
+  // Frame-exact capture for trailers: stop the real-time loop, then advance
+  // and render one frame at a time (tools/record-videos.mjs).
+  captureMode() {
+    this.renderer.setAnimationLoop(null);
+    this.capturing = true;
+  }
+
+  tickFrame(dt) {
+    this.time += dt;
+    if (!this.paused && !this.menu) this.step(dt);
+    this.world.update(dt, this.time, this.held);
+    this.npcs.update(dt, this.time);
+    this.hud.update(dt);
+    this.player.updateCamera(dt);
+    this.updateTheme(dt);
+    this.renderer.render(this.scene, this.camera);
   }
 
   updateTheme(dt) {
@@ -578,13 +625,18 @@ class Game {
     this.hemi.color.lerp(new THREE.Color(th.sky).lerp(tint, 0.25), k);
     this.hemi.groundColor.lerp(new THREE.Color(th.ground), k);
     this.hemi.intensity += (th.hemi - this.hemi.intensity) * k;
+    this.sun.color.lerp(new THREE.Color(th.sunColor), k);
+    this.sun.intensity += (th.sun - this.sun.intensity) * k;
+    const p = this.player.pos;
+    this.sun.position.set(p.x + 6, p.y + 24, p.z + 9);
+    this.sun.target.position.set(p.x, p.y, p.z);
     const dc = this.device.userData;
     dc.shell.material.color.lerp(new THREE.Color(th.device), k);
     dc.shell.rotation.y += dt * 1.5;
     dc.shell.rotation.x += dt * 0.6;
     // When the machine runs, the lab breathes amber.
     if (this.facts.get('machine_activated') && this.room === 'lab') {
-      this.lights[0].color.setRGB(1, 0.62 + Math.sin(this.time * 2.4) * 0.15, 0.35);
+      this.lights[0].color.setRGB(1, 0.85 + Math.sin(this.time * 2.4) * 0.08, 0.7);
     }
   }
 }
@@ -592,6 +644,7 @@ class Game {
 window.addEventListener('DOMContentLoaded', () => {
   try {
     window.AZ = new Game();
+    window.AZSynth = Synth;
   } catch (e) {
     document.querySelector('#title .body').innerHTML = `<p class="err">This device could not start WebGL.<br><small>${e.message}</small></p>`;
     throw e;

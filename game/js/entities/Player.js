@@ -1,7 +1,9 @@
-// Player controller: first-person movement with per-room gravity that can
-// point down, up, or nowhere. When gravity flips, the camera barrel-rolls
-// around the facing direction so "forward" stays forward.
+// Player controller: third-person movement with per-room gravity that can
+// point down, up, or nowhere. The camera follows over the shoulder, never
+// clips through walls, and barrel-rolls around the facing direction when
+// gravity flips so "forward" stays forward.
 import * as THREE from '../../vendor/three.module.min.js';
+import { makeCharacter } from '../world/models.js';
 
 const HALF = new THREE.Vector3(0.3, 0.85, 0.3);
 const EYE = 0.68;
@@ -10,8 +12,15 @@ const _v = new THREE.Vector3();
 const _m = new THREE.Matrix4();
 
 export class Player {
-  constructor(camera) {
+  constructor(camera, scene) {
     this.camera = camera;
+    this.model = makeCharacter({ suit: 0xf4f7fa, accent: 0xff8a6a, hair: 0x3a2e2a });
+    if (scene) scene.add(this.model);
+    this.facing = new THREE.Vector3(0, 0, -1);
+    this.colliders = [];
+    this.camDist = 3.6;
+    this.camPos = null;
+    this.cinema = null; // { pos: Vector3, target: Vector3 } overrides the camera (trailers)
     this.pos = new THREE.Vector3();
     this.vel = new THREE.Vector3();
     this.H = new THREE.Vector3(0, 0, -1); // horizontal heading
@@ -31,7 +40,9 @@ export class Player {
     this.vel.set(0, 0, 0);
     this.H.set(-Math.sin(yaw), 0, -Math.cos(yaw));
     this.U.set(0, this.gravity === 1 ? -1 : 1, 0);
-    this.pitch = 0;
+    this.pitch = -0.12;
+    this.facing.copy(this.H);
+    this.camPos = null;
   }
 
   get upTarget() {
@@ -57,6 +68,7 @@ export class Player {
   }
 
   update(dt, input, colliders) {
+    this.colliders = colliders;
     // --- camera roll toward gravity's up ---------------------------------
     if (this.gravity !== 0) {
       const target = _v.set(0, this.upTarget, 0);
@@ -155,13 +167,81 @@ export class Player {
     return out.copy(this.H).multiplyScalar(Math.cos(this.pitch)).addScaledVector(this.U, Math.sin(this.pitch));
   }
 
-  updateCamera() {
+  // Ray vs. the world's boxes; returns the distance to the first hit (or max).
+  rayDistance(origin, dir, max) {
+    let best = max;
+    const pad = 0.22;
+    for (const c of this.colliders) {
+      let t0 = 0, t1 = best;
+      let hit = true;
+      for (let a = 0; a < 3; a++) {
+        const o = origin.getComponent(a), d = dir.getComponent(a);
+        const mn = c.min[a] - pad, mx = c.max[a] + pad;
+        if (Math.abs(d) < 1e-8) {
+          if (o < mn || o > mx) { hit = false; break; }
+        } else {
+          let ta = (mn - o) / d, tb = (mx - o) / d;
+          if (ta > tb) [ta, tb] = [tb, ta];
+          t0 = Math.max(t0, ta);
+          t1 = Math.min(t1, tb);
+          if (t0 > t1) { hit = false; break; }
+        }
+      }
+      if (hit && t0 < best) best = t0;
+    }
+    return best;
+  }
+
+  updateCamera(dt = 1 / 60) {
+    this.updateModel(dt);
+    if (this.cinema) {
+      this.camera.position.copy(this.cinema.pos);
+      this.camera.up.copy(this.cinema.up || this.U);
+      const t = this.cinema.target;
+      this.camera.lookAt(t.x, t.y, t.z);
+      return;
+    }
     const F = this.forward(new THREE.Vector3());
     const up = new THREE.Vector3().copy(this.U).multiplyScalar(Math.cos(this.pitch)).addScaledVector(this.H, -Math.sin(this.pitch));
     const right = new THREE.Vector3().crossVectors(F, up).normalize();
-    _m.makeBasis(right, up, F.negate());
+    const head = new THREE.Vector3().copy(this.pos).addScaledVector(this.U, 0.6);
+    const desired = head.clone().addScaledVector(F, -this.camDist).addScaledVector(up, 0.35).addScaledVector(right, 0.5);
+    const dir = desired.clone().sub(head);
+    const len = dir.length();
+    dir.divideScalar(len);
+    let dist = Math.max(0.35, this.rayDistance(head, dir, len) - 0.15);
+    let target = head.clone().addScaledVector(dir, dist);
+    if (dist < 1.8) {
+      // cramped: try a higher, closer angle looking down over the shoulder
+      const alt = head.clone().addScaledVector(F, -2.0).addScaledVector(up, 1.3).addScaledVector(right, 0.3).sub(head);
+      const altLen = alt.length();
+      alt.divideScalar(altLen);
+      const altDist = Math.max(0.35, this.rayDistance(head, alt, altLen) - 0.15);
+      if (altDist > dist + 0.3) { dist = altDist; target = head.clone().addScaledVector(alt, altDist); }
+    }
+    if (!this.camPos || this.camPos.distanceTo(target) > 6) this.camPos = target.clone();
+    else this.camPos.lerp(target, 1 - Math.exp(-dt * 14));
+    // never let smoothing drag the camera behind a wall
+    if (this.camPos.distanceTo(head) > dist + 0.05) this.camPos.copy(target);
+    // look slightly past the character's head, so the view stays centred on what's ahead
+    const aim = head.clone().addScaledVector(F, 6);
+    _m.lookAt(this.camPos, aim, up);
     this.camera.quaternion.setFromRotationMatrix(_m);
-    this.eye(this.camera.position);
+    this.camera.position.copy(this.camPos);
+    this.model.visible = this.camPos.distanceTo(head) > 0.9;
+  }
+
+  updateModel(dt) {
+    const m = this.model;
+    // face where we're moving; idle keeps the last direction
+    const v = new THREE.Vector3(this.vel.x, 0, this.vel.z);
+    if (v.lengthSq() > 0.09) this.facing.lerp(v.normalize(), 1 - Math.exp(-dt * 10)).normalize();
+    const z = this.facing.clone().addScaledVector(this.U, -this.facing.dot(this.U)).normalize();
+    const x = new THREE.Vector3().crossVectors(this.U, z).normalize();
+    _m.makeBasis(x, this.U, z);
+    m.quaternion.setFromRotationMatrix(_m);
+    m.position.copy(this.pos).addScaledVector(this.U, -0.85);
+    m.userData.animate(dt, this.speed, performance.now() / 1000, !this.grounded && this.gravity !== 0);
   }
 
   // Is the player standing on (or near) the ceiling?

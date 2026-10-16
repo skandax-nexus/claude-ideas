@@ -95,7 +95,7 @@ function corridor(room, axis, [x0, y0, z0, x1, y1, z1], mat = 'wall') {
 }
 
 function text(room, str, pos, rotY, o = {}) {
-  texts.push({ room, text: str, pos, rotY, size: 0.5, color: '#9fe8ff', ...o });
+  texts.push({ room, text: str, pos, rotY, size: 0.5, color: '#2f7f9e', ...o });
 }
 
 // ---------------------------------------------------------------------------
@@ -109,9 +109,9 @@ export const rooms = {
       [-4, Y[0], 17.6, 4, Y[1], 26],
       [-1.5, Y[0], 12, 1.5, Y[1], 17.6],
     ],
-    spawn: [0, 0.86, 24.5, 0],
-    lights: [[0, 3.6, 22, 0x8a6cff, 2.2, 14], [0, 3.5, 14.5, 0x6a7cff, 1.2, 8]],
-    tint: 0x8070ff,
+    spawn: [0, 0.86, 23.6, 0],
+    lights: [[0, 3.6, 22, 0xd8ccff, 2.2, 14], [0, 3.5, 14.5, 0xc8d4ff, 1.2, 8]],
+    tint: 0xd8d0ff,
   },
   lab: {
     name: 'LABORATORY',
@@ -120,7 +120,7 @@ export const rooms = {
       [12, Y[0], 4.5, 17, Y[1], 7.5],
     ],
     spawn: [0, 0.86, 8, 0],
-    lights: [[0, 8.5, 0, 0xcfe6ff, 2.4, 26], [-8, 5, 8, 0xffd29a, 1.6, 14], [8, 5, -6, 0x9fd8ff, 1.4, 14], [14.5, 2.6, 6, 0x9b7bff, 1.2, 6]],
+    lights: [[0, 8.5, 0, 0xcfe6ff, 2.4, 26], [-8, 5, 8, 0xffd29a, 1.6, 14], [8, 5, -6, 0x9fd8ff, 1.4, 14], [14.5, 2.6, 6, 0xd8ccff, 1.2, 6]],
     tint: 0xbfe0ff,
   },
   hall: {
@@ -130,8 +130,8 @@ export const rooms = {
       [-16, Y[0], -2, -12, Y[1], 2],
     ],
     spawn: [-17.5, 0.86, 0, Math.PI / 2],
-    lights: [[-22, 7, 0, 0xff5a4a, 2.4, 22], [-34, 7, 0, 0xff4a3a, 2.2, 22], [-46, 7, 0, 0xff7a4a, 2.2, 20], [-28, 2, 6, 0x6a4a8a, 1.2, 12]],
-    tint: 0xff6050,
+    lights: [[-22, 7, 0, 0xffd6a0, 2.4, 22], [-34, 7, 0, 0xffcf98, 2.2, 22], [-46, 7, 0, 0xffe0b0, 2.2, 20], [-28, 2, 6, 0xc8b8ff, 1.2, 12]],
+    tint: 0xffe0c0,
   },
   archive: {
     name: 'ARCHIVE',
@@ -140,8 +140,8 @@ export const rooms = {
       [-2, Y[0], -16, 2, Y[1], -12],
     ],
     spawn: [0, 0.86, -18, 0],
-    lights: [[0, 6.5, -20, 0x5af0d0, 2.0, 18], [0, 6.5, -33, 0x5ad0f0, 1.8, 14], [0, -3, -27, 0x2060ff, 1.4, 12]],
-    tint: 0x60f0d0,
+    lights: [[0, 6.5, -20, 0xc8fff0, 2.0, 18], [0, 6.5, -33, 0xc8f0ff, 1.8, 14], [0, -3, -27, 0x9fc8ff, 1.4, 12]],
+    tint: 0xc8f5ea,
     killY: -4,
   },
 };
@@ -163,9 +163,9 @@ export const drifters = [
   { room: 'antechamber', pos: [2.4, 0.35, 24.1], size: 0.7 },
   { room: 'antechamber', pos: [1.0, 0.15, 19.2], size: 0.3 },
 ];
-text('antechamber', 'SUBJECT HOLDING  -  CYCLE 0', [0, 3.6, 25.95], Math.PI, { size: 0.32, color: '#b9a8ff' });
+text('antechamber', 'SUBJECT HOLDING  -  CYCLE 0', [0, 3.6, 25.95], Math.PI, { size: 0.32, color: '#6f5fcf' });
 // Upside-down writing on the ceiling: only readable once the room is inverted.
-text('antechamber', 'YOU HAVE BEEN HERE BEFORE', [0, 4.45, 21], 0, { size: 0.4, color: '#ff8ad8', ceiling: true });
+text('antechamber', 'YOU HAVE BEEN HERE BEFORE', [0, 4.45, 21], 0, { size: 0.4, color: '#cf4f8f', ceiling: true });
 
 // ---------------------------------------------------------------------------
 // LABORATORY - the hub. Revisited; changes meaning five times.
@@ -221,18 +221,18 @@ add('lab', [-0.3, 0, 6.2, 0.5, 0.02, 6.8], { echo: true, solid: false });
 add('lab', [0.4, 0, 4.8, 1.2, 0.02, 5.4], { echo: true, solid: false });
 add('lab', [-0.2, 0, 3.4, 0.6, 0.02, 4.0], { echo: true, solid: false });
 add('lab', [-11.0, 0.9, 1.0, -10.6, 3.2, 3.6], { echo: true, solid: false }); // missing shelf
-text('lab', 'THE ROOM REMEMBERS', [0, 6.2, -11.95], 0, { echo: true, size: 0.9, color: '#5ff' });
-text('lab', 'STAND WHERE IT ISN\'T', [11.88, 4.2, 0], -Math.PI / 2, { echo: true, size: 0.6, color: '#5ff' });
-text('lab', 'DO NOT ACTIVATE', [-11.95, 5.2, -2], Math.PI / 2, { echo: true, size: 0.7, color: '#5ff' });
-text('lab', 'LAB 0  -  FIELD CONTAINMENT', [0, 6.5, 11.88], Math.PI, { size: 0.5, color: '#cfe6ff', when: '!machine_activated' });
-text('lab', 'VESSEL AFTERZERO  -  LIFE SUPPORT: 1 OCCUPANT', [0, 6.5, 11.88], Math.PI, { size: 0.45, color: '#ffb36a', when: 'machine_activated' });
+text('lab', 'THE ROOM REMEMBERS', [0, 6.2, -11.95], 0, { echo: true, size: 0.9, color: '#0e7c88' });
+text('lab', 'STAND WHERE IT ISN\'T', [11.88, 4.2, 0], -Math.PI / 2, { echo: true, size: 0.6, color: '#0e7c88' });
+text('lab', 'DO NOT ACTIVATE', [-11.95, 5.2, -2], Math.PI / 2, { echo: true, size: 0.7, color: '#0e7c88' });
+text('lab', 'LAB 0  -  FIELD CONTAINMENT', [0, 6.5, 11.88], Math.PI, { size: 0.5, color: '#4a6a8a', when: '!machine_activated' });
+text('lab', 'VESSEL AFTERZERO  -  LIFE SUPPORT: 1 OCCUPANT', [0, 6.5, 11.88], Math.PI, { size: 0.45, color: '#c06a1e', when: 'machine_activated' });
 text('lab', 'ARCHIVE', [0, 4.6, -11.95], 0, { size: 0.45 });
-text('lab', 'OBSERVATION', [-11.95, 4.5, 0], Math.PI / 2, { size: 0.45, color: '#ff8a7a' });
+text('lab', 'OBSERVATION', [-11.95, 4.5, 0], Math.PI / 2, { size: 0.45, color: '#c2574a' });
 
 // Passage behind the shadow: a small room with your own recording.
 shell('lab', [12.4, 0, 4.5, 17, 3, 7.5], { skip: ['W'], strip: 'stripViolet' });
 add('lab', [16.2, 0, 5.4, 16.9, 1.1, 6.6], { mat: 'metal' });
-text('lab', 'RECORDING 0', [16.95, 1.9, 6], -Math.PI / 2, { size: 0.3, color: '#c9b8ff' });
+text('lab', 'RECORDING 0', [16.95, 1.9, 6], -Math.PI / 2, { size: 0.3, color: '#6f5fcf' });
 
 // Brain + cables (layers 3 and 4 of the lab).
 export const cables = [
@@ -254,8 +254,8 @@ for (const p of pillars) {
   add('hall', [p.x - p.s - 0.02, 2.0, p.z - p.s - 0.02, p.x + p.s + 0.02, 2.1, p.z + p.s + 0.02], { mat: 'stripRed', solid: false });
 }
 add('hall', [-48.6, 0, -0.6, -47.4, 1.0, 0.6], { mat: 'metal' }); // core pedestal
-text('hall', 'OBSERVATION HALL  -  DO NOT RUN', [-16.05, 5.5, 0], -Math.PI / 2, { size: 0.45, color: '#ff8a7a' });
-text('hall', 'IT ONLY KNOWS WHAT YOU TEACH IT', [-49.95, 4.5, 0], Math.PI / 2, { echo: true, size: 0.7, color: '#5ff' });
+text('hall', 'OBSERVATION HALL  -  DO NOT RUN', [-16.05, 5.5, 0], -Math.PI / 2, { size: 0.45, color: '#c2574a' });
+text('hall', 'IT ONLY KNOWS WHAT YOU TEACH IT', [-49.95, 4.5, 0], Math.PI / 2, { echo: true, size: 0.7, color: '#0e7c88' });
 
 export const hall = {
   room: 'hall',
@@ -289,9 +289,9 @@ add('archive', [-10, 2.4, -27.2, 10, 8, -26.8], { mat: 'shelf' });
 for (const x of [-9.2, -6.6, 6.6, 9.2].map((v) => v)) add('archive', [x - 0.5, 0, -23, x + 0.5, 4.5, -17.5], { mat: 'shelf' });
 add('archive', [-1, 0, -35.5, 1, 1.0, -34.6], { mat: 'metal' }); // vault terminal R2
 for (const x of [-8, 8]) add('archive', [x - 1, 0, -35.6, x + 1, 3.5, -34.8], { mat: 'shelf' });
-text('archive', 'NO RECORD OF LABORATORY', [0, 5.8, -35.95], 0, { size: 0.5, color: '#7ff0d0', when: '!custodian_remembers' });
-text('archive', 'RECORDS RESTORED: LABORATORY (2 VISITS)', [0, 5.8, -35.95], 0, { size: 0.45, color: '#7ff0d0', when: 'custodian_remembers' });
-text('archive', 'MEMORY IS LOAD-BEARING', [0, 2.4, -24.1], 0, { echo: true, size: 0.5, color: '#5ff' });
+text('archive', 'NO RECORD OF LABORATORY', [0, 5.8, -35.95], 0, { size: 0.5, color: '#24927a', when: '!custodian_remembers' });
+text('archive', 'RECORDS RESTORED: LABORATORY (2 VISITS)', [0, 5.8, -35.95], 0, { size: 0.45, color: '#24927a', when: 'custodian_remembers' });
+text('archive', 'MEMORY IS LOAD-BEARING', [0, 2.4, -24.1], 0, { echo: true, size: 0.5, color: '#0e7c88' });
 
 // ---------------------------------------------------------------------------
 // INTERACTABLES, ITEMS, TOKENS, TRIGGERS

@@ -29,20 +29,20 @@ namespace AfterZero.Runtime
             buttons.Clear();
             float w = VW, h = 1080f;
             bool device = G.Facts.Has("has_device");
-            buttons.Add(new Btn { Name = "use", Label = "USE", C = new Vector2(w - 370, h - 330), R = 70, A = Act.Use, Color = "#ffffff" });
-            buttons.Add(new Btn { Name = "jump", Label = "JUMP", C = new Vector2(w - 400, h - 140), R = 62, A = Act.Jump, Color = "#ffffff" });
-            buttons.Add(new Btn { Name = "crouch", Label = "SLIDE", C = new Vector2(w - 580, h - 110), R = 52, A = Act.Crouch, Color = "#ffffff" });
+            buttons.Add(new Btn { Name = "use", Label = "USE", C = new Vector2(w - 370, h - 330), R = 70, A = Act.Use, Color = "#23303c" });
+            buttons.Add(new Btn { Name = "jump", Label = "JUMP", C = new Vector2(w - 400, h - 140), R = 62, A = Act.Jump, Color = "#23303c" });
+            buttons.Add(new Btn { Name = "crouch", Label = "SLIDE", C = new Vector2(w - 580, h - 110), R = 52, A = Act.Crouch, Color = "#23303c" });
             if (device)
             {
-                string col = G.RoomState == "ECHO" ? "#4ff0ff" : G.RoomState == "INVERTED" ? "#ff5ab4" : "#e8f4ff";
+                string col = G.RoomState == "ECHO" ? "#22aeb9" : G.RoomState == "INVERTED" ? "#e86a9c" : "#4f9fe8";
                 buttons.Add(new Btn { Name = "shift", Label = "SHIFT", C = new Vector2(w - 180, h - 180), R = 92, A = Act.Shift, Color = col });
-                if (G.Adrenaline.CanSlip) buttons.Add(new Btn { Name = "slip", Label = "SLIP", C = new Vector2(w - 180, h - 400), R = 60, A = Act.Slip, Color = "#ffd040" });
+                if (G.Adrenaline.CanSlip) buttons.Add(new Btn { Name = "slip", Label = "SLIP", C = new Vector2(w - 180, h - 400), R = 60, A = Act.Slip, Color = "#c98418" });
             }
             float tx = w / 2 - 260;
-            if (device) buttons.Add(new Btn { Name = "laws", Label = "LAWS", C = new Vector2(tx, 130), R = 40, A = Act.Laws, Color = "#9dff9d" });
-            buttons.Add(new Btn { Name = "log", Label = "LOG", C = new Vector2(tx + 130, 130), R = 40, A = Act.Journal, Color = "#ffffff" });
-            if (G.Facts.Has("has_tick")) buttons.Add(new Btn { Name = "hint", Label = "TICK", C = new Vector2(tx + 260, 130), R = 40, A = Act.Hint, Color = "#ffe066" });
-            buttons.Add(new Btn { Name = "pause", Label = "II", C = new Vector2(tx + 390, 130), R = 40, A = Act.Pause, Color = "#ffffff" });
+            if (device) buttons.Add(new Btn { Name = "laws", Label = "LAWS", C = new Vector2(tx, 130), R = 40, A = Act.Laws, Color = "#2f9a64" });
+            buttons.Add(new Btn { Name = "log", Label = "LOG", C = new Vector2(tx + 130, 130), R = 40, A = Act.Journal, Color = "#23303c" });
+            if (G.Facts.Has("has_tick")) buttons.Add(new Btn { Name = "hint", Label = "TICK", C = new Vector2(tx + 260, 130), R = 40, A = Act.Hint, Color = "#b07a08" });
+            buttons.Add(new Btn { Name = "pause", Label = "II", C = new Vector2(tx + 390, 130), R = 40, A = Act.Pause, Color = "#23303c" });
         }
 
         void Update()
@@ -109,14 +109,14 @@ namespace AfterZero.Runtime
             // stick
             Vector2 o = stickId >= 0 ? stickOrigin : new Vector2(220, h - 230);
             Vector2 k = stickId >= 0 ? stickOrigin + Vector2.ClampMagnitude(stickPos - stickOrigin, StickR) : o;
-            Circle(o, StickR, new Color(1, 1, 1, 0.07f), white);
-            Circle(k, 48, new Color(1, 1, 1, 0.22f), white);
+            Circle(o, StickR, new Color(1, 1, 1, 0.35f), white);
+            Circle(k, 48, new Color(1, 1, 1, 0.95f), white);
             var st = new GUIStyle { alignment = TextAnchor.MiddleCenter, fontSize = 20, fontStyle = FontStyle.Bold, font = LevelBuilder.BuiltinFont };
             foreach (var b in buttons)
             {
                 bool down = pressedAt.TryGetValue(b.Name, out var at) && Time.unscaledTime - at < 0.15f;
                 var col = Palette.Hex(b.Color);
-                Circle(b.C, b.R, new Color(0, 0, 0, down ? 0.55f : 0.32f), white);
+                Circle(b.C, b.R, new Color(1, 1, 1, down ? 1f : 0.85f), white);
                 Ring(b.C, b.R, new Color(col.r, col.g, col.b, 0.75f), white);
                 st.normal.textColor = col;
                 GUI.Label(new Rect(b.C.x - b.R, b.C.y - b.R, b.R * 2, b.R * 2), b.Label, st);

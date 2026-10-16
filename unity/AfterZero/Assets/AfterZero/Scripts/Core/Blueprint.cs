@@ -33,7 +33,7 @@ namespace AfterZero.Core
 
     public class Decal
     {
-        public string Room, Text, Color = "#9fe8ff", When;
+        public string Room, Text, Color = "#2f7f9e", When;
         public float X, Y, Z, RotY, Size = 0.5f;
         public bool Echo, Ceiling;
     }
@@ -228,7 +228,7 @@ namespace AfterZero.Core
             }
         }
 
-        public Decal Text(string room, string text, float x, float y, float z, float rotY, float size = 0.5f, string color = "#9fe8ff", bool echo = false, string when = null, bool ceiling = false)
+        public Decal Text(string room, string text, float x, float y, float z, float rotY, float size = 0.5f, string color = "#2f7f9e", bool echo = false, string when = null, bool ceiling = false)
         {
             var d = new Decal { Room = room, Text = text, X = x, Y = y, Z = z, RotY = rotY, Size = size, Color = color, Echo = echo, When = when, Ceiling = ceiling };
             Decals.Add(d);

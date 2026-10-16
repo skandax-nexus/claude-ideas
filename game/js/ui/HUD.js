@@ -41,6 +41,7 @@ export class HUD {
       this.subT = 0;
       return;
     }
+    this.onLine?.(s.who);
     const sp = SPEAKERS[s.who] || SPEAKERS.NONE;
     const name = sp.name ? `<b style="color:${sp.color}">${sp.name}</b> ` : '';
     const cls = s.who === 'OBSERVER' ? 'obs' : s.who === 'NONE' ? 'narr' : '';

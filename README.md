@@ -10,6 +10,10 @@ This repository contains:
 - **`game/` - the original browser prototype** (Three.js): a playable 3D vertical slice for desktop and Android browsers.
 - **`docs/`** - the design for the full game.
 
+## v0.2: calm redesign
+
+Third-person camera, a bright low-contrast look that's easy on the eyes, a new melodic soundtrack in place of the horror drones, Juno and TICK as on-screen characters, a friendlier Observer, and gameplay and character videos. See [docs/ART_AND_AUDIO.md](docs/ART_AND_AUDIO.md).
+
 ## Unity version
 
 | Doc | What's in it |

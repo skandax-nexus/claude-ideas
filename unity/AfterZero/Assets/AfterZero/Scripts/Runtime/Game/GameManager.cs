@@ -42,6 +42,7 @@ namespace AfterZero.Runtime
         public TickCompanion Tick { get; private set; }
         public MobileControls Mobile { get; private set; }
         public Atmosphere Atmos { get; private set; }
+        public PlayerAvatar Avatar { get; private set; }
 
         // state
         public string Room { get; private set; }
@@ -96,6 +97,7 @@ namespace AfterZero.Runtime
             Chases.Init(this);
             Observer = ObserverAgent.Create(this, BP.HuntZones[0]);
             Tick = TickCompanion.Create(this);
+            Avatar = PlayerAvatar.Create(this);
             new GameObject("DeviceView").AddComponent<DeviceView>().Init(this);
 
             Wire();

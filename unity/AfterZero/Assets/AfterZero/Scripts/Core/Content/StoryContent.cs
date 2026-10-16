@@ -12,19 +12,19 @@ namespace AfterZero.Core.Content
     {
         public static readonly Dictionary<string, Speaker> Speakers = new Dictionary<string, Speaker>
         {
-            ["NONE"] = new Speaker("", "#cfd8e0"),
-            ["YOU"] = new Speaker("YOU", "#ffffff"),
-            ["OTHER"] = new Speaker("???", "#c7a2ff"),
-            ["VARGA"] = new Speaker("DR. ILSE VARGA", "#ffc27a"),
-            ["JUNO"] = new Speaker("JUNO HALE", "#7fe0a8"),
-            ["TICK"] = new Speaker("TICK", "#ffe066"),
-            ["CUSTODIAN"] = new Speaker("CUSTODIAN", "#6ff0d4"),
-            ["ASHE"] = new Speaker("MOTHER ASHE", "#f0a0c8"),
-            ["PELL"] = new Speaker("PELL", "#a0c8f0"),
-            ["WREN"] = new Speaker("WREN", "#f0c8a0"),
-            ["BAEL"] = new Speaker("CMDR. IDRIS BAEL", "#ff6a5a"),
-            ["OBSERVER"] = new Speaker("", "#ff7a6a"),
-            ["DEVICE"] = new Speaker("DEVICE", "#9dff9d"),
+            ["NONE"] = new Speaker("", "#4a5866"),
+            ["YOU"] = new Speaker("YOU", "#25313d"),
+            ["OTHER"] = new Speaker("???", "#7a5fd0"),
+            ["VARGA"] = new Speaker("DR. ILSE VARGA", "#c0761e"),
+            ["JUNO"] = new Speaker("JUNO HALE", "#2f9a64"),
+            ["TICK"] = new Speaker("TICK", "#b07a08"),
+            ["CUSTODIAN"] = new Speaker("CUSTODIAN", "#1f9a86"),
+            ["ASHE"] = new Speaker("MOTHER ASHE", "#c0508a"),
+            ["PELL"] = new Speaker("PELL", "#3a78b0"),
+            ["WREN"] = new Speaker("WREN", "#b07038"),
+            ["BAEL"] = new Speaker("CMDR. IDRIS BAEL", "#c2453a"),
+            ["OBSERVER"] = new Speaker("", "#c2574a"),
+            ["DEVICE"] = new Speaker("DEVICE", "#2f8a54"),
         };
 
         static Line L(string who, string text, string when = null) => new Line(who, text, when);

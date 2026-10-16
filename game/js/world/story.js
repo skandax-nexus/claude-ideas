@@ -6,16 +6,24 @@
 // events). Rules fire once when their condition becomes true.
 
 export const SPEAKERS = {
-  VARGA: { name: 'DR. ILSE VARGA', color: '#ffc27a' },
-  YOU: { name: 'YOU', color: '#ffffff' },
-  OTHER: { name: '???', color: '#c7a2ff' },
-  CUSTODIAN: { name: 'CUSTODIAN', color: '#6ff0d4' },
-  DEVICE: { name: 'DEVICE', color: '#9dff9d' },
-  OBSERVER: { name: '', color: '#ff7a6a' },
-  NONE: { name: '', color: '#cfd8e0' },
+  VARGA: { name: 'DR. ILSE VARGA', color: '#c0761e' },
+  YOU: { name: 'YOU', color: '#25313d' },
+  OTHER: { name: '???', color: '#7a5fd0' },
+  CUSTODIAN: { name: 'CUSTODIAN', color: '#1f9a86' },
+  JUNO: { name: 'JUNO HALE', color: '#2f9a64' },
+  TICK: { name: 'TICK', color: '#c08a10' },
+  DEVICE: { name: 'DEVICE', color: '#2f8a54' },
+  OBSERVER: { name: '', color: '#c2574a' },
+  NONE: { name: '', color: '#4a5866' },
 };
 
 export const scripts = {
+  juno_drop: [
+    { who: 'JUNO', text: 'Don\'t scream. Please. It hears screaming.' },
+    { who: 'JUNO', text: 'You don\'t remember me. You never do. I\'m Juno - engineer, last one awake. I\'ve been living on the ceiling.' },
+    { who: 'JUNO', text: 'Take TICK. He\'s been waiting for you longer than I have.' },
+    { who: 'TICK', text: 'HELLO. I AM TICK. IF YOU ARE STUCK, ASK ME. I WILL NOT LAUGH. MUCH.' },
+  ],
   other_speaks: [
     { who: 'OTHER', text: 'You finally learned how to move the room.' },
     { who: 'OTHER', text: 'Now learn why it was moving you.' },
@@ -145,6 +153,8 @@ export const rules = [
 
   // Narrative consequences
   { id: 'tether', when: 'machine_activated', then: [{ set: { observer_tethered: true } }] },
+  { id: 'juno', when: 'left_antechamber', then: [{ set: { met_juno: true, has_tick: true } }, { event: 'juno_drop' }] },
+  { id: 'a_juno', when: 'met_juno', then: [{ log: 'Juno has been hiding on the ceiling. She knew my face. I didn\'t know hers.' }] },
 ];
 
 // System 5: the objective the player sees is the best explanation of the
@@ -203,4 +213,32 @@ export const discoveries = [
   'has_device', 'seen_echo', 'noticed_shadow', 'shadow_passage_open', 'heard_self', 'heard_varga',
   'key_dissolved', 'wrote_law', 'archive_open', 'custodian_remembers', 'vault_seen', 'core_installed',
   'machine_activated', 'brain_seen', 'observer_faced',
+];
+
+// Juno: the first matching line plays when you talk to her.
+export const juno = [
+  { when: '!heard_varga', lines: [{ who: 'JUNO', text: 'Varga left recordings everywhere. The console by the crates is the one she cared about.' }] },
+  { when: '!token_HELD', lines: [{ who: 'JUNO', text: 'See your shadow on the east wall? It moves wrong. It always has. I never figured out why.' }] },
+  { when: '!archive_open', lines: [{ who: 'JUNO', text: 'The archive only believes proof. The key on that desk only exists in the echo. Make it real somehow.' }] },
+  { when: '!core_installed', lines: [{ who: 'JUNO', text: 'The core is in the observation hall. The sentinel there learns. Don\'t teach it the same trick twice.' }] },
+  { when: '!machine_activated', lines: [{ who: 'JUNO', text: 'It\'s ready. Varga said don\'t. I say... your call.' }] },
+  { when: '!brain_seen', lines: [{ who: 'JUNO', text: 'Stars. I\'d forgotten what they look like. Look at the machine in the echo - something\'s inside.' }] },
+  { when: 'true', lines: [{ who: 'JUNO', text: 'Whatever you choose, I\'m glad it was you this time.' }] },
+];
+
+// TICK's hints: first unsolved situation, three tiers (nudge, direction, answer).
+export const hints = [
+  { when: '!has_device', tiers: ['THE FLOATING THING LOOKS TOUCHABLE.', 'TOUCH IT. THEN TOUCH IT AGAIN.', 'TOUCH THE OBJECT TWICE. WHEN THE ROOM FLIPS, WALK THROUGH THE NEW DOOR.'] },
+  { when: 'has_device && !left_antechamber', tiers: ['THE DOOR ONLY EXISTS ONE WAY UP.', 'TRY THE ROOM UPSIDE DOWN.', 'SHIFT TO INVERTED AND WALK OUT ALONG THE CEILING.'] },
+  { when: '!heard_varga', tiers: ['SOMEONE LEFT A MESSAGE.', 'THE GLOWING CONSOLE.', 'PLAY THE RECORDING AT THE LAB CONSOLE.'] },
+  { when: '!token_HELD', tiers: ['THE SHADOW ON THE EAST WALL IS WRONG.', 'IT MIRRORS YOU. IN ECHO IT BECOMES REAL. THE WALL HAS A DOOR OUTLINE.', 'STAND SO THE SHADOW COVERS THE DOOR OUTLINE, THEN SHIFT TO ECHO. WALK INTO THE PASSAGE.'] },
+  { when: '!token_PERSISTS', tiers: ['SOMETHING GLOWS NEAR THE CEILING.', 'YOU CAN WALK ON CEILINGS.', 'SHIFT THE LAB TO INVERTED AND WALK TO THE GLOW IN THE CORNER FRAME.'] },
+  { when: '!archive_open && !wrote_law', tiers: ['THE KEY ONLY EXISTS AS A MEMORY.', 'MEMORIES DISSOLVE OUTSIDE ECHO. UNLESS A LAW SAYS OTHERWISE.', 'OPEN LAWS. WRITE: HELD MATTER  PERSISTS THROUGH  PHYSICAL. THEN TAKE THE KEY IN ECHO.'] },
+  { when: '!archive_open', tiers: ['THE ARCHIVE WANTS PROOF.', 'CARRY THE KEY INTO THE PHYSICAL LAB.', 'TAKE THE KEY IN ECHO, SHIFT TO PHYSICAL, USE THE ARCHIVE PANEL.'] },
+  { when: '!core_installed', tiers: ['THE MACHINE NEEDS A CORE. THE HALL HAS ONE.', 'THE SENTINEL DOES NOT LOOK UP. AT FIRST. ECHO SHOWS WHERE IT WALKED.', 'CROSS THE HALL ON THE CEILING OR BEHIND PILLARS. BRING THE CORE TO THE MACHINE.'] },
+  { when: 'custodian_remembers && !vault_seen', tiers: ['THE BRIDGE IS A MEMORY.', 'MEMORIES CAN BE MADE SOLID.', 'WRITE: ECHOES  SOLIDIFY IN  ECHO. SHIFT THE ARCHIVE TO ECHO AND WALK ACROSS.'] },
+  { when: 'archive_open && !custodian_remembers', tiers: ['THE ARCHIVE KEEPER IS INSIDE.', 'TALK TO IT.', 'WALK INTO THE ARCHIVE AND SPEAK TO THE CUSTODIAN.'] },
+  { when: '!machine_activated', tiers: ['THE MACHINE IS READY.', 'SOMEONE TOLD YOU NOT TO.', 'USE THE MACHINE TWICE.'] },
+  { when: '!brain_seen', tiers: ['THE MACHINE IS HIDING SOMETHING.', 'LOOK AT IT IN THE ECHO.', 'SHIFT THE LAB TO ECHO AND LOOK INTO THE RING.'] },
+  { when: 'brain_seen && !ending', tiers: ['THIS IS YOUR CHOICE.', 'THE MACHINE IS WAITING.', 'USE THE MACHINE WHEN YOU ARE READY.'] },
 ];

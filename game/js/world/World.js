@@ -46,6 +46,8 @@ export class World {
         if (el.solid) this.staticColliders.push(box);
       } else {
         const mesh = new THREE.Mesh(geo, el.echo ? this.mats.echo : this.mats[el.mat]);
+        mesh.castShadow = !el.echo;
+        mesh.receiveShadow = !el.echo;
         if (el.echo) {
           const edges = new THREE.LineSegments(new THREE.EdgesGeometry(geo), this.mats.echoLine);
           mesh.add(edges);
@@ -58,6 +60,9 @@ export class World {
       const mat = this.mats[k.split('|')[1]];
       const mesh = new THREE.Mesh(mergeGeometries(geos), mat);
       if (mat.transparent) mesh.renderOrder = 2;
+      const matName = k.split('|')[1];
+      mesh.castShadow = !(matName === 'ceil' || matName === 'glass' || matName.startsWith('strip'));
+      mesh.receiveShadow = true;
       this.scene.add(mesh);
       geos.forEach((g) => g.dispose());
     }
@@ -66,7 +71,7 @@ export class World {
       const { tex, aspect } = textTexture(t.text, { color: t.color });
       const mat = new THREE.MeshBasicMaterial({
         map: tex, transparent: true, depthWrite: false, fog: false,
-        blending: t.echo ? THREE.AdditiveBlending : THREE.NormalBlending,
+        blending: THREE.NormalBlending,
       });
       const mesh = new THREE.Mesh(new THREE.PlaneGeometry(t.size * aspect, t.size), mat);
       mesh.position.set(...t.pos);

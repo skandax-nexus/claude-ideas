@@ -309,7 +309,7 @@ namespace AfterZero.Runtime
                     skin = cloth = Palette.Unlit(Palette.Hex("#05060a")); accent = Palette.Additive(Palette.Hex("#4ff0ff"), 0.5f); break;
                 default:
                     skin = Palette.Lit(style == Style.Old ? Palette.Hex("#d8b8a0") : Palette.Hex("#c89a7a"), null, 0.3f, 0f);
-                    cloth = Palette.Lit(style == Style.Officer ? Palette.Hex("#2a2e38") : Color.Lerp(c, Palette.Hex("#30343c"), 0.55f), null, 0.25f, 0.05f);
+                    cloth = Palette.Lit(style == Style.Officer ? Palette.Hex("#56667a") : Color.Lerp(c, Palette.Hex("#f4f7fa"), 0.3f), null, 0.35f, 0f);
                     accent = Palette.Emissive(c, 1.6f);
                     break;
             }

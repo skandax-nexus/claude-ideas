@@ -79,7 +79,7 @@ export class Observer {
     geo.setDrawRange(0, 0);
     this.trailPts = new THREE.Points(
       geo,
-      new THREE.PointsMaterial({ color: 0x5ff8ff, size: 0.22, transparent: true, opacity: 0.8, fog: false, blending: THREE.AdditiveBlending, depthWrite: false }),
+      new THREE.PointsMaterial({ color: 0x18a3b3, size: 0.22, transparent: true, opacity: 0.8, fog: false, depthWrite: false }),
     );
     this.trailPts.visible = false;
     scene.add(this.trailPts);
@@ -254,7 +254,8 @@ export class Observer {
 
     if (this.frozen) {
       this.animate(dt, 0, now);
-      U.eyeMat.color.setHex(0x6aa0ff);
+      U.eyeMat.color.setHex(0xb6a6ff);
+      U.coneMat.color.setHex(0xb6a6ff);
       return;
     }
 
@@ -355,9 +356,10 @@ export class Observer {
     }
     this.trailPts.visible = roomState === 'ECHO';
 
-    const col = this.mode === 'chase' ? 0xff3020 : this.suspicion > 0.35 ? 0xffc040 : 0xffffff;
+    const col = this.mode === 'chase' ? 0xff8a70 : this.suspicion > 0.35 ? 0xffc04a : 0x7fd8ff;
     U.eyeMat.color.setHex(col);
-    U.coneMat.opacity = this.mode === 'chase' ? 0.09 : 0.045;
+    U.coneMat.color.setHex(col);
+    U.coneMat.opacity = this.mode === 'chase' ? 0.16 : 0.09;
     this.animate(dt, moved, now);
   }
 

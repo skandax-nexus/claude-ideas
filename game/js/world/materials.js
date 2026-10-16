@@ -39,59 +39,58 @@ function panel(g, s, base, line, dots = true) {
 }
 
 export function createMaterials() {
-  const wallTex = canvasTex(128, (g, s) => panel(g, s, '#8a929c', '#5d646d'));
+  // Soft, bright "clean sci-fi" palette: off-white panels, warm light floors,
+  // pastel accents. Low contrast and matte surfaces are easy on the eyes.
+  const wallTex = canvasTex(128, (g, s) => panel(g, s, '#f4f6f8', '#dfe5eb'));
   const floorTex = canvasTex(128, (g, s) => {
-    panel(g, s, '#5b6068', '#3a3e45', false);
-    g.strokeStyle = '#41454c';
-    for (let i = 8; i < s; i += 16) {
+    panel(g, s, '#e6e9ed', '#d3d9df', false);
+    g.strokeStyle = '#dce1e6';
+    for (let i = 16; i < s; i += 32) {
       g.beginPath();
       g.moveTo(i, 4);
       g.lineTo(i, s - 4);
       g.stroke();
     }
   });
-  const ceilTex = canvasTex(128, (g, s) => panel(g, s, '#4a4f57', '#33373d'));
-  const darkTex = canvasTex(128, (g, s) => panel(g, s, '#5a616b', '#3a3f46'));
-  const crateTex = canvasTex(64, (g, s) => {
-    panel(g, s, '#7a6a4a', '#4a3e28', false);
-    g.strokeStyle = '#4a3e28';
-    g.lineWidth = 3;
-    g.beginPath();
-    g.moveTo(0, 0);
-    g.lineTo(s, s);
-    g.stroke();
+  const ceilTex = canvasTex(128, (g, s) => panel(g, s, '#fbfcfd', '#e8edf1'));
+  const softTex = canvasTex(128, (g, s) => panel(g, s, '#eef1f4', '#dde3e9'));
+  const woodTex = canvasTex(64, (g, s) => {
+    panel(g, s, '#efd6ae', '#d9b98a', false);
+    g.strokeStyle = 'rgba(180,140,90,0.25)';
+    for (let i = 6; i < s; i += 10) {
+      g.beginPath();
+      g.moveTo(0, i);
+      g.lineTo(s, i + 3);
+      g.stroke();
+    }
   });
 
-  const lam = (o) => new THREE.MeshLambertMaterial(o);
+  const std = (o) => new THREE.MeshStandardMaterial({ roughness: 0.85, metalness: 0, ...o });
   const glow = (color, opacity = 1) =>
     new THREE.MeshBasicMaterial({ color, transparent: opacity < 1, opacity, fog: false });
 
   const m = {
-    wall: lam({ map: wallTex, color: 0xb8c2cc }),
-    wallDark: lam({ map: darkTex, color: 0xb8c0cc, emissive: 0x050608 }),
-    floor: lam({ map: floorTex, color: 0xa0a8b0 }),
-    floorDark: lam({ map: darkTex, color: 0x50565e }),
-    ceil: lam({ map: ceilTex, color: 0x9098a0 }),
-    metal: lam({ map: darkTex, color: 0x8a95a6 }),
-    shelf: lam({ map: darkTex, color: 0x6b7480 }),
-    pillar: lam({ map: darkTex, color: 0xc8b4b4, emissive: 0x080404 }),
-    crate: lam({ map: crateTex }),
-    door: lam({ map: darkTex, color: 0x6d7a96, emissive: 0x0a1020 }),
-    doorArchive: lam({ map: darkTex, color: 0x4a8a80, emissive: 0x062420 }),
-    glass: new THREE.MeshLambertMaterial({ color: 0x223040, transparent: true, opacity: 0.18, depthWrite: false }),
-    accent: glow(0x6ff0ff),
-    stripCool: glow(0x7fd8ff),
-    stripViolet: glow(0x9a7bff),
-    stripRed: glow(0xff4a3a),
-    stripTeal: glow(0x4af0c8),
-    stripFaint: glow(0x9fdcff, 0.35),
-    echo: new THREE.MeshBasicMaterial({
-      color: 0x4ff0ff, transparent: true, opacity: 0.22, depthWrite: false, blending: THREE.AdditiveBlending, fog: false,
-    }),
-    echoSolid: new THREE.MeshBasicMaterial({
-      color: 0x7ff8ff, transparent: true, opacity: 0.55, depthWrite: false, blending: THREE.AdditiveBlending, fog: false,
-    }),
-    echoLine: new THREE.LineBasicMaterial({ color: 0x8ff8ff, transparent: true, opacity: 0.85, fog: false }),
+    wall: std({ map: wallTex, color: 0xffffff }),
+    wallDark: std({ map: softTex, color: 0xf6eee4 }),
+    floor: std({ map: floorTex, color: 0xffffff, roughness: 0.75 }),
+    floorDark: std({ map: softTex, color: 0xc9d4de }),
+    ceil: std({ map: ceilTex, color: 0xffffff, roughness: 0.95 }),
+    metal: std({ map: softTex, color: 0xd4dce5, roughness: 0.5, metalness: 0.1 }),
+    shelf: std({ map: softTex, color: 0xc6d3df }),
+    pillar: std({ map: softTex, color: 0xf3e3cf }),
+    crate: std({ map: woodTex }),
+    door: std({ map: softTex, color: 0xa9cdea, roughness: 0.6 }),
+    doorArchive: std({ map: softTex, color: 0xa6e6d6, roughness: 0.6 }),
+    glass: new THREE.MeshStandardMaterial({ color: 0xcfeaff, transparent: true, opacity: 0.22, roughness: 0.1, depthWrite: false }),
+    accent: glow(0x6fd6dc),
+    stripCool: glow(0x8fd3f0),
+    stripViolet: glow(0xb9a8ff),
+    stripRed: glow(0xffc27a),
+    stripTeal: glow(0x7fe3c9),
+    stripFaint: glow(0x7fb8d8, 0.6),
+    echo: new THREE.MeshBasicMaterial({ color: 0x3cc4cf, transparent: true, opacity: 0.28, depthWrite: false, fog: false }),
+    echoSolid: new THREE.MeshBasicMaterial({ color: 0x29b3c0, transparent: true, opacity: 0.55, depthWrite: false, fog: false }),
+    echoLine: new THREE.LineBasicMaterial({ color: 0x1f9aa8, transparent: true, opacity: 0.9, fog: false }),
   };
   return m;
 }
@@ -153,7 +152,7 @@ export function textTexture(str, { color = '#9fe8ff', font = 'bold 64px monospac
   g.textAlign = 'center';
   if (glow) {
     g.shadowColor = color;
-    g.shadowBlur = 16;
+    g.shadowBlur = 3;
   }
   g.fillStyle = color;
   g.fillText(str, w / 2, 52);

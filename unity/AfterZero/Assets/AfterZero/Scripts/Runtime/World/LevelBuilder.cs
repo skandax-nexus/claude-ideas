@@ -88,6 +88,7 @@ namespace AfterZero.Runtime
                     go.AddComponent<MeshFilter>().sharedMesh = mesh;
                     var mr = go.AddComponent<MeshRenderer>();
                     mr.sharedMaterial = Palette.Get(kv.Key.mat);
+                    if (kv.Key.mat == "ceil" || kv.Key.mat == "glass") mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off; // skylight passes through
                     Collider col = null;
                     if (kv.Key.solid) col = go.AddComponent<MeshCollider>();
                     go.isStatic = true;

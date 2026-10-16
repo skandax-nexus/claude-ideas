@@ -53,7 +53,7 @@ namespace AfterZero.Runtime
             if (themed != null) Instantiate(themed, transform, false);
             else
             {
-                var body = Humanoid.Build("#1a1c22", Humanoid.Style.Shadow, 2.9f);
+                var body = Humanoid.Build("#7fd8ff", Humanoid.Style.Solid, 2.9f); // a sleek white sentinel
                 body.transform.SetParent(transform, false);
                 body.transform.localScale = new Vector3(0.75f, 1f, 0.75f); // too tall, too thin
                 rig = body.GetComponent<Humanoid.Rig>();
@@ -176,7 +176,7 @@ namespace AfterZero.Runtime
             }
 
             agent.isStopped = frozen;
-            if (frozen) { Paint(new Color(0.4f, 0.6f, 1f)); Animate(0); return; }
+            if (frozen) { Paint(Palette.Hex("#b6a6ff")); Animate(0); return; }
 
             if (sees && Suspicion >= 1f && Mode != "chase") { Mode = "chase"; repath = 0; Say("It sees you."); G.Audio.ObserverCry(); }
 
@@ -225,7 +225,7 @@ namespace AfterZero.Runtime
             float reach = onCeiling ? (Brain.SeesCeiling ? 1.4f : -1f) : 1.2f;
             if (inHall && dist < reach && (Mode == "chase" || sees || dist < 0.9f)) { G.Caught("observer"); return; }
 
-            Paint(Mode == "chase" ? new Color(1f, 0.15f, 0.1f) : Suspicion > 0.35f ? new Color(1f, 0.75f, 0.25f) : Color.white);
+            Paint(Mode == "chase" ? Palette.Hex("#ff8a70") : Suspicion > 0.35f ? Palette.Hex("#ffc04a") : Palette.Hex("#7fd8ff"));
             Animate(agent.velocity.magnitude);
         }
 

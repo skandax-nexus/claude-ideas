@@ -26,6 +26,14 @@ export class Director {
     this.g.hud.say(scripts[id], this.g.facts, done);
   }
 
+  // Story events raised by rules ({ event: 'id' }).
+  event(id) {
+    if (id === 'juno_drop') {
+      this.g.npcs.dropJuno();
+      this.after(0.9, () => this.say('juno_drop'));
+    }
+  }
+
   // --- interactions --------------------------------------------------------
   use(id) {
     const { facts } = this.g;

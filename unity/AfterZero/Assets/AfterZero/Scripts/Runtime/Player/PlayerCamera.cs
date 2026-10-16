@@ -11,9 +11,14 @@ namespace AfterZero.Runtime
         public Vector3 Heading = Vector3.forward;  // horizontal facing
         public Vector3 Up = Vector3.up;            // animated camera up
         public float Pitch;                         // degrees
-        public float BaseFov = 74f;
+        public float BaseFov = 62f;
         public float RollSpeed = 220f;             // deg/s
         public bool InstantFlip;
+        [Header("Third person")]
+        public bool ThirdPerson = true;
+        public float Distance = 3.6f, Shoulder = 0.5f;
+        Vector3 camPos; bool hasCamPos;
+        public float CameraToHead { get; private set; } = 99f;
 
         float bob, dip, dipVel, trauma, fovKick;
         Vector2 smoothLook;
@@ -90,9 +95,36 @@ namespace AfterZero.Runtime
             Vector3 fwd = Forward;
             Vector3 camUp = Quaternion.AngleAxis(-Pitch, Right) * Up;
             var rot = Quaternion.LookRotation(fwd, camUp) * Quaternion.Euler(shake.x, shake.y, shake.z * 2f);
-            transform.SetPositionAndRotation(
-                motor.transform.position + Up * (EyeHeight + bobY + dip + crouch) + Right * bobX,
-                rot);
+            if (!ThirdPerson)
+            {
+                transform.SetPositionAndRotation(motor.transform.position + Up * (EyeHeight + bobY + dip + crouch) + Right * bobX, rot);
+                return;
+            }
+            // over-the-shoulder follow camera that never clips through walls
+            var head = motor.transform.position + Up * (0.6f + crouch * 0.5f);
+            var desired = head - fwd * Distance + camUp * 0.35f + Right * Shoulder;
+            var dir = desired - head;
+            float len = dir.magnitude;
+            dir /= len;
+            float dist = len;
+            if (Physics.SphereCast(head, 0.22f, dir, out var hit, len, ~(1 << 2), QueryTriggerInteraction.Ignore)) dist = Mathf.Max(0.35f, hit.distance - 0.05f);
+            if (dist < 1.8f)
+            {
+                // cramped: rise and look down over the shoulder instead
+                var alt = (-fwd * 2f + camUp * 1.3f + Right * 0.3f);
+                float altLen = alt.magnitude;
+                alt /= altLen;
+                float altDist = altLen;
+                if (Physics.SphereCast(head, 0.22f, alt, out var h2, altLen, ~(1 << 2), QueryTriggerInteraction.Ignore)) altDist = Mathf.Max(0.35f, h2.distance - 0.05f);
+                if (altDist > dist + 0.3f) { dir = alt; dist = altDist; }
+            }
+            var camTarget = head + dir * dist;
+            if (!hasCamPos || (camPos - camTarget).sqrMagnitude > 36f) { camPos = camTarget; hasCamPos = true; }
+            else camPos = Vector3.Lerp(camPos, camTarget, 1f - Mathf.Exp(-dt * 14f));
+            if ((camPos - head).magnitude > dist + 0.05f) camPos = camTarget;
+            CameraToHead = (camPos - head).magnitude;
+            var aim = head + fwd * 6f;
+            transform.SetPositionAndRotation(camPos, Quaternion.LookRotation(aim - camPos, camUp) * Quaternion.Euler(shake.x, shake.y, shake.z * 2f));
         }
     }
 }
