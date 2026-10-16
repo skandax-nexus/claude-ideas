@@ -286,3 +286,16 @@ body.touch #held { top: auto; bottom: 182px; right: 16px; }
 .sw .txtb { width: auto; height: auto; padding: 6px 10px; border-radius: 999px; font-size: 11px; box-shadow: none; border: 1px solid var(--line); }
 .heroblurb { font-size: 13px; color: var(--ink-soft); min-height: 36px; }
 #heroGo { background: var(--coral); color: #fff; border: none; }
+/* character select on short (phone landscape) screens: compact, START always visible */
+#heroGo { position: sticky; bottom: 0; box-shadow: 0 -10px 20px rgba(255, 255, 255, 0.9); }
+@media (max-height: 520px) {
+  .herop { padding: 14px 18px; max-height: 96vh; }
+  .herop > p.dim, .heroblurb { display: none; }
+  .heroes { grid-template-columns: repeat(6, 1fr); gap: 5px; margin: 8px 0; }
+  .heroes button { padding: 7px 2px; font-size: 11px; }
+  .heroes button small { display: none; }
+  .custom .row2 { margin: 6px 0; }
+  .sw button { width: 22px; height: 22px; }
+  .sw .txtb { padding: 4px 8px; }
+  #heroGo { margin: 6px 0 0; padding: 11px; }
+}
