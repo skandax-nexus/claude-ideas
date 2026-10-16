@@ -109,7 +109,9 @@ body.touch #topbtns { display: flex; gap: 8px; position: absolute; left: 50%; tr
 body.touch #held { bottom: auto; top: 70px; right: 16px; }
 body.touch #subs { bottom: 34%; }
 body.touch #prompt { top: 62%; }
-body.touch #objective { top: 60px; }
+body.touch #objective { top: 60px; max-width: 46vw; }
+body.touch #card { padding-top: 22vh; }
+body.touch #card h2 { font-size: 26px; }
 .touch-only { display: none !important; }
 body.touch .touch-only { display: flex !important; }
 body.touch .desktop-only { display: none !important; }
@@ -192,7 +194,7 @@ li small { display: block; color: var(--ink-soft); font-size: 12px; }
 .seg button.sel { background: var(--ink); color: #fff; border-color: var(--ink); }
 #minimap { position: absolute; right: 16px; bottom: 16px; width: 170px; height: 170px; border-radius: 50%; box-shadow: var(--shadow); display: none; }
 body.minimap #minimap { display: block; }
-body.touch #minimap { width: 120px; height: 120px; top: 110px; bottom: auto; right: 14px; }
+body.touch #minimap { width: 104px; height: 104px; top: 134px; bottom: auto; right: 16px; }
 body.minimap #held { bottom: 196px; }
 #bigmap { display: block; width: 100%; height: min(62vh, 560px); background: #eef3f8; border-radius: 16px; margin-top: 10px; }
 .legend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 10px; font-size: 12px; color: var(--ink-soft); }
@@ -203,9 +205,9 @@ body.minimap #held { bottom: 196px; }
 #zoombtns button { width: 38px; height: 38px; padding: 0; border-radius: 50%; font-size: 18px; line-height: 1; background: rgba(255, 255, 255, 0.85); }
 body:not(.minimap) #zoombtns { right: 18px; bottom: 60px; }
 body.touch #zoombtns { right: auto; left: 50%; transform: translateX(-50%); bottom: 18px; flex-direction: row; }
-#card { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; z-index: 25; opacity: 0; transition: opacity 0.9s; }
+#card { position: fixed; inset: 0; display: flex; align-items: flex-start; padding-top: 16vh; justify-content: center; pointer-events: none; z-index: 25; opacity: 0; transition: opacity 0.9s; }
 #card.on { opacity: 1; }
-#card .inner { text-align: center; background: rgba(255, 255, 255, 0.86); padding: 26px 40px; border-radius: 24px; box-shadow: 0 20px 60px rgba(40, 60, 90, 0.16); max-width: 86vw; }
+#card .inner { text-align: center; background: rgba(255, 255, 255, 0.86); padding: 20px 36px; border-radius: 24px; box-shadow: 0 20px 60px rgba(40, 60, 90, 0.16); max-width: 86vw; }
 #card small { font-size: 11px; letter-spacing: 0.22em; color: var(--ink-soft); font-weight: 700; }
 #card h2 { font-size: clamp(26px, 5vw, 44px); letter-spacing: 0.16em; margin: 8px 0 4px; color: var(--ink); }
 #card p { margin: 0; color: var(--ink-soft); font-size: 16px; }

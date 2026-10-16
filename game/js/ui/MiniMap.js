@@ -109,6 +109,7 @@ export class MiniMap {
   drawMini(player, cur, markers) {
     if (!this.data || !this.mini) return;
     const { g, w, h } = this.fit(this.mini);
+    if (w < 20 || h < 20) return; // hidden
     g.clearRect(0, 0, w, h);
     g.save();
     g.beginPath();
@@ -134,6 +135,7 @@ export class MiniMap {
   drawBig(player, cur, markers) {
     if (!this.data || !this.big) return;
     const { g, w, h } = this.fit(this.big);
+    if (w < 20 || h < 20) return;
     g.clearRect(0, 0, w, h);
     let x0 = Infinity, z0 = Infinity, x1 = -Infinity, z1 = -Infinity;
     for (const r of [...this.data.rooms.map((r) => r.rect), ...(this.data.corridors || [])]) {

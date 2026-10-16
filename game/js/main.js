@@ -190,7 +190,7 @@ class Game {
   buildViewModels() {
     const hands = this.player.model.userData;
     this.device = makeDevice();
-    this.device.scale.setScalar(1.6);
+    this.device.scale.setScalar(1.0);
     hands.handL.add(this.device);
     this.heldModels = { key: makeKeyItem(true), core: makeCoreItem() };
     for (const m of Object.values(this.heldModels)) {
@@ -1233,11 +1233,12 @@ class Game {
     this.capturing = true;
   }
 
-  tickFrame(dt) {
+  tickFrame(dt, noRender = false) {
     this.time += dt;
     if (!this.paused && !this.menu) this.step(dt);
     this.updateWorlds(dt, dt);
     this.player.updateCamera(dt);
+    if (noRender) return;
     this.updateTheme(dt);
     if (this.settings.minimap && this.started) this.minimap.drawMini(this.player, this.room, this.mapMarkers());
     this.postfx.render();

@@ -7,14 +7,45 @@ You wake in a sealed room with a floating object and no instructions. Touch it a
 This repository contains:
 
 - **`unity/AfterZero/` - the Unity 6 (URP) version** with a stronger story, 11 characters, 8 zones (~245 m × 60 m), three adrenaline chase set-pieces, a hint companion, New Game+ and Android touch controls. Start with [`docs/unity/UNITY_GUIDE.md`](docs/unity/UNITY_GUIDE.md).
-- **`game/` - the original browser prototype** (Three.js): a playable 3D vertical slice for desktop and Android browsers.
+- **`game/` - the browser game** (Three.js): the Station Zero prologue plus the generated vessel campaign, for desktop and Android browsers.
 - **`docs/`** - the design for the full game.
+
+## v0.3: the vessel (about 5½ hours of play)
+
+The browser game is now a full campaign: the 35-minute **Station Zero** prologue, then **the vessel** — 8 generated decks with 4 sectors each, about 5 hours of play. See [docs/VESSEL.md](docs/VESSEL.md).
+
+- **Generated levels.** Every room is built from a seed, out of the following parts:
+  - **Pits**, crossed on the ceiling, on an echo bridge, on hard light, or in zero-g.
+  - **Ledges** reached by stairs or zero-g, and **doors on the ceiling**.
+  - **Locks** opened with **memory keys** and **power-core sockets**.
+  - **Time sweepers** and **watched halls** with sentinels.
+
+  Every room can be solved within the device's three law slots. A QA bot plays every generated room with real physics to prove it.
+- **A generated story.** Seven crew members (names, roles, faces, personalities), one of whom started the loop.
+  - Each deck has logs, a record whose official version and **echo** version disagree, and an encounter.
+  - A suspects board in your log, and a final **verdict** on the bridge with a twist that differs from seed to seed.
+- **Two new laws.** `TIME FREEZES IN ...` stops sweepers. `HARD LIGHT SOLIDIFY IN ...` makes gold outlines walkable.
+- **Real-proportion humans** in futuristic costumes (explorer, engineer, scientist, security, pilot, medic, robe), with faces, blinking, talking, looking at you and waving. Holograms are used for echoes.
+- **Comfort and controls**
+  - **Camera:** zoom with the wheel, a pinch or the +/- buttons; four views (close, standard, far, overview), cycled with V.
+  - **Comfort mode:** instant gravity flips and a steadier camera.
+  - **Settings:** field of view, look sensitivity and invert Y.
+- **Saving:** three save slots plus an autosave, F5/F9 quick save and load, and memory beacons that save in story rooms.
+- **Maps:** a minimap and a full map (M) for both the station and every generated sector.
+- **Graphics presets:** ambient occlusion (HIGH), soft bloom (MEDIUM and HIGH), image-based lighting, and bump-mapped panels. LOW is picked automatically on software renderers.
+
+| | Desktop | Android |
+|---|---|---|
+| Zoom / camera view | mouse wheel, + / -, V | pinch, + / - buttons, ◉ |
+| Map / save / load | M, F5, F9, pause menu | MAP, pause menu |
 
 ## v0.2: calm redesign
 
 Third-person camera, a bright low-contrast look that's easy on the eyes, a new melodic soundtrack in place of the horror drones, Juno and TICK as on-screen characters, a friendlier Observer, and gameplay and character videos. See [docs/ART_AND_AUDIO.md](docs/ART_AND_AUDIO.md).
 
 ## Unity version
+
+> The v0.3 features (generated vessel, new humans, saves, maps, camera zoom) are in the browser game, which is also what the Android APK wraps. The Unity project is still at v0.2.
 
 | Doc | What's in it |
 |---|---|
@@ -81,8 +112,9 @@ tests/
 ## Tests
 
 ```bash
-npm test                                   # core systems (Node 20+)
-NODE_PATH=$(npm root -g) npm run smoke     # full playthrough in headless Chromium (needs playwright)
+npm test                                   # core systems + generator invariants over many seeds (Node 20+)
+NODE_PATH=$(npm root -g) npm run smoke     # full prologue playthrough in headless Chromium (needs playwright)
+NODE_PATH=$(npm root -g) npm run vessel    # QA bot plays every generated room of 2 seeds (pass a seed count to test more)
 ```
 
 ## Design principle

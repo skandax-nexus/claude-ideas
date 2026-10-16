@@ -23,6 +23,16 @@ Files: `game/js/entities/Player.js`, `unity/.../Player/PlayerCamera.cs`, `Player
 
 ## Characters
 
+**v0.3:** every character is now a procedurally built human (`game/js/world/humans.js`).
+
+- **Body:** realistic proportions, built from lofted limbs and torso on a joint skeleton.
+- **Face:** sculpted, with eyes, lids that blink, brows, lips and a jaw that moves when they talk.
+- **Costumes:** futuristic, with fabric weave and seams, clearcoat armour plates and glowing seam lines.
+- **Cast:** Ren, Juno, Varga, the Custodian and the Other are presets. Every generated crew member gets a seeded random body, skin tone, hair, costume and palette. Echoes are rendered as holograms.
+- **Cost:** about 13k triangles and 6 draw calls per character.
+
+The table below is the v0.2 design brief that v0.3 builds on.
+
 | Character | Design |
 |---|---|
 | **Ren** (you) | White suit, coral backpack, dark hair; the reality device glows in the left hand |
