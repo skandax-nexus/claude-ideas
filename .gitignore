@@ -4,3 +4,6 @@ unity/Tests/bin/
 unity/Tests/obj/
 unity/Tools/*/bin/
 unity/Tools/*/obj/
+android/build/
+android/debug.keystore
+*.apk
