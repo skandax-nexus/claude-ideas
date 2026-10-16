@@ -314,3 +314,70 @@ body.touch .sub { font-size: 14px; padding: 10px 14px; }
 #rotate .phone { width: 46px; height: 80px; border: 4px solid var(--ink); border-radius: 10px; margin-bottom: 12px; animation: turn 2.4s ease-in-out infinite; }
 @keyframes turn { 0%, 20% { transform: rotate(0); } 50%, 80% { transform: rotate(-90deg); } 100% { transform: rotate(0); } }
 @media (orientation: portrait) { body.touch #rotate { display: flex; } }
+
+/* v0.5: menus at the side - glass panels, the game stays visible ------------------- */
+.overlay.side { background: transparent; backdrop-filter: none; -webkit-backdrop-filter: none; padding: 12px; }
+.overlay.side.left { justify-content: flex-start; }
+.overlay.side.right { justify-content: flex-end; }
+#title.overlay.side { background: linear-gradient(90deg, rgba(244, 247, 250, 0.55), transparent 55%); }
+#hero.overlay.side { background: none; }
+.overlay.side .panel {
+  background: rgba(255, 255, 255, 0.6); backdrop-filter: blur(8px) saturate(1.15); -webkit-backdrop-filter: blur(8px) saturate(1.15);
+  border: 1px solid rgba(255, 255, 255, 0.75); box-shadow: 0 12px 40px rgba(40, 60, 90, 0.14);
+  width: min(360px, 92vw); max-height: calc(100vh - 24px); border-radius: 20px; padding: 18px 18px 14px; text-align: left;
+}
+.overlay.side .panel.center { text-align: center; }
+.overlay.side .panel button:not(.chip):not(.install):not(.clear):not([data-k]):not(.txtb) { background: rgba(255, 255, 255, 0.7); }
+.overlay.side .panel #begin, .overlay.side .panel #heroGo { background: var(--coral); color: #fff; }
+.overlay.side .panel #vessel { background: rgba(238, 244, 255, 0.85); }
+.overlay.side h1 { font-size: clamp(28px, 4.2vw, 44px); letter-spacing: 0.16em; }
+#laws.overlay.side .panel, #journal.overlay.side .panel { width: min(470px, 96vw); }
+#laws.overlay.side .slot { grid-template-columns: 18px 1fr 1fr 1fr auto auto; gap: 4px; }
+#laws.overlay.side .chip { font-size: 10.5px; padding: 8px 4px; min-height: 36px; }
+#map.overlay.glassy { background: rgba(240, 245, 250, 0.25); backdrop-filter: none; }
+#map.overlay.glassy .panel { background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(6px); }
+
+/* character rail: slim, see-through, the character stands next to it at full size */
+#hero .panel.herop { width: min(300px, 40vw); padding: 14px 14px 12px; }
+#hero .herohint { font-size: 12px; margin: 4px 0 8px; }
+#hero .heroes { grid-template-columns: repeat(2, 1fr); gap: 6px; margin: 8px 0; }
+#hero .heroes button { padding: 7px 4px; font-size: 12px; background: rgba(255, 255, 255, 0.7); }
+#hero .heroes button.sel { background: var(--ink); color: #fff; }
+#hero .heroblurb { font-size: 12px; min-height: 0; margin: 6px 0; }
+#hero .custom .row2 { flex-direction: column; align-items: flex-start; gap: 5px; margin: 8px 0; font-size: 10px; }
+#hero .sw { justify-content: flex-start; gap: 5px; }
+#hero .sw button { width: 22px; height: 22px; }
+#hero .sw .txtb { padding: 4px 8px; font-size: 10px; background: rgba(255, 255, 255, 0.7); }
+#hero #heroGo { margin: 8px 0 0; padding: 12px; box-shadow: none; }
+body.touch #hero .panel.herop { width: min(280px, 38vw); }
+
+/* the game is played in landscape; menus before it starts also work upright */
+@media (orientation: portrait) {
+  body.touch #rotate { display: none; }
+  body.touch.playing #rotate { display: flex; }
+  /* upright: menus become a glass sheet along the bottom edge */
+  .overlay.side { align-items: flex-end; justify-content: center; }
+  #title.overlay.side { background: linear-gradient(0deg, rgba(244, 247, 250, 0.6), transparent 60%); }
+  .overlay.side .panel, #hero .panel.herop, body.touch #hero .panel.herop { width: 100%; max-width: 520px; max-height: 52vh; border-radius: 22px; }
+  #hero .panel.herop { max-height: 46vh; }
+  #hero .heroes { grid-template-columns: repeat(3, 1fr); }
+  #hero .herohint, #hero .heroblurb { display: none; }
+  #hero .custom .row2 { flex-direction: row; align-items: center; justify-content: space-between; margin: 6px 0; }
+  #hero .sw { justify-content: flex-end; }
+}
+@media (max-height: 520px) and (orientation: landscape) {
+  #hero .panel.herop { padding: 10px 12px; }
+  #hero .heroes { grid-template-columns: repeat(3, 1fr); }
+  #hero .heroes button small { display: none; }
+  #hero .custom .row2 { flex-direction: row; align-items: center; margin: 4px 0; }
+  #hero .custom .row2 > span:first-child { min-width: 38px; }
+  #hero .sw button { width: 18px; height: 18px; }
+  #hero .herohint { display: none; }
+}
+#hero .sw .txtb, #hero .sw button.txtb { width: auto; height: auto; border-radius: 999px; padding: 4px 8px; line-height: 1.2; }
+@media (max-height: 520px) and (orientation: landscape) { #hero .sw .txtb, #hero .sw button.txtb { padding: 3px 6px; font-size: 9.5px; } }
+@media (orientation: portrait) {
+  #title .controls, #title p.dim { display: none; }
+  #title .panel { max-height: 48vh; }
+}
+@media (orientation: portrait) { body.touch #title .controls.touch-only { display: none !important; } }

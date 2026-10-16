@@ -304,6 +304,8 @@ class Game {
     });
     this.refreshTitle();
     this.hud.show('title');
+    try { window.AndroidUI?.setLandscape(false); } catch { /* not in the app */ }
+    this.enterRoom('antechamber', true);
     // a load / new game requested before the page reloaded
     const boot = session((s) => JSON.parse(s.getItem(BOOT_KEY) || 'null'));
     if (boot) {
@@ -337,6 +339,9 @@ class Game {
       return;
     }
     this.started = true;
+    document.body.classList.add('playing');
+    try { window.AndroidUI?.setLandscape(true); } catch { /* not in the app */ }
+    this.player.cinema = null;
     this.audio.start();
     this.audio.setVolume?.(this.settings.volume);
     let ok = false;
@@ -1133,8 +1138,9 @@ class Game {
   frame() {
     const dt = Math.min(0.05, this.clock.getDelta());
     this.time += dt;
-    // on a phone held upright the game waits until you turn it sideways
-    const upright = this.touch && window.innerHeight > window.innerWidth;
+    // gameplay is landscape: on a phone held upright the game waits until you
+    // turn it sideways (menus before the game starts work upright too)
+    const upright = this.touch && this.started && window.innerHeight > window.innerWidth;
     const active = !this.paused && !this.menu && !upright;
 
     for (const a of this.input.consumeActions()) {
@@ -1186,6 +1192,12 @@ class Game {
 
     if (active) this.step(dt);
     else this.input.consumeLook();
+    if (!this.started && this.menu !== 'hero') {
+      // title backdrop: drift slowly around the floating object
+      const a = this.time * 0.06;
+      this.player.cinema = { pos: { x: Math.sin(a) * 3.2, y: 2.2, z: 21.5 + Math.cos(a) * 3.2 }, target: { x: 0, y: 1.6, z: 21.5 }, up: { x: 0, y: 1, z: 0 } };
+      this.player.model.visible = false;
+    }
     if (this.menu === 'hero') {
       const p = this.player.pos;
       const a = 0.35 + Math.sin(this.time * 0.25) * 0.5;
@@ -1195,13 +1207,17 @@ class Game {
       const head = new THREE.Vector3(p.x, p.y + 0.5, p.z);
       const dir = new THREE.Vector3(Math.sin(yaw), 0, Math.cos(yaw));
       this.player.colliders = this.mode === 'deck' ? this.deckWorld.colliders : this.world.colliders;
-      const r = Math.max(1.2, Math.min(2.7, this.player.rayDistance(head, dir, 2.7) - 0.25));
-      const c = { x: p.x + dir.x * r, y: p.y + 0.5, z: p.z + dir.z * r };
-      // look a little to the character's side so they stand clear of the panel
+      const upright = window.innerHeight > window.innerWidth;
+      const want = upright ? 3.6 : 2.8;
+      const r = Math.max(1.2, Math.min(want, this.player.rayDistance(head, dir, want) - 0.25));
+      const c = { x: p.x + dir.x * r, y: p.y + (upright ? 0.2 : 0.45), z: p.z + dir.z * r };
+      // frame the character clear of the menu: right of the side rail, or
+      // above the bottom sheet when the phone is upright
       const dx = p.x - c.x, dz = p.z - c.z, dl = Math.hypot(dx, dz) || 1;
       const rx = -dz / dl, rz = dx / dl;
-      const off = window.innerWidth > window.innerHeight ? -0.75 : 0;
-      this.player.cinema = { pos: c, target: { x: p.x + rx * off, y: p.y + 0.2, z: p.z + rz * off }, up: { x: 0, y: 1, z: 0 } };
+      const off = upright ? 0 : -0.55 * (r / 2.8);
+      const ty = upright ? p.y - 0.85 : p.y + 0.15;
+      this.player.cinema = { pos: c, target: { x: p.x + rx * off, y: ty, z: p.z + rz * off }, up: { x: 0, y: 1, z: 0 } };
       this.player.model.visible = true;
       this.player.grounded = true; // stand for the portrait, even in a weightless room
     }

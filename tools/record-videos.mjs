@@ -166,7 +166,7 @@ const chip = (t) => `C.card('<div class="chip">${t}</div>');`;
 // A gameplay shot in a generated room: find a room with the challenge, let the bot play it.
 const deckShot = (label, pred, dur, cues = [], opts = '{}') => ({
   dur, cues,
-  setup: `C.vessel(${SEED}); const w = C.find(${pred}); if (!w) throw new Error('no room for ' + ${JSON.stringify(label)}); C.play(w, ${opts}); ${chip(label)}`,
+  setup: `C.free(); C.vessel(${SEED}); const w = C.find(${pred}); if (!w) throw new Error('no room for ' + ${JSON.stringify(label)}); C.play(w, ${opts}); ${chip(label)}`,
   frame: `(t, dt) => { C.step(1 / 24); }`,
 });
 const FILMS = {
@@ -200,7 +200,7 @@ const FILMS = {
       { dur: 3, cues: [{ t: 0.3, fx: 'chime' }, { t: 1.6, fx: 'blip', args: [660, 0.1] }],
         setup: `C.vessel(${SEED}); C.find(() => false); AZ.engine.setLaw(1, null); AZ.engine.setLaw(2, null); C.card(''); AZ.openMenu('laws');`,
         frame: `(t) => { if (t > 1.4 && !AZ._h) { AZ._h = 1; AZ.engine.setLaw(1, { subject: 'TIME', verb: 'FREEZES', target: 'PHYSICAL' }); AZ.hud.lawDraft = null; AZ.hud.renderLaws(AZ, 'LAW 2 INSTALLED'); } }` },
-      Object.assign(deckShot('DECK 4 · TIME FREEZES IN PHYSICAL', `(r) => r.challenges[0] && r.challenges[0].key === 'sweepers'`, 7, [{ t: 0.2, threat: 0.3 }], '{ from: 0 }'), { setup: `AZ.closeMenu(); C.vessel(${SEED}); const w = C.find((r) => r.challenges[0] && r.challenges[0].key === 'sweepers', [3, 0]); C.play(w); ${chip('DECK 4 · TIME FREEZES IN PHYSICAL')}` }),
+      Object.assign(deckShot('DECK 4 · TIME FREEZES IN PHYSICAL', `(r) => r.challenges[0] && r.challenges[0].key === 'sweepers'`, 7, [{ t: 0.2, threat: 0.3 }], '{ from: 0 }'), { setup: `AZ.closeMenu(); C.free(); C.vessel(${SEED}); const w = C.find((r) => r.challenges[0] && r.challenges[0].key === 'sweepers', [3, 0]); C.play(w); ${chip('DECK 4 · TIME FREEZES IN PHYSICAL')}` }),
       Object.assign(deckShot('DECK 5 · THE SENTINELS WATCH THE FLOOR', '', 7, [{ t: 0.2, threat: 0.6 }, { t: 3, fx: 'alert' }]), {
         setup: `C.vessel(${SEED}); const w = C.find((r) => r.challenges[0] && r.challenges[0].key === 'sentinel', [4, 0]); C.play(w, { laws: false }); AZ.engine.setLaw(0, { subject: 'GRAVITY', verb: 'INVERTS', target: 'INVERTED' }); ${chip('DECK 5 · THE SENTINELS ONLY WATCH THE FLOOR')}`,
         frame: `(t) => { if (t > 1.6 && !AZ._a) { AZ._a = 1; AZ.shift('INVERTED'); } if (t > 2.4) { C.keys('KeyW'); } const s = AZ.deckWorld.sentinels[0]; if (s && t < 3.2) C.cam(AZ.player.pos.x + 3, 4.2, AZ.player.pos.z + 3, s.pos.x, 1.2, s.pos.z); else C.free(); }` }),

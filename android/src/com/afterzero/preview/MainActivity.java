@@ -1,6 +1,7 @@
 package com.afterzero.preview;
 
 import android.app.Activity;
+import android.content.pm.ActivityInfo;
 import android.os.Build;
 import android.os.Bundle;
 import android.speech.tts.TextToSpeech;
@@ -31,6 +32,17 @@ public class MainActivity extends Activity {
         @JavascriptInterface public void stop() { if (ttsReady) tts.stop(); }
     }
 
+    /** Menus work upright; gameplay locks to landscape: window.AndroidUI.setLandscape(true|false). */
+    public class UI {
+        @JavascriptInterface public void setLandscape(final boolean on) {
+            runOnUiThread(new Runnable() {
+                @Override public void run() {
+                    setRequestedOrientation(on ? ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE : ActivityInfo.SCREEN_ORIENTATION_FULL_USER);
+                }
+            });
+        }
+    }
+
     @Override
     protected void onCreate(Bundle state) {
         super.onCreate(state);
@@ -52,6 +64,7 @@ public class MainActivity extends Activity {
             }
         });
         web.addJavascriptInterface(new Voice(), "AndroidTTS");
+        web.addJavascriptInterface(new UI(), "AndroidUI");
         web.setWebViewClient(new WebViewClient());
         web.setWebChromeClient(new WebChromeClient());
         web.setBackgroundColor(0xFF05070A);
