@@ -37,6 +37,7 @@ class District {
     this.checkpoints = [];
     this.challenges = [];
     this.free = []; // rects kept clear of buildings
+    this.glows = []; // pools of light on the ground: [x, y, z, radius, color]
   }
 
   box(b, o = {}) {
@@ -72,6 +73,17 @@ export function generateZone(story, zi, si) {
     M.box([-XW, -6, canalZ[0] - T, XW, 0, canalZ[0]], { mat: 'trimDark' });
     M.box([-XW, -6, canalZ[1], XW, 0, canalZ[1] + T], { mat: 'trimDark' });
   } else ground(-XW, ZN, XW, 4);
+  // the avenue: curbs and sidewalks either side, dashed centre line (not in the forest)
+  if (theme !== 'forest') {
+    const runs = canal ? [[ZN, canalZ[1]], [canalZ[0], 4]] : [[ZN, 4]];
+    for (const [z0, z1] of runs) {
+      for (const sx of [-1, 1]) {
+        const a = sx * 4.6, b = sx * 7.2;
+        M.box([Math.min(a, b), 0, z0, Math.max(a, b), 0.16, z1], { mat: 'sidewalk' });
+      }
+      for (let z = z1 - 2; z > z0 + 1; z -= 4) M.box([-0.08, 0, z - 1.6, 0.08, 0.012, z], { mat: 'marking', solid: false });
+    }
+  }
   const wallMat = theme === 'forest' ? 'glassWall' : theme === 'reactor' ? 'industrial' : 'facade';
   M.box([-XW - T, -6, ZN, -XW, H, 4], { mat: wallMat });
   M.box([XW, -6, ZN, XW + T, H, 4], { mat: wallMat });
@@ -225,6 +237,7 @@ export function generateZone(story, zi, si) {
     checkpoints: M.checkpoints.map((c) => ({ ...c, room: id })),
     triggers: [],
     map: { rooms: [{ id, rect: [-XW, ZN, XW, 4], name, kind: 'district' }], corridors: [], blocks: M.blocks || [], gate: [0, ZN - 2] },
+    glows: [...M.glows, [scene.x, 0.02, scene.z + 1, 5, pal.accent], [0, 0.02, ZN + 2, 4, pal.accent2]],
     effects: new Set(['echoSolid', 'gravityFlip', 'zeroG', 'observerFrozen']),
     exit: { room: id, box: [-3, -1, ZN - 4, 3, 6, ZN - 1] },
     spawn: room.spawn,
@@ -272,6 +285,20 @@ function dressing(M, theme, rng, zone, canalZ) {
     const mat = theme === 'reactor' ? rng.pick(['industrial', 'tank']) : 'facade';
     M.box([x0, 0, z0, x1, h, z1], { mat });
     M.box([x0 - 0.2, h, z0 - 0.2, x1 + 0.2, h + 0.35, z1 + 0.2], { mat: 'trim' });
+    // a ledge at every floor, a shopfront glow at street level, clutter on the roof
+    for (let y = 4; y < h - 1; y += 4) M.box([x0 - 0.12, y, z0 - 0.12, x1 + 0.12, y + 0.18, z1 + 0.12], { mat: 'trimDark', solid: false });
+    if (theme === 'city' && rng.chance(0.7)) {
+      const fx = side > 0 ? x0 - 0.05 : x1 + 0.05;
+      M.box([fx - 0.04, 0.4, z0 + 1, fx + 0.04, 2.8, z1 - 1], { mat: 'shopfront', solid: false });
+      M.glows.push([fx - side * 1.6, 0.02, (z0 + z1) / 2, 3.4, zone.palette.accent2]);
+    }
+    for (let k = rng.int(1, 3); k > 0; k--) {
+      const ux = rng.float(x0 + 1, x1 - 1.5), uz = rng.float(z0 + 1, z1 - 1.5);
+      const kind = rng.pick(theme === 'tower' ? ['mast', 'ac', 'ac'] : ['ac', 'tank', 'mast']);
+      if (kind === 'ac') M.box([ux, h + 0.35, uz, ux + 1.2, h + 1.2, uz + 0.9], { mat: 'metal' });
+      else if (kind === 'tank') M.box([ux, h + 0.35, uz, ux + 1.4, h + 2.4, uz + 1.4], { mat: 'tank' });
+      else M.box([ux, h + 0.35, uz, ux + 0.12, h + 3.5, uz + 0.12], { mat: 'trimDark', solid: false });
+    }
     M.blocks.push([x0, z0, x1, z1]);
     M.clear(x0, z0, x1, z1);
     // a sign on the side facing the avenue
@@ -287,7 +314,11 @@ function dressing(M, theme, rng, zone, canalZ) {
     for (const s of [-1, 1]) {
       const x = s * 5.6;
       M.box([x - 0.12, 0, z - 0.12, x + 0.12, 4.2, z + 0.12], { mat: 'trimDark' });
-      M.box([x - 0.5, 4.2, z - 0.25, x + 0.5, 4.45, z + 0.25], { mat: 'neon', solid: false });
+      // lamp: a dark housing on an arm, the light underneath
+      M.box([Math.min(x, x - s * 1.05), 4.15, z - 0.06, Math.max(x, x - s * 1.05), 4.25, z + 0.06], { mat: 'trimDark', solid: false });
+      M.box([x - s * 1.05 - 0.28, 4.1, z - 0.18, x - s * 1.05 + 0.28, 4.32, z + 0.18], { mat: 'trimDark', solid: false });
+      M.box([x - s * 1.05 - 0.22, 4.06, z - 0.13, x - s * 1.05 + 0.22, 4.1, z + 0.13], { mat: 'lamp', solid: false });
+      M.glows.push([x - s * 1.05, 0.02, z, 3.0, zone.palette.light, 4.05]);
     }
     if (theme === 'city' && rng.chance(0.45)) {
       const x = rng.pick([-1, 1]) * rng.float(9, 12);

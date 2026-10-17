@@ -90,6 +90,8 @@ export class DeckWorld {
       this.textMeshes.push({ t, mesh, cond: compileCondition(t.when) });
     }
 
+    if (level.glows?.length) root.add(...lightPools(level.glows));
+
     for (const it of level.interactables) this.buildInteractable(it);
 
     for (const it of level.items) {
@@ -362,6 +364,48 @@ export class DeckWorld {
     }
     return out;
   }
+}
+
+// Pools of light on the ground under lamps and shop windows, and faint cones
+// of light from the lamps: instanced, additive, two draw calls for a district.
+let poolTex = null;
+function lightPools(glows) {
+  if (!poolTex) {
+    const c = document.createElement('canvas');
+    c.width = c.height = 128;
+    const g = c.getContext('2d');
+    const gr = g.createRadialGradient(64, 64, 0, 64, 64, 64);
+    gr.addColorStop(0, 'rgba(255,255,255,0.9)');
+    gr.addColorStop(0.35, 'rgba(255,255,255,0.35)');
+    gr.addColorStop(1, 'rgba(255,255,255,0)');
+    g.fillStyle = gr;
+    g.fillRect(0, 0, 128, 128);
+    poolTex = new THREE.CanvasTexture(c);
+  }
+  const out = [];
+  const plane = new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2);
+  const pools = new THREE.InstancedMesh(plane, new THREE.MeshBasicMaterial({ map: poolTex, transparent: true, opacity: 0.32, blending: THREE.AdditiveBlending, depthWrite: false, fog: true }), glows.length);
+  const m = new THREE.Matrix4(), col = new THREE.Color();
+  glows.forEach(([x, y, z, r, c], i) => {
+    m.makeScale(r * 2, 1, r * 2).setPosition(x, y + 0.03, z);
+    pools.setMatrixAt(i, m);
+    pools.setColorAt(i, col.setHex(c));
+  });
+  pools.renderOrder = 1;
+  out.push(pools);
+  const lamps = glows.filter((g) => g[5]);
+  if (lamps.length) {
+    const cone = new THREE.ConeGeometry(1, 1, 20, 1, true).translate(0, -0.5, 0);
+    const cones = new THREE.InstancedMesh(cone, new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.018, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: true }), lamps.length);
+    lamps.forEach(([x, , z, r, c, h], i) => {
+      m.makeScale(r * 0.55, h, r * 0.55).setPosition(x, h, z);
+      cones.setMatrixAt(i, m);
+      cones.setColorAt(i, col.setHex(c));
+    });
+    cones.renderOrder = 1;
+    out.push(cones);
+  }
+  return out;
 }
 
 function crewGlow(css) {

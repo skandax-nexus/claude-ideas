@@ -12,8 +12,8 @@ export const CAMERA_PRESETS = {
 
 export const QUALITY = {
   low: { label: 'LOW', pixelRatio: 1, shadows: false, shadowMap: 512, bloom: false, ao: false, env: false },
-  medium: { label: 'MEDIUM', pixelRatio: 1.25, shadows: true, shadowMap: 1024, bloom: true, ao: false, env: true },
-  high: { label: 'HIGH', pixelRatio: 2, shadows: true, shadowMap: 2048, bloom: true, ao: true, env: true },
+  medium: { label: 'MEDIUM', pixelRatio: 1.5, shadows: true, shadowMap: 1024, bloom: true, ao: false, env: true, msaa: 2 },
+  high: { label: 'HIGH', pixelRatio: 2, shadows: true, shadowMap: 2048, bloom: true, ao: true, env: true, msaa: 4 },
 };
 
 export function defaultSettings(touch) {

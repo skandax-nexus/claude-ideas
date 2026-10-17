@@ -7,6 +7,41 @@ import { RenderPass } from '../../vendor/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from '../../vendor/addons/postprocessing/UnrealBloomPass.js';
 import { GTAOPass } from '../../vendor/addons/postprocessing/GTAOPass.js';
 import { OutputPass } from '../../vendor/addons/postprocessing/OutputPass.js';
+import { ShaderPass } from '../../vendor/addons/postprocessing/ShaderPass.js';
+
+// A film grade after tone mapping: contrast, split toning (cool shadows, warm
+// highlights by default), a touch of saturation, vignette and fine grain.
+const GradeShader = {
+  uniforms: {
+    tDiffuse: { value: null },
+    time: { value: 0 },
+    contrast: { value: 1.08 },
+    saturation: { value: 1.06 },
+    shadowTint: { value: new THREE.Color(0x2a4a66) },
+    highlightTint: { value: new THREE.Color(0xffd8a8) },
+    toning: { value: 0.12 },
+    vignette: { value: 0.32 },
+    grain: { value: 0.035 },
+  },
+  vertexShader: `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+  fragmentShader: `
+    uniform sampler2D tDiffuse; uniform float time, contrast, saturation, toning, vignette, grain;
+    uniform vec3 shadowTint, highlightTint; varying vec2 vUv;
+    float hash(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
+    void main() {
+      vec4 c = texture2D(tDiffuse, vUv);
+      vec3 col = c.rgb;
+      float l = dot(col, vec3(0.2126, 0.7152, 0.0722));
+      col = mix(vec3(l), col, saturation);
+      col = (col - 0.5) * contrast + 0.5;
+      col = mix(col, col * shadowTint * 2.0, toning * (1.0 - smoothstep(0.0, 0.5, l)));
+      col = mix(col, col * highlightTint * 1.25, toning * smoothstep(0.5, 1.0, l));
+      vec2 d = vUv - 0.5;
+      col *= 1.0 - vignette * smoothstep(0.25, 0.85, dot(d, d) * 2.2);
+      col += (hash(vUv * 1000.0 + time) - 0.5) * grain;
+      gl_FragColor = vec4(clamp(col, 0.0, 1.0), c.a);
+    }`,
+};
 import { RoomEnvironment } from '../../vendor/addons/environments/RoomEnvironment.js';
 
 export class PostFX {
@@ -34,7 +69,9 @@ export class PostFX {
     this.composer = null;
     if (!q.bloom && !q.ao) return;
     const size = renderer.getSize(new THREE.Vector2());
-    const c = new EffectComposer(renderer);
+    // multisampled target: clean edges on geometry even with post-processing on
+    const rt = new THREE.WebGLRenderTarget(size.x, size.y, { type: THREE.HalfFloatType, samples: q.msaa || 0 });
+    const c = new EffectComposer(renderer, rt);
     c.addPass(new RenderPass(scene, camera));
     if (q.ao) {
       const ao = new GTAOPass(scene, camera, size.x, size.y);
@@ -49,6 +86,9 @@ export class PostFX {
       c.addPass(this.bloom);
     }
     c.addPass(new OutputPass());
+    this.grade = new ShaderPass(GradeShader);
+    c.addPass(this.grade);
+    if (this.gradeLook) this.setGrade(this.gradeLook);
     this.composer = c;
     this.resize();
   }
@@ -60,7 +100,20 @@ export class PostFX {
     this.composer.setSize(size.x, size.y);
   }
 
+  // per place: { shadowTint, highlightTint, toning, contrast, saturation, vignette }
+  setGrade(look) {
+    this.gradeLook = look;
+    if (!this.grade) return;
+    const u = this.grade.uniforms;
+    for (const [k, v] of Object.entries(look)) {
+      if (!u[k]) continue;
+      if (u[k].value.isColor) u[k].value.setHex(v);
+      else u[k].value = v;
+    }
+  }
+
   render() {
+    if (this.grade) this.grade.uniforms.time.value = (this.grade.uniforms.time.value + 0.017) % 100;
     if (this.composer) this.composer.render();
     else this.renderer.render(this.scene, this.camera);
   }

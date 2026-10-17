@@ -38,6 +38,8 @@ import { LOOKS, HAIR, TOPS, LOOK_DEFAULT, lookOf } from './world/People.js';
 
 const VERSION = '0.3.0';
 const BOOT_KEY = 'afterzero.boot';
+// the film grade for Station Zero and the vessel: clean, cool shadows, warm light
+const STATION_GRADE = { shadowTint: 0x2a4a66, highlightTint: 0xffd8a8, toning: 0.1, contrast: 1.06, saturation: 1.05 };
 
 // Bright, soft looks per reality state: daylight, rose dusk, mint memory.
 const THEMES = {
@@ -679,6 +681,7 @@ class Game {
 
   returnToStation() {
     this.weather.set(null);
+    this.postfx.setGrade(STATION_GRADE);
     this.deckWorld.dispose();
     this.level = this.stationLevel;
     this.minimap.stationMode = false; // redraw Station Zero's map
@@ -722,6 +725,7 @@ class Game {
     this.level = lv;
     this.deckWorld.build(lv, this.story, c.flags);
     this.weather.set(lv.palette.weather);
+    this.postfx.setGrade(lv.palette.grade || STATION_GRADE);
     this.minimap.setMap(lv.map, c.visited);
     this.minimap.stationMode = false;
     const start = roomId && lv.rooms[roomId] ? roomId : lv.order[0];

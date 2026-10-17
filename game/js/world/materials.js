@@ -114,29 +114,40 @@ function zoneMaterials(pal, std, basic) {
         g.fillRect(Math.random() * s, Math.random() * s, 3, 3);
       }
       g.fillStyle = 'rgba(0,0,0,0.25)';
-      for (let k = 0; k < 4; k++) g.fillRect(0, k * 128 + 120, s, 8);
+      for (let k = 0; k < 5; k++) g.fillRect(0, k * (s / 5) + s / 5 - 6, s, 6);
     }
     let seed = 7;
     const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
-    for (let r = 0; r < 4; r++) for (let c = 0; c < 4; c++) {
-      const on = rnd() < 0.45;
-      const x = c * 128 + 22, y = r * 128 + 26;
+    const cw = s / 6, ch = s / 5;
+    for (let r = 0; r < 5; r++) for (let c = 0; c < 6; c++) {
+      const on = rnd() < 0.38;
+      const x = c * cw + cw * 0.18, y = r * ch + ch * 0.22, w = cw * 0.64, hh = ch * 0.5;
       if (lit) {
         if (!on) continue;
-        g.fillStyle = rnd() < 0.25 ? acc2 : rnd() < 0.5 ? '#ffe2b0' : '#cfe6ff';
-        g.globalAlpha = 0.55 + rnd() * 0.45;
-        g.fillRect(x, y, 84, 70);
+        // a lit room: warm or cool, sometimes a blind half down
+        const grd = g.createLinearGradient(0, y, 0, y + hh);
+        const tone = rnd() < 0.2 ? acc2 : rnd() < 0.6 ? '#ffd9a0' : '#d6e8ff';
+        grd.addColorStop(0, tone);
+        grd.addColorStop(1, 'rgba(0,0,0,0.6)');
+        g.fillStyle = grd;
+        g.globalAlpha = 0.45 + rnd() * 0.5;
+        const blind = rnd() < 0.35 ? hh * rnd() * 0.6 : 0;
+        g.fillRect(x, y + blind, w, hh - blind);
         g.globalAlpha = 1;
       } else {
-        g.fillStyle = on ? '#3a3f55' : '#14182a';
-        g.fillRect(x, y, 84, 70);
-        g.strokeStyle = 'rgba(255,255,255,0.12)';
-        g.strokeRect(x, y, 84, 70);
+        g.fillStyle = on ? '#2e3346' : '#11141f';
+        g.fillRect(x, y, w, hh);
+        g.fillStyle = 'rgba(255,255,255,0.06)'; // sky reflected in the top of the glass
+        g.fillRect(x, y, w, hh * 0.3);
+        g.strokeStyle = 'rgba(200,210,230,0.18)';
+        g.lineWidth = 3;
+        g.strokeRect(x, y, w, hh);
+        g.beginPath(); g.moveTo(x + w / 2, y); g.lineTo(x + w / 2, y + hh); g.stroke();
       }
     }
   });
   const facadeTex = windows(false), litTex = windows(true);
-  for (const t of [facadeTex, litTex]) t.repeat.set(0.25, 0.25);
+  for (const t of [facadeTex, litTex]) t.repeat.set(0.125, 0.125);
   const roadTex = canvasTex(256, (g, s) => {
     g.fillStyle = pal.floor;
     g.fillRect(0, 0, s, s);
@@ -203,6 +214,11 @@ function zoneMaterials(pal, std, basic) {
   const n = pal.night;
   return {
     industrial: std({ map: industrialTex, roughness: 0.75, metalness: 0.25 }),
+    sidewalk: std({ color: new THREE.Color(pal.floor).lerp(new THREE.Color(0x9aa0aa), 0.35), roughness: 0.85 }),
+    marking: basic(0xd8dde6, 0.75),
+    lamp: basic(new THREE.Color(pal.light).lerp(new THREE.Color(0xffffff), 0.5).multiplyScalar(1.6)),
+    metal: std({ color: 0x7a838c, roughness: 0.45, metalness: 0.7 }),
+    shopfront: basic(new THREE.Color(pal.accent2).lerp(new THREE.Color(0xffe8c8), 0.5).multiplyScalar(0.75)),
     facade: std({ map: facadeTex, emissive: 0xffffff, emissiveMap: litTex, emissiveIntensity: 0.9 * n + 0.2, roughness: 0.7, metalness: 0.15 }),
     road: std({ map: roadTex, roughness: 0.32, metalness: 0.35 }), // wet: it catches the neon
     moss: std({ color: new THREE.Color(pal.floor).lerp(new THREE.Color(0x3f7a4a), 0.4), roughness: 0.95 }),
