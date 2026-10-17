@@ -23,14 +23,15 @@ JS
 # character models and the voice pack, served by MainActivity from https://afterzero.app/assets/...
 mkdir -p "$OUT/assets/assets/characters" "$OUT/assets/assets/voice"
 cp ../game/assets/characters/*.glb "$OUT/assets/assets/characters/"
-cp ../game/assets/voice/voice.json ../game/assets/voice/voice.bin "$OUT/assets/assets/voice/"
+if [ -f ../game/assets/voice/voice.ogg ]; then cp ../game/assets/voice/voice.json ../game/assets/voice/voice.ogg "$OUT/assets/assets/voice/"
+else echo "warning: no voice pack (tools/voice-pack.*); dialogue will use device speech"; fi
 
 # 2. Compile the Java host and convert to dex.
 javac --release 8 -classpath "$ANDROID_JAR" -d "$OUT/classes" src/com/afterzero/preview/MainActivity.java 2>&1 | grep -v JAVA_TOOL_OPTIONS || true
 dalvik-exchange --dex --output="$OUT/classes.dex" "$OUT/classes"
 
 # 3. Package, align, sign (debug key generated on first run).
-aapt package -f -0 glb -0 bin -M AndroidManifest.xml -S res -A "$OUT/assets" -I "$ANDROID_JAR" -F "$OUT/unsigned.apk"
+aapt package -f -0 glb -0 ogg -M AndroidManifest.xml -S res -A "$OUT/assets" -I "$ANDROID_JAR" -F "$OUT/unsigned.apk"
 (cd "$OUT" && aapt add unsigned.apk classes.dex >/dev/null)
 zipalign -f 4 "$OUT/unsigned.apk" "$OUT/aligned.apk"
 [ -f debug.keystore ] || keytool -genkeypair -keystore debug.keystore -storepass android -keypass android \
@@ -38,3 +39,12 @@ zipalign -f 4 "$OUT/unsigned.apk" "$OUT/aligned.apk"
 apksigner sign --ks debug.keystore --ks-pass pass:android --key-pass pass:android --out "$OUT/AFTERZERO-preview.apk" "$OUT/aligned.apk"
 apksigner verify "$OUT/AFTERZERO-preview.apk"
 echo "Built $(pwd)/$OUT/AFTERZERO-preview.apk ($(du -h "$OUT/AFTERZERO-preview.apk" | cut -f1))"
+
+# 4. The web preview (AFTERZERO-play.html): same page, with the models as glTF JSON
+#    for hosts that don't serve .glb, beside it in build/preview/.
+P="$OUT/preview"
+mkdir -p "$P/assets/voice"
+python3 -I ../tools/gltf-json.py ../game/assets/characters "$P/assets/characters" >/dev/null
+sed 's#<script>#<script>window.AZ_MODEL_EXT=".json";</script><script>#' "$OUT/assets/index.html" > "$P/index.html"
+[ -f ../game/assets/voice/voice.ogg ] && cp ../game/assets/voice/voice.json ../game/assets/voice/voice.ogg "$P/assets/voice/"
+echo "Preview in $(pwd)/$P"

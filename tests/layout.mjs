@@ -32,12 +32,16 @@ const SIZES = [
   { name: 'phone', width: 844, height: 390, touch: true },
   { name: 'phone-small', width: 667, height: 375, touch: true },
   { name: 'tablet', width: 1024, height: 768, touch: true },
+  { name: 'phone-upright', width: 390, height: 844, touch: true },
+  { name: 'phone-upright-small', width: 360, height: 740, touch: true },
+  { name: 'tablet-upright', width: 768, height: 1024, touch: true },
 ];
+const only = process.env.ONLY ? process.env.ONLY.split(',') : null;
 // the prompt floats over whatever you can use, so it isn't part of the fixed layout
 const HUD = ['#state', '#dock', '#objective', '#minimap', '#held', '#stick', '#buttons', '#subs .sub', '#toast'];
 
 let failures = 0;
-for (const s of SIZES) {
+for (const s of SIZES.filter((x) => !only || only.includes(x.name))) {
   const ctx = await browser.newContext({ viewport: { width: s.width, height: s.height }, isMobile: !!s.touch, hasTouch: !!s.touch });
   const page = await ctx.newPage();
   await page.goto(url);

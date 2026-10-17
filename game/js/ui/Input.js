@@ -87,7 +87,7 @@ export class Input {
     const R = 56;
     const rest = () => {
       const r = zone.getBoundingClientRect();
-      stickEl.style.left = `${Math.min(110, r.width * 0.3)}px`;
+      stickEl.style.left = `${Math.max(78, Math.min(110, r.width * 0.3))}px`;
       stickEl.style.top = `${r.height - 100}px`;
     };
     rest();

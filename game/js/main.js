@@ -269,7 +269,9 @@ class Game {
     const w = window.innerWidth, h = window.innerHeight;
     this.renderer.setSize(w, h, false);
     this.camera.aspect = w / h;
-    this.camera.fov = w < h ? Math.max(this.settings.fov, 76) : this.settings.fov;
+    // upright screens: widen the view so you still see the room around you
+    const hfov = (2 * Math.atan(Math.tan(THREE.MathUtils.degToRad(this.settings.fov) / 2) * Math.max(1, 1.5 / (w / h))) * 180) / Math.PI;
+    this.camera.fov = w < h ? Math.min(96, Math.max(this.settings.fov, hfov)) : this.settings.fov;
     this.camera.updateProjectionMatrix();
     this.postfx.resize();
   }
@@ -344,7 +346,6 @@ class Game {
     }
     this.started = true;
     document.body.classList.add('playing');
-    try { window.AndroidUI?.setLandscape(true); } catch { /* not in the app */ }
     this.player.cinema = null;
     this.audio.start();
     this.audio.setVolume?.(this.settings.volume);
@@ -1161,10 +1162,8 @@ class Game {
   frame() {
     const dt = Math.min(0.05, this.clock.getDelta());
     this.time += dt;
-    // gameplay is landscape: on a phone held upright the game waits until you
-    // turn it sideways (menus before the game starts work upright too)
-    const upright = this.touch && this.started && window.innerHeight > window.innerWidth;
-    const active = !this.paused && !this.menu && !upright;
+    // plays the same held upright or sideways
+    const active = !this.paused && !this.menu;
 
     for (const a of this.input.consumeActions()) {
       this.lastEvent = this.time;

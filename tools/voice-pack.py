@@ -3,7 +3,7 @@
 
 tools/voice-pack.mjs writes script.json (every phrase and word the game can
 speak, per speaker). This renders each one, trims and levels it, encodes it as
-Ogg Opus and packs everything into game/assets/voice/voice.bin + voice.json
+Ogg Opus and packs everything into game/assets/voice/voice.ogg (chained clips) + voice.json
 ({speaker: {key: [byteOffset, byteLength, seconds]}}).
 
     python3 tools/voice-pack.py <script.json> <game/assets/voice> <kokoro_dir> <ffmpeg> [cache_dir]
@@ -103,7 +103,7 @@ def main():
         total += dur
         if i % 50 == 0:
             print(f'  {i}/{len(items)}  {it["voice"]:<9} {text[:60]}', flush=True)
-    open(os.path.join(outdir, 'voice.bin'), 'wb').write(blob)
+    open(os.path.join(outdir, 'voice.ogg'), 'wb').write(blob)
     json.dump(index, open(os.path.join(outdir, 'voice.json'), 'w'), separators=(',', ':'))
     print(f'{len(items)} recordings, {total / 60:.1f} min, {len(blob) / 1e6:.2f} MB')
 

@@ -61,6 +61,7 @@ export function actorsReady(key) {
 export const actorLoaded = (key) => !!loaded[key];
 
 // Load models (all of them by default). Resolves to true if every one loaded.
+// (Hosts that can't serve .glb get glTF JSON copies: window.AZ_MODEL_EXT = '.json'.)
 export function loadActors(keys = Object.keys(MODELS), dir) {
   if (dir) base = dir;
   if (!loader) {
@@ -73,7 +74,7 @@ export function loadActors(keys = Object.keys(MODELS), dir) {
     pending[key] = (async () => {
       // the clip library comes first: retargeted rigs need it
       if (key !== SOURCE && m.rig !== 'quat') await one(SOURCE);
-      const g = await loader.loadAsync(base + m.file);
+      const g = await loader.loadAsync(base + (globalThis.AZ_MODEL_EXT ? m.file.replace(/\.glb$/, globalThis.AZ_MODEL_EXT) : m.file));
       const L = { gltf: g, def: m, key };
       prepare(L);
       L.clips = buildClips(key, L, loaded[SOURCE]);

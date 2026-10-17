@@ -22,14 +22,14 @@ const PROFILES = {
   NONE: { pitch: 1.0, rate: 0.95, gender: 'n' },
 };
 
-// The pack: an index plus one binary of Ogg Opus clips.
+// The pack: an index plus one file of chained Ogg Opus clips (voice.ogg).
 let PACK = null;
 export function loadVoicePack(base = 'assets/voice/') {
   if (PACK) return PACK;
   PACK = (async () => {
     try {
       const index = await (await fetch(base + 'voice.json')).json();
-      const bin = await (await fetch(base + 'voice.bin')).arrayBuffer();
+      const bin = await (await fetch(base + 'voice.ogg')).arrayBuffer();
       return { index, bin, vocab: VOCAB() };
     } catch (e) {
       console.warn('Voice pack unavailable; using device speech', e);

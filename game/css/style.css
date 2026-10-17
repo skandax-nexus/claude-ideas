@@ -305,15 +305,7 @@ body.touch #lookzone, body.touch #stickzone { z-index: 1; }
 body.touch #subs { width: min(560px, 62vw); }
 body.touch .sub { font-size: 14px; padding: 10px 14px; }
 
-/* phones held upright: a gentle nudge to turn sideways (the game pauses meanwhile) */
-#rotate { display: none; position: fixed; inset: 0; z-index: 60; align-items: center; justify-content: center; text-align: center;
-  background: radial-gradient(circle at 30% 20%, rgba(255, 220, 230, 0.9), transparent 55%), radial-gradient(circle at 75% 80%, rgba(190, 235, 240, 0.95), transparent 50%), #f0f5fa; }
-#rotate .inner { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 24px; color: var(--ink); }
-#rotate b { font-size: 20px; letter-spacing: 0.08em; }
-#rotate span { color: var(--ink-soft); font-size: 14px; max-width: 260px; }
-#rotate .phone { width: 46px; height: 80px; border: 4px solid var(--ink); border-radius: 10px; margin-bottom: 12px; animation: turn 2.4s ease-in-out infinite; }
-@keyframes turn { 0%, 20% { transform: rotate(0); } 50%, 80% { transform: rotate(-90deg); } 100% { transform: rotate(0); } }
-@media (orientation: portrait) { body.touch #rotate { display: flex; } }
+
 
 /* v0.5: menus at the side - glass panels, the game stays visible ------------------- */
 .overlay.side { background: transparent; backdrop-filter: none; -webkit-backdrop-filter: none; padding: 12px; }
@@ -351,16 +343,14 @@ body.touch .sub { font-size: 14px; padding: 10px 14px; }
 #hero #heroGo { margin: 8px 0 0; padding: 12px; box-shadow: none; }
 body.touch #hero .panel.herop { width: min(280px, 38vw); }
 
-/* the game is played in landscape; menus before it starts also work upright */
+/* upright or sideways, the game plays the same */
 @media (orientation: portrait) {
-  body.touch #rotate { display: none; }
-  body.touch.playing #rotate { display: flex; }
   /* upright: menus become a glass sheet along the bottom edge */
   .overlay.side { align-items: flex-end; justify-content: center; }
   #title.overlay.side { background: linear-gradient(0deg, rgba(244, 247, 250, 0.6), transparent 60%); }
   .overlay.side .panel, #hero .panel.herop, body.touch #hero .panel.herop { width: 100%; max-width: 520px; max-height: 52vh; border-radius: 22px; }
   #hero .panel.herop { max-height: 46vh; }
-  #hero .heroes { grid-template-columns: repeat(3, 1fr); }
+  #hero .heroes { grid-template-columns: repeat(4, 1fr); }
   #hero .herohint, #hero .heroblurb { display: none; }
   #hero .custom .row2 { flex-direction: row; align-items: center; justify-content: space-between; margin: 6px 0; }
   #hero .sw { justify-content: flex-end; }
@@ -423,6 +413,19 @@ body.touch #subs { bottom: 64px; width: min(560px, calc(48vw - 48px)); min-width
 body.touch #toast { top: max(14%, 70px); max-width: min(440px, 40vw); }
 body.touch #dock { bottom: max(10px, env(safe-area-inset-bottom)); }
 @media (max-height: 400px) {
-  body.touch #stick { width: 120px; height: 120px; bottom: 18px; }
   body.touch #buttons { transform: scale(0.88); transform-origin: right bottom; }
+}
+
+/* v0.7: playing upright ---------------------------------------------------------
+   top row: room state and minimap; under them the dock, then the objective;
+   bottom: stick and buttons in the corners, captions above them */
+@media (orientation: portrait) {
+  body.touch #minimap { width: 84px; height: 84px; top: max(12px, env(safe-area-inset-top)); }
+  body.touch #state { top: max(14px, env(safe-area-inset-top)); max-width: calc(100vw - 130px); }
+  body.touch #dock { top: calc(max(14px, env(safe-area-inset-top)) + 96px); bottom: auto; }
+  body.touch #objective { top: calc(max(14px, env(safe-area-inset-top)) + 150px); max-width: 62vw; }
+  body.touch #held { top: calc(max(14px, env(safe-area-inset-top)) + 100px); right: 12px; }
+  body.touch #toast { top: 34%; max-width: 84vw; }
+  body.touch #subs { bottom: 186px; width: 92vw; }
+  body.touch #buttons { bottom: max(24px, env(safe-area-inset-bottom)); }
 }
