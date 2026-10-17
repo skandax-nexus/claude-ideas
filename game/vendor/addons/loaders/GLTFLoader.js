@@ -2587,7 +2587,9 @@ class GLTFParser {
 
 		}
 
-		if ( typeof createImageBitmap === 'undefined' || ( isSafari && safariVersion < 17 ) || ( isFirefox && firefoxVersion < 98 ) ) {
+		// AFTERZERO: always decode textures through <img> (blob: images are allowed in
+		// sandboxed hosts where ImageBitmapLoader's fetch() of a blob: URL may not be)
+		if ( true || typeof createImageBitmap === 'undefined' || ( isSafari && safariVersion < 17 ) || ( isFirefox && firefoxVersion < 98 ) ) {
 
 			this.textureLoader = new TextureLoader( this.options.manager );
 

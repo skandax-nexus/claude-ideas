@@ -59,6 +59,39 @@ export function actorsReady(key) {
 }
 export const actorLoaded = (key) => !!loaded[key];
 
+export const loadErrors = [];
+
+// glTF JSON copies (for hosts that don't serve .glb) carry their binary as a
+// data: URI. Some hosts forbid fetching data: URIs, so decode it here and hand
+// the loader an in-memory .glb instead.
+async function fetchModel(url) {
+  if (!url.endsWith('.json')) return loader.loadAsync(url);
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`${url}: HTTP ${res.status}`);
+  const j = await res.json();
+  const b64 = j.buffers[0].uri.slice(j.buffers[0].uri.indexOf(',') + 1);
+  delete j.buffers[0].uri;
+  const raw = atob(b64);
+  const bin = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i++) bin[i] = raw.charCodeAt(i);
+  let js = new TextEncoder().encode(JSON.stringify(j));
+  const jsLen = Math.ceil(js.length / 4) * 4, binLen = Math.ceil(bin.length / 4) * 4;
+  const glb = new Uint8Array(12 + 8 + jsLen + 8 + binLen);
+  const dv = new DataView(glb.buffer);
+  dv.setUint32(0, 0x46546c67, true);
+  dv.setUint32(4, 2, true);
+  dv.setUint32(8, glb.length, true);
+  dv.setUint32(12, jsLen, true);
+  dv.setUint32(16, 0x4e4f534a, true);
+  glb.fill(0x20, 20, 20 + jsLen);
+  glb.set(js, 20);
+  dv.setUint32(20 + jsLen, binLen, true);
+  dv.setUint32(24 + jsLen, 0x004e4942, true);
+  glb.set(bin, 28 + jsLen);
+  js = null;
+  return loader.parseAsync(glb.buffer, '');
+}
+
 // Load models (all of them by default). Resolves to true if every one loaded.
 // (Hosts that can't serve .glb get glTF JSON copies: window.AZ_MODEL_EXT = '.json'.)
 export function loadActors(keys = Object.keys(MODELS), dir) {
@@ -72,7 +105,7 @@ export function loadActors(keys = Object.keys(MODELS), dir) {
     pending[key] = (async () => {
       // the clip library comes first: retargeted rigs need it
       if (key !== SOURCE && m.rig !== 'quat') await one(SOURCE);
-      const g = await loader.loadAsync(base + (globalThis.AZ_MODEL_EXT ? m.file.replace(/\.glb$/, globalThis.AZ_MODEL_EXT) : m.file));
+      const g = await fetchModel(base + (globalThis.AZ_MODEL_EXT ? m.file.replace(/\.glb$/, globalThis.AZ_MODEL_EXT) : m.file));
       const L = { gltf: g, def: m, key };
       prepare(L);
       L.clips = buildClips(key, L, loaded[SOURCE]);
@@ -81,6 +114,7 @@ export function loadActors(keys = Object.keys(MODELS), dir) {
       return true;
     })().catch((e) => {
       console.warn(`Character ${key} could not load`, e);
+      loadErrors.push(`${key}: ${e?.message || e}`);
       return false;
     });
     return pending[key];

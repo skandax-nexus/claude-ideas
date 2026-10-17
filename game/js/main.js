@@ -30,7 +30,7 @@ import { MiniMap } from './ui/MiniMap.js';
 import { Voice } from './audio/Voice.js';
 import { Fx } from './world/Fx.js';
 import { HEROES, OPTIONS, heroSpec, hex } from './ui/Heroes.js';
-import { loadActors, actorsReady, actorLoaded, MODELS } from './world/Actors.js';
+import { loadActors, actorsReady, actorLoaded, MODELS, loadErrors } from './world/Actors.js';
 import { LOOKS, HAIR, TOPS, LOOK_DEFAULT, lookOf } from './world/People.js';
 
 const VERSION = '0.3.0';
@@ -1523,7 +1523,12 @@ window.addEventListener('DOMContentLoaded', async () => {
     /* no storage */
   }
   const first = ['ren', 'w_adventurer', lookOf(saved).model];
-  await Promise.race([loadActors(first), new Promise((r) => setTimeout(r, 20000))]);
+  // wait for them (slow connections included) and say what's happening
+  const ver = document.querySelector('#title .ver');
+  const verText = ver?.textContent;
+  if (ver) ver.textContent = 'Loading characters…';
+  const ok = await Promise.race([loadActors(first), new Promise((r) => setTimeout(() => r(false), 90000))]);
+  if (ver) ver.textContent = ok ? verText : `Characters could not load (${loadErrors[0] || 'timed out'})`;
   loadActors(Object.keys(MODELS).filter((k) => !first.includes(k)));
   try {
     window.AZ = new Game();
