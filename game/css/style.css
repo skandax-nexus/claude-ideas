@@ -439,3 +439,6 @@ body.touch #dock { bottom: max(10px, env(safe-area-inset-bottom)); }
 #hero .heroes.looks button.look.sel { background: var(--ink); color: #fff; }
 #hero .heroes.looks button.look.sel img { box-shadow: 0 0 0 2px #fff inset; }
 @media (max-height: 520px) and (orientation: landscape) { #hero .heroes.looks button.look img { aspect-ratio: 1; object-position: top; } }
+#hero .heroes.looks { max-height: min(46vh, 380px); overflow-y: auto; padding-right: 2px; }
+@media (orientation: portrait) { #hero .heroes.looks { max-height: 26vh; } }
+@media (max-height: 520px) and (orientation: landscape) { #hero .heroes.looks { max-height: 44vh; } }

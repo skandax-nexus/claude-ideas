@@ -67,7 +67,7 @@ async function desktop() {
   await page.click('#begin');
   await page.waitForTimeout(500);
   check(await page.isVisible('#hero'), 'NEW GAME opens character select first');
-  check((await page.$$('#hero [data-hero]')).length === 4, 'four looks offered for Ren');
+  check((await page.$$('#hero [data-hero] img')).length === 17, 'every character model is offered as a look, each with its portrait');
   check(await az(() => AZ.player.model.userData.spec.model) === 'nova', 'the default look is Nova (modelled VRM character)');
   await page.click('#hero .sw button[data-k="hair"]:nth-child(3)');
   await page.click('#hero .sw button[data-k="top"]:nth-child(3)');

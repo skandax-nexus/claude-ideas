@@ -11,6 +11,19 @@ export const LOOKS = {
   ren: { model: 'ren', name: 'STREET', blurb: 'Round shades, headphones, quick feet.', voice: 'f' },
   scifi: { model: 'scifi', name: 'FLIGHT SUIT', blurb: 'Station-issue flight suit, short hair, steady hands.', voice: 'f' },
   spacer: { model: 'spacer', name: 'SPACESUIT', blurb: 'Full pressure suit and helmet. Ready for any deck.', voice: 'm' },
+  w_casual: { model: 'w_casual', name: 'CASUAL', blurb: 'White tee, rust trousers, nothing to prove.', voice: 'f' },
+  w_suit: { model: 'w_suit', name: 'OFFICER', blurb: 'A sharp black suit from the bridge crew.', voice: 'f' },
+  w_punk: { model: 'w_punk', name: 'PUNK', blurb: 'Pink crest, torn jeans, no patience for rules.', voice: 'f' },
+  w_worker: { model: 'w_worker', name: 'ENGINEER', blurb: 'Hard hat and hi-vis: the ship is a job site.', voice: 'f' },
+  w_soldier: { model: 'w_soldier', name: 'SECURITY', blurb: 'Field gear and boots. Watches the doors.', voice: 'f' },
+  w_adventurer: { model: 'w_adventurer', name: 'EXPLORER', blurb: 'Backpack, khakis, boots made for decks.', voice: 'f' },
+  m_casual: { model: 'm_casual', name: 'EASYGOING', blurb: 'Tee, jeans, red sneakers.', voice: 'm' },
+  m_hoodie: { model: 'm_hoodie', name: 'HOODIE', blurb: 'Purple hoodie and shorts. Always comfortable.', voice: 'm' },
+  m_suit: { model: 'm_suit', name: 'EXECUTIVE', blurb: 'Dark suit and tie, even at the end of the world.', voice: 'm' },
+  m_punk: { model: 'm_punk', name: 'REBEL', blurb: 'Red crest and a vest that says "no".', voice: 'm' },
+  m_worker: { model: 'm_worker', name: 'MECHANIC', blurb: 'Overalls and tools, fixes what breaks.', voice: 'm' },
+  m_swat: { model: 'm_swat', name: 'TACTICAL', blurb: 'Armoured vest and helmet. Expects trouble.', voice: 'm' },
+  m_adventurer: { model: 'm_adventurer', name: 'RANGER', blurb: 'Pack and field jacket, mapping every deck.', voice: 'm' },
 };
 export const HAIR = [0x7a4e3a, 0x2a211e, 0xc79a62, 0xe8e2d8, 0xd06a52, 0x6a74c8, 0x58b8a8, 0xe08fb0];
 export const TOPS = [0xffffff, 0x2a3240, 0x8fc6e8, 0xf0c7d4, 0xbfe6cf, 0xf3d9a6, 0xb9a8e8, 0xe86a6a];
