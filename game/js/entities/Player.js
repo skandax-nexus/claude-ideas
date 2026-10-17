@@ -14,7 +14,7 @@ const _m = new THREE.Matrix4();
 export class Player {
   constructor(camera, scene) {
     this.camera = camera;
-    this.model = makePlayerModel({ id: 'ren' });
+    this.model = makePlayerModel(null);
     if (scene) scene.add(this.model);
     this.facing = new THREE.Vector3(0, 0, -1);
     this.colliders = [];

@@ -1,57 +1,66 @@
 // Who looks like what. Every person in the game is built here: the modelled,
 // motion-captured cast from world/Actors.js once it has loaded, and the
 // procedural humans as a fallback (e.g. if the model files are missing).
-import { makeActor, actorsReady } from './Actors.js';
+import { makeActor, actorsReady, actorLoaded } from './Actors.js';
 import { makeHuman, CAST_SPECS, randomCrewSpec } from './humans.js';
-import { heroSpec } from '../ui/Heroes.js';
 import { mulberry32 } from '../gen/rng.js';
 
-// Heroes you can play (character select). Armoured suits take any colour.
-export const HERO_LOOKS = {
-  ren: { model: 'michelle', name: 'REN', role: 'Explorer', blurb: 'Round shades, headphones, quick feet. The one who keeps waking up.' },
-  kai: { model: 'vanguard', tint: 0xe4ecff, name: 'KAI', role: 'Vanguard', blurb: 'Pearl-white armour and a sealed visor. Built for gravity that changes its mind.' },
-  asha: { model: 'vanguard', name: 'ASHA', role: 'Field Engineer', blurb: 'Desert-worn plating, a tool for every bolt. Fixes doors by talking to them.' },
-  leo: { model: 'vanguard', tint: 0xc9c3ee, name: 'LEO', role: 'Security', blurb: 'Lavender-grey plate. Watches the watchers.' },
-  mira: { model: 'vanguard', tint: 0xbfeee0, name: 'MIRA', role: 'Medic', blurb: 'Mint-white armour. Steady hands, steadier nerves.' },
-  noor: { model: 'xbot', tint: 0xf3c9b8, name: 'NOOR', role: 'Synthetic', blurb: 'A crew android with a gentle voice and a theory for everything.' },
+// You are always Ren; the character screen changes how Ren looks.
+export const LOOKS = {
+  nova: { model: 'nova', name: 'NOVA', blurb: 'Long hair, easy smile, oversized tee. Wakes up already curious.', colours: true, voice: 'f' },
+  ren: { model: 'ren', name: 'STREET', blurb: 'Round shades, headphones, quick feet.', voice: 'f' },
+  scifi: { model: 'scifi', name: 'FLIGHT SUIT', blurb: 'Station-issue flight suit, short hair, steady hands.', voice: 'f' },
+  spacer: { model: 'spacer', name: 'SPACESUIT', blurb: 'Full pressure suit and helmet. Ready for any deck.', voice: 'm' },
 };
-export const SUIT_TINTS = [0xffffff, 0xe4ecff, 0xbfeee0, 0xffe0c2, 0xc9c3ee, 0xf6c9d4, 0xd6dde6, 0xfff1b8];
-
-const tintable = (look) => look.model !== 'michelle';
+export const HAIR = [0x7a4e3a, 0x2a211e, 0xc79a62, 0xe8e2d8, 0xd06a52, 0x6a74c8, 0x58b8a8, 0xe08fb0];
+export const TOPS = [0xffffff, 0x2a3240, 0x8fc6e8, 0xf0c7d4, 0xbfe6cf, 0xf3d9a6, 0xb9a8e8, 0xe86a6a];
+export const LOOK_DEFAULT = { id: 'nova', hair: HAIR[0], top: TOPS[1] };
 
 export function heroLook(choice) {
-  const base = HERO_LOOKS[choice?.id] || HERO_LOOKS.ren;
-  const look = { ...base };
-  if (choice?.tint !== undefined && tintable(look)) look.tint = choice.tint;
+  const id = LOOKS[choice?.id] ? choice.id : 'nova';
+  const L = LOOKS[id];
+  const look = { model: L.model };
+  if (L.colours) {
+    look.hair = choice?.hair ?? LOOK_DEFAULT.hair;
+    look.top = choice?.top ?? LOOK_DEFAULT.top;
+  }
   return look;
 }
 
-export function canTint(choice) {
-  return tintable(HERO_LOOKS[choice?.id] || HERO_LOOKS.ren);
-}
+export const lookOf = (choice) => LOOKS[choice?.id] || LOOKS.nova;
 
-// The player: the chosen hero.
+// The player.
 export function makePlayerModel(choice) {
-  if (actorsReady()) return makeActor(heroLook(choice));
-  return makeHuman(heroSpec(choice));
+  const look = heroLook(choice);
+  if (actorLoaded(look.model)) return makeActor(look);
+  if (actorsReady()) return makeActor({ model: 'ren' });
+  return makeHuman(CAST_SPECS.ren);
 }
 
 // Named characters.
 export function makeCastModel(who, choice) {
   if (!actorsReady()) return makeHuman(CAST_SPECS[who]);
-  if (who === 'juno') return makeActor({ model: 'vanguard', tint: 0xb9ecc9, height: 1.72 });
+  if (who === 'juno') return makeActor({ model: actorLoaded('w_adventurer') ? 'w_adventurer' : 'ren', height: 1.68 });
   if (who === 'custodian') return makeActor({ model: 'xbot', hologram: true, glow: 0x6ff0d4, height: 1.9 });
   if (who === 'other') return makeActor({ ...heroLook(choice), hologram: true, glow: 0xc7a2ff });
   return makeActor({ model: 'xbot' });
 }
 
-const CREW_TINTS = [0xdfe9ff, 0xffe2c4, 0xd3f2e2, 0xe8dcff, 0xffd8de, 0xfff0bd, 0xd6dde6];
+// Generated crew: people in everyday and work clothes; echoes are holograms of them in their colour.
+const WOMEN = ['w_casual', 'w_suit', 'w_punk', 'w_worker', 'w_soldier', 'w_adventurer'];
+const MEN = ['m_casual', 'm_hoodie', 'm_suit', 'm_punk', 'm_worker', 'm_swat', 'm_adventurer'];
+export const CREW_MODELS = [...WOMEN, ...MEN];
 
-// Generated crew: alive crew wear coloured armour, echoes are holograms in their colour.
+export function crewModelKey(crew) {
+  const pool = crew.pronoun?.their === 'her' ? WOMEN : crew.pronoun?.their === 'his' ? MEN : [...WOMEN, ...MEN];
+  return pool[(crew.seed || 0) % pool.length];
+}
+
 export function makeCrewModel(crew, { hologram = false, glow } = {}) {
-  if (!actorsReady()) {
-    return makeHuman({ ...randomCrewSpec(mulberry32(crew.seed)), hologram, glow });
-  }
-  if (hologram) return makeActor({ model: 'xbot', hologram: true, glow: glow || 0x8fe0ff, height: 1.7 + ((crew.seed || 0) % 20) / 100 });
-  return makeActor({ model: 'vanguard', tint: CREW_TINTS[(crew.seed || 0) % CREW_TINTS.length], height: 1.72 + ((crew.seed || 0) % 14) / 100 });
+  if (!actorsReady()) return makeHuman({ ...randomCrewSpec(mulberry32(crew.seed)), hologram, glow });
+  const key = crewModelKey(crew);
+  const model = actorLoaded(key) ? key : CREW_MODELS.find(actorLoaded) || 'xbot';
+  const height = (crew.pronoun?.their === 'her' ? 1.64 : 1.76) + ((crew.seed || 0) % 9) / 100;
+  if (hologram) return makeActor({ model, hologram: true, glow: glow || 0x8fe0ff, height });
+  return makeActor({ model, height });
 }

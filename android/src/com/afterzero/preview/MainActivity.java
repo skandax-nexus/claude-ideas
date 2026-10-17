@@ -13,11 +13,32 @@ import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.webkit.WebResourceRequest;
+import android.webkit.WebResourceResponse;
+import android.net.Uri;
+import java.io.IOException;
+import java.io.InputStream;
 
-/** Full-screen WebView host for the AFTERZERO playable build (assets/index.html, fully offline). */
+/**
+ * Full-screen WebView host for the AFTERZERO playable build, fully offline.
+ * The game is served from the APK's assets under https://afterzero.app/ so it can
+ * fetch its character models and voice pack (fetch can't read file:// URLs).
+ */
 public class MainActivity extends Activity {
     private WebView web;
     private TextToSpeech tts;
+    private static final String ORIGIN_HOST = "afterzero.app";
+
+    private static String mime(String p) {
+        if (p.endsWith(".html")) return "text/html";
+        if (p.endsWith(".js")) return "text/javascript";
+        if (p.endsWith(".css")) return "text/css";
+        if (p.endsWith(".json")) return "application/json";
+        if (p.endsWith(".glb")) return "model/gltf-binary";
+        if (p.endsWith(".png")) return "image/png";
+        if (p.endsWith(".svg")) return "image/svg+xml";
+        return "application/octet-stream";
+    }
     private boolean ttsReady = false;
 
     /** Voiced dialogue: the game calls window.AndroidTTS.speak(text, pitch, rate). */
@@ -65,13 +86,25 @@ public class MainActivity extends Activity {
         });
         web.addJavascriptInterface(new Voice(), "AndroidTTS");
         web.addJavascriptInterface(new UI(), "AndroidUI");
-        web.setWebViewClient(new WebViewClient());
+        web.setWebViewClient(new WebViewClient() {
+            @Override public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest req) {
+                Uri u = req.getUrl();
+                if (!ORIGIN_HOST.equals(u.getHost())) return null;
+                String path = u.getPath() == null || u.getPath().equals("/") ? "index.html" : u.getPath().substring(1);
+                try {
+                    InputStream in = getAssets().open(path);
+                    return new WebResourceResponse(mime(path), mime(path).startsWith("text") ? "utf-8" : null, in);
+                } catch (IOException e) {
+                    return new WebResourceResponse("text/plain", "utf-8", 404, "Not Found", null, null);
+                }
+            }
+        });
         web.setWebChromeClient(new WebChromeClient());
         web.setBackgroundColor(0xFF05070A);
         setContentView(web);
         immersive();
         if (state != null) web.restoreState(state);
-        else web.loadUrl("file:///android_asset/index.html");
+        else web.loadUrl("https://" + ORIGIN_HOST + "/index.html");
     }
 
     private void immersive() {

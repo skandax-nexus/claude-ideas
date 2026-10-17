@@ -9,7 +9,8 @@
     "test": "node --test tests/*.test.mjs",
     "smoke": "node tests/smoke.mjs",
     "vessel": "node tests/vessel.mjs",
-    "features": "node tests/features.mjs"
+    "features": "node tests/features.mjs",
+    "layout": "node tests/layout.mjs"
   },
   "license": "MIT"
 }

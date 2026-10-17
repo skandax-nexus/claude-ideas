@@ -101,6 +101,14 @@ const TWISTS = [
   { key: 'stars', title: 'THE WINDOWS', text: 'The stars outside are an echo. The vessel stopped moving long ago. Every window on board is replaying the last night anyone believed the journey had a point.' },
 ];
 
+// Every word the generator can drop into a sentence: the voice pack records each
+// one separately and splices them into the recorded phrases (audio/voiceKey.js).
+export const VOCAB = () => [
+  ...FIRST, ...LAST, ...PLACES, ...METHODS,
+  ...DECKS.flatMap((d) => [d.name, d.role]),
+  'Captain',
+];
+
 const ff = (s, v) => s.replace(/\{(\w+)\}/g, (m, k) => (v[k] !== undefined ? v[k] : m));
 
 // Pastel speaker colors for generated crew (dark enough to read on white cards).

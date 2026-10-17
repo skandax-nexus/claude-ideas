@@ -23,7 +23,7 @@ Files: `game/js/entities/Player.js`, `unity/.../Player/PlayerCamera.cs`, `Player
 
 ## Characters
 
-**v0.6:** the cast is now modelled, rigged characters driven by motion capture (`game/js/world/Actors.js`, chosen in `game/js/world/People.js`). The procedural humans below remain as the fallback.
+**v0.7:** the cast is modelled, rigged characters driven by motion capture (`game/js/world/Actors.js`, chosen in `game/js/world/People.js`). Ren's looks are Nova (VRM), Street (Mixamo), Flight suit and Spacesuit (Quaternius); the crew and Juno are Quaternius people. Voices come from a Kokoro voice pack (`game/assets/voice`). The procedural humans below remain as the fallback.
 
 **v0.3:** every character is now a procedurally built human (`game/js/world/humans.js`).
 

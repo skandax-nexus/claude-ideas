@@ -30,8 +30,8 @@ import { MiniMap } from './ui/MiniMap.js';
 import { Voice } from './audio/Voice.js';
 import { Fx } from './world/Fx.js';
 import { HEROES, OPTIONS, heroSpec, hex } from './ui/Heroes.js';
-import { loadActors, actorsReady } from './world/Actors.js';
-import { HERO_LOOKS, SUIT_TINTS, canTint } from './world/People.js';
+import { loadActors, actorsReady, actorLoaded, MODELS } from './world/Actors.js';
+import { LOOKS, HAIR, TOPS, LOOK_DEFAULT, lookOf } from './world/People.js';
 
 const VERSION = '0.3.0';
 const BOOT_KEY = 'afterzero.boot';
@@ -114,7 +114,8 @@ class Game {
     this.player = new Player(this.camera, this.scene);
     if (this.settings.hero) this.player.setModel(this.settings.hero);
     this.world.refreshCast(this.settings.hero);
-    this.voice = new Voice();
+    this.voice = new Voice(this.audio);
+    this.voice.youMale = actorsReady() && lookOf(this.settings.hero).voice === 'm';
     this.fx = new Fx(this.scene);
     this.lastEvent = 0;
     this.observer = new Observer(this.scene);
@@ -194,7 +195,7 @@ class Game {
       if (line) this.voice.speak(line.text, who, line.voice);
     };
     this.hud.onSkip = () => this.voice.stop();
-    this.hud.durFn = (l) => (this.voice.enabled && this.voice.available ? this.voice.duration(l.text, l.who) : 0);
+    this.hud.durFn = (l) => (this.voice.enabled && this.voice.available ? this.voice.duration(l.text, l.who, l.voice) : 0);
     this.objectives.onChange = (layer) => {
       if (this.mode !== 'station') return;
       this.hud.objective(layer.text);
@@ -439,16 +440,19 @@ class Game {
     this.heroThen = then;
     this.input.release();
     if (!this.room) this.enterRoom('antechamber', true);
-    const cur = this.settings.hero || { id: 'ren' };
     const $ = (q) => document.querySelector(q);
     if (actorsReady()) {
-      const look = HERO_LOOKS[cur.id] || HERO_LOOKS.ren;
-      const tint = cur.tint !== undefined ? cur.tint : look.tint;
-      $('#hero .heroes').innerHTML = Object.entries(HERO_LOOKS).map(([id, h]) => `<button data-hero="${id}" class="${id === (cur.id || 'ren') ? 'sel' : ''}">${h.name}<small>${h.role.toUpperCase()}</small></button>`).join('');
-      $('#hero .custom').innerHTML = `<p class="heroblurb">${look.blurb}</p>` + (canTint(cur)
-        ? `<div class="row2"><span>SUIT</span><span class="sw">${SUIT_TINTS.map((v) => `<button style="background:${hex(v)}" class="${tint === v ? 'sel' : ''}" data-k="tint" data-v="${v}" aria-label="SUIT ${hex(v)}"></button>`).join('')}</span></div>`
-        : '');
+      // one character (Ren), several looks
+      const cur = { ...LOOK_DEFAULT, ...(this.settings.hero || {}) };
+      if (!LOOKS[cur.id]) cur.id = LOOK_DEFAULT.id;
+      const look = lookOf(cur);
+      $('#hero h2').textContent = 'YOUR LOOK';
+      $('#hero .herohint').textContent = 'The station calls you Ren. Choose how you remember yourself.';
+      $('#hero .heroes').innerHTML = Object.entries(LOOKS).map(([id, h]) => `<button data-hero="${id}" class="${id === cur.id ? 'sel' : ''}">${h.name}</button>`).join('');
+      const sw = (k, list, label) => `<div class="row2"><span>${label}</span><span class="sw">${list.map((v) => `<button style="background:${hex(v)}" class="${cur[k] === v ? 'sel' : ''}" data-k="${k}" data-v="${v}" aria-label="${label} ${hex(v)}"></button>`).join('')}</span></div>`;
+      $('#hero .custom').innerHTML = `<p class="heroblurb">${look.blurb}</p>` + (look.colours ? sw('hair', HAIR, 'HAIR') + sw('top', TOPS, 'OUTFIT') : '');
     } else {
+      const cur = this.settings.hero || { id: 'ren' };
       const base = HEROES[cur.id] || HEROES.ren;
       const spec = heroSpec(cur);
       $('#hero .heroes').innerHTML = Object.entries(HEROES).map(([id, h]) => `<button data-hero="${id}" class="${id === (cur.id || 'ren') ? 'sel' : ''}">${h.name}<small>${h.role.toUpperCase()}</small></button>`).join('');
@@ -461,12 +465,12 @@ class Game {
     for (const b of document.querySelectorAll('#hero .sw button')) {
       b.onclick = () => {
         const v = b.dataset.k === 'hairStyle' ? b.dataset.v : +b.dataset.v;
-        this.pickHero({ ...(this.settings.hero || { id: 'ren' }), [b.dataset.k]: v }, from, then);
+        this.pickHero({ ...(actorsReady() ? LOOK_DEFAULT : { id: 'ren' }), ...(this.settings.hero || {}), [b.dataset.k]: v }, from, then);
       };
     }
     $('#heroGo').textContent = then ? 'START' : 'DONE';
     $('#heroGo').onclick = () => {
-      if (!this.settings.hero) this.changeSetting('hero', { id: 'ren' });
+      if (!this.settings.hero) this.changeSetting('hero', actorsReady() ? { ...LOOK_DEFAULT } : { id: 'ren' });
       this.player.cinema = null;
       this.menu = null;
       if (then) then();
@@ -476,8 +480,14 @@ class Game {
   }
 
   pickHero(choice, from, then) {
+    if (actorsReady() && !actorLoaded(lookOf(choice).model)) {
+      // a look that hasn't arrived yet: fetch it, then try again
+      loadActors([lookOf(choice).model]).then((ok) => ok && this.menu === 'hero' && this.pickHero(choice, from, then));
+      return;
+    }
     this.changeSetting('hero', choice);
     this.player.setModel(choice);
+    this.voice.youMale = actorsReady() && lookOf(choice).voice === 'm';
     this.buildViewModels();
     this.world.refreshCast(choice);
     this.audio.ui('press');
@@ -1487,8 +1497,17 @@ class Game {
 }
 
 window.addEventListener('DOMContentLoaded', async () => {
-  // the modelled cast loads first (a few MB); the procedural cast stands in if it can't
-  await Promise.race([loadActors(), new Promise((r) => setTimeout(r, 15000))]);
+  // your look and Juno load first; the crew follow in the background.
+  // The procedural cast stands in if the models can't load.
+  let saved = null;
+  try {
+    saved = JSON.parse(localStorage.getItem('afterzero.settings.v1') || 'null')?.hero;
+  } catch {
+    /* no storage */
+  }
+  const first = ['ren', 'w_adventurer', lookOf(saved).model];
+  await Promise.race([loadActors(first), new Promise((r) => setTimeout(r, 20000))]);
+  loadActors(Object.keys(MODELS).filter((k) => !first.includes(k)));
   try {
     window.AZ = new Game();
     window.AZSynth = Synth;

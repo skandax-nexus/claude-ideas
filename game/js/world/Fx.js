@@ -90,19 +90,23 @@ export class Fx {
     c.width = 640;
     c.height = 360;
     const g = c.getContext('2d');
-    g.fillStyle = 'rgba(248,252,255,0.96)';
+    // see-through glass: a faint tint, a thin glowing frame, light text with a dark halo
+    g.fillStyle = 'rgba(20,40,56,0.18)';
     g.beginPath();
     g.roundRect ? g.roundRect(8, 8, 624, 344, 26) : g.rect(8, 8, 624, 344);
     g.fill();
-    g.strokeStyle = color;
-    g.lineWidth = 4;
+    g.strokeStyle = 'rgba(160,230,255,0.7)';
+    g.lineWidth = 3;
     g.stroke();
-    g.fillStyle = color;
+    g.shadowColor = 'rgba(8,16,26,0.95)';
+    g.shadowBlur = 8;
+    g.fillStyle = '#9fe6ff';
     g.font = '700 26px Inter, "Segoe UI", sans-serif';
     g.fillText(title, 36, 58);
-    g.fillStyle = '#23303c';
+    g.fillStyle = '#ffffff';
     g.font = '500 25px Inter, "Segoe UI", sans-serif';
     wrap(g, text, 568).slice(0, 8).forEach((l, i) => g.fillText(l, 36, 108 + i * 32));
+    void color;
     const tex = new THREE.CanvasTexture(c);
     tex.colorSpace = THREE.SRGBColorSpace;
     const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide, fog: false });

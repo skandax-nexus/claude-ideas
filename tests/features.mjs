@@ -67,22 +67,25 @@ async function desktop() {
   await page.click('#begin');
   await page.waitForTimeout(500);
   check(await page.isVisible('#hero'), 'NEW GAME opens character select first');
-  check((await page.$$('#hero [data-hero]')).length === 6, 'six heroes offered');
-  await page.click('[data-hero="kai"]');
+  check((await page.$$('#hero [data-hero]')).length === 4, 'four looks offered for Ren');
+  check(await az(() => AZ.player.model.userData.spec.model) === 'nova', 'the default look is Nova (modelled VRM character)');
+  await page.click('#hero .sw button[data-k="hair"]:nth-child(3)');
+  await page.click('#hero .sw button[data-k="top"]:nth-child(3)');
   await page.waitForTimeout(200);
-  check(await az(() => AZ.settings.hero.id) === 'kai', 'picking a hero updates the choice');
-  check(await az(() => AZ.player.model.userData.actor && AZ.player.model.userData.spec.model) === 'vanguard', 'player model rebuilt as the modelled, mo-capped Vanguard');
-  await page.click('#hero .sw button[data-k="tint"]:nth-child(4)');
+  const nova = await az(() => ({ hero: AZ.settings.hero, spec: AZ.player.model.userData.spec }));
+  check(nova.hero.hair === 0xc79a62 && nova.hero.top === 0x8fc6e8 && nova.spec.hair === 0xc79a62, 'hair and outfit colours apply to the model', JSON.stringify(nova));
+  await page.click('[data-hero="scifi"]');
+  await page.waitForTimeout(1500);
   await page.waitForTimeout(200);
-  const hero = await az(() => AZ.settings.hero);
-  check(hero.id === 'kai' && hero.tint === 0xffe0c2, 'suit colour keeps the hero and stores the option', JSON.stringify(hero));
-  check(await az(() => AZ.player.model.userData.spec.tint) === 0xffe0c2, 'suit colour applied to the model');
+  check(await az(() => AZ.settings.hero.id) === 'scifi', 'picking a look updates the choice');
+  check(await az(() => AZ.player.model.userData.actor && AZ.player.model.userData.spec.model) === 'scifi', 'player model rebuilt with the new look');
+  check(await az(() => document.querySelectorAll('#hero .sw button').length) === 0, 'looks without colour options hide the swatches');
   check(await az(() => !!AZ.player.model.userData.handL.children.length), 'reality device moved into the new model\'s hand');
   await page.screenshot({ timeout: 180000, path: path.join(shots, 'f01-character-select.png') });
   await page.click('#heroGo');
   await page.waitForTimeout(800);
   check(await az(() => AZ.started && AZ.mode === 'station' && AZ.room === 'antechamber'), 'START begins the prologue');
-  check(await az(() => JSON.parse(localStorage.getItem('afterzero.settings.v1')).hero.id) === 'kai', 'hero choice persisted');
+  check(await az(() => JSON.parse(localStorage.getItem('afterzero.settings.v1')).hero.id) === 'scifi', 'look persisted');
 
   // dock: laws hidden until the device, map and log open, key hints present
   check(await az(() => document.querySelector('#dock .laws').classList.contains('off')), 'LAWS hidden in the dock before you have the device');
@@ -182,14 +185,36 @@ async function desktop() {
     for (let i = 0; i < 4; i++) { AZ.hud.subT = 0; AZ.simulate(0.2); }
   });
   check(await az(() => window.__spoken.some((s) => s.who === 'CREW')), 'crew lines are voiced');
+  // the neural voice pack covers scripted and generated lines (spliced from recorded phrases and names)
+  const pack = await az(async () => {
+    const V = AZ.voice;
+    for (let i = 0; i < 100 && !V.pack; i++) await new Promise((r) => setTimeout(r, 100));
+    if (!V.pack) return { loaded: false };
+    const lines = [];
+    for (const d of AZ.story.decks) {
+      d.intro.forEach((l) => lines.push([l.who, l.text, {}]));
+      for (const b of d.beats) {
+        if (b.junoAfter) lines.push(['JUNO', b.junoAfter, {}]);
+        if (b.tick) lines.push(['TICK', b.tick, {}]);
+        if (b.lines) b.lines.forEach((l) => lines.push(['CREW', l.text, { gender: 'f' }]));
+      }
+    }
+    lines.push(['JUNO', 'Varga left recordings everywhere. The console by the crates is the one she cared about.', {}]);
+    const missing = lines.filter(([w, t, e]) => !V.plan(t, w, e)).map(([w, t]) => `${w}: ${t}`);
+    const crew = lines.find(([w]) => w === 'CREW');
+    return { loaded: true, total: lines.length, missing, dur: V.duration(crew[1], 'CREW', crew[2]) };
+  });
+  check(pack.loaded, 'the voice pack loads');
+  check(pack.loaded && pack.missing.length === 0, `every story line of this vessel can be spoken from the pack (${pack.total} lines)`, JSON.stringify(pack.missing?.slice(0, 5)));
+  check(pack.dur > 1, 'line durations come from the recordings', String(pack.dur));
 
   // character change from the pause menu, mid-vessel
   await az(() => { AZ.openMenu('pause'); });
   await page.click('#heroBtn2');
   await page.waitForTimeout(300);
-  await page.click('[data-hero="mira"]');
+  await page.click('[data-hero="ren"]');
   await page.waitForTimeout(300);
-  check(await az(() => AZ.settings.hero.id === 'mira' && AZ.menu === 'hero'), 'character can be changed from the pause menu');
+  check(await az(() => AZ.settings.hero.id === 'ren' && AZ.menu === 'hero'), 'look can be changed from the pause menu');
   await page.screenshot({ timeout: 180000, path: path.join(shots, 'f04-character-midgame.png') });
   await page.click('#heroGo');
   await page.waitForTimeout(300);
@@ -225,11 +250,12 @@ async function phone() {
   await page.waitForTimeout(500);
   const heroBox = await page.locator('#heroGo').boundingBox();
   check(heroBox && heroBox.y + heroBox.height <= 412, 'START is on screen on a phone', JSON.stringify(heroBox));
-  await page.tap('[data-hero="asha"]');
+  await page.tap('[data-hero="spacer"]');
+  await page.waitForTimeout(1500);
   await page.waitForTimeout(200);
   await page.tap('#heroGo');
   await page.waitForTimeout(1500);
-  check(await az(() => AZ.mode === 'deck' && AZ.settings.hero.id === 'asha'), 'the vessel starts with the chosen hero');
+  check(await az(() => AZ.mode === 'deck' && AZ.settings.hero.id === 'spacer' && AZ.voice.youMale), 'the vessel starts with the chosen look (and its voice)');
   await az(() => { AZ.hud.subs = []; AZ.hud.subT = 0; AZ.hud.nextSub(); document.querySelector('#card').classList.remove('on'); });
 
   const cdp = await ctx.newCDPSession(page);

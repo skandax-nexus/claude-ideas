@@ -10,14 +10,22 @@ This repository contains:
 - **`game/` - the browser game** (Three.js): the Station Zero prologue plus the generated vessel campaign, for desktop and Android browsers.
 - **`docs/`** - the design for the full game.
 
-## v0.6: modelled, motion-captured characters
+## v0.7: you hear every line, a cleaner screen, one Ren with many looks
 
-Everyone you see is now a professionally modelled, rigged character (Mixamo models from the three.js examples, in `game/assets/characters`) animated with motion capture (`game/js/world/Actors.js`):
-
-- **Cast:** Ren is Michelle (shades, headphones, a real face). Kai, Asha, Leo and Mira wear Vanguard armour, in any suit colour. Noor is a synthetic, and Juno wears green armour. The Custodian, the Other and crew echoes are glowing holograms.
-- **Motion:** idle, walk and run blend smoothly by speed, with the stride matched to ground speed so feet don't slide. There's a leap pose in the air, nods and head-shakes while talking, a head that turns to whoever you're talking to, and a wave.
-- **Retargeting:** clips are retargeted between skeletons through world space, so any Mixamo-rigged `.glb` added to `MODELS` joins the cast.
-- **Fallback:** if the models can't load, the procedural humans (`humans.js`) stand in. The APK and the single-file preview carry the models inline.
+- **Voiced dialogue that always plays**
+  - Every line is spoken with natural neural voices (Kokoro TTS), recorded into a voice pack (`game/assets/voice`, built by `tools/voice-pack.mjs` + `tools/voice-pack.py`).
+  - Scripted lines are recorded whole. Generated vessel lines are spliced from recorded phrases plus every crew name, place and deck, so the crew of any seed can speak.
+  - It plays through the game's own audio, so it works wherever the music does (the old build relied on the device's text-to-speech, which many phones and the app's WebView don't have). Device speech remains the fallback.
+- **Transparent captions:** dialogue, toasts, the objective and the in-world log screens float over the scene as light text with a soft dark outline, with no cards behind them.
+- **Nothing overlaps:** the dock moved to the bottom centre, the objective sits under the room state, and the minimap sits in the top corner on phones. `npm run layout` checks every HUD piece against every other on desktop, laptop, three phone sizes and a tablet.
+- **One character, many looks:** you are always Ren; the character screen changes how Ren looks.
+  - **Nova:** an anime-style VRM avatar with blinking eyes, a mouth that moves while talking, and hair and outfit colour choices.
+  - **Street** (Michelle), **Flight suit** and **Spacesuit**. Ren's voice follows the look.
+- **New cast** (`game/js/world/Actors.js`, `People.js`):
+  - The crew and Juno are modelled people in everyday and work clothes (Quaternius, CC0); echoes are holograms of them.
+  - All rigs (Mixamo, VRM, Quaternius) map onto one skeleton. Walk and run speeds are measured from each clip's feet, so steps match movement.
+  - Credits are in `game/assets/characters/CREDITS.md`.
+- **APK:** the game is served from inside the APK at `https://afterzero.app/`, so it can load the models and the voice pack offline.
 
 ## v0.4: choose your character, voiced interactions, controls that stay out of the way
 
@@ -145,7 +153,8 @@ tests/
 npm test                                   # core systems + generator invariants over many seeds (Node 20+)
 NODE_PATH=$(npm root -g) npm run smoke     # full prologue playthrough in headless Chromium (needs playwright)
 NODE_PATH=$(npm root -g) npm run vessel    # QA bot plays every generated room of 2 seeds (pass a seed count to test more)
-NODE_PATH=$(npm root -g) npm run features  # v0.4 features on desktop and a touch phone: characters, voices, prompts, zoom, stick, dock
+NODE_PATH=$(npm root -g) npm run features  # features on desktop and a touch phone: looks, voice pack, prompts, zoom, stick, dock
+NODE_PATH=$(npm root -g) npm run layout    # no HUD piece overlaps another, on six screen sizes
 ```
 
 ## Design principle

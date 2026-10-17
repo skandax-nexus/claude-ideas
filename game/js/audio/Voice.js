@@ -1,12 +1,20 @@
-// Voiced dialogue. Every subtitle line can also be spoken, each character
-// with their own pitch and pace: the browser's speech synthesis on desktop
-// and mobile Chrome, Android's own text-to-speech inside the APK.
+// Voiced dialogue. Every line is spoken with recorded neural voices from the
+// voice pack (assets/voice, built by tools/voice-pack.*): scripted lines are
+// recorded whole, generated lines are spliced from recorded phrases and names.
+// It plays through the game's own audio, so it works wherever music does.
+// Anything the pack can't say falls back to the device's text-to-speech
+// (the browser's speech synthesis, Android's TTS inside the APK).
 // Music ducks under speech (see Synth.setDuck). Toggle in Settings.
+import { voicePieces } from './voiceKey.js';
+import { VOCAB } from '../gen/StoryGen.js';
+
+const GAP = 0.05; // between spliced pieces
 
 const PROFILES = {
   JUNO: { pitch: 1.12, rate: 1.03, gender: 'f' },
   TICK: { pitch: 1.75, rate: 1.12, gender: 'n' },
   YOU: { pitch: 1.0, rate: 0.98, gender: 'f' },
+  YOU_m: { pitch: 0.9, rate: 0.98, gender: 'm' },
   VARGA: { pitch: 0.9, rate: 0.92, gender: 'f' },
   CUSTODIAN: { pitch: 0.72, rate: 0.88, gender: 'm' },
   OBSERVER: { pitch: 0.55, rate: 0.82, gender: 'n' },
@@ -14,8 +22,31 @@ const PROFILES = {
   NONE: { pitch: 1.0, rate: 0.95, gender: 'n' },
 };
 
+// The pack: an index plus one binary of Ogg Opus clips.
+let PACK = null;
+export function loadVoicePack(base = 'assets/voice/') {
+  if (PACK) return PACK;
+  PACK = (async () => {
+    try {
+      const index = await (await fetch(base + 'voice.json')).json();
+      const bin = await (await fetch(base + 'voice.bin')).arrayBuffer();
+      return { index, bin, vocab: VOCAB() };
+    } catch (e) {
+      console.warn('Voice pack unavailable; using device speech', e);
+      return null;
+    }
+  })();
+  return PACK;
+}
+
 export class Voice {
-  constructor() {
+  constructor(audio = null) {
+    this.audio = audio; // the game's Synth: voices play through its mixer
+    this.pack = null;
+    this.clips = new Map();
+    this.playing = [];
+    this.packOk = true;
+    loadVoicePack().then((p) => (this.pack = p));
     this.enabled = true;
     this.android = typeof window !== 'undefined' ? window.AndroidTTS : null;
     this.synth = typeof window !== 'undefined' ? window.speechSynthesis : null;
@@ -28,15 +59,87 @@ export class Voice {
   }
 
   get available() {
-    return !!(this.android || this.synth);
+    return !!(this.pack && this.packOk) || !!(this.android || (this.synth && this.voices.length));
+  }
+
+  // the recorded pieces for a line, or null if the pack can't say all of it
+  plan(text, who, extra = {}) {
+    if (!this.pack || !this.packOk) return null;
+    let id = who === 'CREW' ? `CREW_${extra.gender || 'n'}` : who;
+    if (who === 'YOU' && this.youMale && this.pack.index.YOU_m) id = 'YOU_m'; // your look decides your voice
+    // the Other speaks with your voice when it has no recording of its own
+    const libs = [[id, this.pack.index[id]], ...(who === 'OTHER' ? [['YOU', this.pack.index.YOU]] : [])].filter(([, l]) => l);
+    if (!libs.length) return null;
+    const out = [];
+    for (const p of voicePieces(text, this.pack.vocab)) {
+      if (p.pause) {
+        out.push(p);
+        continue;
+      }
+      const hit = libs.find(([, l]) => l[p.key]);
+      if (!hit) return null;
+      out.push({ key: hit[0] + '|' + p.key, ref: hit[1][p.key] });
+    }
+    return out.length ? out : null;
+  }
+
+  clip(key, ref) {
+    let c = this.clips.get(key);
+    if (!c) {
+      const [off, len] = ref;
+      c = this.audio.ctx.decodeAudioData(this.pack.bin.slice(off, off + len)).catch((e) => {
+        this.packOk = false; // e.g. no Opus decoder: use device speech from now on
+        throw e;
+      });
+      this.clips.set(key, c);
+    }
+    return c;
+  }
+
+  async playPlan(plan, extra) {
+    const ctx = this.audio.ctx;
+    const token = (this.token = (this.token || 0) + 1);
+    const bufs = await Promise.all(plan.map((p) => (p.ref ? this.clip(p.key, p.ref) : null)));
+    if (token !== this.token) return; // a newer line (or a skip) took over
+    // crew voices vary a little around their recorded voice
+    const rate = extra.pitch && extra.gender ? Math.min(1.08, Math.max(0.93, 1 + (extra.pitch - { f: 1.14, m: 0.84, n: 1 }[extra.gender]) * 0.9)) : 1;
+    if (!this.out) {
+      this.out = ctx.createGain();
+      this.out.gain.value = 1.15;
+      this.out.connect(this.audio.master);
+    }
+    let t = ctx.currentTime + 0.06;
+    for (let i = 0; i < plan.length; i++) {
+      if (plan[i].pause) {
+        t += plan[i].pause;
+        continue;
+      }
+      const src = ctx.createBufferSource();
+      src.buffer = bufs[i];
+      src.playbackRate.value = rate;
+      src.connect(this.out);
+      src.start(t);
+      this.playing.push(src);
+      t += bufs[i].duration / rate + GAP;
+    }
   }
 
   // who: speaker key; extra: { pitch, gender } for generated crew
   speak(text, who = 'NONE', extra = {}) {
     if (!this.enabled || !text) return;
+    this.stop();
+    const plan = this.audio?.ctx && this.plan(text, who, extra);
+    if (plan) {
+      this.playPlan(plan, extra).catch(() => this.speakDevice(text, who, extra));
+      return;
+    }
+    this.speakDevice(text, who, extra);
+  }
+
+  speakDevice(text, who, extra) {
     const plain = text.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
     const spoken = plain === plain.toUpperCase() ? plain.toLowerCase() : plain; // TICK and records shout in caps
-    const p = { ...(PROFILES[who] || PROFILES.NONE), ...extra };
+    const p = { ...(PROFILES[who === 'YOU' && this.youMale ? 'YOU_m' : who] || PROFILES.NONE), ...extra };
     try {
       if (this.android && this.android.ready && this.android.ready()) {
         this.android.speak(spoken, p.pitch, p.rate);
@@ -66,6 +169,15 @@ export class Voice {
   }
 
   stop() {
+    this.token = (this.token || 0) + 1;
+    for (const s of this.playing) {
+      try {
+        s.stop();
+      } catch {
+        /* already done */
+      }
+    }
+    this.playing = [];
     try {
       if (this.android) this.android.stop();
       else this.synth?.cancel();
@@ -75,7 +187,9 @@ export class Voice {
   }
 
   // how long a line takes to say, so subtitles wait for the voice
-  duration(text, who) {
+  duration(text, who, extra = {}) {
+    const plan = this.plan(text, who, extra);
+    if (plan) return Math.max(1.6, plan.reduce((a, p) => a + (p.pause || p.ref[2] + GAP), 0.06) + 0.45);
     const p = PROFILES[who] || PROFILES.NONE;
     return Math.max(2.2, (text.replace(/<[^>]+>/g, '').length / 14.5) / p.rate + 0.5);
   }

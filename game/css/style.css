@@ -274,7 +274,7 @@ body.touch #held { top: auto; bottom: 182px; right: 16px; }
 /* character select */
 #hero.overlay { justify-content: flex-start; background: linear-gradient(90deg, rgba(240, 245, 250, 0.9) 0%, rgba(240, 245, 250, 0.6) 38%, transparent 60%); backdrop-filter: none; }
 .herop { width: min(440px, 100%); }
-.heroes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 12px 0; }
+.heroes { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin: 12px 0; }
 .heroes button { padding: 10px 6px; text-align: center; font-size: 13px; }
 .heroes button small { display: block; font-size: 10px; color: var(--ink-soft); font-weight: 600; letter-spacing: 0.08em; margin-top: 2px; }
 .heroes button.sel { background: var(--ink); color: #fff; border-color: var(--ink); }
@@ -291,7 +291,7 @@ body.touch #held { top: auto; bottom: 182px; right: 16px; }
 @media (max-height: 520px) {
   .herop { padding: 14px 18px; max-height: 96vh; }
   .herop > p.dim, .heroblurb { display: none; }
-  .heroes { grid-template-columns: repeat(6, 1fr); gap: 5px; margin: 8px 0; }
+  .heroes { grid-template-columns: repeat(4, 1fr); gap: 5px; margin: 8px 0; }
   .heroes button { padding: 7px 2px; font-size: 11px; }
   .heroes button small { display: none; }
   .custom .row2 { margin: 6px 0; }
@@ -381,3 +381,48 @@ body.touch #hero .panel.herop { width: min(280px, 38vw); }
   #title .panel { max-height: 48vh; }
 }
 @media (orientation: portrait) { body.touch #title .controls.touch-only { display: none !important; } }
+
+/* v0.7: transparent captions --------------------------------------------------- */
+/* dialogue, toasts and prompts float over the scene with no card behind them;
+   a soft dark halo keeps light text readable on any background */
+:root { --halo: 0 0 2px rgba(10, 18, 28, 0.95), 0 1px 3px rgba(10, 18, 28, 0.9), 0 0 14px rgba(10, 18, 28, 0.55); }
+.sub { background: transparent; box-shadow: none; backdrop-filter: none; padding: 4px 8px; text-align: center; }
+.sub span { color: #fff !important; text-shadow: var(--halo); font-weight: 500; }
+.sub b { display: inline-block; margin: 0 auto 4px; padding: 2px 10px; border-radius: 999px; background: rgba(255, 255, 255, 0.82); font-size: 10.5px; text-shadow: none; }
+#toast { background: transparent; box-shadow: none; color: #fff; text-shadow: var(--halo); font-weight: 600; }
+#toast small { color: rgba(255, 255, 255, 0.85); letter-spacing: 0.14em; }
+#toast b.tok { color: #8ff0b8; }
+#prompt { background: rgba(255, 255, 255, 0.18); border: 1px solid rgba(255, 255, 255, 0.55); box-shadow: none; color: #fff; text-shadow: var(--halo); backdrop-filter: blur(3px); }
+#objective { background: transparent; box-shadow: none; backdrop-filter: none; padding: 4px 6px; }
+#objective small { color: rgba(255, 255, 255, 0.85); text-shadow: var(--halo); }
+#objective .txt { color: #fff; text-shadow: var(--halo); }
+#objective.rewrite .txt { color: #bfe0ff; }
+#state { background: rgba(255, 255, 255, 0.28); box-shadow: none; }
+#state .room { color: #fff; text-shadow: var(--halo); }
+#state .pip { background: rgba(255, 255, 255, 0.55); }
+#held { background: transparent; color: #fff; text-shadow: var(--halo); }
+#held b { color: #fff; }
+
+/* v0.7: one layout, nothing overlaps ------------------------------------------------
+   top-left: room state, the objective under it   top-right: minimap (touch), held item
+   top-centre: toasts                              bottom-centre: the dock, captions above it
+   bottom corners (touch): stick, buttons          bottom-right (desktop): minimap */
+#dock { top: auto; bottom: max(12px, env(safe-area-inset-bottom)); }
+#subs { bottom: 76px; width: min(720px, calc(100vw - 400px)); min-width: 300px; }
+#objective { left: 16px; right: auto; top: 92px; text-align: left; max-width: min(360px, 26vw); }
+#toast { top: max(16%, 92px); max-width: min(520px, 44vw); width: max-content; }
+#held { right: 16px; bottom: 200px; top: auto; }
+body.touch #state { padding: 7px 9px; }
+body.touch #state .room { margin-bottom: 5px; font-size: 11px; }
+body.touch #state .pip { padding: 3px 7px; font-size: 10.5px; margin-right: 2px; }
+body.touch #objective { top: 78px; max-width: min(300px, 26vw); }
+body.touch #objective .txt { font-size: 12.5px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+body.touch #minimap { top: 12px; right: max(16px, env(safe-area-inset-right)); bottom: auto; width: 96px; height: 96px; }
+body.touch #held { top: 118px; bottom: auto; right: 16px; }
+body.touch #subs { bottom: 64px; width: min(560px, calc(48vw - 48px)); min-width: 0; }
+body.touch #toast { top: max(14%, 70px); max-width: min(440px, 40vw); }
+body.touch #dock { bottom: max(10px, env(safe-area-inset-bottom)); }
+@media (max-height: 400px) {
+  body.touch #stick { width: 120px; height: 120px; bottom: 18px; }
+  body.touch #buttons { transform: scale(0.88); transform-origin: right bottom; }
+}
