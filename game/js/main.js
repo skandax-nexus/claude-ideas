@@ -285,6 +285,7 @@ class Game {
     const $ = (s) => document.querySelector(s);
     $('#begin').onclick = () => this.begin('new');
     $('#vessel').onclick = () => this.begin('vessel');
+    $('#halcyon').onclick = () => this.begin('halcyon');
     $('#continue').onclick = () => {
       const l = latestSave();
       if (l) this.begin('load', l.slot);
@@ -339,7 +340,7 @@ class Game {
   // New game / vessel / load. Starting fresh in a page that already played
   // goes through a reload, so no state ever leaks between runs.
   begin(action, slot) {
-    if (!this.started && !this.settings.hero && (action === 'new' || action === 'vessel')) {
+    if (!this.started && !this.settings.hero && (action === 'new' || action === 'vessel' || action === 'halcyon')) {
       this.openHero('title', () => this.begin(action, slot));
       return;
     }
@@ -357,6 +358,15 @@ class Game {
     if (action === 'load') ok = this.load(slot);
     if (ok) this.hud.toast('Memory restored.');
     else if (action === 'vessel') this.startVessel();
+    else if (action === 'halcyon') {
+      // jump straight to the open districts: Station Zero counts as played up to the vault
+      this.facts.rulesEnabled = false;
+      for (const k of ['left_antechamber', 'met_juno', 'has_tick', 'has_device', 'seen_echo', 'heard_varga', 'heard_self', 'wrote_law', 'archive_open', 'custodian_remembers', 'vault_seen']) this.facts.set(k);
+      for (const t of ['GRAVITY', 'INVERTS', 'PHYSICAL', 'INVERTED', 'ECHO', 'HELD', 'PERSISTS', 'ECHOES', 'SOLIDIFIES', 'ALL']) this.facts.set(`token_${t}`);
+      this.engine.setLaw(1, { subject: 'ECHOES', verb: 'SOLIDIFIES', target: 'ECHO' });
+      this.enterRoom('lab', true);
+      this.startZones();
+    }
     else this.enterRoom('antechamber', true);
     this.paused = false;
     this.hud.show(null);

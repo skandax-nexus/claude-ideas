@@ -282,7 +282,7 @@ try {
   const mob = await browser.newPage({ viewport: { width: 915, height: 412 }, isMobile: true, hasTouch: true });
   mob.on('pageerror', (e) => errors.push(e.message));
   await mob.goto(url);
-  await mob.waitForTimeout(1200);
+  await mob.waitForFunction(() => window.AZ, null, { timeout: 180000 }); // the characters load first
   await mob.evaluate(() => localStorage.clear());
   await mob.tap('#begin');
   await mob.waitForTimeout(500);
