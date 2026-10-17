@@ -21,6 +21,8 @@ This repository contains:
 - **One character, many looks:** you are always Ren; the character screen changes how Ren looks.
   - **Nova:** an anime-style VRM avatar with blinking eyes, a mouth that moves while talking, and hair and outfit colour choices.
   - **Street** (Michelle), **Flight suit** and **Spacesuit**. Ren's voice follows the look.
+  - Each look's button shows its portrait (`game/assets/looks`, rendered by `tools/look-thumbs.mjs`).
+  - Models are plain glTF (no WebAssembly decoders), so they load on hosts that forbid WebAssembly; `tools/unpack-meshopt.mjs` unpacks meshopt-compressed downloads.
 - **New cast** (`game/js/world/Actors.js`, `People.js`):
   - The crew and Juno are modelled people in everyday and work clothes (Quaternius, CC0); echoes are holograms of them.
   - All rigs (Mixamo, VRM, Quaternius) map onto one skeleton. Walk and run speeds are measured from each clip's feet, so steps match movement.

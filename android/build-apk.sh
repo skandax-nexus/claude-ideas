@@ -23,6 +23,7 @@ JS
 # character models and the voice pack, served by MainActivity from https://afterzero.app/assets/...
 mkdir -p "$OUT/assets/assets/characters" "$OUT/assets/assets/voice"
 cp ../game/assets/characters/*.glb "$OUT/assets/assets/characters/"
+mkdir -p "$OUT/assets/assets/looks" && cp ../game/assets/looks/*.webp "$OUT/assets/assets/looks/"
 if [ -f ../game/assets/voice/voice.ogg ]; then cp ../game/assets/voice/voice.json ../game/assets/voice/voice.ogg "$OUT/assets/assets/voice/"
 else echo "warning: no voice pack (tools/voice-pack.*); dialogue will use device speech"; fi
 
@@ -43,7 +44,8 @@ echo "Built $(pwd)/$OUT/AFTERZERO-preview.apk ($(du -h "$OUT/AFTERZERO-preview.a
 # 4. The web preview (AFTERZERO-play.html): same page, with the models as glTF JSON
 #    for hosts that don't serve .glb, beside it in build/preview/.
 P="$OUT/preview"
-mkdir -p "$P/assets/voice"
+mkdir -p "$P/assets/voice" "$P/assets/looks"
+cp ../game/assets/looks/*.webp "$P/assets/looks/"
 python3 -I ../tools/gltf-json.py ../game/assets/characters "$P/assets/characters" >/dev/null
 sed 's#<script>#<script>window.AZ_MODEL_EXT=".json";</script><script>#' "$OUT/assets/index.html" > "$P/index.html"
 [ -f ../game/assets/voice/voice.ogg ] && cp ../game/assets/voice/voice.json ../game/assets/voice/voice.ogg "$P/assets/voice/"

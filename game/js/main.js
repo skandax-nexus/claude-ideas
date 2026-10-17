@@ -449,13 +449,15 @@ class Game {
       const look = lookOf(cur);
       $('#hero h2').textContent = 'YOUR LOOK';
       $('#hero .herohint').textContent = 'The station calls you Ren. Choose how you remember yourself.';
-      $('#hero .heroes').innerHTML = Object.entries(LOOKS).map(([id, h]) => `<button data-hero="${id}" class="${id === cur.id ? 'sel' : ''}">${h.name}</button>`).join('');
+      $('#hero .heroes').innerHTML = Object.entries(LOOKS).map(([id, h]) => `<button data-hero="${id}" class="look ${id === cur.id ? 'sel' : ''}"><img src="assets/looks/${id}.webp" alt=""><span>${h.name}</span></button>`).join('');
+      $('#hero .heroes').classList.add('looks');
       const sw = (k, list, label) => `<div class="row2"><span>${label}</span><span class="sw">${list.map((v) => `<button style="background:${hex(v)}" class="${cur[k] === v ? 'sel' : ''}" data-k="${k}" data-v="${v}" aria-label="${label} ${hex(v)}"></button>`).join('')}</span></div>`;
       $('#hero .custom').innerHTML = `<p class="heroblurb">${look.blurb}</p>` + (look.colours ? sw('hair', HAIR, 'HAIR') + sw('top', TOPS, 'OUTFIT') : '');
     } else {
       const cur = this.settings.hero || { id: 'ren' };
       const base = HEROES[cur.id] || HEROES.ren;
       const spec = heroSpec(cur);
+      $('#hero .heroes').classList.remove('looks');
       $('#hero .heroes').innerHTML = Object.entries(HEROES).map(([id, h]) => `<button data-hero="${id}" class="${id === (cur.id || 'ren') ? 'sel' : ''}">${h.name}<small>${h.role.toUpperCase()}</small></button>`).join('');
       const sw = (k, list, fmt) => `<div class="row2"><span>${fmt}</span><span class="sw">${list.map((v) => k === 'hairStyle'
         ? `<button class="txtb ${spec[k] === v ? 'sel' : ''}" data-k="${k}" data-v="${v}">${v}</button>`

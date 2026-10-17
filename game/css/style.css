@@ -431,3 +431,11 @@ body.touch #dock { bottom: max(10px, env(safe-area-inset-bottom)); }
 }
 
 #title .ver { margin: -4px 0 10px; font-size: 10.5px; letter-spacing: 0.12em; color: var(--ink-soft); text-transform: uppercase; }
+
+/* look picker: a portrait of each look on its button */
+#hero .heroes.looks { grid-template-columns: repeat(4, 1fr) !important; gap: 6px; }
+#hero .heroes.looks button.look { border-radius: 14px; white-space: normal; letter-spacing: 0.02em; padding: 4px 3px 6px; display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 9.5px; line-height: 1.15; background: rgba(255, 255, 255, 0.55); }
+#hero .heroes.looks button.look img { width: 100%; aspect-ratio: 4 / 5; object-fit: cover; border-radius: 10px; background: linear-gradient(180deg, rgba(220, 232, 244, 0.9), rgba(244, 247, 250, 0.6)); }
+#hero .heroes.looks button.look.sel { background: var(--ink); color: #fff; }
+#hero .heroes.looks button.look.sel img { box-shadow: 0 0 0 2px #fff inset; }
+@media (max-height: 520px) and (orientation: landscape) { #hero .heroes.looks button.look img { aspect-ratio: 1; object-position: top; } }

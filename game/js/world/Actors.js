@@ -20,7 +20,6 @@
 // Models are loaded on demand (loadActors(keys)); credits in assets/characters/CREDITS.md.
 import * as THREE from '../../vendor/three.module.min.js';
 import { GLTFLoader } from '../../vendor/addons/loaders/GLTFLoader.js';
-import { MeshoptDecoder } from '../../vendor/addons/libs/meshopt_decoder.module.js';
 import * as SkeletonUtils from '../../vendor/addons/utils/SkeletonUtils.js';
 
 const Q = { idle: 'Idle', walk: 'Walk', run: 'Run' }; // Quaternius clip names
@@ -65,8 +64,7 @@ export const actorLoaded = (key) => !!loaded[key];
 export function loadActors(keys = Object.keys(MODELS), dir) {
   if (dir) base = dir;
   if (!loader) {
-    loader = new GLTFLoader();
-    loader.setMeshoptDecoder(MeshoptDecoder);
+    loader = new GLTFLoader(); // plain glTF only: no WebAssembly decoders (some hosts forbid them)
   }
   const one = (key) => {
     if (pending[key]) return pending[key];

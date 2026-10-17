@@ -36,6 +36,7 @@ public class MainActivity extends Activity {
         if (p.endsWith(".json")) return "application/json";
         if (p.endsWith(".glb")) return "model/gltf-binary";
         if (p.endsWith(".png")) return "image/png";
+        if (p.endsWith(".webp")) return "image/webp";
         if (p.endsWith(".ogg")) return "audio/ogg";
         if (p.endsWith(".svg")) return "image/svg+xml";
         return "application/octet-stream";
