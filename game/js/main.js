@@ -1736,7 +1736,7 @@ class Game {
           l.color.setHex(h ? 0xffd2a0 : c);
           l.distance = h ? 11 : 7;
         }
-        l.userData.want = h ? 9 : 4;
+        l.userData.want = h ? 14 : 6;
       });
     }
     const k = Math.min(1, dt * 4);

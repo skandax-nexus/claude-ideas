@@ -81,7 +81,9 @@ export class DeckWorld {
       const material = this.mats[mat] || this.mats.wall;
       const mesh = new THREE.Mesh(mergeGeometries(geos), material);
       if (material.transparent) mesh.renderOrder = 2;
-      mesh.castShadow = !(mat === 'ceil' || mat === 'glass' || mat === 'glow' || mat === 'gate' || mat === 'leaf');
+      // the glass sky and see-through walls let the light through (a dome shadow cut a hard
+      // diagonal edge across HALCYON where the sun's shadow area ended)
+      mesh.castShadow = !['ceil', 'glass', 'glow', 'gate', 'leaf', 'dome', 'glassWall', 'neon', 'lamp', 'shopfront', 'screen'].includes(mat);
       mesh.receiveShadow = true;
       root.add(mesh);
       geos.forEach((g) => g.dispose());
@@ -465,7 +467,16 @@ function lightPools(glows) {
   const lamps = glows.filter((g) => g[5]);
   if (lamps.length) {
     const cone = new THREE.ConeGeometry(1, 1, 20, 1, true).translate(0, -0.5, 0);
-    const cones = new THREE.InstancedMesh(cone, new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.018, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: true }), lamps.length);
+    const coneMat = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.018, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: true });
+    // haze you see from a distance: it fades out as the camera comes close, so walking
+    // past (or through) a lamp never washes half the screen
+    coneMat.onBeforeCompile = (sh) => {
+      sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying float vAzD;')
+        .replace('#include <project_vertex>', '#include <project_vertex>\nvAzD = -mvPosition.z;');
+      sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying float vAzD;')
+        .replace('#include <dithering_fragment>', '#include <dithering_fragment>\ngl_FragColor.a *= smoothstep(4.0, 9.0, vAzD);');
+    };
+    const cones = new THREE.InstancedMesh(cone, coneMat, lamps.length);
     lamps.forEach(([x, , z, r, c, h], i) => {
       m.makeScale(r * 0.55, h, r * 0.55).setPosition(x, h, z);
       cones.setMatrixAt(i, m);
