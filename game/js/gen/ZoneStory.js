@@ -23,7 +23,7 @@ export const ZONES = [
   {
     key: 'neon', name: 'NEON MERIDIAN', title: 'The City Under Glass', theme: 'city', feature: 'gravity', crew: crew('kade'),
     subtitle: 'A city that never turns its lights off, under a sky made of glass',
-    palette: { fog: 0x161b26, wall: '#3b3e46', floor: '#24272e', accent: 0xff4fa8, accent2: 0x3fe0ff, light: 0xb9a6ff, tint: 0x3a3f6e, night: 1, weather: 'rain', grade: { shadowTint: 0x1c3a72, highlightTint: 0xffb6dc, toning: 0.22, contrast: 1.12, saturation: 1.12 } },
+    palette: { fog: 0x161b26, wall: '#3b3e46', floor: '#24272e', accent: 0xff4fa8, accent2: 0x3fe0ff, light: 0xb9a6ff, tint: 0x3a3f6e, night: 1, weather: 'rain', sky: 'night', grade: { shadowTint: 0x1c3a72, highlightTint: 0xffb6dc, toning: 0.22, contrast: 1.12, saturation: 1.12 } },
     rooms: ['MERIDIAN SQUARE', 'RAIN ALLEY', 'NOODLE ROW', 'THE OVERPASS', 'GLASS MARKET', 'NIGHT STATION'],
     motto: 'HALCYON NEVER SLEEPS',
     intro: [
@@ -62,7 +62,7 @@ export const ZONES = [
   {
     key: 'reactor', name: 'THE DROWNED REACTOR', title: 'Where the Water Came In', theme: 'reactor', feature: 'echo', crew: crew('osei'),
     subtitle: 'Halcyon\'s heart flooded the night the cycle began',
-    palette: { fog: 0x0f2a2e, wall: '#33484a', floor: '#2b3a3c', accent: 0xff8a3d, accent2: 0x4ff0d2, light: 0xffb27a, tint: 0x1d4a48, night: 0.85, weather: 'steam', grade: { shadowTint: 0x0c4a48, highlightTint: 0xffb47a, toning: 0.24, contrast: 1.14, saturation: 1.0 } },
+    palette: { fog: 0x0f2a2e, wall: '#33484a', floor: '#2b3a3c', accent: 0xff8a3d, accent2: 0x4ff0d2, light: 0xffb27a, tint: 0x1d4a48, night: 0.85, weather: 'steam', sky: 'plant', grade: { shadowTint: 0x0c4a48, highlightTint: 0xffb47a, toning: 0.24, contrast: 1.14, saturation: 1.0 } },
     rooms: ['TURBINE FLOOR', 'COOLANT GALLERY', 'THE SUMP', 'PUMP ROW', 'CONTROL DECK', 'THE CORE WELL'],
     motto: 'PRESSURE IS A PROMISE',
     intro: [
@@ -97,7 +97,7 @@ export const ZONES = [
   {
     key: 'forest', name: 'THE GLASS FOREST', title: 'The Garden That Kept Growing', theme: 'forest', feature: 'zerog', crew: crew('theo'),
     subtitle: 'A forest under a dome, still glowing, still growing, still waiting',
-    palette: { fog: 0x14302a, wall: '#3c5a4c', floor: '#2d4436', accent: 0x9dff7a, accent2: 0xffd36a, light: 0xd8ffb0, tint: 0x2a5a44, night: 0.75, weather: 'fireflies', grade: { shadowTint: 0x1a4a34, highlightTint: 0xfff0b8, toning: 0.2, contrast: 1.08, saturation: 1.1 } },
+    palette: { fog: 0x14302a, wall: '#3c5a4c', floor: '#2d4436', accent: 0x9dff7a, accent2: 0xffd36a, light: 0xd8ffb0, tint: 0x2a5a44, night: 0.75, weather: 'fireflies', sky: 'dusk', grade: { shadowTint: 0x1a4a34, highlightTint: 0xfff0b8, toning: 0.2, contrast: 1.08, saturation: 1.1 } },
     rooms: ['THE CANOPY', 'GLOWROOT HOLLOW', 'THE STILL POND', 'FERN STAIR', 'THE CABIN ROAD', 'SEED CHAPEL'],
     motto: 'EVERYTHING HERE WAS PLANTED TO OUTLIVE US',
     intro: [
@@ -136,7 +136,7 @@ export const ZONES = [
   {
     key: 'tower', name: 'THE SIGNAL TOWER', title: 'Last Light', theme: 'tower', feature: 'sentinel', crew: crew('varga'),
     subtitle: 'The tallest thing in Halcyon, and the Observer knows you are coming',
-    palette: { fog: 0x1e1a1e, wall: '#45403f', floor: '#2c2a2b', accent: 0xff4a4a, accent2: 0xffc06a, light: 0xffa0a0, tint: 0x5a2a34, night: 0.9, weather: 'storm', grade: { shadowTint: 0x3a1830, highlightTint: 0xffb0a0, toning: 0.24, contrast: 1.16, saturation: 1.04 } },
+    palette: { fog: 0x1e1a1e, wall: '#45403f', floor: '#2c2a2b', accent: 0xff4a4a, accent2: 0xffc06a, light: 0xffa0a0, tint: 0x5a2a34, night: 0.9, weather: 'storm', sky: 'night', grade: { shadowTint: 0x3a1830, highlightTint: 0xffb0a0, toning: 0.24, contrast: 1.16, saturation: 1.04 } },
     rooms: ['STORM DECK', 'THE SPIRE STAIR', 'ANTENNA FIELD', 'THE RELAY', 'LAST LANDING', 'THE BEACON'],
     motto: 'SAY IT ONCE AND THE WHOLE SKY HEARS',
     intro: [

@@ -64,6 +64,7 @@ export class PostFX {
     }
     scene.environment = q.env ? this.envTex : null;
     scene.environmentIntensity = 0.35;
+    if (q.env && this.envName) this.setEnvironment(this.envName, this.envIntensity);
     renderer.shadowMap.enabled = q.shadows;
     this.composer?.dispose();
     this.composer = null;
@@ -98,6 +99,35 @@ export class PostFX {
     const size = this.renderer.getSize(new THREE.Vector2());
     this.composer.setPixelRatio(this.renderer.getPixelRatio());
     this.composer.setSize(size.x, size.y);
+  }
+
+  // Real-world light for a place: an equirect sky photo (assets/textures/sky_*.jpg)
+  // turned into image-based lighting and reflections. null: the default room light.
+  setEnvironment(name, intensity = 0.6) {
+    this.envName = name;
+    this.envIntensity = intensity;
+    if (!this.q?.env) return;
+    if (!name) {
+      this.scene.environment = this.envTex;
+      this.scene.environmentIntensity = 0.35;
+      return;
+    }
+    this.skies = this.skies || {};
+    const use = (t) => {
+      if (this.envName !== name) return;
+      this.scene.environment = t;
+      this.scene.environmentIntensity = intensity;
+    };
+    if (this.skies[name]) return use(this.skies[name]);
+    new THREE.TextureLoader().load(`assets/textures/sky_${name}.jpg`, (tex) => {
+      tex.mapping = THREE.EquirectangularReflectionMapping;
+      tex.colorSpace = THREE.SRGBColorSpace;
+      const pm = new THREE.PMREMGenerator(this.renderer);
+      this.skies[name] = pm.fromEquirectangular(tex).texture;
+      pm.dispose();
+      tex.dispose();
+      use(this.skies[name]);
+    });
   }
 
   // per place: { shadowTint, highlightTint, toning, contrast, saturation, vignette }

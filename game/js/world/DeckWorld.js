@@ -8,6 +8,7 @@ import * as M from './models.js';
 import { makeCrewModel } from './People.js';
 import { TOKENS } from '../core/Laws.js';
 import { compileCondition } from '../core/conditions.js';
+import { mergeVertices } from '../../vendor/addons/utils/BufferGeometryUtils.js';
 
 const _v = new THREE.Vector3();
 
@@ -56,6 +57,12 @@ export class DeckWorld {
       const geo = boxGeometry(x1 - x0, y1 - y0, z1 - z0);
       geo.translate((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2);
       const box = { min: [x0, y0, z0], max: [x1, y1, z1], id: el.id, room: el.room };
+      if (el.invisible) {
+        // collision only (the visible part is drawn elsewhere, e.g. a tree)
+        if (el.solid) this.staticColliders.push(box);
+        geo.dispose();
+        continue;
+      }
       if (!el.when && !el.echo && !el.light) {
         if (!groups.has(el.mat)) groups.set(el.mat, []);
         groups.get(el.mat).push(geo);
@@ -91,6 +98,7 @@ export class DeckWorld {
     }
 
     if (level.glows?.length) root.add(...lightPools(level.glows));
+    if (level.trees?.length || level.rocks?.length) root.add(...forest(level, this.mats));
 
     for (const it of level.interactables) this.buildInteractable(it);
 
@@ -364,6 +372,67 @@ export class DeckWorld {
     }
     return out;
   }
+}
+
+// Trees and boulders for open districts: tapered bark trunks with layered,
+// lumpy crowns, and moss-covered rocks; instanced, a few draw calls in all.
+function forest(level, mats) {
+  const out = [];
+  const m = new THREE.Matrix4(), q = new THREE.Quaternion(), sc = new THREE.Vector3(), p = new THREE.Vector3();
+  const trees = level.trees || [];
+  if (trees.length) {
+    const trunkGeo = new THREE.CylinderGeometry(0.55, 1, 1, 10, 4).translate(0, 0.5, 0);
+    // jitter the trunk a little so no two read as perfect cylinders
+    const tp = trunkGeo.attributes.position;
+    for (let i = 0; i < tp.count; i++) tp.setX(i, tp.getX(i) * (1 + Math.sin(tp.getY(i) * 9 + i) * 0.06));
+    trunkGeo.computeVertexNormals();
+    let crownGeo = new THREE.IcosahedronGeometry(1, 3);
+    crownGeo.deleteAttribute('normal');
+    crownGeo.deleteAttribute('uv');
+    crownGeo = mergeVertices(crownGeo); // welded, so the lumps shade smoothly
+    const cp = crownGeo.attributes.position;
+    for (let i = 0; i < cp.count; i++) {
+      const v = p.fromBufferAttribute(cp, i);
+      v.multiplyScalar(1 + Math.sin(v.x * 5.1) * Math.cos(v.z * 4.3) * 0.14 + Math.sin(v.y * 7.7) * 0.06);
+      cp.setXYZ(i, v.x, v.y, v.z);
+    }
+    crownGeo.computeVertexNormals();
+    const trunks = new THREE.InstancedMesh(trunkGeo, mats.bark, trees.length);
+    const crowns = new THREE.InstancedMesh(crownGeo, mats.crown || mats.leaf, trees.length * 3);
+    trees.forEach(([x, z, h, r, c, turn], i) => {
+      q.setFromAxisAngle(p.set(0, 1, 0), turn);
+      m.compose(p.set(x, 0, z), q, sc.set(r, h, r));
+      trunks.setMatrixAt(i, m);
+      for (let k = 0; k < 3; k++) {
+        const a = turn + k * 2.1;
+        m.compose(p.set(x + Math.cos(a) * c * 0.35, h - 0.6 + k * 0.9, z + Math.sin(a) * c * 0.35), q, sc.set(c * (1 - k * 0.18), c * 0.72 * (1 - k * 0.15), c * (1 - k * 0.18)));
+        crowns.setMatrixAt(i * 3 + k, m);
+      }
+    });
+    trunks.castShadow = crowns.castShadow = true;
+    trunks.receiveShadow = crowns.receiveShadow = true;
+    out.push(trunks, crowns);
+  }
+  const rocks = level.rocks || [];
+  if (rocks.length) {
+    const rockGeo = new THREE.DodecahedronGeometry(1, 1);
+    const rp = rockGeo.attributes.position;
+    for (let i = 0; i < rp.count; i++) {
+      const v = p.fromBufferAttribute(rp, i);
+      v.set(v.x * (1 + Math.sin(v.y * 6) * 0.12), v.y * 0.62, v.z * (1 + Math.cos(v.x * 5) * 0.12));
+      rp.setXYZ(i, v.x, v.y, v.z);
+    }
+    rockGeo.computeVertexNormals();
+    const inst = new THREE.InstancedMesh(rockGeo, mats.rock || mats.prop, rocks.length);
+    rocks.forEach(([x, z, b, turn], i) => {
+      q.setFromAxisAngle(p.set(0, 1, 0), turn);
+      m.compose(p.set(x, b * 0.2, z), q, sc.set(b, b, b));
+      inst.setMatrixAt(i, m);
+    });
+    inst.castShadow = inst.receiveShadow = true;
+    out.push(inst);
+  }
+  return out;
 }
 
 // Pools of light on the ground under lamps and shop windows, and faint cones

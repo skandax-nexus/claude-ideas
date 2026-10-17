@@ -38,6 +38,8 @@ class District {
     this.challenges = [];
     this.free = []; // rects kept clear of buildings
     this.glows = []; // pools of light on the ground: [x, y, z, radius, color]
+    this.trees = []; // [x, z, height, trunk radius, crown radius, turn]
+    this.rocks = []; // [x, z, size, turn]
   }
 
   box(b, o = {}) {
@@ -237,6 +239,7 @@ export function generateZone(story, zi, si) {
     checkpoints: M.checkpoints.map((c) => ({ ...c, room: id })),
     triggers: [],
     map: { rooms: [{ id, rect: [-XW, ZN, XW, 4], name, kind: 'district' }], corridors: [], blocks: M.blocks || [], gate: [0, ZN - 2] },
+    trees: M.trees, rocks: M.rocks,
     glows: [...M.glows, [scene.x, 0.02, scene.z + 1, 5, pal.accent], [0, 0.02, ZN + 2, 4, pal.accent2]],
     effects: new Set(['echoSolid', 'gravityFlip', 'zeroG', 'observerFrozen']),
     exit: { room: id, box: [-3, -1, ZN - 4, 3, 6, ZN - 1] },
@@ -270,9 +273,19 @@ function dressing(M, theme, rng, zone, canalZ) {
       const r = rng.float(0.5, 1.1), h = rng.float(8, 16);
       if (!M.isFree(x - 2.5, z - 2.5, x + 2.5, z + 2.5, 0.5) || inCanal(z - 3, z + 3)) continue;
       const echo = rng.chance(0.18);
-      M.box([x - r, 0, z - r, x + r, h, z + r], { mat: 'bark', echo, solid: !echo });
       const c = rng.float(2.2, 3.6);
-      M.box([x - c, h - 1, z - c, x + c, h + 1.6, z + c], { mat: 'leaf', solid: false, echo });
+      if (echo) {
+        // a memory of a tree: an outline only
+        M.box([x - r, 0, z - r, x + r, h, z + r], { mat: 'bark', echo, solid: false });
+        M.box([x - c, h - 1, z - c, x + c, h + 1.6, z + c], { mat: 'leaf', solid: false, echo });
+      } else {
+        M.box([x - r * 0.8, 0, z - r * 0.8, x + r * 0.8, h, z + r * 0.8], { mat: 'bark', invisible: true });
+        M.trees.push([x, z, h, r, c, rng.float(0, Math.PI * 2)]);
+      }
+      if (rng.chance(0.25)) {
+        const b = rng.float(0.6, 1.4), bx = x + rng.float(-3, 3), bz = z + rng.float(-3, 3);
+        if (M.isFree(bx - b, bz - b, bx + b, bz + b, 0.2)) M.rocks.push([bx, bz, b, rng.float(0, 6)]);
+      }
       if (rng.chance(0.4)) M.box([x - 0.25, 0, z + r, x + 0.25, 0.5, z + r + 0.6], { mat: 'neon', solid: false });
       M.clear(x - c, z - c, x + c, z + c);
       continue;

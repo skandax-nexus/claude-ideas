@@ -27,6 +27,7 @@ import { generateSector, SECTORS_PER_DECK } from './gen/LevelGen.js';
 import { makeZoneStory } from './gen/ZoneStory.js';
 import { generateZone } from './gen/ZoneGen.js';
 import { Weather } from './world/Weather.js';
+import { WATER_NORMALS } from './world/materials.js';
 import { loadSettings, saveSettings, CAMERA_PRESETS, QUALITY } from './ui/Settings.js';
 import { writeSave, readSave, listSaves, latestSave, describeSave, SLOTS } from './ui/Saves.js';
 import { MiniMap } from './ui/MiniMap.js';
@@ -682,6 +683,7 @@ class Game {
   returnToStation() {
     this.weather.set(null);
     this.postfx.setGrade(STATION_GRADE);
+    this.postfx.setEnvironment(null);
     this.deckWorld.dispose();
     this.level = this.stationLevel;
     this.minimap.stationMode = false; // redraw Station Zero's map
@@ -726,6 +728,7 @@ class Game {
     this.deckWorld.build(lv, this.story, c.flags);
     this.weather.set(lv.palette.weather);
     this.postfx.setGrade(lv.palette.grade || STATION_GRADE);
+    this.postfx.setEnvironment(lv.palette.sky || null);
     this.minimap.setMap(lv.map, c.visited);
     this.minimap.stationMode = false;
     const start = roomId && lv.rooms[roomId] ? roomId : lv.order[0];
@@ -1401,6 +1404,7 @@ class Game {
     this.runTimers();
     this.fx.update(dt);
     this.bolt = this.weather.update(dt, this.time, this.player.pos);
+    for (const t of WATER_NORMALS) { t.offset.x += dt * 0.012; t.offset.y += dt * 0.007; } // water moves
     this.world.update(dt, this.time, this.held);
     this.npcs.update(simDt, this.time);
     this.hud.update(simDt);

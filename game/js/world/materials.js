@@ -15,6 +15,38 @@ function canvasTex(size, draw, repeat = true) {
   return t;
 }
 
+// Photo-scanned CC0 surfaces (assets/textures, see CREDITS.md). Loaded in the
+// background; materials pick them up when they arrive. repeat: texture
+// repeats per UV unit (boxGeometry gives 1 UV unit per 2 m).
+const _texLoader = new THREE.TextureLoader();
+const _texCache = new Map();
+export function pbrTex(name, role, repeat = 1) {
+  const key = `${name}_${role}_${repeat}`;
+  if (_texCache.has(key)) return _texCache.get(key);
+  const t = _texLoader.load(`assets/textures/${name}_${role}.jpg`);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.repeat.set(repeat, repeat);
+  t.anisotropy = 8;
+  if (role === 'color') t.colorSpace = THREE.SRGBColorSpace;
+  _texCache.set(key, t);
+  return t;
+}
+// a full surface: colour, normal and roughness maps
+export function pbr(name, repeat = 1, o = {}) {
+  return new THREE.MeshStandardMaterial({
+    map: pbrTex(name, 'color', repeat),
+    normalMap: pbrTex(name, 'normal', repeat),
+    roughnessMap: pbrTex(name, 'rough', repeat),
+    roughness: 1,
+    metalness: 0,
+    ...o,
+  });
+}
+// just the relief of a surface (normal + roughness) under an existing look
+export function relief(name, repeat = 1, strength = 0.6) {
+  return { normalMap: pbrTex(name, 'normal', repeat), normalScale: new THREE.Vector2(strength, strength), roughnessMap: pbrTex(name, 'rough', repeat) };
+}
+
 function panel(g, s, base, line, dots = true) {
   g.fillStyle = base;
   g.fillRect(0, 0, s, s);
@@ -70,12 +102,12 @@ export function createMaterials() {
     new THREE.MeshBasicMaterial({ color, transparent: opacity < 1, opacity, fog: false });
 
   const m = {
-    wall: std({ map: wallTex, bumpMap: wallTex, bumpScale: 1.2, color: 0xffffff }),
-    wallDark: std({ map: softTex, color: 0xf6eee4 }),
-    floor: std({ map: floorTex, bumpMap: floorTex, bumpScale: 0.8, color: 0xffffff, roughness: 0.68 }),
+    wall: std({ map: wallTex, ...relief('concrete2', 1, 0.5), color: 0xffffff }),
+    wallDark: std({ map: softTex, ...relief('concrete2', 1, 0.5), color: 0xf6eee4 }),
+    floor: std({ map: floorTex, ...relief('pavement', 0.5, 0.7), color: 0xffffff, roughness: 0.8 }),
     floorDark: std({ map: softTex, color: 0xc9d4de }),
     ceil: std({ map: ceilTex, color: 0xffffff, roughness: 0.95 }),
-    metal: std({ map: softTex, color: 0xd4dce5, roughness: 0.5, metalness: 0.1 }),
+    metal: std({ map: softTex, ...relief('metal', 1, 0.6), color: 0xd4dce5, roughness: 0.6, metalness: 0.35 }),
     shelf: std({ map: softTex, color: 0xc6d3df }),
     pillar: std({ map: softTex, color: 0xf3e3cf }),
     crate: std({ map: woodTex }),
@@ -98,6 +130,7 @@ export function createMaterials() {
 // Materials for a generated deck, tinted by the deck's palette. Panel
 // textures double as bump maps so walls catch the light along their seams.
 const _deckCache = new Map();
+export const WATER_NORMALS = new Set(); // scrolled each frame (main.js) so water moves
 // HALCYON's districts (gen/ZoneGen.js): lit facades, neon, wet roads, water, the dome.
 function zoneMaterials(pal, std, basic) {
   const acc = '#' + new THREE.Color(pal.accent).getHexString();
@@ -148,51 +181,6 @@ function zoneMaterials(pal, std, basic) {
   });
   const facadeTex = windows(false), litTex = windows(true);
   for (const t of [facadeTex, litTex]) t.repeat.set(0.125, 0.125);
-  const roadTex = canvasTex(256, (g, s) => {
-    g.fillStyle = pal.floor;
-    g.fillRect(0, 0, s, s);
-    for (let i = 0; i < 2600; i++) {
-      const v = Math.random() * 30 - 15;
-      g.fillStyle = `rgba(${120 + v},${125 + v},${140 + v},0.07)`;
-      g.fillRect(Math.random() * s, Math.random() * s, 2, 2);
-    }
-    g.strokeStyle = 'rgba(255,255,255,0.08)';
-    g.lineWidth = 2;
-    g.strokeRect(1, 1, s - 2, s - 2);
-  });
-  roadTex.repeat.set(0.5, 0.5);
-  const barkTex = canvasTex(128, (g, s) => {
-    g.fillStyle = '#4a3a2c';
-    g.fillRect(0, 0, s, s);
-    for (let i = 0; i < 40; i++) {
-      g.strokeStyle = `rgba(${20 + Math.random() * 40},${15 + Math.random() * 25},10,0.6)`;
-      g.beginPath();
-      const x = Math.random() * s;
-      g.moveTo(x, 0);
-      g.bezierCurveTo(x + 6, s * 0.3, x - 6, s * 0.6, x + 3, s);
-      g.stroke();
-    }
-  });
-  const industrialTex = canvasTex(256, (g, s) => {
-    g.fillStyle = wall;
-    g.fillRect(0, 0, s, s);
-    for (let i = 0; i < 1800; i++) {
-      const v = Math.random() * 24 - 12;
-      g.fillStyle = `rgba(${110 + v},${115 + v},${115 + v},0.08)`;
-      g.fillRect(Math.random() * s, Math.random() * s, 3, 3);
-    }
-    g.fillStyle = 'rgba(0,0,0,0.3)';
-    for (let k = 0; k < 4; k++) g.fillRect(k * 64 + 30, 0, 4, s); // panel seams
-    // a band of hazard stripes near the floor
-    for (let x = -s; x < s * 2; x += 24) {
-      g.fillStyle = (x / 24) % 2 ? acc : '#1a1a1a';
-      g.beginPath();
-      g.moveTo(x, s - 28); g.lineTo(x + 24, s - 28); g.lineTo(x + 12, s); g.lineTo(x - 12, s);
-      g.fill();
-    }
-    g.fillStyle = 'rgba(255,255,255,0.08)';
-    g.fillRect(0, s * 0.3, s, 6);
-  });
   const skyTex = canvasTex(512, (g, s) => {
     g.fillStyle = '#000';
     g.fillRect(0, 0, s, s);
@@ -212,24 +200,30 @@ function zoneMaterials(pal, std, basic) {
   });
   skyTex.repeat.set(0.1, 0.1);
   const n = pal.night;
+  const waterNormal = _texLoader.load('assets/textures/water_normal.jpg');
+  waterNormal.wrapS = waterNormal.wrapT = THREE.RepeatWrapping;
+  waterNormal.repeat.set(0.15, 0.15);
+  WATER_NORMALS.add(waterNormal);
   return {
-    industrial: std({ map: industrialTex, roughness: 0.75, metalness: 0.25 }),
-    sidewalk: std({ color: new THREE.Color(pal.floor).lerp(new THREE.Color(0x9aa0aa), 0.35), roughness: 0.85 }),
+    industrial: pbr('rust', 0.5, { color: 0xc8c0b8, metalness: 0.35 }),
+    sidewalk: pbr('pavement', 0.6, { color: 0xa8acb2 }),
     marking: basic(0xd8dde6, 0.75),
     lamp: basic(new THREE.Color(pal.light).lerp(new THREE.Color(0xffffff), 0.5).multiplyScalar(1.6)),
-    metal: std({ color: 0x7a838c, roughness: 0.45, metalness: 0.7 }),
+    metal: pbr('metal', 1, { color: 0x9aa2aa, metalness: 0.7 }),
     shopfront: basic(new THREE.Color(pal.accent2).lerp(new THREE.Color(0xffe8c8), 0.5).multiplyScalar(0.75)),
-    facade: std({ map: facadeTex, emissive: 0xffffff, emissiveMap: litTex, emissiveIntensity: 0.9 * n + 0.2, roughness: 0.7, metalness: 0.15 }),
-    road: std({ map: roadTex, roughness: 0.32, metalness: 0.35 }), // wet: it catches the neon
-    moss: std({ color: new THREE.Color(pal.floor).lerp(new THREE.Color(0x3f7a4a), 0.4), roughness: 0.95 }),
-    tank: std({ color: new THREE.Color(wall).lerp(new THREE.Color(0x9aa6a8), 0.35), roughness: 0.35, metalness: 0.6 }),
-    pipe: std({ color: 0x8a5a3a, roughness: 0.5, metalness: 0.5 }),
+    facade: std({ map: facadeTex, ...relief('concrete', 0.5, 0.9), emissive: 0xffffff, emissiveMap: litTex, emissiveIntensity: 0.9 * n + 0.2, roughness: 1, metalness: 0.1 }),
+    road: pbr('asphalt', 0.5, { color: 0x8a8f99, roughness: 0.55, metalness: 0.15, envMapIntensity: 1.4 }), // wet: it catches the neon
+    moss: pbr('moss', 0.35, { color: 0x9aa890 }),
+    tank: pbr('metal', 0.5, { color: 0xb8c2c6, metalness: 0.6 }),
+    pipe: pbr('rust', 1, { metalness: 0.5 }),
     car: std({ color: new THREE.Color(pal.accent2).lerp(new THREE.Color(0x222833), 0.55), roughness: 0.25, metalness: 0.7 }),
-    bark: std({ map: barkTex, roughness: 0.9 }),
+    bark: pbr('bark', 0.5),
+    crown: new THREE.MeshStandardMaterial({ color: new THREE.Color(0x3f6a34).lerp(new THREE.Color(pal.accent), 0.12), emissive: new THREE.Color(pal.accent), emissiveIntensity: 0.08, roughness: 0.85 }),
+    rock: pbr('rock', 0.5),
     leaf: std({ color: new THREE.Color(pal.accent).lerp(new THREE.Color(0x1a4a2a), 0.45), emissive: new THREE.Color(pal.accent), emissiveIntensity: 0.25, roughness: 0.8, transparent: true, opacity: 0.9 }),
     neon: basic(new THREE.Color(pal.accent).multiplyScalar(1.6)),
     screen: basic(new THREE.Color(pal.accent).lerp(new THREE.Color(0x101828), 0.55)),
-    water: new THREE.MeshStandardMaterial({ color: new THREE.Color(pal.accent2).lerp(new THREE.Color(0x05101a), 0.75), roughness: 0.08, metalness: 0.6, transparent: true, opacity: 0.88 }),
+    water: new THREE.MeshStandardMaterial({ color: new THREE.Color(pal.accent2).lerp(new THREE.Color(0x05101a), 0.8), normalMap: waterNormal, normalScale: new THREE.Vector2(0.6, 0.6), roughness: 0.06, metalness: 0.8, envMapIntensity: 1.6, transparent: true, opacity: 0.92 }),
     dome: std({ color: new THREE.Color(pal.fog).lerp(new THREE.Color(0x000000), 0.35), emissive: 0xffffff, emissiveMap: skyTex, emissiveIntensity: 0.9, roughness: 0.3, metalness: 0.4, side: THREE.DoubleSide }),
     glassWall: new THREE.MeshStandardMaterial({ color: new THREE.Color(pal.fog).lerp(new THREE.Color(0xffffff), 0.15), roughness: 0.15, metalness: 0.3, transparent: true, opacity: 0.55 }),
     trim: std({ color: new THREE.Color(wall).lerp(new THREE.Color(0xffffff), 0.25), roughness: 0.4, metalness: 0.3 }),
@@ -275,8 +269,8 @@ export function deckMaterials(pal) {
     trim: std({ color: accent.clone().lerp(new THREE.Color(0xffffff), 0.45), roughness: 0.4, metalness: 0.1 }),
     trimDark: std({ color: accent.clone().lerp(new THREE.Color(0x3a4656), 0.35), roughness: 0.5 }),
     panelGlow: basic(new THREE.Color(0xffffff).lerp(new THREE.Color(pal.light), 0.6)),
-    wall: std({ map: wallTex, bumpMap: wallTex, bumpScale: 1.2 }),
-    floor: std({ map: floorTex, bumpMap: floorTex, bumpScale: 0.8, roughness: 0.62 }),
+    wall: std({ map: wallTex, ...relief('concrete2', 1, 0.5) }),
+    floor: std({ map: floorTex, ...relief('pavement', 0.5, 0.7), roughness: 0.75 }),
     ceil: std({ map: ceilTex, roughness: 0.95 }),
     pit: std({ map: floorTex, color: new THREE.Color(pal.fog).multiplyScalar(0.9) }),
     prop: std({ map: propTex, bumpMap: propTex, bumpScale: 0.8, roughness: 0.45, metalness: 0.05 }),
