@@ -8,7 +8,7 @@ This repository contains:
 
 - **`unity/AfterZero/` - the Unity 6 (URP) version** with a stronger story, 11 characters, 8 zones (~245 m × 60 m), three adrenaline chase set-pieces, a hint companion, New Game+ and Android touch controls. Start with [`docs/unity/UNITY_GUIDE.md`](docs/unity/UNITY_GUIDE.md).
 - **`game/` - the browser game** (Three.js): the two-hour prologue (Station Zero and the open districts of HALCYON) plus the generated vessel campaign, for desktop and Android browsers.
-- **`docs/`** - the design for the full game.
+- **`docs/`** - the design for the full game. The whole story, level by level, is in [`docs/STORY.md`](docs/STORY.md).
 
 ## v0.9: chapters, save slots, Story Studio, smart renderer
 
