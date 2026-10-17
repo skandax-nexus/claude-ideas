@@ -193,6 +193,19 @@ try {
   await skipTalk();
   await expect('vault_seen', "Varga's recording from after");
 
+  console.log('HALCYON - the long way (played district by district in tests/halcyon.mjs)');
+  await skipTalk();
+  await sim(0.5);
+  await page.waitForFunction(() => window.AZ.mode === 'deck' && window.AZ.campaign?.zones, null, { timeout: 30000 });
+  console.log('  ok  the vault hatch leads up into HALCYON');
+  await az(() => { document.querySelector('#card')?.classList.remove('on'); });
+  await sim(1);
+  await shot('10b-halcyon');
+  await az(() => window.AZ.returnToStation());
+  await skipTalk();
+  if (!(await az(() => window.AZ.mode === 'station' && window.AZ.room === 'lab'))) throw new Error('should be back in the lab');
+  console.log('  ok  the tower lift returns to Station Zero');
+
   console.log('Chapter 3 - The Observer');
   await place([-17.5, 0.86, 0, Math.PI / 2]);
   await sim(1.5);

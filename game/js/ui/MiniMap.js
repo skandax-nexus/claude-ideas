@@ -61,12 +61,18 @@ export class MiniMap {
         g.font = '600 11px Inter, "Segoe UI", sans-serif';
         g.textAlign = 'center';
         g.fillText(r.name, (a[0] + b[0]) / 2, (a[1] + b[1]) / 2 + 4);
-        if (r.kind && r.kind !== 'puzzle') {
+        if (r.kind && r.kind !== 'puzzle' && r.kind !== 'district') {
           g.font = '600 9px Inter, sans-serif';
           g.fillStyle = COLORS.gate;
           g.fillText('★ STORY', (a[0] + b[0]) / 2, (a[1] + b[1]) / 2 + 17);
         }
       }
+    }
+    // open districts: the buildings
+    g.fillStyle = 'rgba(60,72,90,0.35)';
+    for (const bk of map.blocks || []) {
+      const [a, b] = [P(bk[0], bk[1]), P(bk[2], bk[3])];
+      g.fillRect(a[0], a[1], b[0] - a[0], b[1] - a[1]);
     }
     if (map.gate) {
       const [x, y] = P(map.gate[0], map.gate[1]);

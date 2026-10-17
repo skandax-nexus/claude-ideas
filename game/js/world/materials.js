@@ -98,6 +98,130 @@ export function createMaterials() {
 // Materials for a generated deck, tinted by the deck's palette. Panel
 // textures double as bump maps so walls catch the light along their seams.
 const _deckCache = new Map();
+// HALCYON's districts (gen/ZoneGen.js): lit facades, neon, wet roads, water, the dome.
+function zoneMaterials(pal, std, basic) {
+  const acc = '#' + new THREE.Color(pal.accent).getHexString();
+  const acc2 = '#' + new THREE.Color(pal.accent2).getHexString();
+  const wall = pal.wall;
+  // 8 m of facade per texture: 4 x 4 windows, some lit
+  const windows = (lit) => canvasTex(512, (g, s) => {
+    g.fillStyle = lit ? '#000' : wall;
+    g.fillRect(0, 0, s, s);
+    if (!lit) {
+      for (let i = 0; i < 1400; i++) {
+        const v = Math.random() * 20 - 10;
+        g.fillStyle = `rgba(${128 + v},${128 + v},${128 + v},0.06)`;
+        g.fillRect(Math.random() * s, Math.random() * s, 3, 3);
+      }
+      g.fillStyle = 'rgba(0,0,0,0.25)';
+      for (let k = 0; k < 4; k++) g.fillRect(0, k * 128 + 120, s, 8);
+    }
+    let seed = 7;
+    const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+    for (let r = 0; r < 4; r++) for (let c = 0; c < 4; c++) {
+      const on = rnd() < 0.45;
+      const x = c * 128 + 22, y = r * 128 + 26;
+      if (lit) {
+        if (!on) continue;
+        g.fillStyle = rnd() < 0.25 ? acc2 : rnd() < 0.5 ? '#ffe2b0' : '#cfe6ff';
+        g.globalAlpha = 0.55 + rnd() * 0.45;
+        g.fillRect(x, y, 84, 70);
+        g.globalAlpha = 1;
+      } else {
+        g.fillStyle = on ? '#3a3f55' : '#14182a';
+        g.fillRect(x, y, 84, 70);
+        g.strokeStyle = 'rgba(255,255,255,0.12)';
+        g.strokeRect(x, y, 84, 70);
+      }
+    }
+  });
+  const facadeTex = windows(false), litTex = windows(true);
+  for (const t of [facadeTex, litTex]) t.repeat.set(0.25, 0.25);
+  const roadTex = canvasTex(256, (g, s) => {
+    g.fillStyle = pal.floor;
+    g.fillRect(0, 0, s, s);
+    for (let i = 0; i < 2600; i++) {
+      const v = Math.random() * 30 - 15;
+      g.fillStyle = `rgba(${120 + v},${125 + v},${140 + v},0.07)`;
+      g.fillRect(Math.random() * s, Math.random() * s, 2, 2);
+    }
+    g.strokeStyle = 'rgba(255,255,255,0.08)';
+    g.lineWidth = 2;
+    g.strokeRect(1, 1, s - 2, s - 2);
+  });
+  roadTex.repeat.set(0.5, 0.5);
+  const barkTex = canvasTex(128, (g, s) => {
+    g.fillStyle = '#4a3a2c';
+    g.fillRect(0, 0, s, s);
+    for (let i = 0; i < 40; i++) {
+      g.strokeStyle = `rgba(${20 + Math.random() * 40},${15 + Math.random() * 25},10,0.6)`;
+      g.beginPath();
+      const x = Math.random() * s;
+      g.moveTo(x, 0);
+      g.bezierCurveTo(x + 6, s * 0.3, x - 6, s * 0.6, x + 3, s);
+      g.stroke();
+    }
+  });
+  const industrialTex = canvasTex(256, (g, s) => {
+    g.fillStyle = wall;
+    g.fillRect(0, 0, s, s);
+    for (let i = 0; i < 1800; i++) {
+      const v = Math.random() * 24 - 12;
+      g.fillStyle = `rgba(${110 + v},${115 + v},${115 + v},0.08)`;
+      g.fillRect(Math.random() * s, Math.random() * s, 3, 3);
+    }
+    g.fillStyle = 'rgba(0,0,0,0.3)';
+    for (let k = 0; k < 4; k++) g.fillRect(k * 64 + 30, 0, 4, s); // panel seams
+    // a band of hazard stripes near the floor
+    for (let x = -s; x < s * 2; x += 24) {
+      g.fillStyle = (x / 24) % 2 ? acc : '#1a1a1a';
+      g.beginPath();
+      g.moveTo(x, s - 28); g.lineTo(x + 24, s - 28); g.lineTo(x + 12, s); g.lineTo(x - 12, s);
+      g.fill();
+    }
+    g.fillStyle = 'rgba(255,255,255,0.08)';
+    g.fillRect(0, s * 0.3, s, 6);
+  });
+  const skyTex = canvasTex(512, (g, s) => {
+    g.fillStyle = '#000';
+    g.fillRect(0, 0, s, s);
+    for (let i = 0; i < 260; i++) {
+      g.fillStyle = `rgba(255,255,255,${0.25 + Math.random() * 0.7})`;
+      const r = Math.random() < 0.08 ? 2 : 1;
+      g.fillRect(Math.random() * s, Math.random() * s, r, r);
+    }
+    g.strokeStyle = acc2;
+    g.globalAlpha = 0.18;
+    g.lineWidth = 2;
+    for (let k = 0; k <= s; k += 128) {
+      g.beginPath(); g.moveTo(k, 0); g.lineTo(k, s); g.stroke();
+      g.beginPath(); g.moveTo(0, k); g.lineTo(s, k); g.stroke();
+    }
+    g.globalAlpha = 1;
+  });
+  skyTex.repeat.set(0.1, 0.1);
+  const n = pal.night;
+  return {
+    industrial: std({ map: industrialTex, roughness: 0.75, metalness: 0.25 }),
+    facade: std({ map: facadeTex, emissive: 0xffffff, emissiveMap: litTex, emissiveIntensity: 0.9 * n + 0.2, roughness: 0.7, metalness: 0.15 }),
+    road: std({ map: roadTex, roughness: 0.32, metalness: 0.35 }), // wet: it catches the neon
+    moss: std({ color: new THREE.Color(pal.floor).lerp(new THREE.Color(0x3f7a4a), 0.4), roughness: 0.95 }),
+    tank: std({ color: new THREE.Color(wall).lerp(new THREE.Color(0x9aa6a8), 0.35), roughness: 0.35, metalness: 0.6 }),
+    pipe: std({ color: 0x8a5a3a, roughness: 0.5, metalness: 0.5 }),
+    car: std({ color: new THREE.Color(pal.accent2).lerp(new THREE.Color(0x222833), 0.55), roughness: 0.25, metalness: 0.7 }),
+    bark: std({ map: barkTex, roughness: 0.9 }),
+    leaf: std({ color: new THREE.Color(pal.accent).lerp(new THREE.Color(0x1a4a2a), 0.45), emissive: new THREE.Color(pal.accent), emissiveIntensity: 0.25, roughness: 0.8, transparent: true, opacity: 0.9 }),
+    neon: basic(new THREE.Color(pal.accent).multiplyScalar(1.6)),
+    screen: basic(new THREE.Color(pal.accent).lerp(new THREE.Color(0x101828), 0.55)),
+    water: new THREE.MeshStandardMaterial({ color: new THREE.Color(pal.accent2).lerp(new THREE.Color(0x05101a), 0.75), roughness: 0.08, metalness: 0.6, transparent: true, opacity: 0.88 }),
+    dome: std({ color: new THREE.Color(pal.fog).lerp(new THREE.Color(0x000000), 0.35), emissive: 0xffffff, emissiveMap: skyTex, emissiveIntensity: 0.9, roughness: 0.3, metalness: 0.4, side: THREE.DoubleSide }),
+    glassWall: new THREE.MeshStandardMaterial({ color: new THREE.Color(pal.fog).lerp(new THREE.Color(0xffffff), 0.15), roughness: 0.15, metalness: 0.3, transparent: true, opacity: 0.55 }),
+    trim: std({ color: new THREE.Color(wall).lerp(new THREE.Color(0xffffff), 0.25), roughness: 0.4, metalness: 0.3 }),
+    trimDark: std({ color: new THREE.Color(wall).lerp(new THREE.Color(0x000000), 0.35), roughness: 0.5, metalness: 0.4 }),
+    door: std({ color: new THREE.Color(pal.accent).lerp(new THREE.Color(0x202030), 0.4), emissive: new THREE.Color(pal.accent), emissiveIntensity: 0.35 }),
+  };
+}
+
 export function deckMaterials(pal) {
   const key = JSON.stringify(pal);
   if (_deckCache.has(key)) return _deckCache.get(key);
@@ -156,6 +280,7 @@ export function deckMaterials(pal) {
   };
   m.metal = m.prop;
   m.crate = m.prop2;
+  if (pal.night !== undefined) Object.assign(m, zoneMaterials(pal, std, basic));
   _deckCache.set(key, m);
   return m;
 }

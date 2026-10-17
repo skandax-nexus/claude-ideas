@@ -10,7 +10,8 @@
     "smoke": "node tests/smoke.mjs",
     "vessel": "node tests/vessel.mjs",
     "features": "node tests/features.mjs",
-    "layout": "node tests/layout.mjs"
+    "layout": "node tests/layout.mjs",
+    "halcyon": "node tests/halcyon.mjs"
   },
   "license": "MIT"
 }

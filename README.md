@@ -7,8 +7,29 @@ You wake in a sealed room with a floating object and no instructions. Touch it a
 This repository contains:
 
 - **`unity/AfterZero/` - the Unity 6 (URP) version** with a stronger story, 11 characters, 8 zones (~245 m × 60 m), three adrenaline chase set-pieces, a hint companion, New Game+ and Android touch controls. Start with [`docs/unity/UNITY_GUIDE.md`](docs/unity/UNITY_GUIDE.md).
-- **`game/` - the browser game** (Three.js): the Station Zero prologue plus the generated vessel campaign, for desktop and Android browsers.
+- **`game/` - the browser game** (Three.js): the two-hour prologue (Station Zero and the open districts of HALCYON) plus the generated vessel campaign, for desktop and Android browsers.
 - **`docs/`** - the design for the full game.
+
+## v0.8: HALCYON - a two-hour prologue with open districts
+
+Station Zero turns out to be the basement of **HALCYON**, a city-sized arcology. Varga's vault recording sends Ren up the long way. Four open districts, each a different kind of film, sit between the vault and the machine, and the prologue now runs about two hours. See [docs/HALCYON.md](docs/HALCYON.md).
+
+| Chapter | Feel | Districts | Who you meet |
+| --- | --- | --- | --- |
+| **Neon Meridian** | Rain-soaked noir city under a glass sky, drones on the streets | Meridian Square, The Overpass, Night Station | Kade, who fixes the neon |
+| **The Drowned Reactor** | Industrial horror, black water, orange alarms | Turbine Floor, The Sump, Control Deck | Chief Osei's echo |
+| **The Glass Forest** | Glowing forest under a dome, quiet and eerie | The Canopy, The Still Pond, The Cabin Road | Theo, who kept the garden |
+| **The Signal Tower** | Storm and lightning, the Observer hunting | Storm Deck, Antenna Field, Last Landing | Varga's echo |
+
+- **Open maps:** each district is one big open space (72 × 108 m) of streets, buildings, water, trees or masts. Every obstacle has more than one answer:
+  - Fall up to the glass dome (INVERTED), walk across it, then drop onto a roof or past the water.
+  - The old stairs and bridges are memories: ECHOES SOLIDIFY IN ECHO.
+  - Float up in zero gravity, or freeze the drones with a law.
+- **Atmosphere:** lit windows and neon, wet roads that catch the light, rain, steam, fireflies, lightning.
+- **Controls:** one **WALK/RUN** button (Z on desktop), and running is faster.
+- **Characters:** smoother, rim-lit and grounded. Every model can be Ren's look (17 in all), each with its portrait.
+- **Story:** 229 new voiced lines, from the same neural voices.
+- **Test:** `npm run halcyon` plays all 12 districts through and checks the alternative solutions.
 
 ## v0.7: you hear every line, a cleaner screen, one Ren with many looks
 
@@ -156,7 +177,8 @@ npm test                                   # core systems + generator invariants
 NODE_PATH=$(npm root -g) npm run smoke     # full prologue playthrough in headless Chromium (needs playwright)
 NODE_PATH=$(npm root -g) npm run vessel    # QA bot plays every generated room of 2 seeds (pass a seed count to test more)
 NODE_PATH=$(npm root -g) npm run features  # features on desktop and a touch phone: looks, voice pack, prompts, zoom, stick, dock
-NODE_PATH=$(npm root -g) npm run layout    # no HUD piece overlaps another, on six screen sizes
+NODE_PATH=$(npm root -g) npm run layout    # no HUD piece overlaps another, on nine screen sizes
+NODE_PATH=$(npm root -g) npm run halcyon   # plays HALCYON's 12 open districts and the lift home
 ```
 
 ## Design principle

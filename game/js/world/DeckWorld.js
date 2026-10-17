@@ -170,6 +170,16 @@ export class DeckWorld {
       obj.add(gem, ring);
       obj.userData.gem = gem;
       obj.position.set(...it.pos);
+    } else if (it.kind === 'fragment') {
+      // a memory fragment: a small bright crystal (HALCYON)
+      obj = new THREE.Group();
+      const c = new THREE.Color(this.level.palette.accent2 ?? 0x9fe8ff);
+      const gem = new THREE.Mesh(new THREE.IcosahedronGeometry(0.2, 0), new THREE.MeshBasicMaterial({ color: c.clone().multiplyScalar(1.4) }));
+      const halo = new THREE.Mesh(new THREE.SphereGeometry(0.42, 16, 12), new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: 0.18, depthWrite: false }));
+      obj.add(gem, halo);
+      obj.userData.gem = gem;
+      obj.position.set(...it.pos);
+      obj.visible = !this.flags[`done_${it.id}`];
     } else if (it.kind === 'chair') {
       obj = new THREE.Group();
       const seat = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.12, 0.9), this.mats.door);
@@ -243,6 +253,7 @@ export class DeckWorld {
       const open = this.flags[`open_${it.room}`];
       if (p.userData.light) p.userData.light.material.color.setHex(open ? 0x5fd39a : 0xffb36b);
       if (p.userData.core) p.userData.core.visible = !!open;
+      if (it.kind === 'fragment') p.visible = !this.flags[`done_${it.id}`];
     }
   }
 

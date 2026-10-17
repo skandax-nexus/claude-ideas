@@ -24,6 +24,9 @@ import { DeckWorld } from './world/DeckWorld.js';
 import { PostFX } from './world/PostFX.js';
 import { makeStory, verdictEnding } from './gen/StoryGen.js';
 import { generateSector, SECTORS_PER_DECK } from './gen/LevelGen.js';
+import { makeZoneStory } from './gen/ZoneStory.js';
+import { generateZone } from './gen/ZoneGen.js';
+import { Weather } from './world/Weather.js';
 import { loadSettings, saveSettings, CAMERA_PRESETS, QUALITY } from './ui/Settings.js';
 import { writeSave, readSave, listSaves, latestSave, describeSave, SLOTS } from './ui/Saves.js';
 import { MiniMap } from './ui/MiniMap.js';
@@ -117,6 +120,7 @@ class Game {
     this.voice = new Voice(this.audio);
     this.voice.youMale = actorsReady() && lookOf(this.settings.hero).voice === 'm';
     this.fx = new Fx(this.scene);
+    this.weather = new Weather(this.scene);
     this.lastEvent = 0;
     this.observer = new Observer(this.scene);
     this.director = new Director(this);
@@ -127,7 +131,7 @@ class Game {
     this.buildViewModels();
 
     this.mode = 'station';
-    this.level = { rooms: STATION_ROOMS, items: STATION_ITEMS, tokens: STATION_TOKENS };
+    this.level = this.stationLevel = { rooms: STATION_ROOMS, items: STATION_ITEMS, tokens: STATION_TOKENS };
     this.stationVisited = new Set();
     this.story = null;
     this.campaign = null;
@@ -632,6 +636,60 @@ class Game {
     this.openMenu('ending');
   }
 
+  // --- HALCYON: the open districts in the middle of the prologue -------------------
+  // Varga's vault recording sends Ren up into the arcology above Station Zero;
+  // the last district's lift brings Ren back down to the lab.
+  startZones(saved = null) {
+    this.mode = 'deck';
+    this.story = makeZoneStory();
+    this.campaign = saved || { zones: true, deck: 0, sector: 0, flags: {}, visited: [] };
+    this.campaign.zones = true;
+    this.facts.rulesEnabled = false;
+    this.facts.set('zones_started');
+    for (const t of BASE_TOKENS) this.facts.set(`token_${t}`);
+    this.engine.unlockSlot(3);
+    this.world.root.visible = false;
+    this.observer.mesh.visible = false;
+    this.npcs.juno.visible = false;
+    this.held = saved ? saved.held || null : null;
+    this.loadSector(!saved, saved?.room, saved?.pos);
+  }
+
+  enterHalcyon() {
+    if (this.mode !== 'station' || this.transitioning) return;
+    this.transitioning = true;
+    this.hud.fade(true);
+    this.audio.sweep?.(true);
+    setTimeout(() => {
+      this.startZones();
+      this.hud.fade(false);
+      this.transitioning = false;
+    }, 1400);
+  }
+
+  returnToStation() {
+    this.weather.set(null);
+    this.deckWorld.dispose();
+    this.level = this.stationLevel;
+    this.minimap.stationMode = false; // redraw Station Zero's map
+    this.mode = 'station';
+    this.campaign = null;
+    this.story = null;
+    this.held = null;
+    this.facts.rulesEnabled = true;
+    this.facts.set('zones_done');
+    this.world.root.visible = true;
+    this.observer.mesh.visible = true;
+    this.npcs.juno.visible = this.facts.get('met_juno');
+    this.enterRoom('lab', true);
+    this.hud.card('STATION ZERO', 'Home', 'The lift opens into the laboratory', 4200);
+    this.after(2.4, () => this.hud.say([
+      { who: 'JUNO', text: 'You are back. Same lab. It looks different now that we know what it is for.' },
+      { who: 'JUNO', text: 'The core is in the observation hall. The machine is waiting. Varga said look inside it before you choose.' },
+    ], this.facts));
+    this.saveTo('auto');
+  }
+
   // --- the vessel -------------------------------------------------------------
   startVessel(seed = (Math.random() * 1e9) | 0, saved = null) {
     this.mode = 'deck';
@@ -650,10 +708,12 @@ class Game {
 
   loadSector(intro, roomId, pos) {
     const c = this.campaign;
-    const lv = generateSector(this.story, c.deck, c.sector, c.seed);
+    const lv = c.zones ? generateZone(this.story, c.deck, c.sector) : generateSector(this.story, c.deck, c.sector, c.seed);
     this.level = lv;
     this.deckWorld.build(lv, this.story, c.flags);
+    this.weather.set(lv.palette.weather);
     this.minimap.setMap(lv.map, c.visited);
+    this.minimap.stationMode = false;
     const start = roomId && lv.rooms[roomId] ? roomId : lv.order[0];
     this.enterRoom(start, true);
     if (pos) this.player.place(pos);
@@ -661,10 +721,11 @@ class Game {
     const deck = this.story.decks[c.deck];
     if (intro) {
       this.held = null;
+      const per = deck.sectors || SECTORS_PER_DECK;
       if (c.sector === 0) {
-        this.hud.card(`DECK ${c.deck + 1} OF 8`, deck.name, deck.subtitle, 4200);
+        this.hud.card(c.zones ? `HALCYON · CHAPTER ${c.deck + 1} OF ${this.story.decks.length}` : `DECK ${c.deck + 1} OF 8`, deck.name, deck.subtitle, 4200);
         this.after(2.6, () => this.hud.say(deck.intro, this.facts));
-      } else this.hud.card(`${deck.name} · SECTOR ${c.sector + 1} OF 4`, this.level.rooms[lv.order[0]].name, '', 2600);
+      } else this.hud.card(`${deck.name} · ${c.zones ? 'DISTRICT' : 'SECTOR'} ${c.sector + 1} OF ${per}`, this.level.rooms[lv.order[0]].name, '', 2600);
     }
     this.updateDeckObjective(true);
     this.saveTo('auto');
@@ -678,7 +739,21 @@ class Game {
       return;
     }
     if (this.transitioning) return;
-    if (c.deck === 7 && c.sector === SECTORS_PER_DECK - 1) {
+    const per = this.story.decks[c.deck].sectors || SECTORS_PER_DECK;
+    const lastDeck = this.story.decks.length - 1;
+    if (c.zones && c.deck === lastDeck && c.sector === per - 1) {
+      // the lift at the top of the tower goes home
+      this.transitioning = true;
+      this.hud.fade(true);
+      this.audio.chime();
+      setTimeout(() => {
+        this.returnToStation();
+        this.hud.fade(false);
+        this.transitioning = false;
+      }, 1200);
+      return;
+    }
+    if (c.deck === lastDeck && c.sector === per - 1) {
       // the last gate: the vessel is done; offer the next cycle
       if (this.menu !== 'ending') this.openMenu('ending');
       return;
@@ -688,9 +763,9 @@ class Game {
     this.audio.chime();
     setTimeout(() => {
       c.sector++;
-      if (c.sector >= SECTORS_PER_DECK) {
+      if (c.sector >= per) {
         c.sector = 0;
-        c.deck = Math.min(7, c.deck + 1);
+        c.deck = Math.min(lastDeck, c.deck + 1);
       }
       c.flags = {};
       c.visited = [];
@@ -711,7 +786,9 @@ class Game {
     const crew = deck.crew !== null ? this.story.cast[deck.crew] : null;
     const done = this.deckWorld.flags.beat_done;
     let goal;
-    if (beat.kind === 'verdict') goal = this.facts.get('verdict_right') ? 'Walk through the last gate.' : 'Reach the chair. Name who started the loop.';
+    if (beat.goal && !done) goal = beat.goal;
+    else if (beat.goal) goal = 'The north gate is open.';
+    else if (beat.kind === 'verdict') goal = this.facts.get('verdict_right') ? 'Walk through the last gate.' : 'Reach the chair. Name who started the loop.';
     else if (done) goal = 'Find the way to the next sector.';
     else if (beat.kind === 'arrival' || beat.kind === 'log') goal = crew ? `Find ${crew.first}'s log.` : 'Find the captain\'s log.';
     else if (beat.kind === 'contradiction') goal = `Compare ${crew.first}'s record with its echo.`;
@@ -727,6 +804,7 @@ class Game {
     if (this.deckWorld.flags.beat_done) return;
     this.deckWorld.flags.beat_done = true;
     this.campaign.flags.beat_done = true;
+    this.deckWorld.refresh(); // doors that wait for the scene (HALCYON's gates) open now
     this.audio.chime();
     this.updateDeckObjective();
     this.dirty = true;
@@ -822,6 +900,20 @@ class Game {
       this.audio.beacon();
       this.fx.burst(it.pos, 0x9fe8ff, 40, 1.4);
       this.hud.toast('<small>MEMORY BEACON</small><br>Progress saved.');
+    } else if (kind === 'fragment') {
+      if (!flags[`done_${it.id}`]) {
+        flags[`done_${it.id}`] = true;
+        this.campaign.flags = { ...flags };
+        this.facts.inc('fragments');
+        const p = this.deckWorld.props[it.id];
+        if (p) p.visible = false;
+        this.audio.token();
+        this.fx.burst(it.pos, this.level.palette.accent2 ?? 0x9fe8ff, 30, 1.4);
+        const found = Object.keys(flags).filter((k) => k.startsWith('done_frag_')).length;
+        this.hud.toast(`<small>MEMORY FRAGMENT ${found} / 3</small><br>${this.level.deckName}`, 2600);
+        this.log.push(`<b>Memory fragment.</b> ${it.text}`);
+        say([{ who: 'NONE', text: it.text }]);
+      }
     } else if (kind === 'chair') {
       this.openVerdict();
     }
@@ -1136,6 +1228,7 @@ class Game {
   saveMeta() {
     if (this.mode === 'deck') {
       const d = this.story.decks[this.campaign.deck];
+      if (this.campaign.zones) return { where: `HALCYON · ${d.name}`, chapter: `District ${this.campaign.sector + 1}/${d.sectors}` };
       return { where: `DECK ${this.campaign.deck + 1} · ${d.name}`, chapter: `Sector ${this.campaign.sector + 1}/4` };
     }
     return { where: 'STATION ZERO', chapter: STATION_ROOMS[this.room]?.name || '' };
@@ -1163,6 +1256,10 @@ class Game {
       this.timeline = d.timeline || [];
       this.playTime = d.playTime || 0;
       this.restoring = false;
+      if (d.mode === 'deck' && d.campaign?.zones) {
+        this.startZones(d.campaign);
+        return true;
+      }
       if (d.mode === 'deck' && d.campaign) {
         this.startVessel(d.campaign.seed, d.campaign);
         return true;
@@ -1289,6 +1386,7 @@ class Game {
   updateWorlds(simDt, dt) {
     this.runTimers();
     this.fx.update(dt);
+    this.bolt = this.weather.update(dt, this.time, this.player.pos);
     this.world.update(dt, this.time, this.held);
     this.npcs.update(simDt, this.time);
     this.hud.update(simDt);
@@ -1488,17 +1586,19 @@ class Game {
     const room = this.level.rooms[this.room || 'antechamber'] || STATION_ROOMS.antechamber;
     const tint = new THREE.Color(room.tint);
     let fog = new THREE.Color(th.fog);
-    if (this.mode === 'deck') fog = new THREE.Color(this.level.palette.fog).lerp(fog, s === 'PHYSICAL' ? 0.1 : 0.55);
+    if (this.mode === 'deck') fog = new THREE.Color(this.level.palette.fog).lerp(fog, (s === 'PHYSICAL' ? 0.1 : 0.55) * (1 - (this.level.palette.night || 0) * 0.6));
     this.scene.fog.color.lerp(fog, k);
     this.scene.background.copy(this.scene.fog.color);
     this.scene.fog.density += ((this.mode === 'deck' ? th.density * 0.3 : th.density) - this.scene.fog.density) * k;
     this.hemi.color.lerp(new THREE.Color(th.sky).lerp(tint, 0.25), k);
     this.hemi.groundColor.lerp(new THREE.Color(th.ground), k);
-    const env = (this.scene.environment ? 0.85 : 1) * (this.mode === 'deck' ? 0.72 : 1);
+    const night = this.mode === 'deck' ? this.level.palette.night || 0 : 0;
+    const env = (this.scene.environment ? 0.85 : 1) * (this.mode === 'deck' ? 0.72 : 1) * (1 - night * 0.55);
     this.hemi.intensity += (th.hemi * env - this.hemi.intensity) * k;
+    if (this.bolt) this.hemi.intensity = th.hemi * env + this.bolt * 2.2;
     this.sun.color.lerp(new THREE.Color(th.sunColor), k);
-    this.sun.intensity += (th.sun * (this.mode === 'deck' ? 0.8 : 1) - this.sun.intensity) * k;
-    this.renderer.toneMappingExposure += ((this.mode === 'deck' ? 0.9 : 1.0) - this.renderer.toneMappingExposure) * k;
+    this.sun.intensity += (th.sun * (this.mode === 'deck' ? 0.8 : 1) * (1 - night * 0.7) - this.sun.intensity) * k;
+    this.renderer.toneMappingExposure += ((this.mode === 'deck' ? 0.9 + night * 0.15 : 1.0) - this.renderer.toneMappingExposure) * k;
     const p = this.player.pos;
     this.sun.position.set(p.x + 6, p.y + 24, p.z + 9);
     this.sun.target.position.set(p.x, p.y, p.z);

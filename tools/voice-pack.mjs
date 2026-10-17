@@ -54,6 +54,27 @@ for (const f of ['main.js', 'world/Npcs.js', 'world/Director.js', 'world/World.j
 for (const m of src('world/Npcs.js').matchAll(/'([A-Z][a-z][^']{8,}[.?!])'/g)) add('YOU', m[1]);
 for (const m of src('entities/Observer.js').matchAll(/onSay\('([^']+)'\)/g)) add('OBSERVER', m[1]);
 
+// HALCYON, the open districts in the middle of the prologue
+const { makeZoneStory, FRAGMENTS } = await imp('gen/ZoneStory.js');
+FRAGMENTS.flat().forEach((t) => add('NONE', t));
+const { ZONE_HINTS } = await imp('gen/ZoneGen.js');
+{
+  const zs = makeZoneStory();
+  const voiceOf = (c) => 'CREW_' + ({ her: 'f', his: 'm' }[c.pronoun?.their] || 'n');
+  for (const d of zs.decks) {
+    d.intro.forEach((l) => add(l.who, l.text));
+    const c = zs.cast[d.crew];
+    for (const b of d.beats) {
+      if (b.log) add(b.kind === 'contradiction' ? 'YOU' : 'NONE', typeof b.log === 'string' ? b.log : b.log.text);
+      if (b.tick) add('TICK', b.tick);
+      if (b.junoAfter) add('JUNO', b.junoAfter);
+      if (b.kind === 'contradiction') { add('NONE', b.official); add('NONE', b.echo); }
+      if (b.lines) b.lines.forEach((l) => add(voiceOf(c), l.text));
+    }
+  }
+  for (const tiers of Object.values(ZONE_HINTS)) tiers.forEach((t) => add('TICK', t));
+}
+
 // the generated vessel campaign, over many seeds
 for (let s = 1; s <= SEEDS; s++) {
   const st = makeStory(s * 104729 + 17);

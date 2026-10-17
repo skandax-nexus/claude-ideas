@@ -41,7 +41,17 @@ export class Director {
       case 'shard': return this.touchShard();
       case 'r1': return this.say('r1', () => facts.set('heard_varga'));
       case 'r0': return this.say('r0', () => facts.set('heard_self'));
-      case 'r2': return this.say('r2', () => facts.set('vault_seen'));
+      case 'r2':
+        return this.say('r2', () => {
+          facts.set('vault_seen');
+          // Varga went up. The long way through HALCYON starts here (once).
+          if (!facts.get('zones_started')) {
+            this.g.hud.say([
+              { who: 'JUNO', text: 'Ren - behind the vault. A service hatch, and a ladder going up. A long way up.' },
+              { who: 'JUNO', text: 'If Varga is later, she went somewhere. I think she went up.' },
+            ], facts, () => this.g.enterHalcyon());
+          }
+        });
       case 'machine': return this.machine();
       case 'archive_lock': return this.archiveLock();
       case 'custodian': return this.custodian();
