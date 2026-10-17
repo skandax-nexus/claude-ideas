@@ -21,7 +21,17 @@ export class Weather {
     }
     this.geo = new THREE.BufferGeometry();
     this.geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-    this.mat = new THREE.PointsMaterial({ size: 0.08, transparent: true, opacity: 0.6, depthWrite: false, color: 0xbfd8ff, fog: true });
+    // a soft round sprite, so drops and fireflies aren't square
+    const c = document.createElement('canvas');
+    c.width = c.height = 32;
+    const g = c.getContext('2d');
+    const gr = g.createRadialGradient(16, 16, 0, 16, 16, 16);
+    gr.addColorStop(0, 'rgba(255,255,255,1)');
+    gr.addColorStop(0.4, 'rgba(255,255,255,0.6)');
+    gr.addColorStop(1, 'rgba(255,255,255,0)');
+    g.fillStyle = gr;
+    g.fillRect(0, 0, 32, 32);
+    this.mat = new THREE.PointsMaterial({ map: new THREE.CanvasTexture(c), alphaTest: 0.01, size: 0.08, transparent: true, opacity: 0.6, depthWrite: false, color: 0xbfd8ff, fog: true });
     this.points = new THREE.Points(this.geo, this.mat);
     this.points.frustumCulled = false;
     this.points.visible = false;
@@ -35,7 +45,7 @@ export class Weather {
     const look = {
       rain: [0xbfd8ff, 0.07, 0.55],
       storm: [0xffd0d0, 0.08, 0.6],
-      steam: [0xcfeee8, 0.35, 0.22],
+      steam: [0xcfeee8, 0.16, 0.16],
       fireflies: [0xdfff8a, 0.16, 0.95],
     }[kind];
     this.mat.color.setHex(look[0]);

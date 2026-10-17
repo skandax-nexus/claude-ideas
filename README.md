@@ -26,6 +26,11 @@ Station Zero turns out to be the basement of **HALCYON**, a city-sized arcology.
   - The old stairs and bridges are memories: ECHOES SOLIDIFY IN ECHO.
   - Float up in zero gravity, or freeze the drones with a law.
 - **Atmosphere:** lit windows and neon, wet roads that catch the light, rain, steam, fireflies, lightning.
+- **Real-world look:**
+  - CC0 photo-scanned surfaces from ambientCG and Poly Haven: asphalt, paving, concrete, rusty metal, bark, moss and rock (`game/assets/textures`).
+  - Lighting and reflections from real sky photos.
+  - A film grade for each chapter, smoother edges, and bloom only on real light sources.
+  - Street lamps with pools of light, sidewalks, road markings, cars, rooftop equipment, and real trees in the forest.
 - **Controls:** one **WALK/RUN** button (Z on desktop), and running is faster.
 - **Characters:** smoother, rim-lit and grounded. Every model can be Ren's look (17 in all), each with its portrait.
 - **Story:** 229 new voiced lines, from the same neural voices.

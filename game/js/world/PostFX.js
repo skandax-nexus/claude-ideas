@@ -83,7 +83,7 @@ export class PostFX {
     }
     if (q.bloom) {
       // threshold high: only the brightest strips and holograms glow
-      this.bloom = new UnrealBloomPass(new THREE.Vector2(size.x, size.y), 0.28, 0.45, 1.0);
+      this.bloom = new UnrealBloomPass(new THREE.Vector2(size.x, size.y), 0.3, 0.5, 1.7); // only lamps, neon, screens and holograms; lit walls never haze
       c.addPass(this.bloom);
     }
     c.addPass(new OutputPass());

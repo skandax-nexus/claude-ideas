@@ -23,7 +23,7 @@ export const ZONES = [
   {
     key: 'neon', name: 'NEON MERIDIAN', title: 'The City Under Glass', theme: 'city', feature: 'gravity', crew: crew('kade'),
     subtitle: 'A city that never turns its lights off, under a sky made of glass',
-    palette: { fog: 0x161b26, wall: '#3b3e46', floor: '#24272e', accent: 0xff4fa8, accent2: 0x3fe0ff, light: 0xb9a6ff, tint: 0x3a3f6e, night: 1, weather: 'rain', sky: 'night', grade: { shadowTint: 0x1c3a72, highlightTint: 0xffb6dc, toning: 0.22, contrast: 1.12, saturation: 1.12 } },
+    palette: { fog: 0x161b26, wall: '#3b3e46', floor: '#24272e', accent: 0xff4fa8, accent2: 0x3fe0ff, light: 0xffd2a0, tint: 0x3a3f6e, night: 1, weather: 'rain', sky: 'night', grade: { shadowTint: 0x1c3a72, highlightTint: 0xffb6dc, toning: 0.22, contrast: 1.12, saturation: 1.12 } },
     rooms: ['MERIDIAN SQUARE', 'RAIN ALLEY', 'NOODLE ROW', 'THE OVERPASS', 'GLASS MARKET', 'NIGHT STATION'],
     motto: 'HALCYON NEVER SLEEPS',
     intro: [

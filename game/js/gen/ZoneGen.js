@@ -115,7 +115,12 @@ export function generateZone(story, zi, si) {
     const rx = sceneSide * 18, rz = canal ? -76 : -38, rh = 7;
     // a landmark roof: a tower block, a pump house, a giant tree's platform, a relay hut
     M.box([rx - 6, 0, rz - 6, rx + 6, rh, rz + 6], { mat: theme === 'forest' ? 'bark' : theme === 'reactor' ? 'industrial' : 'facade' });
-    if (theme === 'forest') M.box([rx - 7.5, rh + 0.4, rz - 7.5, rx + 7.5, rh + 2.6, rz + 7.5], { mat: 'leaf', solid: false });
+    if (theme === 'forest') {
+      for (const [dx, dz] of [[-7, -7], [7, -7], [-7, 7], [7, 7]]) {
+        M.trees.push([rx + dx, rz + dz, rh + 6, 0.9, 3.4, dx + dz]);
+        M.box([rx + dx - 0.7, 0, rz + dz - 0.7, rx + dx + 0.7, rh + 6, rz + dz + 0.7], { mat: 'bark', invisible: true });
+      }
+    }
     M.box([rx - 6.2, rh, rz - 6.2, rx + 6.2, rh + 0.4, rz + 6.2], { mat: 'trim' });
     M.box([rx - 0.5, rh + 0.4, rz - 0.4, rx + 0.5, rh + 1.4, rz + 0.4], { mat: 'prop' });
     M.inter.push({ id: `log_${id}`, kind: 'terminal', pos: [rx, rh + 1.65, rz], yaw: 0, r: 2.6, prompt: 'PLAY RECORDER', log: beat.log });
@@ -335,8 +340,10 @@ function dressing(M, theme, rng, zone, canalZ) {
     }
     if (theme === 'city' && rng.chance(0.45)) {
       const x = rng.pick([-1, 1]) * rng.float(9, 12);
-      M.box([x - 1, 0, z - 2.1, x + 1, 1.0, z + 2.1], { mat: 'car' });
-      M.box([x - 0.85, 1.0, z - 1.1, x + 0.85, 1.6, z + 1.0], { mat: 'glass', solid: false });
+      M.box([x - 0.95, 0.25, z - 2.2, x + 0.95, 0.95, z + 2.2], { mat: 'car' });
+      M.box([x - 0.82, 0.95, z - 1.2, x + 0.82, 1.45, z + 0.9], { mat: 'carGlass', solid: false });
+      for (const [wx, wz] of [[-0.8, -1.4], [0.8, -1.4], [-0.8, 1.4], [0.8, 1.4]]) M.box([x + wx - 0.15, 0, z + wz - 0.35, x + wx + 0.15, 0.6, z + wz + 0.35], { mat: 'tyre', solid: false });
+      M.glows.push([x, 0.02, z - 2.6, 1.4, 0xff3030]);
     }
     if (theme === 'reactor' && rng.chance(0.5)) {
       const x = rng.pick([-1, 1]) * rng.float(8, 12);

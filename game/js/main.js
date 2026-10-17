@@ -40,13 +40,13 @@ import { LOOKS, HAIR, TOPS, LOOK_DEFAULT, lookOf } from './world/People.js';
 const VERSION = '0.3.0';
 const BOOT_KEY = 'afterzero.boot';
 // the film grade for Station Zero and the vessel: clean, cool shadows, warm light
-const STATION_GRADE = { shadowTint: 0x2a4a66, highlightTint: 0xffd8a8, toning: 0.1, contrast: 1.06, saturation: 1.05 };
+const STATION_GRADE = { shadowTint: 0x2a4a66, highlightTint: 0xfff0dc, toning: 0.08, contrast: 1.14, saturation: 1.02 };
 
 // Bright, soft looks per reality state: daylight, rose dusk, mint memory.
 const THEMES = {
-  PHYSICAL: { fog: 0xe4edf5, sky: 0xffffff, ground: 0xd5dce4, hemi: 1.25, sun: 1.5, sunColor: 0xfff3e0, density: 0.012, device: 0x6fb8ff },
-  INVERTED: { fog: 0xf5e3ec, sky: 0xfff2f7, ground: 0xe8d3de, hemi: 1.2, sun: 1.3, sunColor: 0xffe2ec, density: 0.013, device: 0xff7aa8 },
-  ECHO: { fog: 0xd8f2f0, sky: 0xf0fffd, ground: 0xc8e6e3, hemi: 1.1, sun: 1.1, sunColor: 0xe6fffb, density: 0.016, device: 0x2bc4cf },
+  PHYSICAL: { fog: 0xe4edf5, sky: 0xffffff, ground: 0xd5dce4, hemi: 0.72, sun: 2.3, sunColor: 0xfff3e0, density: 0.012, device: 0x6fb8ff },
+  INVERTED: { fog: 0xf5e3ec, sky: 0xfff2f7, ground: 0xe8d3de, hemi: 0.7, sun: 2.0, sunColor: 0xffe2ec, density: 0.013, device: 0xff7aa8 },
+  ECHO: { fog: 0xd8f2f0, sky: 0xf0fffd, ground: 0xc8e6e3, hemi: 0.66, sun: 1.8, sunColor: 0xe6fffb, density: 0.016, device: 0x2bc4cf },
 };
 
 // Every token the prologue can teach; the vessel starts with all of them.
@@ -1607,7 +1607,7 @@ class Game {
     if (this.mode === 'deck') fog = new THREE.Color(this.level.palette.fog).lerp(fog, (s === 'PHYSICAL' ? 0.1 : 0.55) * (1 - (this.level.palette.night || 0) * 0.6));
     this.scene.fog.color.lerp(fog, k);
     this.scene.background.copy(this.scene.fog.color);
-    this.scene.fog.density += ((this.mode === 'deck' ? th.density * 0.3 : th.density) - this.scene.fog.density) * k;
+    this.scene.fog.density += ((this.mode === 'deck' ? th.density * 0.3 : th.density * 0.45) - this.scene.fog.density) * k;
     this.hemi.color.lerp(new THREE.Color(th.sky).lerp(tint, 0.25), k);
     this.hemi.groundColor.lerp(new THREE.Color(th.ground), k);
     const night = this.mode === 'deck' ? this.level.palette.night || 0 : 0;
@@ -1616,7 +1616,7 @@ class Game {
     if (this.bolt) this.hemi.intensity = th.hemi * env + this.bolt * 2.2;
     this.sun.color.lerp(new THREE.Color(th.sunColor), k);
     this.sun.intensity += (th.sun * (this.mode === 'deck' ? 0.8 : 1) * (1 - night * 0.7) - this.sun.intensity) * k;
-    this.renderer.toneMappingExposure += ((this.mode === 'deck' ? 0.9 + night * 0.15 : 1.0) - this.renderer.toneMappingExposure) * k;
+    this.renderer.toneMappingExposure += ((this.mode === 'deck' ? 0.9 + night * 0.15 : 0.95) - this.renderer.toneMappingExposure) * k;
     const p = this.player.pos;
     this.sun.position.set(p.x + 6, p.y + 24, p.z + 9);
     this.sun.target.position.set(p.x, p.y, p.z);
