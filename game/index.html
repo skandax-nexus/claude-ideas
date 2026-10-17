@@ -47,12 +47,10 @@
     <div class="panel center">
       <h1>AFTER<span>ZERO</span></h1>
       <p class="tag">The world has rules. Nobody will tell you what they are.</p>
-      <p class="ver">v0.8 · HALCYON open districts · walk/run button · 17 looks</p>
+      <p class="ver">v0.9 · chapters · save slots · Story Studio · smart renderer</p>
       <div class="body">
         <button class="big" id="continue">CONTINUE<small id="continueInfo"></small></button>
-        <button class="big" id="begin">NEW GAME<small>Prologue: Station Zero, then the vessel</small></button>
-        <button class="big" id="halcyon">HALCYON<small>Skip to the open districts &middot; 4 chapters, 12 maps</small></button>
-        <button class="big" id="vessel">THE VESSEL<small>Skip to the generated campaign &middot; 8 decks</small></button>
+        <button class="big" id="begin">NEW GAME<small>Choose a chapter: the prologue, HALCYON, the vessel or your own story</small></button>
         <div class="row"><button id="heroBtn">CHARACTER</button><button id="loadBtn">LOAD</button><button id="settingsBtn">SETTINGS</button></div>
         <div class="controls desktop-only">
           <span><b>WASD</b> move</span><span><b>MOUSE</b> look</span><span><b>SPACE</b> jump</span><span><b>Z</b> walk / run</span>
@@ -107,6 +105,21 @@
       <div class="heroes"></div>
       <div class="custom"></div>
       <button class="big" id="heroGo">START</button>
+    </div>
+  </section>
+
+  <section class="overlay side left" id="chapters">
+    <div class="panel chap">
+      <header><h2>CHOOSE A CHAPTER</h2><button data-back>&times;</button></header>
+      <div class="body"></div>
+    </div>
+  </section>
+
+  <section class="overlay side left" id="studio">
+    <div class="panel chap studio">
+      <header><h2>STORY STUDIO</h2><button data-back>&times;</button></header>
+      <p class="dim">Tell the vessel what kind of story you want. The crew, the clues, the rooms and the culprit are built around it, offline.</p>
+      <div class="body"></div>
     </div>
   </section>
 

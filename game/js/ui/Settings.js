@@ -28,6 +28,7 @@ export function defaultSettings(touch) {
     minimap: true,
     volume: 0.8,
     textSize: 1,
+    smart: true, // smart renderer: adapts resolution and effects to stay smooth
   };
 }
 

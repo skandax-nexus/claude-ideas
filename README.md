@@ -10,6 +10,25 @@ This repository contains:
 - **`game/` - the browser game** (Three.js): the two-hour prologue (Station Zero and the open districts of HALCYON) plus the generated vessel campaign, for desktop and Android browsers.
 - **`docs/`** - the design for the full game.
 
+## v0.9: chapters, save slots, Story Studio, smart renderer
+
+- **NEW GAME asks for a chapter:** **Prologue**, **HALCYON**, **The Vessel** or **Story Studio**.
+  - Each chapter card has its own **CONTINUE** button, which resumes that chapter's latest save.
+- **Save slots:**
+  - A new game asks for one of three slots and autosaves there as you play.
+  - A slot that is already in use asks before it is replaced.
+  - **DELETE** removes a save after a second tap ("SURE?").
+- **Story Studio:** describe the vessel story you want and the game builds it on the device, with no connection.
+  - **What you can set:** a title, a mood (thriller, horror, mystery, hopeful), why the time loop exists, the final twist, your crew's names and a story number.
+  - **How it is built:**
+    - The crew, clues, rooms and culprit are generated around your choices.
+    - The same number and choices always tell the same story.
+    - It is a rule-based story generator, not a chat AI: it recombines hand-written story parts and does not write new prose.
+- **Smart renderer:** the game watches its real frame rate while you play and keeps it smooth on its own.
+  - **When it slows:** it first lowers the resolution (down to 60%), then the effects.
+  - **When there is headroom:** it raises them again, but never above the quality you chose in Settings.
+  - On by default; switch it off in Settings.
+
 ## v0.8: HALCYON - a two-hour prologue with open districts
 
 Station Zero turns out to be the basement of **HALCYON**, a city-sized arcology. Varga's vault recording sends Ren up the long way. Four open districts, each a different kind of film, sit between the vault and the machine, and the prologue now runs about two hours. See [docs/HALCYON.md](docs/HALCYON.md).
@@ -181,7 +200,7 @@ tests/
 npm test                                   # core systems + generator invariants over many seeds (Node 20+)
 NODE_PATH=$(npm root -g) npm run smoke     # full prologue playthrough in headless Chromium (needs playwright)
 NODE_PATH=$(npm root -g) npm run vessel    # QA bot plays every generated room of 2 seeds (pass a seed count to test more)
-NODE_PATH=$(npm root -g) npm run features  # features on desktop and a touch phone: looks, voice pack, prompts, zoom, stick, dock
+NODE_PATH=$(npm root -g) npm run features  # features on desktop and a touch phone: chapters, slots, Story Studio, smart renderer, looks, voice pack, zoom, stick
 NODE_PATH=$(npm root -g) npm run layout    # no HUD piece overlaps another, on nine screen sizes
 NODE_PATH=$(npm root -g) npm run halcyon   # plays HALCYON's 12 open districts and the lift home
 ```

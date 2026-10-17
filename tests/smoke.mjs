@@ -67,6 +67,8 @@ try {
   await wait(1500);
   await shot('00-title');
   await page.click('#begin');
+  await page.click('[data-newch="prologue"]');
+  await page.click('#saves [data-slot="0"]');
   await wait(600);
   await shot('00b-character-select');
   await page.click('[data-hero="scifi"]');
@@ -285,6 +287,8 @@ try {
   await mob.waitForFunction(() => window.AZ, null, { timeout: 180000 }); // the characters load first
   await mob.evaluate(() => localStorage.clear());
   await mob.tap('#begin');
+  await mob.tap('[data-newch="prologue"]');
+  await mob.tap('#saves [data-slot="0"]');
   await mob.waitForTimeout(500);
   await mob.tap('#heroGo');
   await mob.waitForTimeout(1500);

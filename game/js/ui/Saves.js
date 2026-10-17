@@ -1,5 +1,7 @@
-// Save slots: three manual slots plus an autosave. Each entry stores the
-// game state plus a little metadata for the load screen.
+// Save slots. A new game picks one of three slots and autosaves into it as you
+// play (each slot remembers which chapter it belongs to: the prologue,
+// HALCYON, the vessel or a Story Studio tale). The old single autosave is
+// still readable. Each entry stores the game state plus a little metadata.
 
 const SLOT_KEY = (i) => `afterzero.slot.${i}`;
 const AUTO_KEY = 'afterzero.save.v1'; // the v0.1/v0.2 single save doubles as the autosave
@@ -53,6 +55,23 @@ export function latestSave() {
   return best;
 }
 
+export const CHAPTERS = {
+  prologue: { name: 'PROLOGUE', sub: 'Station Zero, HALCYON, the machine' },
+  halcyon: { name: 'HALCYON', sub: 'Four open districts above Station Zero' },
+  vessel: { name: 'THE VESSEL', sub: 'Eight generated decks, a crew, a culprit' },
+  studio: { name: 'STORY STUDIO', sub: 'A vessel story made from your wishes' },
+};
+
+// the most recent save of one chapter
+export function latestFor(chapter) {
+  let best = null;
+  for (const s of listSaves()) {
+    if (!s.data || (s.data.meta?.run || 'prologue') !== chapter) continue;
+    if (!best || (s.data.meta?.savedAt || 0) > (best.data.meta?.savedAt || 0)) best = s;
+  }
+  return best;
+}
+
 export function describeSave(d) {
   if (!d) return { title: 'EMPTY', sub: '' };
   const m = d.meta || {};
@@ -60,5 +79,5 @@ export function describeSave(d) {
   const h = Math.floor(mins / 60);
   const time = h ? `${h} h ${mins % 60} min` : `${mins} min`;
   const when = m.savedAt ? new Date(m.savedAt).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
-  return { title: m.where || 'STATION ZERO', sub: `${m.chapter || ''}${m.chapter ? ' · ' : ''}${time}${when ? ' · ' + when : ''}` };
+  return { title: m.where || 'STATION ZERO', run: CHAPTERS[m.run || 'prologue']?.name || 'PROLOGUE', sub: `${m.chapter || ''}${m.chapter ? ' · ' : ''}${time}${when ? ' · ' + when : ''}` };
 }

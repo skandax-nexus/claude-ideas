@@ -22,14 +22,15 @@ import { makeDevice, makeKeyItem, makeCoreItem } from './world/models.js';
 import { Npcs } from './world/Npcs.js';
 import { DeckWorld } from './world/DeckWorld.js';
 import { PostFX } from './world/PostFX.js';
-import { makeStory, verdictEnding } from './gen/StoryGen.js';
+import { makeStory, verdictEnding, WISH_OPTIONS } from './gen/StoryGen.js';
 import { generateSector, SECTORS_PER_DECK } from './gen/LevelGen.js';
 import { makeZoneStory } from './gen/ZoneStory.js';
 import { generateZone } from './gen/ZoneGen.js';
 import { Weather } from './world/Weather.js';
 import { WATER_NORMALS } from './world/materials.js';
+import { SmartRenderer } from './core/SmartRenderer.js';
 import { loadSettings, saveSettings, CAMERA_PRESETS, QUALITY } from './ui/Settings.js';
-import { writeSave, readSave, listSaves, latestSave, describeSave, SLOTS } from './ui/Saves.js';
+import { writeSave, readSave, listSaves, latestSave, describeSave, deleteSave, latestFor, CHAPTERS, SLOTS } from './ui/Saves.js';
 import { MiniMap } from './ui/MiniMap.js';
 import { Voice } from './audio/Voice.js';
 import { Fx } from './world/Fx.js';
@@ -96,6 +97,7 @@ class Game {
     this.camera = new THREE.PerspectiveCamera(62, 1, 0.05, 600);
     this.scene.add(this.camera);
     this.postfx = new PostFX(this.renderer, this.scene, this.camera);
+    this.smart = new SmartRenderer(this);
 
     this.hemi = new THREE.HemisphereLight(0xffffff, 0xd5dce4, 1.25);
     this.scene.add(this.hemi);
@@ -247,12 +249,12 @@ class Game {
   // --- settings -------------------------------------------------------------
   applySettings() {
     const s = this.settings;
-    const q = QUALITY[s.quality];
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, q.pixelRatio));
-    this.sun.shadow.mapSize.set(q.shadowMap, q.shadowMap);
-    this.sun.shadow.map?.dispose();
-    this.sun.shadow.map = null;
-    this.postfx.apply(q);
+    if (s.smart === undefined) s.smart = true;
+    if (this.smart.chosenWas !== s.quality) {
+      this.smart.chosenWas = s.quality;
+      this.smart.reset();
+    }
+    this.applyQuality();
     this.player.cam = { ...CAMERA_PRESETS[s.camera] };
     this.player.zoom = s.zoom;
     this.player.comfort = s.comfort;
@@ -264,6 +266,16 @@ class Game {
     document.body.classList.toggle('minimap', s.minimap);
     document.body.classList.toggle('text-lg', s.textSize > 1);
     this.resize();
+  }
+
+  // the quality preset in use: the one chosen, or lower while the smart renderer eases off
+  applyQuality() {
+    const q = this.smart.quality();
+    this.sun.shadow.mapSize.set(q.shadowMap, q.shadowMap);
+    this.sun.shadow.map?.dispose();
+    this.sun.shadow.map = null;
+    this.postfx.apply(q);
+    this.smart.apply();
   }
 
   changeSetting(k, v) {
@@ -286,9 +298,7 @@ class Game {
   // --- menus ------------------------------------------------------------
   setupMenus() {
     const $ = (s) => document.querySelector(s);
-    $('#begin').onclick = () => this.begin('new');
-    $('#vessel').onclick = () => this.begin('vessel');
-    $('#halcyon').onclick = () => this.begin('halcyon');
+    $('#begin').onclick = () => this.openChapters('title');
     $('#continue').onclick = () => {
       const l = latestSave();
       if (l) this.begin('load', l.slot);
@@ -326,7 +336,7 @@ class Game {
       session((s) => s.removeItem(BOOT_KEY));
       $('#continue').style.display = '';
       $('#continueInfo').textContent = 'Tap to enter';
-      $('#continue').onclick = () => this.begin(boot.action, boot.slot);
+      $('#continue').onclick = () => this.begin(boot.action, boot.slot, boot.saveSlot, boot.opts);
     }
   }
 
@@ -342,16 +352,20 @@ class Game {
 
   // New game / vessel / load. Starting fresh in a page that already played
   // goes through a reload, so no state ever leaks between runs.
-  begin(action, slot) {
-    if (!this.started && !this.settings.hero && (action === 'new' || action === 'vessel' || action === 'halcyon')) {
-      this.openHero('title', () => this.begin(action, slot));
+  // action: 'new' (the prologue), 'halcyon', 'vessel', 'studio' or 'load';
+  // saveSlot: the slot a new game autosaves into.
+  begin(action, slot, saveSlot = null, opts = null) {
+    if (!this.started && !this.settings.hero && action !== 'load') {
+      this.openHero('title', () => this.begin(action, slot, saveSlot, opts));
       return;
     }
     if (this.started) {
-      session((s) => s.setItem(BOOT_KEY, JSON.stringify({ action, slot })));
+      session((s) => s.setItem(BOOT_KEY, JSON.stringify({ action, slot, saveSlot, opts })));
       location.reload();
       return;
     }
+    this.slot = action === 'load' ? (typeof slot === 'number' ? slot : null) : saveSlot;
+    this.run = { new: 'prologue', halcyon: 'halcyon', vessel: 'vessel', studio: 'studio' }[action] || 'prologue';
     this.started = true;
     document.body.classList.add('playing');
     this.player.cinema = null;
@@ -361,6 +375,7 @@ class Game {
     if (action === 'load') ok = this.load(slot);
     if (ok) this.hud.toast('Memory restored.');
     else if (action === 'vessel') this.startVessel();
+    else if (action === 'studio') this.startVessel(opts?.seed, null, opts?.wish);
     else if (action === 'halcyon') {
       // jump straight to the open districts: Station Zero counts as played up to the vault
       this.facts.rulesEnabled = false;
@@ -420,25 +435,107 @@ class Game {
     } else this.openMenu(to);
   }
 
-  openSaves(mode, from) {
+  // STORY STUDIO: a vessel story made from the player's wishes (offline: the
+  // story generator composes it; see gen/StoryGen.js WISH_OPTIONS).
+  openStudio(from) {
+    this.menuBack = from;
+    this.menu = 'studio';
+    this.input.release();
+    const $ = (q) => document.querySelector(q);
+    const opt = (k, any = true) => `<select id="st_${k}">${any ? '<option value="">Surprise me</option>' : ''}${Object.entries(WISH_OPTIONS[k]).map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select>`;
+    $('#studio .body').innerHTML = `
+      <label>Title<input id="st_title" maxlength="40" placeholder="e.g. The Night Shift"></label>
+      <label>Mood${opt('mood')}</label>
+      <label>Why the time loop exists${opt('motive')}</label>
+      <label>The final twist${opt('twist')}</label>
+      <label>Crew names <small>up to 8, separated by commas</small><input id="st_names" maxlength="160" placeholder="e.g. Aria, Dev, Mina, Rohan"></label>
+      <label>Story number <small>the same number and wishes always tell the same story</small><input id="st_seed" inputmode="numeric" maxlength="9" placeholder="random"></label>
+      <p class="dim">Names you type are spoken by your device's own voice; everything else uses the recorded voices.</p>
+      <button class="big" id="st_go">CREATE STORY<small>Then choose a save slot</small></button>`;
+    $('#st_go').onclick = () => {
+      const v = (k) => $(`#st_${k}`).value.trim();
+      const wish = {
+        title: v('title') || null,
+        mood: v('mood') || null,
+        motive: v('motive') || null,
+        twist: v('twist') || null,
+        names: v('names') ? v('names').split(',').map((x) => x.trim()).filter(Boolean) : [],
+      };
+      const seed = /^\d+$/.test(v('seed')) ? +v('seed') : (Math.random() * 1e9) | 0;
+      this.openSaves('new', 'studio', { action: 'studio', opts: { seed, wish } });
+    };
+    this.hud.show('studio');
+  }
+
+  // NEW GAME: pick a chapter. Each card continues its own latest save.
+  openChapters(from) {
+    this.menuBack = from;
+    this.menu = 'chapters';
+    this.input.release();
+    const order = ['prologue', 'halcyon', 'vessel', 'studio'];
+    const action = { prologue: 'new', halcyon: 'halcyon', vessel: 'vessel', studio: 'studio' };
+    document.querySelector('#chapters .body').innerHTML = order.map((ch) => {
+      const c = CHAPTERS[ch];
+      const last = latestFor(ch);
+      const d = last && describeSave(last.data);
+      return `<div class="chapcard"><h3>${c.name}</h3><p>${c.sub}</p><div class="acts">
+        ${last ? `<button class="cont" data-cont="${last.slot}">CONTINUE<small>${d.title} · ${d.sub}</small></button>` : ''}
+        <button data-newch="${ch}">${ch === 'studio' ? 'CREATE A STORY' : 'NEW GAME'}</button></div></div>`;
+    }).join('');
+    for (const b of document.querySelectorAll('#chapters [data-cont]')) {
+      b.onclick = () => {
+        this.menu = null;
+        this.begin('load', b.dataset.cont === 'auto' ? 'auto' : +b.dataset.cont);
+      };
+    }
+    for (const b of document.querySelectorAll('#chapters [data-newch]')) {
+      b.onclick = () => (b.dataset.newch === 'studio' ? this.openStudio('chapters') : this.openSaves('new', 'chapters', { action: action[b.dataset.newch] }));
+    }
+    this.hud.show('chapters');
+  }
+
+  openSaves(mode, from, pending = null) {
     this.menuBack = from;
     this.menu = 'saves';
     this.input.release();
     const $ = (s) => document.querySelector(s);
-    $('#savesTitle').textContent = mode === 'save' ? 'SAVE GAME' : 'LOAD GAME';
-    const rows = listSaves()
-      .filter((s) => mode === 'load' || s.slot !== 'auto')
+    $('#savesTitle').textContent = mode === 'save' ? 'SAVE GAME' : mode === 'new' ? 'CHOOSE A SAVE SLOT' : 'LOAD GAME';
+    const rows = (mode === 'new' ? '<p class="dim">Your new game autosaves into this slot as you play.</p>' : '') + listSaves()
+      .filter((s) => mode === 'load' ? s.data : s.slot !== 'auto')
       .map((s) => {
         const d = describeSave(s.data);
-        const label = s.slot === 'auto' ? 'AUTOSAVE' : `SLOT ${s.slot + 1}`;
-        const dis = mode === 'load' && !s.data ? 'disabled' : '';
-        return `<button class="slotbtn ${s.data ? '' : 'empty'}" data-slot="${s.slot}" ${dis}><span><b>${d.title}</b><small>${d.sub || (mode === 'save' ? 'Save here' : 'Empty')}</small></span><span class="tag2">${label}</span></button>`;
-      }).join('');
+        const label = s.slot === 'auto' ? 'OLD AUTOSAVE' : `SLOT ${s.slot + 1}`;
+        const empty = mode === 'new' ? 'Empty · start here' : mode === 'save' ? 'Save here' : 'Empty';
+        const run = s.data ? `<span class="run">${d.run}</span>` : '';
+        const del = s.data ? `<button class="del" data-del="${s.slot}" aria-label="Delete ${label}">DELETE</button>` : '';
+        return `<div class="slotrow"><button class="slotbtn ${s.data ? '' : 'empty'}" data-slot="${s.slot}"><span><b>${run}${d.title}</b><small>${d.sub || empty}</small></span><span class="tag2">${label}</span></button>${del}</div>`;
+      }).join('') || '<p class="dim">No saved games yet.</p>';
     $('#saves .body').innerHTML = rows;
+    for (const b of document.querySelectorAll('#saves [data-del]')) {
+      b.onclick = () => {
+        if (!b.classList.contains('sure')) {
+          b.classList.add('sure');
+          b.textContent = 'SURE?';
+          return;
+        }
+        deleteSave(b.dataset.del === 'auto' ? 'auto' : +b.dataset.del);
+        this.hud.toast('Save deleted.');
+        this.openSaves(mode, from, pending);
+      };
+    }
     for (const b of document.querySelectorAll('#saves [data-slot]')) {
       b.onclick = () => {
         const slot = b.dataset.slot === 'auto' ? 'auto' : +b.dataset.slot;
-        if (mode === 'save') {
+        if (mode === 'new') {
+          // a used slot needs a second tap: it will be overwritten
+          if (!b.classList.contains('empty') && !b.classList.contains('sure')) {
+            b.classList.add('sure');
+            b.querySelector('small').textContent = 'Tap again to replace this save with a new game';
+            return;
+          }
+          this.menu = null;
+          this.begin(pending.action, null, slot, pending.opts || null);
+        } else if (mode === 'save') {
           this.saveTo(slot);
           this.hud.toast(`Saved to slot ${slot + 1}.`);
           this.openSaves('save', from);
@@ -532,7 +629,8 @@ class Game {
       <div class="setting"><span>Invert look up/down</span>${toggle('invertY')}</div>
       <div class="setting"><span>Comfort mode<small>Instant gravity flips, steadier camera, no flashes</small></span>${toggle('comfort')}</div>
       <h3>SCREEN</h3>
-      <div class="setting"><span>Graphics quality<small>Lower it if your phone gets warm</small></span>${seg('quality', Object.entries(QUALITY).map(([k, q]) => [k, q.label]))}</div>
+      <div class="setting"><span>Graphics quality<small>The highest the game will use</small></span>${seg('quality', Object.entries(QUALITY).map(([k, q]) => [k, q.label]))}</div>
+      <div class="setting"><span>Smart renderer<small>${this.smart.fps ? `Now ${Math.round(this.smart.fps)} fps at ${Math.round(this.smart.scale * 100)}% resolution` : 'Adjusts resolution and effects to stay smooth'}</small></span>${toggle('smart')}</div>
       <div class="setting"><span>Minimap</span>${toggle('minimap')}</div>
       <div class="setting"><span>Large subtitles</span>${seg('textSize', [[1, 'NORMAL'], [1.2, 'LARGE']])}</div>
       <h3>SOUND</h3>
@@ -706,10 +804,12 @@ class Game {
   }
 
   // --- the vessel -------------------------------------------------------------
-  startVessel(seed = (Math.random() * 1e9) | 0, saved = null) {
+  startVessel(seed = (Math.random() * 1e9) | 0, saved = null, wish = null) {
     this.mode = 'deck';
-    this.story = makeStory(seed);
-    this.campaign = saved || { seed, deck: 0, sector: 0, flags: {}, visited: [] };
+    seed = seed ?? ((Math.random() * 1e9) | 0);
+    wish = saved?.wish || wish;
+    this.story = makeStory(seed, wish);
+    this.campaign = saved || { seed, wish, deck: 0, sector: 0, flags: {}, visited: [] };
     this.facts.rulesEnabled = false; // Station Zero's scripted rules stay behind
     for (const t of BASE_TOKENS) this.facts.set(`token_${t}`);
     for (const k of ['has_device', 'has_tick', 'met_juno', 'left_antechamber']) this.facts.set(k);
@@ -1246,14 +1346,16 @@ class Game {
     if (this.mode === 'deck') {
       const d = this.story.decks[this.campaign.deck];
       if (this.campaign.zones) return { where: `HALCYON · ${d.name}`, chapter: `District ${this.campaign.sector + 1}/${d.sectors}` };
-      return { where: `DECK ${this.campaign.deck + 1} · ${d.name}`, chapter: `Sector ${this.campaign.sector + 1}/4` };
+      const told = this.story.title ? `${this.story.title.toUpperCase()} · ` : '';
+      return { where: `${told}DECK ${this.campaign.deck + 1} · ${d.name}`, chapter: `Sector ${this.campaign.sector + 1}/4` };
     }
     return { where: 'STATION ZERO', chapter: STATION_ROOMS[this.room]?.name || '' };
   }
 
   saveTo(slot) {
     if (!this.started || !this.room) return;
-    writeSave(slot, this.snapshot(), this.saveMeta());
+    if (slot === 'auto' && this.slot !== null && this.slot !== undefined) slot = this.slot; // this game's own slot
+    writeSave(slot, this.snapshot(), { ...this.saveMeta(), run: this.run || 'prologue' });
   }
 
   // kept for tools and old callers
@@ -1273,6 +1375,7 @@ class Game {
       this.timeline = d.timeline || [];
       this.playTime = d.playTime || 0;
       this.restoring = false;
+      this.run = d.meta?.run || (d.campaign?.zones ? 'halcyon' : d.mode === 'deck' ? 'vessel' : 'prologue');
       if (d.mode === 'deck' && d.campaign?.zones) {
         this.startZones(d.campaign);
         return true;
@@ -1292,7 +1395,9 @@ class Game {
 
   // --- main loop --------------------------------------------------------------
   frame() {
-    const dt = Math.min(0.05, this.clock.getDelta());
+    const raw = this.clock.getDelta();
+    this.smart.sample(raw);
+    const dt = Math.min(0.05, raw);
     this.time += dt;
     // plays the same held upright or sideways
     const active = !this.paused && !this.menu;
@@ -1301,7 +1406,7 @@ class Game {
       this.lastEvent = this.time;
       if (a === 'pause') {
         this.voice.stop();
-        if (this.menu === 'saves' || this.menu === 'settings' || this.menu === 'hero') {
+        if (['saves', 'settings', 'hero', 'chapters', 'studio'].includes(this.menu)) {
           this.player.cinema = null;
           this.back();
         }
@@ -1610,7 +1715,7 @@ class Game {
     this.scene.fog.density += ((this.mode === 'deck' ? th.density * 0.3 : th.density * 0.45) - this.scene.fog.density) * k;
     this.hemi.color.lerp(new THREE.Color(th.sky).lerp(tint, 0.25), k);
     this.hemi.groundColor.lerp(new THREE.Color(th.ground), k);
-    const night = this.mode === 'deck' ? this.level.palette.night || 0 : 0;
+    const night = this.mode === 'deck' ? this.level.palette.night || { horror: 0.55, thriller: 0.3 }[this.story?.mood] || 0 : 0;
     const env = (this.scene.environment ? 0.85 : 1) * (this.mode === 'deck' ? 0.72 : 1) * (1 - night * 0.55);
     this.hemi.intensity += (th.hemi * env - this.hemi.intensity) * k;
     if (this.bolt) this.hemi.intensity = th.hemi * env + this.bolt * 2.2;

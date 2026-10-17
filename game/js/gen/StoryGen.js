@@ -114,10 +114,27 @@ const ff = (s, v) => s.replace(/\{(\w+)\}/g, (m, k) => (v[k] !== undefined ? v[k
 // Pastel speaker colors for generated crew (dark enough to read on white cards).
 const CREW_COLORS = ['#2f8a5a', '#3b7fb8', '#6c5bc4', '#c0762a', '#1f9a90', '#c4566a', '#2b8f7a', '#a8862a'];
 
-export function makeStory(seed) {
+// Story Studio: what a player can ask for. Everything else is generated; a wish
+// only replaces what it names, so the same seed without a wish is unchanged.
+export const WISH_OPTIONS = {
+  mood: { thriller: 'Thriller', horror: 'Horror', mystery: 'Mystery', hopeful: 'Hopeful' },
+  motive: Object.fromEntries([['save', 'To keep someone alive'], ['arrival', 'To hide where the ship arrived'], ['mistake', 'To undo a terrible mistake'], ['promise', 'Because the Observer promised a way home']]),
+  twist: Object.fromEntries([['you', 'You helped start it'], ['observer', 'The watcher is a lost crew member'], ['juno', 'Juno remembers everything'], ['stars', 'The stars outside are fake']]),
+};
+const MOOD_TRAITS = { thriller: ['dry', 'nervous', 'formal'], horror: ['nervous', 'dreamy', 'nervous'], mystery: ['formal', 'dry', 'dreamy'], hopeful: ['warm', 'dreamy', 'warm'] };
+
+// a player-typed name, made safe to show and speak
+function cleanName(n) {
+  const t = String(n || '').replace(/[^\p{L}\p{M}' -]/gu, '').replace(/\s+/g, ' ').trim().slice(0, 16);
+  return t ? t[0].toUpperCase() + t.slice(1) : '';
+}
+
+export function makeStory(seed, wish = null) {
   const r = Rng.from('story', seed);
   // --- cast: one crew member per deck (decks 1-7); deck 8 is the captain's
   const firsts = r.shuffle(FIRST);
+  const wished = (wish?.names || []).map(cleanName).filter(Boolean).slice(0, 8);
+  wished.forEach((n, i) => (firsts[i] = n));
   const lasts = r.shuffle(LAST);
   const traits = Object.keys(TRAITS);
   const cast = DECKS.slice(0, 7).map((d, i) => {
@@ -142,9 +159,15 @@ export function makeStory(seed) {
   const culprit = r.int(2, 6); // never the first two decks: the player should know a few people before suspecting
   let victim = r.int(0, 6);
   if (victim === culprit) victim = (victim + 1) % 7;
-  const motive = r.pick(MOTIVES);
+  let motive = r.pick(MOTIVES);
   const method = r.pick(METHODS);
-  const twist = r.pick(TWISTS);
+  let twist = r.pick(TWISTS);
+  if (wish?.motive && MOTIVES.find((m) => m.key === wish.motive)) motive = MOTIVES.find((m) => m.key === wish.motive);
+  if (wish?.twist && TWISTS.find((t) => t.key === wish.twist)) twist = TWISTS.find((t) => t.key === wish.twist);
+  if (wish?.mood && MOOD_TRAITS[wish.mood]) {
+    const mr = Rng.from('mood', seed);
+    for (const c of cast) c.trait = mr.pick(MOOD_TRAITS[wish.mood]);
+  }
   // one innocent looks guilty on paper (a red herring), cleared later by echo
   let herring = r.int(0, 6);
   if (herring === culprit) herring = (herring + 2) % 7;
@@ -186,7 +209,7 @@ export function makeStory(seed) {
     };
   });
 
-  return { seed, cast, captain, truth, decks, motive: ff(motive.long, V()), twist: { ...twist, text: ff(twist.text, V()) } };
+  return { seed, cast, captain, truth, decks, motive: ff(motive.long, V()), twist: { ...twist, text: ff(twist.text, V()) }, title: wish?.title ? String(wish.title).slice(0, 40) : null, mood: wish?.mood || null };
 }
 
 // --- beats ---------------------------------------------------------------------

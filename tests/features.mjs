@@ -63,10 +63,18 @@ async function desktop() {
   await page.evaluate(SPY);
   const az = (fn, a) => page.evaluate(fn, a);
 
-  // character select
+  // NEW GAME -> chapter -> save slot -> character select
   await page.click('#begin');
+  await page.waitForTimeout(300);
+  check(await page.isVisible('#chapters'), 'NEW GAME asks for a chapter');
+  check(await az(() => [...document.querySelectorAll('#chapters h3')].map((h) => h.textContent).join()) === 'PROLOGUE,HALCYON,THE VESSEL,STORY STUDIO', 'chapters: Prologue, HALCYON, the Vessel, Story Studio');
+  check((await page.$$('#chapters [data-cont]')).length === 0, 'no CONTINUE on a chapter you have not played');
+  await page.click('[data-newch="prologue"]');
+  await page.waitForTimeout(300);
+  check(await page.isVisible('#saves') && (await page.$$('#saves [data-slot]')).length === 3, 'a new game asks for one of three save slots');
+  await page.click('#saves [data-slot="1"]');
   await page.waitForTimeout(500);
-  check(await page.isVisible('#hero'), 'NEW GAME opens character select first');
+  check(await page.isVisible('#hero'), 'then character select');
   check((await page.$$('#hero [data-hero] img')).length === 17, 'every character model is offered as a look, each with its portrait');
   check(await az(() => AZ.player.model.userData.spec.model) === 'nova', 'the default look is Nova (modelled VRM character)');
   await page.click('#hero .sw button[data-k="hair"]:nth-child(3)');
@@ -86,6 +94,27 @@ async function desktop() {
   await page.waitForTimeout(800);
   check(await az(() => AZ.started && AZ.mode === 'station' && AZ.room === 'antechamber'), 'START begins the prologue');
   check(await az(() => JSON.parse(localStorage.getItem('afterzero.settings.v1')).hero.id) === 'scifi', 'look persisted');
+  check(await az(() => AZ.slot === 1 && AZ.run === 'prologue'), 'the new game plays in the chosen slot');
+  await az(() => AZ.saveTo('auto'));
+  check(await az(() => { const r = JSON.parse(localStorage.getItem('afterzero.slot.1') || 'null'); return r && r.meta && r.meta.run; }) === 'prologue', 'autosave goes into the chosen slot, tagged with its chapter');
+
+  // smart renderer: eases resolution when slow, gives it back when fast
+  const sm = await az(() => {
+    const s = AZ.smart;
+    const was = AZ.menu;
+    AZ.menu = null;
+    s.reset();
+    for (let i = 0; i < 2 * 2 * 30; i++) s.sample(1 / 30); // 4 s at 30 fps
+    const low = s.scale;
+    for (let i = 0; i < 6 * 2 * 60; i++) s.sample(1 / 70); // 12 s at 70 fps
+    const back = s.scale;
+    AZ.menu = was;
+    return { low, back, pr: AZ.renderer.getPixelRatio() };
+  });
+  check(sm.low < 1 && sm.back > sm.low, 'smart renderer lowers resolution when slow and raises it with headroom', JSON.stringify(sm));
+  await az(() => { AZ.changeSetting('smart', false); });
+  check(await az(() => AZ.renderer.getPixelRatio() === Math.min(devicePixelRatio, AZ.smart.quality().pixelRatio)), 'smart renderer off: full resolution of the chosen quality');
+  await az(() => AZ.changeSetting('smart', true));
 
   // dock: laws hidden until the device, map and log open, key hints present
   check(await az(() => document.querySelector('#dock .laws').classList.contains('off')), 'LAWS hidden in the dock before you have the device');
@@ -254,7 +283,9 @@ async function phone() {
   await page.waitForTimeout(1200);
   await page.evaluate(SPY);
   const az = (fn, a) => page.evaluate(fn, a);
-  await page.tap('#vessel');
+  await page.tap('#begin');
+  await page.tap('[data-newch="vessel"]');
+  await page.tap('#saves [data-slot="0"]');
   await page.waitForTimeout(500);
   const heroBox = await page.locator('#heroGo').boundingBox();
   check(heroBox && heroBox.y + heroBox.height <= 412, 'START is on screen on a phone', JSON.stringify(heroBox));
@@ -344,8 +375,86 @@ async function phone() {
   await ctx.close();
 }
 
+
+// chapters: each continues its own save; slots can be deleted; Story Studio
+async function chapters() {
+  console.log('Chapters, save slots, Story Studio');
+  const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
+  const errors = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  const ready = () => page.waitForFunction(() => window.AZ && document.querySelector('#begin'), null, { timeout: 180000 });
+  await page.goto(url);
+  await ready();
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  await ready();
+  const az = (fn, a) => page.evaluate(fn, a);
+  await page.click('#begin');
+  await page.click('[data-newch="vessel"]');
+  await page.click('#saves [data-slot="0"]');
+  await page.waitForSelector('#heroGo', { state: 'visible' });
+  await page.click('#heroGo');
+  await page.waitForFunction(() => AZ.mode === 'deck', null, { timeout: 60000 });
+  check(await az(() => AZ.slot === 0 && AZ.run === 'vessel'), 'the Vessel starts in slot 1');
+  await az(() => AZ.saveTo('auto'));
+
+  await page.reload();
+  await ready();
+  await page.click('#begin');
+  const cards = await az(() => Object.fromEntries([...document.querySelectorAll('#chapters .chapcard')].map((c) => [c.querySelector('h3').textContent, !!c.querySelector('[data-cont]')])));
+  check(cards['THE VESSEL'] && !cards.PROLOGUE && !cards.HALCYON, 'CONTINUE sits on the chapter you played, only there', JSON.stringify(cards));
+  await page.screenshot({ timeout: 180000, path: path.join(shots, 'f08-chapters.png') });
+  await page.click('#chapters [data-cont]');
+  await page.waitForFunction(() => AZ.mode === 'deck', null, { timeout: 60000 });
+  check(await az(() => AZ.slot === 0 && AZ.run === 'vessel' && !!AZ.campaign), 'CONTINUE resumes that chapter from its slot');
+
+  // a new game into a used slot asks twice; delete asks twice
+  await page.reload();
+  await ready();
+  await page.click('#begin');
+  await page.click('[data-newch="prologue"]');
+  await page.click('#saves [data-slot="0"]');
+  check(await page.isVisible('#saves') && /replace/.test(await page.textContent('#saves [data-slot="0"] small')), 'a used slot asks before it is replaced');
+  await page.click('#saves [data-del="0"]');
+  check(await az(() => !!localStorage.getItem('afterzero.slot.0')), 'DELETE asks for a second tap');
+  await page.screenshot({ timeout: 180000, path: path.join(shots, 'f09-slots.png') });
+  await page.click('#saves [data-del="0"]');
+  check(await az(() => !localStorage.getItem('afterzero.slot.0')), 'the second tap deletes the save');
+  check(await az(() => document.querySelector('#saves [data-slot="0"]').classList.contains('empty')), 'the slot shows as empty again');
+
+  // Story Studio: a vessel story from your wishes
+  await page.reload();
+  await ready();
+  await page.click('#begin');
+  await page.click('[data-newch="studio"]');
+  check(await page.isVisible('#studio'), 'Story Studio opens');
+  await page.fill('#st_title', 'The Night Shift');
+  await page.selectOption('#st_mood', 'horror');
+  await page.selectOption('#st_twist', 'juno');
+  await page.fill('#st_names', 'Aria, Dev, Mina');
+  await page.fill('#st_seed', '4242');
+  await page.screenshot({ timeout: 180000, path: path.join(shots, 'f10-studio.png') });
+  await page.click('#st_go');
+  await page.click('#saves [data-slot="2"]');
+  await page.waitForFunction(() => AZ.mode === 'deck', null, { timeout: 60000 });
+  const st = await az(() => ({ title: AZ.story.title, mood: AZ.story.mood, names: AZ.story.cast.map((c) => c.name).join(' '), twist: AZ.story.twist.key, run: AZ.run, slot: AZ.slot }));
+  check(st.title === 'The Night Shift' && st.mood === 'horror' && st.run === 'studio' && st.slot === 2, 'the studio story uses your title and mood', JSON.stringify(st));
+  check(/Aria/.test(st.names) && /Dev/.test(st.names) && /Mina/.test(st.names), 'your crew names are in the story', st.names);
+  check(st.twist === 'juno', 'your twist is the twist', st.twist);
+  await az(() => AZ.saveTo('auto'));
+  await page.reload();
+  await ready();
+  await page.click('#begin');
+  await page.click('#chapters [data-cont="2"]');
+  await page.waitForFunction(() => AZ.mode === 'deck', null, { timeout: 60000 });
+  check(await az(() => AZ.story.title === 'The Night Shift' && AZ.story.mood === 'horror' && AZ.campaign.seed === 4242), 'continuing a studio story keeps your wishes');
+  check(errors.length === 0, 'no page errors (chapters)', errors.join(' | '));
+  await page.close();
+}
+
 try {
   await desktop();
+  await chapters();
   await phone();
 } catch (e) {
   failures.push('crashed: ' + e.message);
