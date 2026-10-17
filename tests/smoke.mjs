@@ -69,7 +69,7 @@ try {
   await page.click('#begin');
   await wait(600);
   await shot('00b-character-select');
-  await page.click('[data-hero="asha"]');
+  await page.click('[data-hero="scifi"]');
   await wait(300);
   await page.click('#heroGo');
   await sim(1.2);
