@@ -429,3 +429,5 @@ body.touch #dock { bottom: max(10px, env(safe-area-inset-bottom)); }
   body.touch #subs { bottom: 186px; width: 92vw; }
   body.touch #buttons { bottom: max(24px, env(safe-area-inset-bottom)); }
 }
+
+#title .ver { margin: -4px 0 10px; font-size: 10.5px; letter-spacing: 0.12em; color: var(--ink-soft); text-transform: uppercase; }

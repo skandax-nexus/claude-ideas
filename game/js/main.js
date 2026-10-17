@@ -518,7 +518,23 @@ class Game {
       <div class="setting"><span>Large subtitles</span>${seg('textSize', [[1, 'NORMAL'], [1.2, 'LARGE']])}</div>
       <h3>SOUND</h3>
       <div class="setting"><span>Volume</span>${range('volume', 0, 1, 0.05)}</div>
-      <div class="setting"><span>Voiced dialogue<small>${this.voice.available ? 'Characters speak their lines aloud' : 'Not supported on this device'}</small></span>${seg('voice', [[true, 'ON'], [false, 'OFF']])}</div>`;
+      <div class="setting"><span>Voiced dialogue<small>${this.voice.available ? 'Characters speak their lines aloud' : 'Not supported on this device'}</small></span>${seg('voice', [[true, 'ON'], [false, 'OFF']])}</div>
+      <h3>DATA</h3>
+      <div class="setting"><span>Start fresh<small>Clears saves, settings and your look on this device, then reloads</small></span><span class="seg"><button id="resetData">CLEAR</button></span></div>`;
+    document.querySelector('#resetData').onclick = (e) => {
+      if (e.currentTarget.dataset.sure !== '1') {
+        e.currentTarget.dataset.sure = '1';
+        e.currentTarget.textContent = 'TAP AGAIN TO CLEAR';
+        return;
+      }
+      try {
+        for (const k of Object.keys(localStorage)) if (k.startsWith('afterzero.')) localStorage.removeItem(k);
+        sessionStorage.clear();
+      } catch {
+        /* no storage */
+      }
+      location.reload();
+    };
     for (const b of document.querySelectorAll('#settings .seg button')) {
       b.onclick = () => {
         let v = b.dataset.v;
