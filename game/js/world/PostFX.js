@@ -8,6 +8,43 @@ import { UnrealBloomPass } from '../../vendor/addons/postprocessing/UnrealBloomP
 import { GTAOPass } from '../../vendor/addons/postprocessing/GTAOPass.js';
 import { OutputPass } from '../../vendor/addons/postprocessing/OutputPass.js';
 import { ShaderPass } from '../../vendor/addons/postprocessing/ShaderPass.js';
+import { RGBELoader } from '../../vendor/addons/loaders/RGBELoader.js';
+
+// Ambient light from a sky photo: project the HDR onto 9 spherical-harmonic
+// coefficients (THREE.LightProbe), so characters and props are lit by the sky's
+// real colours from the right directions. Runs once per sky on the CPU.
+function skyProbe(tex) {
+  const { data, width: w, height: h } = tex.image;
+  const half = data instanceof Uint16Array;
+  const f = half ? THREE.DataUtils.fromHalfFloat : (v) => v;
+  const sh = new THREE.SphericalHarmonics3();
+  const dir = new THREE.Vector3();
+  const col = new THREE.Color();
+  const basis = Array.from({ length: 9 }, () => 0);
+  const step = 2;
+  let total = 0;
+  for (let y = 0; y < h; y += step) {
+    const theta = ((y + 0.5) / h) * Math.PI;
+    const weight = Math.sin(theta);
+    for (let x = 0; x < w; x += step) {
+      const phi = ((x + 0.5) / w) * Math.PI * 2;
+      // equirect: same orientation three.js uses for EquirectangularReflectionMapping
+      dir.set(-Math.sin(theta) * Math.cos(phi), Math.cos(theta), -Math.sin(theta) * Math.sin(phi));
+      const i = (y * w + x) * 4;
+      col.setRGB(Math.min(f(data[i]), 16), Math.min(f(data[i + 1]), 16), Math.min(f(data[i + 2]), 16));
+      THREE.SphericalHarmonics3.getBasisAt(dir, basis);
+      for (let j = 0; j < 9; j++) {
+        sh.coefficients[j].x += basis[j] * col.r * weight;
+        sh.coefficients[j].y += basis[j] * col.g * weight;
+        sh.coefficients[j].z += basis[j] * col.b * weight;
+      }
+      total += weight;
+    }
+  }
+  const norm = (4 * Math.PI) / total;
+  for (const c of sh.coefficients) c.multiplyScalar(norm);
+  return sh;
+}
 
 // A film grade after tone mapping: contrast, split toning (cool shadows, warm
 // highlights by default), a touch of saturation, vignette and fine grain.
@@ -118,16 +155,36 @@ export class PostFX {
       this.scene.environment = t;
       this.scene.environmentIntensity = intensity;
     };
+    this.probes = this.probes || {};
     if (this.skies[name]) return use(this.skies[name]);
-    new THREE.TextureLoader().load(`assets/textures/sky_${name}.jpg`, (tex) => {
+    const done = (tex) => {
       tex.mapping = THREE.EquirectangularReflectionMapping;
-      tex.colorSpace = THREE.SRGBColorSpace;
       const pm = new THREE.PMREMGenerator(this.renderer);
       this.skies[name] = pm.fromEquirectangular(tex).texture;
       pm.dispose();
       tex.dispose();
       use(this.skies[name]);
+      this.onSky?.(name);
+    };
+    const jpg = () => new THREE.TextureLoader().load(`assets/textures/sky_${name}.jpg`, (tex) => {
+      tex.colorSpace = THREE.SRGBColorSpace;
+      done(tex);
     });
+    // real HDR skies where the host serves them (the web preview uses the JPG copies)
+    if (window.AZ_NO_HDR) return jpg();
+    new RGBELoader().setDataType(THREE.HalfFloatType).load(`assets/textures/sky_${name}.hdr`, (tex) => {
+      try {
+        this.probes[name] = skyProbe(tex);
+      } catch {
+        /* lit by the hemisphere light instead */
+      }
+      done(tex);
+    }, undefined, jpg);
+  }
+
+  // the sky's ambient light for the current environment, or null
+  probe() {
+    return (this.q?.env && this.envName && this.probes?.[this.envName]) || null;
   }
 
   // per place: { shadowTint, highlightTint, toning, contrast, saturation, vignette }

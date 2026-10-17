@@ -38,6 +38,7 @@ public class MainActivity extends Activity {
         if (p.endsWith(".png")) return "image/png";
         if (p.endsWith(".webp")) return "image/webp";
         if (p.endsWith(".jpg")) return "image/jpeg";
+        if (p.endsWith(".hdr")) return "application/octet-stream";
         if (p.endsWith(".ogg")) return "audio/ogg";
         if (p.endsWith(".svg")) return "image/svg+xml";
         return "application/octet-stream";

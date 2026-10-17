@@ -131,6 +131,35 @@ export function createMaterials() {
 // textures double as bump maps so walls catch the light along their seams.
 const _deckCache = new Map();
 export const WATER_NORMALS = new Set(); // scrolled each frame (main.js) so water moves
+
+// Rain puddles on a street surface: a world-space noise mask (no texture) turns
+// patches of the road into dark, mirror-smooth water that reflects the sky and
+// the city lights. wet: 0 dry .. 1 pouring.
+function puddles(mat, wet) {
+  mat.onBeforeCompile = (sh) => {
+    sh.uniforms.azWet = { value: wet };
+    sh.vertexShader = sh.vertexShader
+      .replace('#include <common>', '#include <common>\nvarying vec3 vAzW;')
+      .replace('#include <project_vertex>', '#include <project_vertex>\nvAzW = (modelMatrix * vec4(transformed, 1.0)).xyz;');
+    sh.fragmentShader = sh.fragmentShader
+      .replace('#include <common>', `#include <common>
+varying vec3 vAzW;
+uniform float azWet;
+float azH(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+float azN(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
+  return mix(mix(azH(i), azH(i + vec2(1.0, 0.0)), f.x), mix(azH(i + vec2(0.0, 1.0)), azH(i + vec2(1.0, 1.0)), f.x), f.y); }`)
+      .replace('#include <roughnessmap_fragment>', `#include <roughnessmap_fragment>
+float azNoise = azN(vAzW.xz * 0.32) * 0.65 + azN(vAzW.xz * 1.4) * 0.35;
+float azPuddle = smoothstep(0.62 - azWet * 0.16, 0.68 - azWet * 0.16, azNoise) * step(abs(vAzW.y), 0.06) * step(0.01, azWet);
+float azDamp = azWet * 0.5;
+roughnessFactor = mix(roughnessFactor * (1.0 - azDamp * 0.35), 0.035, azPuddle);
+diffuseColor.rgb *= mix(1.0 - azDamp * 0.25, 0.42, azPuddle);`)
+      .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
+normal = normalize(mix(normal, nonPerturbedNormal, azPuddle));`);
+  };
+  mat.customProgramCacheKey = () => 'puddles';
+  return mat;
+}
 // HALCYON's districts (gen/ZoneGen.js): lit facades, neon, wet roads, water, the dome.
 function zoneMaterials(pal, std, basic) {
   const acc = '#' + new THREE.Color(pal.accent).getHexString();
@@ -204,9 +233,10 @@ function zoneMaterials(pal, std, basic) {
   waterNormal.wrapS = waterNormal.wrapT = THREE.RepeatWrapping;
   waterNormal.repeat.set(0.15, 0.15);
   WATER_NORMALS.add(waterNormal);
+  const wet = { rain: 1, storm: 1, steam: 0.6 }[pal.weather] ?? 0.2;
   return {
     industrial: pbr('rust', 0.5, { color: 0xc8c0b8, metalness: 0.35 }),
-    sidewalk: pbr('pavement', 0.6, { color: 0xa8acb2 }),
+    sidewalk: puddles(pbr('pavement', 0.6, { color: 0xa8acb2 }), wet * 0.6),
     marking: basic(0xd8dde6, 0.75),
     carGlass: new THREE.MeshStandardMaterial({ color: 0x0c1016, roughness: 0.05, metalness: 0.9, envMapIntensity: 1.5 }),
     tyre: std({ color: 0x111111, roughness: 0.9 }),
@@ -214,7 +244,7 @@ function zoneMaterials(pal, std, basic) {
     metal: pbr('metal', 1, { color: 0x9aa2aa, metalness: 0.7 }),
     shopfront: basic(new THREE.Color(0xffd9a8).lerp(new THREE.Color(pal.accent2), 0.25), 0.55, { depthWrite: false }),
     facade: std({ map: facadeTex, ...relief('concrete', 0.5, 0.9), emissive: 0xffffff, emissiveMap: litTex, emissiveIntensity: 0.9 * n + 0.2, roughness: 1, metalness: 0.1 }),
-    road: pbr('asphalt', 0.5, { color: 0x8a8f99, roughness: 0.55, metalness: 0.15, envMapIntensity: 1.4 }), // wet: it catches the neon
+    road: puddles(pbr('asphalt', 0.5, { color: 0x8a8f99, roughness: 0.55, metalness: 0.15, envMapIntensity: 1.4 }), wet), // wet: puddles catch the neon
     moss: pbr('moss', 0.35, { color: 0x9aa890 }),
     tank: pbr('metal', 0.5, { color: 0xb8c2c6, metalness: 0.6 }),
     pipe: pbr('rust', 1, { metalness: 0.5 }),

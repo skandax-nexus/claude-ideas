@@ -101,6 +101,10 @@ class Game {
 
     this.hemi = new THREE.HemisphereLight(0xffffff, 0xd5dce4, 1.25);
     this.scene.add(this.hemi);
+    // ambient light from the district's sky photo (see PostFX.setEnvironment)
+    this.skyLight = new THREE.LightProbe();
+    this.skyLight.intensity = 0;
+    this.scene.add(this.skyLight);
     // a soft "skylight" sun that follows the player so shadows stay crisp and cheap
     this.sun = new THREE.DirectionalLight(0xfff3e0, 1.5);
     this.sun.castShadow = true;
@@ -271,6 +275,15 @@ class Game {
   // the quality preset in use: the one chosen, or lower while the smart renderer eases off
   applyQuality() {
     const q = this.smart.quality();
+    // street lamps that really light whoever walks under them (more of them on better quality)
+    this.lampLights = this.lampLights || [];
+    while (this.lampLights.length > (q.lamps || 0)) this.scene.remove(this.lampLights.pop());
+    while (this.lampLights.length < (q.lamps || 0)) {
+      const l = new THREE.PointLight(0xffd2a0, 0, 10, 2);
+      l.userData.want = 0;
+      this.lampLights.push(l);
+      this.scene.add(l);
+    }
     this.sun.shadow.mapSize.set(q.shadowMap, q.shadowMap);
     this.sun.shadow.map?.dispose();
     this.sun.shadow.map = null;
@@ -1702,7 +1715,36 @@ class Game {
     this.postfx.render();
   }
 
+  // the nearest street lamps and lit shopfronts become real lights (every 0.25 s)
+  updateLamps(dt) {
+    const glows = this.mode === 'deck' && this.level?.glows;
+    this.lampT = (this.lampT || 0) - dt;
+    if (this.lampT <= 0) {
+      this.lampT = 0.25;
+      const p = this.player.pos;
+      const near = glows ? glows.filter((g) => g[5] || g[3] >= 3)
+        .map((g) => ({ g, d: (g[0] - p.x) ** 2 + (g[2] - p.z) ** 2 }))
+        .filter((o) => o.d < 18 * 18).sort((a, b) => a.d - b.d) : [];
+      this.lampLights.forEach((l, i) => {
+        const o = near[i];
+        if (!o) return (l.userData.want = 0);
+        const [x, , z, , c, h] = o.g;
+        if (l.userData.at !== o.g) {
+          l.userData.at = o.g;
+          l.intensity = 0;
+          l.position.set(x, h ? h - 0.35 : 2.4, z);
+          l.color.setHex(h ? 0xffd2a0 : c);
+          l.distance = h ? 11 : 7;
+        }
+        l.userData.want = h ? 9 : 4;
+      });
+    }
+    const k = Math.min(1, dt * 4);
+    for (const l of this.lampLights) l.intensity += (l.userData.want - l.intensity) * k;
+  }
+
   updateTheme(dt) {
+    this.updateLamps(dt);
     const s = this.room ? this.engine.state(this.room) : 'PHYSICAL';
     const th = THEMES[s];
     const k = Math.min(1, dt * 3);
@@ -1717,7 +1759,15 @@ class Game {
     this.hemi.groundColor.lerp(new THREE.Color(th.ground), k);
     const night = this.mode === 'deck' ? this.level.palette.night || { horror: 0.55, thriller: 0.3 }[this.story?.mood] || 0 : 0;
     const env = (this.scene.environment ? 0.85 : 1) * (this.mode === 'deck' ? 0.72 : 1) * (1 - night * 0.55);
-    this.hemi.intensity += (th.hemi * env - this.hemi.intensity) * k;
+    // a sky photo lights the district: the probe takes over most of the flat hemisphere fill
+    const probe = this.mode === 'deck' ? this.postfx.probe() : null;
+    if (probe && this.skyLight.userData.sh !== probe) {
+      this.skyLight.sh.copy(probe);
+      this.skyLight.userData.sh = probe;
+    }
+    const skyAmt = probe ? 1 : 0;
+    this.skyLight.intensity += (skyAmt * (1 - night * 0.35) * 1.1 - this.skyLight.intensity) * k;
+    this.hemi.intensity += (th.hemi * env * (1 - skyAmt * 0.55) - this.hemi.intensity) * k;
     if (this.bolt) this.hemi.intensity = th.hemi * env + this.bolt * 2.2;
     this.sun.color.lerp(new THREE.Color(th.sunColor), k);
     this.sun.intensity += (th.sun * (this.mode === 'deck' ? 0.8 : 1) * (1 - night * 0.7) - this.sun.intensity) * k;
