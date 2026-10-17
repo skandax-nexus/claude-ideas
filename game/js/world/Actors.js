@@ -21,6 +21,7 @@
 import * as THREE from '../../vendor/three.module.min.js';
 import { GLTFLoader } from '../../vendor/addons/loaders/GLTFLoader.js';
 import * as SkeletonUtils from '../../vendor/addons/utils/SkeletonUtils.js';
+import { mergeVertices } from '../../vendor/addons/utils/BufferGeometryUtils.js';
 
 const Q = { idle: 'Idle', walk: 'Walk', run: 'Run' }; // Quaternius clip names
 const GEAR = /pistol|gun|rifle|sword|knife|axe/i; // props some outfits carry: not on this ship
@@ -169,6 +170,23 @@ function prepare(L) {
   const s = L.gltf.scene;
   s.traverse((o) => {
     if (L.def.hide && (L.def.hide.test(o.name) || L.def.hide.test(o.material?.name || ''))) o.visible = false;
+    // the low-poly cast is flat-shaded; weld its faces and smooth the normals so
+    // skin and cloth read as rounded forms instead of facets
+    if (L.def.rig === 'quat' && o.isMesh) {
+      const g = new THREE.BufferGeometry();
+      // plain float copies (the files are quantized and interleaved)
+      for (const [name, a] of Object.entries(o.geometry.attributes)) {
+        if (name === 'normal') continue;
+        const arr = new Float32Array(a.count * a.itemSize);
+        for (let i = 0; i < a.count; i++) for (let c = 0; c < a.itemSize; c++) arr[i * a.itemSize + c] = a.getComponent(i, c);
+        g.setAttribute(name, new THREE.BufferAttribute(arr, a.itemSize));
+      }
+      if (o.geometry.index) g.setIndex(o.geometry.index.clone());
+      for (const gr of o.geometry.groups) g.addGroup(gr.start, gr.count, gr.materialIndex);
+      const m = mergeVertices(g, 1e-4);
+      m.computeVertexNormals();
+      o.geometry = m;
+    }
   });
   // VRM node constraints (sleeves and twist bones follow the arms and legs)
   const nodes = L.gltf.parser.json.nodes;
@@ -312,6 +330,42 @@ function measure(L) {
 
 // --- one character instance -------------------------------------------------------
 
+// a soft rim light: edges facing away from the camera catch a little light, so
+// characters separate from the walls behind them
+function addRim(mat, color = 0xdff2ff, strength = 0.35) {
+  mat.onBeforeCompile = (sh) => {
+    sh.uniforms.rimColor = { value: new THREE.Color(color) };
+    sh.uniforms.rimStrength = { value: strength };
+    sh.fragmentShader = sh.fragmentShader
+      .replace('#include <common>', '#include <common>\nuniform vec3 rimColor;\nuniform float rimStrength;')
+      .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
+        float rimF = 1.0 - clamp(dot(normal, normalize(vViewPosition)), 0.0, 1.0);
+        totalEmissiveRadiance += rimColor * rimStrength * pow(rimF, 3.0);`);
+  };
+  mat.customProgramCacheKey = () => `rim${strength}`;
+}
+
+let blobTex = null;
+function contactShadow(radius) {
+  if (!blobTex) {
+    const c = document.createElement('canvas');
+    c.width = c.height = 64;
+    const g = c.getContext('2d');
+    const gr = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+    gr.addColorStop(0, 'rgba(20,30,40,0.45)');
+    gr.addColorStop(0.6, 'rgba(20,30,40,0.18)');
+    gr.addColorStop(1, 'rgba(20,30,40,0)');
+    g.fillStyle = gr;
+    g.fillRect(0, 0, 64, 64);
+    blobTex = new THREE.CanvasTexture(c);
+  }
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(radius * 2, radius * 2), new THREE.MeshBasicMaterial({ map: blobTex, transparent: true, depthWrite: false }));
+  m.rotation.x = -Math.PI / 2;
+  m.position.y = 0.015;
+  m.renderOrder = -1;
+  return m;
+}
+
 const _v = new THREE.Vector3(), _e = new THREE.Euler();
 
 // world-space rotation of a bone around an axis (works on any rig)
@@ -375,6 +429,7 @@ export function makeActor(spec = {}) {
           n.envMapIntensity = 0.6;
         }
       }
+      if (!spec.hologram && n.isMeshStandardMaterial) addRim(n);
       mats.push(n);
       return n;
     });
@@ -386,6 +441,8 @@ export function makeActor(spec = {}) {
     return (w) => { for (const [f, i] of list) f.morphTargetInfluences[i] = w; };
   };
   const blinkM = morph(/Fcl_EYE_Close$/), mouthA = morph(/Fcl_MTH_A$/), mouthO = morph(/Fcl_MTH_O$/), smile = morph(/Fcl_ALL_Joy$/);
+
+  if (!spec.hologram) root.add(contactShadow(height * 0.24));
 
   // animation
   const mixer = new THREE.AnimationMixer(model);

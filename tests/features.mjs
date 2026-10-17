@@ -89,12 +89,20 @@ async function desktop() {
 
   // dock: laws hidden until the device, map and log open, key hints present
   check(await az(() => document.querySelector('#dock .laws').classList.contains('off')), 'LAWS hidden in the dock before you have the device');
-  check((await page.$$('#dock kbd')).length === 5, 'dock shows key hints on desktop');
+  check((await page.$$('#dock kbd')).length === 6, 'dock shows key hints on desktop (incl. walk/run)');
   await az(() => { AZ.input.actions.push('map'); AZ.frame(); });
   check(await az(() => AZ.menu) === 'map', 'map opens from the dock action');
   await az(() => AZ.closeMenu());
   await page.waitForTimeout(300);
   await az(() => { if (AZ.menu) AZ.closeMenu(); }); // headless pointer-lock release can reopen pause
+
+  // one button switches walking and running; running is faster
+  await az(() => { AZ.input.toggleRun(false); AZ.player.place([0, 0.86, 23.4, 0]); AZ.simulate(0.2); });
+  const walkV = await az(() => { AZ.input.keys.add('KeyW'); let v = 0; for (let i = 0; i < 8; i++) { AZ.simulate(0.05); v = Math.max(v, AZ.player.speed); } AZ.input.keys.delete('KeyW'); return v; });
+  await az(() => { document.querySelector('#dock .gaitd').click(); AZ.player.place([0, 0.86, 23.4, 0]); AZ.simulate(0.2); });
+  const runV = await az(() => { AZ.input.keys.add('KeyW'); let v = 0; for (let i = 0; i < 8; i++) { AZ.simulate(0.05); v = Math.max(v, AZ.player.speed); } AZ.input.keys.delete('KeyW'); return v; });
+  check(runV > walkV * 1.7 && await az(() => AZ.input.runMode && document.querySelector('#dock .gaitd span').textContent === 'RUN'), 'the walk/run button toggles the gait', `${walkV.toFixed(2)} -> ${runV.toFixed(2)}`);
+  await az(() => { AZ.input.toggleRun(false); AZ.player.place([0, 0.86, 23.4, 0]); AZ.simulate(0.3); });
 
   // zoom: wheel only (no buttons)
   check((await page.$$('#zoombtns, [data-zoom]')).length === 0, 'zoom buttons removed');

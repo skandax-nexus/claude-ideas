@@ -5,6 +5,7 @@ export class Input {
   constructor(canvas, ui) {
     this.canvas = canvas;
     this.state = { forward: 0, strafe: 0, run: false, jump: false, slow: false };
+    this.runMode = false; // one button toggles walking and running (touch button, CapsLock or Z)
     this.keys = new Set();
     this.look = { dx: 0, dy: 0 };
     this.actions = []; // queued: 'use', 'shift', 'laws', 'journal', 'pause', 'set:STATE'
@@ -36,6 +37,7 @@ export class Input {
       if (e.repeat) return;
       this.keys.add(e.code);
       if (e.code === 'Space') this.state.jump = true;
+      if (e.code === 'CapsLock' || e.code === 'KeyZ') this.toggleRun();
       if (map[e.code]) this.actions.push(map[e.code]);
     });
     window.addEventListener('keyup', (e) => this.keys.delete(e.code));
@@ -55,6 +57,7 @@ export class Input {
         e.stopPropagation();
         const a = b.dataset.act;
         if (a === 'jump') this.state.jump = true;
+        else if (a === 'run') this.toggleRun();
         else this.actions.push(a);
       });
     }
@@ -165,6 +168,7 @@ export class Input {
         e.stopPropagation();
         const a = b.dataset.act;
         if (a === 'jump') this.state.jump = true;
+        else if (a === 'run') this.toggleRun();
         else this.actions.push(a);
         b.classList.add('down');
         navigator.vibrate?.(8);
@@ -182,15 +186,25 @@ export class Input {
     knob.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
   }
 
+  toggleRun(on = !this.runMode) {
+    this.runMode = on;
+    for (const b of document.querySelectorAll('[data-act="run"]')) {
+      b.classList.toggle('on', on);
+      const l = b.querySelector('span');
+      if (l) l.textContent = on ? 'RUN' : 'WALK';
+    }
+    this.onGait?.(on);
+  }
+
   poll() {
     const k = this.keys;
     let f = (k.has('KeyW') || k.has('ArrowUp') ? 1 : 0) - (k.has('KeyS') || k.has('ArrowDown') ? 1 : 0);
     let s = (k.has('KeyD') || k.has('ArrowRight') ? 1 : 0) - (k.has('KeyA') || k.has('ArrowLeft') ? 1 : 0);
-    let run = k.has('ShiftLeft') || k.has('ShiftRight');
+    let run = this.runMode !== (k.has('ShiftLeft') || k.has('ShiftRight')); // Shift flips the current gait
     if (this.stick.id !== null) {
       f = -this.stick.y;
       s = this.stick.x;
-      run = Math.hypot(this.stick.x, this.stick.y) > 0.95;
+      run = this.runMode || Math.hypot(this.stick.x, this.stick.y) > 0.97;
     }
     this.state.forward = f;
     this.state.strafe = s;

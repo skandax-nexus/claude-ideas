@@ -109,8 +109,8 @@ export class Player {
     wish.y = 0;
     const mag = Math.min(1, wish.length());
     if (mag > 0) wish.normalize();
-    this.running = input.run && mag > 0.5;
-    const speed = (this.running ? 6.4 : 4.0) * mag * (input.slow ? 0.7 : 1);
+    this.running = input.run && mag > 0.3;
+    const speed = (this.running ? 7.6 : 3.9) * Math.max(mag, this.running ? 0.85 : 0) * (input.slow ? 0.7 : 1);
     const accel = this.gravity === 0 ? 1.5 : this.grounded ? 14 : 5;
     const k = Math.min(1, accel * dt);
     this.vel.x += (wish.x * speed - this.vel.x) * k;
