@@ -7,7 +7,7 @@ unity/Tools/*/obj/
 android/build/
 android/debug.keystore
 *.apk
-AFTERZERO-play.html
+AFTERZERO-*play.html
 AFTERZERO-screenshot.png
 videos/
 AFTERZERO-*.mp4

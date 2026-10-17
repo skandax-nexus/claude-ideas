@@ -10,6 +10,19 @@ This repository contains:
 - **`game/` - the browser game** (Three.js): the two-hour prologue (Station Zero and the open districts of HALCYON) plus the generated vessel campaign, for desktop and Android browsers.
 - **`docs/`** - the design for the full game. The whole story, level by level, is in [`docs/STORY.md`](docs/STORY.md).
 
+## Versions
+
+Each version is kept separately. It has its own git commit, its own Android app and its own web preview. A new version installs beside the old one, with its own icon and its own saves, and does not replace it.
+
+| Version | Status | Commit | Android app | Web preview |
+| --- | --- | --- | --- | --- |
+| **v1.0** | in development | this branch | `AFTERZERO-v1.0.apk`, app "AFTERZERO 1.0" (`com.afterzero.v1_0`) | new artifact, published with the first v1.0 build |
+| **v0.9** | saved | `293d857` (tag `v0.9.0`) | `AFTERZERO-v0.9.apk`, app "AFTERZERO" (`com.afterzero.preview`) | [claude.ai/artifact/6m2ucDKS4hUW5bE818FZQz](https://claude.ai/artifact/6m2ucDKS4hUW5bE818FZQz) |
+
+`android/build-apk.sh` takes the version from `versionName` in `android/AndroidManifest.xml`. To start a new version, raise `versionCode` and `versionName` and change the app label there. The script then names the APK and the app id from it.
+
+To rebuild a saved version, check out its commit and run the script.
+
 ## v0.9: chapters, save slots, Story Studio, smart renderer
 
 - **NEW GAME asks for a chapter:** **Prologue**, **HALCYON**, **The Vessel** or **Story Studio**.

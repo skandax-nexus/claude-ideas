@@ -1,9 +1,16 @@
 #!/usr/bin/env bash
 # Builds an installable debug APK of the AFTERZERO playable build (game/) without Gradle.
 # Needs: node/npx, JDK, and the Ubuntu packages aapt, dalvik-exchange, zipalign, apksigner,
-# android-sdk-platform-23.   Output: android/build/AFTERZERO-preview.apk
+# android-sdk-platform-23.   Output: android/build/AFTERZERO-v<version>.apk
+#
+# Every version is its own app: the version in AndroidManifest.xml (versionName) picks the
+# file name and the app id (com.afterzero.v1_0 for 1.0.x), so a new version installs beside
+# the old one, with its own icon and its own saves, instead of replacing it.
 set -euo pipefail
 cd "$(dirname "$0")"
+VER=$(sed -n 's/.*android:versionName="\([0-9]*\.[0-9]*\).*/\1/p' AndroidManifest.xml)
+APP_ID="com.afterzero.v${VER//./_}"
+APK="AFTERZERO-v$VER.apk"
 ANDROID_JAR=${ANDROID_JAR:-/usr/lib/android-sdk/platforms/android-23/android.jar}
 OUT=build
 rm -rf "$OUT" && mkdir -p "$OUT/assets" "$OUT/classes" "$OUT/gen"
@@ -33,16 +40,16 @@ javac --release 8 -classpath "$ANDROID_JAR" -d "$OUT/classes" src/com/afterzero/
 dalvik-exchange --dex --output="$OUT/classes.dex" "$OUT/classes"
 
 # 3. Package, align, sign (debug key generated on first run).
-aapt package -f -0 glb -0 ogg -M AndroidManifest.xml -S res -A "$OUT/assets" -I "$ANDROID_JAR" -F "$OUT/unsigned.apk"
+aapt package -f -0 glb -0 ogg --rename-manifest-package "$APP_ID" -M AndroidManifest.xml -S res -A "$OUT/assets" -I "$ANDROID_JAR" -F "$OUT/unsigned.apk"
 (cd "$OUT" && aapt add unsigned.apk classes.dex >/dev/null)
 zipalign -f 4 "$OUT/unsigned.apk" "$OUT/aligned.apk"
 [ -f debug.keystore ] || keytool -genkeypair -keystore debug.keystore -storepass android -keypass android \
   -alias afterzero -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=AFTERZERO Debug" 2>&1 | grep -v JAVA_TOOL_OPTIONS || true
-apksigner sign --ks debug.keystore --ks-pass pass:android --key-pass pass:android --out "$OUT/AFTERZERO-preview.apk" "$OUT/aligned.apk"
-apksigner verify "$OUT/AFTERZERO-preview.apk"
-echo "Built $(pwd)/$OUT/AFTERZERO-preview.apk ($(du -h "$OUT/AFTERZERO-preview.apk" | cut -f1))"
+apksigner sign --ks debug.keystore --ks-pass pass:android --key-pass pass:android --out "$OUT/$APK" "$OUT/aligned.apk"
+apksigner verify "$OUT/$APK"
+echo "Built $(pwd)/$OUT/$APK ($APP_ID, $(du -h "$OUT/$APK" | cut -f1))"
 
-# 4. The web preview (AFTERZERO-play.html): same page, with the models as glTF JSON
+# 4. The web preview (AFTERZERO-v<version>-play.html, one claude.ai artifact per version): same page, with the models as glTF JSON
 #    for hosts that don't serve .glb, beside it in build/preview/.
 P="$OUT/preview"
 mkdir -p "$P/assets/voice" "$P/assets/looks" "$P/assets/textures"
