@@ -98,6 +98,8 @@ export class HUD {
     el.classList.add('on');
     const out = el.querySelector('.txt');
     if (!animate) {
+      clearInterval(this._glitch); // a rewrite still running would keep overwriting the new text
+      el.classList.remove('rewrite');
       out.textContent = text;
       return;
     }

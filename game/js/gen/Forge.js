@@ -535,7 +535,9 @@ export function forgeGame(seed, choices = {}) {
     const others = cast.map((m, k) => k).filter((k) => k !== 0 && k !== antagonist);
     const npc = part === 'twist' || part === 'finale' ? antagonist : i === 0 ? 0 : others.length ? others[(i - 1) % others.length] : 0;
     const plans = T.kind === 'deck' ? Array.from({ length: perAct }, (_, s) => Array.from({ length: 1 + (s >= 1 ? 1 : 0) }, (_, p) => planPuzzle(r, rules, 0.6 + i * 0.5 + s * 0.3 + p * 0.25))) : null;
-    return { index: i, part, theme, kind: T.kind, name, blurb, rules, gearAllowed, sectors: perAct, kinds, npc, plans, choice: part === 'mid' ? i % 2 : 1 };
+    const fragments = theme === 'cradle' ? CRADLE_FRAGMENTS : T.kind === 'open' ? FRAGMENTS[THEME_KEYS.indexOf(theme)] : [];
+    const hints = T.kind === 'open' ? (T.zone.hints || null) : null; // open acts: TICK's roof/canal/drone hints; decks use LevelGen's per challenge
+    return { index: i, part, theme, kind: T.kind, name, blurb, rules, gearAllowed, sectors: perAct, kinds, beats: kinds, npc, npcs: [npc], fragments, hints, plans, choice: part === 'mid' ? i % 2 : 1 };
   });
 
   // --- the kit

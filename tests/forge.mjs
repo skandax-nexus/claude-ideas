@@ -71,11 +71,31 @@ const PLAY_ROOM = ({ rid }) => {
   let setbacks = 0;
   g.deckSetback = (k) => { setbacks++; g.player.place(g.checkpoint); g.catching = false; };
   g.catching = false;
+  g.transitioning = true; // the route ends in the gate: keep the bot in this sector until the scene is done
   g.engine.setState(rid, st('PHYSICAL'), { force: true });
   g.held = null;
   g.enterRoom(rid, true);
   const step = (n = 1) => { for (let i = 0; i < n; i++) g.simulate(1 / 30); };
   step(10);
+  // movement, when no law can stop the beams (a null field): jump a sweeper as it comes round
+  const prevPerp = new Map();
+  const dodge = () => {
+    if (!g.player.grounded) return;
+    for (const h of g.deckWorld.hazards) {
+      if (h.hz.room !== rid || g.engine.hasIn('timeStop', rid) || h.stasisT > 0) continue;
+      const p = g.player.pos, dx = p.x - h.hz.pivot[0], dz = p.z - h.hz.pivot[2];
+      const r = Math.hypot(dx, dz);
+      if (r > h.hz.radius + 0.8) continue;
+      const ax = Math.cos(h.angle), az = -Math.sin(h.angle);
+      const perp = Math.abs(dx * -az + dz * ax);
+      const prev = prevPerp.get(h);
+      prevPerp.set(h, perp);
+      if (prev === undefined || perp >= prev) continue;
+      const tti = (perp - 0.42) / (Math.abs(h.hz.speed) * Math.max(0.6, r));
+      if (tti > 0.1 && tti < 0.45) g.input.state.jump = true;
+    }
+  };
+  const retries = rules.nullField ? 5 : 0;
   let fail = null;
   for (const w of room.route) {
     if (fail) break;
@@ -91,10 +111,12 @@ const PLAY_ROOM = ({ rid }) => {
       if (d < 0.35) break;
       g.player.H.set(dx / d, 0, dz / d);
       if (w.jump && g.player.grounded) g.input.state.jump = true;
+      dodge();
       step();
       t += 1 / 30;
       if (d < best - 0.05) { best = d; since = 0; } else if ((since += 1 / 30) > 4) { fail = `stuck ${d.toFixed(2)} m from ${w.exit ? 'exit' : w.act || 'waypoint'} at ${g.player.pos.toArray().map((v) => v.toFixed(1))}`; break; }
-      if (setbacks > s0) { fail = `setback on the way to ${w.act || (w.exit ? 'exit' : 'waypoint')}`; break; }
+      if (setbacks > s0 + retries) { fail = `setback on the way to ${w.act || (w.exit ? 'exit' : 'waypoint')}`; break; }
+      if (setbacks > s0 && d < best) best = Infinity; // back at the checkpoint: start the approach again
     }
     g.input.keys.clear();
     g.input.state.jump = false;
@@ -111,6 +133,10 @@ const PLAY_ROOM = ({ rid }) => {
       if (!g.deckWorld.flags[`open_${rid}`]) { fail = `${w.target} did not open (held ${g.held}, state ${g.engine.state(rid)})`; break; }
     }
   }
+  // the route ends inside the gate: step back to the room's door before the live loop runs on
+  g.player.place(room.spawn);
+  g.simulate(0.1);
+  g.transitioning = false;
   return { ok: !fail, fail, challenges: room.challenges.map((c) => c.key).join(','), setbacks };
 };
 
@@ -209,6 +235,7 @@ for (const genre of want) {
           AZ.player.place([AZ.player.pos.x + H.x * 2.5, AZ.player.pos.y, AZ.player.pos.z + H.z * 2.5, Math.atan2(H.x, H.z)]);
           AZ.updateDeckObjective(true);
           AZ.simulate(0.8);
+          for (let i = 0; i < 4; i++) AZ.updateTheme(0.5); // the fog and light settle at once (they ease over a second at full frame rate)
         });
         await page.waitForTimeout(400);
         await shot(`act-${A.theme}`);
@@ -237,6 +264,30 @@ for (const genre of want) {
       }
       // the puzzle rooms of a deck act, along the generator's route
       if (A.kind === 'deck') {
+        // KEY FORGE, where there is a memory key: taken in ECHO, forged real, it survives the shift to PHYSICAL
+        const kf = await az(() => {
+          const g = AZ;
+          const i = g.forge.gear.indexOf('KEYFORGE');
+          const key = g.level.items.find((it) => it.kind === 'key');
+          if (i < 0 || !key || !g.forgeAct().gearAllowed.KEYFORGE.ok) return null;
+          g.transitioning = true;
+          g.engine.setState(key.room, 'ECHO', { force: true });
+          g.enterRoom(key.room, true);
+          g.player.place([key.pos[0], 0.86, key.pos[2] + 1.0, 0]);
+          g.simulate(0.2);
+          g.useDeck({ id: `ditem:${key.id}` });
+          const held = g.held === key.id;
+          const r = g.useGear(i);
+          const real = !!g.heldItem() && !g.heldItem().echo;
+          g.engine.setState(key.room, g.level.rules.gravity === 'INVERTED' ? 'INVERTED' : 'PHYSICAL', { force: true });
+          g.simulate(0.3);
+          const kept = g.held === key.id;
+          const again = g.useGear(i);
+          g.held = null;
+          g.transitioning = false;
+          return { held, r, real, kept, again };
+        });
+        if (kf) check(kf.held && kf.r === 'ok' && kf.real && kf.kept && kf.again === 'spent', `${label}: KEY FORGE makes the memory key real, once`, JSON.stringify(kf));
         const rooms = await az(() => AZ.level.order.filter((r) => AZ.level.rooms[r].kind === 'puzzle'));
         for (const rid of rooms) {
           const r = await az(PLAY_ROOM, { rid });
