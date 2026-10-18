@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Renders a portrait of each of Ren's looks (world/People.js LOOKS) for the
 // character screen's buttons: game/assets/looks/<id>.webp.
-//   NODE_PATH=$(npm root -g) node tools/look-thumbs.mjs
+//   NODE_PATH=$(npm root -g) node tools/look-thumbs.mjs [look id ...]   (default: all)
 import { createRequire } from 'node:module';
 import http from 'node:http';
 import fs from 'node:fs';
@@ -16,18 +16,21 @@ fs.mkdirSync(out, { recursive: true });
 const PAGE = `<!doctype html><body style="margin:0;background:transparent"><canvas id=c></canvas><script type="module">
 import * as THREE from './vendor/three.module.min.js';
 import { RoomEnvironment } from './vendor/addons/environments/RoomEnvironment.js';
-import { loadActors, makeActor } from './js/world/Actors.js';
+import { loadActors, makeActor, setActorQuality } from './js/world/Actors.js';
 import { LOOKS, heroLook } from './js/world/People.js';
+import { QUALITY } from './js/ui/Settings.js';
+const IDS = __IDS__.length ? __IDS__ : Object.keys(LOOKS);
+setActorQuality(QUALITY.high);
 const W = 240, H = 300;
 const r = new THREE.WebGLRenderer({ canvas: c, antialias: true, alpha: true, preserveDrawingBuffer: true });
 r.setSize(W, H); r.setClearColor(0, 0); r.toneMapping = THREE.ACESFilmicToneMapping;
 const sc = new THREE.Scene();
 sc.environment = new THREE.PMREMGenerator(r).fromScene(new RoomEnvironment(), 0.04).texture;
 const d = new THREE.DirectionalLight(0xffffff, 1.8); d.position.set(2, 4, 5); sc.add(d, new THREE.HemisphereLight(0xffffff, 0xaab, 0.8));
-await loadActors(Object.values(LOOKS).map((l) => l.model));
+await loadActors(IDS.map((id) => LOOKS[id].model));
 const cam = new THREE.PerspectiveCamera(24, W / H, 0.1, 50);
 window.shots = {};
-for (const id of Object.keys(LOOKS)) {
+for (const id of IDS) {
   const a = makeActor(heroLook({ id }));
   a.rotation.y = -0.35;
   sc.add(a);
@@ -45,7 +48,7 @@ window.DONE = true;
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json' };
 const server = http.createServer((req, res) => {
   const u = decodeURIComponent(req.url.split('?')[0]);
-  if (u === '/__looks.html') return res.writeHead(200, { 'content-type': 'text/html' }).end(PAGE);
+  if (u === '/__looks.html') return res.writeHead(200, { 'content-type': 'text/html' }).end(PAGE.replaceAll('__IDS__', JSON.stringify(process.argv.slice(2))));
   const p = path.join(root, u);
   if (!p.startsWith(root) || !fs.existsSync(p)) return res.writeHead(404).end();
   res.writeHead(200, { 'content-type': TYPES[path.extname(p)] || 'application/octet-stream' });

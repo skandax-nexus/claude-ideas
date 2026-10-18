@@ -1,10 +1,15 @@
 // Characters built from modelled, rigged models driven by motion capture.
 // Used for everyone you see: the player, Juno, the crew, the Custodian, the Other.
 //
-// Three kinds of rig share one runtime:
+// Four kinds of rig share one runtime:
 // - Mixamo models (Michelle, X Bot). X Bot's clips are the motion library.
 // - VRM avatars (Nova): the library is retargeted onto them.
-// - Quaternius modular people (the crew and some looks): their own clips.
+// - Quaternius modular people (older looks): their own clips.
+// - Microsoft Rocketbox people (rb_*: Ren's realistic looks, Juno, the crew):
+//   3ds Max Biped skeletons (Bip01_*) modelled in an A-pose; the library is
+//   retargeted onto them after their arms are matched to its T-pose. Their
+//   faces are driven by bones: blinks, a jaw that follows the voice, eyes that
+//   look at whoever they talk to. Skin, eyes and hair get their own shading.
 // Bones are mapped onto Mixamo names (boneKey), so retargeting, hands, the head
 // and the wave work the same on every rig.
 //
@@ -47,6 +52,17 @@ export const MODELS = {
   m_worker: { file: 'men_Worker.glb', rig: 'quat', native: Q, height: 1.8, hide: GEAR },
   m_swat: { file: 'men_Swat.glb', rig: 'quat', native: Q, height: 1.84, hide: GEAR },
   m_adventurer: { file: 'men_Adventurer.glb', rig: 'quat', native: Q, height: 1.8, hide: GEAR },
+  // realistic people (Microsoft Rocketbox, MIT; tools/rocketbox-to-glb.mjs)
+  rb_ren_f: { file: 'rb_ren_f.glb', rig: 'rb', height: 1.72 },
+  rb_ren_m: { file: 'rb_ren_m.glb', rig: 'rb', height: 1.8 },
+  rb_juno: { file: 'rb_juno.glb', rig: 'rb', height: 1.7 },
+  rb_pilot_f: { file: 'rb_pilot_f.glb', rig: 'rb', height: 1.73 },
+  rb_captain_m: { file: 'rb_captain_m.glb', rig: 'rb', height: 1.82 },
+  rb_doctor_f: { file: 'rb_doctor_f.glb', rig: 'rb', height: 1.7 },
+  rb_doctor_m: { file: 'rb_doctor_m.glb', rig: 'rb', height: 1.79 },
+  rb_engineer_m: { file: 'rb_engineer_m.glb', rig: 'rb', height: 1.82 },
+  rb_office_f: { file: 'rb_office_f.glb', rig: 'rb', height: 1.7 },
+  rb_gardener_m: { file: 'rb_gardener_m.glb', rig: 'rb', height: 1.78 },
 };
 const SOURCE = 'xbot'; // clip library: idle, walk, run (+ poses)
 
@@ -135,9 +151,26 @@ const QUAT_BONES = {
   Shoulder: 'Shoulder', UpperArm: 'Arm', LowerArm: 'ForeArm', Wrist: 'Hand', UpperLeg: 'UpLeg', LowerLeg: 'Leg', Foot: 'Foot',
   Thumb: 'HandThumb', Index: 'HandIndex', Middle: 'HandMiddle', Ring: 'HandRing', Pinky: 'HandPinky',
 };
+// 3ds Max Biped (Rocketbox): Bip01_Pelvis, Bip01_L_UpperArm, Bip01_R_Finger21 ...
+const RB_BONES = {
+  Pelvis: 'Hips', Spine: 'Spine', Spine1: 'Spine1', Spine2: 'Spine2', Neck: 'Neck', Head: 'Head',
+  Clavicle: 'Shoulder', UpperArm: 'Arm', Forearm: 'ForeArm', Hand: 'Hand', Thigh: 'UpLeg', Calf: 'Leg', Foot: 'Foot', Toe0: 'ToeBase',
+};
+const RB_FINGERS = ['HandThumb', 'HandIndex', 'HandMiddle', 'HandRing', 'HandPinky'];
 
 // a bone's name on the shared (Mixamo) skeleton, or null
 function boneKey(name, rig) {
+  if (rig === 'rb') {
+    const m = /^Bip01_(?:([LR])_)?(\w+)$/.exec(name);
+    if (!m) return null;
+    const side = m[1] === 'L' ? 'Left' : m[1] === 'R' ? 'Right' : '';
+    const f = /^Finger(\d)(\d?)$/.exec(m[2]); // Finger1 / Finger11 / Finger12: index 1, 2, 3
+    if (f) return side && RB_FINGERS[+f[1]] ? side + RB_FINGERS[+f[1]] + (f[2] === '' ? 1 : +f[2] + 1) : null;
+    const k = RB_BONES[m[2]];
+    const central = ['Hips', 'Spine', 'Spine1', 'Spine2', 'Neck', 'Head'].includes(k);
+    if (!k || central === !!side) return null;
+    return side + k;
+  }
   if (rig === 'vrm') {
     const m = /^J_Bip_(C_\w+|[LR]_)([A-Za-z]*?)(\d?)$/.exec(name);
     if (!m) return null;
@@ -206,13 +239,53 @@ function prepare(L) {
   L.nativeHeight = Math.max(0.01, box.max.y - box.min.y);
 }
 
+// Limb segments matched to the library's T-pose (parents first), for rigs modelled
+// in another pose (Rocketbox: an A-pose, arms 42 degrees down). Without this the
+// library's arm motion lands 42 degrees too low and the arms sink into the body.
+const SEGMENTS = [];
+for (const s of ['Left', 'Right']) {
+  SEGMENTS.push([`${s}Arm`, `${s}ForeArm`], [`${s}ForeArm`, `${s}Hand`], [`${s}Hand`, `${s}HandMiddle1`]);
+  for (const f of RB_FINGERS) SEGMENTS.push([`${s}${f}1`, `${s}${f}2`], [`${s}${f}2`, `${s}${f}3`]);
+  SEGMENTS.push([`${s}UpLeg`, `${s}Leg`], [`${s}Leg`, `${s}Foot`], [`${s}Foot`, `${s}ToeBase`]);
+}
+function matchPose(root, rig, want, armOut = 0) {
+  const b = bonesByKey(root, rig);
+  const pa = new THREE.Vector3(), pb = new THREE.Vector3(), q = new THREE.Quaternion(), pw = new THREE.Quaternion();
+  const turn = (bone) => { // world rotation q applied to a bone
+    bone.parent.getWorldQuaternion(pw);
+    bone.quaternion.copy(pw.clone().invert().multiply(q).multiply(pw).multiply(bone.quaternion));
+    bone.updateMatrixWorld(true);
+  };
+  root.updateMatrixWorld(true);
+  for (const [a, c] of SEGMENTS) {
+    if (!b[a] || !b[c] || !want.pos[a] || !want.pos[c]) continue;
+    const cur = b[c].getWorldPosition(pb).sub(b[a].getWorldPosition(pa)).normalize();
+    const to = want.pos[c].clone().sub(want.pos[a]).normalize();
+    // arms a little out from the T-pose, so a heavier body's hanging arms clear the hips
+    if (armOut && /Arm$/.test(a) && !/Fore/.test(a)) to.y += armOut;
+    q.setFromUnitVectors(cur, to.normalize());
+    turn(b[a]);
+    // then the palm faces the way the library's does: twist the hand around its length
+    // until the knuckles (index -> pinky) line up, before the fingers are matched
+    const s = a.startsWith('Left') ? 'Left' : 'Right';
+    if (a === `${s}Hand` && b[`${s}HandIndex1`] && b[`${s}HandPinky1`] && want.pos[`${s}HandIndex1`] && want.pos[`${s}HandPinky1`]) {
+      const axis = b[c].getWorldPosition(pb).sub(b[a].getWorldPosition(pa)).normalize();
+      const across = (v) => v.sub(axis.clone().multiplyScalar(v.dot(axis))).normalize();
+      const now = across(b[`${s}HandIndex1`].getWorldPosition(new THREE.Vector3()).sub(b[`${s}HandPinky1`].getWorldPosition(new THREE.Vector3())));
+      q.setFromUnitVectors(now, across(want.pos[`${s}HandIndex1`].clone().sub(want.pos[`${s}HandPinky1`])));
+      turn(b[a]);
+    }
+  }
+}
+
 // Pose a model in its reference pose (a T-pose clip, or the rest pose) and record world transforms.
-function refPose(root, gltf, refName, rig) {
+function refPose(root, gltf, refName, rig, match = null, armOut = 0) {
   const mixer = new THREE.AnimationMixer(root);
   if (refName) {
     mixer.clipAction(gltf.animations.find((a) => a.name === refName)).play();
     mixer.update(0);
   }
+  if (match) matchPose(root, rig, match, armOut);
   root.updateMatrixWorld(true);
   const rot = {}, pos = {};
   for (const [k, b] of Object.entries(bonesByKey(root, rig))) {
@@ -295,7 +368,7 @@ function buildClips(key, L, src) {
   const s = { root: SkeletonUtils.clone(src.gltf.scene), rig: src.def.rig };
   const d = { root: SkeletonUtils.clone(L.gltf.scene), rig };
   const srcRef = refPose(s.root, src.gltf, src.def.ref, s.rig);
-  const dstRef = refPose(d.root, L.gltf, L.def.ref, rig);
+  const dstRef = rig === 'rb' ? refPose(d.root, L.gltf, null, rig, srcRef, 0.1) : refPose(d.root, L.gltf, L.def.ref, rig);
   for (const n of ['idle', 'walk', 'run']) out[n] = retarget(s, srcRef, src.gltf.animations.find((a) => a.name === n), d, dstRef);
   return out;
 }
@@ -345,6 +418,92 @@ function addRim(mat, color = 0xdff2ff, strength = 0.35) {
   mat.customProgramCacheKey = () => `rim${strength}`;
 }
 
+// --- realistic people: shading by kind of surface ----------------------------------
+// Follows the graphics quality (setActorQuality, from the game's preset and the
+// smart renderer): LOW drops normal maps and the skin model; HIGH adds a sheen.
+const SHADE = { detail: 1, a2c: false, ver: 0 };
+export function setActorQuality(q) {
+  const detail = q?.label === 'LOW' ? 0 : q?.label === 'HIGH' ? 2 : 1;
+  const a2c = !!q?.msaa; // multisampled: hair edges by alpha-to-coverage, not a hard cut
+  if (detail === SHADE.detail && a2c === SHADE.a2c) return;
+  Object.assign(SHADE, { detail, a2c, ver: SHADE.ver + 1 });
+}
+
+// Skin: the light falls off softly and wraps a little past the terminator, and
+// the shadow edge itself turns warm (the look of light scattering under the
+// skin) instead of a hard plastic edge. The lit side keeps its colour. A few
+// ALU per light. azSkin is how much a texel looks like skin.
+const SKIN_LIGHT = THREE.ShaderChunk.lights_physical_pars_fragment.replace(
+  'reflectedLight.directDiffuse += irradiance * BRDF_Lambert( material.diffuseColor );',
+  `{
+    float azNL = dot( geometryNormal, directLight.direction );
+    float azSoft = mix( saturate( azNL ), saturate( ( azNL + AZ_WRAP ) / ( 1.0 + AZ_WRAP ) ), azSkin );
+    vec3 azEdge = AZ_TINT * azSkin * saturate( 1.0 - abs( azNL - 0.05 ) / 0.4 );
+    reflectedLight.directDiffuse += directLight.color * ( vec3( azSoft ) + azEdge ) * BRDF_Lambert( material.diffuseColor );
+    #ifdef AZ_SHEEN
+    // fine facial hair and moisture catch grazing light
+    float azF = pow( 1.0 - saturate( dot( geometryNormal, geometryViewDir ) ), 4.0 );
+    reflectedLight.directSpecular += directLight.color * azF * saturate( azNL + 0.25 ) * 0.1 * azSkin;
+    #endif
+  }`,
+);
+// skin-like texels: red > green > blue in skin-like proportions (cloth, denim, hair and
+// grey fabrics fall outside); the head material counts as mostly skin regardless
+const SKIN_MASK = `
+  {
+    vec3 c = diffuseColor.rgb;
+    float gr = c.g / max( c.r, 1e-3 ), br = c.b / max( c.r, 1e-3 );
+    azSkin = max( AZ_SKIN_FLOOR, smoothstep( 0.24, 0.36, gr ) * ( 1.0 - smoothstep( 0.72, 0.86, gr ) ) * step( br, gr ) * smoothstep( 0.012, 0.04, c.r ) );
+  }`;
+
+// kind: 'skin' (the head), 'body' (clothes and the skin of arms and legs),
+// 'eye', 'cut' (hair, lashes, glasses: cut-outs), 'plain' (hats, tools)
+function shadeActor(mat, kind) {
+  const base = { normalMap: mat.normalMap, alphaTest: mat.alphaTest || 0.35 };
+  const skin = kind === 'skin' || kind === 'body';
+  let ver = -1;
+  mat.onBeforeCompile = (sh) => {
+    let f = sh.fragmentShader;
+    // (no rim on eyes, nor on hair cards: seen edge-on they would all light up)
+    if (kind !== 'eye' && kind !== 'cut') {
+      sh.uniforms.rimColor = { value: new THREE.Color(0xdff2ff) };
+      sh.uniforms.rimStrength = { value: skin ? 0.22 : 0.3 };
+      f = f.replace('#include <common>', '#include <common>\nuniform vec3 rimColor;\nuniform float rimStrength;')
+        .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
+        float rimF = 1.0 - clamp(dot(normal, normalize(vViewPosition)), 0.0, 1.0);
+        totalEmissiveRadiance += rimColor * rimStrength * pow(rimF, 3.0);`);
+    }
+    if ((skin || kind === 'cut') && SHADE.detail > 0) {
+      // hair: the same wrap, neutral, so neighbouring cards at different angles
+      // shade alike instead of reading as separate sheets
+      const defs = kind === 'cut' ? '#define AZ_SKIN_FLOOR 1.0\n#define AZ_WRAP 0.6\n#define AZ_TINT vec3( 0.0 )\n'
+        : `#define AZ_SKIN_FLOOR ${kind === 'skin' ? '0.65' : '0.0'}\n#define AZ_WRAP 0.3\n#define AZ_TINT vec3( 0.2, 0.05, 0.02 )\n${SHADE.detail > 1 ? '#define AZ_SHEEN\n' : ''}`;
+      f = defs + f
+        .replace('#include <common>', '#include <common>\nfloat azSkin = 0.0;')
+        .replace('#include <lights_physical_pars_fragment>', SKIN_LIGHT)
+        .replace('#include <map_fragment>', '#include <map_fragment>' + SKIN_MASK);
+    }
+    sh.fragmentShader = f;
+  };
+  mat.customProgramCacheKey = () => `az-${kind}-${skin || kind === 'cut' ? SHADE.detail : 0}`;
+  if (kind === 'cut') mat.roughness = 0.85; // hair: soft, no plastic highlights
+  mat.envMapIntensity = { eye: 1, cut: 0.25, skin: 0.45, body: 0.45 }[kind] ?? 0.6;
+  // call every frame: rebuilds the material only when the quality changed
+  const refresh = () => {
+    if (ver === SHADE.ver) return;
+    ver = SHADE.ver;
+    mat.normalMap = SHADE.detail > 0 ? base.normalMap : null;
+    if (kind === 'cut') {
+      mat.alphaTest = base.alphaTest;
+      mat.alphaToCoverage = SHADE.a2c;
+    }
+    if (kind === 'eye') mat.roughness = SHADE.detail > 1 ? 0.07 : 0.15; // wet, with a sharp catchlight
+    mat.needsUpdate = true;
+  };
+  refresh();
+  return refresh;
+}
+
 let blobTex = null;
 function contactShadow(radius) {
   if (!blobTex) {
@@ -367,6 +526,52 @@ function contactShadow(radius) {
 }
 
 const _v = new THREE.Vector3(), _e = new THREE.Euler();
+const _f = { v: new THREE.Vector3(), q: new THREE.Quaternion(), hw: new THREE.Quaternion(), r: new THREE.Vector3(), u: new THREE.Vector3(), d: new THREE.Vector3() };
+
+// A bone face for one frame (rig 'rb'): everything relative to the head, from rest.
+// blink 0..1, open: how far the voice opens the jaw, lift: brow emphasis,
+// target: a world point to look at (weight k), or null.
+const LID_CLOSE = 0.5; // radians the upper lid travels around the eyeball to close
+function driveFace(F, head, right, up, dt, blink, open, lift, target, k) {
+  for (const [b, q, p] of F.rest) {
+    b.quaternion.copy(q);
+    b.position.copy(p);
+  }
+  // the root's right and up axes in the head's frame
+  head.getWorldQuaternion(_f.hw).invert();
+  const rightL = _f.r.copy(right).applyQuaternion(_f.hw).normalize();
+  const upL = _f.u.copy(up).applyQuaternion(_f.hw).normalize();
+  // eyes: rest gaze, turned toward the target (up to ~30 degrees), plus small saccades
+  F.sacT -= dt;
+  if (F.sacT <= 0) {
+    F.sacT = 0.5 + Math.random() * 2.2;
+    const a = target ? 0.03 : 0.08;
+    F.sac.set((Math.random() - 0.5) * 2 * a, (Math.random() - 0.5) * a);
+  }
+  let pitch = 0;
+  for (const e of F.eyes) {
+    const dir = _f.d.copy(F.gaze);
+    if (target) {
+      const t = head.worldToLocal(_f.v.copy(target)).sub(e.position).normalize();
+      const ang = F.gaze.angleTo(t);
+      if (ang > 0.52) t.copy(F.gaze).lerp(t, 0.52 / ang).normalize();
+      dir.lerp(t, k).normalize();
+    }
+    dir.applyAxisAngle(upL, F.sac.x).applyAxisAngle(rightL, F.sac.y);
+    pitch = Math.asin(THREE.MathUtils.clamp(dir.dot(upL), -1, 1)) - Math.asin(THREE.MathUtils.clamp(F.gaze.dot(upL), -1, 1));
+    e.quaternion.premultiply(_f.q.setFromUnitVectors(F.gaze, dir));
+  }
+  // lids: turned around the eyeball's centre so they slide over it; they follow the
+  // eyes down a little, and close on a blink
+  for (const l of F.lids) {
+    const a = l.k > 0 ? LID_CLOSE * blink - pitch * 0.7 : l.k * LID_CLOSE * blink - pitch * 0.25;
+    _f.q.setFromAxisAngle(rightL, a);
+    l.b.position.sub(l.eye.position).applyQuaternion(_f.q).add(l.eye.position);
+    l.b.quaternion.premultiply(_f.q);
+  }
+  if (F.jaw) F.jaw.quaternion.premultiply(_f.q.setFromAxisAngle(rightL, 0.01 + open * 0.085)); // speech: a few degrees
+  for (const b of F.brows) b.position.addScaledVector(upL, lift * 0.0028);
+}
 
 // world-space rotation of a bone around an axis (works on any rig)
 function rotWorld(bone, axis, ang) {
@@ -379,7 +584,7 @@ function rotWorld(bone, axis, ang) {
 // spec: { model, tint, hologram, glow, height, hair, top, bottom }
 export function makeActor(spec = {}) {
   let key = MODELS[spec.model] && loaded[spec.model] ? spec.model : null;
-  if (!key) key = ['ren', 'nova', SOURCE].find((k) => loaded[k]);
+  if (!key) key = ['rb_ren_f', 'ren', 'nova', SOURCE].find((k) => loaded[k]);
   const L = loaded[key];
   const rig = L.def.rig;
   const root = new THREE.Group();
@@ -396,6 +601,7 @@ export function makeActor(spec = {}) {
   // materials: holograms glow, looks recolour hair and clothes
   const mats = [];
   const faces = [];
+  const shading = []; // realistic people: per-surface shading that follows the quality preset
   model.traverse((o) => {
     if (!o.isMesh) return;
     o.castShadow = !spec.hologram;
@@ -407,6 +613,25 @@ export function makeActor(spec = {}) {
       let n;
       if (spec.hologram) {
         n = new THREE.MeshStandardMaterial({ color: spec.glow || 0x8fe0ff, emissive: spec.glow || 0x8fe0ff, emissiveIntensity: 0.55, transparent: true, opacity: 0.55, depthWrite: false, roughness: 0.3 });
+        if (m.alphaTest > 0 && m.map) {
+          // hair cards stay cut out (else they show as flat sheets)
+          n.map = m.map;
+          n.alphaTest = m.alphaTest;
+          n.side = m.side;
+        }
+      } else if (rig === 'rb') {
+        n = m.clone();
+        const name = m.name || '';
+        const kind = name === 'eye' ? 'eye' : m.alphaTest > 0 ? 'cut' : name === 'head' ? 'skin' : name === 'body' ? 'body' : 'plain';
+        shading.push(shadeActor(n, kind));
+        if (kind === 'cut') {
+          o.castShadow = false; // thin cards shadowing each other only make dark blotches
+          // screen-space AO renders the scene with one override material, which would
+          // see the cards as solid sheets: draw nothing in that pass
+          o.onBeforeRender = (r, scene, cam, geo) => { geo.drawRange.count = scene.overrideMaterial ? 0 : Infinity; };
+        }
+        mats.push(n);
+        return n;
       } else {
         n = m.clone();
         const name = m.name || '';
@@ -463,12 +688,36 @@ export function makeActor(spec = {}) {
     b.updateMatrixWorld(true);
     const ws = b.getWorldScale(new THREE.Vector3());
     h.scale.setScalar(1 / Math.max(1e-4, ws.x / scale));
-    const finger = b.children.find((c) => c.isBone && /Middle/i.test(c.name)) || b.children.find((c) => c.isBone);
+    const finger = b.children.find((c) => c.isBone && /Middle|Finger2$/i.test(c.name)) || b.children.find((c) => c.isBone);
     if (finger) h.position.copy(finger.position).multiplyScalar(0.55);
     return h;
   };
   const handL = hand(bones.LeftHand);
   const handR = hand(bones.RightHand);
+
+  // bone-driven faces (Rocketbox): eyelids turn around the eyeball's centre, the jaw
+  // opens with the voice, the eyes find whoever this person looks at, brows lift
+  // on emphasis. These bones have no animation tracks: they start from rest each frame.
+  let face = null;
+  if (rig === 'rb' && bones.Head) {
+    const get = (n) => model.getObjectByName(`Bip01_${n}`);
+    const eyes = ['LEye', 'REye'].map(get).filter((b) => b?.parent === bones.Head);
+    const lids = [['LEyeBlinkTop', 'LEye', 1], ['REyeBlinkTop', 'REye', 1], ['LEyeBlinkBottom', 'LEye', -0.25], ['REyeBlinkBottom', 'REye', -0.25]]
+      .map(([n, e, k]) => ({ b: get(n), eye: get(e), k })).filter((l) => l.b?.parent === bones.Head && l.eye);
+    const brows = ['LInnerEyebrow', 'RInnerEyebrow', 'MMiddleEyebrow', 'LOuterEyebrow', 'ROuterEyebrow'].map(get).filter((b) => b?.parent === bones.Head);
+    const jaw = get('MJaw');
+    const all = [...eyes, ...lids.map((l) => l.b), ...brows, jaw].filter(Boolean);
+    if (eyes.length || lids.length || jaw) {
+      // rest gaze: the model faces +Z; in the head's frame
+      const hq = bones.Head.getWorldQuaternion(new THREE.Quaternion()).premultiply(model.getWorldQuaternion(new THREE.Quaternion()).invert()).invert();
+      face = {
+        eyes, lids, brows, jaw,
+        rest: all.map((b) => [b, b.quaternion.clone(), b.position.clone()]),
+        gaze: new THREE.Vector3(0, 0, 1).applyQuaternion(hq),
+        sac: new THREE.Vector2(), sacT: 0.5,
+      };
+    }
+  }
 
   // node constraints, bound to this instance's bones
   const AX = { PositiveX: [1, 0, 0], NegativeX: [-1, 0, 0], PositiveY: [0, 1, 0], NegativeY: [0, -1, 0], PositiveZ: [0, 0, 1], NegativeZ: [0, 0, -1], X: [1, 0, 0], Y: [0, 1, 0], Z: [0, 0, 1] };
@@ -568,15 +817,19 @@ export function makeActor(spec = {}) {
         rotWorld(head, right, nod);
         rotWorld(head, fwd, Math.sin(clock * 1.3) * 0.04 * talkK);
       }
+      // the voice's syllables and the blinks, shared by morph faces and bone faces
+      const syl = Math.max(0, Math.sin(clock * 15.5) * 0.6 + Math.sin(clock * 9.1) * 0.4);
+      blinkT -= dt;
+      if (blinkT < 0) blinkT = 2.2 + Math.random() * 3.5;
+      const blink = blinkT < 0.13 ? Math.sin((blinkT / 0.13) * Math.PI) : 0;
       if (faces.length) {
-        const syl = Math.max(0, Math.sin(clock * 15.5) * 0.6 + Math.sin(clock * 9.1) * 0.4);
         mouthA(syl * 0.75 * talkK);
         mouthO(Math.max(0, Math.sin(clock * 6.3 + 1)) * 0.25 * talkK);
         smile(0.15 + 0.1 * (1 - talkK));
-        blinkT -= dt;
-        if (blinkT < 0) blinkT = 2.2 + Math.random() * 3.5;
-        blinkM(blinkT < 0.13 ? Math.sin((blinkT / 0.13) * Math.PI) : 0);
+        blinkM(blink);
       }
+      if (face) driveFace(face, head, right, up, dt, blink, syl * talkK, talkK * Math.max(0, Math.sin(talkT * 2.4)), lookK > 0.01 ? lastLook : null, lookK);
+      for (const r of shading) r();
       // the wave: right arm out to the side, forearm waving
       if (waveT >= 0) {
         waveT += dt;

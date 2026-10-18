@@ -75,8 +75,18 @@ async function desktop() {
   await page.click('#saves [data-slot="1"]');
   await page.waitForTimeout(500);
   check(await page.isVisible('#hero'), 'then character select');
-  check((await page.$$('#hero [data-hero] img')).length === 17, 'every character model is offered as a look, each with its portrait');
-  check(await az(() => AZ.player.model.userData.spec.model) === 'nova', 'the default look is Nova (modelled VRM character)');
+  check((await page.$$('#hero [data-hero] img')).length === 19, 'every look is offered, each with its portrait (2 realistic + 17 stylised)');
+  check(await az(() => AZ.player.model.userData.spec.model) === 'rb_ren_f', 'the default look is the realistic Ren (Rocketbox model)');
+  check(await az(() => {
+    const u = AZ.player.model.userData;
+    const names = [];
+    u.model.traverse((o) => o.isMesh && names.push(o.material.name));
+    return ['body', 'head', 'hair', 'eye'].every((n) => names.includes(n)) && !!u.bones.LeftArm && !!u.bones.Head;
+  }), 'the realistic model has skin, eye and hair materials and a mapped skeleton');
+  check(await az(() => document.querySelectorAll('#hero .sw button').length) === 0, 'the realistic look has no colour swatches');
+  await page.click('[data-hero="nova"]');
+  await page.waitForTimeout(1500);
+  check(await az(() => AZ.player.model.userData.spec.model) === 'nova', 'the stylised Nova look is still offered');
   await page.click('#hero .sw button[data-k="hair"]:nth-child(3)');
   await page.click('#hero .sw button[data-k="top"]:nth-child(3)');
   await page.waitForTimeout(200);

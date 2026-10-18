@@ -6,7 +6,11 @@ import { makeHuman, CAST_SPECS, randomCrewSpec } from './humans.js';
 import { mulberry32 } from '../gen/rng.js';
 
 // You are always Ren; the character screen changes how Ren looks.
+// The first two are realistic (photo-scanned people); the rest are the older,
+// stylised looks, kept for whoever prefers them.
 export const LOOKS = {
+  real_f: { model: 'rb_ren_f', name: 'FIELD JACKET', blurb: 'Worn leather jacket, field trousers, boots. Looks like someone who has done this before.', voice: 'f' },
+  real_m: { model: 'rb_ren_m', name: 'SHIRTSLEEVES', blurb: 'Sleeves rolled up, jeans, steady eyes. Ready to fix whatever this is.', voice: 'm' },
   nova: { model: 'nova', name: 'NOVA', blurb: 'Long hair, easy smile, oversized tee. Wakes up already curious.', colours: true, voice: 'f' },
   ren: { model: 'ren', name: 'STREET', blurb: 'Round shades, headphones, quick feet.', voice: 'f' },
   scifi: { model: 'scifi', name: 'FLIGHT SUIT', blurb: 'Station-issue flight suit, short hair, steady hands.', voice: 'f' },
@@ -27,10 +31,10 @@ export const LOOKS = {
 };
 export const HAIR = [0x7a4e3a, 0x2a211e, 0xc79a62, 0xe8e2d8, 0xd06a52, 0x6a74c8, 0x58b8a8, 0xe08fb0];
 export const TOPS = [0xffffff, 0x2a3240, 0x8fc6e8, 0xf0c7d4, 0xbfe6cf, 0xf3d9a6, 0xb9a8e8, 0xe86a6a];
-export const LOOK_DEFAULT = { id: 'nova', hair: HAIR[0], top: TOPS[1] };
+export const LOOK_DEFAULT = { id: 'real_f', hair: HAIR[0], top: TOPS[1] };
 
 export function heroLook(choice) {
-  const id = LOOKS[choice?.id] ? choice.id : 'nova';
+  const id = LOOKS[choice?.id] ? choice.id : LOOK_DEFAULT.id;
   const L = LOOKS[id];
   const look = { model: L.model };
   if (L.colours) {
@@ -40,40 +44,75 @@ export function heroLook(choice) {
   return look;
 }
 
-export const lookOf = (choice) => LOOKS[choice?.id] || LOOKS.nova;
+export const lookOf = (choice) => LOOKS[choice?.id] || LOOKS[LOOK_DEFAULT.id];
+
+// the model Ren wears now: the crew never wear the same one
+let wearing = null;
 
 // The player.
 export function makePlayerModel(choice) {
   const look = heroLook(choice);
-  if (actorLoaded(look.model)) return makeActor(look);
-  if (actorsReady()) return makeActor({ model: 'ren' });
+  if (actorLoaded(look.model)) {
+    wearing = look.model;
+    return makeActor(look);
+  }
+  if (actorsReady()) {
+    wearing = ['rb_ren_f', 'ren'].find(actorLoaded) || null;
+    return makeActor({ model: wearing || 'ren' });
+  }
   return makeHuman(CAST_SPECS.ren);
 }
 
 // Named characters.
 export function makeCastModel(who, choice) {
   if (!actorsReady()) return makeHuman(CAST_SPECS[who]);
-  if (who === 'juno') return makeActor({ model: actorLoaded('w_adventurer') ? 'w_adventurer' : 'ren', height: 1.68 });
+  if (who === 'juno') return makeActor({ model: ['rb_juno', 'w_adventurer', 'ren'].find(actorLoaded), height: 1.68 });
   if (who === 'custodian') return makeActor({ model: 'xbot', hologram: true, glow: 0x6ff0d4, height: 1.9 });
   if (who === 'other') return makeActor({ ...heroLook(choice), hologram: true, glow: 0xc7a2ff });
   return makeActor({ model: 'xbot' });
 }
 
-// Generated crew: people in everyday and work clothes; echoes are holograms of them in their colour.
+// Crew: realistic people dressed for their job, by role, then by pronoun
+// (f: her, m: his; "their" picks from both). HALCYON's cast are named.
+const BY_ROLE = {
+  botanist: { f: ['rb_ren_f', 'rb_office_f'], m: ['rb_gardener_m'] },
+  'cryo technician': { f: ['rb_doctor_f'], m: ['rb_doctor_m'] },
+  navigator: { f: ['rb_pilot_f'], m: ['rb_captain_m'] },
+  'chief engineer': { f: ['rb_ren_f', 'rb_pilot_f'], m: ['rb_engineer_m'] },
+  medic: { f: ['rb_doctor_f'], m: ['rb_doctor_m'] },
+  counselor: { f: ['rb_office_f'], m: ['rb_ren_m', 'rb_captain_m'] },
+  archivist: { f: ['rb_office_f'], m: ['rb_ren_m', 'rb_doctor_m'] },
+  captain: { f: ['rb_pilot_f'], m: ['rb_captain_m'] },
+};
+const BY_NAME = { kade: 'rb_engineer_m', osei: 'rb_pilot_f', theo: 'rb_gardener_m', varga: 'rb_office_f' };
+export const CREW_REAL = {
+  f: ['rb_pilot_f', 'rb_doctor_f', 'rb_office_f', 'rb_ren_f'],
+  m: ['rb_captain_m', 'rb_doctor_m', 'rb_engineer_m', 'rb_gardener_m', 'rb_ren_m'],
+};
+// the older stylised crew, used only if the realistic people have not loaded
 const WOMEN = ['w_casual', 'w_suit', 'w_punk', 'w_worker', 'w_soldier', 'w_adventurer'];
 const MEN = ['m_casual', 'm_hoodie', 'm_suit', 'm_punk', 'm_worker', 'm_swat', 'm_adventurer'];
-export const CREW_MODELS = [...WOMEN, ...MEN];
+export const CREW_MODELS = [...CREW_REAL.f, ...CREW_REAL.m, ...WOMEN, ...MEN];
 
 export function crewModelKey(crew) {
-  const pool = crew.pronoun?.their === 'her' ? WOMEN : crew.pronoun?.their === 'his' ? MEN : [...WOMEN, ...MEN];
-  return pool[(crew.seed || 0) % pool.length];
+  const seed = crew.seed || 0;
+  const sex = crew.pronoun?.their === 'her' ? 'f' : crew.pronoun?.their === 'his' ? 'm' : null;
+  const ok = (k) => actorLoaded(k) && k !== wearing;
+  if (BY_NAME[crew.id] && ok(BY_NAME[crew.id])) return BY_NAME[crew.id];
+  const role = BY_ROLE[(crew.role || '').toLowerCase()];
+  const pick = (list) => {
+    const l = list.filter(ok);
+    return l.length ? l[seed % l.length] : null;
+  };
+  const both = (r) => (sex ? r[sex] || [] : [...(r.f || []), ...(r.m || [])]);
+  return (role && pick(both(role))) || pick(both(CREW_REAL)) || pick(sex === 'f' ? WOMEN : sex === 'm' ? MEN : [...WOMEN, ...MEN]) || null;
 }
 
 export function makeCrewModel(crew, { hologram = false, glow } = {}) {
   if (!actorsReady()) return makeHuman({ ...randomCrewSpec(mulberry32(crew.seed)), hologram, glow });
-  const key = crewModelKey(crew);
-  const model = actorLoaded(key) ? key : CREW_MODELS.find(actorLoaded) || 'xbot';
-  const height = (crew.pronoun?.their === 'her' ? 1.64 : 1.76) + ((crew.seed || 0) % 9) / 100;
+  const model = crewModelKey(crew) || 'xbot';
+  const woman = /_f$|^w_/.test(model) || (model === 'xbot' && crew.pronoun?.their === 'her');
+  const height = (woman ? 1.64 : 1.76) + ((crew.seed || 0) % 9) / 100;
   if (hologram) return makeActor({ model, hologram: true, glow: glow || 0x8fe0ff, height });
   return makeActor({ model, height });
 }

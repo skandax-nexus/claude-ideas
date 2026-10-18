@@ -71,8 +71,8 @@ try {
   await page.click('#saves [data-slot="0"]');
   await wait(600);
   await shot('00b-character-select');
-  await page.click('[data-hero="scifi"]');
-  await wait(300);
+  await page.click('[data-hero="real_m"]'); // a realistic look (Rocketbox model)
+  await wait(1500);
   await page.click('#heroGo');
   await sim(1.2);
   await shot('01-antechamber');

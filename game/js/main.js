@@ -35,7 +35,7 @@ import { MiniMap } from './ui/MiniMap.js';
 import { Voice } from './audio/Voice.js';
 import { Fx } from './world/Fx.js';
 import { HEROES, OPTIONS, heroSpec, hex } from './ui/Heroes.js';
-import { loadActors, actorsReady, actorLoaded, MODELS, loadErrors } from './world/Actors.js';
+import { loadActors, actorsReady, actorLoaded, MODELS, loadErrors, setActorQuality } from './world/Actors.js';
 import { LOOKS, HAIR, TOPS, LOOK_DEFAULT, lookOf } from './world/People.js';
 
 const VERSION = '0.3.0';
@@ -288,6 +288,7 @@ class Game {
     this.sun.shadow.map?.dispose();
     this.sun.shadow.map = null;
     this.postfx.apply(q);
+    setActorQuality(q); // skin, eye and hair shading follow the preset
     this.smart.apply();
   }
 
@@ -1795,14 +1796,16 @@ window.addEventListener('DOMContentLoaded', async () => {
   } catch {
     /* no storage */
   }
-  const first = ['ren', 'w_adventurer', lookOf(saved).model];
+  const first = [...new Set(['rb_ren_f', 'rb_juno', lookOf(saved).model])];
   // wait for them (slow connections included) and say what's happening
   const ver = document.querySelector('#title .ver');
   const verText = ver?.textContent;
   if (ver) ver.textContent = 'Loading characters…';
   const ok = await Promise.race([loadActors(first), new Promise((r) => setTimeout(() => r(false), 90000))]);
   if (ver) ver.textContent = ok ? verText : `Characters could not load (${loadErrors[0] || 'timed out'})`;
-  loadActors(Object.keys(MODELS).filter((k) => !first.includes(k)));
+  // the realistic crew next, then the older looks (picked on the character screen)
+  const rest = Object.keys(MODELS).filter((k) => !first.includes(k));
+  loadActors(rest.filter((k) => k.startsWith('rb_'))).then(() => loadActors(rest.filter((k) => !k.startsWith('rb_'))));
   try {
     window.AZ = new Game();
     window.AZSynth = Synth;
