@@ -19,7 +19,7 @@ function commuters(M, rng) {
   const A = AMBIENT.rain;
   let k = 0;
   const add = (pos, o = {}) => M.npcs.push({
-    id: `amb_${k}`, crew: `amb_${k}`, first: A.names[k % A.names.length], seed: 100 + k, ambient: true,
+    crew: `amb_${k}`, first: A.names[k % A.names.length], seed: 100 + k, ambient: true,
     pronoun: k % 2 ? { their: 'his', them: 'him' } : { their: 'her', them: 'her' },
     pos, yaw: o.yaw ?? rng.float(0, 6.28), barks: o.barks || A.barks, barkEvery: 22, freezeWhen: 'zero_second && !after_zero', silent: !o.talk, ...o, id: `amb_${k++}`,
   });

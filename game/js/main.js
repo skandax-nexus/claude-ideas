@@ -1939,7 +1939,7 @@ class Game {
     // plays the same held upright or sideways
     const active = !this.paused && !this.menu;
 
-    for (const a of this.input.consumeActions()) {
+    for (let a of this.input.consumeActions()) {
       this.lastEvent = this.time;
       if (a === 'pause') {
         this.voice.stop();

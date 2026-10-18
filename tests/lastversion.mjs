@@ -43,6 +43,12 @@ const az = (fn, arg) => page.evaluate(([src, a]) => {
   try { return (0, eval)(`(${src})`)(a); } catch (e) { return `ERR ${e.message} @ ${(e.stack || '').split('\n').slice(1, 4).join(' | ')}`; }
 }, [fn.toString(), arg]);
 const ok = (v) => !(typeof v === 'string' && v.startsWith('ERR'));
+// a key, as a player presses it (headless, losing the pointer lock opens the pause menu: close it first)
+const press = async (key) => {
+  await az(() => { if (AZ.menu === 'pause') AZ.closeMenu(); });
+  await page.keyboard.press(key);
+  await frame();
+};
 // one real frame: the keys pressed since the last one are handled
 const frame = async () => {
   const r = await az(() => { AZ.frame(); return 'ok'; });
@@ -248,8 +254,7 @@ const pips = await az(() => [...document.querySelectorAll('#state .pip')].map((p
 check(JSON.stringify(pips) === JSON.stringify(['12049', '22026', '32196']), 'the HUD names this place\'s three years', JSON.stringify(pips));
 // switch with the number keys
 await az(() => LVB.at('cable', -4, -7.6));
-await page.keyboard.press('Digit2');
-await frame();
+await press('Digit2');
 const cable = await az(() => {
   const st = AZ.engine.state(AZ.room);
   const a = LVB.use('cable');
@@ -257,8 +262,7 @@ const cable = await az(() => {
   return [st, a, b, LVB.f('cable_connected')];
 });
 check(cable[0] === 'PAST' && cable[3].cable_connected, 'key 2: 2026, where the cable is; connected there', JSON.stringify(cable));
-await page.keyboard.press('Digit1');
-await frame();
+await press('Digit1');
 check(await az(() => { LVB.at('cable', 0, -14.6); LVB.step(0.2); LVB.use('power'); LVB.skip(); return AZ.engine.state(AZ.room) === 'PRESENT' && AZ.facts.get('power_on'); }), 'key 1: 2049, and the power a 2026 cable carries comes on');
 const cross = await az(() => {
   LVB.at('collapse', 0, -4.5);
@@ -302,8 +306,7 @@ check(route.choice === 'choice' && route.saved && route.quest === 'resolved' && 
 await az(() => LVB.at('control', 4, -2.6));
 const took = await az(() => { AZ.edition.shift('PAST'); AZ.simulate(0.1); return [LVB.use('keycard'), AZ.held, AZ.menu, AZ.paused]; });
 check(took[1] === 'keycard', 'in 2026, the keycard on the desk', JSON.stringify(took));
-await page.keyboard.press('KeyC');
-await frame();
+await press('KeyC');
 const anchored = await az(() => { AZ.edition.shift('PRESENT'); AZ.simulate(0.4); LVB.skip(); return [AZ.held, AZ.facts.get('anchored_once')]; });
 check(anchored[0] === 'keycard' && anchored[1], 'key C anchors the 2026 keycard; it survives the switch to 2049', JSON.stringify(anchored));
 const fracture = await az(() => {
