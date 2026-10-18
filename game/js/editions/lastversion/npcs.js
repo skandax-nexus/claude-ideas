@@ -23,6 +23,7 @@ export const NPCS = {
     id: 'witness', first: 'The Witness', name: 'The Witness', role: 'Older Kai', pronoun: HIS, color: '#4a5a7a', voice: 'WITNESS', era: 'future', seed: 3,
     temporal: ['PRESENT', 'PAST', 'FUTURE'], want: 'To force a survivable path.', fear: 'Uncertainty and loss.',
     barks: ['You are early. You are always early.', 'Do not build the machine.'],
+    echo: [{ who: 'NONE', text: 'The Witness does not exist in this state. What stands here is the shape he left behind on his way through.' }, { who: 'WITNESS', text: 'You are early. You are always early.' }],
   },
   sera: {
     id: 'sera', first: 'Sera', name: 'Sera Voss', role: 'Resistance leader, 2196', pronoun: HER, color: '#c0762a', voice: 'SERA', era: 'future', seed: 4,
@@ -38,6 +39,7 @@ export const NPCS = {
     id: 'niko', first: 'Niko', name: 'Niko', role: 'Keeper of the settlement', pronoun: HIS, color: '#2f8a5a', voice: 'NIKO', era: 'past', seed: 6,
     temporal: ['PAST', 'PRESENT'], want: 'To protect communal memory.', fear: 'Outsiders turning sacred knowledge into a weapon.',
     barks: ['You wear no dust, but the old story knows your face.', 'The river was taught to stay. Who taught you?'],
+    echo: [{ who: 'NONE', text: 'Niko has not been born in this year, or has been dead in it a long time. His echo kneels by the water, listening.' }, { who: 'NIKO', text: 'Then you have not listened long enough.' }],
   },
   anja: {
     id: 'anja', first: 'Anja', name: 'Dr. Anja Vale', role: 'Temporal scientist, 2196', pronoun: HER, color: '#1f9a90', voice: 'ANJA', era: 'future', seed: 7,
@@ -48,16 +50,19 @@ export const NPCS = {
     id: 'iven', first: 'Iven', name: 'Iven Marr', role: 'Helix technician', pronoun: HIS, color: '#a8862a', voice: 'IVEN', era: 'present', seed: 8,
     temporal: ['PRESENT'], want: 'To get his team out safely.', fear: 'Being blamed for a test he did not approve.',
     barks: ['I signed nothing. Remember that when they ask.', 'Maintenance route runs behind the conduit. Nobody uses it. Nobody is supposed to.'],
+    echo: [{ who: 'NONE', text: 'Iven Marr is not here in this year. His echo is: a man at a panel, writing NOT SIGNED BY ME on a sheet, again and again.' }, { who: 'IVEN', text: 'Panel was installed before the drone was. Remember that.' }],
   },
   jun: {
     id: 'jun', first: 'Jun', name: 'Jun Park', role: 'Transit operator, Rain City', pronoun: HIS, color: '#3b7fb8', voice: 'JUN', era: 'present', seed: 9,
     temporal: ['PRESENT'], want: 'To keep the station running.', fear: 'Leaving passengers behind.',
     barks: ['Mind the yellow line. The board is wrong but the line is right.', 'Forty-one seconds. I\'ve timed it. Forty-one.'],
+    echo: [{ who: 'NONE', text: 'For a few seconds it is a minute before the crash. The Jun in the booth is an echo, calling the 41 in.' }, { who: 'JUN', text: 'Line 41, platform two, on time. On time. On time.' }],
   },
   tala: {
     id: 'tala', first: 'Tala', name: 'Tala', role: 'Water keeper', pronoun: HER, color: '#2b8f7a', voice: 'TALA', era: 'past', seed: 10,
     temporal: ['PAST'], want: 'The water system restored.', fear: 'The observatory being weaponized.',
     barks: ['The dry channel remembers being a river.', 'Three gates. Stone does not argue, it only waits.'],
+    echo: [{ who: 'NONE', text: 'Tala belongs to the year the river was alive. Here she is an echo, lifting a stone gate that is not there.' }, { who: 'TALA', text: 'Left, right, centre. Stone does not argue.' }],
   },
   mara: {
     id: 'mara', first: 'Mara', name: 'Mara Quill', role: 'Archivist, 2196', pronoun: HER, color: '#8a6a9a', voice: 'MARA', era: 'future', seed: 11,

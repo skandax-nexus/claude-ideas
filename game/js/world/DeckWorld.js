@@ -169,8 +169,18 @@ export class DeckWorld {
       model.position.set(...n.pos);
       model.rotation.y = n.yaw || 0;
       root.add(model);
+      // THE LAST VERSION: someone who only exists in some temporal states (n.temporal) leaves an
+      // echo in the others - a translucent impression of them that can still be listened to
+      let echo = null;
+      if (n.temporal && !guest) {
+        echo = makeCrewModel(crew, { hologram: true, glow: crewGlow(crew.color), height: n.height });
+        echo.position.copy(model.position);
+        echo.rotation.y = model.rotation.y;
+        echo.visible = false;
+        root.add(echo);
+      }
       // ambient people walk a small loop (n.path: [[x, z], ...]) and stand still when the world stops
-      this.npcs.push({ n, crew, model, talkT: 0, cond: compileCondition(n.when), freeze: compileCondition(n.freezeWhen || 'false'), wp: 0, lastBark: -99 });
+      this.npcs.push({ n, crew, model, body: model, echo, talkT: 0, cond: compileCondition(n.when), freeze: compileCondition(n.freezeWhen || 'false'), wp: 0, lastBark: -99 });
     }
     this.decoy = null; // an Echo Step afterimage the watchers chase instead of you
     this.lookBase = null;
@@ -335,7 +345,22 @@ export class DeckWorld {
       if (it.kind === 'fragment') p.visible = !this.flags[`done_${it.id}`];
       if (it.kind === 'scene') p.visible = (!it.when || !!compileCondition(it.when)(this.ctx(it.room))) && !(it.once && this.flags[`done_${it.id}`]);
     }
-    for (const p of this.npcs || []) p.model.visible = !!p.cond(this.ctx(p.n.room));
+    for (const p of this.npcs || []) {
+      const c = this.ctx(p.n.room);
+      const here = !!p.cond(c);
+      if (p.echo) {
+        // in a state they do not exist in, their echo stands where they would be
+        const want = p.n.temporal.includes(c.state) ? p.body : p.echo;
+        if (want !== p.model) {
+          want.position.copy(p.model.position);
+          want.rotation.y = p.model.rotation.y;
+          p.model.visible = false;
+          p.model = want;
+        }
+        p.isEcho = p.model === p.echo;
+      }
+      p.model.visible = here;
+    }
   }
 
   // THE LAST VERSION: each temporal state tints the place (warm stone and wood in the past,
@@ -504,7 +529,7 @@ export class DeckWorld {
       if (!frozen) m.userData.animate(dt, speed, t);
       // a bark: something said in passing, never over a conversation
       // (one bark at a time across the whole place, each person starting somewhere else in their list)
-      if (n.n.barks?.length && m.visible && !frozen && d.length() < 5 && t - n.lastBark > (n.n.barkEvery || 16) && t - (this.lastBarkT ?? -99) > 9 && !g.hud.talking && !g.menu) {
+      if (n.n.barks?.length && m.visible && !n.isEcho && !frozen && d.length() < 5 && t - n.lastBark > (n.n.barkEvery || 16) && t - (this.lastBarkT ?? -99) > 9 && !g.hud.talking && !g.menu) {
         n.lastBark = this.lastBarkT = t;
         n.barkI = n.barkI === undefined ? (n.n.seed || this.npcs.indexOf(n)) % n.n.barks.length : (n.barkI + 1) % n.n.barks.length;
         const text = n.n.barks[n.barkI];
@@ -532,7 +557,8 @@ export class DeckWorld {
     for (const n of this.npcs) {
       if (n.n.silent || !n.model.visible || (n.n.ambient && !n.n.lines && !n.n.scene)) continue;
       const p = n.model.position;
-      out.push({ id: `dnpc:${n.n.id}`, pos: [p.x, p.y + 1.5, p.z], r: 3.2, prompt: n.n.prompt || `TALK TO ${(n.n.first || n.crew.first).toUpperCase()}`, npc: n });
+      const who = (n.n.first || n.crew.first).toUpperCase();
+      out.push({ id: `dnpc:${n.n.id}`, pos: [p.x, p.y + 1.5, p.z], r: 3.2, prompt: n.isEcho ? `LISTEN TO ${who}'S ECHO` : n.n.prompt || `TALK TO ${who}`, npc: n });
     }
     return out;
   }

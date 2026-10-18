@@ -243,6 +243,15 @@ export class LastVersion {
       // a room keeps the baseline until the player switches it (saves restore the rest)
       if (!c.flags || !Object.keys(c.flags).length) g.engine.setState(id, g.engine.baseline, { force: true });
     }
+    // people who only exist in some of this place's states leave an echo in the others (NPC failure handling)
+    for (const n of level.npcs) {
+      const def = NPCS[n.crew];
+      if (n.temporal || !def?.temporal || n.hologram) continue;
+      const real = def.temporal.filter((s) => this.def.states.includes(s));
+      const here = level.rooms[n.room]?.states || states;
+      if (real.length && here.some((s) => real.includes(s)) && here.some((s) => !real.includes(s))) n.temporal = real;
+    }
+    deck.adjust?.(level, this); // a consequence of an earlier choice can change the place
     this.level = level;
     this.unstable = !!(level.unstable || deck.unstable);
     return level;
@@ -371,10 +380,23 @@ export class LastVersion {
     const def = NPCS[n.crew.id];
     n.talkT = 6;
     n.model.userData.wave?.();
-    g.facts.set(`met_${n.crew.id}`);
     const p = n.model.position;
     g.talkWith = [p.x, p.y + 1.55, p.z];
     g.audio.greet('CREW');
+    if (n.isEcho) {
+      // not here in this year: their echo plays what the year kept of them
+      const year = this.def.labels[g.engine.state(g.room)];
+      const name = def?.name || n.crew.name;
+      const lines = n.n.echoLines || def?.echo || [{ who: 'NONE', text: `${name} is not here in ${year}. What is here is an echo: a few seconds of ${def?.pronoun?.their || 'their'} day, repeating.` }, ...(def?.barks?.length ? [{ who: def.voice, text: def.barks[0] }] : [])];
+      g.facts.set(`echo_${n.crew.id}`);
+      if (!g.deckWorld.flags[`echo_${n.n.id}`]) {
+        g.deckWorld.flags[`echo_${n.n.id}`] = true;
+        g.log.push(`${name} is not in ${year}. An echo stood in: <i>${(lines[lines.length - 1] || {}).text || ''}</i>`);
+      }
+      this.playNode({ lines: lines.map((l) => (l.who === def?.voice ? { ...l, name: `${(def.first || name).toUpperCase()} (ECHO)` } : l)) }, n);
+      return;
+    }
+    g.facts.set(`met_${n.crew.id}`);
     if (n.n.scene) {
       const sc = this.deck.scenes?.[n.n.scene];
       if (sc) this.playNode(sc, n, `npc_${n.n.id}`);
