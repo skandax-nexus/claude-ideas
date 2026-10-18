@@ -477,7 +477,7 @@ function shadeActor(mat, kind) {
       // hair: the same wrap, neutral, so neighbouring cards at different angles
       // shade alike instead of reading as separate sheets
       const defs = kind === 'cut' ? '#define AZ_SKIN_FLOOR 1.0\n#define AZ_WRAP 0.6\n#define AZ_TINT vec3( 0.0 )\n'
-        : `#define AZ_SKIN_FLOOR ${kind === 'skin' ? '0.65' : '0.0'}\n#define AZ_WRAP 0.3\n#define AZ_TINT vec3( 0.2, 0.05, 0.02 )\n${SHADE.detail > 1 ? '#define AZ_SHEEN\n' : ''}`;
+        : `#define AZ_SKIN_FLOOR ${kind === 'skin' ? '0.65' : '0.0'}\n#define AZ_WRAP 0.3\n#define AZ_TINT vec3( 0.11, 0.03, 0.015 )\n${SHADE.detail > 1 ? '#define AZ_SHEEN\n' : ''}`;
       f = defs + f
         .replace('#include <common>', '#include <common>\nfloat azSkin = 0.0;')
         .replace('#include <lights_physical_pars_fragment>', SKIN_LIGHT)
