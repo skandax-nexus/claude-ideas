@@ -67,7 +67,7 @@ async function desktop() {
   await page.click('#begin');
   await page.waitForTimeout(300);
   check(await page.isVisible('#chapters'), 'NEW GAME asks for a chapter');
-  check(await az(() => [...document.querySelectorAll('#chapters h3')].map((h) => h.textContent).join()) === 'PROLOGUE,HALCYON,THE VESSEL,STORY STUDIO', 'chapters: Prologue, HALCYON, the Vessel, Story Studio');
+  check(await az(() => [...document.querySelectorAll('#chapters h3')].map((h) => h.textContent).join()) === 'PROLOGUE,HALCYON,THE CRADLE,THE VESSEL,STORY STUDIO', 'chapters: Prologue, HALCYON, the Cradle, the Vessel, Story Studio');
   check((await page.$$('#chapters [data-cont]')).length === 0, 'no CONTINUE on a chapter you have not played');
   await page.click('[data-newch="prologue"]');
   await page.waitForTimeout(300);

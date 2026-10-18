@@ -433,7 +433,7 @@ class Game {
     this.hud.show(id);
     if (id === 'map') {
       document.querySelector('#mapTitle').textContent = this.mode === 'deck'
-        ? (this.campaign.zones ? `${this.story.label || 'HALCYON'} · ${this.story.decks[this.campaign.deck].name} · DISTRICT ${this.campaign.sector + 1}/${this.story.decks[this.campaign.deck].sectors}` : `DECK ${this.campaign.deck + 1} · ${this.story.decks[this.campaign.deck].name} · SECTOR ${this.campaign.sector + 1}/4`)
+        ? (this.campaign.zones ? `${this.zoneWhere()} · DISTRICT ${this.campaign.sector + 1}/${this.story.decks[this.campaign.deck].sectors}` : `DECK ${this.campaign.deck + 1} · ${this.story.decks[this.campaign.deck].name} · SECTOR ${this.campaign.sector + 1}/4`)
         : 'STATION ZERO';
       requestAnimationFrame(() => this.minimap.drawBig(this.player, this.room, this.mapMarkers()));
     }
@@ -1497,10 +1497,16 @@ class Game {
     return data;
   }
 
+  // "HALCYON · NEON MERIDIAN"; THE CRADLE is one zone of its own name, so just "THE CRADLE"
+  zoneWhere() {
+    const name = this.story.decks[this.campaign.deck].name, label = this.story.label || 'HALCYON';
+    return label === name ? name : `${label} · ${name}`;
+  }
+
   saveMeta() {
     if (this.mode === 'deck') {
       const d = this.story.decks[this.campaign.deck];
-      if (this.campaign.zones) return { where: `${this.story.label || 'HALCYON'} · ${d.name}`, chapter: `District ${this.campaign.sector + 1}/${d.sectors}` };
+      if (this.campaign.zones) return { where: this.zoneWhere(), chapter: `District ${this.campaign.sector + 1}/${d.sectors}` };
       const told = this.story.title ? `${this.story.title.toUpperCase()} · ` : '';
       return { where: `${told}DECK ${this.campaign.deck + 1} · ${d.name}`, chapter: `Sector ${this.campaign.sector + 1}/4` };
     }

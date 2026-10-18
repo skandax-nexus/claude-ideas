@@ -2,7 +2,9 @@
 // district through - the scene, the gate, the next district - and the lift
 // home to Station Zero; checks the two ways over the obstacles (the dome when
 // INVERTED, the echo bridge with ECHOES SOLIDIFY IN ECHO), and the way in from
-// Varga's vault recording.
+// Varga's vault recording. Since v1.0 also: the screens correct Varga's record
+// (RECORD CORRECTED, not Kade's or Theo's), Juno's line after each screen plays,
+// and Varga's recorders and tower echo speak in her own voice.
 //   NODE_PATH=$(npm root -g) node tests/halcyon.mjs
 import { createRequire } from 'node:module';
 import http from 'node:http';

@@ -190,7 +190,7 @@ export class HUD {
     }).join('');
     const logs = game.log.slice().reverse().map((l) => `<li>${l}</li>`).join('') || '<li class="dim">Nothing yet.</li>';
     $('#journal .body').innerHTML = `
-      <h3>WHERE YOU ARE</h3><p><b>${story.zones ? `${story.label || 'HALCYON'} &middot; ${deck.name}` : `DECK ${campaign.deck + 1} OF 8 &middot; ${deck.name}`}</b><br><span class="dim">${deck.title} &middot; ${story.zones ? `district ${campaign.sector + 1} of ${deck.sectors}` : `sector ${campaign.sector + 1} of 4`}</span></p>
+      <h3>WHERE YOU ARE</h3><p><b>${story.zones ? ((story.label || 'HALCYON') === deck.name ? deck.name : `${story.label || 'HALCYON'} &middot; ${deck.name}`) :`DECK ${campaign.deck + 1} OF 8 &middot; ${deck.name}`}</b><br><span class="dim">${deck.title} &middot; ${story.zones ? `district ${campaign.sector + 1} of ${deck.sectors}` : `sector ${campaign.sector + 1} of 4`}</span></p>
       <h3>THE QUESTION</h3><p class="dim">${story.question || 'The first law takes a key and a pair of hands. Someone on this ship put their hands on it at 03:12 and started this cycle. Every crew member has an official record. The echoes don\'t always agree.'}</p>
       <h3>${story.zones ? 'PEOPLE' : 'SUSPECTS'}</h3><ul class="suspects">${sus}</ul>
       <h3>LOG</h3><ul class="log">${logs}</ul>`;

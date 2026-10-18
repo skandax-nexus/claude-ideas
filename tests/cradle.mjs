@@ -203,7 +203,9 @@ for (const e of ENDINGS) {
       await page.waitForTimeout(1500);
       await page.screenshot({ path: path.join(shots, `c0${s + 1}-cradle-${tag.toLowerCase()}.png`), timeout: 240000 });
     }
-    // through the gate (the drones go back to their rounds first: this checks the gate, not them)
+    // through the gate (the drones go back to their rounds first: this checks the gate, not them;
+    // a catch during the scene freezes you for a moment, so wait for that to pass)
+    await page.waitForFunction(() => !AZ.catching, null, { timeout: 30000 }).catch(() => {});
     await az(() => {
       for (const d of AZ.deckWorld.sentinels) { d.pos.copy(d.home); d.reset(); }
       const ex = AZ.level.exit.box;
