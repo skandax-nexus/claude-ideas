@@ -34,6 +34,7 @@ VOICES = {
     'CUSTODIAN': ('bm_george', 0.9, 0.9),
     'OBSERVER': ('am_onyx', 0.86, 0.85),
     'OTHER': ('af_nova', 0.92, 0.94),
+    'OTHER_m': ('am_liam', 0.92, 0.94),
     'DEVICE': ('af_sky', 1.0, 1.08),
     'CREW_f': ('af_bella', 1.0, 1.0),
     'CREW_m': ('am_michael', 0.97, 1.0),

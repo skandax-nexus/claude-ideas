@@ -170,7 +170,8 @@ export const drifters = [
   { room: 'antechamber', pos: [2.4, 0.35, 24.1], size: 0.7 },
   { room: 'antechamber', pos: [1.0, 0.15, 19.2], size: 0.3 },
 ];
-text('antechamber', 'SUBJECT HOLDING  -  CYCLE 0', [0, 3.6, 25.95], Math.PI, { size: 0.32, color: '#6f5fcf' });
+text('antechamber', 'SUBJECT HOLDING  -  CYCLE 0', [0, 3.6, 25.95], Math.PI, { size: 0.32, color: '#6f5fcf', when: '!@ECHO' });
+text('antechamber', 'SUBJECT HOLDING  -  CYCLE 42', [0, 3.6, 25.95], Math.PI, { size: 0.32, color: '#0e7c88', echo: true });
 // Upside-down writing on the ceiling: only readable once the room is inverted.
 text('antechamber', 'YOU HAVE BEEN HERE BEFORE', [0, 4.45, 21], 0, { size: 0.4, color: '#cf4f8f', ceiling: true });
 

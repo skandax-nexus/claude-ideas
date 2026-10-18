@@ -20,7 +20,7 @@ export const SPEAKERS = {
 export const scripts = {
   juno_drop: [
     { who: 'JUNO', text: 'Don\'t scream. Please. It hears screaming.' },
-    { who: 'JUNO', text: 'You don\'t remember me. You never do. I\'m Juno - engineer, last one awake. I\'ve been living on the ceiling.' },
+    { who: 'JUNO', text: 'You don\'t remember me. You never do. I\'m Juno - engineer, last one awake down here. I\'ve been living on the ceiling.' },
     { who: 'JUNO', text: 'Take TICK. He\'s been waiting for you longer than I have.' },
     { who: 'TICK', text: 'HELLO. I AM TICK. IF YOU ARE STUCK, ASK ME. I WILL NOT LAUGH. MUCH.' },
   ],
@@ -220,6 +220,7 @@ export const juno = [
   { when: '!heard_varga', lines: [{ who: 'JUNO', text: 'Varga left recordings everywhere. The console by the crates is the one she cared about.' }] },
   { when: '!token_HELD', lines: [{ who: 'JUNO', text: 'See your shadow on the east wall? It moves wrong. It always has. I never figured out why.' }] },
   { when: '!archive_open', lines: [{ who: 'JUNO', text: 'The archive only believes proof. The key on that desk only exists in the echo. Make it real somehow.' }] },
+  { when: 'custodian_remembers && !zones_started', lines: [{ who: 'JUNO', text: 'The Custodian says you carried someone through that door. ...I\'ll tell you. Not yet.' }] },
   { when: '!core_installed', lines: [{ who: 'JUNO', text: 'The core is in the observation hall. The sentinel there learns. Don\'t teach it the same trick twice.' }] },
   { when: '!machine_activated', lines: [{ who: 'JUNO', text: 'It\'s ready. Varga said don\'t. I say... your call.' }] },
   { when: '!brain_seen', lines: [{ who: 'JUNO', text: 'Stars. I\'d forgotten what they look like. Look at the machine in the echo - something\'s inside.' }] },

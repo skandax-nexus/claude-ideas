@@ -47,7 +47,7 @@ export class Director {
           // Varga went up. The long way through HALCYON starts here (once).
           if (!facts.get('zones_started')) {
             this.g.hud.say([
-              { who: 'JUNO', text: 'Ren - behind the vault. A service hatch, and a ladder going up. A long way up.' },
+              { who: 'JUNO', text: 'Ren - behind the vault. A service hatch, and a ladder. It goes a long way up. And further down.' },
               { who: 'JUNO', text: 'If Varga is later, she went somewhere. I think she went up.' },
             ], facts, () => this.g.enterHalcyon());
           }

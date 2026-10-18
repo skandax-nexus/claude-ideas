@@ -24,13 +24,13 @@ import { DeckWorld } from './world/DeckWorld.js';
 import { PostFX } from './world/PostFX.js';
 import { makeStory, verdictEnding, WISH_OPTIONS } from './gen/StoryGen.js';
 import { generateSector, SECTORS_PER_DECK } from './gen/LevelGen.js';
-import { makeZoneStory } from './gen/ZoneStory.js';
+import { makeZoneStory, makeCradleStory } from './gen/ZoneStory.js';
 import { generateZone } from './gen/ZoneGen.js';
 import { Weather } from './world/Weather.js';
 import { WATER_NORMALS } from './world/materials.js';
 import { SmartRenderer } from './core/SmartRenderer.js';
 import { loadSettings, saveSettings, CAMERA_PRESETS, QUALITY } from './ui/Settings.js';
-import { writeSave, readSave, listSaves, latestSave, describeSave, deleteSave, latestFor, CHAPTERS, SLOTS } from './ui/Saves.js';
+import { writeSave, readSave, listSaves, latestSave, describeSave, deleteSave, latestFor, CHAPTERS, SLOTS, rememberEnding, lastEnding, ENDING_TITLES } from './ui/Saves.js';
 import { MiniMap } from './ui/MiniMap.js';
 import { Voice } from './audio/Voice.js';
 import { Fx } from './world/Fx.js';
@@ -371,8 +371,9 @@ class Game {
 
   // New game / vessel / load. Starting fresh in a page that already played
   // goes through a reload, so no state ever leaks between runs.
-  // action: 'new' (the prologue), 'halcyon', 'vessel', 'studio' or 'load';
-  // saveSlot: the slot a new game autosaves into.
+  // action: 'new' (the prologue), 'halcyon', 'cradle', 'vessel', 'studio' or 'load';
+  // saveSlot: the slot a new game autosaves into; opts.ending: the prologue ending a
+  // replayed vessel keeps (TELL IT AGAIN after SEVERED stays after SEVERED).
   begin(action, slot, saveSlot = null, opts = null) {
     if (!this.started && !this.settings.hero && action !== 'load') {
       this.openHero('title', () => this.begin(action, slot, saveSlot, opts));
@@ -384,7 +385,7 @@ class Game {
       return;
     }
     this.slot = action === 'load' ? (typeof slot === 'number' ? slot : null) : saveSlot;
-    this.run = { new: 'prologue', halcyon: 'halcyon', vessel: 'vessel', studio: 'studio' }[action] || 'prologue';
+    this.run = { new: 'prologue', halcyon: 'halcyon', cradle: 'cradle', vessel: 'vessel', studio: 'studio' }[action] || 'prologue';
     this.started = true;
     document.body.classList.add('playing');
     this.player.cinema = null;
@@ -392,9 +393,11 @@ class Game {
     this.audio.setVolume?.(this.settings.volume);
     let ok = false;
     if (action === 'load') ok = this.load(slot);
+    else if (['cradle', 'vessel', 'studio'].includes(action)) this.adoptLastEnding();
     if (ok) this.hud.toast('Memory restored.');
-    else if (action === 'vessel') this.startVessel();
+    else if (action === 'vessel') this.startVessel(undefined, null, null, opts?.ending);
     else if (action === 'studio') this.startVessel(opts?.seed, null, opts?.wish);
+    else if (action === 'cradle') this.beginCradle();
     else if (action === 'halcyon') {
       // jump straight to the open districts: Station Zero counts as played up to the vault
       this.facts.rulesEnabled = false;
@@ -428,7 +431,7 @@ class Game {
     this.hud.show(id);
     if (id === 'map') {
       document.querySelector('#mapTitle').textContent = this.mode === 'deck'
-        ? `DECK ${this.campaign.deck + 1} · ${this.story.decks[this.campaign.deck].name} · SECTOR ${this.campaign.sector + 1}/4`
+        ? (this.campaign.zones ? `${this.story.label || 'HALCYON'} · ${this.story.decks[this.campaign.deck].name} · DISTRICT ${this.campaign.sector + 1}/${this.story.decks[this.campaign.deck].sectors}` : `DECK ${this.campaign.deck + 1} · ${this.story.decks[this.campaign.deck].name} · SECTOR ${this.campaign.sector + 1}/4`)
         : 'STATION ZERO';
       requestAnimationFrame(() => this.minimap.drawBig(this.player, this.room, this.mapMarkers()));
     }
@@ -489,13 +492,15 @@ class Game {
     this.menuBack = from;
     this.menu = 'chapters';
     this.input.release();
-    const order = ['prologue', 'halcyon', 'vessel', 'studio'];
-    const action = { prologue: 'new', halcyon: 'halcyon', vessel: 'vessel', studio: 'studio' };
+    const order = ['prologue', 'halcyon', 'cradle', 'vessel', 'studio'];
+    const action = { prologue: 'new', halcyon: 'halcyon', cradle: 'cradle', vessel: 'vessel', studio: 'studio' };
+    const le = lastEnding();
     document.querySelector('#chapters .body').innerHTML = order.map((ch) => {
       const c = CHAPTERS[ch];
       const last = latestFor(ch);
       const d = last && describeSave(last.data);
-      return `<div class="chapcard"><h3>${c.name}</h3><p>${c.sub}</p><div class="acts">
+      const after = ['cradle', 'vessel', 'studio'].includes(ch) ? `<p class="dim">${le ? `After ${ENDING_TITLES[le.key]}` : ch === 'cradle' ? 'Before the choice' : 'The ship as it was'}</p>` : '';
+      return `<div class="chapcard"><h3>${c.name}</h3><p>${c.sub}</p>${after}<div class="acts">
         ${last ? `<button class="cont" data-cont="${last.slot}">CONTINUE<small>${d.title} · ${d.sub}</small></button>` : ''}
         <button data-newch="${ch}">${ch === 'studio' ? 'CREATE A STORY' : 'NEW GAME'}</button></div></div>`;
     }).join('');
@@ -716,6 +721,7 @@ class Game {
   finish(key) {
     const e = endings[key];
     this.facts.set('ending', key);
+    rememberEnding(key, [...this.observer.brain.lessons]);
     const found = discoveries.filter((d) => this.facts.get(d)).length;
     const report = {
       version: VERSION,
@@ -735,7 +741,8 @@ class Game {
         <span>${report.minutes} min</span><span>${report.discoveries} discoveries</span>
         <span>caught ${report.timesCaught}x</span><span>${report.observerLessons.length} lessons taught to the Observer</span>
       </div>
-      <button class="big" id="toVessel">CONTINUE TO THE VESSEL<small>Eight decks. A crew that vanished. One of them started the loop.</small></button>
+      <button class="big" id="toCradle">GO BENEATH<small>${{ SEVER: 'Far beneath the station, something opened its eyes.', SUSTAIN: 'The keeper\'s rounds go down.', MIRROR: 'Something below heard the station say your name.' }[key]}</small></button>
+      <button id="toVessel">SKIP TO THE VESSEL<small>Eight decks. A crew that vanished. One of them started this cycle.</small></button>
       <h3>THREE QUESTIONS</h3>
       <label>What do you think happened?<textarea id="q1"></textarea></label>
       <label>What do you want to investigate next?<textarea id="q2"></textarea></label>
@@ -756,6 +763,11 @@ class Game {
       $('#copyReport').textContent = 'COPIED';
     };
     $('#again').onclick = () => this.begin('new');
+    $('#toCradle').onclick = () => {
+      this.closeMenu();
+      this.run = 'cradle';
+      this.startZones(null, 'cradle', key);
+    };
     $('#toVessel').onclick = () => {
       this.closeMenu();
       const free = listSaves().find((s) => s.slot !== 'auto' && !s.data);
@@ -768,13 +780,33 @@ class Game {
     this.openMenu('ending');
   }
 
+  // A chapter started from the chapter menu (after the page reload every new start goes through)
+  // inherits the last prologue ending reached on this device, and what the Observer learned then.
+  adoptLastEnding() {
+    const last = lastEnding();
+    if (!last) return;
+    this.facts.set('ending', last.key);
+    for (const l of last.lessons || []) this.observer.brain.lessons.add(l);
+  }
+
+  // THE CRADLE from the chapter menu: the prologue counts as played to the machine.
+  beginCradle() {
+    this.facts.rulesEnabled = false;
+    for (const k of ['left_antechamber', 'met_juno', 'has_tick', 'has_device', 'seen_echo', 'heard_varga', 'heard_self', 'wrote_law', 'archive_open', 'custodian_remembers', 'vault_seen', 'zones_started', 'zones_done', 'core_installed', 'machine_activated', 'brain_seen']) this.facts.set(k);
+    this.engine.setLaw(1, { subject: 'ECHOES', verb: 'SOLIDIFIES', target: 'ECHO' });
+    this.enterRoom('lab', true);
+    this.startZones(null, 'cradle', this.facts.get('ending') || null);
+  }
+
   // --- HALCYON: the open districts in the middle of the prologue -------------------
   // Varga's vault recording sends Ren up into the arcology above Station Zero;
   // the last district's lift brings Ren back down to the lab.
-  startZones(saved = null) {
+  startZones(saved = null, set = saved?.set || 'halcyon', ending = saved ? saved.ending ?? null : null) {
     this.mode = 'deck';
-    this.story = makeZoneStory();
-    this.campaign = saved || { zones: true, deck: 0, sector: 0, flags: {}, visited: [] };
+    this.story = set === 'cradle' ? makeCradleStory(ending) : makeZoneStory();
+    this.facts.set('observer_taught', this.observer.brain.lessons.size > 0);
+    if (this.story.after?.sentinels === 'learned' && !this.observer.brain.lessons.size) this.story.after.sentinels = 'hunt';
+    this.campaign = saved || { zones: true, set, ending, deck: 0, sector: 0, flags: {}, visited: [] };
     this.campaign.zones = true;
     this.facts.rulesEnabled = false;
     this.facts.set('zones_started');
@@ -829,12 +861,16 @@ class Game {
   }
 
   // --- the vessel -------------------------------------------------------------
-  startVessel(seed = (Math.random() * 1e9) | 0, saved = null, wish = null) {
+  startVessel(seed = (Math.random() * 1e9) | 0, saved = null, wish = null, ending) {
     this.mode = 'deck';
     seed = seed ?? ((Math.random() * 1e9) | 0);
     wish = saved?.wish || wish;
-    this.story = makeStory(seed, wish);
-    this.campaign = saved || { seed, wish, deck: 0, sector: 0, flags: {}, visited: [] };
+    // the prologue ending reaches the vessel: a save keeps its own, else what this run chose (or adopted), else none
+    ending = saved ? saved.ending ?? null : ending !== undefined ? ending : this.facts.get('ending') || null;
+    this.story = makeStory(seed, wish, { ending });
+    this.facts.set('observer_taught', this.observer.brain.lessons.size > 0);
+    if (this.story.after.sentinels === 'learned' && !this.observer.brain.lessons.size) this.story.after = { ...this.story.after, sentinels: 'hunt' };
+    this.campaign = saved || { seed, wish, ending, deck: 0, sector: 0, flags: {}, visited: [] };
     this.facts.rulesEnabled = false; // Station Zero's scripted rules stay behind
     for (const t of BASE_TOKENS) this.facts.set(`token_${t}`);
     for (const k of ['has_device', 'has_tick', 'met_juno', 'left_antechamber']) this.facts.set(k);
@@ -850,6 +886,7 @@ class Game {
     const c = this.campaign;
     const lv = c.zones ? generateZone(this.story, c.deck, c.sector) : generateSector(this.story, c.deck, c.sector, c.seed);
     this.level = lv;
+    this.deckWorld.hero = this.settings.hero; // the Other wears your face
     this.deckWorld.build(lv, this.story, c.flags);
     this.weather.set(lv.palette.weather);
     this.postfx.setGrade(lv.palette.grade || STATION_GRADE);
@@ -865,7 +902,7 @@ class Game {
       this.held = null;
       const per = deck.sectors || SECTORS_PER_DECK;
       if (c.sector === 0) {
-        this.hud.card(c.zones ? `HALCYON · CHAPTER ${c.deck + 1} OF ${this.story.decks.length}` : `DECK ${c.deck + 1} OF 8`, deck.name, deck.subtitle, 4200);
+        this.hud.card(c.zones ? (this.story.cardTop || `HALCYON · CHAPTER ${c.deck + 1} OF ${this.story.decks.length}`) : `DECK ${c.deck + 1} OF 8${this.story.after?.title ? ` · AFTER ${this.story.after.title}` : ''}`, deck.name, deck.subtitle, 4200);
         this.after(2.6, () => this.hud.say(deck.intro, this.facts));
       } else this.hud.card(`${deck.name} · ${c.zones ? 'DISTRICT' : 'SECTOR'} ${c.sector + 1} OF ${per}`, this.level.rooms[lv.order[0]].name, '', 2600);
     }
@@ -883,6 +920,20 @@ class Game {
     if (this.transitioning) return;
     const per = this.story.decks[c.deck].sectors || SECTORS_PER_DECK;
     const lastDeck = this.story.decks.length - 1;
+    if (c.zones && c.set === 'cradle' && c.sector === per - 1) {
+      // the night watch gate climbs to the forward decks: the vessel, in the world the ending made
+      this.transitioning = true;
+      this.hud.fade(true);
+      this.audio.chime();
+      const ending = c.ending ?? null;
+      setTimeout(() => {
+        this.run = 'vessel';
+        this.startVessel(undefined, null, null, ending);
+        this.hud.fade(false);
+        this.transitioning = false;
+      }, 1200);
+      return;
+    }
     if (c.zones && c.deck === lastDeck && c.sector === per - 1) {
       // the lift at the top of the tower goes home
       this.transitioning = true;
@@ -929,8 +980,8 @@ class Game {
     const done = this.deckWorld.flags.beat_done;
     let goal;
     if (beat.goal && !done) goal = beat.goal;
-    else if (beat.goal) goal = 'The north gate is open.';
-    else if (beat.kind === 'verdict') goal = this.facts.get('verdict_right') ? 'Walk through the last gate.' : 'Reach the chair. Name who started the loop.';
+    else if (beat.goal) goal = beat.gate ? `The gate is open: ${beat.gate}.` :'The north gate is open.';
+    else if (beat.kind === 'verdict') goal = this.facts.get('verdict_right') ? 'Walk through the last gate.' : 'Reach the chair. Name whose hands were on the first law.';
     else if (done) goal = 'Find the way to the next sector.';
     else if (beat.kind === 'arrival' || beat.kind === 'log') goal = crew ? `Find ${crew.first}'s log.` : 'Find the captain\'s log.';
     else if (beat.kind === 'contradiction') goal = `Compare ${crew.first}'s record with its echo.`;
@@ -975,7 +1026,7 @@ class Game {
       const p = n.model.position;
       this.talkWith = [p.x, p.y + 1.55, p.z];
       say(lines.map((l) => (l.who === 'CREW' ? { ...l, voice } : l)));
-      if (n.n.junoAfter) say([{ who: 'JUNO', text: n.n.junoAfter }]);
+      if (n.n.junoAfter) say([].concat(n.n.junoAfter).map((text) => ({ who: 'JUNO', text })));
       if (beat.kind === 'encounter') {
         this.log.push(`Met ${n.crew.name} (${n.crew.role})${n.n.hologram ? ' - only an echo' : ' - alive'}.`);
         this.beatDone();
@@ -986,12 +1037,12 @@ class Game {
     if (kind === 'terminal') {
       this.audio.terminal();
       const pp = this.player.pos;
-      this.fx.holo(it.pos, Math.atan2(pp.x - it.pos[0], pp.z - it.pos[2]), it.log.title, it.log.text, '#2f7f9e', this.voice.duration(it.log.text, 'NONE') + 1);
-      say([{ who: 'NONE', name: it.log.title, color: '#4f6170', text: it.log.text }]);
+      this.fx.holo(it.pos, Math.atan2(pp.x - it.pos[0], pp.z - it.pos[2]), it.log.title, it.log.text, '#2f7f9e', this.voice.duration(it.log.text, it.log.who || 'NONE') + 1);
+      say([{ who: it.log.who || 'NONE', name: it.log.title, color: '#4f6170', text: it.log.text }]);
       if (!flags[`done_${it.id}`]) {
         flags[`done_${it.id}`] = true;
         this.log.push(`<b>${it.log.title}</b> ${it.log.text}`);
-        if (beat.junoAfter) say([{ who: 'JUNO', text: beat.junoAfter }]);
+        if (beat.junoAfter) say([].concat(beat.junoAfter).map((text) => ({ who: 'JUNO', text })));
         if (beat.kind === 'arrival' && beat.tick) say([{ who: 'TICK', text: beat.tick }]);
         if (beat.kind === 'arrival' || beat.kind === 'log') this.beatDone();
       }
@@ -1009,13 +1060,14 @@ class Game {
         say([{ who: 'NONE', text: beat.echo }, { who: 'YOU', text: beat.log }]);
         if (!flags[`done_${it.id}`]) {
           flags[`done_${it.id}`] = true;
-          const crew = this.story.cast[this.story.decks[this.campaign.deck].crew];
+          const crew = this.story.cast[beat.crew ?? this.story.decks[this.campaign.deck].crew];
           this.facts.set(`clue_${crew.id}`, beat.clue);
           // discoveries rewrite what you thought you knew
           this.log = this.log.map((l) => (l.includes(crew.first) && !l.includes('↻')
             ? `${l} <i>↻ ${beat.clue === 'guilty' ? 'The echo contradicts this.' : 'The echo confirms this.'}</i>` : l));
           this.log.push(beat.log);
-          this.hud.toast(`<small>${beat.clue === 'guilty' ? 'CONTRADICTION FOUND' : 'ALIBI CONFIRMED'}</small><br>${crew.name}`, 4200);
+          this.hud.toast(`<small>${beat.toast || (beat.clue === 'guilty' ? 'CONTRADICTION FOUND' : 'ALIBI CONFIRMED')}</small><br>${crew.name}`, 4200);
+          if (beat.junoAfter) say([].concat(beat.junoAfter).map((text) => ({ who: 'JUNO', text })));
           this.beatDone();
         }
       }
@@ -1082,18 +1134,29 @@ class Game {
       return;
     }
     this.facts.set('verdict_right');
+    this.deckWorld.refresh(); // whoever waits for the verdict steps in (Juno, after SEVERED)
     const $ = (s) => document.querySelector(s);
     const mins = Math.round(this.playTime / 60);
-    $('#ending .body').innerHTML = `
-      <h2>${end.title}</h2>${end.text.map((p) => `<p>${p}</p>`).join('')}
+    const A = this.story.after || {};
+    const again = A.again || ['CYCLE 43', 'A new vessel, a new crew, a new truth'];
+    const coda = (A.coda || []).filter((l) => l.who === 'NONE').map((l) => `<p class="dim">${l.text}</p>`).join('');
+    const show = () => {
+      $('#ending .body').innerHTML = `
+      <h2>${end.title}</h2>${end.text.map((p) => `<p>${p}</p>`).join('')}${coda}
       <div class="stats"><span>${Math.floor(mins / 60)} h ${mins % 60} min</span><span>${this.facts.get('verdicts')} verdict${this.facts.get('verdicts') > 1 ? 's' : ''}</span>
       <span>${this.story.cast.filter((c) => this.facts.get(`met_${c.id}`)).length}/7 crew met</span><span>seed ${this.campaign.seed}</span></div>
-      <button class="big" id="newVessel">CYCLE 43<small>A new vessel, a new crew, a new truth</small></button>
+      <button class="big" id="newVessel">${again[0]}<small>${again[1]}</small></button>
       <button id="keepPlaying">STAY ON THE BRIDGE</button>`;
-    $('#newVessel').onclick = () => this.begin('vessel');
-    $('#keepPlaying').onclick = () => this.closeMenu();
-    this.saveTo('auto');
-    this.openMenu('ending');
+      $('#newVessel').onclick = () => this.begin('vessel', null, null, { ending: this.campaign.ending ?? null });
+      $('#keepPlaying').onclick = () => this.closeMenu();
+      this.saveTo('auto');
+      this.openMenu('ending');
+    };
+    // the last scene on the bridge plays first, in the world the prologue ending made
+    if (A.coda?.length) {
+      this.closeMenu();
+      this.hud.say(A.coda, this.facts, show);
+    } else show();
   }
 
   deckHint() {
@@ -1320,7 +1383,8 @@ class Game {
       this.catching = false;
       if (kind === 'caught' && !this.facts.get('sentinel_tip')) {
         this.facts.set('sentinel_tip');
-        this.hud.say([{ who: 'TICK', text: 'IT ONLY WATCHES THE FLOOR. OR YOU COULD ASK IT TO HOLD STILL. POLITELY. WITH A LAW.' }], this.facts);
+        const learned = this.story?.after?.sentinels === 'learned';
+        this.hud.say([{ who: 'TICK', text: learned ? 'IT KNEW WHERE YOU WOULD BE. YOU TAUGHT IT THAT, IN THE HALL.' : 'IT ONLY WATCHES THE FLOOR. OR YOU COULD ASK IT TO HOLD STILL. POLITELY. WITH A LAW.' }], this.facts);
       }
     }, kind === 'caught' ? 700 : 350);
   }
@@ -1433,7 +1497,7 @@ class Game {
   saveMeta() {
     if (this.mode === 'deck') {
       const d = this.story.decks[this.campaign.deck];
-      if (this.campaign.zones) return { where: `HALCYON · ${d.name}`, chapter: `District ${this.campaign.sector + 1}/${d.sectors}` };
+      if (this.campaign.zones) return { where: `${this.story.label || 'HALCYON'} · ${d.name}`, chapter: `District ${this.campaign.sector + 1}/${d.sectors}` };
       const told = this.story.title ? `${this.story.title.toUpperCase()} · ` : '';
       return { where: `${told}DECK ${this.campaign.deck + 1} · ${d.name}`, chapter: `Sector ${this.campaign.sector + 1}/4` };
     }
@@ -1466,7 +1530,7 @@ class Game {
       this.comboIndex = d.comboIndex ?? -1;
       this.hud.lawDraft = null;
       this.restoring = false;
-      this.run = d.meta?.run || (d.campaign?.zones ? 'halcyon' : d.mode === 'deck' ? 'vessel' : 'prologue');
+      this.run = d.meta?.run || (d.campaign?.zones ? (d.campaign.set === 'cradle' ? 'cradle' : 'halcyon') : d.mode === 'deck' ? 'vessel' : 'prologue');
       if (d.mode === 'deck' && d.campaign?.zones) {
         this.startZones(d.campaign);
         return true;
@@ -1853,7 +1917,7 @@ class Game {
     _c.set(th.ground);
     if (pal?.look) _c.lerp(_c2.set(pal.fog), 0.5);
     this.hemi.groundColor.lerp(_c, k);
-    const night = deck ? pal.night || { horror: 0.55, thriller: 0.3 }[this.story?.mood] || 0 : room.night || 0;
+    const night = deck ? pal.night || { horror: 0.55, thriller: 0.3 }[this.story?.mood] || this.story?.after?.dark || 0 : room.night || 0;
     const env = (this.scene.environment ? 0.85 : 1) * (deck ? 0.72 : 1) * (1 - night * 0.55);
     // a sky photo lights the district: the probe takes over most of the flat hemisphere fill
     // (indoor decks only borrow the sky for reflections)

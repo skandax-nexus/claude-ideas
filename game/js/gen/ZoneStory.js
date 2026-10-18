@@ -13,11 +13,11 @@ const cast = [
   { id: 'kade', first: 'Kade', name: 'Kade Mori', role: 'Sign Fixer', pronoun: { their: 'his', them: 'him' }, color: '#c4566a', alive: true, seed: 4021 },
   { id: 'osei', first: 'Abena', name: 'Abena Osei', role: 'Reactor Chief', pronoun: { their: 'her', them: 'her' }, color: '#c0762a', alive: false, seed: 977 },
   { id: 'theo', first: 'Theo', name: 'Theo Lark', role: 'Botanist', pronoun: { their: 'their', them: 'them' }, color: '#2f8a5a', alive: true, seed: 3160 },
-  { id: 'varga', first: 'Ilse', name: 'Dr. Ilse Varga', role: 'Director', pronoun: { their: 'her', them: 'her' }, color: '#6c5bc4', alive: false, seed: 5512 },
+  { id: 'varga', first: 'Ilse', name: 'Dr. Ilse Varga', role: 'Director', pronoun: { their: 'her', them: 'her' }, color: '#6c5bc4', alive: false, seed: 5512, voice: 'VARGA' },
 ];
 
 const crew = (id) => cast.findIndex((c) => c.id === id);
-const said = (id, lines) => lines.map((text) => ({ who: 'CREW', name: cast[crew(id)].name.toUpperCase(), color: cast[crew(id)].color, text }));
+const said = (id, lines) => lines.map((text) => ({ who: cast[crew(id)].voice || 'CREW', name: cast[crew(id)].name.toUpperCase(), color: cast[crew(id)].color, text }));
 
 export const ZONES = [
   {
@@ -29,12 +29,12 @@ export const ZONES = [
     intro: [
       { who: 'JUNO', text: 'Ren, that hatch goes up. All the way up. There is a whole city on top of Station Zero.' },
       { who: 'JUNO', text: 'They called it Halcyon. One glass sky, a million lights, and nobody left to switch them off.' },
-      { who: 'TICK', text: 'DRONES. THREE. THEY LOOK AT FLOORS. WE SHOULD NOT BE A FLOOR.' },
+      { who: 'TICK', text: 'DRONES. TWO. THEY LOOK AT FLOORS. WE SHOULD NOT BE A FLOOR.' },
     ],
     beats: [
       {
         kind: 'arrival', goal: 'Find Varga\'s recorder in the square.',
-        log: { title: 'VARGA - FIELD RECORDER 1', text: 'If you are hearing this, you came up the long way. Good. The Observer cannot see past its own floors, so stay high when you can. I am going to the Signal Tower. Follow the pink lights.' },
+        log: { title: 'VARGA - FIELD RECORDER 1', who: 'VARGA', text: 'If you are hearing this, you came up the long way. Good. The Observer cannot see past its own floors, so stay high when you can. I am going to the Signal Tower. Follow the pink lights.' },
         tick: 'THE RECORDER IS ON A ROOF. ROOFS ARE CEILINGS FOR THE SKY. FLIP THE CITY.',
         junoAfter: 'Stay high. Roofs, overpasses, the glass itself if you have to. I can steer you.',
       },
@@ -43,7 +43,7 @@ export const ZONES = [
         log: 'The screen says the city hunted me. The echo says it hunted Varga. Someone rewrote who the villain was.',
         official: 'WANTED: SUBJECT ZERO - FOR THE ZERO EVENT - DO NOT APPROACH',
         echo: 'WANTED: ILSE VARGA - FOR TRYING TO STOP IT',
-        clue: 'cleared', crew: crew('varga'),
+        clue: 'cleared', crew: crew('varga'), toast: 'RECORD CORRECTED',
         tick: 'THE SCREEN HAS A MEMORY. MEMORIES TELL THE TRUTH MORE OFTEN. NOT ALWAYS.',
         junoAfter: 'They put your face on every screen in the city. Somebody wanted you to be the reason.',
       },
@@ -51,7 +51,7 @@ export const ZONES = [
         kind: 'encounter', goal: 'Find whoever keeps the signs lit.',
         lines: said('kade', [
           'Hey - hey! Don\'t run. Nobody runs on my street. You\'ll scare the signs.',
-          'Kade. I fix the neon. Twelve years, every night, and not one customer. Feels honest work, though.',
+          'Kade. I fix the neon. Eighteen years, every night, and not one customer. Feels honest work, though.',
           'The woman with the grey coat? Varga. She came through crying and laughing at the same time. Took the old service lift to the reactor.',
           'Told me if a kid with a glowing thing in their hand comes by, I should say: the lights are a map. I never knew what that meant.',
         ]),
@@ -79,7 +79,7 @@ export const ZONES = [
       },
       {
         kind: 'log', goal: 'Find Varga\'s note in the pump hall.',
-        log: { title: 'VARGA - NOTE ON A PUMP', text: 'I opened the flood valves myself. It was the only way to slow the core down. Osei, I am sorry. Ren, if you read this: the water bought us eighteen years. Do not waste them.' },
+        log: { title: 'VARGA - NOTE ON A PUMP', who: 'VARGA', text: 'I opened the flood valves myself. It was the only way to slow the core down. Osei, I am sorry. Ren, if you read this: the water bought us eighteen years. Do not waste them.' },
         junoAfter: 'Eighteen years. That number again. Recording 0 was eighteen years before you were born.',
       },
       {
@@ -87,10 +87,12 @@ export const ZONES = [
         lines: said('osei', [
           'Pressure at nine-forty and climbing. Seal the lower gallery. Seal it!',
           'Who is that? You are not on my shift. Nobody is on my shift anymore.',
+          'The doors said VARGA. I took it for the Director. I never saw a face.',
           'She opened the valves. She saved the city and drowned my reactor in the same breath. I would have done the same.',
+          'Hale. Where is Hale? Somebody get Hale out of the lower gallery!',
           'Go up the core well. The forest is above us. She went to the cabin. She always went to the cabin.',
         ]),
-        junoAfter: 'That was an echo. Osei has been saying that to an empty room for eighteen years.',
+        junoAfter: 'That was Osei. My chief. She has been calling for me in an empty room for eighteen years.',
       },
     ],
   },
@@ -117,7 +119,7 @@ export const ZONES = [
         log: 'The memorial says Halcyon\'s people died. The echo says they are asleep. Varga did not kill this city. She put it to sleep.',
         official: 'IN MEMORY OF THE PEOPLE OF HALCYON - LOST IN THE ZERO EVENT',
         echo: 'THEY ARE NOT LOST - THEY ARE ASLEEP - WAKE THEM WHEN IT IS SAFE',
-        clue: 'cleared', crew: crew('varga'),
+        clue: 'cleared', crew: crew('varga'), toast: 'RECORD CORRECTED',
         tick: 'STONE REMEMBERS WHAT IT WAS ASKED TO SAY. ECHO REMEMBERS WHAT IT MEANT.',
         junoAfter: 'Asleep. A whole city, asleep. Ren, that is what the machine is for.',
       },
@@ -140,20 +142,20 @@ export const ZONES = [
     rooms: ['STORM DECK', 'THE SPIRE STAIR', 'ANTENNA FIELD', 'THE RELAY', 'LAST LANDING', 'THE BEACON'],
     motto: 'SAY IT ONCE AND THE WHOLE SKY HEARS',
     intro: [
-      { who: 'JUNO', text: 'The tower. Storm on the glass, red lights everywhere. And Ren - it is here. The Observer. It got here first.' },
-      { who: 'OBSERVER', text: 'It has been waiting at the top of the world. It knows the way you climb.' },
+      { who: 'JUNO', text: 'The tower. Storm on the glass, red lights everywhere. And Ren - the Observer\'s eyes are up here. Its drones got here first.' },
+      { who: 'OBSERVER', text: 'They have been waiting at the top of the world. They know the way you climb.' },
       { who: 'TICK', text: 'IT WATCHES FLOORS. YOU KNOW WHAT TO DO. PROBABLY.' },
     ],
     beats: [
       {
         kind: 'arrival', goal: 'Find Varga\'s relay log on the storm deck.',
-        log: { title: 'VARGA - RELAY LOG', text: 'The broadcast that starts the cycle goes out from this tower every zero hour. I can stop it from here. I can also stop it from Station Zero, the right way, with a choice instead of a switch. I am not brave enough to choose for everyone.' },
-        tick: 'THE OBSERVER PATROLS THE DECK. HIDE BEHIND THINGS. OR BE ON THE CEILING. OR WRITE IT A LAW.',
+        log: { title: 'VARGA - RELAY LOG', who: 'VARGA', text: 'The broadcast that starts the cycle goes out from this tower every zero hour. I can stop it from here. I can also stop it from Station Zero, the right way, with a choice instead of a switch. I am not brave enough to choose for everyone.' },
+        tick: 'ITS DRONES PATROL THE DECK. HIDE BEHIND THINGS. OR BE ON THE CEILING. OR WRITE THEM A LAW.',
         junoAfter: 'She could have ended it here. She did not. She left it for someone to choose.',
       },
       {
         kind: 'log', goal: 'Find Varga\'s last instruction in the antenna field.',
-        log: { title: 'VARGA - TO REN', text: 'Ren. You asked me to make you forget so that you could choose honestly. Go back down to Station Zero. Install the core. Wake the machine and look inside it. Then decide. I will be the light at the top of the tower when you need me.' },
+        log: { title: 'VARGA - TO REN', who: 'VARGA', text: 'Ren. You asked me to make you forget so that you could choose honestly. You even scratched our name off your badge. Go back down to Station Zero. Install the core. Wake the machine and look inside it. Then decide. I will be the light at the top of the tower when you need me.' },
         junoAfter: 'Go back down. After all this. She wants the choice made where it started.',
       },
       {
@@ -220,10 +222,170 @@ export const FRAGMENTS = [
   ],
 ];
 
+
+// THE CRADLE: beneath Station Zero, after the machine. The long-sleep hold around the lower core
+// well, where Halcyon's million sleep in rows under the roots of the Glass Forest, with Varga in
+// row one. One zone, three districts, told differently after each prologue ending (null: started
+// from the chapter menu before the choice). Same shape as a HALCYON story, so the same runtime
+// plays it; gen/ZoneGen.js builds the 'cradle' theme.
+export const CRADLE_FRAGMENTS = [
+  'Footprints in the dust, from the foot of the ladder to row one. One set going in. None coming out.',
+  'An empty pod, its lid propped open with a wrench. Scratched inside: NOT TONIGHT. SOMEBODY HAS TO KEEP THE LIGHTS ON. K. MORI.',
+  'The next pod along: S. MORI, asleep. Someone has taped a tiny neon sign to the glass. It says OPEN.',
+  'A door log from the reactor control deck. 03:04: KEY ACCEPTED - VARGA. The doors knew one name. Two people carried it. Badge on record: R. VARGA-ZERO.',
+  'A dream monitor labelled ROW ONE, wired up to the station terminals. Its last output, word for word: If you have already activated it, I am sorry.',
+  'A half-built drone in a toolbox, one rotor missing. A note in a child\'s handwriting: TICK. HE WILL TELL ME WHEN I AM WRONG.',
+  'Eight empty pods at the end of the row, lids up, still warm. The label says NIGHT WATCH. The names on it change every cycle.',
+  'Broadcast notes, the unredacted copy. Every zero hour, the tower sends one word down to Station Zero. The word is AGAIN.',
+  'A lab tag dated 14 March 2071: LIFE SUPPORT, ONE OCCUPANT, R. VARGA. Consent signed by the Director. The line for the occupant is blank.',
+];
+
+// TICK in the Cradle: the ceiling is roots, not glass (gate hints are HALCYON's)
+export const CRADLE_HINTS = {
+  roof: ['THE RECORDER IS ON TOP OF THE PODS.', 'THE ROOTS ARE A FLOOR IF YOU ARE UPSIDE DOWN. OR THE OLD STAIRS ARE A MEMORY.', 'SHIFT TO INVERTED, WALK THE ROOTS UNTIL YOU ARE ABOVE THE STACK, SHIFT BACK. OR: ECHOES SOLIDIFY IN ECHO, SHIFT TO ECHO, CLIMB.'],
+  canal: ['THE WATER CUTS THE ROW IN TWO.', 'A WALKWAY USED TO BE HERE. ECHO REMEMBERS IT. THE ROOTS DO NOT CARE ABOUT WATER.', 'ECHOES SOLIDIFY IN ECHO, SHIFT TO ECHO, CROSS. OR SHIFT TO INVERTED AND WALK OVER IT ON THE ROOTS.'],
+  drones: ['THE DRONES WATCH THE AISLES. ONLY THE AISLES.', 'KEEP THE PODS BETWEEN YOU. OR GO WHERE THEY DO NOT LOOK: UP, AMONG THE ROOTS.', 'SHIFT TO INVERTED AND CROSS ON THE ROOTS. OR WRITE  OBSERVER  FREEZES IN  (THIS STATE).'],
+};
+
+const VARGA_CRADLE = { id: 'varga', first: 'Ilse', name: 'Dr. Ilse Varga', role: 'Director', pronoun: { their: 'her', them: 'her' }, color: '#6c5bc4', seed: 5512, voice: 'VARGA' };
+const vargaSays = (lines) => lines.map((text) => ({ who: 'VARGA', name: 'DR. ILSE VARGA', color: VARGA_CRADLE.color, text }));
+const LADDER = { who: 'JUNO', text: 'Varga said they sleep below the forest. That means below us. The ladder behind the vault goes down. It always did.' };
+const HUSH = { who: 'TICK', text: 'EVERYONE DOWN HERE IS ASLEEP. I WILL USE MY INSIDE VOICE. THIS IS MY INSIDE VOICE.' };
+// shared with the vessel's SEVERED opening (one recording)
+const SMALL_FIELD = { who: 'TICK', text: 'THE DEVICE STILL WORKS. IT CARRIES A SMALL FIELD OF ITS OWN. THE WATCHERS DO NOT. THEY ARE STANDING VERY STILL.' };
+
+const CRADLE_ZONE = {
+  key: 'cradle', name: 'THE CRADLE', title: 'Where Halcyon Sleeps', theme: 'cradle', feature: 'echo', idPrefix: 'c',
+  rooms: ['THE WELL FLOOR', 'ROOT GALLERY', 'THE REGISTRY', 'MERIDIAN WARD', 'ROW ONE', 'NIGHT WATCH'],
+  motto: 'SLEEP IS A PROMISE TO WAKE', // the Cryo Bay's motto: the night watch is woken from here
+  canalSign: 'WALKWAY FLOODED',
+  hints: CRADLE_HINTS,
+  palette: { fog: 0x0e0c19, wall: '#2e2b38', floor: '#221f2a', accent: 0xb08cff, accent2: 0xffb46a, light: 0xe2d4ff, tint: 0x2c2650, night: 0.95, weather: 'motes', sky: 'warehouse', grade: { shadowTint: 0x221a4a, highlightTint: 0xffcf9e, toning: 0.24, contrast: 1.12, saturation: 0.96 } },
+};
+
+const CRADLE_BY_ENDING = {
+  SEVER: {
+    title: 'SEVERED', subtitle: 'Below the station, a sleeping city opens its eyes',
+    awake: true, podsOpen: true, sentinels: 'still',
+    palette: { accent2: 0xeef4ff, night: 0.8, grade: { highlightTint: 0xfff0dc } }, // pod lights gone white: the lids are open
+    intro: [
+      { who: 'JUNO', text: 'The lab went dark when you pulled the core. And something down the ladder is breathing, Ren. Hundreds of somethings.' },
+      LADDER,
+      SMALL_FIELD,
+    ],
+    open: 'There you are. Smaller than I made you. Come here. Let me look at you.',
+    close: 'You let him go. I never could. Go forward and see whose hands were last. Then come back and help me wake the rest.',
+    after: 'She\'s awake. Ren, she\'s actually awake. Go on - I\'ll keep her company on the radio.',
+  },
+  SUSTAIN: {
+    title: 'SUSTAINED', subtitle: 'Below the station, the city you are keeping asleep',
+    awake: false, podsOpen: false, sentinels: 'learned',
+    intro: [
+      { who: 'JUNO', text: 'The new one found the door. You were good at that part. Upside down and everything.' },
+      LADDER,
+      HUSH,
+    ],
+    open: 'If you are hearing this, you kept him running. I understand. I kept him for eighteen years.',
+    close: 'I am asleep, Ren. Let me sleep. Go forward and see whose hands it is this time. Then decide how long you can keep doing this.',
+    after: 'That was her dream talking. She\'s still asleep in there. Go on. The gate goes forward.',
+  },
+  MIRROR: {
+    title: 'OBSERVED', subtitle: 'Below the station, a city that heard your name',
+    awake: true, podsOpen: false, sentinels: 'kin',
+    palette: { accent: 0x9fb4ff },
+    intro: [
+      { who: 'YOU', text: 'I know this ladder. I\'ve carried someone down it.' },
+      { who: 'JUNO', text: 'Ren? You sound different. Older, at the edges. Go slow. It goes a long way down.' },
+      { who: 'TICK', text: 'THE DRONES DOWN HERE KNOW YOUR NAME. I CAN TELL. NOBODY TELLS ME ANYTHING.' },
+    ],
+    open: 'Ren. Both of you. I can hear it in the way you walk.',
+    close: 'You did not end him and you did not keep him. You let him in. Go forward. The ship will listen to you now.',
+    after: 'She knew you. Both of you. Go on - I\'ll stay on the line with her.',
+  },
+  NONE: {
+    title: null, subtitle: 'Below the forest, below the station, a city asleep in rows',
+    awake: false, podsOpen: false, sentinels: 'hunt',
+    intro: [
+      { who: 'JUNO', text: 'You came down without choosing. That\'s allowed. The machine will wait. It\'s good at waiting.' },
+      LADDER,
+      HUSH,
+    ],
+    open: 'If you are hearing this, you have not chosen yet. Good. Look first.',
+    close: 'The machine is still waiting upstairs. Go forward first, if you like. See whose hands. Then choose it awake.',
+    after: 'That was her dream talking. She\'s still asleep in there. Go on. The gate goes forward.',
+  },
+};
+
+const VARGA_SHARED = [
+  'The one in the machine is my son. The first Ren. I opened the valves, and he went into the water for Juno.',
+  'He carried her all the way to the lab. Then I could not let him go. That was my terrible decision.',
+  'That night the control deck opened for my name, on his badge. He could not stop the fold. So he made it ask, every cycle: whose hands?',
+  'Someone always answers. Never the same hands twice. You are made of him, Ren. You do not have to be him.',
+];
+
+export function makeCradleStory(ending = null) {
+  const v = CRADLE_BY_ENDING[ending] || CRADLE_BY_ENDING.NONE;
+  const cast = [{ ...VARGA_CRADLE, alive: v.awake }]; // awake after SEVERED and OBSERVED; otherwise her dream, as an echo
+  const zone = {
+    ...CRADLE_ZONE,
+    crew: 0,
+    subtitle: v.subtitle,
+    awake: v.awake, // ZoneGen: Varga's pod lid stands open
+    podsOpen: v.podsOpen, // ZoneGen: every pod lid stands open (SEVERED)
+    palette: { ...CRADLE_ZONE.palette, ...v.palette, grade: { ...CRADLE_ZONE.palette.grade, ...v.palette?.grade } },
+    intro: v.intro,
+    beats: [
+      {
+        kind: 'arrival', goal: 'Find the recorder on top of the pod stack.',
+        log: { title: 'VARGA - LAST LOG - 14 MARCH 2071', who: 'VARGA', text: 'Last log. The city is down here, every pod green. I chose not to choose at the tower, so I will not stay awake to choose here. Row one. When the water runs out, the field will wake a new Ren. Tell Juno I am sorry.' },
+        tick: 'ROW ONE IS AT THE FAR END. I COUNTED. THERE ARE A LOT OF ROWS.',
+        junoAfter: 'She asked for me. Eighteen years, and she was under our feet the whole time. Keep going, Ren.',
+      },
+      {
+        kind: 'contradiction', goal: 'Read the sleep registry. Then read it in ECHO.',
+        log: 'The registry says nobody made me. The echo says Ren Varga, Ilse Varga\'s son. Body lost. Mind kept. The one in the machine is him. I\'m made of him.',
+        official: 'SLEEP REGISTRY - SUBJECT ZERO - WOKEN DAY 6570 - NO PARENT ON RECORD',
+        echo: 'REN VARGA - SON OF ILSE VARGA - BODY LOST 14 MARCH 2071 - MIND KEPT',
+        clue: 'cleared', crew: 0, toast: 'RECORD CORRECTED',
+        tick: 'THE REGISTRY HAS AN ECHO. FORMS FORGET PEOPLE. ECHOES DO NOT.',
+        // Juno's confession: the 'her' the Custodian saw you carry
+        junoAfter: [
+          'Ren. I was on Osei\'s shift that night. Lower gallery. When the valves opened, the water came in like a wall.',
+          'You came down for me. Nobody else did. You carried me all the way to the lab.',
+          'That\'s the her. The Custodian saw you carry me. I made it. You didn\'t. I\'ve wanted to say that for forty-two cycles.',
+        ],
+      },
+      {
+        kind: 'encounter', goal: 'Find row one.', gate: 'NIGHT WATCH - FORWARD DECKS',
+        lines: vargaSays([v.open, ...VARGA_SHARED, v.close]),
+        junoAfter: v.after,
+      },
+    ],
+    index: 0,
+    sectors: ZONE_SECTORS,
+  };
+  return {
+    zones: true,
+    cradle: true,
+    set: 'cradle',
+    seed: 'cradle',
+    label: 'THE CRADLE',
+    cardTop: v.title ? `BENEATH STATION ZERO · AFTER ${v.title}` : 'BENEATH STATION ZERO',
+    question: 'Who sleeps beneath Station Zero, and who did you carry through the archive door?',
+    after: { key: ending || 'NONE', title: v.title, sentinels: v.sentinels },
+    fragments: [CRADLE_FRAGMENTS],
+    cast,
+    captain: cast[0],
+    truth: {},
+    decks: [zone],
+  };
+}
+
 export function makeZoneStory() {
   return {
     zones: true,
     seed: 'halcyon',
+    question: 'Where did Varga go, and what did she do on the night of the Zero Event?',
     cast,
     captain: cast[crew('varga')],
     truth: {},

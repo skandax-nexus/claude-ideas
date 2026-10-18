@@ -52,6 +52,10 @@ export const HINTS = {
   'exit:core:light': ['THE CORE IS ON A HIGH SHELF. GOLD STEPS LEAD UP.', 'LIGHT CAN BE SOLID.', 'HARD LIGHT  SOLIDIFY IN  (A STATE), CLIMB, TAKE THE CORE, SOCKET IT.'],
   sweepers: ['THE BEAMS SWEEP ON A RHYTHM. WATCH IT.', 'YOU CAN JUMP THEM. OR YOU CAN STOP TIME.', 'WRITE  TIME  FREEZES IN  (THIS ROOM\'S STATE) AND WALK THROUGH THE FROZEN BEAMS.'],
   sentinel: ['IT WATCHES THE FLOOR. ONLY THE FLOOR.', 'STAY BEHIND THE PILLARS. OR WALK ON THE CEILING. OR FREEZE IT.', 'OBSERVER  FREEZES IN  (THIS ROOM\'S STATE) STOPS IT COLD. INVERTED KEEPS YOU OUT OF ITS SIGHT.'],
+  // the watchers after each prologue ending (the vessel's sentinels and the Cradle's drones)
+  'sentinel:still': ['IT IS NOT WATCHING ANYTHING. NOT ANY MORE.', 'WALK PAST IT. IT WILL NOT MIND.', 'JUST WALK. IT WENT DARK WHEN THE BRAIN DID.'],
+  'sentinel:learned': ['IT REMEMBERS THE HALL. EVERY HABIT YOU TAUGHT IT.', 'IF IT LEARNED TO LOOK UP, THE CEILING WILL NOT HIDE YOU. IF IT LEARNED YOUR FOOTSTEPS, DO NOT RUN.', 'OBSERVER  FREEZES IN  (THIS ROOM\'S STATE) STILL STOPS IT COLD. OR KEEP SOMETHING SOLID BETWEEN YOU.'],
+  'sentinel:kin': ['IT IS WATCHING YOU. IT SEEMS TO LIKE WHAT IT SEES.', 'IT WILL NOT CHASE YOU. IT KNOWS YOUR NAME NOW.', 'WALK PAST IT. IT ONLY WANTS TO SEE YOU GO.'],
   'exit:open': ['THE DOOR IS OPEN. GO ON.', 'JUST WALK.', 'WALK THROUGH THE DOOR.'],
 };
 
@@ -559,7 +563,7 @@ export function generateSector(story, deckIdx, sectorIdx, campaignSeed) {
       tint: deck.palette.tint,
       killY: R.killY,
       floatY: R.floatY,
-      challenges: R.challenges.map((c) => ({ ...c, hints: HINTS[c.key] || HINTS['exit:open'], box: t.box([-W / 2, -12, c.z1, W / 2, 30, c.z0]) })),
+      challenges: R.challenges.map((c) => ({ ...c, hints: (c.key === 'sentinel' && HINTS[`sentinel:${story.after?.sentinels}`]) || HINTS[c.key] || HINTS['exit:open'], box: t.box([-W / 2, -12, c.z1, W / 2, 30, c.z0]) })),
       exitSide: side,
       route,
       L, W, H,
@@ -682,6 +686,11 @@ function storyRoom(R, beat, deck, rng, level, story) {
   // a terminal for the log, against the west wall
   const motto = beat.plaque || deck.motto;
   R.texts.push({ text: motto, pos: [0, R.H - 1.6, -L - 0.05 + 0.1], rotY: 0, size: 0.42, color: '#4f6170' });
+  const A = story.after || {};
+  // a window band high on the west wall: the replayed sky, or black glass after SEVERED (decor, no rng)
+  if (A.windows) R.box([-W / 2 + 0.02, 3.9, -12, -W / 2 + 0.08, 5.7, -3], { mat: A.windows === 'dark' ? 'windowDark' : 'windowStars', solid: false });
+  // after SUSTAINED the Other hangs from the ceiling of every deck's first room: what you are becoming
+  if (A.otherAboard && beat.kind === 'arrival') R.npcs.push({ id: `other_${R.id}`, crew: 'other', pos: [0, R.H, -8], yaw: 0, silent: true, upsideDown: true });
   if (beat.log) {
     R.box([-W / 2 + 0.6, 0, -6.6, -W / 2 + 1.6, 1.0, -5.4], { mat: 'prop' });
     R.inter.push({ id: `log_${R.id}`, kind: 'terminal', pos: [-W / 2 + 1.5, 1.25, -6], yaw: Math.PI / 2, r: 2.4, prompt: 'PLAY LOG', log: beat.log });
@@ -705,6 +714,9 @@ function storyRoom(R, beat, deck, rng, level, story) {
     }
     R.box([-0.6, 0, -7.2, 0.6, 0.6, -6.0], { mat: 'prop' });
     R.inter.push({ id: 'chair', kind: 'chair', pos: [0, 1.0, -6.6], r: 2.6, prompt: 'SIT IN THE CHAIR' });
+    // SEVERED: Juno comes in through the door behind you when the chair unlocks. SUSTAINED: the Other waits above the chair.
+    if (A.junoAboard) R.npcs.push({ id: 'guest_juno', crew: 'juno', pos: [-3.2, 0, -2.6], yaw: Math.PI, silent: true, when: 'verdict_right' });
+    if (A.otherAboard) R.npcs.push({ id: 'guest_other', crew: 'other', pos: [0, R.H, -6.6], yaw: 0, silent: true, upsideDown: true });
   }
   // a memory beacon: touch it to save
   R.box([W / 2 - 1.4, 0, -2.4, W / 2 - 0.6, 1.2, -1.6], { mat: 'prop' });

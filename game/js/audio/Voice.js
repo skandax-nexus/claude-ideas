@@ -19,6 +19,7 @@ const PROFILES = {
   CUSTODIAN: { pitch: 0.72, rate: 0.88, gender: 'm' },
   OBSERVER: { pitch: 0.55, rate: 0.82, gender: 'n' },
   OTHER: { pitch: 1.05, rate: 0.9, gender: 'f' },
+  OTHER_m: { pitch: 0.92, rate: 0.9, gender: 'm' },
   NONE: { pitch: 1.0, rate: 0.95, gender: 'n' },
 };
 
@@ -67,8 +68,10 @@ export class Voice {
     if (!this.pack || !this.packOk) return null;
     let id = who === 'CREW' ? `CREW_${extra.gender || 'n'}` : who;
     if (who === 'YOU' && this.youMale && this.pack.index.YOU_m) id = 'YOU_m'; // your look decides your voice
+    if (who === 'OTHER' && this.youMale && this.pack.index.OTHER_m) id = 'OTHER_m'; // and the Other's: it wears your face
     // the Other speaks with your voice when it has no recording of its own
-    const libs = [[id, this.pack.index[id]], ...(who === 'OTHER' ? [['YOU', this.pack.index.YOU]] : [])].filter(([, l]) => l);
+    const you = this.youMale && this.pack.index.YOU_m ? 'YOU_m' : 'YOU';
+    const libs = [[id, this.pack.index[id]], ...(who === 'OTHER' ? [[you, this.pack.index[you]]] : [])].filter(([, l]) => l);
     if (!libs.length) return null;
     const out = [];
     for (const p of voicePieces(text, this.pack.vocab)) {
@@ -139,7 +142,7 @@ export class Voice {
   speakDevice(text, who, extra) {
     const plain = text.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
     const spoken = plain === plain.toUpperCase() ? plain.toLowerCase() : plain; // TICK and records shout in caps
-    const p = { ...(PROFILES[who === 'YOU' && this.youMale ? 'YOU_m' : who] || PROFILES.NONE), ...extra };
+    const p = { ...(PROFILES[(who === 'YOU' || who === 'OTHER') && this.youMale ? `${who}_m` : who] || PROFILES.NONE), ...extra };
     try {
       if (this.android && this.android.ready && this.android.ready()) {
         this.android.speak(spoken, p.pitch, p.rate);

@@ -5,13 +5,19 @@
 import * as THREE from '../../vendor/three.module.min.js';
 import { deckMaterials, boxGeometry, mergeGeometries, textTexture } from './materials.js';
 import * as M from './models.js';
-import { makeCrewModel } from './People.js';
+import { makeCrewModel, makeCastModel } from './People.js';
 import { TOKENS } from '../core/Laws.js';
 import { compileCondition } from '../core/conditions.js';
 import { mergeVertices } from '../../vendor/addons/utils/BufferGeometryUtils.js';
 import { buildDecor, RESKIN } from './DeckDecor.js';
 
 const _v = new THREE.Vector3();
+
+// named people who can stand in a generated room (they are not crew): see LevelGen storyRoom
+const GUESTS = {
+  juno: { id: 'juno', first: 'Juno', name: 'JUNO HALE', color: '#2f9a64' },
+  other: { id: 'other', first: '???', name: '???', color: '#7a5fd0' },
+};
 
 export class DeckWorld {
   constructor(scene, engine, facts) {
@@ -86,7 +92,7 @@ export class DeckWorld {
       if (material.transparent) mesh.renderOrder = 2;
       // the glass sky and see-through walls let the light through (a dome shadow cut a hard
       // diagonal edge across HALCYON where the sun's shadow area ended)
-      mesh.castShadow = !['ceil', 'glass', 'glow', 'gate', 'leaf', 'dome', 'glassWall', 'neon', 'lamp', 'shopfront', 'screen'].includes(mat);
+      mesh.castShadow = !['ceil', 'glass', 'glow', 'gate', 'leaf', 'dome', 'roots', 'glassWall', 'neon', 'lamp', 'shopfront', 'screen', 'podLight', 'windowStars', 'windowDark'].includes(mat);
       mesh.receiveShadow = true;
       root.add(mesh);
       geos.forEach((g) => g.dispose());
@@ -150,12 +156,14 @@ export class DeckWorld {
     }
 
     for (const n of level.npcs) {
-      const crew = story.cast.find((c) => c.id === n.crew) || story.captain;
-      const model = makeCrewModel(crew, { hologram: !!n.hologram, glow: n.hologram ? crewGlow(crew.color) : undefined });
+      const guest = GUESTS[n.crew];
+      const crew = guest || story.cast.find((c) => c.id === n.crew) || story.captain;
+      const model = guest ? makeCastModel(n.crew, this.hero) : makeCrewModel(crew, { hologram: !!n.hologram, glow: n.hologram ? crewGlow(crew.color) : undefined });
+      if (n.upsideDown) model.rotation.z = Math.PI; // hangs from the ceiling, like the Other in the first corridor
       model.position.set(...n.pos);
       model.rotation.y = n.yaw || 0;
       root.add(model);
-      this.npcs.push({ n, crew, model, talkT: 0 });
+      this.npcs.push({ n, crew, model, talkT: 0, cond: compileCondition(n.when) });
     }
 
     this.ready = false;
@@ -282,6 +290,7 @@ export class DeckWorld {
       if (p.userData.core) p.userData.core.visible = !!open;
       if (it.kind === 'fragment') p.visible = !this.flags[`done_${it.id}`];
     }
+    for (const p of this.npcs || []) p.model.visible = !!p.cond(this.ctx(p.n.room));
   }
 
   isItemAvailable(id) {
@@ -352,6 +361,8 @@ export class DeckWorld {
         here: g.room === s.def.room,
         frozen: this.engine.hasIn('observerFrozen', s.def.room),
         hidden: player.gravity === 1,
+        mode: this.story?.after?.sentinels || 'hunt',
+        lessons: g.observer?.brain?.lessons || null,
       });
       if (r === 'caught') event = 'caught';
     }
@@ -384,7 +395,7 @@ export class DeckWorld {
       out.push({ id: `ditem:${id}`, pos: im.it.pos, r: 2.3, prompt: `TAKE ${im.it.label}` });
     }
     for (const n of this.npcs) {
-      if (n.n.silent) continue;
+      if (n.n.silent || !n.model.visible) continue;
       const p = n.model.position;
       out.push({ id: `dnpc:${n.n.id}`, pos: [p.x, p.y + 1.5, p.z], r: 3.2, prompt: `TALK TO ${n.crew.first.toUpperCase()}`, npc: n });
     }
@@ -547,8 +558,22 @@ export class Sentinel {
     return player.rayDistance(eye, dir, len) >= len - 0.6;
   }
 
-  update(dt, t, { player, here, frozen, hidden }) {
+  update(dt, t, { player, here, frozen, hidden, mode = 'hunt', lessons = null }) {
     const U = this.model.userData;
+    // SEVERED: nobody looks out of it any more
+    if (mode === 'still') {
+      U.eyeMat.color.setHex(0x1a1a22);
+      U.coneMat.opacity = 0;
+      this.suspicion = 0;
+      this.mode = 'patrol';
+      this.sync(dt, 0);
+      return null;
+    }
+    // OBSERVED: it is yours
+    if (mode === 'kin') return this.kin(dt, player, here);
+    // SUSTAINED: it carries what you taught the Observer in the hall
+    const L = mode === 'learned' ? lessons : null;
+    if (L?.has('ceiling')) hidden = false;
     if (frozen) {
       U.eyeMat.color.setHex(0xb6a6ff);
       U.coneMat.color.setHex(0xb6a6ff);
@@ -558,7 +583,8 @@ export class Sentinel {
       this.sync(dt, 0);
       return null;
     }
-    const seen = here && !hidden && this.sees(player);
+    const heard = !!L?.has('runner') && here && player.running && this.pos.distanceTo(_v.set(player.pos.x, 0, player.pos.z)) < 7;
+    const seen = (here && !hidden && this.sees(player)) || heard;
     if (seen) this.suspicion = Math.min(1.2, this.suspicion + dt * (player.running ? 2.4 : 1.4));
     else this.suspicion = Math.max(0, this.suspicion - dt * 0.45);
     if (this.mode !== 'chase' && this.suspicion >= 1) this.mode = 'chase';
@@ -568,7 +594,7 @@ export class Sentinel {
       if (!here || hidden) this.lostT += dt;
       else if (seen) this.lostT = 0;
       else this.lostT += dt;
-      if (this.lostT > 2.2) {
+      if (this.lostT > (L?.has('patient') ? 4 : 2.2)) {
         this.mode = 'patrol';
         this.suspicion = 0.4;
         this.lostT = 0;
@@ -602,6 +628,33 @@ export class Sentinel {
       this.suspicion = 0;
       return 'caught';
     }
+    return null;
+  }
+
+  // OBSERVED: patrols, stops to watch you pass, never builds suspicion, never catches
+  kin(dt, player, here) {
+    const U = this.model.userData;
+    this.suspicion = 0;
+    this.mode = 'patrol';
+    let speed = this.def.speed;
+    const look = new THREE.Vector3(player.pos.x - this.pos.x, 0, player.pos.z - this.pos.z);
+    if (here && look.length() < this.def.range) {
+      speed = 0;
+      this.turnTo(look, dt);
+    } else {
+      const w = this.def.path[this.wp];
+      const to = new THREE.Vector3(w[0] - this.pos.x, 0, w[1] - this.pos.z);
+      const d = to.length();
+      if (d < 0.3) this.wp = (this.wp + 1) % this.def.path.length;
+      else {
+        this.turnTo(to, dt);
+        this.pos.addScaledVector(to.divideScalar(d), Math.min(d, speed * dt));
+      }
+    }
+    U.eyeMat.color.setHex(0xb48cff);
+    U.coneMat.color.setHex(0xb48cff);
+    U.coneMat.opacity = 0.05;
+    this.sync(dt, speed);
     return null;
   }
 

@@ -287,6 +287,12 @@ function zoneMaterials(pal, std, basic) {
     bark: pbr('bark', 0.5),
     crown: new THREE.MeshStandardMaterial({ color: 0x2c4a24, emissive: new THREE.Color(pal.accent), emissiveIntensity: 0.035, roughness: 0.9 }),
     rock: pbr('rock', 0.5),
+    // THE CRADLE (theme 'cradle'): stone floor, the forest's roots for a ceiling, amber pod lights
+    stone: pbr('stone', 0.5, { color: 0x8a8494, roughness: 0.7 }),
+    roots: pbr('bark', 0.25, { color: 0x4a3c48, emissive: new THREE.Color(pal.accent), emissiveIntensity: 0.05, side: THREE.DoubleSide }),
+    root: pbr('bark', 0.6, { color: 0x6a5866, emissive: new THREE.Color(pal.accent), emissiveIntensity: 0.06 }), // one hanging root
+    podLight: basic(new THREE.Color(pal.accent2).multiplyScalar(1.4)),
+    pods: podStack(pal, std),
     leaf: std({ color: new THREE.Color(pal.accent).lerp(new THREE.Color(0x1a4a2a), 0.45), emissive: new THREE.Color(pal.accent), emissiveIntensity: 0.25, roughness: 0.8, transparent: true, opacity: 0.9 }),
     neon: basic(new THREE.Color(pal.accent).multiplyScalar(1.6)),
     screen: basic(new THREE.Color(pal.accent).lerp(new THREE.Color(0x101828), 0.55)),
@@ -297,6 +303,91 @@ function zoneMaterials(pal, std, basic) {
     trimDark: std({ color: new THREE.Color(wall).lerp(new THREE.Color(0x000000), 0.35), roughness: 0.5, metalness: 0.4 }),
     door: std({ color: new THREE.Color(pal.accent).lerp(new THREE.Color(0x202030), 0.4), emissive: new THREE.Color(pal.accent), emissiveIntensity: 0.35 }),
   };
+}
+
+// THE CRADLE's pod stacks: tiers of sleeping pods in a steel frame (three pods across, four
+// tiers up, 8 m of stack per texture), most of them glowing with someone asleep inside.
+const _pods = new Map();
+function capsule(g, x, y, w, h, r) {
+  g.beginPath();
+  g.moveTo(x + r, y);
+  g.lineTo(x + w - r, y);
+  g.arc(x + w - r, y + r, r, -Math.PI / 2, Math.PI / 2);
+  g.lineTo(x + r, y + h);
+  g.arc(x + r, y + r, r, Math.PI / 2, Math.PI * 1.5);
+  g.closePath();
+}
+function podStack(pal, std) {
+  const key = `${pal.wall}|${pal.accent}|${pal.accent2}`;
+  if (_pods.has(key)) return _pods.get(key);
+  const acc = '#' + new THREE.Color(pal.accent).getHexString();
+  const acc2 = '#' + new THREE.Color(pal.accent2).getHexString();
+  const frame = new THREE.Color(pal.wall).lerp(new THREE.Color(0x000000), 0.2).getStyle();
+  const draw = (lit) => canvasTex(512, (g, s) => {
+    g.fillStyle = lit ? '#000' : frame;
+    g.fillRect(0, 0, s, s);
+    const rows = 4, cols = 3, rh = s / rows, cw = s / cols;
+    if (!lit) {
+      for (let i = 0; i < 1200; i++) {
+        const v = Math.random() * 20 - 10;
+        g.fillStyle = `rgba(${128 + v},${128 + v},${128 + v},0.06)`;
+        g.fillRect(Math.random() * s, Math.random() * s, 3, 3);
+      }
+      g.fillStyle = 'rgba(0,0,0,0.35)'; // a ledge under every tier
+      for (let r = 0; r < rows; r++) g.fillRect(0, r * rh + rh * 0.86, s, rh * 0.06);
+      g.fillStyle = 'rgba(255,255,255,0.05)'; // a post between pods
+      for (let c = 0; c <= cols; c++) g.fillRect(c * cw - 3, 0, 6, s);
+    }
+    let seed = 11;
+    const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+    for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+      const x = c * cw + cw * 0.08, y = r * rh + rh * 0.3, w = cw * 0.84, h = rh * 0.44;
+      const on = rnd() < 0.85, a = 0.4 + rnd() * 0.5, tone = rnd() < 0.25 ? acc : acc2;
+      capsule(g, x, y, w, h, h / 2);
+      if (lit) {
+        if (!on) continue;
+        const gr = g.createRadialGradient(x + w / 2, y + h / 2, 2, x + w / 2, y + h / 2, w * 0.55);
+        gr.addColorStop(0, tone);
+        gr.addColorStop(1, 'rgba(0,0,0,0)');
+        g.globalAlpha = a;
+        g.fillStyle = gr;
+        g.fill();
+        g.globalAlpha = 1;
+        g.fillStyle = acc; // the status light at the head end
+        g.fillRect(x + w * 0.88, y + h * 0.42, 7, 7);
+      } else {
+        g.fillStyle = '#0c0b14';
+        g.fill();
+        g.strokeStyle = 'rgba(214,204,240,0.3)';
+        g.lineWidth = 4;
+        g.stroke();
+        g.fillStyle = 'rgba(255,255,255,0.08)'; // light along the top of the glass
+        g.fillRect(x + h / 2, y + h * 0.12, w - h, h * 0.12);
+      }
+    }
+  });
+  const base = draw(false), lit = draw(true);
+  for (const t of [base, lit]) t.repeat.set(0.25, 0.25);
+  const m = std({ map: base, ...relief('metal', 0.5, 0.4), emissive: 0xffffff, emissiveMap: lit, emissiveIntensity: 0.85, roughness: 0.55, metalness: 0.35 });
+  _pods.set(key, m);
+  return m;
+}
+
+// The vessel's window bands (LevelGen storyRoom): a small star field, drawn once.
+let _stars = null;
+function starTex() {
+  if (_stars) return _stars;
+  _stars = canvasTex(256, (g, s) => {
+    g.fillStyle = '#02030a';
+    g.fillRect(0, 0, s, s);
+    for (let i = 0; i < 180; i++) {
+      g.fillStyle = `rgba(255,255,255,${0.3 + Math.random() * 0.7})`;
+      const r = Math.random() < 0.1 ? 2 : 1;
+      g.fillRect(Math.random() * s, Math.random() * s, r, r);
+    }
+  });
+  _stars.repeat.set(0.25, 0.25); // boxGeometry tiles UVs per 2 m: one star field per 8 m of wall
+  return _stars;
 }
 
 export function deckMaterials(pal) {
@@ -354,6 +445,9 @@ export function deckMaterials(pal) {
     light: basic(0xffcf6a, 0.16, { depthWrite: false }),
     lightSolid: basic(0xffc24a, 0.62, { depthWrite: false }),
     lightLine: new THREE.LineBasicMaterial({ color: 0xe8a420, transparent: true, opacity: 0.95, fog: false }),
+    // the vessel's window bands (LevelGen storyRoom): the replayed sky, or black glass after SEVERED
+    windowStars: new THREE.MeshBasicMaterial({ map: starTex(), fog: false }),
+    windowDark: new THREE.MeshStandardMaterial({ color: 0x05070a, roughness: 0.05, metalness: 0.9 }),
   };
   m.metal = m.prop;
   m.crate = m.prop2;

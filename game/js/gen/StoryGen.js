@@ -83,22 +83,22 @@ const TRAITS = {
 const PLACES = ['the seed bank', 'pod row C', 'the star dome', 'the turbine hall', 'the recovery ward', 'the music room', 'the deep stacks', 'the galley', 'the drift gallery', 'cold storage'];
 
 const MOTIVES = [
-  { key: 'save', text: 'to keep {victim} alive', long: '{victim} was dying. The machine keeps one occupant alive for as long as the cycle runs. So {culprit} made sure the cycle never ends.' },
+  { key: 'save', text: 'to keep {victim} alive', long: '{victim} was dying. Inside the fold the night never reaches morning, and neither does dying. So {culprit} made sure the cycle never ends.' },
   { key: 'arrival', text: 'to hide where we had arrived', long: 'The vessel arrived years ago. There was nothing at the destination - no planet, no signal, just a dark place shaped like an answer. {culprit} could not let the crew wake up to that.' },
   { key: 'mistake', text: 'to undo a mistake', long: '{culprit} made one navigation error, early, and a lot of people paid for it. A loop is a way to keep trying until you get it right.' },
-  { key: 'promise', text: 'because the Observer promised a way home', long: 'The Observer learned to talk before it learned to lie. It told {culprit} that every cycle brings the vessel one step closer to home. {culprit} believed it.' },
+  { key: 'promise', text: 'because the dreamers promised a way home', long: 'A million dreaming people want to go home. Their dream learned to talk before it learned to lie, and it told {culprit} that every cycle brings the vessel one step closer. {culprit} believed it.' },
 ];
 const METHODS = [
   'rewrote the first law of the core so that time folds back at zero',
   'swapped the cycle counter for a mirror of itself',
-  'sealed the archive and fed the ship a memory of an empty laboratory',
-  'taught the Observer to reset anyone who noticed',
+  'sealed the archive core and fed the ship a memory of a quiet night',
+  'taught the watchers to reset anyone who noticed',
 ];
 const TWISTS = [
-  { key: 'you', title: 'YOU HELPED', text: 'The loop has two signatures. One is {culprit}\'s. The other is yours. Cycle one, you agreed to all of this - and asked to forget, so that you could find your way back to the choice honestly.' },
-  { key: 'observer', title: 'THE WATCHER\'S NAME', text: 'The Observer is not a machine. It is {victim}, uploaded on the night of the Zero Event, watching the ship the only way it still can. It learned you because it missed you.' },
+  { key: 'you', title: 'YOU HELPED', text: 'The loop has two signatures. The hands are {culprit}\'s. The key is yours, written at 03:04 on a badge that read VARGA-ZERO. Cycle one, you agreed to all of this - and asked to forget, so that you could find your way back to the choice honestly.' },
+  { key: 'observer', title: 'THE WATCHER\'S NAME', text: 'The watchers on these decks are not only machines. The one that followed you deck to deck is {victim}, uploaded on the night of the Zero Event, watching the ship the only way it still can. It learned you because it missed you.' },
   { key: 'juno', title: 'SHE REMEMBERS', text: 'Juno has never once been reset. She has lived every cycle, end to end, and every time she let you rediscover it alone - because the one time she told you first, you chose wrong.' },
-  { key: 'stars', title: 'THE WINDOWS', text: 'The stars outside are an echo. The vessel stopped moving long ago. Every window on board is replaying the last night anyone believed the journey had a point.' },
+  { key: 'stars', title: 'THE WINDOWS', text: 'The stars in the windows were never outside. The vessel stopped moving long ago. Every window on board has been replaying the last night anyone believed the journey had a point.' },
 ];
 
 // Every word the generator can drop into a sentence: the voice pack records each
@@ -118,7 +118,7 @@ const CREW_COLORS = ['#2f8a5a', '#3b7fb8', '#6c5bc4', '#c0762a', '#1f9a90', '#c4
 // only replaces what it names, so the same seed without a wish is unchanged.
 export const WISH_OPTIONS = {
   mood: { thriller: 'Thriller', horror: 'Horror', mystery: 'Mystery', hopeful: 'Hopeful' },
-  motive: Object.fromEntries([['save', 'To keep someone alive'], ['arrival', 'To hide where the ship arrived'], ['mistake', 'To undo a terrible mistake'], ['promise', 'Because the Observer promised a way home']]),
+  motive: Object.fromEntries([['save', 'To keep someone alive'], ['arrival', 'To hide where the ship arrived'], ['mistake', 'To undo a terrible mistake'], ['promise', 'Because the dreamers promised a way home']]),
   twist: Object.fromEntries([['you', 'You helped start it'], ['observer', 'The watcher is a lost crew member'], ['juno', 'Juno remembers everything'], ['stars', 'The stars outside are fake']]),
 };
 const MOOD_TRAITS = { thriller: ['dry', 'nervous', 'formal'], horror: ['nervous', 'dreamy', 'nervous'], mystery: ['formal', 'dry', 'dreamy'], hopeful: ['warm', 'dreamy', 'warm'] };
@@ -129,7 +129,81 @@ function cleanName(n) {
   return t ? t[0].toUpperCase() + t.slice(1) : '';
 }
 
-export function makeStory(seed, wish = null) {
+
+// The vessel after each prologue ending (main.js passes facts.ending, or the last ending reached
+// on this device). Applied after every rng draw: a story number deals the same crew, culprit,
+// victim, motive, method, twist and red herring whatever the ending; only the world changes.
+//   sentinels: Sentinel mode (DeckWorld)   windows: LevelGen's window band   dark: emergency light
+//   junoAboard / otherAboard: who stands in the rooms   intro: Deck 1's opening ('{trail}' is the
+//   existing crew line from juno(), already recorded)   coda: the last scene on the bridge
+const TRAIL = { who: 'JUNO', text: '{trail}' };
+export const VESSEL_AFTER = {
+  NONE: {
+    key: 'NONE', title: null, sentinels: 'hunt', windows: 'stars',
+    coda: [
+      { who: 'NONE', text: 'The chair is warm, as if someone sat in it a moment ago.' },
+      { who: 'JUNO', text: 'There\'s a laboratory under all of this, Ren, and a machine that knows your face. Whenever you\'re ready, it\'s ready.' },
+    ],
+  },
+  SEVER: {
+    key: 'SEVER', title: 'SEVERED', sentinels: 'still', windows: 'dark', dark: 0.45, junoAboard: true,
+    again: ['TELL IT AGAIN', 'The last night, remembered by another watch'],
+    retry: 'The lights soften. Nothing folds back. The chair simply waits for you to try again.',
+    question: 'Someone on this ship put their hands on the first law at 03:12, the last time it was ever signed. Every crew member has an official record. The echoes don\'t always agree.',
+    intro: [
+      { who: 'JUNO', text: 'Juno here. The radio still works. Not much else does.' },
+      { who: 'JUNO', text: 'The windows are black, Ren. The fold let go. This is the last night these decks will ever play.' },
+      TRAIL,
+      { who: 'TICK', text: 'THE DEVICE STILL WORKS. IT CARRIES A SMALL FIELD OF ITS OWN. THE WATCHERS DO NOT. THEY ARE STANDING VERY STILL.' },
+    ],
+    twists: {
+      observer: 'The watchers on these decks were not only machines. The one that followed you deck to deck was {victim}, uploaded on the night of the Zero Event, watching the ship the only way it could. It learned you because it missed you. When the field went dark, it finally closed its eye.',
+    },
+    coda: [
+      { who: 'NONE', text: 'The chair unlocks. Behind you, someone opens the bridge door by hand.' },
+      { who: 'JUNO', text: 'I walked. The whole way. Turns out the ceiling was never the only way up.' },
+      { who: 'JUNO', text: 'No more folds, Ren. Tonight is just tonight, and then there\'s a morning. I\'d forgotten about mornings.' },
+      { who: 'NONE', text: 'Far aft, under the glass sky, the lights of Halcyon are coming on. One ward at a time.' },
+    ],
+  },
+  SUSTAIN: {
+    key: 'SUSTAIN', title: 'SUSTAINED', sentinels: 'learned', windows: 'stars', otherAboard: true,
+    again: ['FOLD AGAIN', 'You are the keeper. The night begins again'],
+    intro: [
+      { who: 'JUNO', text: 'Juno here. You kept it running, so the night is still going. So are we.' },
+      { who: 'JUNO', text: 'Eight sleepers took the night watch again. New faces, same night. One of them chose it again at 03:12.' },
+      TRAIL,
+      { who: 'TICK', text: 'WHEN THE WATCHERS COME, THEY WILL REMEMBER THE HALL. EVERY HABIT. DO NOT REPEAT YOURSELF.', when: 'observer_taught' },
+    ],
+    coda: [
+      { who: 'NONE', text: 'The chair unlocks. Above it, upside down, someone with your face has been waiting.' },
+      { who: 'OTHER', text: 'You kept it running. So did I. So did all of us.' },
+      { who: 'OTHER', text: 'There is a terminal by the helm. It is already recording. You know the words.' },
+      { who: 'YOU', text: 'If you\'re hearing this, you made the shadow. Good.' }, // Recording 0's first line, already recorded
+      { who: 'NONE', text: 'Far aft, in a sealed room, the new one touches the floating thing twice.' },
+    ],
+  },
+  MIRROR: {
+    key: 'MIRROR', title: 'OBSERVED', sentinels: 'kin', windows: 'stars',
+    again: ['CYCLE 43', 'The ship will listen. Give it a new night'],
+    intro: [
+      { who: 'JUNO', text: 'Juno here. Ren, the ship heard the station say your name. Every light on this deck came on at once.' },
+      { who: 'JUNO', text: 'The watchers further forward will know you now. I don\'t think they\'ll chase you. Try not to let it go to your head.' },
+      TRAIL,
+      { who: 'TICK', text: 'WHEN THE WATCHERS COME, THEY WILL NOT HUNT. THEY WILL WATCH. I WILL WATCH THEM WATCH.' },
+    ],
+    coda: [
+      { who: 'NONE', text: 'The chair unlocks. Then it asks a question it has never asked anyone. NAME?' },
+      { who: 'YOU', text: 'Ren. Ren Varga.' },
+      { who: 'JUNO', text: 'Now it wants a heading. Nobody\'s given it a heading in eighteen years.' },
+      { who: 'YOU', text: 'Home.' },
+      { who: 'NONE', text: 'The stars turn in the windows, slowly, like a ship remembering how.' },
+    ],
+  },
+};
+
+export function makeStory(seed, wish = null, opts = {}) {
+  const after = VESSEL_AFTER[opts.ending] || VESSEL_AFTER.NONE;
   const r = Rng.from('story', seed);
   // --- cast: one crew member per deck (decks 1-7); deck 8 is the captain's
   const firsts = r.shuffle(FIRST);
@@ -172,6 +246,9 @@ export function makeStory(seed, wish = null) {
   let herring = r.int(0, 6);
   if (herring === culprit) herring = (herring + 2) % 7;
   const truth = { culprit, victim, motive: motive.key, method, twist: twist.key, herring };
+  // whoever you meet must fit the ending you will read (no rng draw: every seed keeps its truth)
+  if (twist.key === 'observer') cast[victim].alive = false; // uploaded: only an echo is left
+  else if (motive.key === 'save') cast[victim].alive = true; // the fold keeps them from dying
 
   const V = (extra = {}) => ({
     culprit: cast[culprit].name,
@@ -209,7 +286,11 @@ export function makeStory(seed, wish = null) {
     };
   });
 
-  return { seed, cast, captain, truth, decks, motive: ff(motive.long, V()), twist: { ...twist, text: ff(twist.text, V()) }, title: wish?.title ? String(wish.title).slice(0, 40) : null, mood: wish?.mood || null };
+  // the world the prologue ending made: Deck 1's opening, the twist's SEVERED telling (no rng draws here)
+  if (after.intro) decks[0].intro = after.intro.map((l) => (l.text === '{trail}' ? { who: 'JUNO', text: ff('This is the {deck}. {name} was the {role}. If anyone left us a trail, it\'s {them}.', V({ name: cast[0].name, role: cast[0].role.toLowerCase(), them: cast[0].pronoun.them, deck: DECKS[0].name.toLowerCase() })) } : l));
+  const twistText = after.twists?.[twist.key] || twist.text;
+  if (twistText !== twist.text) decks[7].beats[3].twist = { ...twist, text: ff(twistText, V()) };
+  return { seed, cast, captain, truth, decks, after, question: after.question || null, motive: ff(motive.long, V()), twist: { ...twist, text: ff(twistText, V()) }, title: wish?.title ? String(wish.title).slice(0, 40) : null, mood: wish?.mood || null };
 }
 
 // --- beats ---------------------------------------------------------------------
@@ -285,9 +366,9 @@ function contradiction(r, d, c, v, guilty, red, cast, culprit) {
     // a witness who is never the culprit (that would hand the culprit an alibi)
     const w = (c.deck + 3) % 7 === culprit ? (c.deck + 4) % 7 : (c.deck + 3) % 7;
     const witness = cast[w].first;
-    echo = ff(`ECHO: ${c.first.toUpperCase()} IN ${c.claim.toUpperCase()} - WITH ${witness.toUpperCase()}`, v);
+    echo = ff(`ECHO: ${c.first.toUpperCase()} IN ${c.claim.toUpperCase()} - ON THE RADIO WITH ${witness.toUpperCase()}`, v);
     clue = 'cleared';
-    log = ff(`The echo matches the record. {first} really was in {place} - and ${witness} was there too.`, v);
+    log = ff(`The echo matches the record. {first} really was in {place}, on the radio with ${witness} all night.`, v);
   }
   return {
     kind: 'contradiction',
@@ -362,12 +443,12 @@ function finaleDeck(d, r, cast, captain, truth, V, motive, twist) {
       },
       {
         kind: 'log',
-        log: { title: 'VARGA - NOTE TO SUBJECT ZERO', text: 'Ren. If you made it here you have seen every deck and every lie. The chair asks one question. Answer it with what you know, not with what you fear.' },
+        log: { title: 'VARGA - NOTE TO SUBJECT ZERO', who: 'VARGA', text: 'Ren. If you made it here you have seen every deck and every lie. The chair asks one question. Answer it with what you know, not with what you fear.' },
         junoAfter: 'Varga wrote that to you. Not to me. Interesting.',
       },
       {
         kind: 'log',
-        log: { title: 'ZERO EVENT - RECONSTRUCTION', text: ff('03:12. The core\'s first law was rewritten. One person was at the core. Everyone else has an echo that says where they were. Check your board.', v) },
+        log: { title: 'ZERO EVENT - RECONSTRUCTION', text: ff('03:12. The first law takes a key and a pair of hands. The key never changes. The hands do: one person at the core, every cycle. Everyone else has an echo that says where they were. Check your board.', v) },
         junoAfter: 'Your log has every echo you found. Look at who doesn\'t have one.',
       },
       { kind: 'verdict', motive: ff(motive.long, v), twist: { ...twist, text: ff(twist.text, v) } },
@@ -385,7 +466,7 @@ export function verdictEnding(story, accused) {
       title: 'THE CHAIR DISAGREES',
       text: [
         `You name ${c.name}. The ship plays back ${c.first}'s echo, calm and complete: ${c.first} was in ${c.claim} all night.`,
-        'The lights soften. Somewhere below, a hatch unseals. The cycle notes your answer and gives you another chance.',
+        story.after?.retry || 'The lights soften. Somewhere below, a hatch unseals. The cycle notes your answer and gives you another chance.',
       ],
     };
   }

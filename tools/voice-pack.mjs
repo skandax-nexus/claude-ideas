@@ -54,25 +54,28 @@ for (const f of ['main.js', 'world/Npcs.js', 'world/Director.js', 'world/World.j
 for (const m of src('world/Npcs.js').matchAll(/'([A-Z][a-z][^']{8,}[.?!])'/g)) add('YOU', m[1]);
 for (const m of src('entities/Observer.js').matchAll(/onSay\('([^']+)'\)/g)) add('OBSERVER', m[1]);
 
-// HALCYON, the open districts in the middle of the prologue
-const { makeZoneStory, FRAGMENTS } = await imp('gen/ZoneStory.js');
-FRAGMENTS.flat().forEach((t) => add('NONE', t));
+// HALCYON, the open districts in the middle of the prologue, and THE CRADLE after it (one telling per ending)
+const { makeZoneStory, makeCradleStory, FRAGMENTS, CRADLE_FRAGMENTS, CRADLE_HINTS } = await imp('gen/ZoneStory.js');
+[...FRAGMENTS.flat(), ...CRADLE_FRAGMENTS].forEach((t) => add('NONE', t));
 const { ZONE_HINTS } = await imp('gen/ZoneGen.js');
 {
-  const zs = makeZoneStory();
   const voiceOf = (c) => 'CREW_' + ({ her: 'f', his: 'm' }[c.pronoun?.their] || 'n');
-  for (const d of zs.decks) {
-    d.intro.forEach((l) => add(l.who, l.text));
-    const c = zs.cast[d.crew];
-    for (const b of d.beats) {
-      if (b.log) add(b.kind === 'contradiction' ? 'YOU' : 'NONE', typeof b.log === 'string' ? b.log : b.log.text);
-      if (b.tick) add('TICK', b.tick);
-      if (b.junoAfter) add('JUNO', b.junoAfter);
-      if (b.kind === 'contradiction') { add('NONE', b.official); add('NONE', b.echo); }
-      if (b.lines) b.lines.forEach((l) => add(voiceOf(c), l.text));
+  for (const zs of [makeZoneStory(), ...['SEVER', 'SUSTAIN', 'MIRROR', null].map((e) => makeCradleStory(e))]) {
+    for (const d of zs.decks) {
+      d.intro.forEach((l) => add(l.who, l.text));
+      const c = zs.cast[d.crew];
+      for (const b of d.beats) {
+        if (b.log) add(b.kind === 'contradiction' ? 'YOU' : b.log.who || 'NONE', typeof b.log === 'string' ? b.log : b.log.text);
+        if (b.tick) add('TICK', b.tick);
+        if (b.junoAfter) [].concat(b.junoAfter).forEach((t) => add('JUNO', t));
+        if (b.kind === 'contradiction') { add('NONE', b.official); add('NONE', b.echo); }
+        if (b.lines) b.lines.forEach((l) => add(l.who === 'CREW' ? voiceOf(c) : l.who, l.text));
+        // main.onDeckRoom's line is spoken whole: zone names (Kade, Abena, Theo, Ilse) are not generated words
+        if (b.kind === 'encounter') add('JUNO', `Someone's in there. Ren - be gentle. It might be ${c.first}.`);
+      }
     }
   }
-  for (const tiers of Object.values(ZONE_HINTS)) tiers.forEach((t) => add('TICK', t));
+  for (const tiers of [...Object.values(ZONE_HINTS), ...Object.values(CRADLE_HINTS)]) tiers.forEach((t) => add('TICK', t));
 }
 
 // the generated vessel campaign, over many seeds
@@ -82,7 +85,7 @@ for (let s = 1; s <= SEEDS; s++) {
     d.intro.forEach((l) => add(l.who, l.text));
     const c = d.crew != null ? st.cast[d.crew] : null;
     for (const b of d.beats) {
-      if (b.log) add('NONE', b.log.text);
+      if (b.log) add(b.log.who || 'NONE', b.log.text);
       if (b.tick) add('TICK', b.tick);
       if (b.junoAfter) add('JUNO', b.junoAfter);
       if (b.kind === 'contradiction') { add('NONE', b.official); add('NONE', b.echo); add('YOU', b.log); }
@@ -91,9 +94,20 @@ for (let s = 1; s <= SEEDS; s++) {
   }
   st.cast.forEach((c, i) => verdictEnding(st, i).text.forEach((t) => add('NONE', t)));
 }
+// the vessel after each prologue ending: Deck 1's opening (its {trail} line is spliced like today's),
+// the bridge coda, SEVERED's retry and its telling of THE WATCHER'S NAME
+for (const ending of ['SEVER', 'SUSTAIN', 'MIRROR', null]) {
+  for (let s = 1; s <= 40; s++) {
+    const st = makeStory(s * 7919 + 3, s % 4 === 0 ? { twist: 'observer' } : null, { ending });
+    st.decks[0].intro.forEach((l) => add(l.who, l.text));
+    (st.after.coda || []).forEach((l) => add(l.who, l.text));
+    verdictEnding(st, st.truth.culprit).text.forEach((t) => add('NONE', t));
+    verdictEnding(st, (st.truth.culprit + 1) % 7).text.forEach((t) => add('NONE', t));
+  }
+}
 
 // you sound like your look: everything Ren says is also recorded in a male voice
-for (const [voice, text] of [...lines]) if (voice === 'YOU') add('YOU_m', text);
+for (const [voice, text] of [...lines]) if (voice === 'YOU' || voice === 'OTHER') add(`${voice}_m`, text);
 
 // unique pieces per voice
 const pieces = new Map();

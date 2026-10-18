@@ -186,13 +186,13 @@ export class HUD {
     const sus = story.cast.map((c) => {
       const st = facts.get(`clue_${c.id}`);
       const label = st === 'guilty' ? 'ECHO CONTRADICTS' : st === 'cleared' ? 'ALIBI CONFIRMED' : facts.get(`met_${c.id}`) ? 'MET' : 'UNKNOWN';
-      return `<li><span><b>${c.name}</b> <small>${c.role}${st ? '' : ` &middot; deck ${c.deck + 1}`}</small></span><span class="st ${st || ''}">${label}</span></li>`;
+      return `<li><span><b>${c.name}</b> <small>${c.role}${st || c.deck === undefined ? '' : ` &middot; deck ${c.deck + 1}`}</small></span><span class="st ${st || ''}">${label}</span></li>`;
     }).join('');
     const logs = game.log.slice().reverse().map((l) => `<li>${l}</li>`).join('') || '<li class="dim">Nothing yet.</li>';
     $('#journal .body').innerHTML = `
-      <h3>WHERE YOU ARE</h3><p><b>DECK ${campaign.deck + 1} OF 8 &middot; ${deck.name}</b><br><span class="dim">${deck.title} &middot; sector ${campaign.sector + 1} of 4</span></p>
-      <h3>THE QUESTION</h3><p class="dim">Someone on this ship rewrote the core's first law at 03:12 and started the loop. Every crew member has an official record. The echoes don't always agree.</p>
-      <h3>SUSPECTS</h3><ul class="suspects">${sus}</ul>
+      <h3>WHERE YOU ARE</h3><p><b>${story.zones ? `${story.label || 'HALCYON'} &middot; ${deck.name}` : `DECK ${campaign.deck + 1} OF 8 &middot; ${deck.name}`}</b><br><span class="dim">${deck.title} &middot; ${story.zones ? `district ${campaign.sector + 1} of ${deck.sectors}` : `sector ${campaign.sector + 1} of 4`}</span></p>
+      <h3>THE QUESTION</h3><p class="dim">${story.question || 'The first law takes a key and a pair of hands. Someone on this ship put their hands on it at 03:12 and started this cycle. Every crew member has an official record. The echoes don\'t always agree.'}</p>
+      <h3>${story.zones ? 'PEOPLE' : 'SUSPECTS'}</h3><ul class="suspects">${sus}</ul>
       <h3>LOG</h3><ul class="log">${logs}</ul>`;
   }
 

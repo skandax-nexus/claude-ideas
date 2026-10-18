@@ -12,6 +12,7 @@
 // Same level format as gen/LevelGen.js, so world/DeckWorld.js runs it.
 import { Rng } from './rng.js';
 import { ZONE_SECTORS, FRAGMENTS } from './ZoneStory.js';
+import { HINTS } from './LevelGen.js';
 
 const T = 0.4;
 const H = 22; // the dome
@@ -58,15 +59,15 @@ class District {
 export function generateZone(story, zi, si) {
   const zone = story.decks[zi];
   const beat = zone.beats[si];
-  const rng = Rng.from('halcyon', zi, si);
-  const id = `z${zi}s${si}`;
+  const rng = Rng.from(story.seed || 'halcyon', zi, si);
+  const id = `${zone.idPrefix || 'z'}${zi}s${si}`;
   const M = new District(id);
   const theme = zone.theme;
   const canal = si >= 1 || theme === 'reactor'; // water splits the district from the second sector on
   const canalZ = [-50, -57];
 
   // --- shell: ground, walls, dome, the gate -----------------------------------------
-  const ground = (x0, z0, x1, z1) => M.box([x0, -T, z0, x1, 0, z1], { mat: theme === 'forest' ? 'moss' : 'road' });
+  const ground = (x0, z0, x1, z1) => M.box([x0, -T, z0, x1, 0, z1], { mat: theme === 'forest' ? 'moss' : theme === 'cradle' ? 'stone' : 'road' });
   if (canal) {
     ground(-XW, canalZ[0], XW, 4);
     ground(-XW, ZN, XW, canalZ[1]);
@@ -81,19 +82,19 @@ export function generateZone(story, zi, si) {
     for (const [z0, z1] of runs) {
       for (const sx of [-1, 1]) {
         const a = sx * 4.6, b = sx * 7.2;
-        M.box([Math.min(a, b), 0, z0, Math.max(a, b), 0.16, z1], { mat: 'sidewalk' });
+        M.box([Math.min(a, b), 0, z0, Math.max(a, b), 0.16, z1], { mat: theme === 'cradle' ? 'metal' : 'sidewalk' });
       }
-      for (let z = z1 - 2; z > z0 + 1; z -= 4) M.box([-0.08, 0, z - 1.6, 0.08, 0.012, z], { mat: 'marking', solid: false });
+      for (let z = z1 - 2; z > z0 + 1; z -= 4) M.box([-0.08, 0, z - 1.6, 0.08, 0.012, z], { mat: theme === 'cradle' ? 'neon' : 'marking', solid: false });
     }
   }
-  const wallMat = theme === 'forest' ? 'glassWall' : theme === 'reactor' ? 'industrial' : 'facade';
+  const wallMat = theme === 'forest' ? 'glassWall' : theme === 'reactor' || theme === 'cradle' ? 'industrial' : 'facade';
   M.box([-XW - T, -6, ZN, -XW, H, 4], { mat: wallMat });
   M.box([XW, -6, ZN, XW + T, H, 4], { mat: wallMat });
   M.box([-XW, -6, 4, XW, H, 4 + T], { mat: wallMat });
   M.box([-XW, -6, ZN - T, -3, H, ZN], { mat: wallMat });
   M.box([3, -6, ZN - T, XW, H, ZN], { mat: wallMat });
   M.box([-3, 4.5, ZN - T, 3, H, ZN], { mat: wallMat });
-  M.box([-XW - T, H, ZN - T, XW + T, H + T, 4 + T], { mat: 'dome' });
+  M.box([-XW - T, H, ZN - T, XW + T, H + T, 4 + T], { mat: theme === 'cradle' ? 'roots' : 'dome' });
   // the gate: locked until this district's scene is done
   M.box([-3, 0, ZN - 0.2, 3, 4.5, ZN + 0.2], { mat: 'door', when: '!beat_done', id: `gate_${id}` });
   M.box([-3, 0, ZN - 4, 3, 4.5, ZN - T], { mat: 'gate', solid: false });
@@ -101,7 +102,7 @@ export function generateZone(story, zi, si) {
   M.box([-3.4, 0, ZN - 4, -3, 4.5, ZN], { mat: 'trim' });
   M.box([3, 0, ZN - 4, 3.4, 4.5, ZN], { mat: 'trim' });
   M.box([-3.4, 4.5, ZN - 4, 3.4, 4.9, ZN], { mat: 'trim' });
-  M.texts.push({ text: beat.kind === 'encounter' && zi === 3 ? 'LIFT - STATION ZERO' : 'NORTH GATE', pos: [0, 5.6, ZN + 0.3], rotY: 0, size: 0.6, color: hex(zone.palette.accent) });
+  M.texts.push({ text: beat.gate || (beat.kind === 'encounter' && zi === 3 ? 'LIFT - STATION ZERO' : 'NORTH GATE'), pos: [0, 5.6, ZN + 0.3], rotY: 0, size: 0.6, color: hex(zone.palette.accent) });
   M.clear(-6, ZN, 6, ZN + 10);
   M.clear(-6, -8, 6, 4); // the arrival plaza
   M.clear(-5, ZN, 5, 4); // the main avenue stays walkable
@@ -114,7 +115,7 @@ export function generateZone(story, zi, si) {
     // a recorder on a landmark roof: the dome or the remembered stairs get you there
     const rx = sceneSide * 18, rz = canal ? -76 : -38, rh = 7;
     // a landmark roof: a tower block, a pump house, a giant tree's platform, a relay hut
-    M.box([rx - 6, 0, rz - 6, rx + 6, rh, rz + 6], { mat: theme === 'forest' ? 'bark' : theme === 'reactor' ? 'industrial' : 'facade' });
+    M.box([rx - 6, 0, rz - 6, rx + 6, rh, rz + 6], { mat: theme === 'forest' ? 'bark' : theme === 'reactor' ? 'industrial' : theme === 'cradle' ? 'pods' : 'facade' });
     if (theme === 'forest') {
       for (const [dx, dz] of [[-7, -7], [7, -7], [-7, 7], [7, 7]]) {
         M.trees.push([rx + dx, rz + dz, rh + 6, 0.9, 3.4, dx + dz]);
@@ -131,8 +132,8 @@ export function generateZone(story, zi, si) {
     }
     M.box([rx - sceneSide * 6.1 - 1, rh, rz - 6.2, rx - sceneSide * 6.1 + 1, rh + 0.4, rz - 4.6], { mat: 'wall', echo: true });
     M.clear(rx - 9, rz - 9, rx + 9, rz + 9);
-    M.challenges.push({ key: 'roof', z0: 4, z1: ZN, hints: ZONE_HINTS.roof });
-    M.texts.push({ text: zi === 0 ? 'FOLLOW THE PINK LIGHTS' : zone.motto, pos: [rx - sceneSide * 6.05, 4.5, rz], rotY: sceneSide > 0 ? -Math.PI / 2 : Math.PI / 2, size: 0.55, color: hex(zone.palette.accent) });
+    M.challenges.push({ key: 'roof', z0: 4, z1: ZN, hints: zone.hints?.roof || ZONE_HINTS.roof });
+    M.texts.push({ text: zone.key === 'neon' ? 'FOLLOW THE PINK LIGHTS' : zone.motto, pos: [rx - sceneSide * 6.05, 4.5, rz], rotY: sceneSide > 0 ? -Math.PI / 2 : Math.PI / 2, size: 0.55, color: hex(zone.palette.accent) });
     scene.x = rx;
     scene.z = rz;
   } else if (beat.kind === 'log') {
@@ -143,7 +144,7 @@ export function generateZone(story, zi, si) {
   } else if (beat.kind === 'contradiction') {
     // a big public screen: the record on it, the memory in ECHO
     const sx = scene.x, sz = scene.z;
-    M.box([sx - 6, 0, sz - 3, sx + 6, 9, sz - 1.8], { mat: theme === 'forest' ? 'bark' : 'facade' });
+    M.box([sx - 6, 0, sz - 3, sx + 6, 9, sz - 1.8], { mat: theme === 'forest' ? 'bark' : theme === 'cradle' ? 'industrial' : 'facade' });
     M.box([sx - 4.6, 3.2, sz - 1.8, sx + 4.6, 6.8, sz - 1.6], { mat: 'screen', solid: false });
     M.texts.push({ text: beat.official, pos: [sx, 5.0, sz - 1.5], rotY: 0, size: 0.42, color: '#ffd6e6', when: '!@ECHO' });
     M.texts.push({ text: beat.echo, pos: [sx, 5.0, sz - 1.5], rotY: 0, size: 0.42, color: '#8ff4ff', echo: true });
@@ -153,36 +154,37 @@ export function generateZone(story, zi, si) {
     const c = story.cast[zone.crew];
     const sx = scene.x, sz = scene.z;
     // a lit nook for whoever is here: a stall, a hatch, a cabin, a beacon
-    M.box([sx - 4, 0, sz - 4, sx + 4, 4.2, sz - 3.4], { mat: theme === 'forest' ? 'bark' : 'facade' });
+    M.box([sx - 4, 0, sz - 4, sx + 4, 4.2, sz - 3.4], { mat: theme === 'forest' ? 'bark' : theme === 'cradle' ? 'industrial' : 'facade' });
     M.box([sx - 4, 4.2, sz - 4, sx + 4, 4.6, sz + 1], { mat: 'trim' });
-    M.box([sx - 4, 0, sz - 4, sx - 3.4, 4.2, sz + 1], { mat: theme === 'forest' ? 'bark' : 'facade' });
-    M.box([sx + 3.4, 0, sz - 4, sx + 4, 4.2, sz + 1], { mat: theme === 'forest' ? 'bark' : 'facade' });
+    M.box([sx - 4, 0, sz - 4, sx - 3.4, 4.2, sz + 1], { mat: theme === 'forest' ? 'bark' : theme === 'cradle' ? 'industrial' : 'facade' });
+    M.box([sx + 3.4, 0, sz - 4, sx + 4, 4.2, sz + 1], { mat: theme === 'forest' ? 'bark' : theme === 'cradle' ? 'industrial' : 'facade' });
     M.box([sx - 2.4, 3.3, sz - 3.35, sx + 2.4, 3.9, sz - 3.3], { mat: 'neon', solid: false });
     M.npcs.push({ id: `npc_${id}`, crew: c.id, pos: [sx, 0, sz - 1.6], yaw: 0, hologram: !c.alive, lines: beat.lines, junoAfter: beat.junoAfter });
+    if (theme === 'cradle') cradlePod(M, sx, sz, zone); // row one: Varga's pod, open if she is awake
     M.clear(sx - 7, sz - 6, sx + 7, sz + 8);
   }
   if (canal) {
     // the old bridge is a memory: solid with ECHOES SOLIDIFY IN ECHO
     M.box([-3, -0.4, canalZ[1], 3, 0, canalZ[0]], { mat: 'wall', echo: true });
-    M.challenges.push({ key: 'canal', z0: canalZ[0] + 8, z1: canalZ[1] - 2, hints: ZONE_HINTS.canal });
-    M.texts.push({ text: 'BRIDGE CLOSED', pos: [0, 2.6, canalZ[0] + 1.2], rotY: 0, size: 0.5, color: hex(zone.palette.accent) });
+    M.challenges.push({ key: 'canal', z0: canalZ[0] + 8, z1: canalZ[1] - 2, hints: zone.hints?.canal || ZONE_HINTS.canal });
+    M.texts.push({ text: zone.canalSign || 'BRIDGE CLOSED', pos: [0, 2.6, canalZ[0] + 1.2], rotY: 0, size: 0.5, color: hex(zone.palette.accent) });
   }
 
   // --- drones on the far side ----------------------------------------------------------
-  const nDrones = theme === 'tower' ? 2 + si : si === 2 || theme === 'city' && si === 1 ? 1 : 0;
+  const nDrones = theme === 'tower' ? 2 + si : theme === 'cradle' ? si : si === 2 || theme === 'city' && si === 1 ? 1 : 0;
   for (let k = 0; k < nDrones; k++) {
     const z = canal ? -64 - k * 9 : -40 - k * 12;
     const x0 = -XW + 6, x1 = XW - 6;
     M.sentinels.push({ path: k % 2 ? [[x1, z], [x0, z]] : [[x0, z], [x1, z]], speed: 2.2 + si * 0.3, range: 9, fov: 0.75 });
   }
-  if (nDrones) M.challenges.push({ key: 'drones', z0: (canal ? canalZ[1] : -30), z1: ZN, hints: ZONE_HINTS.drones });
+  if (nDrones) M.challenges.push({ key: 'drones', z0: (canal ? canalZ[1] : -30), z1: ZN, hints: HINTS[`sentinel:${story.after?.sentinels}`] || zone.hints?.drones || ZONE_HINTS.drones });
   M.challenges.push({ key: 'gate', z0: ZN + 14, z1: ZN, hints: ZONE_HINTS.gate });
 
   // --- the district: buildings, trees, tanks, masts --------------------------------------
   dressing(M, theme, rng, zone, canal ? canalZ : null);
 
   // three hidden memory fragments: a roof, a back street, the water's edge
-  const lore = FRAGMENTS[zi] || [];
+  const lore = (story.fragments || FRAGMENTS)[zi] || [];
   const spots = [];
   const roofs = (M.blocks || []).filter((b) => b[2] - b[0] > 5 && b[3] - b[1] > 5);
   if (roofs.length) {
@@ -200,7 +202,7 @@ export function generateZone(story, zi, si) {
   });
 
   // tokens: new words for the device
-  if (zi === 0 && si === 0) {
+  if (zone.key === 'neon' && si === 0) {
     M.tokens.push({ token: 'FREEZES', pos: [-3, 1.2, -6] });
     M.tokens.push({ token: 'OBSERVER', pos: [3, 1.2, -6] });
   }
@@ -230,7 +232,7 @@ export function generateZone(story, zi, si) {
     route: [], exitSide: 'N', L: -ZN, W: XW * 2, H,
   };
   const level = {
-    id, deck: zi, sector: si, seed: 'halcyon', zone: true,
+    id, deck: zi, sector: si, seed: story.seed || 'halcyon', zone: true,
     deckName: zone.name, palette: pal,
     rooms: { [id]: room }, order: [id],
     elements: M.els.map((e) => ({ ...e, room: id })),
@@ -267,6 +269,7 @@ function dressing(M, theme, rng, zone, canalZ) {
     reactor: ['PUMP 4', 'DANGER - HIGH PRESSURE', 'COOLANT', 'SECTOR C', 'NO ENTRY', 'VALVE ROOM'],
     forest: ['SEED VAULT', 'PATH TO CABIN', 'QUIET PLEASE', 'GLOWROOT'],
     tower: ['RELAY 7', 'STORM WARNING', 'BEACON', 'AUTHORIZED ONLY', 'SIGNAL'],
+    cradle: ['ROW 12', 'MERIDIAN WARD', 'REACTOR WARD', 'FOREST WARD', 'QUIET - SLEEPERS', 'DO NOT WAKE', 'DORMANCY 98%', 'NIGHT WATCH'],
   }[theme];
   const tries = theme === 'forest' ? 120 : 70;
   for (let i = 0; i < tries; i++) {
@@ -293,6 +296,10 @@ function dressing(M, theme, rng, zone, canalZ) {
       }
       if (rng.chance(0.4)) M.box([x - 0.25, 0, z + r, x + 0.25, 0.5, z + r + 0.6], { mat: 'neon', solid: false });
       M.clear(x - c, z - c, x + c, z + c);
+      continue;
+    }
+    if (theme === 'cradle') {
+      podBlock(M, rng, side, x, z, zone, inCanal, signs);
       continue;
     }
     const w = rng.float(6, 11), d = rng.float(6, 12);
@@ -345,7 +352,7 @@ function dressing(M, theme, rng, zone, canalZ) {
       for (const [wx, wz] of [[-0.8, -1.4], [0.8, -1.4], [-0.8, 1.4], [0.8, 1.4]]) M.box([x + wx - 0.15, 0, z + wz - 0.35, x + wx + 0.15, 0.6, z + wz + 0.35], { mat: 'tyre', solid: false });
       M.glows.push([x, 0.02, z - 2.6, 1.4, 0xff3030]);
     }
-    if (theme === 'reactor' && rng.chance(0.5)) {
+    if ((theme === 'reactor' || theme === 'cradle') && rng.chance(0.5)) {
       const x = rng.pick([-1, 1]) * rng.float(8, 12);
       M.box([x - 0.5, 0, z - 4, x + 0.5, 1.0, z + 4], { mat: 'pipe' });
     }
@@ -362,4 +369,67 @@ function dressing(M, theme, rng, zone, canalZ) {
   if (theme === 'forest') {
     M.box([-9, -0.05, -24, -3, 0.02, -18], { mat: 'water', solid: false });
   }
+  if (theme === 'cradle') cradleCeiling(M, rng);
+}
+
+// --- THE CRADLE (theme 'cradle') ------------------------------------------------------
+// A bank of sleeping pods on a low plinth, or a stack of them in tiers, in the slot a building
+// would take. Lids are decided here from the ending (zone.podsOpen), so they merge into one mesh.
+function podBlock(M, rng, side, x, z, zone, inCanal, signs) {
+  const w = rng.float(6, 10), d = rng.float(6, 12);
+  const x0 = side > 0 ? Math.max(7, x - w / 2) : x - w / 2, x1 = Math.min(XW - 1, x0 + w);
+  const z0 = z - d / 2, z1 = z + d / 2;
+  if (!M.isFree(x0, z0, x1, z1) || inCanal(z0, z1)) return;
+  if (rng.chance(0.4)) {
+    // a stack: tiers of glowing pods in a steel frame; its roof holds a fragment
+    const h = rng.float(6, 14);
+    M.box([x0, 0, z0, x1, h, z1], { mat: 'pods' });
+    M.box([x0 - 0.2, h, z0 - 0.2, x1 + 0.2, h + 0.35, z1 + 0.2], { mat: 'trim' });
+    for (let k = rng.int(1, 2); k > 0; k--) {
+      const ux = rng.float(x0 + 1, x1 - 1.5), uz = rng.float(z0 + 1, z1 - 1.5);
+      M.box([ux, h + 0.35, uz, ux + 1.2, h + 1.2, uz + 0.9], { mat: 'metal' });
+    }
+    if (rng.chance(0.7)) {
+      const fx = side > 0 ? x0 - 0.06 : x1 + 0.06;
+      M.texts.push({ text: rng.pick(signs), pos: [fx, rng.float(3, Math.max(3.5, h - 2)), (z0 + z1) / 2], rotY: side > 0 ? -Math.PI / 2 : Math.PI / 2, size: rng.float(0.5, 0.8), color: hex(zone.palette.accent) });
+    }
+  } else {
+    // a bank: two rows of pods on a 1.2 m plinth, low cover from the drones
+    M.box([x0, 0, z0, x1, 1.2, z1], { mat: 'metal' });
+    for (const cx of [x0 + (x1 - x0) * 0.3, x0 + (x1 - x0) * 0.7]) {
+      for (let pz = z0 + 1.4; pz < z1 - 1.2; pz += 2.6) {
+        if (zone.podsOpen) M.box([cx - 0.5, 1.2, pz + 1.0, cx + 0.5, 2.6, pz + 1.1], { mat: 'glassWall', solid: false }); // the lid stands open
+        else M.box([cx - 0.5, 1.2, pz - 1.1, cx + 0.5, 1.75, pz + 1.1], { mat: 'glassWall', solid: false });
+        M.box([cx - 0.08, 1.2, pz - 1.25, cx + 0.08, 1.32, pz - 1.15], { mat: 'podLight', solid: false });
+      }
+      M.glows.push([cx, 1.22, (z0 + z1) / 2, 1.6, zone.palette.accent2]);
+    }
+  }
+  M.blocks.push([x0, z0, x1, z1]);
+  M.clear(x0, z0, x1, z1);
+}
+
+// Row one: Varga's pod against the back of the lit nook. The lid stands open if she is awake.
+function cradlePod(M, sx, sz, zone) {
+  M.box([sx - 1.2, 0, sz - 3.35, sx + 1.2, 0.8, sz - 2.45], { mat: 'metal' });
+  if (zone.awake) M.box([sx - 1.0, 0.8, sz - 3.38, sx + 1.0, 2.6, sz - 3.3], { mat: 'glassWall', solid: false });
+  else M.box([sx - 1.0, 0.8, sz - 3.3, sx + 1.0, 1.25, sz - 2.5], { mat: 'glassWall', solid: false });
+  M.box([sx - 0.1, 0.8, sz - 2.5, sx + 0.1, 0.9, sz - 2.42], { mat: 'podLight', solid: false });
+  M.texts.push({ text: 'ROW ONE  -  I. VARGA', pos: [sx, 2.9, sz - 3.28], rotY: 0, size: 0.32, color: hex(zone.palette.accent) });
+}
+
+// The underside of the Glass Forest: roots hang from the ceiling, so the INVERTED walk weaves
+// between them; one in five is only a memory. They keep out of every clear rect (the avenue, the
+// arrival roof, the scenes, the stacks), so every dome answer still has a straight path. The core
+// well comes down the middle, with the reactor's flood water still falling down its face.
+function cradleCeiling(M, rng) {
+  for (let i = 0, n = 0; i < 90 && n < 24; i++) {
+    const x = rng.pick([-1, 1]) * rng.float(8, XW - 2), z = rng.float(ZN + 6, -6);
+    const r = rng.float(0.3, 0.8), h = rng.float(4, 12);
+    if (!M.isFree(x - r, z - r, x + r, z + r, 0.6)) continue;
+    M.box([x - r, H - h, z - r, x + r, H, z + r], rng.chance(0.2) ? { mat: 'root', echo: true } : { mat: 'root' });
+    n++;
+  }
+  M.box([-2.5, 0, -30, 2.5, H, -25], { mat: 'industrial' });
+  M.box([-1.2, 0, -25, 1.2, H, -24.9], { mat: 'water', solid: false });
 }
