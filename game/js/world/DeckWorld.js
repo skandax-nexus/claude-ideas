@@ -197,7 +197,6 @@ export class DeckWorld {
       this.npcs.push({ n, crew, model, body: model, echo, talkT: 0, cond: compileCondition(n.when), freeze: compileCondition(n.freezeWhen || 'false'), wp: 0, lastBark: -99 });
     }
     this.decoy = null; // an Echo Step afterimage the watchers chase instead of you
-    this.lookBase = null;
 
     this.ready = false;
     this.refresh();
@@ -381,19 +380,26 @@ export class DeckWorld {
   // cold steel now, moss and rust in 2196, a cold violet when inverted), eased in by main.js
   setLook(state, k = 1) {
     if (!this.mats) return;
+    // (materials are shared between levels of one palette: each keeps its own untinted base)
     const keys = ['wall', 'floor', 'prop', 'prop2', 'trim', 'trimDark', 'facade', 'industrial', 'road', 'sidewalk', 'stone', 'pillar', 'ceil', 'door'];
-    if (!this.lookBase) {
-      this.lookBase = {};
-      for (const key of keys) if (this.mats[key]?.color) this.lookBase[key] = this.mats[key].color.clone();
-    }
     const tint = { PAST: [1.1, 0.96, 0.78], PRESENT: [1, 1, 1], PHYSICAL: [1, 1, 1], FUTURE: [0.82, 0.98, 0.84], INVERTED: [0.94, 0.9, 1.08], ECHO: [0.9, 1.02, 1.04] }[state] || [1, 1, 1];
     for (const key of keys) {
-      const m = this.mats[key], b = this.lookBase[key];
-      if (!m?.color || !b) continue;
+      const m = this.mats[key];
+      if (!m?.color) continue;
+      const b = (m.userData.lookBase ??= m.color.clone());
       _c.set(b.r * tint[0], b.g * tint[1], b.b * tint[2]);
       m.color.lerp(_c, k);
     }
+    // the lit windows: in 2196 nobody has power any more
+    const lit = { FUTURE: 0.05, INVERTED: 0.6 }[state] ?? 1;
+    for (const key of ['facade', 'industrial']) {
+      const m = this.mats[key];
+      if (!m?.emissiveMap) continue;
+      const base = (m.userData.litBase ??= m.emissiveIntensity);
+      m.emissiveIntensity += (base * lit - m.emissiveIntensity) * k;
+    }
   }
+
 
   // an Echo Step afterimage: the watchers chase it for `secs`, not you
   setDecoy(pos, secs) {

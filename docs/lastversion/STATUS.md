@@ -12,7 +12,8 @@ story beats. How it works: [`DESIGN.md`](DESIGN.md).
   settings, default look (Kai Varen, a realistic man), HUD state names (2049 / 2026 / 2196 /
   INVERTED), its own Android build (`EDITION=lastversion bash android/build-apk.sh`: app
   "AFTERZERO: Last Version", `com.afterzero.lastversion`, versionName 2.0.0,
-  `AFTERZERO-LastVersion-v2.0.apk`, preview page with `window.AZ_EDITION='lastversion'`). The
+  `AFTERZERO-LastVersion-v2.0.apk`, preview page with `window.AZ_EDITION='lastversion'`, published
+  at [claude.ai/artifact/GDpG6YCybK2cj8P3gPXRrr](https://claude.ai/artifact/GDpG6YCybK2cj8P3gPXRrr)). The
   default build and every Station Zero chapter are unchanged.
 - **The four temporal states**, authored per region; per-state looks (tint, hour, weather,
   decoration, music); the Chronolith stability meter with the snap back to PRESENT at the last

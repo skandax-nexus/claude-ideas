@@ -94,7 +94,7 @@ export class Npcs {
     }
 
     // TICK: hovers over your shoulder, glances at what you're looking at
-    this.tick.visible = !!facts.get('has_tick');
+    this.tick.visible = !!facts.get('has_tick') && !this.g.edition; // (THE LAST VERSION has no TICK: Kai thinks for himself)
     if (this.tick.visible) {
       const right = player.right(new THREE.Vector3());
       const target = player.pos.clone().addScaledVector(player.U, 1.05 + Math.sin(t * 2.2) * 0.06).addScaledVector(right, 0.75).addScaledVector(player.H, 0.25);

@@ -399,6 +399,7 @@ export function makeChronolith(scale = 1.6) {
       o.material.roughness = 0.35;
     }
   });
+  ring.position.set(0, 0, 0); // (the lab's machine ring is mounted 3.6 m up; the Chronolith stands where it is put)
   ring.scale.setScalar(scale);
   const halo = new THREE.Mesh(new THREE.TorusGeometry(3.05 * scale * 0.62, 0.025, 8, 96), basic(0x4f9fe8, { transparent: true, opacity: 0.6 }));
   g.add(ring, halo);

@@ -69,7 +69,7 @@ export const M01 = {
     // --- the checkpoint ---------------------------------------------------------------
     M.box([-34, 0, -62.4, -2, 2.4, -61.6], { mat: 'trim' });
     M.box([2, 0, -62.4, 34, 2.4, -61.6], { mat: 'trim' });
-    M.box([-6.4, 0, -66, -2.4, 3.2, -62.6], { mat: 'facade' });
+    M.box([-6.4, 0, -66, -2.4, 3.2, -62.6], { mat: 'industrial' }); // the checkpoint booth
     M.texts.push({ text: 'CHECKPOINT - HELIX CONTRACTORS', pos: [-4.4, 3.6, -62.5], rotY: 0, size: 0.4, color: '#ffc06a' });
     M.box([-2, 0, -62.4, 2, 3.2, -61.6], { mat: 'door', when: '!checkpoint_passed', id: 'gate_checkpoint' });
     M.glows.push([-4.4, 0.02, -60.5, 3.2, 0xffc06a]);
@@ -234,7 +234,7 @@ export const M01 = {
 };
 
 // --- Mission 2: HELIX GOES DARK -------------------------------------------------------------
-const HELIX_PALETTE = { look: 'med', fog: 0x2a2226, density: 1.6, wall: '#5c5a62', floor: '#3b3a40', accent: 0xff6a48, accent2: 0xffb36b, light: 0xffb0a0, tint: 0x6a4a4a, night: 0.55, weather: 'motes', sky: 'warehouse', probe: false, ink: 0.85, grade: { shadowTint: 0x2a1418, highlightTint: 0xffc0a8, toning: 0.24, contrast: 1.14, saturation: 0.92 } };
+const HELIX_PALETTE = { look: 'eng', emergency: 0.85, fog: 0x2a2226, density: 1.6, wall: '#5c5a62', floor: '#3b3a40', accent: 0xff6a48, accent2: 0xffb36b, light: 0xffb0a0, tint: 0x6a4a4a, night: 0.7, weather: 'motes', sky: 'warehouse', probe: false, ink: 0.85, grade: { shadowTint: 0x2a1418, highlightTint: 0xffc0a8, toning: 0.24, contrast: 1.14, saturation: 0.92 } };
 
 const HELIX_SENTINEL_HINTS = ['The drone watches the floor in front of it. Only that.', 'Stay behind the pillars. Move when it turns. The cell is in the alcove past its loop.', 'Wait behind a pillar until the drone walks away, then cross behind it to the alcove on the east side.'];
 
@@ -345,7 +345,7 @@ function buildHelixDark(story, si, rt) {
   D.room({ id: 'chamber', name: 'CHRONOLITH CHAMBER', W: 16, L: 20, H: 9, kind: 'encounter', beat: 'custom' }, (R) => {
     R.floor();
     R.text('CHAMBER - AUTHORISED PERSONNEL - DIRECTOR\'S OFFICE', [0, 6.2, -19.9], 0, { size: 0.42, color: '#ff6a48' });
-    R.scene('chronolith', [0, 3.6, -12], 'APPROACH THE CHRONOLITH', { model: () => makeChronolith(1.6), r: 4.5, once: true });
+    R.scene('chronolith', [0, 2.95, -12], 'APPROACH THE CHRONOLITH', { model: () => makeChronolith(1.05), r: 4.5, once: true });
     R.box([-3, -T0, -15, 3, 0.02, -9], { mat: 'glow', solid: false });
     R.checkpoint(0, -2, -1.6);
   });
@@ -413,7 +413,7 @@ export const M02 = {
 };
 
 // --- Mission 3: THE FIRST SWITCH ------------------------------------------------------------
-const SWITCH_PALETTE = { ...HELIX_PALETTE, fog: 0x1e2430, wall: '#58606c', floor: '#363c46', accent: 0x4f9fe8, accent2: 0xc08a3e, light: 0xcfe0ff, tint: 0x4a5a7a, night: 0.4, weather: null, grade: { shadowTint: 0x14243a, highlightTint: 0xe0ecff, toning: 0.18, contrast: 1.12, saturation: 0.96 } };
+const SWITCH_PALETTE = { ...HELIX_PALETTE, emergency: 0, fog: 0x1e2430, wall: '#58606c', floor: '#363c46', accent: 0x4f9fe8, accent2: 0xc08a3e, light: 0xcfe0ff, tint: 0x4a5a7a, night: 0.4, weather: null, grade: { shadowTint: 0x14243a, highlightTint: 0xe0ecff, toning: 0.18, contrast: 1.12, saturation: 0.96 } };
 
 // Iven Marr in the maintenance route (quest chain D)
 const IVEN_ROUTE = [
@@ -436,7 +436,7 @@ function buildFirstSwitch(story, si, rt) {
   // r0 the chamber: the Chronolith teaches the switch
   D.room({ id: 'chamber', name: 'CHRONOLITH CHAMBER', W: 16, L: 20, H: 9, kind: 'arrival', beat: 'custom' }, (R) => {
     R.floor();
-    R.scene('touch', [0, 3.6, -12], 'TOUCH THE CHRONOLITH', { model: () => makeChronolith(1.6), r: 4.5, once: true });
+    R.scene('touch', [0, 2.95, -12], 'TOUCH THE CHRONOLITH', { model: () => makeChronolith(1.05), r: 4.5, once: true });
     // 2026: scaffolding around a half-built ring, a thermos; 2196: the ceiling gone, moss, a fallen beam
     for (const [x, z] of [[-5, -8], [5, -8], [-5, -16], [5, -16]]) R.box([x - 0.15, 0, z - 0.15, x + 0.15, 7, z + 0.15], { mat: 'trimDark', when: '@PAST' });
     R.box([-5, 4.0, -16, 5, 4.2, -8], { mat: 'crate', solid: false, when: '@PAST' });

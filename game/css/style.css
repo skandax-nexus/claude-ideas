@@ -101,7 +101,7 @@ body.touch #stability { top: 140px; }
 #choice .body button.withdraw { color: var(--ink-soft); }
 /* the title of THE LAST VERSION */
 body.lastversion #title h1 span { color: var(--present); }
-body.lastversion #title .sub { font-size: clamp(12px, 2vw, 16px); letter-spacing: 0.34em; color: var(--ink); font-weight: 700; margin: -4px 0 10px; }
+body.lastversion #title .sub { font-size: clamp(12px, 2vw, 16px); letter-spacing: 0.3em; color: var(--ink); font-weight: 700; margin: -4px 0 10px; text-wrap: balance; }
 body.lastversion #title.overlay.side { background: linear-gradient(90deg, rgba(228, 236, 246, 0.72), transparent 60%); }
 body.lastversion #begin { background: var(--present); }
 /* the case board */
@@ -632,7 +632,7 @@ body.touch.forge #dock .d.rules { display: flex; }
 
 /* v2.0 THE LAST VERSION: Chronolith stability lives under the year pips, quiet until it matters */
 body.lastversion #stability { display: none; }
-#state .stab { height: 4px; margin-top: 8px; border-radius: 999px; background: rgba(35, 48, 60, 0.18); overflow: hidden; opacity: 0.35; transition: opacity 0.5s; }
+#state .stab { height: 5px; margin-top: 8px; border-radius: 999px; background: rgba(12, 20, 30, 0.45); box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.35); overflow: hidden; opacity: 0.35; transition: opacity 0.5s; }
 #state .stab i { display: block; height: 100%; width: calc(var(--sv, 1) * 100%); border-radius: 999px; background: linear-gradient(90deg, #e2574a, #ffc04a 40%, #4f9fe8); transition: width 0.2s; }
 #state.stab-on .stab { opacity: 0.75; }
 #state.stab-on.draining .stab, #state.stab-on.low .stab { opacity: 1; }
@@ -654,3 +654,5 @@ body.lastversion #title.overlay.side {
   backdrop-filter: none;
 }
 body.lastversion #title .panel { box-shadow: 0 18px 60px rgba(0, 0, 0, 0.45); }
+/* the calm HUD steps back, but never hides a draining Chronolith */
+body.calm #state.draining, body.calm #state.low { opacity: 1; }

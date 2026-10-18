@@ -16,7 +16,7 @@ Each version is kept separately. It has its own git commit, its own Android app 
 
 | Version | Status | Commit | Android app | Web preview |
 | --- | --- | --- | --- | --- |
-| **v2.0** | in development (separate edition) | this branch | `AFTERZERO-LastVersion-v2.0.apk`, app "AFTERZERO: Last Version" (`com.afterzero.lastversion`); build with `EDITION=lastversion bash android/build-apk.sh` | new artifact, published with the first build |
+| **v2.0** | in development (separate edition) | this branch | `AFTERZERO-LastVersion-v2.0.apk`, app "AFTERZERO: Last Version" (`com.afterzero.lastversion`); build with `EDITION=lastversion bash android/build-apk.sh` | [claude.ai/artifact/GDpG6YCybK2cj8P3gPXRrr](https://claude.ai/artifact/GDpG6YCybK2cj8P3gPXRrr) |
 | **v1.1** | in development | this branch | `AFTERZERO-v1.1.apk`, app "AFTERZERO 1.1" (`com.afterzero.v1_1`) | new artifact, published with the first v1.1 build |
 | **v1.0** | saved | `c6b8682` (tag `v1.0.0`) | `AFTERZERO-v1.0.apk`, app "AFTERZERO 1.0" (`com.afterzero.v1_0`) | [claude.ai/artifact/8Vz91NGuA5NzYydryybv8q](https://claude.ai/artifact/8Vz91NGuA5NzYydryybv8q) |
 | **v0.9** | saved | `293d857` (tag `v0.9.0`) | `AFTERZERO-v0.9.apk`, app "AFTERZERO" (`com.afterzero.preview`) | [claude.ai/artifact/6m2ucDKS4hUW5bE818FZQz](https://claude.ai/artifact/6m2ucDKS4hUW5bE818FZQz) |

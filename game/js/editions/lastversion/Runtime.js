@@ -125,9 +125,9 @@ export class LastVersion {
     $('#title .ver').textContent = 'v2.0 · The Last Version of Earth';
     $('#begin small').textContent = 'Choose a chapter: the Prologue, Acts I to IV, the Finale, or the Cases';
     const dim = $('#title p.dim');
-    if (dim) dim.textContent = 'A temporal thriller about a machine that lets you stand in different years of the same place. The Prologue is about two hours; the whole campaign about twenty-five.';
+    if (dim) dim.textContent = 'A temporal thriller about a machine that lets you stand in different years of the same place. Twenty-three missions, four states of one world, three endings.';
     const ctl = $('#title .controls.desktop-only');
-    if (ctl) ctl.innerHTML = '<span><b>WASD</b> move</span><span><b>MOUSE</b> look</span><span><b>SPACE</b> jump</span><span><b>Z</b> walk / run</span><span><b>E</b> / click use</span><span><b>Q</b> switch year</span><span><b>1 2 3 4</b> choose a year</span><span><b>C</b> anchor what you carry</span><span><b>X</b> Echo Step</span><span><b>H</b> think</span><span><b>J</b> case board</span><span><b>M</b> map</span><span><b>F5</b> quick save</span><span><b>ESC</b> pause</span>';
+    if (ctl) ctl.innerHTML = '<span><b>WASD</b> move</span><span><b>MOUSE</b> look</span><span><b>SPACE</b> jump</span><span><b>Z</b> walk / run</span><span><b>E</b> / click use</span><span><b>Q</b> switch year</span><span><b>1 2 3 4</b> choose a year</span><span><b>C</b> anchor what you carry</span><span><b>X</b> Echo Step</span><span><b>H</b> think</span><span><b>J</b> / <b>L</b> case board</span><span><b>M</b> map</span><span><b>F5</b> quick save</span><span><b>ESC</b> pause</span>';
     const hero = $('#hero .herohint');
     if (hero) hero.textContent = 'You are Kai Varen, temporal systems engineer. Choose how you look.';
     for (const [sel, text] of [['#dock .hint span', 'THINK'], ['#dock .combo span', 'ECHO STEP'], ['#buttons .combo span', 'ECHO'], ['#dock .journal span', 'CASE']]) {
@@ -285,6 +285,7 @@ export class LastVersion {
     const deck = this.deck;
     const chapter = CHAPTERS[this.chapter];
     g.audio.setAmbience(deck.ambience || null);
+    g.hud.states = this.def.states.map((key) => ({ key, label: this.label(key) }));
     this.weatherState = null;
     this.loopT = deck.loop || 0;
     this.hintKey = null;
@@ -299,6 +300,11 @@ export class LastVersion {
       } else g.hud.card(kicker, this.level.rooms[start].name, deck.subtitle || '', 2600);
     }
     this.objective(true);
+  }
+
+  // what a state is called here: a year by default, or what the mission calls it (the village: thriving, abandoned, flooded)
+  label(state) {
+    return this.deck?.labels?.[state] || this.def.labels[state];
   }
 
   // --- objectives ------------------------------------------------------------------------------
@@ -364,7 +370,7 @@ export class LastVersion {
       const state = g.engine.state(g.room);
       if (it.only && state !== it.only) {
         g.audio.deny();
-        this.say(`The socket is from ${this.def.labels[it.only]}. It is not here now.`);
+        this.say(`The socket is from ${this.label(it.only)}. It is not here now.`);
         return true;
       }
       if (!held || !(it.any ? held.startsWith(it.needs) : held === it.needs)) {
@@ -408,7 +414,7 @@ export class LastVersion {
     g.audio.greet('CREW');
     if (n.isEcho) {
       // not here in this year: their echo plays what the year kept of them
-      const year = this.def.labels[g.engine.state(g.room)];
+      const year = this.label(g.engine.state(g.room));
       const name = def?.name || n.crew.name;
       const lines = n.n.echoLines || def?.echo || [{ who: 'NONE', text: `${name} is not here in ${year}. What is here is an echo: a few seconds of ${def?.pronoun?.their || 'their'} day, repeating.` }, ...(def?.barks?.length ? [{ who: def.voice, text: def.barks[0] }] : [])];
       g.facts.set(`echo_${n.crew.id}`);
@@ -473,7 +479,7 @@ export class LastVersion {
     if (flags[`done_${it.id}`]) return;
     if (t.state && g.engine.state(g.room) !== t.state) {
       g.audio.deny();
-      this.say(t.no || `Not in this year. It only answers in ${this.def.labels[t.state]}.`);
+      this.say(t.no || `Not in this year. It only answers in ${this.label(t.state)}.`);
       return;
     }
     flags[`done_${it.id}`] = true;
@@ -752,7 +758,7 @@ export class LastVersion {
       if (!to) return g.audio.deny();
       if (!engine.statesOf(g.room).includes(to)) {
         g.audio.deny();
-        g.hud.toast(`<small>${this.def.labels[to]}</small><br>${LINES.no_state}`, 1800);
+        g.hud.toast(`<small>${this.label(to)}</small><br>${LINES.no_state}`, 1800);
         return;
       }
     }
@@ -765,7 +771,7 @@ export class LastVersion {
     this.deck?.onShift?.(this, s);
     if (!facts.get('first_switch')) {
       facts.set('first_switch');
-      g.log.push(`I switched the room to ${this.def.labels[s]}. The place stayed. The year did not.`);
+      g.log.push(`I switched the room to ${this.label(s)}. The place stayed. The year did not.`);
     }
   }
 
@@ -845,6 +851,18 @@ export class LastVersion {
     return night * ({ PAST: 0.55, FUTURE: 0.4, INVERTED: 0.85 }[state] ?? 1);
   }
 
+  // ...and its own air: how much of the year's fog colour (warm 2026, pale green 2196) fills the district
+  stateFog(state) {
+    if (!this.level?.zone || this.deck?.noDress) return undefined;
+    return { PRESENT: 0.1, PAST: 0.8, FUTURE: 0.85, INVERTED: 0.6 }[state];
+  }
+
+  // ...and how thick that air is: 2026's warm haze, 2196's pale mist
+  stateDensity(state) {
+    if (!this.level?.zone || this.deck?.noDress) return 1;
+    return { PAST: 2.4, FUTURE: 2.8, INVERTED: 1.6 }[state] ?? 1;
+  }
+
   // each state tints the place
   theme(dt, state) {
     const g = this.g;
@@ -853,6 +871,10 @@ export class LastVersion {
     // an open district's weather follows its year
     if (this.level?.zone && state !== this.weatherState) {
       this.weatherState = state;
+      // a colour grade per year (where the renderer grades at all): sepia then, green-gold later, violet inverted
+      const base = { shadowTint: 0x2a4a66, highlightTint: 0xfff0dc, toning: 0.08, contrast: 1.14, saturation: 1.02, ...(this.level.palette.grade || {}) };
+      const tone = this.deck?.noDress ? null : { PAST: { shadowTint: 0x3a2814, highlightTint: 0xffdcaa, toning: 0.3, saturation: 0.86 }, FUTURE: { shadowTint: 0x14382a, highlightTint: 0xeaffd8, toning: 0.3, saturation: 1.1 }, INVERTED: { shadowTint: 0x2a1648, highlightTint: 0xffd2f2, toning: 0.32, contrast: 1.2 } }[state];
+      g.postfx.setGrade({ ...base, ...(tone || {}) });
       const w = this.deck?.stateWeather?.[state] ?? stateWeather(state, this.level.palette);
       if (w !== g.weather.kind) g.weather.set(w);
     }

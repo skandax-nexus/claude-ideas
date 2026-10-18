@@ -43,6 +43,7 @@ export const ACT1 = [
   zone({
     key: 'm04', n: 4, chapter: 'act1', name: 'THE MAN FROM THE LAST DAY', title: 'The Ancient Settlement', subtitle: 'A village built around a stone ring. Its leader knows the mark on your wrist.',
     theme: 'settlement', palette: P.settlement, states: ['PRESENT', 'PAST'], canal: false, drones: [0, 0, 0], ambience: 'water', ambient: 'settlement',
+    labels: { PRESENT: 'THE VILLAGE', PAST: 'BEFORE THE FIRE' }, // three thousand years before Helix: here, now is the village
     rooms: ['THE FIRST FIRE', 'THE WATER STEPS', 'THE RING CHAMBER'], motto: 'YOU CAME BEFORE THE FIRST FIRE', gate: 'THE UNDER-CHAMBER',
     crew: C('elder'),
     intro: [N('Kai wakes in grass, under a sky that has never seen a plane. The ring in the middle of the village is stone, and it is the same ring.'), K('Where is this. When is this.')],
@@ -79,6 +80,7 @@ export const ACT1 = [
   zone({
     key: 'm05', n: 5, chapter: 'act1', name: 'THE VILLAGE THAT NEVER EXISTED', title: 'The settlement, thriving, abandoned, flooded', subtitle: 'Niko follows you through the years.',
     theme: 'settlement', palette: P.settlement, states: ['PAST', 'PRESENT', 'FUTURE'], canal: true, drones: [0, 0, 0], unstable: true, ambience: 'water', ambient: 'settlement',
+    labels: { PAST: 'THRIVING', PRESENT: 'ABANDONED', FUTURE: 'FLOODED' },
     rooms: ['THE LIVING VILLAGE', 'THE EMPTY VILLAGE', 'THE DROWNED VILLAGE'], motto: 'THE RIVER WAS TAUGHT TO STAY', gate: 'THE BURIED MACHINE',
     crew: C('niko'),
     intro: [N('The village in three states: thriving in the earliest, abandoned in the middle, flooded in the last. Niko watches you switch.'), ...says('niko', ['You keep changing the world.']), K('I\'m trying to get home.'), ...says('niko', ['Then stop changing it.'])],

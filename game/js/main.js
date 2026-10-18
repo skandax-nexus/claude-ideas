@@ -2304,7 +2304,7 @@ class Game {
   // how much the vessel runs on emergency light (after SEVERED; districts have their own night)
   emergency() {
     if (this.mode !== 'deck' || !this.level?.palette) return 0;
-    if (this.level.forge) return (this.level.palette.emergency || 0) * (1 - this.flare()); // WORLD FORGE's EMERGENCY light; a flare lifts it
+    if (this.level.forge || this.level.palette.emergency !== undefined) return (this.level.palette.emergency || 0) * (1 - this.flare()); // WORLD FORGE's EMERGENCY light (a flare lifts it); THE LAST VERSION's Helix
     return this.level.palette.night === undefined ? this.story?.after?.dark || 0 : 0;
   }
 
@@ -2325,11 +2325,11 @@ class Game {
     const tint = _tint.set(room.tint);
     // each place has its own air: a deck's palette, or a Station Zero room's own fog
     const fog = _fog.set(th.fog);
-    if (deck) fog.lerp(_c.set(pal.fog), 1 - (s === this.engine.baseline ? 0.1 : 0.55) * (1 - (pal.night || 0) * 0.6));
+    if (deck) fog.lerp(_c.set(pal.fog), 1 - (this.edition?.stateFog?.(s) ?? (s === this.engine.baseline ? 0.1 : 0.55)) * (1 - (pal.night || 0) * 0.6));
     else if (room.fog !== undefined) fog.lerp(_c.set(room.fog), s === 'PHYSICAL' ? 0.85 : 0.5);
     this.scene.fog.color.lerp(fog, k);
     this.scene.background.copy(this.scene.fog.color);
-    this.scene.fog.density += ((deck ? th.density * 0.3 * (pal.density ?? 1) : th.density * 0.45 * (room.density ?? 1)) - this.scene.fog.density) * k;
+    this.scene.fog.density += ((deck ? th.density * 0.3 * (pal.density ?? 1) * (this.edition?.stateDensity?.(s) ?? 1) : th.density * 0.45 * (room.density ?? 1)) - this.scene.fog.density) * k;
     const emergency = this.emergency();
     this.hemi.color.lerp(_c.set(th.sky).lerp(tint, 0.25).lerp(EMERGENCY, emergency), k);
     _c.set(th.ground);
