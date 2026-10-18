@@ -181,7 +181,7 @@ for (const genre of want) {
   // the LOCAL RULES card comes up after the act card
   await az(() => { for (let i = 0; i < 70; i++) AZ.simulate(0.1); });
   check(await az(() => document.querySelector('#rules').classList.contains('on') && document.querySelectorAll('#rules li').length >= 5 && document.querySelectorAll('#rules .gc').length === 4), 'the LOCAL RULES card shows the five rules and the four gear on arrival');
-  if (gi === 0) await shot('rules');
+  if (gi === 0) { await page.waitForTimeout(800); await shot('rules'); }
   check(await az(() => { const o = AZ.engine.overrides[AZ.room]; const r = AZ.level.rules; return r.nullField ? o && o.gravityFlip === false : r.gravity === 'ZERO' ? o?.zeroG === true : r.gravity === 'INVERTED' ? !!o?.gravityFlip?.PHYSICAL : true; }), 'the rules are engine overrides on every room of the act');
   await flush();
 
@@ -197,7 +197,17 @@ for (const genre of want) {
       await flush();
       if (!shotThemes.has(A.theme) && sector === 0) {
         shotThemes.add(A.theme);
-        await az(() => { AZ.hud.rulesHide(); document.querySelector('#card')?.classList.remove('on'); AZ.simulate(0.5); });
+        await az(() => {
+          AZ.hud.rulesHide();
+          document.querySelector('#card')?.classList.remove('on');
+          AZ.hud.el.toast.classList.remove('on');
+          // a few steps into the room, so the camera is not against the door behind you
+          const H = AZ.player.H;
+          AZ.player.place([AZ.player.pos.x + H.x * 2.5, AZ.player.pos.y, AZ.player.pos.z + H.z * 2.5, Math.atan2(H.x, H.z)]);
+          AZ.updateDeckObjective(true);
+          AZ.simulate(0.8);
+        });
+        await page.waitForTimeout(400);
         await shot(`act-${A.theme}`);
       }
       // every gear slot, once: refused where the rules say so, at work where they allow it
@@ -251,7 +261,10 @@ for (const genre of want) {
         break;
       } else {
         check(sc.ok && sc.done, `${label}: the ${sc.beat} scene opens the gate`, JSON.stringify({ ...sc, said: sc.said.slice(0, 3) }));
-        if (sc.beat === 'encounter') check(sc.said.length >= 3 && sc.said.some((l) => l.startsWith('JUNO: Someone is ahead')), `${label}: the cast member says their lines (${sc.said.filter((l) => !l.startsWith('JUNO') && !l.startsWith('TICK')).length})`, sc.said.join(' | '));
+        if (sc.beat === 'encounter') {
+          const theirs = sc.said.filter((l) => l.startsWith('CREW:'));
+          check(theirs.length >= 3 && theirs.length <= 6 && sc.said.some((l) => l.startsWith('JUNO:')), `${label}: the cast member says their lines (${theirs.length}) and Juno answers`, sc.said.join(' | '));
+        }
         if (sc.beat === 'contradiction') check(sc.said.some((l) => /^NONE: ECHO:/.test(l)), `${label}: the record reads differently in ECHO`, sc.said.join(' | '));
       }
       // save in the middle of the second act and continue from the chapter card

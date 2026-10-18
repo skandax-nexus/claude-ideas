@@ -13,7 +13,8 @@
     "layout": "node tests/layout.mjs",
     "halcyon": "node tests/halcyon.mjs",
     "qa": "node tests/qa.mjs",
-    "cradle": "node tests/cradle.mjs"
+    "cradle": "node tests/cradle.mjs",
+    "forge": "node tests/forge.mjs"
   },
   "license": "MIT"
 }

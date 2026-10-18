@@ -757,6 +757,20 @@ You can't wish for who the culprit is, who the victim is, the method, the red he
 
 For example, take story 4242 with a Horror mood, the names Aria, Dev and Mina, and the twist "Juno remembers everything". Ximena becomes Aria, Uma becomes Dev and Kalani becomes Mina. Kofi now greets you dreamily, Dev and Yusuf nervously, and the decks are darker. Kofi is still the culprit. But the winning screen now ends: *"Juno has never once been reset. She has lived every cycle, end to end, and every time she let you rediscover it alone - because the one time she told you first, you chose wrong."*
 
+### PART SIX: WORLD FORGE, "build your own game"
+
+The sixth chapter card reads **WORLD FORGE - Build your own game**. It is not a chapter of the one story: it is the player's own game, built on the device by the Forge from a Forge number and their choices, and played by the same engine. The whole of it is in [`FORGE.md`](FORGE.md); here is how it reads.
+
+You choose a **genre** and the genre chooses the kind of story: a THRILLER about the one who lied, a HORROR about the one who stayed, a MYSTERY with a culprit, an ADVENTURE with a rival, a HEIST with a crew that lies for a living, a SURVIVAL about where the last of the air goes. Each genre has its own grammar (a setup act, complications, a twist act in which a record reads differently in ECHO and names the antagonist, and a finale with a chair and a last question) and its own line banks in the game's voice: Juno on the radio, TICK in capitals, the records and their echoes, the cast.
+
+You choose **the world**: three, five or eight locations from the places the engine already renders (Neon Meridian, the Drowned Reactor, the Glass Forest, the Signal Tower, the Cradle; the Garden deck, the Cryo bay, the Observatory, Engineering, the Medbay, the Crew quarters, the Archive core, the Bridge), each with a name and **local rules**: which way gravity points, whether memories show or hold, whether beams sweep the floor, whether anyone watches and how hard, how dark it is, and whether it is a null field where nothing the device says is true and the way through is movement. On arrival the HUD shows the act's LOCAL RULES, and TICK says what matters most.
+
+You choose **the cast**: up to eight names (spoken by the device's own voice) and roles - a guide, a rival, a witness, a keeper, an engineer, a medic, a child of the city, a watcher in disguise. Each gets a mood from the genre, a secret, and three to six lines in every act they appear in. One of them is the antagonist; the genre decides who, and never the first person you meet. Twice or more in a game they ask you something with two answers, and the answer sets a fact: later lines change with it, and so does the ending's last word from Juno.
+
+You choose **the kit**: four reality tools (there is no combat in AFTERZERO): a stasis pulse that holds a watcher or a beam still, a grapple line and a light rig made of hard light that last a few seconds, an echo lens, a signal flare that lights the dark and draws the watchers, and a key forge that makes one memory key real. The rules of each location decide which of them work there, and the rules card says so.
+
+At the end there is a chair. It asks the genre's question, and two or three answers are two or three endings, named for the antagonist and the place: *"You say the name out loud. Every clock in {place} stops on the same second."* Then Juno: *"You trusted them, Ren, and most of them deserved it."* Or: *"You doubted everyone, and you were right about one."*
+
 ---
 
 ## Endings

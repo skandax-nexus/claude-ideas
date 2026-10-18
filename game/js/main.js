@@ -442,6 +442,7 @@ class Game {
     if (id === 'laws' && !this.facts.get('has_device')) return;
     this.menu = id;
     this.input.release();
+    this.hud.rulesHide?.(); // the local rules card steps aside for any panel
     if (id === 'laws') this.hud.renderLaws(this); // the draft is kept between visits
     if (id === 'journal') this.hud.renderJournal(this);
     this.hud.show(id);
@@ -533,7 +534,7 @@ class Game {
         <label>Forge number<span class="seedrow"><input id="fg_seed" inputmode="numeric" maxlength="9" placeholder="random" value="${esc(pre.seed)}"><button id="fg_random" type="button">RANDOM</button></span></label>
       </div>
       <div class="frow">
-        <label>Genre${opt('fg_genre', GENRE_KEYS.map((k) => [k, `${GENRES[k].label} - ${GENRES[k].tag}`]), pre.genre)}</label>
+        <label>Genre${opt('fg_genre', GENRE_KEYS.map((k) => [k, GENRES[k].label]), pre.genre)}<p class="tagline" id="fg_tag"></p></label>
         <label>Length${opt('fg_len', Object.entries(LENGTHS).map(([k, l]) => [k, `${l.label} - ${l.sub}`]), len, null)}</label>
       </div>
       <h3>THE WORLD <small>one location per act, with its local rules; leave anything to the Forge</small></h3>
@@ -559,6 +560,9 @@ class Game {
       $('#fg_acts').innerHTML = actsHtml(LENGTHS[cur.length].acts, cur.acts);
     };
     $('#fg_random').onclick = () => ($('#fg_seed').value = String((Math.random() * 1e9) | 0));
+    const tag = () => ($('#fg_tag').textContent = GENRES[$('#fg_genre').value]?.tag || 'The Forge picks a genre: thriller, horror, mystery, adventure, heist or survival.');
+    $('#fg_genre').onchange = tag;
+    tag();
     $('#fg_go').onclick = () => {
       const choices = read();
       const seed = /^\d+$/.test(choices.seed) ? +choices.seed : (Math.random() * 1e9) | 0;
@@ -1213,6 +1217,7 @@ class Game {
     if (intro && c.forge) {
       this.held = null;
       if (c.sector === 0) {
+        this.gearCd = {}; // the kit recharges at the door of a new location
         this.hud.card(`${this.story.title.toUpperCase()} · ACT ${c.deck + 1} OF ${this.story.decks.length}`, deck.name, deck.subtitle, 4200);
         this.after(2.6, () => this.hud.say(deck.intro, this.facts));
         this.after(5.2, () => this.showRules(8000));

@@ -506,7 +506,9 @@ body.touch #buttons .combo svg { width: 20px; height: 20px; }
 .forgep h3 { margin: 16px 0 6px; }
 .forgep h3 small { font-weight: 500; letter-spacing: 0; text-transform: none; margin-left: 6px; }
 .forgep .fact { border: 1px solid var(--line); border-radius: 12px; padding: 8px 10px; margin: 6px 0; background: rgba(255, 255, 255, 0.5); }
-.forgep .fact .fhead { display: grid; grid-template-columns: 34px 1fr 1fr; gap: 6px; align-items: center; }
+.forgep .fact .fhead { display: grid; grid-template-columns: 44px 1fr 1fr; gap: 6px; align-items: center; }
+.forgep .fact .fhead b { white-space: nowrap; }
+.forgep .tagline { margin: 2px 0 0; font-size: 11px; color: var(--ink-soft); font-weight: 500; min-height: 14px; }
 .forgep .fact .fhead b { font-size: 11px; letter-spacing: 0.1em; color: var(--ink-soft); }
 .forgep .fact .frules { display: grid; grid-template-columns: repeat(5, 1fr) auto; gap: 4px; margin-top: 6px; align-items: end; }
 .forgep .fact .frules label { margin: 0; font-size: 9px; letter-spacing: 0.08em; color: var(--ink-soft); }
@@ -517,7 +519,7 @@ body.touch #buttons .combo svg { width: 20px; height: 20px; }
 .forgep .crow input, .forgep .crow select { margin: 0; padding: 7px 8px; font-size: 12px; }
 .forgep .grow { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
 .forgep .grow select { margin: 0; padding: 7px 6px; font-size: 11px; }
-.forgep #fg_go { background: var(--coral); color: #fff; border: none; margin-top: 14px; position: sticky; bottom: 0; }
+.forgep #fg_go { background: var(--coral); color: #fff; border: none; margin-top: 14px; }
 .forgep .seedrow { display: grid; grid-template-columns: 1fr auto; gap: 6px; align-items: end; }
 .forgep .seedrow button { padding: 9px 12px; font-size: 11px; white-space: nowrap; }
 @media (max-width: 700px) { .forgep .fact .frules { grid-template-columns: repeat(3, 1fr); } .forgep .frow3 { grid-template-columns: 1fr 1fr; } }
