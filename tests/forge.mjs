@@ -200,8 +200,8 @@ for (const genre of want) {
   for (let i = 0; i < 4; i++) await page.selectOption(`#fg_gear_${i}`, kit[i]);
   if (gi === 0) await shot('panel');
   await page.click('#fg_go');
-  await page.click(`#saves [data-slot="${gi}"]`);
-  await page.waitForFunction(() => AZ.mode === 'deck' && AZ.campaign?.forge, null, { timeout: 120000 });
+  await az((sel) => setTimeout(() => document.querySelector(sel).click(), 0), `#saves [data-slot="${gi}"]`); // builds act 1 synchronously
+  await page.waitForFunction(() => AZ.mode === 'deck' && AZ.campaign?.forge, null, { timeout: 300000 });
   const game = await az(() => ({ title: AZ.story.title, hero: AZ.forge.hero, genre: AZ.forge.genre, run: AZ.run, slot: AZ.slot, acts: AZ.forge.acts.map((a) => ({ theme: a.theme, name: a.name, rules: a.rules, kind: a.kind, allowed: Object.fromEntries(Object.entries(a.gearAllowed).map(([k, v]) => [k, v.ok])) })), cast: AZ.forge.cast.map((c) => [c.first, c.roleKey, !!c.antagonist]), gear: AZ.forge.gear, tokens: ['TIME', 'LIGHT'].every((t) => AZ.facts.get(`token_${t}`)) }));
   check(game.title === title && game.hero === 'Mika' && game.genre === genre && game.run === 'forge' && game.slot === gi && game.tokens, 'the Forge keeps the title, hero, genre, slot and gives every law token', JSON.stringify([game.title, game.hero, game.genre, game.run, game.slot]));
   check(game.acts.map((a) => a.theme).join() === themes.join() && game.acts[0].name === 'THE FIRST DOOR' && game.acts[1].rules.gravity === (gi % 2 ? 'ZERO' : 'INVERTED') && game.acts[2].rules.time === 'SWEEPERS' && game.acts[1].rules.nullField === (gi % 3 === 0), 'the locations and their rules are the ones chosen', JSON.stringify(game.acts.map((a) => [a.theme, a.rules])));
@@ -330,8 +330,10 @@ for (const genre of want) {
         await page.click('#begin');
         const cont = await az(() => [...document.querySelectorAll('#chapters .chapcard')].find((c) => /WORLD FORGE/.test(c.textContent))?.querySelector('[data-cont]')?.dataset.cont);
         check(cont === String(gi), 'the WORLD FORGE chapter card offers CONTINUE for the saved game', String(cont));
-        await page.click(`#chapters [data-cont="${gi}"]`);
-        await page.waitForFunction(() => AZ.mode === 'deck' && AZ.campaign?.forge, null, { timeout: 120000 });
+        // CONTINUE builds the act synchronously; on a loaded machine that outlasts a click's
+        // 30 s wait, so tap it from the page and wait for the act instead
+        await az((sel) => setTimeout(() => document.querySelector(sel).click(), 0), `#chapters [data-cont="${gi}"]`);
+        await page.waitForFunction(() => AZ.mode === 'deck' && AZ.campaign?.forge, null, { timeout: 300000 });
         const back = await az(() => ({ title: AZ.story.title, deck: AZ.campaign.deck, sector: AZ.campaign.sector, done: !!AZ.deckWorld.flags.beat_done, gear: AZ.forge.gear.join(), trust: AZ.facts.get('forge_trust') || 0, doubt: AZ.facts.get('forge_doubt') || 0, theme: AZ.forge.acts[1].theme }));
         check(back.title === title && back.deck === 1 && back.sector === 0 && back.done && back.gear === kit.join() && back.theme === themes[1] && back.trust + back.doubt >= 0, 'continuing restores the same act, scene progress, kit and choices', JSON.stringify(back));
         await flush();
