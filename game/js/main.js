@@ -676,7 +676,7 @@ class Game {
       }
       location.reload();
     };
-    for (const b of document.querySelectorAll('#settings .seg button')) {
+    for (const b of document.querySelectorAll('#settings .seg button[data-k]')) { // not the CLEAR button
       b.onclick = () => {
         let v = b.dataset.v;
         if (v === 'true') v = true;
