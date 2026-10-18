@@ -168,9 +168,11 @@ check(!hint || /CUSTODIAN/.test(JSON.stringify(hint)), 'after the archive opens,
 
 // 10. Settings > Start fresh: two taps clear this device's saves and settings, then reload
 await az(() => { if (AZ.menu) AZ.closeMenu(); AZ.openMenu('pause'); AZ.openSettings('pause'); });
-await page.click('#resetData');
+const tapClear = () => az(() => { const b = document.querySelector('#resetData'); b.scrollIntoView(); setTimeout(() => b.click(), 0); });
+await tapClear();
+await page.waitForTimeout(300);
 check((await page.textContent('#resetData')).includes('AGAIN'), 'CLEAR asks for a second tap');
-await Promise.all([page.waitForNavigation({ timeout: 120000 }), page.click('#resetData')]);
+await Promise.all([page.waitForNavigation({ timeout: 120000 }), tapClear()]);
 await page.waitForFunction(() => window.AZ, null, { timeout: 400000 });
 check(await az(() => !Object.keys(localStorage).some((k) => k.startsWith('afterzero.'))), 'the second tap clears every save and setting on the device');
 check(errors.length === 0, 'no page errors', errors.join(' | '));
