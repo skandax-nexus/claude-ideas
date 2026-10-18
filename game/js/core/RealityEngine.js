@@ -82,9 +82,14 @@ export class RealityEngine {
     return this.effects[effect]?.has(state) || false;
   }
 
+  // an override is true/false for every state, or an object keyed by state (WORLD FORGE's
+  // local rules: e.g. gravity reversed in PHYSICAL and ECHO, upright in INVERTED)
   hasIn(effect, room) {
     const o = this.overrides[room];
-    if (o && effect in o) return !!o[effect];
+    if (o && effect in o) {
+      const v = o[effect];
+      return v && typeof v === 'object' ? !!v[this.state(room)] : !!v;
+    }
     return this.has(effect, this.state(room));
   }
 

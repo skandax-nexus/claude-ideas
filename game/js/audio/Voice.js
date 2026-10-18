@@ -71,7 +71,8 @@ export class Voice {
     if (who === 'OTHER' && this.youMale && this.pack.index.OTHER_m) id = 'OTHER_m'; // and the Other's: it wears your face
     // the Other speaks with your voice when it has no recording of its own
     const you = this.youMale && this.pack.index.YOU_m ? 'YOU_m' : 'YOU';
-    const libs = [[id, this.pack.index[id]], ...(who === 'OTHER' ? [[you, this.pack.index[you]]] : [])].filter(([, l]) => l);
+    // a crew voice falls back on the neutral crew recordings (WORLD FORGE's cast lines are recorded once)
+    const libs = [[id, this.pack.index[id]], ...(who === 'OTHER' ? [[you, this.pack.index[you]]] : []), ...(who === 'CREW' && id !== 'CREW_n' ? [['CREW_n', this.pack.index.CREW_n]] : [])].filter(([, l]) => l);
     if (!libs.length) return null;
     const out = [];
     for (const p of voicePieces(text, this.pack.vocab)) {

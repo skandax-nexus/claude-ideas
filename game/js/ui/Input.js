@@ -28,6 +28,8 @@ export class Input {
       KeyE: 'use', KeyF: 'use', KeyH: 'hint', KeyQ: 'shift', KeyR: 'shift', KeyL: 'laws', Tab: 'laws', KeyJ: 'journal',
       Escape: 'pause', Digit1: 'set:PHYSICAL', Digit2: 'set:INVERTED', Digit3: 'set:ECHO',
       KeyM: 'map', KeyV: 'camera', KeyX: 'combo', F5: 'quicksave', F9: 'quickload',
+      // WORLD FORGE: the four gear slots and the local rules card
+      Digit5: 'gear:0', Digit6: 'gear:1', Digit7: 'gear:2', Digit8: 'gear:3', KeyK: 'rules',
     };
     window.addEventListener('keydown', (e) => {
       if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') {

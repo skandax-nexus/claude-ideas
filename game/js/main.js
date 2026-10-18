@@ -26,6 +26,7 @@ import { makeStory, verdictEnding, WISH_OPTIONS } from './gen/StoryGen.js';
 import { generateSector, SECTORS_PER_DECK } from './gen/LevelGen.js';
 import { makeZoneStory, makeCradleStory } from './gen/ZoneStory.js';
 import { generateZone } from './gen/ZoneGen.js';
+import { forgeGame, makeForgeStory, tuneLevel, rulesOverride, forgeEnding, describeRules, gearTick, GEAR, GEAR_KEYS, GENRES, GENRE_KEYS, LENGTHS, THEMES as FORGE_THEMES, THEME_KEYS, RULE_OPTIONS, RULE_KEYS, ROLES, ROLE_KEYS } from './gen/Forge.js';
 import { Weather } from './world/Weather.js';
 import { WATER_NORMALS } from './world/materials.js';
 import { SmartRenderer } from './core/SmartRenderer.js';
@@ -56,6 +57,15 @@ const _c = new THREE.Color(), _c2 = new THREE.Color(), _fog = new THREE.Color(),
 
 // Every token the prologue can teach; the vessel starts with all of them.
 const BASE_TOKENS = ['GRAVITY', 'INVERTS', 'INVERTED', 'PHYSICAL', 'ECHO', 'HELD', 'PERSISTS', 'OBSERVER', 'FREEZES', 'ALL', 'ECHOES', 'SOLIDIFIES'];
+// WORLD FORGE gear icons (the dock and the phone's gear pad)
+const GEAR_ICONS = {
+  STASIS: '<svg viewBox="0 0 24 24"><path d="M12 3v18M3 12h18M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
+  GRAPPLE: '<svg viewBox="0 0 24 24"><path d="M3 12h11a4 4 0 1 1-4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="4" cy="12" r="2" fill="currentColor"/></svg>',
+  LENS: '<svg viewBox="0 0 24 24"><path d="M2 12s4-6 10-6 10 6 10 6-4 6-10 6S2 12 2 12z" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="3" fill="currentColor"/></svg>',
+  RIG: '<svg viewBox="0 0 24 24"><path d="M3 20h5v-5h5v-5h5V5h3" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>',
+  FLARE: '<svg viewBox="0 0 24 24"><path d="M12 2l2.2 6.2L21 9l-5 4.2 1.6 6.8L12 16.5 6.4 20l1.6-6.8L3 9l6.8-.8z" fill="currentColor"/></svg>',
+  KEYFORGE: '<svg viewBox="0 0 24 24"><circle cx="8" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 12h9M18 12v3M15 12v3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
+};
 
 // Software rasterisers (no GPU) get the LOW preset by default.
 function softwareGL(renderer) {
@@ -353,7 +363,10 @@ class Game {
     this.enterRoom('antechamber', true);
     // a load / new game requested before the page reloaded
     const boot = session((s) => JSON.parse(s.getItem(BOOT_KEY) || 'null'));
-    if (boot) {
+    if (boot?.action === 'forgePanel') {
+      session((s) => s.removeItem(BOOT_KEY));
+      this.openForge('title', boot.opts?.choices || null);
+    } else if (boot) {
       session((s) => s.removeItem(BOOT_KEY));
       $('#continue').style.display = '';
       $('#continueInfo').textContent = 'Tap to enter';
@@ -387,7 +400,7 @@ class Game {
       return;
     }
     this.slot = action === 'load' ? (typeof slot === 'number' ? slot : null) : saveSlot;
-    this.run = { new: 'prologue', halcyon: 'halcyon', cradle: 'cradle', vessel: 'vessel', studio: 'studio' }[action] || 'prologue';
+    this.run = { new: 'prologue', halcyon: 'halcyon', cradle: 'cradle', vessel: 'vessel', studio: 'studio', forge: 'forge' }[action] || 'prologue';
     this.started = true;
     document.body.classList.add('playing');
     this.player.cinema = null;
@@ -400,6 +413,7 @@ class Game {
     else if (action === 'vessel') this.startVessel(undefined, null, null, opts?.ending);
     else if (action === 'studio') this.startVessel(opts?.seed, null, opts?.wish);
     else if (action === 'cradle') this.beginCradle();
+    else if (action === 'forge') this.startForge(opts?.seed, null, opts?.choices);
     else if (action === 'halcyon') {
       // jump straight to the open districts: Station Zero counts as played up to the vault
       this.facts.rulesEnabled = false;
@@ -433,7 +447,8 @@ class Game {
     this.hud.show(id);
     if (id === 'map') {
       document.querySelector('#mapTitle').textContent = this.mode === 'deck'
-        ? (this.campaign.zones ? `${this.zoneWhere()} · DISTRICT ${this.campaign.sector + 1}/${this.story.decks[this.campaign.deck].sectors}` : `DECK ${this.campaign.deck + 1} · ${this.story.decks[this.campaign.deck].name} · SECTOR ${this.campaign.sector + 1}/4`)
+        ? (this.campaign.forge ? `${this.story.title.toUpperCase()} · ACT ${this.campaign.deck + 1} · ${this.forgeAct().name} · ${this.forgeAct().open ? 'DISTRICT' : 'SECTOR'} ${this.campaign.sector + 1}/${this.forgeAct().sectors}`
+          : this.campaign.zones ? `${this.zoneWhere()} · DISTRICT ${this.campaign.sector + 1}/${this.story.decks[this.campaign.deck].sectors}` : `DECK ${this.campaign.deck + 1} · ${this.story.decks[this.campaign.deck].name} · SECTOR ${this.campaign.sector + 1}/4`)
         : 'STATION ZERO';
       requestAnimationFrame(() => this.minimap.drawBig(this.player, this.room, this.mapMarkers()));
     }
@@ -489,13 +504,77 @@ class Game {
     this.hud.show('studio');
   }
 
+  // WORLD FORGE: build your own game. Everything is optional except the Forge number, which can
+  // be random; the Forge decides whatever is left blank (gen/Forge.js).
+  openForge(from, preset = null) {
+    this.menuBack = from;
+    this.menu = 'forge';
+    this.input.release();
+    const $ = (q) => document.querySelector(q);
+    const pre = preset || this.forgeDraft || {};
+    const opt = (id, entries, cur, any = 'Forge decides') => `<select id="${id}">${any ? `<option value="">${any}</option>` : ''}${entries.map(([v, l]) => `<option value="${v}" ${cur === v ? 'selected' : ''}>${l}</option>`).join('')}</select>`;
+    const esc = (t) => String(t || '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    const actsHtml = (n, acts = []) => Array.from({ length: n }, (_, i) => {
+      const a = acts[i] || {};
+      const r = a.rules || {};
+      return `<div class="fact" data-act="${i}"><div class="fhead"><b>ACT ${i + 1}</b>${opt(`fg_theme_${i}`, THEME_KEYS.map((k) => [k, FORGE_THEMES[k].label]), a.theme)}<input id="fg_name_${i}" maxlength="28" placeholder="Name it (optional)" value="${esc(a.name)}"></div>
+        <div class="frules">${RULE_KEYS.map((k) => `<label>${k.toUpperCase()}${opt(`fg_${k}_${i}`, Object.keys(RULE_OPTIONS[k]).map((v) => [v, v]), r[k], 'Forge')}</label>`).join('')}<label class="nul">NULL FIELD<input type="checkbox" id="fg_null_${i}" ${r.nullField ? 'checked' : ''}></label></div></div>`;
+    }).join('');
+    const castHtml = Array.from({ length: 8 }, (_, i) => {
+      const m = pre.cast?.[i] || {};
+      return `<div class="crow"><input id="fg_cast_${i}" maxlength="16" placeholder="Name ${i + 1}" value="${esc(m.name)}">${opt(`fg_role_${i}`, ROLE_KEYS.map((k) => [k, ROLES[k].label]), m.role)}</div>`;
+    }).join('');
+    const gearHtml = Array.from({ length: 4 }, (_, i) => opt(`fg_gear_${i}`, GEAR_KEYS.map((k) => [k, GEAR[k].name]), pre.gear?.[i])).join('');
+    const len = pre.length || 'SHORT';
+    $('#forge .body').innerHTML = `
+      <div class="frow3">
+        <label>Title<input id="fg_title" maxlength="40" placeholder="e.g. The Night Shift" value="${esc(pre.title)}"></label>
+        <label>Hero's name <small>the station still calls you Ren</small><input id="fg_hero" maxlength="16" placeholder="Ren" value="${esc(pre.hero)}"></label>
+        <label>Forge number<span class="seedrow"><input id="fg_seed" inputmode="numeric" maxlength="9" placeholder="random" value="${esc(pre.seed)}"><button id="fg_random" type="button">RANDOM</button></span></label>
+      </div>
+      <div class="frow">
+        <label>Genre${opt('fg_genre', GENRE_KEYS.map((k) => [k, `${GENRES[k].label} - ${GENRES[k].tag}`]), pre.genre)}</label>
+        <label>Length${opt('fg_len', Object.entries(LENGTHS).map(([k, l]) => [k, `${l.label} - ${l.sub}`]), len, null)}</label>
+      </div>
+      <h3>THE WORLD <small>one location per act, with its local rules; leave anything to the Forge</small></h3>
+      <div id="fg_acts">${actsHtml(LENGTHS[len].acts, pre.acts)}</div>
+      <h3>THE CAST <small>up to 8 names and roles; one of them will be the ${'antagonist'}. Typed names are spoken by your device's own voice</small></h3>
+      ${castHtml}
+      <h3>THE KIT <small>four reality tools, not weapons: AFTERZERO has no combat. Each location's rules decide which work there</small></h3>
+      <div class="grow">${gearHtml}</div>
+      <p class="dim">The same Forge number and the same choices always build the same game.</p>
+      <button class="big" id="fg_go">FORGE<small>Then choose a save slot</small></button>`;
+    const read = () => {
+      const v = (id) => ($(`#${id}`)?.value ?? '').trim();
+      const n = LENGTHS[v('fg_len')]?.acts || 3;
+      return {
+        title: v('fg_title') || null, hero: v('fg_hero') || null, genre: v('fg_genre') || null, length: v('fg_len') || null, seed: v('fg_seed'),
+        acts: Array.from({ length: n }, (_, i) => ({ theme: v(`fg_theme_${i}`) || null, name: v(`fg_name_${i}`) || null, rules: { ...Object.fromEntries(RULE_KEYS.map((k) => [k, v(`fg_${k}_${i}`) || null])), nullField: $(`#fg_null_${i}`)?.checked ? true : null } })),
+        cast: Array.from({ length: 8 }, (_, i) => ({ name: v(`fg_cast_${i}`) || null, role: v(`fg_role_${i}`) || null })).filter((m) => m.name || m.role),
+        gear: Array.from({ length: 4 }, (_, i) => v(`fg_gear_${i}`)).filter(Boolean),
+      };
+    };
+    $('#fg_len').onchange = () => {
+      const cur = read();
+      $('#fg_acts').innerHTML = actsHtml(LENGTHS[cur.length].acts, cur.acts);
+    };
+    $('#fg_random').onclick = () => ($('#fg_seed').value = String((Math.random() * 1e9) | 0));
+    $('#fg_go').onclick = () => {
+      const choices = read();
+      const seed = /^\d+$/.test(choices.seed) ? +choices.seed : (Math.random() * 1e9) | 0;
+      this.forgeDraft = { ...choices, seed: String(seed) };
+      this.openSaves('new', 'forge', { action: 'forge', opts: { seed, choices } });
+    };
+    this.hud.show('forge');
+  }
+
   // NEW GAME: pick a chapter. Each card continues its own latest save.
   openChapters(from) {
     this.menuBack = from;
     this.menu = 'chapters';
     this.input.release();
-    const order = ['prologue', 'halcyon', 'cradle', 'vessel', 'studio'];
-    const action = { prologue: 'new', halcyon: 'halcyon', cradle: 'cradle', vessel: 'vessel', studio: 'studio' };
+    const order = ['prologue', 'halcyon', 'cradle', 'vessel', 'studio', 'forge'];
+    const action = { prologue: 'new', halcyon: 'halcyon', cradle: 'cradle', vessel: 'vessel', studio: 'studio', forge: 'forge' };
     const le = lastEnding();
     document.querySelector('#chapters .body').innerHTML = order.map((ch) => {
       const c = CHAPTERS[ch];
@@ -504,7 +583,7 @@ class Game {
       const after = ['cradle', 'vessel', 'studio'].includes(ch) ? `<p class="dim">${le ? `After ${ENDING_TITLES[le.key]}` : ch === 'cradle' ? 'Before the choice' : 'The ship as it was'}</p>` : '';
       return `<div class="chapcard"><h3>${c.name}</h3><p>${c.sub}</p>${after}<div class="acts">
         ${last ? `<button class="cont" data-cont="${last.slot}">CONTINUE<small>${d.title} · ${d.sub}</small></button>` : ''}
-        <button data-newch="${ch}">${ch === 'studio' ? 'CREATE A STORY' : 'NEW GAME'}</button></div></div>`;
+        <button data-newch="${ch}">${ch === 'studio' ? 'CREATE A STORY' : ch === 'forge' ? 'BUILD A GAME' : 'NEW GAME'}</button></div></div>`;
     }).join('');
     for (const b of document.querySelectorAll('#chapters [data-cont]')) {
       b.onclick = () => {
@@ -513,7 +592,7 @@ class Game {
       };
     }
     for (const b of document.querySelectorAll('#chapters [data-newch]')) {
-      b.onclick = () => (b.dataset.newch === 'studio' ? this.openStudio('chapters') : this.openSaves('new', 'chapters', { action: action[b.dataset.newch] }));
+      b.onclick = () => (b.dataset.newch === 'studio' ? this.openStudio('chapters') : b.dataset.newch === 'forge' ? this.openForge('chapters') : this.openSaves('new', 'chapters', { action: action[b.dataset.newch] }));
     }
     this.hud.show('chapters');
   }
@@ -884,9 +963,240 @@ class Game {
     this.loadSector(!saved, saved?.room, saved?.pos);
   }
 
+  // --- WORLD FORGE: a game built from the player's choices ---------------------------
+  startForge(seed = (Math.random() * 1e9) | 0, saved = null, choices = null) {
+    this.mode = 'deck';
+    seed = seed ?? ((Math.random() * 1e9) | 0);
+    choices = saved?.choices || choices || {};
+    this.forge = forgeGame(seed, choices);
+    this.story = makeForgeStory(this.forge);
+    this.campaign = saved || { forge: true, seed, choices, deck: 0, sector: 0, flags: {}, visited: [] };
+    this.campaign.forge = true;
+    this.gearCd = {};
+    this.flareT = 0;
+    this.facts.rulesEnabled = false;
+    for (const t of [...BASE_TOKENS, 'TIME', 'LIGHT']) this.facts.set(`token_${t}`); // the device knows every word: the puzzle is the rules
+    for (const k of ['has_device', 'has_tick', 'met_juno', 'left_antechamber']) this.facts.set(k);
+    this.engine.unlockSlot(3);
+    this.engine.lock('antechamber', false);
+    this.world.root.visible = false;
+    this.observer.mesh.visible = false;
+    this.npcs.juno.visible = false;
+    this.held = saved ? saved.held || null : null;
+    document.body.classList.add('forge');
+    this.renderGearDock();
+    this.loadSector(!saved, saved?.room, saved?.pos);
+  }
+
+  forgeAct() {
+    return this.story.decks[this.campaign.deck];
+  }
+
+  // the rules card and the journal share one rendering of an act's rules and the kit
+  rulesHtml(act) {
+    const d = describeRules(act, this.forge.gear);
+    const rows = d.rows.map((r) => `<li class="${r.key === 'NULL FIELD' ? 'nul' : ''}"><b>${r.key}</b><div><em>${r.value}</em> <span>${r.text}</span></div></li>`).join('');
+    const gear = d.gear.map((g) => `<span class="gc ${g.ok ? '' : 'no'}">${g.name}${g.note ? `<small>${g.note}</small>` : ''}</span>`).join('');
+    return { rows, gear };
+  }
+
+  showRules(ms = 7000) {
+    if (!this.campaign?.forge) return;
+    const act = this.forgeAct();
+    const R = this.rulesHtml(act);
+    this.hud.rules(`ACT ${act.index + 1} · ${act.name}`, R.rows, R.gear, ms);
+  }
+
+  toggleRules() {
+    if (!this.campaign?.forge) return;
+    if (this.hud.rulesShown) this.hud.rulesHide();
+    else this.showRules(0);
+  }
+
+  renderGearDock() {
+    const kit = this.campaign?.forge ? this.forge.gear : [];
+    for (const b of document.querySelectorAll('[data-act^="gear:"]')) {
+      const i = +b.dataset.act.slice(5);
+      const key = kit[i];
+      b.classList.toggle('off', !key);
+      if (!key) continue;
+      b.querySelector('i').innerHTML = GEAR_ICONS[key];
+      b.querySelector('span').textContent = GEAR[key].short;
+      b.title = `${GEAR[key].name}: ${GEAR[key].desc}`;
+    }
+    document.querySelector('#dock .rules')?.classList.toggle('off', !this.campaign?.forge);
+  }
+
+  // one press of a gear slot: 'ok', or why not ('refused', 'cooling', 'spent', 'none')
+  useGear(i) {
+    if (this.mode !== 'deck' || !this.campaign?.forge) return 'off';
+    const key = this.forge.gear[i];
+    if (!key) return 'off';
+    const act = this.forgeAct();
+    const rule = act.gearAllowed[key];
+    const G = GEAR[key];
+    const say = (t) => t && this.hud.say([{ who: 'TICK', text: t }], this.facts);
+    const toast = (t) => this.hud.toast(`<small>${G.name}</small><br>${t}`, 2600);
+    if (!rule.ok) {
+      this.audio.deny();
+      toast(rule.note.toUpperCase());
+      say(gearTick(key, 'refused'));
+      this.showRules(5000);
+      return 'refused';
+    }
+    if ((this.gearCd[key] || 0) > this.time) {
+      this.audio.deny();
+      toast(`CHARGING · ${Math.ceil(this.gearCd[key] - this.time)} S`);
+      return 'cooling';
+    }
+    const flags = this.deckWorld.flags;
+    const p = this.player.pos;
+    const room = this.room;
+    const near = (list, at) => list.filter((o) => at(o).room === room).map((o) => ({ o, d: Math.hypot(at(o).x - p.x, at(o).z - p.z) })).sort((a, b) => a.d - b.d)[0]?.o;
+    if (key === 'STASIS') {
+      const s = near(this.deckWorld.sentinels, (o) => ({ room: o.def.room, x: o.pos.x, z: o.pos.z }));
+      const h = near(this.deckWorld.hazards, (o) => ({ room: o.hz.room, x: o.hz.pivot[0], z: o.hz.pivot[2] }));
+      if (!s && !h) {
+        this.audio.deny();
+        say(gearTick(key, 'none'));
+        return 'none';
+      }
+      if (s) { s.stasisT = rule.dur; s.mode = 'patrol'; s.suspicion = 0; this.fx.burst([s.pos.x, 1.2, s.pos.z], 0xb6a6ff, 30, 1.6); }
+      if (h) { h.stasisT = rule.dur; this.fx.burst(h.hz.pivot, 0xb6a6ff, 20, 1.2); }
+    } else if (key === 'GRAPPLE' || key === 'RIG') {
+      // hard light in front of you, along the nearest axis, on the surface you stand on
+      const f = this.player.forward(new THREE.Vector3());
+      const ax = Math.abs(f.x) > Math.abs(f.z) ? [Math.sign(f.x) || 1, 0] : [0, Math.sign(f.z) || -1];
+      const up = this.player.gravity === 1 ? -1 : 1; // on the ceiling, "up" is down
+      const feet = p.y - up * this.player.half.y;
+      const boxes = [];
+      if (key === 'GRAPPLE') {
+        const len = 8.5, w = 0.5;
+        const x0 = p.x + ax[0] * -0.4, z0 = p.z + ax[1] * -0.4, x1 = p.x + ax[0] * len, z1 = p.z + ax[1] * len;
+        boxes.push([Math.min(x0, x1) - (ax[0] ? 0 : w), feet - (up > 0 ? 0.22 : 0), Math.min(z0, z1) - (ax[1] ? 0 : w), Math.max(x0, x1) + (ax[0] ? 0 : w), feet + (up > 0 ? 0 : 0.22), Math.max(z0, z1) + (ax[1] ? 0 : w)]);
+      } else {
+        const steps = 6, tread = 1.2, rise = 0.75, w = 1.1;
+        for (let k = 0; k < steps; k++) {
+          const a = 0.6 + k * tread, b = a + tread;
+          const top = feet + up * (k + 1) * rise;
+          const x0 = p.x + ax[0] * a, z0 = p.z + ax[1] * a, x1 = p.x + ax[0] * b, z1 = p.z + ax[1] * b;
+          boxes.push([Math.min(x0, x1) - (ax[0] ? 0 : w), Math.min(top, top - up * 0.3), Math.min(z0, z1) - (ax[1] ? 0 : w), Math.max(x0, x1) + (ax[0] ? 0 : w), Math.max(top, top - up * 0.3), Math.max(z0, z1) + (ax[1] ? 0 : w)]);
+        }
+      }
+      for (const b of boxes) this.deckWorld.addTemp(b, rule.dur);
+      this.fx.burst([p.x + ax[0] * 2, feet + up * 0.5, p.z + ax[1] * 2], 0xffd36a, 30, 1.8);
+    } else if (key === 'LENS') {
+      this.deckWorld.lens(rule.dur);
+      this.fx.burst([p.x, p.y + 0.8, p.z], 0x3cc4cf, 34, 2.2);
+    } else if (key === 'FLARE') {
+      this.flareT = rule.dur;
+      this.flareAt = [p.x, p.y + 0.6, p.z];
+      for (const s of this.deckWorld.sentinels) if (s.def.room === room) s.lure = { x: p.x, z: p.z, t: rule.dur };
+      this.fx.burst(this.flareAt, 0xffb060, 40, 2.6);
+    } else if (key === 'KEYFORGE') {
+      if (flags[`gear_KEYFORGE_${act.index}`]) {
+        this.audio.deny();
+        say(gearTick(key, 'spent'));
+        return 'spent';
+      }
+      const it = this.heldItem();
+      if (!it || !it.echo) {
+        this.audio.deny();
+        say(gearTick(key, 'none'));
+        return 'none';
+      }
+      it.echo = false;
+      flags[`forged_${it.id}`] = true;
+      flags[`gear_KEYFORGE_${act.index}`] = true;
+      this.campaign.flags = { ...flags };
+      this.fx.burst([p.x, p.y + 0.6, p.z], 0xffd27a, 30, 1.6);
+    }
+    this.gearCd[key] = this.time + G.cooldown;
+    this.audio.insert();
+    toast(G.desc.toUpperCase());
+    say(gearTick(key, 'use'));
+    this.dirty = true;
+    return 'ok';
+  }
+
+  // the cast's two-option encounters: a fact is set, later lines and the ending change with it
+  openForgeChoice(beat, npc) {
+    const ch = beat.choice;
+    if (this.deckWorld.flags[`chosen_${beat.choice.fact}`]) return;
+    const $ = (q) => document.querySelector(q);
+    $('#forgechoice .body').innerHTML = `<p>${ch.prompt}</p>` + ch.options.map((o) => `<button class="big" data-fch="${o.key}">${o.label}</button>`).join('');
+    for (const b of document.querySelectorAll('[data-fch]')) b.onclick = () => this.chooseForge(beat, npc, b.dataset.fch);
+    this.openMenu('forgechoice');
+  }
+
+  chooseForge(beat, npc, key) {
+    const ch = beat.choice;
+    const o = ch.options.find((x) => x.key === key) || ch.options[0];
+    this.facts.set(ch.fact, o.tag);
+    this.facts.inc(`forge_${o.tag}`);
+    this.deckWorld.flags[`chosen_${ch.fact}`] = true;
+    this.campaign.flags = { ...this.deckWorld.flags };
+    this.log.push(`<b>${ch.prompt}</b> You chose: ${o.label}.`);
+    this.closeMenu();
+    const reply = ch.reply[o.tag];
+    const voice = npc ? crewVoice(npc.crew) : undefined;
+    this.hud.say([{ ...reply, voice }, { who: 'TICK', text: ch.tick }], this.facts);
+    if (beat.junoAfter) this.hud.say([{ who: 'JUNO', text: beat.junoAfter }], this.facts);
+    this.audio.chime();
+    this.beatDone();
+  }
+
+  // the finale: a two or three option decision; the ending depends on it and on what you chose before
+  openForgeDecision() {
+    if (this.facts.get('verdict_right')) return this.hud.toast('The chair has its answer.');
+    const beat = this.deckBeat();
+    const $ = (q) => document.querySelector(q);
+    $('#forgeQ').textContent = beat.question;
+    $('#forgeend .body').innerHTML = beat.options.map((o) => `<button class="big" data-fend="${o.key}">${o.label}</button>`).join('');
+    for (const b of document.querySelectorAll('[data-fend]')) b.onclick = () => this.endForge(b.dataset.fend);
+    this.openMenu('forgeend');
+  }
+
+  endForge(key) {
+    const end = forgeEnding(this.forge, key, this.facts);
+    this.facts.set('verdict_right');
+    this.facts.set('forge_ending', key);
+    this.beatDone();
+    const $ = (q) => document.querySelector(q);
+    const mins = Math.round(this.playTime / 60);
+    const g = this.forge;
+    const show = () => {
+      $('#ending .body').innerHTML = `
+      <h2>${end.title}</h2>${end.text.map((t) => `<p>${t}</p>`).join('')}
+      <p class="dim">${end.coda[0].text}</p>
+      <div class="stats"><span>${g.title.toUpperCase()} · ${GENRES[g.genre].label}</span><span>${Math.floor(mins / 60)} h ${mins % 60} min</span><span>${g.cast.filter((c) => this.facts.get(`met_${c.id}`)).length}/${g.cast.length} met</span><span>trusted ${end.trust} · doubted ${end.doubt}</span><span>Forge ${g.seed}</span></div>
+      <button class="big" id="forgeAgain">BACK TO THE FORGE<small>Build another game, or the same one with a new number</small></button>
+      <button id="keepPlaying">STAY HERE</button>`;
+      $('#forgeAgain').onclick = () => {
+        this.saveTo('auto');
+        session((s) => s.setItem(BOOT_KEY, JSON.stringify({ action: 'forgePanel', opts: { choices: { ...(this.campaign.choices || {}), seed: '' } } })));
+        location.reload();
+      };
+      $('#keepPlaying').onclick = () => this.closeMenu();
+      this.saveTo('auto');
+      this.openMenu('ending');
+    };
+    this.closeMenu();
+    this.hud.say(end.coda, this.facts, show);
+  }
+
   loadSector(intro, roomId, pos) {
     const c = this.campaign;
-    const lv = c.zones ? generateZone(this.story, c.deck, c.sector) : generateSector(this.story, c.deck, c.sector, c.seed);
+    const act = c.forge ? this.forgeAct() : null;
+    let lv = c.zones || act?.open ? generateZone(this.story, c.deck, c.sector) : generateSector(this.story, c.deck, c.sector, c.seed);
+    if (act) {
+      lv = tuneLevel(lv, act);
+      // the act's local rules, applied to every room (RealityEngine overrides)
+      for (const k of Object.keys(this.engine.overrides)) if (/^(d\d+s\d+r\d+|f\d+s\d+)$/.test(k)) delete this.engine.overrides[k];
+      const o = rulesOverride(act.rules);
+      for (const rid of lv.order) this.engine.setOverride(rid, o);
+      this.flareT = 0;
+    }
     this.level = lv;
     this.deckWorld.hero = this.settings.hero; // the Other wears your face
     this.deckWorld.build(lv, this.story, c.flags);
@@ -900,7 +1210,18 @@ class Game {
     if (pos) this.player.place(pos);
     this.checkpoint = pos || lv.rooms[start].spawn;
     const deck = this.story.decks[c.deck];
-    if (intro) {
+    if (intro && c.forge) {
+      this.held = null;
+      if (c.sector === 0) {
+        this.hud.card(`${this.story.title.toUpperCase()} · ACT ${c.deck + 1} OF ${this.story.decks.length}`, deck.name, deck.subtitle, 4200);
+        this.after(2.6, () => this.hud.say(deck.intro, this.facts));
+        this.after(5.2, () => this.showRules(8000));
+        if (deck.ruleTick) this.after(5.4, () => this.hud.say([{ who: 'TICK', text: deck.ruleTick }], this.facts));
+      } else {
+        this.hud.card(`${deck.name} · ${deck.open ? 'DISTRICT' : 'SECTOR'} ${c.sector + 1} OF ${deck.sectors}`, this.level.rooms[lv.order[0]].name, '', 2600);
+        this.after(1.2, () => this.showRules(5000));
+      }
+    } else if (intro) {
       this.held = null;
       const per = deck.sectors || SECTORS_PER_DECK;
       if (c.sector === 0) {
@@ -908,6 +1229,7 @@ class Game {
         this.after(2.6, () => this.hud.say(deck.intro, this.facts));
       } else this.hud.card(`${deck.name} · ${c.zones ? 'DISTRICT' : 'SECTOR'} ${c.sector + 1} OF ${per}`, this.level.rooms[lv.order[0]].name, '', 2600);
     }
+    if (c.forge && !intro && pos) this.after(1.2, () => this.showRules(5000));
     this.updateDeckObjective(true);
     this.saveTo('auto');
   }
@@ -978,7 +1300,7 @@ class Game {
   updateDeckObjective(force = false) {
     const deck = this.story.decks[this.campaign.deck];
     const beat = this.deckBeat();
-    const crew = deck.crew !== null ? this.story.cast[deck.crew] : null;
+    const crew = beat.crew != null ? this.story.cast[beat.crew] : deck.crew !== null ? this.story.cast[deck.crew] : null;
     const done = this.deckWorld.flags.beat_done;
     let goal;
     if (beat.goal && !done) goal = beat.goal;
@@ -1009,7 +1331,7 @@ class Game {
     const it = f.it;
     const flags = this.deckWorld.flags;
     const beat = this.deckBeat();
-    const say = (lines) => this.hud.say(lines, this.facts);
+    const say = (lines, done) => this.hud.say(lines, this.facts, done);
     if (f.id.startsWith('ditem:')) {
       this.held = f.id.slice(6);
       this.audio.pickup();
@@ -1027,12 +1349,14 @@ class Game {
       this.audio.greet('CREW');
       const p = n.model.position;
       this.talkWith = [p.x, p.y + 1.55, p.z];
-      say(lines.map((l) => (l.who === 'CREW' ? { ...l, voice } : l)));
-      if (n.n.junoAfter) say([].concat(n.n.junoAfter).map((text) => ({ who: 'JUNO', text })));
-      if (beat.kind === 'encounter') {
+      const choosing = beat.choice && !flags[`chosen_${beat.choice.fact}`] && n.n.id === `npc_${this.level.order.find((rid) => this.level.rooms[rid].beat)}`;
+      say(lines.map((l) => (l.who === 'CREW' ? { ...l, voice } : l)), choosing ? () => this.openForgeChoice(beat, n) : undefined);
+      if (n.n.junoAfter && !choosing) say([].concat(n.n.junoAfter).map((text) => ({ who: 'JUNO', text })));
+      if (beat.kind === 'encounter' && !this.facts.get(`met_logged_${n.crew.id}`)) {
+        this.facts.set(`met_logged_${n.crew.id}`);
         this.log.push(`Met ${n.crew.name} (${n.crew.role})${n.n.hologram ? ' - only an echo' : ' - alive'}.`);
-        this.beatDone();
       }
+      if (beat.kind === 'encounter' && !choosing && !beat.choice) this.beatDone();
       return;
     }
     const kind = it.kind;
@@ -1064,6 +1388,7 @@ class Game {
           flags[`done_${it.id}`] = true;
           const crew = this.story.cast[beat.crew ?? this.story.decks[this.campaign.deck].crew];
           this.facts.set(`clue_${crew.id}`, beat.clue);
+          if (beat.twistRead) this.facts.set('forge_twist_read'); // the twist: every secret in the journal opens
           // discoveries rewrite what you thought you knew
           this.log = this.log.map((l) => (l.includes(crew.first) && !l.includes('↻')
             ? `${l} <i>↻ ${beat.clue === 'guilty' ? 'The echo contradicts this.' : 'The echo confirms this.'}</i>` : l));
@@ -1117,6 +1442,7 @@ class Game {
   }
 
   openVerdict() {
+    if (this.campaign?.forge) return this.openForgeDecision();
     if (this.facts.get('verdict_right')) return this.hud.toast('The chair has its answer.');
     const $ = (s) => document.querySelector(s);
     $('#verdict .body').innerHTML = this.story.cast.map((c, i) => {
@@ -1261,6 +1587,7 @@ class Game {
     const beat = this.deckBeat();
     const deck = this.story.decks[this.campaign.deck];
     if (beat.kind === 'contradiction') this.hud.say([{ who: 'TICK', text: 'A RECORD ON THE WALL. RECORDS HAVE ECHOES.' }], this.facts);
+    else if (beat.kind === 'encounter' && this.story.forge) this.hud.say([this.story.ahead], this.facts);
     else if (beat.kind === 'encounter') this.hud.say([{ who: 'JUNO', text: `Someone's in there. Ren - be gentle. It might be ${this.story.cast[deck.crew].first}.` }], this.facts);
     else if (beat.kind === 'verdict') this.hud.say([{ who: 'JUNO', text: 'This is it. The chair. Check your log before you sit.' }], this.facts);
   }
@@ -1506,6 +1833,7 @@ class Game {
   saveMeta() {
     if (this.mode === 'deck') {
       const d = this.story.decks[this.campaign.deck];
+      if (this.campaign.forge) return { where: `${this.story.title.toUpperCase()} · ACT ${this.campaign.deck + 1} · ${d.name}`, chapter: `${d.open ? 'District' : 'Sector'} ${this.campaign.sector + 1}/${d.sectors}` };
       if (this.campaign.zones) return { where: this.zoneWhere(), chapter: `District ${this.campaign.sector + 1}/${d.sectors}` };
       const told = this.story.title ? `${this.story.title.toUpperCase()} · ` : '';
       return { where: `${told}DECK ${this.campaign.deck + 1} · ${d.name}`, chapter: `Sector ${this.campaign.sector + 1}/4` };
@@ -1539,7 +1867,11 @@ class Game {
       this.comboIndex = d.comboIndex ?? -1;
       this.hud.lawDraft = null;
       this.restoring = false;
-      this.run = d.meta?.run || (d.campaign?.zones ? (d.campaign.set === 'cradle' ? 'cradle' : 'halcyon') : d.mode === 'deck' ? 'vessel' : 'prologue');
+      this.run = d.meta?.run || (d.campaign?.forge ? 'forge' : d.campaign?.zones ? (d.campaign.set === 'cradle' ? 'cradle' : 'halcyon') : d.mode === 'deck' ? 'vessel' : 'prologue');
+      if (d.mode === 'deck' && d.campaign?.forge) {
+        this.startForge(d.campaign.seed, d.campaign);
+        return true;
+      }
       if (d.mode === 'deck' && d.campaign?.zones) {
         this.startZones(d.campaign);
         return true;
@@ -1577,11 +1909,11 @@ class Game {
       this.lastEvent = this.time;
       if (a === 'pause') {
         this.voice.stop();
-        if (['saves', 'settings', 'hero', 'chapters', 'studio'].includes(this.menu)) {
+        if (['saves', 'settings', 'hero', 'chapters', 'studio', 'forge'].includes(this.menu)) {
           this.player.cinema = null;
           this.back();
         }
-        else if (this.menu === 'ending' || this.menu === 'decision') { /* choose; endings are final */ }
+        else if (this.menu === 'ending' || this.menu === 'decision' || this.menu === 'forgechoice') { /* choose; endings are final */ }
         else if (this.menu) this.closeMenu();
         else if (!this.paused) this.openMenu('pause');
         continue;
@@ -1606,6 +1938,8 @@ class Game {
       }
       if (!active) continue;
       if (a === 'use') this.use();
+      else if (a.startsWith('gear:')) this.useGear(+a.slice(5));
+      else if (a === 'rules') this.toggleRules();
       else if (a === 'hint') (this.mode === 'deck' ? this.deckHint() : this.npcs.hint());
       else if (a === 'combo') this.nextCombo();
       else if (a === 'shift') this.shift();
@@ -1679,6 +2013,22 @@ class Game {
     dock.comboTouch?.classList.toggle('off', noCombo);
     dock.hint?.classList.toggle('off', !this.facts.get('has_tick'));
     dock.hint?.classList.toggle('ready', this.mode === 'deck' || !!this.facts.get('has_tick'));
+    // WORLD FORGE: the four gear slots show their cooldown, and whether the local rules allow them
+    if (this.campaign?.forge && this.story?.forge) {
+      const act = this.forgeAct();
+      dock.gear = dock.gear || [...document.querySelectorAll('[data-act^="gear:"]')];
+      for (const b of dock.gear) {
+        const key = this.forge.gear[+b.dataset.act.slice(5)];
+        if (!key) continue;
+        const rule = act.gearAllowed[key];
+        const left = Math.max(0, (this.gearCd[key] || 0) - this.time);
+        b.classList.toggle('no', !rule.ok);
+        b.classList.toggle('cooling', left > 0);
+        b.classList.toggle('spent', !!GEAR[key].once && !!this.deckWorld.flags[`gear_KEYFORGE_${act.index}`]);
+        b.classList.toggle('on', (key === 'FLARE' && this.flareT > 0) || (key === 'LENS' && this.deckWorld.lensT > 0) || ((key === 'GRAPPLE' || key === 'RIG') && this.deckWorld.temps.length > 0));
+        b.style.setProperty('--cd', (left / GEAR[key].cooldown || 0).toFixed(2));
+      }
+    }
   }
 
   updateWorlds(simDt, dt) {
@@ -1843,7 +2193,12 @@ class Game {
         this.audio.alert();
       } else if (s.mode !== 'chase') s.alerted = false;
     }
-    this.audio.setThreat(near ? Math.max(0.15, sus) : this.deckWorld.hazards.some((h) => h.hz.room === this.room) ? 0.3 : 0);
+    let threat = near ? Math.max(0.15, sus) : this.deckWorld.hazards.some((h) => h.hz.room === this.room) ? 0.3 : 0;
+    if (this.campaign.forge) {
+      threat = Math.max(threat, GENRES[this.forge.genre].threat); // the genre sets the floor of the music's tension
+      if (this.flareT > 0) this.flareT -= dt;
+    }
+    this.audio.setThreat(threat);
     this.hud.eye(sus, near);
     this.updateDeckObjective();
   }
@@ -1908,7 +2263,14 @@ class Game {
 
   // how much the vessel runs on emergency light (after SEVERED; districts have their own night)
   emergency() {
-    return this.mode === 'deck' && this.level?.palette && this.level.palette.night === undefined ? this.story?.after?.dark || 0 : 0;
+    if (this.mode !== 'deck' || !this.level?.palette) return 0;
+    if (this.level.forge) return (this.level.palette.emergency || 0) * (1 - this.flare()); // WORLD FORGE's EMERGENCY light; a flare lifts it
+    return this.level.palette.night === undefined ? this.story?.after?.dark || 0 : 0;
+  }
+
+  // how much a signal flare is lighting the act right now (0..1)
+  flare() {
+    return this.flareT > 0 ? Math.min(1, this.flareT / 2) * 0.85 : 0;
   }
 
   updateTheme(dt) {
@@ -1932,7 +2294,7 @@ class Game {
     _c.set(th.ground);
     if (pal?.look) _c.lerp(_c2.set(pal.fog), 0.5);
     this.hemi.groundColor.lerp(_c, k);
-    const night = deck ? pal.night || { horror: 0.55, thriller: 0.3 }[this.story?.mood] || this.story?.after?.dark || 0 : room.night || 0;
+    const night = (deck ? pal.night || { horror: 0.55, thriller: 0.3 }[this.story?.mood] || this.story?.after?.dark || 0 : room.night || 0) * (1 - this.flare());
     const env = (this.scene.environment ? 0.85 : 1) * (deck ? 0.72 : 1) * (1 - night * 0.55);
     // a sky photo lights the district: the probe takes over most of the flat hemisphere fill
     // (indoor decks only borrow the sky for reflections)

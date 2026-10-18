@@ -1,6 +1,6 @@
 // Save slots. A new game picks one of three slots and autosaves into it as you
 // play (each slot remembers which chapter it belongs to: the prologue,
-// HALCYON, the Cradle, the vessel or a Story Studio tale). The old single
+// HALCYON, the Cradle, the vessel, a Story Studio tale or a WORLD FORGE game). The old single
 // autosave is still readable. Each entry stores the game state plus a little
 // metadata. The last prologue ending reached is kept apart from the slots.
 
@@ -62,6 +62,7 @@ export const CHAPTERS = {
   vessel: { name: 'THE VESSEL', sub: 'Eight generated decks, a crew, a culprit' },
   cradle: { name: 'THE CRADLE', sub: 'Beneath Station Zero, where Halcyon sleeps' },
   studio: { name: 'STORY STUDIO', sub: 'A vessel story made from your wishes' },
+  forge: { name: 'WORLD FORGE', sub: 'Build your own game: your genre, your locations, their rules, your cast and kit' },
 };
 
 // The last prologue ending reached on this device, so chapters started from the menu (after the

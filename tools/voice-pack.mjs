@@ -106,6 +106,12 @@ for (const ending of ['SEVER', 'SUSTAIN', 'MIRROR', null]) {
   }
 }
 
+// WORLD FORGE: every fixed line the Forge can say (gen/Forge.js). Names the player types, and the
+// few lines that carry them, fall back to the device voice; cast lines are recorded once, in the
+// neutral crew voice, which the other crew voices fall back on (audio/Voice.js).
+const { FORGE_LINES } = await imp('gen/Forge.js');
+for (const [voice, text] of FORGE_LINES()) add(voice === 'CREW' ? 'CREW_n' : voice, text);
+
 // you sound like your look: everything Ren says is also recorded in a male voice
 for (const [voice, text] of [...lines]) if (voice === 'YOU' || voice === 'OTHER') add(`${voice}_m`, text);
 

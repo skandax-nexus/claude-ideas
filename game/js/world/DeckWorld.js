@@ -28,6 +28,8 @@ export class DeckWorld {
     this.level = null;
     this.flags = {};
     this.colliders = [];
+    this.temps = []; // WORLD FORGE gear: hard-light lines and stairs that last a few seconds
+    this.lensT = 0; // WORLD FORGE gear: the echo lens shows every echo for a while
   }
 
   ctx(room) {
@@ -56,6 +58,10 @@ export class DeckWorld {
     this.hazards = [];
     this.sentinels = [];
     this.npcs = [];
+    this.temps = [];
+    this.lensT = 0;
+    // a memory key the KEY FORGE made real stays real (the flag is saved with the sector)
+    for (const it of level.items) if (it.echo && this.flags[`forged_${it.id}`]) it.echo = false;
 
     // static geometry merged per material, conditional pieces kept separate
     const groups = new Map();
@@ -245,7 +251,27 @@ export class DeckWorld {
   }
 
   echoVisible(state) {
-    return state === 'ECHO' || this.engine.has('echoVisible', state);
+    return state === 'ECHO' || this.lensT > 0 || this.engine.has('echoVisible', state);
+  }
+
+  // WORLD FORGE gear: a solid hard-light box (a grapple line, a stair) for a few seconds
+  addTemp(box, secs) {
+    const [x0, y0, z0, x1, y1, z1] = box;
+    const geo = boxGeometry(x1 - x0, y1 - y0, z1 - z0);
+    geo.translate((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2);
+    const mesh = new THREE.Mesh(geo, this.mats.lightSolid);
+    mesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(geo), this.mats.lightLine));
+    this.root.add(mesh);
+    const t = { mesh, box: { min: [x0, y0, z0], max: [x1, y1, z1] }, t: secs };
+    this.temps.push(t);
+    this.refresh();
+    return t;
+  }
+
+  // the echo lens: every echo shows, in any state, for a while
+  lens(secs) {
+    this.lensT = secs;
+    this.refresh();
   }
 
   refresh() {
@@ -277,6 +303,7 @@ export class DeckWorld {
         if (present && d.el.solid !== false) cols.push(d.box);
       }
     }
+    for (const t of this.temps) cols.push(t.box);
     this.colliders = cols;
     for (const tm of this.textMeshes) {
       const c = this.ctx(tm.t.room);
@@ -313,6 +340,17 @@ export class DeckWorld {
     if (!this.level) return null;
     const { player } = g;
     let event = null;
+    // gear that runs out: hard light fades, the lens closes
+    if (this.temps.length) {
+      let gone = false;
+      for (const tp of this.temps) {
+        tp.t -= dt;
+        tp.mesh.material = tp.t < 1.5 && Math.floor(tp.t * 8) % 2 ? this.mats.light : this.mats.lightSolid; // it flickers before it goes
+        if (tp.t <= 0) { this.root.remove(tp.mesh); tp.mesh.geometry.dispose(); gone = true; }
+      }
+      if (gone) { this.temps = this.temps.filter((tp) => tp.t > 0); this.refresh(); }
+    }
+    if (this.lensT > 0) { this.lensT -= dt; if (this.lensT <= 0) { this.lensT = 0; this.refresh(); } }
     for (const d of this.dynamic) {
       if (d.openT === undefined || d.openT >= 1) continue;
       d.openT = Math.min(1, d.openT + dt * 1.1);
@@ -340,7 +378,8 @@ export class DeckWorld {
     // time sweepers: stopped by a TIME FREEZES law in their room's state
     const feet = player.pos.y - player.half.y, head = player.pos.y + player.half.y;
     for (const h of this.hazards) {
-      const frozen = this.engine.hasIn('timeStop', h.hz.room);
+      if (h.stasisT > 0) h.stasisT -= dt; // a stasis pulse holds it still
+      const frozen = this.engine.hasIn('timeStop', h.hz.room) || h.stasisT > 0;
       if (!frozen) h.angle += h.hz.speed * dt;
       h.g.rotation.y = h.angle;
       h.beamMat.color.setHex(frozen ? 0xb6a6ff : 0xff8f7a);
@@ -356,10 +395,12 @@ export class DeckWorld {
       if (perp < 0.42) event = 'hit';
     }
     for (const s of this.sentinels) {
+      if (s.stasisT > 0) s.stasisT -= dt;
+      if (s.lure && (s.lure.t -= dt) <= 0) s.lure = null;
       const r = s.update(dt, t, {
         player,
         here: g.room === s.def.room,
-        frozen: this.engine.hasIn('observerFrozen', s.def.room),
+        frozen: this.engine.hasIn('observerFrozen', s.def.room) || s.stasisT > 0,
         hidden: player.gravity === 1,
         mode: this.story?.after?.sentinels || 'hunt',
         lessons: g.observer?.brain?.lessons || null,
@@ -370,14 +411,29 @@ export class DeckWorld {
       const m = n.model;
       const d = _v.copy(player.pos).sub(m.position);
       d.y = 0;
+      let speed = 0;
       if (!n.n.silent && d.length() < 7) {
         const yaw = Math.atan2(d.x, d.z);
         m.rotation.y += Math.atan2(Math.sin(yaw - m.rotation.y), Math.cos(yaw - m.rotation.y)) * Math.min(1, dt * 3);
         m.userData.lookAt?.(_v.copy(player.pos).setY(player.pos.y + 0.6));
+      } else if (n.n.path && m.visible) {
+        // a small patrol loop (WORLD FORGE's cast walk their scenes when you are not with them)
+        n.wp = n.wp || 0;
+        const w = n.n.path[n.wp];
+        const to = _v.set(w[0] - m.position.x, 0, w[1] - m.position.z);
+        const dist = to.length();
+        if (dist < 0.25) n.wp = (n.wp + 1) % n.n.path.length;
+        else {
+          const yaw = Math.atan2(to.x, to.z);
+          m.rotation.y += Math.atan2(Math.sin(yaw - m.rotation.y), Math.cos(yaw - m.rotation.y)) * Math.min(1, dt * 4);
+          speed = 0.9;
+          m.position.addScaledVector(to.divideScalar(dist), Math.min(dist, speed * dt));
+        }
+        m.userData.lookAt?.(null);
       } else m.userData.lookAt?.(null);
       n.talkT = Math.max(0, n.talkT - dt);
       m.userData.setTalking?.(n.talkT > 0);
-      m.userData.animate(dt, 0, t);
+      m.userData.animate(dt, speed, t);
     }
     return event;
   }
@@ -584,7 +640,10 @@ export class Sentinel {
       return null;
     }
     const heard = !!L?.has('runner') && here && player.running && this.pos.distanceTo(_v.set(player.pos.x, 0, player.pos.z)) < 7;
-    const seen = (here && !hidden && this.sees(player)) || heard;
+    // a signal flare: it goes to look at the light instead of you
+    const lured = !!this.lure;
+    if (lured && this.mode === 'chase') { this.mode = 'patrol'; this.suspicion = 0; }
+    const seen = !lured && ((here && !hidden && this.sees(player)) || heard);
     if (seen) this.suspicion = Math.min(1.2, this.suspicion + dt * (player.running ? 2.4 : 1.4));
     else this.suspicion = Math.max(0, this.suspicion - dt * 0.45);
     if (this.mode !== 'chase' && this.suspicion >= 1) this.mode = 'chase';
@@ -603,7 +662,8 @@ export class Sentinel {
       speed = 4.4;
     } else {
       const w = this.def.path[this.wp];
-      target = new THREE.Vector3(w[0], 0, w[1]);
+      target = lured ? new THREE.Vector3(this.lure.x, 0, this.lure.z) : new THREE.Vector3(w[0], 0, w[1]);
+      if (lured && target.distanceTo(this.pos) < 1.6) speed = 0; // it stands and stares at the flare
       if (this.suspicion > 0.3 && seen) {
         // stop and stare
         speed = 0;
@@ -617,8 +677,8 @@ export class Sentinel {
       this.turnTo(to, dt);
       this.pos.addScaledVector(to.normalize(), Math.min(d, speed * dt));
     }
-    if (this.mode === 'patrol' && d < 0.3) this.wp = (this.wp + 1) % this.def.path.length;
-    const col = this.mode === 'chase' ? 0xff8a70 : this.suspicion > 0.3 ? 0xffc04a : 0x7fd8ff;
+    if (this.mode === 'patrol' && !lured && d < 0.3) this.wp = (this.wp + 1) % this.def.path.length;
+    const col = this.mode === 'chase' ? 0xff8a70 : lured ? 0xffd27a : this.suspicion > 0.3 ? 0xffc04a : 0x7fd8ff;
     U.eyeMat.color.setHex(col);
     U.coneMat.color.setHex(col);
     U.coneMat.opacity = this.mode === 'chase' ? 0.16 : 0.09;

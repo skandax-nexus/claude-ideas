@@ -423,7 +423,8 @@ export function generateSector(story, deckIdx, sectorIdx, campaignSeed) {
   // story room position: first on arrival, last for the finale verdict, otherwise mid-sector
   const storyAt = beat.kind === 'arrival' ? 0 : beat.kind === 'verdict' ? nPuzzles : rng.int(1, Math.max(1, nPuzzles - 1));
   const plan = [];
-  for (let i = 0; i < nPuzzles; i++) plan.push({ type: 'puzzle', ...planPuzzle(rng, deckIdx, difficulty + i * 0.25, deck.feature) });
+  // a WORLD FORGE act plans its own puzzles, within its local rules (gen/Forge.js)
+  for (let i = 0; i < nPuzzles; i++) plan.push({ type: 'puzzle', ...(deck.planPuzzle ? deck.planPuzzle(sectorIdx, i, rng) : planPuzzle(rng, deckIdx, difficulty + i * 0.25, deck.feature)) });
   plan.splice(storyAt, 0, { type: 'story', beat });
 
   const names = rng.shuffle(deck.rooms);
@@ -703,13 +704,14 @@ function storyRoom(R, beat, deck, rng, level, story) {
     R.inter.push({ id: `plaque_${R.id}`, kind: 'plaque', pos: [W / 2 - 0.5, 2.6, -6], r: 3.2, prompt: 'READ THE RECORD', beat });
   }
   if (beat.kind === 'encounter') {
-    const c = story.cast[story.decks[deck.index].crew];
-    R.npcs.push({ id: `npc_${R.id}`, crew: c.id, pos: [1.6, 0, -7.2], yaw: Math.PI * 0.85, hologram: !c.alive, lines: beat.lines, junoAfter: beat.junoAfter });
+    const c = story.cast[beat.crew ?? story.decks[deck.index].crew];
+    R.npcs.push({ id: `npc_${R.id}`, crew: c.id, pos: [1.6, 0, -7.2], yaw: Math.PI * 0.85, hologram: !c.alive, lines: beat.lines, junoAfter: beat.junoAfter, path: beat.path ? [[1.6, -7.2], [-2.4, -9.6], [-2.4, -5.2]] : undefined });
   }
   if (beat.kind === 'verdict') {
     // the crew, in a circle of echoes around the chair
-    for (let k = 0; k < 7; k++) {
-      const a = (k / 7) * Math.PI * 2;
+    const nj = Math.min(7, story.cast.length);
+    for (let k = 0; k < nj; k++) {
+      const a = (k / nj) * Math.PI * 2;
       R.npcs.push({ id: `juror_${k}`, crew: story.cast[k].id, pos: [Math.sin(a) * 3.6, 0, -6.6 + Math.cos(a) * 3.6], yaw: a + Math.PI, hologram: true, silent: true });
     }
     R.box([-0.6, 0, -7.2, 0.6, 0.6, -6.0], { mat: 'prop' });
@@ -718,6 +720,8 @@ function storyRoom(R, beat, deck, rng, level, story) {
     if (A.junoAboard) R.npcs.push({ id: 'guest_juno', crew: 'juno', pos: [-3.2, 0, -2.6], yaw: Math.PI, silent: true, when: 'verdict_right' });
     if (A.otherAboard) R.npcs.push({ id: 'guest_other', crew: 'other', pos: [0, R.H, -6.6], yaw: 0, silent: true, upsideDown: true });
   }
+  // WORLD FORGE, time SWEEPERS: a slow beam turns in the middle of the hall (the walls stay safe)
+  if (deck.rules?.time === 'SWEEPERS') R.hazards.push({ kind: 'sweeper', pivot: [0, 0.75, -8], radius: 3.4, speed: 0.9, phase: 0.6 });
   // a memory beacon: touch it to save
   R.box([W / 2 - 1.4, 0, -2.4, W / 2 - 0.6, 1.2, -1.6], { mat: 'prop' });
   R.inter.push({ id: `beacon_${R.id}`, kind: 'beacon', pos: [W / 2 - 1.0, 1.5, -2.0], r: 2.4, prompt: 'SAVE MEMORY' });

@@ -83,6 +83,14 @@ const BY_ROLE = {
   counselor: { f: ['rb_office_f'], m: ['rb_ren_m', 'rb_captain_m'] },
   archivist: { f: ['rb_office_f'], m: ['rb_ren_m', 'rb_doctor_m'] },
   captain: { f: ['rb_pilot_f'], m: ['rb_captain_m'] },
+  // WORLD FORGE roles
+  guide: { f: ['rb_pilot_f', 'rb_ren_f'], m: ['rb_captain_m', 'rb_ren_m'] },
+  rival: { f: ['rb_office_f', 'rb_pilot_f'], m: ['rb_ren_m', 'rb_captain_m'] },
+  witness: { f: ['rb_office_f', 'rb_doctor_f'], m: ['rb_doctor_m', 'rb_gardener_m'] },
+  keeper: { f: ['rb_ren_f', 'rb_office_f'], m: ['rb_gardener_m', 'rb_engineer_m'] },
+  engineer: { f: ['rb_pilot_f', 'rb_ren_f'], m: ['rb_engineer_m'] },
+  'child of the city': { f: ['rb_ren_f'], m: ['rb_ren_m'] },
+  'watcher in disguise': { f: ['rb_office_f', 'rb_doctor_f'], m: ['rb_captain_m', 'rb_doctor_m'] },
 };
 const BY_NAME = { kade: 'rb_engineer_m', osei: 'rb_pilot_f', theo: 'rb_gardener_m', varga: 'rb_office_f' };
 export const CREW_REAL = {
