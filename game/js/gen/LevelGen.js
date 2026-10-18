@@ -692,7 +692,8 @@ function storyRoom(R, beat, deck, rng, level, story) {
   if (A.windows) R.box([-W / 2 + 0.02, 3.9, -12, -W / 2 + 0.08, 5.7, -3], { mat: A.windows === 'dark' ? 'windowDark' : 'windowStars', solid: false });
   // after SUSTAINED the Other hangs from the ceiling of every deck's first room: what you are becoming
   if (A.otherAboard && beat.kind === 'arrival') R.npcs.push({ id: `other_${R.id}`, crew: 'other', pos: [0, R.H, -8], yaw: 0, silent: true, upsideDown: true });
-  if (beat.log) {
+  // a record to play (a contradiction's `log` is what you say after the plaque, not a recording)
+  if (beat.log && typeof beat.log === 'object') {
     R.box([-W / 2 + 0.6, 0, -6.6, -W / 2 + 1.6, 1.0, -5.4], { mat: 'prop' });
     R.inter.push({ id: `log_${R.id}`, kind: 'terminal', pos: [-W / 2 + 1.5, 1.25, -6], yaw: Math.PI / 2, r: 2.4, prompt: 'PLAY LOG', log: beat.log });
   }

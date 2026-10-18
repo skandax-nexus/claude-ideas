@@ -64,8 +64,10 @@ const PLAY_ROOM = ({ rid }) => {
     if (req.includes('gravityFlip') || opt.length + req.length < 3) laws.push(LAW.gravityFlip);
     for (const e of [...req, ...opt]) if (e !== 'gravityFlip' && laws.length < 3) laws.push(LAW[e]);
   }
-  for (let i = 0; i < 3; i++) g.engine.setLaw(i, laws[i] ? { subject: laws[i][0], verb: laws[i][1], target: laws[i][2] } : null);
+  // with gravity INVERTED, PHYSICAL is upside down: the upright state is INVERTED, so the laws
+  // the route needs there target INVERTED
   const st = (s) => (rules.gravity === 'INVERTED' ? { PHYSICAL: 'INVERTED', INVERTED: 'PHYSICAL' }[s] || s : s);
+  for (let i = 0; i < 3; i++) g.engine.setLaw(i, laws[i] ? { subject: laws[i][0], verb: laws[i][1], target: laws[i][2] === 'PHYSICAL' ? st('PHYSICAL') : laws[i][2] } : null);
   let setbacks = 0;
   g.deckSetback = (k) => { setbacks++; g.player.place(g.checkpoint); g.catching = false; };
   g.catching = false;
@@ -144,6 +146,7 @@ for (const genre of want) {
   await page.reload();
   await ready();
   await az(() => AZ.changeSetting('hero', { id: 'nova' }));
+  await page.addStyleTag({ content: '* { transition: none !important; }' }); // screenshots never catch a fade half way
   // --- the panel
   await page.click('#begin');
   await page.click('[data-newch="forge"]');
