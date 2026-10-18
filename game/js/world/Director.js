@@ -108,10 +108,13 @@ export class Director {
         setTimeout(() => audio.sweep(false), 300);
         this.say('machine_activate');
       } else {
-        this.armT = 4;
+        // armed while the warning plays and for a while after it (it used to expire before
+        // the warning finished, so a second use could never activate it, above all on touch)
+        this.armT = 20;
         this.say('machine_warn');
       }
     } else if (!facts.get('brain_seen') && this.g.engine.state('lab') === 'ECHO') this.use('brain');
+    else if (facts.get('ending')) this.g.finish(facts.get('ending')); // the choice is made: show it again
     else if (facts.get('brain_seen')) this.g.openDecision();
     else this.say('machine_hum');
   }
@@ -170,7 +173,7 @@ export class Director {
     const due = this.timers.filter((t) => t.t <= 0);
     this.timers = this.timers.filter((t) => t.t > 0);
     due.forEach((t) => t.fn());
-    if (this.armT > 0) this.armT -= dt;
+    if (this.armT > 0 && !this.g.hud.talking) this.armT -= dt;
 
     // The Other dissolves when you come close.
     if (facts.test('shard_touch >= 2 && !other_gone')) {

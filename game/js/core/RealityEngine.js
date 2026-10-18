@@ -97,7 +97,7 @@ export class RealityEngine {
   }
 
   serialize() {
-    return { rooms: this.rooms, laws: this.laws, unlocked: this.unlocked, locked: [...this.locked] };
+    return { rooms: this.rooms, laws: this.laws, unlocked: this.unlocked, locked: [...this.locked], overrides: this.overrides };
   }
 
   restore(d) {
@@ -105,6 +105,7 @@ export class RealityEngine {
     this.laws = Array.from({ length: this.slots }, (_, i) => d.laws[i] || null);
     this.unlocked = d.unlocked;
     this.locked = new Set(d.locked || []);
+    this.overrides = { ...(d.overrides || {}) };
     this.recompile();
   }
 }

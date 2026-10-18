@@ -471,3 +471,7 @@ body.touch #buttons .gait.on { background: var(--coral); color: #fff; }
 .studio label { display: block; margin: 10px 0; font-size: 12px; font-weight: 700; letter-spacing: 0.06em; }
 .studio label small { font-weight: 500; color: var(--ink-soft); letter-spacing: 0; }
 .studio input, .studio select { display: block; width: 100%; margin-top: 4px; padding: 9px 10px; border-radius: 10px; border: 1px solid var(--line); font: inherit; font-weight: 500; background: rgba(255, 255, 255, 0.85); color: var(--ink); }
+/* law slots: a status pill instead of an INSTALL button (laws run as soon as they make sense) */
+span.install { display: inline-block; padding: 6px 10px; border-radius: 999px; border: 1px solid var(--line); font-weight: 700; letter-spacing: 0.06em; color: var(--ink-soft); }
+span.install.pending { color: var(--coral); border-color: var(--coral); }
+.slot.editing { box-shadow: 0 0 0 2px var(--coral) inset; }

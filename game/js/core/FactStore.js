@@ -81,6 +81,11 @@ export class FactStore {
     }
   }
 
+  // a chapter started mid-story: rules whose moment has already passed must not fire later
+  primeRules() {
+    for (const r of this.rules) if (r.once && r._when(this.ctx())) this.fired.add(r.id);
+  }
+
   serialize() {
     return { facts: this.facts, fired: [...this.fired] };
   }

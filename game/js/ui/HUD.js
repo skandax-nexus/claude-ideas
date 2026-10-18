@@ -33,7 +33,11 @@ export class HUD {
   nextSub() {
     let s = this.subs.shift();
     while (s && s.done) {
+      const seq = this.subSeq;
       s.done();
+      // done() may start the next conversation, which already shows its first line:
+      // stop here, or that line would be skipped (Juno's hatch line, the Observer's doorway)
+      if (this.subSeq !== seq) return;
       s = this.subs.shift();
     }
     if (!s) {
@@ -47,6 +51,14 @@ export class HUD {
     const cls = s.who === 'OBSERVER' ? 'obs' : s.who === 'NONE' ? 'narr' : '';
     this.el.subs.innerHTML = `<div class="sub ${cls}">${name}<span style="color:${sp.color}">${s.text}</span></div>`;
     this.subT = s.dur;
+    this.subSeq = (this.subSeq || 0) + 1;
+  }
+
+  // end the whole conversation now (its end callbacks still run)
+  skipAll() {
+    this.onSkip?.();
+    this.subs = this.subs.filter((x) => x.done);
+    if (this.subT > 0) this.subT = 0.01;
   }
 
   skipSub() {
@@ -220,10 +232,16 @@ export class HUD {
         const r = parseLaw(law.subject || law.verb || law.target ? law : null);
         const sig = (l) => (l && (l.subject || l.verb || l.target) ? `${l.subject}|${l.verb}|${l.target}` : '');
         const installed = sig(engine.laws[i]) === sig(law);
-        return `<div class="slot"><span class="n">${i + 1}</span>${chip('subject', 'subject')}${chip('verb', 'verb')}${chip('target', 'target')}
-          <button class="install ${installed ? 'ok' : ''}" data-install="${i}">${installed ? 'ACTIVE' : 'INSTALL'}</button>
-          <button class="clear" data-clear="${i}">&times;</button>
-          <div class="desc ${r.ok ? '' : 'err'}">${r.ok ? r.text || 'EMPTY SLOT' : r.error}</div></div>`;
+        // a law runs the moment its three words make sense; until then the slot says plainly
+        // that it is not running (and what still is), so nothing looks active that isn't
+        const running = engine.laws[i] ? parseLaw(engine.laws[i]).text : '';
+        const status = installed ? (engine.laws[i] ? 'RUNNING' : 'EMPTY') : 'NOT RUNNING';
+        const desc = installed ? (r.text || 'Empty slot. Tap the words to write a law.')
+          : `${r.ok ? '' : `${r.error}. `}Not running yet: finish all three words.${running ? ` Still running: ${running}` : ''}`;
+        return `<div class="slot ${installed ? '' : 'editing'}"><span class="n">${i + 1}</span>${chip('subject', 'subject')}${chip('verb', 'verb')}${chip('target', 'target')}
+          <span class="install ${installed && engine.laws[i] ? 'ok' : ''} ${installed ? '' : 'pending'}">${status}</span>
+          <button class="clear" data-clear="${i}" aria-label="Clear law ${i + 1}">&times;</button>
+          <div class="desc ${installed ? '' : 'err'}">${desc}</div></div>`;
       })
       .join('');
     const effects = engine.laws
@@ -232,41 +250,39 @@ export class HUD {
       .map((l) => `<li>${describeLaw(l)}</li>`)
       .join('');
     $('#laws .body').innerHTML = `
-      <p class="intro">The device does what its laws say. Tap a token to cycle it, then install the law.</p>
+      <p class="intro">The device does what its laws say. Tap a word to change it: a law runs as soon as its three words make sense.</p>
       ${rows}
       ${flash ? `<div class="flash">${flash}</div>` : ''}
       ${engine.paradoxes.map((p) => `<div class="flash err">${p}</div>`).join('')}
       <h3>RUNNING</h3><ul>${effects || '<li class="dim">No laws. The world is ordinary.</li>'}</ul>
       <h3>TOKENS FOUND</h3><div class="tokens">${owned.map((t) => `<span class="tk ${TOKENS[t].kind}">${TOKENS[t].label}</span>`).join('')}</div>`;
 
+    // install the slot's draft if it is a complete, valid law (or empty); report it
+    const tryInstall = (i) => {
+      const d = draft[i];
+      const law = d.subject || d.verb || d.target ? { ...d } : null;
+      if (law && !parseLaw(law).ok) return '';
+      const sig = (l) => (l ? `${l.subject}|${l.verb}|${l.target}` : '');
+      if (sig(engine.laws[i]) === sig(law)) return '';
+      const r = engine.setLaw(i, law);
+      if (!r.ok) return `<span class="err">${r.error}</span>`;
+      game.onLawInstalled(i, law);
+      return law ? `LAW ${i + 1} RUNNING: ${r.text}` : `SLOT ${i + 1} CLEARED`;
+    };
     for (const b of document.querySelectorAll('#laws .chip')) {
       b.onclick = () => {
         const i = +b.dataset.slot, key = b.dataset.key;
         const opts = [null, ...byKind(b.dataset.kind)];
         const cur = opts.indexOf(draft[i][key]);
         draft[i][key] = opts[(cur + 1) % opts.length];
-        this.renderLaws(game);
-      };
-    }
-    for (const b of document.querySelectorAll('#laws [data-install]')) {
-      b.onclick = () => {
-        const i = +b.dataset.install;
-        const d = draft[i];
-        const law = d.subject || d.verb || d.target ? { ...d } : null;
-        const r = engine.setLaw(i, law);
-        if (r.ok) {
-          game.onLawInstalled(i, law);
-          this.renderLaws(game, law ? `LAW ${i + 1} INSTALLED` : `SLOT ${i + 1} CLEARED`);
-        } else {
-          game.audio.deny();
-          this.renderLaws(game, `<span class="err">${r.error}</span>`);
-        }
+        this.renderLaws(game, tryInstall(i));
       };
     }
     for (const b of document.querySelectorAll('#laws [data-clear]')) {
       b.onclick = () => {
-        draft[+b.dataset.clear] = { subject: null, verb: null, target: null };
-        this.renderLaws(game);
+        const i = +b.dataset.clear;
+        draft[i] = { subject: null, verb: null, target: null };
+        this.renderLaws(game, tryInstall(i));
       };
     }
   }

@@ -199,7 +199,7 @@ add('lab', [-0.6, 0.8, 1.4, 0.6, 1.0, 2], { mat: 'accent', solid: false });
 
 // Recording terminal R1, benches, shelves.
 add('lab', [-9, 0, 7.5, -7, 1.0, 8.5], { mat: 'metal' });
-add('lab', [-11.6, 0, -10, -10.6, 4, 4], { mat: 'shelf' });
+add('lab', [-11.6, 0, -10, -10.6, 4, -3.2], { mat: 'shelf' }); // stops short of the hall doorway (z -2..2)
 add('lab', [7, 0, -7, 10, 0.9, -5], { mat: 'metal' }); // desk holding the key's memory
 add('lab', [-8, 0, -8, -4, 1.0, -6.6], { mat: 'metal' });
 add('lab', [4, 0, 6, 7, 1.0, 7.2], { mat: 'metal' });

@@ -208,7 +208,9 @@ export class Observer {
     // Laws: the Observer can be frozen - until it learns.
     const wantFreeze = frozenByLaw && !this.brain.ignoresFreeze();
     if (wantFreeze && !this.frozen) {
-      this.brain.recordFreeze();
+      // it only learns from freezes it lives through with you in the hall (a load or a
+      // law written in another room used to spend its "works twice" budget unseen)
+      if (inHall) this.brain.recordFreeze();
       if (this.brain.ignoresFreeze()) this.frozen = false;
       else this.frozen = true;
     } else if (!wantFreeze) this.frozen = false;

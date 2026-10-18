@@ -396,6 +396,7 @@ class Game {
       for (const k of ['left_antechamber', 'met_juno', 'has_tick', 'has_device', 'seen_echo', 'heard_varga', 'heard_self', 'wrote_law', 'archive_open', 'custodian_remembers', 'vault_seen']) this.facts.set(k);
       for (const t of ['GRAVITY', 'INVERTS', 'PHYSICAL', 'INVERTED', 'ECHO', 'HELD', 'PERSISTS', 'ECHOES', 'SOLIDIFIES', 'ALL']) this.facts.set(`token_${t}`);
       this.engine.setLaw(1, { subject: 'ECHOES', verb: 'SOLIDIFIES', target: 'ECHO' });
+      this.facts.primeRules();
       this.enterRoom('lab', true);
       this.startZones();
     }
@@ -755,7 +756,11 @@ class Game {
     $('#again').onclick = () => this.begin('new');
     $('#toVessel').onclick = () => {
       this.closeMenu();
+      const free = listSaves().find((s) => s.slot !== 'auto' && !s.data);
+      if (free) this.slot = free.slot; // the finished prologue stays in its slot
+      this.run = 'vessel';
       this.startVessel();
+      this.hud.toast(`<small>THE VESSEL</small><br>Saving in slot ${(this.slot ?? 0) + 1}.`, 2400);
     };
     this.saveTo('auto');
     this.openMenu('ending');
@@ -808,11 +813,15 @@ class Game {
     this.world.root.visible = true;
     this.observer.mesh.visible = true;
     this.npcs.juno.visible = this.facts.get('met_juno');
+    if (this.run === 'halcyon') this.run = 'prologue'; // the rest is the prologue's last act
     this.enterRoom('lab', true);
+    this.objectives.update(true);
+    this.hud.objective(this.objectives.text);
     this.hud.card('STATION ZERO', 'Home', 'The lift opens into the laboratory', 4200);
     this.after(2.4, () => this.hud.say([
       { who: 'JUNO', text: 'You are back. Same lab. It looks different now that we know what it is for.' },
-      { who: 'JUNO', text: 'The core is in the observation hall. The machine is waiting. Varga said look inside it before you choose.' },
+      { who: 'JUNO', text: 'The core is in the observation hall. The machine is waiting. Varga said look inside it before you choose.', when: '!core_installed' },
+      { who: 'JUNO', text: 'The machine is waiting. Varga said look inside it before you choose.', when: 'core_installed' },
     ], this.facts));
     this.saveTo('auto');
   }
@@ -1211,6 +1220,7 @@ class Game {
     this.audio.blip(520, 0.2, 'square', 0.08);
     const isDefault = law && law.subject === 'GRAVITY' && law.verb === 'INVERTS' && law.target === 'INVERTED';
     if (law && !isDefault) this.facts.set('wrote_law');
+    if (law && law.subject === 'HELD' && law.verb === 'PERSISTS' && (law.target === 'PHYSICAL' || law.target === 'ALL')) this.facts.set('wrote_held_law');
     this.dirty = true;
   }
 
@@ -1308,14 +1318,21 @@ class Game {
     if (f && (f.id.startsWith('item:') || f.id.startsWith('ditem:'))) {
       if (f.id.startsWith('ditem:')) return this.useDeck(f);
       const id = f.id.slice(5);
+      if (this.held && this.held !== id) {
+        this.audio.deny();
+        return this.hud.toast(`<small>HANDS FULL</small><br>You are carrying the ${this.held === 'core' ? 'power core' : this.held}.`, 2200);
+      }
       this.held = id;
       this.audio.pickup();
       this.fx.burst(f.pos, 0xffd27a);
       if (id === 'key') this.facts.set('key_taken');
       return;
     }
-    // Re-using whatever is talking (or nothing) skips the current line.
-    if (this.hud.talking && (!f || f.id === this.lastUse)) return this.hud.skipSub();
+    // Re-using whatever is talking (or nothing) skips the current line - except the armed
+    // machine: "USE AGAIN TO ACTIVATE" means exactly that, even while the warning plays.
+    const armedMachine = this.mode === 'station' && f?.id === 'machine' && this.director.armT > 0;
+    if (armedMachine && this.hud.talking) this.hud.skipAll?.();
+    else if (this.hud.talking && (!f || f.id === this.lastUse)) return this.hud.skipSub();
     if (!f) return;
     this.lastUse = f.id;
     if (this.mode === 'deck') return this.useDeck(f);
@@ -1348,6 +1365,7 @@ class Game {
       timeline: this.timeline,
       playTime: this.playTime,
       settingsCamera: this.settings.camera,
+      held: this.mode === 'station' ? this.held : undefined,
     };
     if (this.mode === 'deck') {
       const p = this.checkpoint || this.level.rooms[this.room].spawn;
@@ -1398,6 +1416,13 @@ class Game {
         this.startVessel(d.campaign.seed, d.campaign);
         return true;
       }
+      this.held = d.held || null;
+      // quit between Varga's vault recording and the climb: the way up is still waiting
+      if (this.facts.get('vault_seen') && !this.facts.get('zones_done')) {
+        this.enterRoom('archive', true);
+        this.enterHalcyon();
+        return true;
+      }
       this.enterRoom(d.room && d.room !== 'antechamber' ? d.room : this.facts.get('left_antechamber') ? 'lab' : 'antechamber', true);
       return true;
     } catch (e) {
@@ -1424,6 +1449,7 @@ class Game {
           this.player.cinema = null;
           this.back();
         }
+        else if (this.menu === 'ending' || this.menu === 'decision') { /* choose; endings are final */ }
         else if (this.menu) this.closeMenu();
         else if (!this.paused) this.openMenu('pause');
         continue;
@@ -1439,7 +1465,7 @@ class Game {
         continue;
       }
       if (a === 'quickload' && this.started) {
-        this.begin('load', 'auto');
+        this.begin('load', this.slot ?? 'auto'); // the slot quick save wrote
         continue;
       }
       if (a === 'camera') {
@@ -1566,7 +1592,7 @@ class Game {
     for (const tk of this.level.tokens) {
       if (facts.get(`token_${tk.token}`)) continue;
       const d = Math.hypot(player.pos.x - tk.pos[0], player.pos.y - tk.pos[1], player.pos.z - tk.pos[2]);
-      if (d < 1.3) this.grantToken(tk.token);
+      if (d < 2.4) this.grantToken(tk.token);
     }
 
     // echo matter dissolves unless a law says it persists
