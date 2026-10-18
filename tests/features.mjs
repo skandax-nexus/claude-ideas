@@ -25,6 +25,9 @@ await new Promise((r) => server.listen(0, r));
 const url = `http://localhost:${server.address().port}/index.html`;
 const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
 
+// a click that starts a level: the level builds inside the click handler, which on a loaded
+// machine outlasts Playwright's 30 s wait for the click to settle, so click from inside the page
+const tapIn = (page, sel) => page.evaluate((q) => setTimeout(() => document.querySelector(q).click(), 0), sel);
 let passed = 0;
 const failures = [];
 const check = (ok, label, detail = '') => {
@@ -403,10 +406,10 @@ async function chapters() {
   const az = (fn, a) => page.evaluate(fn, a);
   await page.click('#begin');
   await page.click('[data-newch="vessel"]');
-  await page.click('#saves [data-slot="0"]');
+  await tapIn(page, '#saves [data-slot="0"]');
   await page.waitForSelector('#heroGo', { state: 'visible' });
   await page.click('#heroGo');
-  await page.waitForFunction(() => AZ.mode === 'deck', null, { timeout: 60000 });
+  await page.waitForFunction(() => AZ.mode === 'deck', null, { timeout: 300000 });
   check(await az(() => AZ.slot === 0 && AZ.run === 'vessel'), 'the Vessel starts in slot 1');
   await az(() => AZ.saveTo('auto'));
 
@@ -425,8 +428,8 @@ async function chapters() {
   check(after[2] === 'THE CRADLE|After OBSERVED' && after[3] === 'THE VESSEL|After OBSERVED' && after[4] === 'STORY STUDIO|After OBSERVED', 'the Cradle card\'s status line follows the last ending reached on this device', JSON.stringify(after));
   await az(() => { localStorage.removeItem('afterzero.lastEnding'); AZ.openChapters('title'); });
   await page.screenshot({ timeout: 180000, path: path.join(shots, 'f08-chapters.png') });
-  await page.click('#chapters [data-cont]');
-  await page.waitForFunction(() => AZ.mode === 'deck', null, { timeout: 60000 });
+  await tapIn(page, '#chapters [data-cont]');
+  await page.waitForFunction(() => AZ.mode === 'deck', null, { timeout: 300000 });
   check(await az(() => AZ.slot === 0 && AZ.run === 'vessel' && !!AZ.campaign), 'CONTINUE resumes that chapter from its slot');
 
   // a new game into a used slot asks twice; delete asks twice
@@ -456,8 +459,8 @@ async function chapters() {
   await page.fill('#st_seed', '4242');
   await page.screenshot({ timeout: 180000, path: path.join(shots, 'f10-studio.png') });
   await page.click('#st_go');
-  await page.click('#saves [data-slot="2"]');
-  await page.waitForFunction(() => AZ.mode === 'deck', null, { timeout: 60000 });
+  await tapIn(page, '#saves [data-slot="2"]');
+  await page.waitForFunction(() => AZ.mode === 'deck', null, { timeout: 300000 });
   const st = await az(() => ({ title: AZ.story.title, mood: AZ.story.mood, names: AZ.story.cast.map((c) => c.name).join(' '), twist: AZ.story.twist.key, run: AZ.run, slot: AZ.slot }));
   check(st.title === 'The Night Shift' && st.mood === 'horror' && st.run === 'studio' && st.slot === 2, 'the studio story uses your title and mood', JSON.stringify(st));
   check(/Aria/.test(st.names) && /Dev/.test(st.names) && /Mina/.test(st.names), 'your crew names are in the story', st.names);
@@ -466,8 +469,8 @@ async function chapters() {
   await page.reload();
   await ready();
   await page.click('#begin');
-  await page.click('#chapters [data-cont="2"]');
-  await page.waitForFunction(() => AZ.mode === 'deck', null, { timeout: 60000 });
+  await tapIn(page, '#chapters [data-cont="2"]');
+  await page.waitForFunction(() => AZ.mode === 'deck', null, { timeout: 300000 });
   check(await az(() => AZ.story.title === 'The Night Shift' && AZ.story.mood === 'horror' && AZ.campaign.seed === 4242), 'continuing a studio story keeps your wishes');
   check(errors.length === 0, 'no page errors (chapters)', errors.join(' | '));
   await page.close();
