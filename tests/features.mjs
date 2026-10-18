@@ -67,7 +67,7 @@ async function desktop() {
   await page.click('#begin');
   await page.waitForTimeout(300);
   check(await page.isVisible('#chapters'), 'NEW GAME asks for a chapter');
-  check(await az(() => [...document.querySelectorAll('#chapters h3')].map((h) => h.textContent).join()) === 'PROLOGUE,HALCYON,THE CRADLE,THE VESSEL,STORY STUDIO', 'chapters: Prologue, HALCYON, the Cradle, the Vessel, Story Studio');
+  check(await az(() => [...document.querySelectorAll('#chapters h3')].map((h) => h.textContent).join()) === 'PROLOGUE,HALCYON,THE CRADLE,THE VESSEL,STORY STUDIO,WORLD FORGE', 'chapters: Prologue, HALCYON, the Cradle, the Vessel, Story Studio, World Forge');
   check((await page.$$('#chapters [data-cont]')).length === 0, 'no CONTINUE on a chapter you have not played');
   await page.click('[data-newch="prologue"]');
   await page.waitForTimeout(300);
@@ -128,7 +128,9 @@ async function desktop() {
 
   // dock: laws hidden until the device, map and log open, key hints present
   check(await az(() => document.querySelector('#dock .laws').classList.contains('off')), 'LAWS hidden in the dock before you have the device');
-  check((await page.$$('#dock kbd')).length === 6, 'dock shows key hints on desktop (incl. walk/run)');
+  // (LAWS and COMBO wait for the device; RULES and the four gear slots belong to WORLD FORGE)
+  const hints = await az(() => [...document.querySelectorAll('#dock .d')].filter((b) => getComputedStyle(b).display !== 'none').map((b) => b.querySelector('kbd')?.textContent).join());
+  check(hints === 'J,M,H,Z,Esc', 'dock shows key hints on desktop (incl. walk/run)', hints);
   await az(() => { AZ.input.actions.push('map'); AZ.frame(); });
   check(await az(() => AZ.menu) === 'map', 'map opens from the dock action');
   await az(() => AZ.closeMenu());
@@ -413,10 +415,10 @@ async function chapters() {
   await page.click('#begin');
   const cards = await az(() => Object.fromEntries([...document.querySelectorAll('#chapters .chapcard')].map((c) => [c.querySelector('h3').textContent, !!c.querySelector('[data-cont]')])));
   check(cards['THE VESSEL'] && !cards.PROLOGUE && !cards.HALCYON, 'CONTINUE sits on the chapter you played, only there', JSON.stringify(cards));
-  // v1.0: five chapters; the later ones say which prologue ending they follow
+  // v1.0: six chapters; the later ones say which prologue ending they follow
   const status = () => az(() => [...document.querySelectorAll('#chapters .chapcard')].map((c) => `${c.querySelector('h3').textContent}|${c.querySelector('p.dim')?.textContent || ''}`));
   const before = await status();
-  check(before.map((s) => s.split('|')[0]).join() === 'PROLOGUE,HALCYON,THE CRADLE,THE VESSEL,STORY STUDIO', 'the chapter picker has five cards, THE CRADLE third', JSON.stringify(before));
+  check(before.map((s) => s.split('|')[0]).join() === 'PROLOGUE,HALCYON,THE CRADLE,THE VESSEL,STORY STUDIO,WORLD FORGE', 'the chapter picker has six cards, THE CRADLE third, WORLD FORGE last', JSON.stringify(before));
   check(before[2] === 'THE CRADLE|Before the choice' && before[3] === 'THE VESSEL|The ship as it was' && before[0] === 'PROLOGUE|', 'before any ending: "Before the choice" / "The ship as it was"', JSON.stringify(before));
   await az(() => { localStorage.setItem('afterzero.lastEnding', JSON.stringify({ key: 'MIRROR', lessons: [] })); AZ.openChapters('title'); });
   const after = await status();
