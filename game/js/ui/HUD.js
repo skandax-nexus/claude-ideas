@@ -13,9 +13,12 @@ export class HUD {
     this.toastT = 0;
     this.el = {
       subs: $('#subs'), prompt: $('#prompt'), state: $('#state'), objective: $('#objective'),
-      held: $('#held'), toast: $('#toast'), eye: $('#eye'), fade: $('#fade'), tint: $('#tint'),
+      held: $('#held'), toast: $('#toast'), eye: $('#eye'), fade: $('#fade'), tint: $('#tint'), stability: $('#stability'),
     };
     this.onSubsDone = null;
+    // the states the pips show: key, label and css class (an edition replaces them)
+    this.states = [{ key: 'PHYSICAL', label: 'PHYSICAL' }, { key: 'INVERTED', label: 'INVERTED' }, { key: 'ECHO', label: 'ECHO' }];
+    this.speakers = {}; // an edition's extra speakers, looked up before the story's
   }
 
   // --- subtitles ---------------------------------------------------------
@@ -46,7 +49,7 @@ export class HUD {
       return;
     }
     this.onLine?.(s.who, s);
-    const sp = s.name ? { name: s.name, color: s.color || '#23303c' } : SPEAKERS[s.who] || SPEAKERS.NONE;
+    const sp = s.name ? { name: s.name, color: s.color || '#23303c' } : this.speakers[s.who] || SPEAKERS[s.who] || SPEAKERS.NONE;
     const name = sp.name ? `<b style="color:${sp.color}">${sp.name}</b> ` : '';
     const cls = s.who === 'OBSERVER' ? 'obs' : s.who === 'NONE' ? 'narr' : '';
     this.el.subs.innerHTML = `<div class="sub ${cls}">${name}<span style="color:${sp.color}">${s.text}</span></div>`;
@@ -78,15 +81,30 @@ export class HUD {
     this.el.prompt.classList.toggle('on', !!text);
   }
 
-  setState(visible, room, state, roomName, locked) {
+  // avail: the states this room was authored with (others are not shown)
+  setState(visible, room, state, roomName, locked, avail = null) {
     this.el.state.classList.toggle('on', visible);
     if (!visible) return;
-    this.el.state.innerHTML =
+    const html =
       `<div class="room">${roomName}${locked ? ' <i>(UNRESPONSIVE)</i>' : ''}</div>` +
-      ['PHYSICAL', 'INVERTED', 'ECHO']
-        .map((s, i) => `<span class="pip ${s.toLowerCase()} ${s === state ? 'cur' : ''}"><em>${i + 1}</em>${s}</span>`)
+      this.states
+        .map((st, i) => (avail && !avail.includes(st.key) ? '' : `<span class="pip ${st.key.toLowerCase()} ${st.key === state ? 'cur' : ''}"><em>${i + 1}</em>${st.label}</span>`))
         .join('');
-    document.body.dataset.state = state || 'PHYSICAL';
+    if (html !== this._stateHtml) {
+      this._stateHtml = html;
+      this.el.state.innerHTML = html;
+    }
+    document.body.dataset.state = state || this.states[0].key;
+  }
+
+  // Chronolith stability (THE LAST VERSION): a quiet bar that only shows when it matters
+  setStability(v, visible, draining = false) {
+    const el = this.el.stability;
+    if (!el) return;
+    el.classList.toggle('on', visible);
+    el.classList.toggle('draining', draining);
+    el.classList.toggle('low', v < 0.3);
+    el.style.setProperty('--v', Math.max(0, Math.min(1, v)).toFixed(3));
   }
 
   objective(text, animate = true) {
@@ -197,6 +215,7 @@ export class HUD {
   }
 
   renderJournal(game) {
+    if (game.edition?.renderJournal) return game.edition.renderJournal(game, $('#journal .body'));
     if (game.mode === 'deck') return this.renderDeckJournal(game);
     const { facts, objectives, observer } = game;
     const hist = objectives.history

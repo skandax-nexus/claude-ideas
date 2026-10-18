@@ -22,6 +22,7 @@
     <div id="state"></div>
     <div id="objective"><small>CURRENT UNDERSTANDING</small><div class="txt"></div></div>
     <div id="eye"><div class="iris"></div></div>
+    <div id="stability"><small>CHRONOLITH</small><div class="bar"><i></i></div></div>
     <button id="prompt" data-act="use"><kbd class="desktop-only">E</kbd><span class="txt"></span></button>
     <div id="held"></div>
     <div id="subs"></div>
@@ -87,6 +88,14 @@
   <section class="overlay side right" id="journal">
     <div class="panel wide">
       <header><h2>LOG</h2><button data-close>&times;</button></header>
+      <div class="body"></div>
+    </div>
+  </section>
+
+  <!-- THE LAST VERSION: a conversation choice (challenge / comfort / investigate / withdraw) -->
+  <section class="overlay choice" id="choice">
+    <div class="panel">
+      <p class="line"></p>
       <div class="body"></div>
     </div>
   </section>

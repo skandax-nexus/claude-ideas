@@ -37,6 +37,8 @@ import { Fx } from './world/Fx.js';
 import { HEROES, OPTIONS, heroSpec, hex } from './ui/Heroes.js';
 import { loadActors, actorsReady, actorLoaded, MODELS, loadErrors, setActorQuality } from './world/Actors.js';
 import { LOOKS, HAIR, TOPS, LOOK_DEFAULT, lookOf } from './world/People.js';
+import { EDITION, NS } from './core/Edition.js';
+import { LV } from './editions/lastversion/index.js';
 
 const VERSION = '0.3.0';
 const BOOT_KEY = 'afterzero.boot';
@@ -50,6 +52,7 @@ const THEMES = {
   PHYSICAL: { fog: 0xe4edf5, sky: 0xffffff, ground: 0xd5dce4, hemi: 0.72, sun: 2.3, sunColor: 0xfff3e0, density: 0.012, device: 0x6fb8ff },
   INVERTED: { fog: 0xf5e3ec, sky: 0xfff2f7, ground: 0xe8d3de, hemi: 0.7, sun: 2.0, sunColor: 0xffe2ec, density: 0.013, device: 0xff7aa8 },
   ECHO: { fog: 0xd8f2f0, sky: 0xf0fffd, ground: 0xc8e6e3, hemi: 0.66, sun: 1.8, sunColor: 0xe6fffb, density: 0.016, device: 0x2bc4cf },
+  ...LV.themes, // THE LAST VERSION's PRESENT / PAST / FUTURE
 };
 
 const _c = new THREE.Color(), _c2 = new THREE.Color(), _fog = new THREE.Color(), _tint = new THREE.Color(); // per-frame scratch colours
@@ -91,6 +94,7 @@ class Game {
     this.touch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
     this.renderer = new THREE.WebGLRenderer({ canvas: this.canvas, antialias: !this.touch, powerPreference: 'high-performance' });
     this.settings = loadSettings(this.touch, softwareGL(this.renderer));
+    this.editionDef = EDITION === 'lastversion' ? LV : null; // which game this page is
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.0;
     this.renderer.shadowMap.enabled = true;
@@ -140,6 +144,7 @@ class Game {
     this.npcs = new Npcs(this);
     this.deckWorld = new DeckWorld(this.scene, this.engine, this.facts);
     this.minimap = new MiniMap(document.querySelector('#minimap'), document.querySelector('#bigmap'));
+    this.edition = this.editionDef ? this.editionDef.makeRuntime(this) : null;
     this.wire();
     this.buildViewModels();
 
@@ -168,7 +173,8 @@ class Game {
 
   newState() {
     this.facts = new FactStore();
-    this.engine = new RealityEngine({ slots: 3, unlocked: 2, laws: DEFAULT_LAWS });
+    // THE LAST VERSION runs the engine on PAST / PRESENT / FUTURE / INVERTED without laws
+    this.engine = new RealityEngine(this.editionDef ? this.editionDef.makeRuntime.prototype.engineOptions.call({ def: this.editionDef }) : { slots: 3, unlocked: 2, laws: DEFAULT_LAWS });
     this.engine.lock('antechamber');
     this.objectives = new Objectives(objectiveLayers, this.facts);
     this.log = [];
@@ -348,6 +354,7 @@ class Game {
       if (e.target.closest?.('.overlay button, #dock button')) this.audio.ui('press');
     });
     this.refreshTitle();
+    this.edition?.title();
     this.hud.show('title');
     try { window.AndroidUI?.setLandscape(false); } catch { /* not in the app */ }
     this.enterRoom('antechamber', true);
@@ -387,7 +394,7 @@ class Game {
       return;
     }
     this.slot = action === 'load' ? (typeof slot === 'number' ? slot : null) : saveSlot;
-    this.run = { new: 'prologue', halcyon: 'halcyon', cradle: 'cradle', vessel: 'vessel', studio: 'studio' }[action] || 'prologue';
+    this.run = action.startsWith('lv:') ? action.slice(3) : { new: 'prologue', halcyon: 'halcyon', cradle: 'cradle', vessel: 'vessel', studio: 'studio' }[action] || 'prologue';
     this.started = true;
     document.body.classList.add('playing');
     this.player.cinema = null;
@@ -397,6 +404,7 @@ class Game {
     if (action === 'load') ok = this.load(slot);
     else if (['cradle', 'vessel', 'studio'].includes(action)) this.adoptLastEnding();
     if (ok) this.hud.toast('Memory restored.');
+    else if (action.startsWith('lv:')) this.edition.start(action.slice(3));
     else if (action === 'vessel') this.startVessel(undefined, null, null, opts?.ending);
     else if (action === 'studio') this.startVessel(opts?.seed, null, opts?.wish);
     else if (action === 'cradle') this.beginCradle();
@@ -433,7 +441,7 @@ class Game {
     this.hud.show(id);
     if (id === 'map') {
       document.querySelector('#mapTitle').textContent = this.mode === 'deck'
-        ? (this.campaign.zones ? `${this.zoneWhere()} · DISTRICT ${this.campaign.sector + 1}/${this.story.decks[this.campaign.deck].sectors}` : `DECK ${this.campaign.deck + 1} · ${this.story.decks[this.campaign.deck].name} · SECTOR ${this.campaign.sector + 1}/4`)
+        ? (this.campaign.lv ? this.edition.mapTitle() : this.campaign.zones ? `${this.zoneWhere()} · DISTRICT ${this.campaign.sector + 1}/${this.story.decks[this.campaign.deck].sectors}` : `DECK ${this.campaign.deck + 1} · ${this.story.decks[this.campaign.deck].name} · SECTOR ${this.campaign.sector + 1}/4`)
         : 'STATION ZERO';
       requestAnimationFrame(() => this.minimap.drawBig(this.player, this.room, this.mapMarkers()));
     }
@@ -491,6 +499,7 @@ class Game {
 
   // NEW GAME: pick a chapter. Each card continues its own latest save.
   openChapters(from) {
+    if (this.edition) return this.edition.openChapters(from);
     this.menuBack = from;
     this.menu = 'chapters';
     this.input.release();
@@ -886,7 +895,7 @@ class Game {
 
   loadSector(intro, roomId, pos) {
     const c = this.campaign;
-    const lv = c.zones ? generateZone(this.story, c.deck, c.sector) : generateSector(this.story, c.deck, c.sector, c.seed);
+    const lv = c.lv ? this.edition.buildLevel(c) : c.zones ? generateZone(this.story, c.deck, c.sector) : generateSector(this.story, c.deck, c.sector, c.seed);
     this.level = lv;
     this.deckWorld.hero = this.settings.hero; // the Other wears your face
     this.deckWorld.build(lv, this.story, c.flags);
@@ -900,6 +909,11 @@ class Game {
     if (pos) this.player.place(pos);
     this.checkpoint = pos || lv.rooms[start].spawn;
     const deck = this.story.decks[c.deck];
+    if (c.lv) {
+      this.edition.onSectorLoaded(intro, start);
+      this.saveTo('auto');
+      return;
+    }
     if (intro) {
       this.held = null;
       const per = deck.sectors || SECTORS_PER_DECK;
@@ -914,6 +928,7 @@ class Game {
 
   completeSector() {
     const c = this.campaign;
+    if (c.lv) return this.edition.exitReached();
     if (this.level.rooms[this.level.order[this.level.order.length - 1]]?.beat === 'verdict' && !this.facts.get('verdict_right')) {
       if (!this.gateWarned) this.hud.say([{ who: 'JUNO', text: 'The gate won\'t open for a guess. Sit in the chair first.' }], this.facts);
       this.gateWarned = true;
@@ -976,6 +991,7 @@ class Game {
   }
 
   updateDeckObjective(force = false) {
+    if (this.campaign?.lv) return this.edition.objective(force);
     const deck = this.story.decks[this.campaign.deck];
     const beat = this.deckBeat();
     const crew = deck.crew !== null ? this.story.cast[deck.crew] : null;
@@ -1006,10 +1022,12 @@ class Game {
   }
 
   useDeck(f) {
+    if (this.campaign?.lv && this.edition.useDeck(f)) return;
     const it = f.it;
     const flags = this.deckWorld.flags;
     const beat = this.deckBeat();
     const say = (lines) => this.hud.say(lines, this.facts);
+    const sys = (key, tick) => (this.edition ? [{ who: 'KAI', text: this.edition.line(key) }] : [{ who: 'TICK', text: tick }]);
     if (f.id.startsWith('ditem:')) {
       this.held = f.id.slice(6);
       this.audio.pickup();
@@ -1050,11 +1068,11 @@ class Game {
       }
     } else if (kind === 'plaque') {
       const state = this.engine.state(this.room);
-      if (state !== 'ECHO') {
+      if (state !== this.engine.residue) {
         say([{ who: 'NONE', text: beat.official }]);
         if (!flags.plaqueHint) {
           flags.plaqueHint = true;
-          say([{ who: 'TICK', text: beat.tick }]);
+          say(this.edition ? sys('plaque') : [{ who: 'TICK', text: beat.tick }]);
         }
       } else {
         this.audio.terminal();
@@ -1075,7 +1093,7 @@ class Game {
       }
     } else if (kind === 'lock' || kind === 'socket') {
       const state = this.engine.state(this.room);
-      if (this.held === it.needs && (kind === 'socket' || state === 'PHYSICAL')) {
+      if (this.held === it.needs && (kind === 'socket' || state === this.engine.baseline)) {
         this.held = null;
         flags[`used_${it.needs}`] = true;
         this.deckWorld.setFlag(`open_${it.room}`);
@@ -1086,10 +1104,10 @@ class Game {
         this.hud.toast(kind === 'lock' ? 'The lock accepts the key.' : 'The core hums. The door opens.');
       } else if (kind === 'lock' && this.held === it.needs) {
         this.audio.deny();
-        say([{ who: 'TICK', text: 'THE LOCK ONLY READS PHYSICAL MATTER. THIS ROOM IS NOT PHYSICAL RIGHT NOW.' }]);
+        say(sys('lock_state', 'THE LOCK ONLY READS PHYSICAL MATTER. THIS ROOM IS NOT PHYSICAL RIGHT NOW.'));
       } else {
         this.audio.deny();
-        say([{ who: 'TICK', text: kind === 'lock' ? 'IT WANTS A KEY. I SAW ONE IN ANOTHER STATE OF THIS ROOM.' : 'AN EMPTY CORE SOCKET. THERE IS A CORE IN THIS ROOM.' }]);
+        say(kind === 'lock' ? sys('lock_key', 'IT WANTS A KEY. I SAW ONE IN ANOTHER STATE OF THIS ROOM.') : sys('socket_empty', 'AN EMPTY CORE SOCKET. THERE IS A CORE IN THIS ROOM.'));
       }
     } else if (kind === 'beacon') {
       this.saveTo('auto');
@@ -1162,6 +1180,7 @@ class Game {
   }
 
   deckHint() {
+    if (this.campaign?.lv) return this.edition.hint();
     const r = this.level.rooms[this.room];
     const p = this.player.pos;
     const inside = (b) => p.x >= b[0] && p.x < b[3] && p.z >= b[2] && p.z < b[5];
@@ -1257,6 +1276,7 @@ class Game {
     const key = `entered_${id}`;
     if (this.deckWorld.flags[key]) return;
     this.deckWorld.flags[key] = true;
+    if (this.campaign?.lv) return this.edition.roomEntered(id);
     if (!r.beat) return;
     const beat = this.deckBeat();
     const deck = this.story.decks[this.campaign.deck];
@@ -1345,6 +1365,7 @@ class Game {
   }
 
   shift(to) {
+    if (this.edition) return this.edition.shift(to);
     if (!this.facts.get('has_device')) return;
     if (this.engine.locked.has(this.room)) return this.audio.deny();
     const ok = to ? this.engine.setState(this.room, to) : this.engine.cycle(this.room);
@@ -1387,7 +1408,7 @@ class Game {
       if (kind === 'caught' && !this.facts.get('sentinel_tip')) {
         this.facts.set('sentinel_tip');
         const learned = this.story?.after?.sentinels === 'learned';
-        this.hud.say([{ who: 'TICK', text: learned ? 'IT KNEW WHERE YOU WOULD BE. YOU TAUGHT IT THAT, IN THE HALL.' : 'IT ONLY WATCHES THE FLOOR. OR YOU COULD ASK IT TO HOLD STILL. POLITELY. WITH A LAW.' }], this.facts);
+        this.hud.say(this.edition ? [{ who: 'KAI', text: this.edition.line('caught') }] : [{ who: 'TICK', text: learned ? 'IT KNEW WHERE YOU WOULD BE. YOU TAUGHT IT THAT, IN THE HALL.' : 'IT ONLY WATCHES THE FLOOR. OR YOU COULD ASK IT TO HOLD STILL. POLITELY. WITH A LAW.' }], this.facts);
       }
     }, kind === 'caught' ? 700 : 350);
   }
@@ -1477,6 +1498,7 @@ class Game {
   snapshot() {
     const data = {
       v: VERSION,
+      edition: EDITION || undefined,
       mode: this.mode,
       facts: this.facts.serialize(),
       engine: this.engine.serialize(),
@@ -1505,6 +1527,7 @@ class Game {
 
   saveMeta() {
     if (this.mode === 'deck') {
+      if (this.campaign.lv) return this.edition.saveMeta();
       const d = this.story.decks[this.campaign.deck];
       if (this.campaign.zones) return { where: this.zoneWhere(), chapter: `District ${this.campaign.sector + 1}/${d.sectors}` };
       const told = this.story.title ? `${this.story.title.toUpperCase()} · ` : '';
@@ -1540,6 +1563,10 @@ class Game {
       this.hud.lawDraft = null;
       this.restoring = false;
       this.run = d.meta?.run || (d.campaign?.zones ? (d.campaign.set === 'cradle' ? 'cradle' : 'halcyon') : d.mode === 'deck' ? 'vessel' : 'prologue');
+      if (d.mode === 'deck' && d.campaign?.lv && this.edition) {
+        this.edition.resume(d.campaign);
+        return true;
+      }
       if (d.mode === 'deck' && d.campaign?.zones) {
         this.startZones(d.campaign);
         return true;
@@ -1586,6 +1613,7 @@ class Game {
         else if (!this.paused) this.openMenu('pause');
         continue;
       }
+      if (a === 'laws' && this.edition) a = 'journal'; // no law device in THE LAST VERSION: L opens the case board
       if (a === 'laws' || a === 'journal' || a === 'map') {
         if (this.menu === a) this.closeMenu();
         else if (!this.paused && (!this.menu || ['laws', 'journal', 'map'].includes(this.menu))) this.openMenu(a);
@@ -1607,7 +1635,8 @@ class Game {
       if (!active) continue;
       if (a === 'use') this.use();
       else if (a === 'hint') (this.mode === 'deck' ? this.deckHint() : this.npcs.hint());
-      else if (a === 'combo') this.nextCombo();
+      else if (a === 'combo') (this.edition ? this.edition.echoStep() : this.nextCombo());
+      else if (a === 'anchor') this.edition?.anchor();
       else if (a === 'shift') this.shift();
       else if (a.startsWith('set:')) this.shift(a.slice(4));
     }
@@ -1674,7 +1703,7 @@ class Game {
       laws: document.querySelector('#dock .laws'), hint: document.querySelector('#dock .hint'), combo: document.querySelector('#dock .combo'), comboTouch: document.querySelector('#buttons .combo'),
     });
     dock.laws?.classList.toggle('off', !this.facts.get('has_device'));
-    const noCombo = !this.facts.get('has_device') || !this.combos?.length;
+    const noCombo = this.edition ? !this.facts.get('echo_step') : !this.facts.get('has_device') || !this.combos?.length;
     dock.combo?.classList.toggle('off', noCombo);
     dock.comboTouch?.classList.toggle('off', noCombo);
     dock.hint?.classList.toggle('off', !this.facts.get('has_tick'));
@@ -1731,13 +1760,14 @@ class Game {
       if (d < 2.4) this.grantToken(tk.token);
     }
 
-    // echo matter dissolves unless a law says it persists
+    // echo matter dissolves unless a law says it persists (or, in THE LAST VERSION, an anchor holds it)
     const held = this.heldItem();
     if (held && held.echo) {
       const s = engine.state(this.room);
-      if (s !== 'ECHO' && !engine.has('heldPersists', s)) {
+      if (s !== engine.residue && !engine.has('heldPersists', s)) {
         this.held = null;
-        if (this.mode === 'deck') this.hud.say([{ who: 'TICK', text: 'THE KEY WAS A MEMORY. IT STAYED BEHIND IN ECHO. A LAW COULD LET YOU KEEP IT.' }], this.facts);
+        if (this.edition) this.hud.say([{ who: 'KAI', text: this.edition.line('key_dissolve') }], this.facts);
+        else if (this.mode === 'deck') this.hud.say([{ who: 'TICK', text: 'THE KEY WAS A MEMORY. IT STAYED BEHIND IN ECHO. A LAW COULD LET YOU KEEP IT.' }], this.facts);
         else {
           facts.set('key_dissolved');
           this.director.say('key_dissolves');
@@ -1758,7 +1788,8 @@ class Game {
     this.placePrompt(showFocus ? this.focus.pos : null);
     const it = this.heldItem();
     this.hud.held(it?.label, it?.echo);
-    this.hud.setState(!!facts.get('has_device'), this.room, engine.state(this.room), room.name, engine.locked.has(this.room));
+    if (this.edition) this.hud.setState(!!facts.get('has_chronolith'), this.room, engine.state(this.room), room.name, engine.locked.has(this.room), engine.statesOf(this.room));
+    else this.hud.setState(!!facts.get('has_device'), this.room, engine.state(this.room), room.name, engine.locked.has(this.room));
 
     const kind = it ? it.kind || it.id : null;
     for (const [id, m] of Object.entries(this.heldModels)) {
@@ -1845,6 +1876,7 @@ class Game {
     }
     this.audio.setThreat(near ? Math.max(0.15, sus) : this.deckWorld.hazards.some((h) => h.hz.room === this.room) ? 0.3 : 0);
     this.hud.eye(sus, near);
+    if (this.campaign?.lv) this.edition.step(dt);
     this.updateDeckObjective();
   }
 
@@ -1913,8 +1945,9 @@ class Game {
 
   updateTheme(dt) {
     this.updateLamps(dt);
-    const s = this.room ? this.engine.state(this.room) : 'PHYSICAL';
-    const th = THEMES[s];
+    const s = this.room ? this.engine.state(this.room) : this.engine.baseline;
+    const th = THEMES[s] || THEMES.PHYSICAL;
+    this.edition?.theme(dt, s);
     const k = Math.min(1, dt * 3);
     const deck = this.mode === 'deck';
     const pal = deck ? this.level.palette : null;
@@ -1967,11 +2000,12 @@ window.addEventListener('DOMContentLoaded', async () => {
   // The procedural cast stands in if the models can't load.
   let saved = null;
   try {
-    saved = JSON.parse(localStorage.getItem('afterzero.settings.v1') || 'null')?.hero;
+    saved = JSON.parse(localStorage.getItem(`${NS}settings.v1`) || 'null')?.hero;
   } catch {
     /* no storage */
   }
-  const first = [...new Set(['rb_ren_f', 'rb_juno', lookOf(saved).model])];
+  if (!saved && EDITION === 'lastversion') saved = { id: 'real_m' }; // Kai
+  const first = [...new Set(EDITION === 'lastversion' ? ['rb_ren_m', lookOf(saved).model, 'rb_doctor_f'] : ['rb_ren_f', 'rb_juno', lookOf(saved).model])];
   // wait for them (slow connections included) and say what's happening
   const ver = document.querySelector('#title .ver');
   const verText = ver?.textContent;

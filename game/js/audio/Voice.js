@@ -21,7 +21,24 @@ const PROFILES = {
   OTHER: { pitch: 1.05, rate: 0.9, gender: 'f' },
   OTHER_m: { pitch: 0.92, rate: 0.9, gender: 'm' },
   NONE: { pitch: 1.0, rate: 0.95, gender: 'n' },
+  // THE LAST VERSION OF EARTH
+  KAI: { pitch: 0.9, rate: 0.98, gender: 'm' },
+  MIRA: { pitch: 1.08, rate: 0.96, gender: 'f' },
+  WITNESS: { pitch: 0.78, rate: 0.86, gender: 'm' },
+  ROOK: { pitch: 0.8, rate: 0.94, gender: 'm' },
+  NIKO: { pitch: 1.0, rate: 1.04, gender: 'm' },
+  SERA: { pitch: 0.98, rate: 1.0, gender: 'f' },
+  ANJA: { pitch: 1.02, rate: 0.95, gender: 'f' },
+  IVEN: { pitch: 0.86, rate: 1.0, gender: 'm' },
+  JUN: { pitch: 0.92, rate: 1.02, gender: 'm' },
+  TALA: { pitch: 1.05, rate: 0.95, gender: 'f' },
+  MARA: { pitch: 0.95, rate: 0.9, gender: 'f' },
+  ORREN: { pitch: 0.75, rate: 0.88, gender: 'm' },
+  CHILD: { pitch: 1.45, rate: 1.05, gender: 'f' },
+  VOICE: { pitch: 0.7, rate: 0.86, gender: 'm' },
 };
+// speakers recorded under another name in the pack
+const ALIAS = { KAI: 'YOU_m', VOICE: 'WITNESS' };
 
 // The pack: an index plus one file of chained Ogg Opus clips (voice.ogg).
 let PACK = null;
@@ -66,7 +83,7 @@ export class Voice {
   // the recorded pieces for a line, or null if the pack can't say all of it
   plan(text, who, extra = {}) {
     if (!this.pack || !this.packOk) return null;
-    let id = who === 'CREW' ? `CREW_${extra.gender || 'n'}` : who;
+    let id = who === 'CREW' ? `CREW_${extra.gender || 'n'}` : ALIAS[who] && !this.pack.index[who] ? ALIAS[who] : who;
     if (who === 'YOU' && this.youMale && this.pack.index.YOU_m) id = 'YOU_m'; // your look decides your voice
     if (who === 'OTHER' && this.youMale && this.pack.index.OTHER_m) id = 'OTHER_m'; // and the Other's: it wears your face
     // the Other speaks with your voice when it has no recording of its own

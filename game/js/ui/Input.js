@@ -27,7 +27,7 @@ export class Input {
     const map = {
       KeyE: 'use', KeyF: 'use', KeyH: 'hint', KeyQ: 'shift', KeyR: 'shift', KeyL: 'laws', Tab: 'laws', KeyJ: 'journal',
       Escape: 'pause', Digit1: 'set:PHYSICAL', Digit2: 'set:INVERTED', Digit3: 'set:ECHO',
-      KeyM: 'map', KeyV: 'camera', KeyX: 'combo', F5: 'quicksave', F9: 'quickload',
+      KeyM: 'map', KeyV: 'camera', KeyX: 'combo', F5: 'quicksave', F9: 'quickload', KeyC: 'anchor', Digit4: 'set:4',
     };
     window.addEventListener('keydown', (e) => {
       if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') {

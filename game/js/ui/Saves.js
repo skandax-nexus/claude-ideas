@@ -4,8 +4,11 @@
 // autosave is still readable. Each entry stores the game state plus a little
 // metadata. The last prologue ending reached is kept apart from the slots.
 
-const SLOT_KEY = (i) => `afterzero.slot.${i}`;
-const AUTO_KEY = 'afterzero.save.v1'; // the v0.1/v0.2 single save doubles as the autosave
+import { NS, EDITION } from '../core/Edition.js';
+
+// each edition keeps its own slots (afterzero.slot.N / afterzero.lv.slot.N)
+const SLOT_KEY = (i) => `${NS}slot.${i}`;
+const AUTO_KEY = EDITION ? `${NS}save.v1` : 'afterzero.save.v1'; // the v0.1/v0.2 single save doubles as the autosave
 export const SLOTS = 10;
 
 function store(fn, fallback = null) {
@@ -56,7 +59,8 @@ export function latestSave() {
   return best;
 }
 
-export const CHAPTERS = {
+// an edition replaces the chapter list (setChapters) before any save is described
+export let CHAPTERS = {
   prologue: { name: 'PROLOGUE', sub: 'Station Zero, HALCYON, the machine' },
   halcyon: { name: 'HALCYON', sub: 'Four open districts above Station Zero' },
   vessel: { name: 'THE VESSEL', sub: 'Eight generated decks, a crew, a culprit' },
@@ -64,10 +68,14 @@ export const CHAPTERS = {
   studio: { name: 'STORY STUDIO', sub: 'A vessel story made from your wishes' },
 };
 
+export function setChapters(c) {
+  CHAPTERS = c;
+}
+
 // The last prologue ending reached on this device, so chapters started from the menu (after the
 // page reload every new start goes through) still play in the world that choice made.
 export const ENDING_TITLES = { SEVER: 'SEVERED', SUSTAIN: 'SUSTAINED', MIRROR: 'OBSERVED' };
-const ENDING_KEY = 'afterzero.lastEnding';
+const ENDING_KEY = `${NS}lastEnding`;
 export function rememberEnding(key, lessons = []) {
   store((s) => s.setItem(ENDING_KEY, JSON.stringify({ key, lessons })));
 }

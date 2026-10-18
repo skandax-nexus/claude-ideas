@@ -68,6 +68,49 @@ body.menu #ui { visibility: hidden; }
 #state .pip.cur.physical { background: var(--physical); }
 #state .pip.cur.inverted { background: var(--inverted); }
 #state .pip.cur.echo { background: var(--echo); }
+/* THE LAST VERSION OF EARTH: four temporal states */
+:root { --past: #c08a3e; --present: #4f9fe8; --future: #3fa078; }
+#state .pip.past::before { content: "◐ "; }
+#state .pip.present::before { content: "■ "; }
+#state .pip.future::before { content: "❋ "; }
+#state .pip.cur.past { background: var(--past); }
+#state .pip.cur.present { background: var(--present); }
+#state .pip.cur.future { background: var(--future); }
+body[data-state="PAST"] #vignette { box-shadow: inset 0 0 140px rgba(192, 138, 62, 0.18); }
+body[data-state="FUTURE"] #vignette { box-shadow: inset 0 0 140px rgba(63, 160, 120, 0.18); }
+body[data-state="PAST"] #buttons .shift { background: var(--past); }
+body[data-state="FUTURE"] #buttons .shift { background: var(--future); }
+body[data-state="PRESENT"] #buttons .shift { background: var(--inverted); }
+/* Chronolith stability: a thin quiet bar under the state card; it steps forward only while it drains */
+#stability { position: absolute; left: 16px; top: 96px; width: 150px; opacity: 0; transition: opacity 0.5s; --v: 1; }
+#stability.on { opacity: 0.55; }
+#stability.on.draining, #stability.on.low { opacity: 1; }
+#stability small { display: block; font-size: 9px; letter-spacing: 0.2em; color: var(--ink-soft); font-weight: 700; margin-bottom: 4px; text-shadow: 0 1px 4px rgba(255,255,255,0.8); }
+#stability .bar { height: 5px; border-radius: 999px; background: rgba(35, 48, 60, 0.12); overflow: hidden; box-shadow: var(--shadow); }
+#stability .bar i { display: block; height: 100%; width: calc(var(--v) * 100%); border-radius: 999px; background: linear-gradient(90deg, #e2574a, #ffc04a 40%, #4f9fe8); transition: width 0.2s; }
+#stability.low .bar i { animation: tickblink 0.8s ease-in-out infinite; }
+#stability.draining small::after { content: " · DRAINING"; color: var(--danger); }
+body.touch #stability { top: 140px; }
+/* a dialogue choice */
+#choice.overlay { background: linear-gradient(0deg, rgba(228, 237, 245, 0.75), transparent 60%); align-items: flex-end; backdrop-filter: none; }
+#choice .panel { width: min(640px, 100%); margin-bottom: 8vh; }
+#choice .line { color: var(--ink); font-size: 15px; margin: 0 0 12px; }
+#choice .line b { letter-spacing: 0.08em; }
+#choice .body button { display: block; width: 100%; text-align: left; margin: 6px 0; padding: 11px 16px; }
+#choice .body button small { display: inline-block; font-size: 10px; letter-spacing: 0.16em; color: var(--ink-soft); margin-right: 10px; min-width: 86px; }
+#choice .body button.withdraw { color: var(--ink-soft); }
+/* the title of THE LAST VERSION */
+body.lastversion #title h1 span { color: var(--present); }
+body.lastversion #title .sub { font-size: clamp(12px, 2vw, 16px); letter-spacing: 0.34em; color: var(--ink); font-weight: 700; margin: -4px 0 10px; }
+body.lastversion #title.overlay.side { background: linear-gradient(90deg, rgba(228, 236, 246, 0.72), transparent 60%); }
+body.lastversion #begin { background: var(--present); }
+/* the case board */
+.board li { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0; border-bottom: 1px solid var(--line); font-size: 13px; }
+.board li small { color: var(--ink-soft); }
+.board .st { font-size: 10px; letter-spacing: 0.12em; font-weight: 700; color: var(--ink-soft); white-space: nowrap; }
+.board .st.good { color: var(--token); }
+.board .st.bad { color: var(--danger); }
+.board .ev { color: var(--past); }
 
 #objective { position: absolute; right: 16px; top: 14px; text-align: right; max-width: 44vw; opacity: 0; transition: opacity 0.6s; background: var(--card); padding: 10px 14px; border-radius: var(--radius); box-shadow: var(--shadow); backdrop-filter: blur(8px); }
 #objective.on { opacity: 1; }

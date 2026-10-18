@@ -84,7 +84,12 @@ const BY_ROLE = {
   archivist: { f: ['rb_office_f'], m: ['rb_ren_m', 'rb_doctor_m'] },
   captain: { f: ['rb_pilot_f'], m: ['rb_captain_m'] },
 };
-const BY_NAME = { kade: 'rb_engineer_m', osei: 'rb_pilot_f', theo: 'rb_gardener_m', varga: 'rb_office_f' };
+const BY_NAME = {
+  kade: 'rb_engineer_m', osei: 'rb_pilot_f', theo: 'rb_gardener_m', varga: 'rb_office_f',
+  // THE LAST VERSION OF EARTH
+  kai: 'rb_ren_m', witness: 'rb_ren_m', mira: 'rb_doctor_f', rook: 'rb_doctor_m', niko: 'rb_gardener_m', sera: 'rb_pilot_f',
+  anja: 'rb_doctor_f', iven: 'rb_engineer_m', jun: 'rb_captain_m', tala: 'rb_ren_f', mara: 'rb_office_f', orren: 'rb_captain_m', child: 'rb_juno',
+};
 export const CREW_REAL = {
   f: ['rb_pilot_f', 'rb_doctor_f', 'rb_office_f', 'rb_ren_f'],
   m: ['rb_captain_m', 'rb_doctor_m', 'rb_engineer_m', 'rb_gardener_m', 'rb_ren_m'],
@@ -98,7 +103,8 @@ export function crewModelKey(crew) {
   const seed = crew.seed || 0;
   const sex = crew.pronoun?.their === 'her' ? 'f' : crew.pronoun?.their === 'his' ? 'm' : null;
   const ok = (k) => actorLoaded(k) && k !== wearing;
-  if (BY_NAME[crew.id] && ok(BY_NAME[crew.id])) return BY_NAME[crew.id];
+  // the Witness is an older Kai: he wears your face even when you do
+  if (BY_NAME[crew.id] && (ok(BY_NAME[crew.id]) || (crew.id === 'witness' && actorLoaded(BY_NAME[crew.id])))) return BY_NAME[crew.id];
   const role = BY_ROLE[(crew.role || '').toLowerCase()];
   const pick = (list) => {
     const l = list.filter(ok);
@@ -108,11 +114,11 @@ export function crewModelKey(crew) {
   return (role && pick(both(role))) || pick(both(CREW_REAL)) || pick(sex === 'f' ? WOMEN : sex === 'm' ? MEN : [...WOMEN, ...MEN]) || null;
 }
 
-export function makeCrewModel(crew, { hologram = false, glow } = {}) {
+export function makeCrewModel(crew, { hologram = false, glow, height: wantH } = {}) {
   if (!actorsReady()) return makeHuman({ ...randomCrewSpec(mulberry32(crew.seed)), hologram, glow });
   const model = crewModelKey(crew) || 'xbot';
   const woman = /_f$|^w_/.test(model) || (model === 'xbot' && crew.pronoun?.their === 'her');
-  const height = (woman ? 1.64 : 1.76) + ((crew.seed || 0) % 9) / 100;
+  const height = wantH || (woman ? 1.64 : 1.76) + ((crew.seed || 0) % 9) / 100;
   if (hologram) return makeActor({ model, hologram: true, glow: glow || 0x8fe0ff, height });
   return makeActor({ model, height });
 }
