@@ -110,8 +110,10 @@ export const rooms = {
       [-1.5, Y[0], 12, 1.5, Y[1], 17.6],
     ],
     spawn: [0, 0.86, 23.6, 0],
-    lights: [[0, 3.6, 22, 0xd8ccff, 2.2, 14], [0, 3.5, 14.5, 0xc8d4ff, 1.2, 8]],
-    tint: 0xd8d0ff,
+    lights: [[0, 3.6, 22, 0xc4aaff, 2.2, 14], [0, 3.5, 14.5, 0xb8b0ff, 1.2, 8]],
+    tint: 0xc8b8ff,
+    fog: 0xc6b8f0, // sealed, violet, a little uncanny
+    night: 0.12,
   },
   lab: {
     name: 'LABORATORY',
@@ -122,6 +124,7 @@ export const rooms = {
     spawn: [0, 0.86, 8, 0],
     lights: [[0, 8.5, 0, 0xcfe6ff, 2.4, 26], [-8, 5, 8, 0xffd29a, 1.6, 14], [8, 5, -6, 0x9fd8ff, 1.4, 14], [14.5, 2.6, 6, 0xd8ccff, 1.2, 6]],
     tint: 0xbfe0ff,
+    fog: 0xe4edf5, // clean and bright: the machine is the hero
   },
   hall: {
     name: 'OBSERVATION HALL',
@@ -130,8 +133,10 @@ export const rooms = {
       [-16, Y[0], -2, -12, Y[1], 2],
     ],
     spawn: [-17.5, 0.86, 0, Math.PI / 2],
-    lights: [[-22, 7, 0, 0xffd6a0, 2.4, 22], [-34, 7, 0, 0xffcf98, 2.2, 22], [-46, 7, 0, 0xffe0b0, 2.2, 20], [-28, 2, 6, 0xc8b8ff, 1.2, 12]],
-    tint: 0xffe0c0,
+    lights: [[-22, 7, 0, 0xffb090, 2.4, 22], [-34, 7, 0, 0xffa888, 2.2, 22], [-46, 7, 0, 0xffbc98, 2.2, 20], [-28, 2, 6, 0xc8b8ff, 1.2, 12]],
+    tint: 0xffc0a8,
+    fog: 0x7a3c3a, // the Observer's red hall
+    night: 0.3,
   },
   archive: {
     name: 'ARCHIVE',
@@ -140,8 +145,10 @@ export const rooms = {
       [-2, Y[0], -16, 2, Y[1], -12],
     ],
     spawn: [0, 0.86, -18, 0],
-    lights: [[0, 6.5, -20, 0xc8fff0, 2.0, 18], [0, 6.5, -33, 0xc8f0ff, 1.8, 14], [0, -3, -27, 0x9fc8ff, 1.4, 12]],
-    tint: 0xc8f5ea,
+    lights: [[0, 6.5, -20, 0xb8ffe8, 2.0, 18], [0, 6.5, -33, 0xb8f0f0, 1.8, 14], [0, -3, -27, 0x7fd8c8, 1.4, 12]],
+    tint: 0xb8f0e0,
+    fog: 0xb4dcd2, // teal stacks
+    night: 0.1,
     killY: -4,
   },
 };

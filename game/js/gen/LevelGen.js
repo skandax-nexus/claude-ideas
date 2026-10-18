@@ -121,24 +121,28 @@ function segFlat(R, z, len, rng, theme) {
   return z - len;
 }
 
+// Furniture is tagged with its kind (prop: the solid body, part: the decor on it)
+// so each deck can dress it in its own style (world/DeckDecor.js) - the boxes,
+// and so the collisions, stay exactly the same.
 function propAt(R, kind, x, z, rng) {
+  const body = { prop: kind }, part = { part: kind, solid: false };
   if (kind === 'planter') {
-    R.box([x - 0.7, 0, z - 0.7, x + 0.7, 0.7, z + 0.7], { mat: 'prop' });
-    R.box([x - 0.55, 0.7, z - 0.55, x + 0.55, 1.3, z + 0.55], { mat: 'leaf', solid: false });
+    R.box([x - 0.7, 0, z - 0.7, x + 0.7, 0.7, z + 0.7], { mat: 'prop', ...body });
+    R.box([x - 0.55, 0.7, z - 0.55, x + 0.55, 1.3, z + 0.55], { mat: 'leaf', ...part });
   } else if (kind === 'console') {
-    R.box([x - 0.6, 0, z - 0.4, x + 0.6, 1.0, z + 0.4], { mat: 'prop' });
-    R.box([x - 0.5, 1.0, z - 0.3, x + 0.5, 1.06, z + 0.3], { mat: 'glow', solid: false });
+    R.box([x - 0.6, 0, z - 0.4, x + 0.6, 1.0, z + 0.4], { mat: 'prop', ...body });
+    R.box([x - 0.5, 1.0, z - 0.3, x + 0.5, 1.06, z + 0.3], { mat: 'glow', ...part });
   } else if (kind === 'pod') {
-    R.box([x - 0.6, 0, z - 1.1, x + 0.6, 0.9, z + 1.1], { mat: 'prop' });
-    R.box([x - 0.5, 0.9, z - 1.0, x + 0.5, 1.3, z + 1.0], { mat: 'glass', solid: false });
+    R.box([x - 0.6, 0, z - 1.1, x + 0.6, 0.9, z + 1.1], { mat: 'prop', ...body });
+    R.box([x - 0.5, 0.9, z - 1.0, x + 0.5, 1.3, z + 1.0], { mat: 'glass', ...part });
   } else if (kind === 'crate') {
     const s = rng.float(0.5, 0.9);
-    R.box([x - s, 0, z - s, x + s, s * 1.6, z + s], { mat: 'prop2' });
+    R.box([x - s, 0, z - s, x + s, s * 1.6, z + s], { mat: 'prop2', ...body });
   } else if (kind === 'bench') {
-    R.box([x - 0.4, 0, z - 1.2, x + 0.4, 0.5, z + 1.2], { mat: 'prop2' });
+    R.box([x - 0.4, 0, z - 1.2, x + 0.4, 0.5, z + 1.2], { mat: 'prop2', ...body });
   } else {
-    R.box([x - 0.35, 0, z - 0.35, x + 0.35, 2.4, z + 0.35], { mat: 'prop' });
-    R.box([x - 0.4, 2.4, z - 0.4, x + 0.4, 2.5, z + 0.4], { mat: 'glow', solid: false });
+    R.box([x - 0.35, 0, z - 0.35, x + 0.35, 2.4, z + 0.35], { mat: 'prop', prop: 'lamp' });
+    R.box([x - 0.4, 2.4, z - 0.4, x + 0.4, 2.5, z + 0.4], { mat: 'glow', part: 'lamp', solid: false });
   }
 }
 

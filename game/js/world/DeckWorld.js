@@ -9,6 +9,7 @@ import { makeCrewModel } from './People.js';
 import { TOKENS } from '../core/Laws.js';
 import { compileCondition } from '../core/conditions.js';
 import { mergeVertices } from '../../vendor/addons/utils/BufferGeometryUtils.js';
+import { buildDecor, RESKIN } from './DeckDecor.js';
 
 const _v = new THREE.Vector3();
 
@@ -52,12 +53,14 @@ export class DeckWorld {
 
     // static geometry merged per material, conditional pieces kept separate
     const groups = new Map();
+    const reskin = RESKIN[level.palette.look] || {};
     for (const el of level.elements) {
       const [x0, y0, z0, x1, y1, z1] = el.box;
       const geo = boxGeometry(x1 - x0, y1 - y0, z1 - z0);
       geo.translate((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2);
       const box = { min: [x0, y0, z0], max: [x1, y1, z1], id: el.id, room: el.room };
-      if (el.invisible) {
+      // furniture this deck dresses in its own model (DeckDecor): keep the collision only
+      if (el.invisible || (el.part && reskin[el.part]) || (el.prop && reskin[el.prop] === 'full')) {
         // collision only (the visible part is drawn elsewhere, e.g. a tree)
         if (el.solid) this.staticColliders.push(box);
         geo.dispose();
@@ -89,8 +92,16 @@ export class DeckWorld {
       geos.forEach((g) => g.dispose());
     }
 
+    // the deck's own set dressing (decoration only: no collisions)
+    this.decor = buildDecor(level);
+    if (this.decor) root.add(this.decor.root);
+
+    // dark decks lighten the ink of their plaques so they stay readable
+    const ink = level.palette.ink;
+    const white = new THREE.Color(0xffffff);
     for (const t of level.texts) {
-      const { tex, aspect } = textTexture(t.text, { color: t.color, font: 'bold 60px Inter, "Segoe UI", sans-serif' });
+      const color = ink ? '#' + new THREE.Color(t.color).lerp(white, ink).getHexString() : t.color;
+      const { tex, aspect } = textTexture(t.text, { color, font: 'bold 60px Inter, "Segoe UI", sans-serif' });
       const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false, fog: false });
       const mesh = new THREE.Mesh(new THREE.PlaneGeometry(t.size * aspect, t.size), mat);
       mesh.position.set(...t.pos);
@@ -99,7 +110,9 @@ export class DeckWorld {
       this.textMeshes.push({ t, mesh, cond: compileCondition(t.when) });
     }
 
-    if (level.glows?.length) root.add(...lightPools(level.glows));
+    // pools of light under lamps (main.js turns the nearest into real lights)
+    this.glows = [...(level.glows || []), ...(this.decor?.glows || [])];
+    if (this.glows.length) root.add(...lightPools(this.glows));
     if (level.trees?.length || level.rocks?.length) root.add(...forest(level, this.mats));
 
     for (const it of level.interactables) this.buildInteractable(it);
@@ -215,10 +228,12 @@ export class DeckWorld {
     this.scene.remove(this.root);
     this.root.traverse((o) => {
       if (o.geometry) o.geometry.dispose();
-      if (o.material && o.material.map && !Object.values(this.mats || {}).includes(o.material)) o.material.map.dispose?.();
+      if (o.material && o.material.map && !o.material.userData.keep && !Object.values(this.mats || {}).includes(o.material)) o.material.map.dispose?.();
     });
     this.root = null;
     this.level = null;
+    this.decor = null;
+    this.glows = [];
   }
 
   echoVisible(state) {
@@ -305,6 +320,7 @@ export class DeckWorld {
       tm.mesh.children[0].rotation.y = t * 1.5;
       tm.mesh.children[0].rotation.x = t * 0.7;
     }
+    this.decor?.update(dt, t, this);
     for (const p of Object.values(this.props)) {
       if (p.userData.gem) {
         p.userData.gem.rotation.y = t * 1.4;

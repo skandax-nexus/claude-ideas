@@ -9,6 +9,7 @@ import {
   elements, texts, drifters, cables, interactables, items, tokens, SHADOW,
 } from './maps.js';
 import { TOKENS } from '../core/Laws.js';
+import { bookMaterial } from './DeckDecor.js';
 import { compileCondition } from '../core/conditions.js';
 
 export class World {
@@ -35,6 +36,11 @@ export class World {
     return { fact: (k) => this.facts.get(k), state: this.engine.state(room) };
   }
 
+  // the material for an element: the room's own version if it has one
+  roomMat(room, name) {
+    return this.mats.rooms?.[room]?.[name] || this.mats[name];
+  }
+
   build() {
     const groups = new Map();
     for (const el of elements) {
@@ -48,7 +54,7 @@ export class World {
         groups.get(k).push(geo);
         if (el.solid) this.staticColliders.push(box);
       } else {
-        const mesh = new THREE.Mesh(geo, el.echo ? this.mats.echo : this.mats[el.mat]);
+        const mesh = new THREE.Mesh(geo, el.echo ? this.mats.echo : this.roomMat(el.room, el.mat));
         mesh.castShadow = !el.echo;
         mesh.receiveShadow = !el.echo;
         if (el.echo) {
@@ -60,7 +66,7 @@ export class World {
       }
     }
     for (const [k, geos] of groups) {
-      const mat = this.mats[k.split('|')[1]];
+      const mat = this.roomMat(...k.split('|'));
       const mesh = new THREE.Mesh(mergeGeometries(geos), mat);
       if (mat.transparent) mesh.renderOrder = 2;
       const matName = k.split('|')[1];
@@ -105,6 +111,7 @@ export class World {
 
     this.stars = M.makeStarfield();
     this.root.add(this.stars);
+    this.root.add(...stationDecor(this.mats));
   }
 
   // The Other wears your face: rebuild it when you pick a hero.
@@ -244,4 +251,30 @@ export class World {
 
     if (this.facts.get('machine_activated')) this.stars.rotation.y += dt * 0.01;
   }
+}
+
+// Station Zero's set dressing: light rings on the lab floor around the machine,
+// and books and glowing record drums on the archive's shelves.
+function stationDecor(mats) {
+  const out = [];
+  const rings = mergeGeometries([3.0, 3.45].map((r) => new THREE.RingGeometry(r - 0.06, r, 72).rotateX(-Math.PI / 2).translate(0, 0.012, 0)));
+  out.push(new THREE.Mesh(rings, new THREE.MeshBasicMaterial({ color: 0x6fd6ec })));
+  const books = [];
+  for (const el of elements) {
+    if (el.room !== 'archive' || el.mat !== 'shelf') continue;
+    const [x0, y0, z0, x1, y1, z1] = el.box;
+    // a face of books on each long side of the shelf, 1 cm proud of it
+    const alongZ = z1 - z0 > x1 - x0;
+    const len = alongZ ? z1 - z0 : x1 - x0, h = y1 - Math.max(y0, -0.4);
+    for (const side of [-1, 1]) {
+      const g = new THREE.PlaneGeometry(len - 0.1, h - 0.1);
+      const uv = g.attributes.uv;
+      for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * (len / 1.1), uv.getY(i) * (h / 0.55));
+      if (alongZ) g.rotateY(side * Math.PI / 2).translate(side > 0 ? x1 + 0.01 : x0 - 0.01, (y1 + Math.max(y0, -0.4)) / 2, (z0 + z1) / 2);
+      else g.rotateY(side > 0 ? 0 : Math.PI).translate((x0 + x1) / 2, (y1 + Math.max(y0, -0.4)) / 2, side > 0 ? z1 + 0.01 : z0 - 0.01);
+      books.push(g);
+    }
+  }
+  if (books.length) out.push(new THREE.Mesh(mergeGeometries(books), bookMaterial()));
+  return out;
 }

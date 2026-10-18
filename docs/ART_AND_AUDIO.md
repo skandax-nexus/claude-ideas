@@ -21,6 +21,24 @@ Files: `game/js/entities/Player.js`, `unity/.../Player/PlayerCamera.cs`, `Player
 - **No eye strain:** no dark vignette, scanlines, film grain or heavy chromatic aberration. Post-processing is mild ACES tonemapping and a light bloom.
 - **Interface:** white glass cards, rounded pills, a clean sans-serif typeface, dark ink text at a comfortable size, and state indicators that use shape plus colour (■ ▲ ●).
 
+### Every place its own look
+
+Feedback: *"All the rooms look similar in the vessel and the prologue."* Each place now has its own surfaces, light, air and set dressing, while the puzzle language stays shared: pit lips glow in the deck's accent, echo is mint and hard light is gold everywhere, doors glow, and walls darken down every pit shaft so a drop always reads as a drop.
+
+| Place | Look |
+|---|---|
+| Hydroponics | Sage glazed tiles on green iron ribs, wet slate, planter troughs of leaves, hanging vines, magenta grow lights, amber pit edges, pollen in a humid haze |
+| Cryo Bay | Brushed blue steel frosted near the floor, icy tiles, rows of frosted pods (some with sleepers), rimed coolant lines, falling frost |
+| Observatory | Dark navy and brass, a star-chart floor, a starry ceiling, wide windows onto space and a slowly turning gas giant, an orrery and a telescope |
+| Engineering | Riveted plates weeping rust, diamond plate, hazard stripes on pit lips and round the time sweepers, pipes and valves, wall gears that stop when time freezes, sodium light, steam |
+| Medbay | White tiles over a deep teal dado (so white sentinels stand out), beds with heartbeat monitors, glass partitions, wall cabinets, guide lines on the floor |
+| Crew Quarters | Walnut floor, blue wallpaper over wood panelling, bunks, sofas, lamps with warm pools, posters and rugs, dust in the lamplight |
+| Archive Core | Floor-to-ceiling shelves of books and glowing data drums, ladders, sconces, dark stone, dust motes in amber light |
+| The Bridge | Deep blue consoles and wall displays, windows onto space (a great forward window in puzzle rooms), a wine-red runner, the captain's dais |
+| Station Zero | The antechamber is sealed and violet; the laboratory stays bright white on a dark floor with light rings round the machine; the archive is teal with shelves of records; the observation hall is dark red with stone pillars |
+
+Files: `game/js/gen/StoryGen.js` (deck palettes: light, fog, grade, sky, weather), `game/js/world/materials.js` (surfaces per deck and per Station Zero room), `game/js/world/DeckDecor.js` (set dressing, merged per material; furniture from the generator is re-dressed in place, collisions unchanged), `game/js/world/Weather.js` (indoor particles).
+
 ## Characters
 
 **v0.7:** the cast is modelled, rigged characters driven by motion capture (`game/js/world/Actors.js`, chosen in `game/js/world/People.js`). Ren's looks are Nova (VRM), Street (Mixamo), Flight suit and Spacesuit (Quaternius); the crew and Juno are Quaternius people. Voices come from a Kokoro voice pack (`game/assets/voice`). The procedural humans below remain as the fallback.

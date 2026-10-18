@@ -50,6 +50,8 @@ const THEMES = {
   ECHO: { fog: 0xd8f2f0, sky: 0xf0fffd, ground: 0xc8e6e3, hemi: 0.66, sun: 1.8, sunColor: 0xe6fffb, density: 0.016, device: 0x2bc4cf },
 };
 
+const _c = new THREE.Color(), _c2 = new THREE.Color(), _fog = new THREE.Color(), _tint = new THREE.Color(); // per-frame scratch colours
+
 // Every token the prologue can teach; the vessel starts with all of them.
 const BASE_TOKENS = ['GRAVITY', 'INVERTS', 'INVERTED', 'PHYSICAL', 'ECHO', 'HELD', 'PERSISTS', 'OBSERVER', 'FREEZES', 'ALL', 'ECHOES', 'SOLIDIFIES'];
 
@@ -1805,7 +1807,7 @@ class Game {
 
   // the nearest street lamps and lit shopfronts become real lights (every 0.25 s)
   updateLamps(dt) {
-    const glows = this.mode === 'deck' && this.level?.glows;
+    const glows = this.mode === 'deck' && this.deckWorld.glows?.length && this.deckWorld.glows;
     this.lampT = (this.lampT || 0) - dt;
     if (this.lampT <= 0) {
       this.lampT = 0.25;
@@ -1836,19 +1838,26 @@ class Game {
     const s = this.room ? this.engine.state(this.room) : 'PHYSICAL';
     const th = THEMES[s];
     const k = Math.min(1, dt * 3);
+    const deck = this.mode === 'deck';
+    const pal = deck ? this.level.palette : null;
     const room = this.level.rooms[this.room || 'antechamber'] || STATION_ROOMS.antechamber;
-    const tint = new THREE.Color(room.tint);
-    let fog = new THREE.Color(th.fog);
-    if (this.mode === 'deck') fog = new THREE.Color(this.level.palette.fog).lerp(fog, (s === 'PHYSICAL' ? 0.1 : 0.55) * (1 - (this.level.palette.night || 0) * 0.6));
+    const tint = _tint.set(room.tint);
+    // each place has its own air: a deck's palette, or a Station Zero room's own fog
+    const fog = _fog.set(th.fog);
+    if (deck) fog.lerp(_c.set(pal.fog), 1 - (s === 'PHYSICAL' ? 0.1 : 0.55) * (1 - (pal.night || 0) * 0.6));
+    else if (room.fog !== undefined) fog.lerp(_c.set(room.fog), s === 'PHYSICAL' ? 0.85 : 0.5);
     this.scene.fog.color.lerp(fog, k);
     this.scene.background.copy(this.scene.fog.color);
-    this.scene.fog.density += ((this.mode === 'deck' ? th.density * 0.3 : th.density * 0.45) - this.scene.fog.density) * k;
-    this.hemi.color.lerp(new THREE.Color(th.sky).lerp(tint, 0.25), k);
-    this.hemi.groundColor.lerp(new THREE.Color(th.ground), k);
-    const night = this.mode === 'deck' ? this.level.palette.night || { horror: 0.55, thriller: 0.3 }[this.story?.mood] || 0 : 0;
-    const env = (this.scene.environment ? 0.85 : 1) * (this.mode === 'deck' ? 0.72 : 1) * (1 - night * 0.55);
+    this.scene.fog.density += ((deck ? th.density * 0.3 * (pal.density ?? 1) : th.density * 0.45 * (room.density ?? 1)) - this.scene.fog.density) * k;
+    this.hemi.color.lerp(_c.set(th.sky).lerp(tint, 0.25), k);
+    _c.set(th.ground);
+    if (pal?.look) _c.lerp(_c2.set(pal.fog), 0.5);
+    this.hemi.groundColor.lerp(_c, k);
+    const night = deck ? pal.night || { horror: 0.55, thriller: 0.3 }[this.story?.mood] || 0 : room.night || 0;
+    const env = (this.scene.environment ? 0.85 : 1) * (deck ? 0.72 : 1) * (1 - night * 0.55);
     // a sky photo lights the district: the probe takes over most of the flat hemisphere fill
-    const probe = this.mode === 'deck' ? this.postfx.probe() : null;
+    // (indoor decks only borrow the sky for reflections)
+    const probe = deck && pal.probe !== false ? this.postfx.probe() : null;
     if (probe && this.skyLight.userData.sh !== probe) {
       this.skyLight.sh.copy(probe);
       this.skyLight.userData.sh = probe;
@@ -1857,14 +1866,14 @@ class Game {
     this.skyLight.intensity += (skyAmt * (1 - night * 0.35) * 1.1 - this.skyLight.intensity) * k;
     this.hemi.intensity += (th.hemi * env * (1 - skyAmt * 0.55) - this.hemi.intensity) * k;
     if (this.bolt) this.hemi.intensity = th.hemi * env + this.bolt * 2.2;
-    this.sun.color.lerp(new THREE.Color(th.sunColor), k);
-    this.sun.intensity += (th.sun * (this.mode === 'deck' ? 0.8 : 1) * (1 - night * 0.7) - this.sun.intensity) * k;
-    this.renderer.toneMappingExposure += ((this.mode === 'deck' ? 0.9 + night * 0.15 : 0.95) - this.renderer.toneMappingExposure) * k;
+    this.sun.color.lerp(_c.set(th.sunColor), k);
+    this.sun.intensity += (th.sun * (deck ? 0.8 : 1) * (1 - night * 0.7) - this.sun.intensity) * k;
+    this.renderer.toneMappingExposure += ((deck ? 0.9 + night * 0.15 : 0.95 + night * 0.1) - this.renderer.toneMappingExposure) * k;
     const p = this.player.pos;
     this.sun.position.set(p.x + 6, p.y + 24, p.z + 9);
     this.sun.target.position.set(p.x, p.y, p.z);
     const dc = this.device.userData;
-    dc.shell.material.color.lerp(new THREE.Color(th.device), k);
+    dc.shell.material.color.lerp(_c.set(th.device), k);
     dc.shell.rotation.y += dt * 1.5;
     dc.shell.rotation.x += dt * 0.6;
     // When the machine runs, the lab breathes amber.

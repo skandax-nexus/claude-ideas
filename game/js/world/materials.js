@@ -3,11 +3,12 @@
 // tiny and the look consistent on low-end Android GPUs.
 import * as THREE from '../../vendor/three.module.min.js';
 
-function canvasTex(size, draw, repeat = true) {
+export function canvasTex(size, draw, repeat = true, height = size) {
   const c = document.createElement('canvas');
-  c.width = c.height = size;
+  c.width = size;
+  c.height = height;
   const g = c.getContext('2d');
-  draw(g, size);
+  draw(g, size, height);
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.SRGBColorSpace;
   if (repeat) t.wrapS = t.wrapT = THREE.RepeatWrapping;
@@ -123,6 +124,40 @@ export function createMaterials() {
     echo: new THREE.MeshBasicMaterial({ color: 0x3cc4cf, transparent: true, opacity: 0.28, depthWrite: false, fog: false }),
     echoSolid: new THREE.MeshBasicMaterial({ color: 0x29b3c0, transparent: true, opacity: 0.55, depthWrite: false, fog: false }),
     echoLine: new THREE.LineBasicMaterial({ color: 0x1f9aa8, transparent: true, opacity: 0.9, fog: false }),
+  };
+  // Station Zero's rooms, each in its own key (World.js picks these per room):
+  // the sealed violet antechamber, the clean lab on a dark floor, the teal
+  // archive of shelves, the dark red hall of pillars.
+  const labFloor = canvasTex(256, (g, s) => {
+    panel(g, s, '#3c4552', '#56616e', false);
+    g.fillStyle = 'rgba(120,200,230,0.18)';
+    g.fillRect(0, s / 2 - 1, s, 2);
+  });
+  const hallWall = canvasTex(128, (g, s) => panel(g, s, '#8a3a3c', '#6a2a2e'));
+  m.rooms = {
+    antechamber: {
+      wall: std({ map: wallTex, ...relief('concrete2', 1, 0.5), color: 0xb2a4ec }),
+      floor: std({ map: floorTex, ...relief('pavement', 0.5, 0.7), color: 0xa69cd0, roughness: 0.7 }),
+      ceil: std({ map: ceilTex, color: 0xc4b8f2, roughness: 0.95 }),
+      wallDark: std({ map: softTex, color: 0x5e4ea8, roughness: 0.6 }),
+    },
+    lab: {
+      floor: std({ map: labFloor, ...relief('pavement', 0.5, 0.4), roughness: 0.35, metalness: 0.15 }),
+    },
+    archive: {
+      wall: std({ map: wallTex, ...relief('concrete2', 1, 0.5), color: 0x92d2c6 }),
+      wallDark: std({ map: softTex, color: 0x2e5a54 }),
+      floor: std({ map: floorTex, ...relief('pavement', 0.5, 0.7), color: 0x5a8a82, roughness: 0.7 }),
+      floorDark: std({ map: softTex, color: 0x1c3430 }),
+      ceil: std({ map: ceilTex, color: 0xa8d8ce, roughness: 0.95 }),
+    },
+    hall: {
+      wallDark: std({ map: hallWall, ...relief('concrete2', 1, 0.5), roughness: 0.8 }),
+      wall: std({ map: hallWall, ...relief('concrete2', 1, 0.5), roughness: 0.8 }),
+      floor: pbr('stone', 0.5, { color: 0x9a7a72 }),
+      ceil: std({ map: softTex, color: 0x5a2e30, roughness: 0.95 }),
+      pillar: pbr('concrete', 0.5, { color: 0xf0e2d0 }),
+    },
   };
   return m;
 }
@@ -322,9 +357,425 @@ export function deckMaterials(pal) {
   };
   m.metal = m.prop;
   m.crate = m.prop2;
-  if (pal.night !== undefined) Object.assign(m, zoneMaterials(pal, std, basic));
+  if (pal.look) Object.assign(m, lookMaterials(pal, std, basic));
+  else if (pal.night !== undefined) Object.assign(m, zoneMaterials(pal, std, basic));
+  // on dark decks the echo outline is drawn lighter so it still reads
+  if (pal.echoLine !== undefined) m.echoLine = new THREE.LineBasicMaterial({ color: pal.echoLine, transparent: true, opacity: 0.95, fog: false });
   _deckCache.set(key, m);
   return m;
+}
+
+// --- the vessel's decks: each one its own surfaces -------------------------------
+
+// A small seeded generator so painted textures come out the same every time.
+function lcg(seed) {
+  let s = seed >>> 0 || 1;
+  return () => ((s = (Math.imul(s, 1664525) + 1013904223) >>> 0) / 4294967296);
+}
+const css = (hex, k = 1) => '#' + new THREE.Color(hex).multiplyScalar(k).getHexString();
+function speckle(g, w, h, rnd, n, alpha, size = 2) {
+  for (let i = 0; i < n; i++) {
+    const v = rnd() < 0.5 ? 0 : 255;
+    g.fillStyle = `rgba(${v},${v},${v},${alpha * rnd()})`;
+    g.fillRect(rnd() * w, rnd() * h, size, size);
+  }
+}
+// square tiles with grout and a little variation tile to tile
+function tiles(g, s, n, base, grout, vary, rnd, gw = 3) {
+  g.fillStyle = grout;
+  g.fillRect(0, 0, s, s);
+  const t = s / n;
+  for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) {
+    g.fillStyle = css(base, 1 + (rnd() - 0.5) * 2 * vary);
+    g.fillRect(i * t + gw / 2, j * t + gw / 2, t - gw, t - gw);
+  }
+}
+// riveted panels: n columns, seams and corner rivets
+function panels(g, s, n, base, seam, rivet, rnd, vary = 0.03) {
+  const t = s / n;
+  for (let i = 0; i < n; i++) {
+    g.fillStyle = css(base, 1 + (rnd() - 0.5) * 2 * vary);
+    g.fillRect(i * t, 0, t, s);
+  }
+  speckle(g, s, s, rnd, 1400, 0.05);
+  g.fillStyle = seam;
+  for (let i = 0; i <= n; i++) g.fillRect(i * t - 1.5, 0, 3, s);
+  g.fillRect(0, s / 2 - 1.5, s, 3);
+  g.fillRect(0, 0, s, 2);
+  if (rivet) {
+    g.fillStyle = rivet;
+    for (let i = 0; i < n; i++) for (const y of [8, s / 2 - 8, s / 2 + 8, s - 8]) for (const x of [i * t + 8, (i + 1) * t - 8]) g.fillRect(x - 2, y - 2, 4, 4);
+  }
+}
+
+// World-space shading for deck surfaces: walls get darker down a pit shaft (so a
+// pit always reads as a drop), an optional band of another colour near the floor
+// (frost, grime, wainscot, a tiled dado) and, on floors, world-space patches
+// (frost, moss). Same shader for every deck; the values are per material.
+function deckShade(mat, o = {}) {
+  const u = {
+    dsBand: { value: new THREE.Color(o.band ?? 0xffffff) },
+    dsBandH: { value: o.bandH ?? 0 },
+    dsBandSoft: { value: o.bandSoft ?? 0.3 },
+    dsBandAmt: { value: o.bandAmt ?? 0 },
+    dsPit: { value: o.pit ?? 0.55 },
+    dsSpeck: { value: o.speck ?? 0 },
+    dsSpeckCol: { value: new THREE.Color(o.speckCol ?? 0xffffff) },
+  };
+  mat.onBeforeCompile = (sh) => {
+    Object.assign(sh.uniforms, u);
+    sh.vertexShader = sh.vertexShader
+      .replace('#include <common>', '#include <common>\nvarying vec3 vDsW;')
+      .replace('#include <project_vertex>', '#include <project_vertex>\nvDsW = (modelMatrix * vec4(transformed, 1.0)).xyz;');
+    sh.fragmentShader = sh.fragmentShader
+      .replace('#include <common>', `#include <common>
+varying vec3 vDsW;
+uniform vec3 dsBand, dsSpeckCol;
+uniform float dsBandH, dsBandSoft, dsBandAmt, dsPit, dsSpeck;
+float dsHash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+float dsNoise(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
+  return mix(mix(dsHash(i), dsHash(i + vec2(1.0, 0.0)), f.x), mix(dsHash(i + vec2(0.0, 1.0)), dsHash(i + vec2(1.0, 1.0)), f.x), f.y); }`)
+      .replace('#include <map_fragment>', `#include <map_fragment>
+float dsLum = dot(diffuseColor.rgb, vec3(0.299, 0.587, 0.114));
+float dsK = dsBandAmt * (1.0 - smoothstep(dsBandH - dsBandSoft, dsBandH, vDsW.y)) * step(-0.02, vDsW.y);
+diffuseColor.rgb = mix(diffuseColor.rgb, dsBand * (0.72 + 0.6 * dsLum), dsK);
+float dsS = dsSpeck * smoothstep(0.52, 0.72, dsNoise(vDsW.xz * 0.55) * 0.6 + dsNoise(vDsW.xz * 2.7) * 0.4);
+diffuseColor.rgb = mix(diffuseColor.rgb, dsSpeckCol * (0.85 + 0.3 * dsLum), dsS);
+diffuseColor.rgb *= mix(1.0 - dsPit, 1.0, smoothstep(-2.6, -0.08, vDsW.y));`);
+  };
+  mat.customProgramCacheKey = () => 'deckShade';
+  return mat;
+}
+
+const _lookTex = new Map();
+// painted textures per deck look (cached: built once per session)
+export function lookTextures(look) {
+  if (_lookTex.has(look)) return _lookTex.get(look);
+  const rnd = lcg(look.length * 7919 + look.charCodeAt(0));
+  const T = {};
+  if (look === 'hydro') {
+    T.wall = canvasTex(512, (g, s) => {
+      tiles(g, s, 4, 0x8fa88a, '#5f7a5c', 0.06, rnd, 6);
+      // condensation runs down the glazed tiles
+      for (let i = 0; i < 90; i++) {
+        g.fillStyle = `rgba(235,255,240,${0.04 + rnd() * 0.06})`;
+        g.fillRect(rnd() * s, rnd() * s, 1.5, 20 + rnd() * 90);
+      }
+      speckle(g, s, s, rnd, 1500, 0.06);
+    });
+    T.floor = canvasTex(512, (g, s) => {
+      tiles(g, s, 2, 0x55634f, '#2a3328', 0.08, rnd, 8);
+      speckle(g, s, s, rnd, 4000, 0.1, 3);
+      // a drainage grate across each slab
+      g.fillStyle = 'rgba(20,26,18,0.55)';
+      for (let k = 0; k < 2; k++) for (let i = 0; i < 9; i++) g.fillRect(k * s / 2 + s / 4 - 36 + i * 9, s / 4 - 3, 4, s / 2 + 6);
+    });
+    T.ceil = canvasTex(256, (g, s) => {
+      g.fillStyle = '#4d6658';
+      g.fillRect(0, 0, s, s);
+      speckle(g, s, s, rnd, 600, 0.08);
+      g.fillStyle = '#26352b';
+      for (let i = 0; i <= 2; i++) { g.fillRect(i * s / 2 - 5, 0, 10, s); g.fillRect(0, i * s / 2 - 5, s, 10); }
+    });
+  } else if (look === 'cryo') {
+    T.wall = canvasTex(256, (g, s) => {
+      panels(g, s, 4, 0x8ea3b6, '#5d7184', '#b8c8d6', rnd);
+      for (let i = 0; i < 260; i++) {
+        g.fillStyle = `rgba(${rnd() < 0.5 ? 255 : 40},${rnd() < 0.5 ? 255 : 60},255,0.04)`;
+        g.fillRect(rnd() * s, 0, 1, s); // brushed steel
+      }
+    });
+    T.floor = canvasTex(512, (g, s) => {
+      tiles(g, s, 4, 0xc9d9e6, '#93a8ba', 0.03, rnd, 4);
+      speckle(g, s, s, rnd, 3000, 0.08);
+      // frost crystals
+      g.strokeStyle = 'rgba(255,255,255,0.35)';
+      for (let i = 0; i < 40; i++) {
+        const x = rnd() * s, y = rnd() * s, r = 6 + rnd() * 18;
+        for (let k = 0; k < 6; k++) {
+          const a = (k / 6) * Math.PI * 2;
+          g.beginPath(); g.moveTo(x, y); g.lineTo(x + Math.cos(a) * r, y + Math.sin(a) * r); g.stroke();
+        }
+      }
+    });
+    T.ceil = canvasTex(256, (g, s) => panels(g, s, 2, 0x415163, '#2a3644', '#6f8296', rnd));
+  } else if (look === 'obs') {
+    T.wall = canvasTex(256, (g, s) => panels(g, s, 2, 0x222a48, '#8a6a3a', '#b08a4a', rnd, 0.04));
+    T.floor = canvasTex(512, (g, s) => {
+      g.fillStyle = '#151b2e';
+      g.fillRect(0, 0, s, s);
+      speckle(g, s, s, rnd, 2500, 0.05);
+      // brass star-chart inlay: a compass rose per slab
+      g.strokeStyle = 'rgba(176,138,74,0.55)';
+      g.lineWidth = 2;
+      const c = s / 2;
+      for (const r of [0.46, 0.3, 0.12]) { g.beginPath(); g.arc(c, c, s * r, 0, Math.PI * 2); g.stroke(); }
+      g.lineWidth = 1;
+      for (let k = 0; k < 16; k++) {
+        const a = (k / 16) * Math.PI * 2, r0 = k % 4 ? s * 0.3 : s * 0.05;
+        g.beginPath(); g.moveTo(c + Math.cos(a) * r0, c + Math.sin(a) * r0); g.lineTo(c + Math.cos(a) * s * 0.46, c + Math.sin(a) * s * 0.46); g.stroke();
+      }
+      g.strokeStyle = 'rgba(176,138,74,0.35)';
+      g.strokeRect(1, 1, s - 2, s - 2);
+    });
+    T.ceil = canvasTex(512, (g, s) => {
+      g.fillStyle = '#05070f';
+      g.fillRect(0, 0, s, s);
+      for (let i = 0; i < 260; i++) {
+        const b = 120 + rnd() * 135;
+        g.fillStyle = `rgba(${b},${b},${Math.min(255, b + 40)},${0.5 + rnd() * 0.5})`;
+        const r = rnd() < 0.1 ? 2 : 1;
+        g.fillRect(rnd() * s, rnd() * s, r, r);
+      }
+    });
+  } else if (look === 'eng') {
+    T.wall = canvasTex(256, (g, s) => {
+      panels(g, s, 2, 0x7c7064, '#3a332c', '#a89a88', rnd, 0.06);
+      // rust weeping from the seams and rivets
+      for (let i = 0; i < 70; i++) {
+        const x = rnd() * s, y = rnd() * s, h = 20 + rnd() * 90;
+        const gr = g.createLinearGradient(0, y, 0, y + h);
+        gr.addColorStop(0, `rgba(140,70,30,${0.15 + rnd() * 0.25})`);
+        gr.addColorStop(1, 'rgba(140,70,30,0)');
+        g.fillStyle = gr;
+        g.fillRect(x, y, 2 + rnd() * 5, h);
+      }
+      speckle(g, s, s, rnd, 2500, 0.1, 2);
+    });
+    T.floor = canvasTex(256, (g, s) => {
+      g.fillStyle = '#55585b';
+      g.fillRect(0, 0, s, s);
+      speckle(g, s, s, rnd, 2500, 0.1);
+      // diamond plate
+      const n = 16, t = s / n;
+      for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) {
+        g.save();
+        g.translate(i * t + t / 2, j * t + t / 2);
+        g.rotate((i + j) % 2 ? Math.PI / 4 : -Math.PI / 4);
+        g.fillStyle = 'rgba(200,205,210,0.32)';
+        g.fillRect(-t * 0.36, -2, t * 0.72, 4);
+        g.fillStyle = 'rgba(0,0,0,0.3)';
+        g.fillRect(-t * 0.36, 2, t * 0.72, 1.5);
+        g.restore();
+      }
+      g.fillStyle = 'rgba(0,0,0,0.35)';
+      g.fillRect(0, 0, s, 3);
+      g.fillRect(0, 0, 3, s);
+    });
+    T.ceil = canvasTex(256, (g, s) => panels(g, s, 2, 0x34302c, '#1c1a18', '#5a5048', rnd));
+    T.hazard = canvasTex(128, (g, s) => {
+      g.fillStyle = '#e8b020';
+      g.fillRect(0, 0, s, s);
+      g.fillStyle = '#1c1a18';
+      for (let k = -s; k < s * 2; k += 32) {
+        g.beginPath(); g.moveTo(k, 0); g.lineTo(k + 16, 0); g.lineTo(k + 16 - s, s); g.lineTo(k - s, s); g.fill();
+      }
+      speckle(g, s, s, rnd, 500, 0.15);
+    });
+  } else if (look === 'med') {
+    T.wall = canvasTex(512, (g, s) => {
+      tiles(g, s, 8, 0xeef4f4, '#c4d3d3', 0.015, rnd, 3);
+      speckle(g, s, s, rnd, 600, 0.03);
+    });
+    T.floor = canvasTex(256, (g, s) => {
+      g.fillStyle = '#a3bcc2';
+      g.fillRect(0, 0, s, s);
+      speckle(g, s, s, rnd, 3500, 0.18, 2);
+      g.fillStyle = 'rgba(60,90,96,0.25)';
+      g.fillRect(0, 0, s, 2);
+      g.fillRect(0, 0, 2, s);
+    });
+    T.ceil = canvasTex(256, (g, s) => tiles(g, s, 4, 0xf4f8f8, '#d6e0e0', 0.01, rnd, 4));
+  } else if (look === 'crew') {
+    T.wall = canvasTex(512, (g, s) => {
+      g.fillStyle = '#6c7f95';
+      g.fillRect(0, 0, s, s);
+      speckle(g, s, s, rnd, 2500, 0.05);
+      // striped wallpaper with a small diamond motif
+      for (let i = 0; i < 8; i++) {
+        g.fillStyle = 'rgba(150,170,195,0.22)';
+        g.fillRect(i * 64 + 6, 0, 4, s);
+        g.fillRect(i * 64 + 14, 0, 2, s);
+      }
+      g.fillStyle = 'rgba(240,226,200,0.3)';
+      for (let i = 0; i < 8; i++) for (let j = 0; j < 8; j++) {
+        const x = i * 64 + 40, y = j * 64 + (i % 2 ? 32 : 0) + 16;
+        g.beginPath(); g.moveTo(x, y - 7); g.lineTo(x + 5, y); g.lineTo(x, y + 7); g.lineTo(x - 5, y); g.fill();
+      }
+    });
+    T.floor = canvasTex(512, (g, s) => {
+      // walnut planks, 0.25 m wide
+      const n = 8, w = s / n;
+      for (let i = 0; i < n; i++) {
+        let y = -rnd() * 300;
+        while (y < s) {
+          const len = 160 + rnd() * 260;
+          g.fillStyle = css(0x6b4a33, 0.82 + rnd() * 0.36);
+          g.fillRect(i * w, y, w, len);
+          g.strokeStyle = 'rgba(40,24,12,0.18)';
+          for (let k = 0; k < 5; k++) {
+            const x = i * w + 4 + rnd() * (w - 8);
+            g.beginPath(); g.moveTo(x, y); g.bezierCurveTo(x + 4, y + len * 0.3, x - 4, y + len * 0.7, x + 2, y + len); g.stroke();
+          }
+          g.fillStyle = 'rgba(30,18,10,0.7)';
+          g.fillRect(i * w, y, w, 2);
+          y += len;
+        }
+        g.fillStyle = 'rgba(30,18,10,0.75)';
+        g.fillRect(i * w, 0, 2, s);
+      }
+    });
+    T.ceil = canvasTex(256, (g, s) => {
+      g.fillStyle = '#e6dac8';
+      g.fillRect(0, 0, s, s);
+      speckle(g, s, s, rnd, 800, 0.04);
+      g.fillStyle = '#b89a76';
+      g.fillRect(0, s / 2 - 6, s, 12);
+    });
+  } else if (look === 'arch') {
+    T.wall = canvasTex(256, (g, s) => panels(g, s, 2, 0x2c3532, '#1a2220', '#4a5450', rnd));
+    T.ceil = canvasTex(256, (g, s) => panels(g, s, 2, 0x1e2220, '#121614', null, rnd));
+  } else if (look === 'bridge') {
+    T.wall = canvasTex(256, (g, s) => {
+      panels(g, s, 2, 0x1c2b4a, '#2c406a', '#3a5080', rnd);
+      g.fillStyle = 'rgba(110,170,255,0.45)';
+      g.fillRect(0, s * 0.25, s, 2);
+    });
+    T.floor = canvasTex(256, (g, s) => {
+      g.fillStyle = '#20283a';
+      g.fillRect(0, 0, s, s);
+      speckle(g, s, s, rnd, 2500, 0.06);
+      g.strokeStyle = 'rgba(70,90,130,0.35)';
+      const r = 16, h = r * Math.sqrt(3);
+      for (let y = 0; y < s + h; y += h) for (let x = 0; x < s + 3 * r; x += 3 * r) {
+        for (const [ox, oy] of [[0, 0], [1.5 * r, h / 2]]) {
+          g.beginPath();
+          for (let k = 0; k <= 6; k++) {
+            const a = (k / 6) * Math.PI * 2;
+            g.lineTo(x + ox + Math.cos(a) * r, y + oy + Math.sin(a) * r);
+          }
+          g.stroke();
+        }
+      }
+    });
+    T.ceil = canvasTex(256, (g, s) => panels(g, s, 2, 0x131b2e, '#0a101c', null, rnd));
+  }
+  _lookTex.set(look, T);
+  return T;
+}
+
+// The surfaces of one deck: walls, floors, ceilings, the furniture material and
+// the trim, each deck in its own materials. Echo, hard light, gates and the
+// glowing edges keep their shared colours, so the puzzles read the same everywhere.
+function lookMaterials(pal, std, basic) {
+  const look = pal.look;
+  const T = lookTextures(look);
+  const accent = new THREE.Color(pal.accent);
+  const col = (h) => new THREE.Color(h);
+  const out = {};
+  const L = (o) => Object.assign(out, o);
+  const dark = (pal.night || 0) > 0.25;
+  out.door = std({ color: accent.clone().lerp(col(0xffffff), 0.3), emissive: accent, emissiveIntensity: dark ? 0.4 : 0.15, roughness: 0.45, metalness: 0.2 });
+  if (look === 'hydro') {
+    L({
+      wall: deckShade(std({ map: T.wall, ...relief('concrete2', 1, 0.35), roughness: 0.62 }), { band: 0x4a5a34, bandH: 0.7, bandSoft: 0.6, bandAmt: 0.55, pit: 0.7 }),
+      floor: deckShade(std({ map: T.floor, ...relief('concrete', 0.5, 0.6), roughness: 0.55 }), { speck: 0.45, speckCol: 0x4f6a32 }),
+      ceil: std({ map: T.ceil, roughness: 0.6, metalness: 0.2 }),
+      pit: deckShade(std({ color: 0x24362a, roughness: 0.12, metalness: 0.3 }), { pit: 0.5 }),
+      prop: pbr('concrete', 0.5, { color: 0xa8b098 }),
+      pillar: pbr('stone', 0.5, { color: 0xb0b8a0 }),
+      trim: std({ color: 0x46705a, roughness: 0.5, metalness: 0.35 }),
+      trimDark: std({ color: 0x3b2f22, roughness: 0.9 }),
+      panelGlow: basic(col(0xff8ae0)),
+      leaf: std({ color: 0x4f9a45, emissive: 0x2a5a20, emissiveIntensity: 0.2, roughness: 0.8 }),
+    });
+  } else if (look === 'cryo') {
+    L({
+      wall: deckShade(std({ map: T.wall, ...relief('metal', 1, 0.5), roughness: 0.45, metalness: 0.35 }), { band: 0xeef6ff, bandH: 1.1, bandSoft: 0.9, bandAmt: 0.75, pit: 0.65 }),
+      floor: deckShade(std({ map: T.floor, ...relief('concrete', 0.5, 0.4), roughness: 0.32, metalness: 0.1 }), { speck: 0.55, speckCol: 0xf6fbff }),
+      ceil: std({ map: T.ceil, roughness: 0.5, metalness: 0.4 }),
+      pit: deckShade(std({ color: 0x1c2a3a, roughness: 0.2, metalness: 0.2 }), { pit: 0.4 }),
+      prop: std({ color: 0xd6e2ec, roughness: 0.35, metalness: 0.3 }),
+      pillar: std({ color: 0xb8c8d6, roughness: 0.4, metalness: 0.4 }),
+      trim: std({ color: 0x46566a, roughness: 0.35, metalness: 0.6 }),
+      trimDark: std({ color: 0x2b3846, roughness: 0.5, metalness: 0.4 }),
+      panelGlow: basic(col(0xc8ecff)),
+      glass: new THREE.MeshStandardMaterial({ color: 0xdff2ff, emissive: 0x4f9ad0, emissiveIntensity: 0.25, transparent: true, opacity: 0.42, roughness: 0.2, depthWrite: false }),
+    });
+  } else if (look === 'obs') {
+    L({
+      wall: deckShade(std({ map: T.wall, ...relief('metal', 1, 0.4), roughness: 0.5, metalness: 0.3 }), { pit: 0.75 }),
+      floor: deckShade(std({ map: T.floor, roughness: 0.28, metalness: 0.25 }), {}),
+      ceil: std({ map: T.ceil, emissive: 0xffffff, emissiveMap: T.ceil, emissiveIntensity: 0.9, roughness: 0.8 }),
+      pit: deckShade(std({ color: 0x0a0d1a, roughness: 0.6 }), { pit: 0.5 }),
+      prop: std({ color: 0x4c5280, roughness: 0.45, metalness: 0.3 }),
+      pillar: std({ color: 0x4c5280, roughness: 0.45, metalness: 0.3 }),
+      trim: std({ color: 0xb48a4c, roughness: 0.35, metalness: 0.85 }),
+      trimDark: std({ color: 0x6a5230, roughness: 0.4, metalness: 0.8 }),
+      panelGlow: basic(col(0xc8bcff)),
+    });
+  } else if (look === 'eng') {
+    L({
+      wall: deckShade(std({ map: T.wall, normalMap: pbrTex('rust', 'normal', 0.5), normalScale: new THREE.Vector2(0.7, 0.7), roughness: 0.72, metalness: 0.25 }), { band: 0x2a2018, bandH: 1.0, bandSoft: 0.9, bandAmt: 0.55, pit: 0.75 }),
+      floor: deckShade(std({ map: T.floor, bumpMap: T.floor, bumpScale: 1.2, roughness: 0.45, metalness: 0.55 }), { speck: 0.3, speckCol: 0x2a2420 }),
+      ceil: std({ map: T.ceil, roughness: 0.7, metalness: 0.4 }),
+      pit: deckShade(std({ color: 0x15100c, roughness: 0.3, metalness: 0.4 }), { pit: 0.5 }),
+      prop: std({ color: 0x4a5a52, ...relief('metal', 1, 0.6), roughness: 0.5, metalness: 0.45 }),
+      pillar: std({ color: 0x5a5650, ...relief('rust', 0.5, 0.6), roughness: 0.6, metalness: 0.5 }),
+      trim: std({ color: 0xc8962a, ...relief('rust', 0.5, 0.5), roughness: 0.6, metalness: 0.3 }),
+      trimDark: std({ map: T.hazard, roughness: 0.7 }),
+      panelGlow: basic(col(0xffb050)),
+    });
+  } else if (look === 'med') {
+    L({
+      wall: deckShade(std({ map: T.wall, roughness: 0.28, metalness: 0.05 }), { band: 0x2d6476, bandH: 1.25, bandSoft: 0.015, bandAmt: 1, pit: 0.65 }),
+      floor: deckShade(std({ map: T.floor, roughness: 0.38 }), {}),
+      ceil: std({ map: T.ceil, roughness: 0.6 }),
+      pit: deckShade(std({ color: 0x1a3236, roughness: 0.5 }), { pit: 0.4 }),
+      prop: std({ color: 0xeef3f3, roughness: 0.35 }),
+      pillar: std({ color: 0xdfe8ea, roughness: 0.35 }),
+      trim: std({ color: 0xc5d1d4, roughness: 0.3, metalness: 0.6 }),
+      trimDark: std({ color: 0x2d6476, roughness: 0.5 }),
+      panelGlow: basic(col(0xf4ffff)),
+    });
+  } else if (look === 'crew') {
+    L({
+      wall: deckShade(std({ map: T.wall, ...relief('concrete2', 1, 0.25), roughness: 0.9 }), { band: 0x6a4630, bandH: 1.0, bandSoft: 0.015, bandAmt: 1, pit: 0.7 }),
+      floor: deckShade(std({ map: T.floor, bumpMap: T.floor, bumpScale: 0.6, roughness: 0.55 }), {}),
+      ceil: std({ map: T.ceil, roughness: 0.9 }),
+      pit: deckShade(std({ color: 0x241a14, roughness: 0.8 }), { pit: 0.5 }),
+      prop: std({ color: 0x8a6446, ...relief('bark', 1, 0.15), roughness: 0.6 }),
+      pillar: std({ color: 0x7a5638, roughness: 0.6 }),
+      trim: std({ color: 0x7a5638, roughness: 0.6 }),
+      trimDark: std({ color: 0x4a3222, roughness: 0.7 }),
+      panelGlow: basic(col(0xffe2b8)),
+    });
+  } else if (look === 'arch') {
+    L({
+      wall: deckShade(std({ map: T.wall, ...relief('concrete2', 1, 0.4), roughness: 0.7, metalness: 0.2 }), { pit: 0.75 }),
+      floor: deckShade(pbr('stone', 0.5, { color: 0xa08c76 }), {}),
+      ceil: std({ map: T.ceil, roughness: 0.8 }),
+      pit: deckShade(std({ color: 0x0e0b08, roughness: 0.8 }), { pit: 0.5 }),
+      prop: std({ color: 0x4a3828, ...relief('bark', 1, 0.15), roughness: 0.6 }),
+      pillar: std({ color: 0x4a3828, roughness: 0.6 }),
+      trim: std({ color: 0x5a4630, roughness: 0.55, metalness: 0.2 }),
+      trimDark: std({ color: 0x2a2018, roughness: 0.7 }),
+      panelGlow: basic(col(0xffc070)),
+    });
+  } else if (look === 'bridge') {
+    L({
+      wall: deckShade(std({ map: T.wall, ...relief('metal', 1, 0.4), roughness: 0.45, metalness: 0.35 }), { pit: 0.75 }),
+      floor: deckShade(std({ map: T.floor, roughness: 0.5, metalness: 0.2 }), {}),
+      ceil: std({ map: T.ceil, roughness: 0.7, metalness: 0.3 }),
+      pit: deckShade(std({ color: 0x05070e, roughness: 0.6 }), { pit: 0.5 }),
+      prop: std({ color: 0x2e3b55, roughness: 0.45, metalness: 0.4 }),
+      pillar: std({ color: 0x34425e, roughness: 0.45, metalness: 0.4 }),
+      trim: std({ color: 0x2e3a52, roughness: 0.4, metalness: 0.5 }),
+      trimDark: std({ color: 0xb8923e, roughness: 0.35, metalness: 0.7 }),
+      panelGlow: basic(col(0xcfe0ff)),
+    });
+  }
+  return out;
 }
 
 // Box geometry whose UVs tile in world units (one texture repeat per `tile` m).
