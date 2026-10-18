@@ -345,15 +345,17 @@ const niko = await az(() => { AZ.edition.shift('FUTURE'); AZ.simulate(0.1); cons
 check(niko[0] && !niko[1], 'Niko is himself in the present, an echo in the flooded future', JSON.stringify(niko));
 await scene('the river is diverted in the earliest state (refused in the present)', 'scene_' + (await az(() => AZ.room)), 'PRESENT', 'PAST');
 // the river cuts the village: walk the old bridge in the past
+const fell = await az(() => { AZ.edition.shift('PRESENT'); LVB.place(0, -46); const s0 = LVB.setbacks; LVB.walkTo(0, -62, 6); return LVB.setbacks > s0 || AZ.player.pos.z > -58; });
+await page.waitForTimeout(1200); // the fall's fade and the walk back to the checkpoint
 const canal = await az(() => {
   const r = {};
-  AZ.edition.shift('PRESENT'); LVB.place(0, -46); const s0 = LVB.setbacks;
-  LVB.walkTo(0, -62, 6); r.presentFell = LVB.setbacks > s0 || AZ.player.pos.z > -58;
-  LVB.place(0, -46); AZ.edition.shift('PAST'); const s1 = LVB.setbacks;
+  AZ.simulate(0.2);
+  LVB.place(0, -46); AZ.edition.shift('PAST'); AZ.simulate(0.1); const s1 = LVB.setbacks;
   r.left = LVB.walkTo(0, -62, 8); r.pastCrossed = LVB.setbacks === s1 && AZ.player.pos.z < -58;
   AZ.edition.shift('PRESENT');
   return r;
 });
+canal.presentFell = fell;
 check(canal.presentFell && canal.pastCrossed, 'the water cuts the village in two; in the past the bridge still stands', JSON.stringify(canal));
 await az(() => LVB.exit());
 await az(() => { AZ.simulate(0.3); LVB.skip(); });

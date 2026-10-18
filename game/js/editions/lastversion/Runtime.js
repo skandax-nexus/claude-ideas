@@ -509,7 +509,12 @@ export class LastVersion {
   }
 
   applyAfter(node) {
-    if (node.beatDone) this.g.beatDone();
+    if (node.beatDone) {
+      // a scene or choice beat's own closing lines (an encounter's person says theirs)
+      const b = this.beat;
+      if (b.after?.length && !b.npc && (b.kind === 'scene' || b.kind === 'choice') && !this.g.deckWorld.flags.beat_done) this.g.hud.say(b.after, this.g.facts, () => this.g.beatDone());
+      else this.g.beatDone();
+    }
     if (node.ending) this.ending(node.ending);
   }
 
