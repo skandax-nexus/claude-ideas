@@ -538,3 +538,94 @@ button.install.pending.dim { opacity: 0.45; }
 #buttons .combo.off { display: none !important; }
 body.touch #buttons .combo { left: 0; top: 0; width: 52px; height: 52px; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; color: var(--ink); font-size: 8px; font-weight: 800; letter-spacing: 0.08em; }
 body.touch #buttons .combo svg { width: 20px; height: 20px; }
+
+/* v1.0: WORLD FORGE --------------------------------------------------------------- */
+/* the setup panel: one card per act, small selects for its rules */
+#forge .panel.forgep { width: min(640px, 96vw); }
+.forgep .body { font-size: 12px; }
+.forgep .frow { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.forgep .frow3 { grid-template-columns: 1.4fr 1fr 1fr; }
+.forgep label { margin: 8px 0; }
+.forgep h3 { margin: 16px 0 6px; }
+.forgep h3 small { font-weight: 500; letter-spacing: 0; text-transform: none; margin-left: 6px; }
+.forgep .fact { border: 1px solid var(--line); border-radius: 12px; padding: 8px 10px; margin: 6px 0; background: rgba(255, 255, 255, 0.5); }
+.forgep .fact .fhead { display: grid; grid-template-columns: 44px 1fr 1fr; gap: 6px; align-items: center; }
+.forgep .fact .fhead b { white-space: nowrap; }
+.forgep .tagline { margin: 2px 0 0; font-size: 11px; color: var(--ink-soft); font-weight: 500; min-height: 14px; }
+.forgep .fact .fhead b { font-size: 11px; letter-spacing: 0.1em; color: var(--ink-soft); }
+.forgep .fact .frules { display: grid; grid-template-columns: repeat(5, 1fr) auto; gap: 4px; margin-top: 6px; align-items: end; }
+.forgep .fact .frules label { margin: 0; font-size: 9px; letter-spacing: 0.08em; color: var(--ink-soft); }
+.forgep .fact .frules select, .forgep .fact .fhead select, .forgep .fact .fhead input { padding: 6px 6px; font-size: 11px; margin-top: 2px; }
+.forgep .fact .frules .nul { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; font-size: 9px; letter-spacing: 0.08em; color: var(--ink-soft); }
+.forgep .fact .frules .nul input { width: 18px; height: 18px; margin: 4px 0 6px; accent-color: var(--coral); }
+.forgep .crow { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 4px 0; }
+.forgep .crow input, .forgep .crow select { margin: 0; padding: 7px 8px; font-size: 12px; }
+.forgep .grow { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.forgep .grow select { margin: 0; padding: 7px 6px; font-size: 11px; }
+.forgep #fg_go { background: var(--coral); color: #fff; border: none; margin-top: 14px; }
+.forgep .seedrow { display: grid; grid-template-columns: 1fr auto; gap: 6px; align-items: end; }
+.forgep .seedrow button { padding: 9px 12px; font-size: 11px; white-space: nowrap; }
+@media (max-width: 700px) { .forgep .fact .frules { grid-template-columns: repeat(3, 1fr); } .forgep .frow3 { grid-template-columns: 1fr 1fr; } }
+
+/* the local rules card: shown on arrival in an act, again with K or the RULES dock button */
+#rules { position: fixed; left: 16px; top: 50%; transform: translateY(-50%); z-index: 25; pointer-events: none; opacity: 0; transition: opacity 0.5s; max-width: min(380px, 42vw); }
+#rules.on { opacity: 1; }
+#rules .inner { background: rgba(255, 255, 255, 0.9); padding: 14px 18px; border-radius: 18px; box-shadow: 0 20px 60px rgba(40, 60, 90, 0.16); }
+#rules small { font-size: 10px; letter-spacing: 0.22em; color: var(--ink-soft); font-weight: 700; }
+#rules h2 { font-size: 15px; letter-spacing: 0.14em; margin: 4px 0 8px; }
+#rules ul { list-style: none; padding: 0; margin: 0; }
+#rules li { display: grid; grid-template-columns: 86px 1fr; gap: 8px; font-size: 12px; line-height: 1.35; margin: 4px 0; }
+#rules li b { font-size: 10px; letter-spacing: 0.1em; color: var(--ink-soft); padding-top: 2px; }
+#rules li em { font-style: normal; font-weight: 700; color: var(--ink); }
+#rules li.nul em { color: var(--danger); }
+#rules li span { color: var(--ink-soft); }
+#rules .gg { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+#rules .gc { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; padding: 3px 8px; border-radius: 999px; background: #e3f6ec; color: #2f8a5a; }
+#rules .gc.no { background: #fde9e4; color: #c0553f; text-decoration: line-through; }
+#rules .gc small { font-weight: 500; letter-spacing: 0; text-transform: none; margin-left: 4px; font-size: 10px; color: inherit; opacity: 0.85; }
+#rules .k { margin: 8px 0 0; font-size: 10px; color: var(--ink-soft); }
+/* phones: under the room state, clear of the captions and the stick */
+body.touch #rules { max-width: min(300px, 40vw); top: 68px; transform: none; left: 12px; }
+body.touch #rules .inner { padding: 8px 11px; }
+body.touch #rules h2 { font-size: 12px; margin: 2px 0 5px; }
+body.touch #rules li { font-size: 10px; grid-template-columns: 64px 1fr; margin: 2px 0; line-height: 1.25; }
+body.touch #rules li span { display: none; } /* the rule's value is enough at a glance; the journal has the text */
+body.touch #rules .gc { font-size: 9px; padding: 2px 7px; }
+body.touch #rules .k { display: none; }
+@media (orientation: portrait) { #rules { left: 12px; right: 12px; max-width: none; top: 30%; transform: none; } }
+
+/* gear in the dock: four slots with a cooldown ring; dimmed where the local rules refuse them */
+#dock .d.gear.off, #dock .d.rules.off { display: none; }
+#dock .d.gear { position: relative; padding-left: 8px; }
+#dock .d.gear i { position: relative; width: 20px; height: 20px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; background: conic-gradient(rgba(35, 48, 60, 0.18) calc(var(--cd, 0) * 100%), transparent 0); }
+#dock .d.gear i svg { width: 16px; height: 16px; }
+#dock .d.gear.no { opacity: 0.4; }
+#dock .d.gear.no span { text-decoration: line-through; }
+#dock .d.gear.spent span { text-decoration: line-through; }
+#dock .d.gear.cooling { color: var(--ink-soft); }
+#dock .d.gear.on { color: var(--verb); }
+#gearpad { display: none; }
+body.touch #gearpad { display: grid; position: absolute; right: max(18px, env(safe-area-inset-right)); bottom: 184px; grid-template-columns: 50px 50px; gap: 6px; pointer-events: auto; }
+body.touch #gearpad .g { width: 50px; height: 50px; border-radius: 50%; padding: 0; border: none; background: rgba(255, 255, 255, 0.6); box-shadow: 0 6px 18px rgba(40, 60, 90, 0.14); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; font-size: 7px; font-weight: 800; letter-spacing: 0.06em; color: var(--ink); }
+body.touch #gearpad .g i { width: 22px; height: 22px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; background: conic-gradient(rgba(35, 48, 60, 0.22) calc(var(--cd, 0) * 100%), transparent 0); }
+body.touch #gearpad .g i svg { width: 16px; height: 16px; }
+body.touch #gearpad .g.off { display: none; }
+body.touch #gearpad .g.no, body.touch #gearpad .g.spent { opacity: 0.4; }
+body.touch #gearpad .g.down { transform: scale(0.93); }
+body.touch #dock .d.gear, body.touch #dock .d.rules { display: none; }
+body.touch.forge #dock .d.rules { display: flex; }
+@media (orientation: portrait) { body.touch #gearpad { bottom: 200px; right: 12px; } }
+@media (max-width: 1100px) { #dock .d.gear span, #dock .d.gear kbd { display: none; } }
+/* the two-option choice and the last decision */
+#forgechoice .panel { width: min(520px, 100%); }
+#forgechoice .body p { font-size: 15px; line-height: 1.6; }
+#forgechoice .body button, #forgeend .body button { margin: 8px 0; }
+#forgechoice .body button small { color: var(--ink-soft); }
+#journal .rr { list-style: none; padding: 0; }
+#journal .rr li { display: grid; grid-template-columns: 90px 1fr; gap: 8px; font-size: 13px; }
+#journal .rr li b { font-size: 10px; letter-spacing: 0.1em; color: var(--ink-soft); padding-top: 3px; }
+#journal .rr li em { font-style: normal; font-weight: 700; }
+#journal .rr li span { color: var(--ink-soft); }
+#journal .tokens .gc { font-size: 11px; font-weight: 700; letter-spacing: 0.06em; padding: 4px 10px; border-radius: 999px; background: #e3f6ec; color: #2f8a5a; }
+#journal .tokens .gc.no { background: #fde9e4; color: #c0553f; text-decoration: line-through; }
+#journal .tokens .gc small { font-weight: 500; letter-spacing: 0; margin-left: 4px; }

@@ -65,6 +65,7 @@ export function generateZone(story, zi, si) {
   const theme = zone.themes?.[si] || zone.theme;
   // THE LAST VERSION's themes: 'rain' (a present-day city in the rain), 'ruin' (the same city in
   // 2196, overgrown), 'settlement' (stone houses, water and trees), 'liminal' (floating fragments)
+  const rules = zone.rules || null; // WORLD FORGE: the act's local rules shape the district
   const canal = zone.canal ?? (si >= 1 || theme === 'reactor'); // water splits the district from the second sector on
   const canalZ = [-50, -57];
 
@@ -116,6 +117,16 @@ export function generateZone(story, zi, si) {
   const scene = { x: sceneSide * rng.float(14, 22), z: far(rng.float(-62, -84)) };
   if (beat.kind === 'custom') {
     // the edition places its own scene (zone.overlay below): nothing here
+  } else if (beat.kind === 'arrival' && rules?.nullField) {
+    // a null field: no law reaches a roof, so the recorder waits on a plinth in the street
+    const rx = sceneSide * 16, rz = canal ? -76 : -38;
+    M.box([rx - 2.5, 0, rz - 2.5, rx + 2.5, 0.6, rz + 2.5], { mat: 'trim' });
+    M.box([rx - 0.5, 0.6, rz - 0.4, rx + 0.5, 1.6, rz + 0.4], { mat: 'prop' });
+    M.inter.push({ id: `log_${id}`, kind: 'terminal', pos: [rx, 1.85, rz], yaw: 0, r: 2.6, prompt: 'PLAY RECORDER', log: beat.log });
+    M.clear(rx - 6, rz - 6, rx + 6, rz + 6);
+    M.texts.push({ text: zone.motto, pos: [rx, 3.2, rz - 2.6], rotY: 0, size: 0.5, color: hex(zone.palette.accent) });
+    scene.x = rx;
+    scene.z = rz;
   } else if (beat.kind === 'arrival') {
     // a recorder on a landmark roof: the dome or the remembered stairs get you there
     const rx = sceneSide * 18, rz = canal ? -76 : -38, rh = 7;
@@ -177,11 +188,28 @@ export function generateZone(story, zi, si) {
     M.box([sx - 4, 0, sz - 4, sx - 3.4, 4.2, sz + 1], { mat: theme === 'forest' ? 'bark' : theme === 'cradle' ? 'industrial' : 'facade' });
     M.box([sx + 3.4, 0, sz - 4, sx + 4, 4.2, sz + 1], { mat: theme === 'forest' ? 'bark' : theme === 'cradle' ? 'industrial' : 'facade' });
     M.box([sx - 2.4, 3.3, sz - 3.35, sx + 2.4, 3.9, sz - 3.3], { mat: 'neon', solid: false });
-    M.npcs.push({ id: `npc_${id}`, crew: c.id, pos: [sx, 0, sz - 1.6], yaw: 0, hologram: !c.alive, lines: beat.lines, junoAfter: beat.junoAfter, choices: beat.choices, after: beat.after });
+    M.npcs.push({ id: `npc_${id}`, crew: c.id, pos: [sx, 0, sz - 1.6], yaw: 0, hologram: !c.alive, lines: beat.lines, junoAfter: beat.junoAfter, choices: beat.choices, after: beat.after, path: beat.path ? [[sx, sz - 1.6], [sx + 5, sz + 3], [sx - 5, sz + 3]] : undefined });
     if (theme === 'cradle') cradlePod(M, sx, sz, zone); // row one: Varga's pod, open if she is awake
     M.clear(sx - 7, sz - 6, sx + 7, sz + 8);
+  } else if (beat.kind === 'verdict') {
+    // WORLD FORGE's finale in the open: a chair on a plinth, the cast standing round it as echoes
+    const sx = scene.x, sz = scene.z;
+    M.box([sx - 5, 0, sz - 5, sx + 5, 0.5, sz + 5], { mat: 'trim' });
+    M.box([sx - 0.6, 0.5, sz - 0.6, sx + 0.6, 1.1, sz + 0.6], { mat: 'prop' });
+    M.inter.push({ id: 'chair', kind: 'chair', pos: [sx, 1.5, sz], r: 2.8, prompt: beat.prompt || 'SIT IN THE CHAIR' });
+    const nj = Math.min(7, story.cast.length);
+    for (let k = 0; k < nj; k++) {
+      const a = (k / nj) * Math.PI * 2;
+      M.npcs.push({ id: `juror_${k}`, crew: story.cast[k].id, pos: [sx + Math.sin(a) * 4.2, 0.5, sz + Math.cos(a) * 4.2], yaw: a + Math.PI, hologram: true, silent: true });
+    }
+    M.texts.push({ text: zone.motto, pos: [sx, 3.4, sz - 5.2], rotY: 0, size: 0.5, color: hex(zone.palette.accent) });
+    M.clear(sx - 8, sz - 8, sx + 8, sz + 8);
   }
-  if (canal) {
+  if (canal && rules?.nullField) {
+    // a null field: the bridge is real, the water is only water
+    M.box([-3, -0.4, canalZ[1] - T, 3, 0, canalZ[0] + T], { mat: 'trim' });
+    M.texts.push({ text: 'BRIDGE OPEN', pos: [0, 2.6, canalZ[0] + 1.2], rotY: 0, size: 0.5, color: hex(zone.palette.accent) });
+  } else if (canal) {
     // the old bridge is a memory: solid with ECHOES SOLIDIFY IN ECHO
     M.box([-3, -0.4, canalZ[1], 3, 0, canalZ[0]], { mat: 'wall', echo: true });
     M.challenges.push({ key: 'canal', z0: canalZ[0] + 8, z1: canalZ[1] - 2, hints: zone.hints?.canal || ZONE_HINTS.canal });
@@ -189,7 +217,8 @@ export function generateZone(story, zi, si) {
   }
 
   // --- drones on the far side ----------------------------------------------------------
-  const nDrones = zone.drones ? zone.drones[si] ?? 0 : theme === 'tower' ? 2 + si : theme === 'cradle' ? si : si === 2 || theme === 'city' && si === 1 ? 1 : 0;
+  const nDrones = zone.drones ? zone.drones[si] ?? 0 : rules ? { NONE: 0, PATROL: 1 + (si > 0 ? 1 : 0), HUNT: 2 + si }[rules.watchers] ?? 1
+    : theme === 'tower' ? 2 + si : theme === 'cradle' ? si : si === 2 || theme === 'city' && si === 1 ? 1 : 0;
   for (let k = 0; k < nDrones; k++) {
     const z = canal ? -64 - k * 9 : -40 - k * 12;
     const x0 = -XW + 6, x1 = XW - 6;
@@ -197,6 +226,12 @@ export function generateZone(story, zi, si) {
   }
   if (nDrones) M.challenges.push({ key: 'drones', z0: (canal ? canalZ[1] : -30), z1: ZN, hints: HINTS[`sentinel:${story.after?.sentinels}`] || zone.hints?.drones || ZONE_HINTS.drones });
   M.challenges.push({ key: 'gate', z0: ZN + 14, z1: ZN, hints: ZONE_HINTS.gate });
+  // WORLD FORGE, time SWEEPERS: beams turn across the avenue; the sidewalks stay clear of them
+  if (rules?.time === 'SWEEPERS') {
+    M.hazards = [];
+    for (const z of canal ? [-24, -70] : [-24, -52]) M.hazards.push({ kind: 'sweeper', pivot: [0, 0.75, z], radius: 4.3, speed: 1.1 + si * 0.2, phase: z });
+    M.challenges.push({ key: 'sweepers', effect: 'timeStop', optional: true, z0: 4, z1: ZN, hints: HINTS.sweepers });
+  }
 
   // --- the district: buildings, trees, tanks, masts --------------------------------------
   dressing(M, theme, rng, zone, canal ? canalZ : null);
@@ -261,7 +296,7 @@ export function generateZone(story, zi, si) {
     interactables: M.inter.map((t) => ({ ...t, room: id })),
     items: [],
     tokens: M.tokens.map((t) => ({ ...t, room: id })),
-    hazards: [],
+    hazards: (M.hazards || []).map((h) => ({ ...h, room: id })),
     sentinels: M.sentinels.map((s, k) => ({ ...s, room: id, id: `${id}_s${k}` })),
     npcs: M.npcs.map((n) => ({ ...n, room: id })),
     checkpoints: M.checkpoints.map((c) => ({ ...c, room: id })),

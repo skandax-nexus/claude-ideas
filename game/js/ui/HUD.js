@@ -116,6 +116,8 @@ export class HUD {
     el.classList.add('on');
     const out = el.querySelector('.txt');
     if (!animate) {
+      clearInterval(this._glitch); // a rewrite still running would keep overwriting the new text
+      el.classList.remove('rewrite');
       out.textContent = text;
       return;
     }
@@ -197,8 +199,58 @@ export class HUD {
     this._cardT = setTimeout(() => el.classList.remove('on'), ms);
   }
 
+  // WORLD FORGE: the local rules card, shown on arrival and on demand
+  rules(title, rowsHtml, gearHtml, ms = 7000) {
+    const el = $('#rules');
+    el.querySelector('h2').textContent = title || '';
+    el.querySelector('ul').innerHTML = rowsHtml || '';
+    el.querySelector('.gg').innerHTML = gearHtml || '';
+    el.classList.add('on');
+    clearTimeout(this._rulesT);
+    if (ms) this._rulesT = setTimeout(() => el.classList.remove('on'), ms);
+  }
+
+  rulesHide() {
+    clearTimeout(this._rulesT);
+    $('#rules').classList.remove('on');
+  }
+
+  get rulesShown() {
+    return $('#rules').classList.contains('on');
+  }
+
+  // Journal in a WORLD FORGE game: the act, its rules, the kit, the cast and what you chose.
+  renderForgeJournal(game) {
+    const { story, campaign, facts } = game;
+    const g = story.game;
+    const act = story.decks[campaign.deck];
+    const twist = facts.get('forge_twist_read');
+    const people = g.cast.map((c) => {
+      const st = facts.get(`clue_${c.id}`);
+      const label = st === 'guilty' ? 'THE RECORD LIED' : st === 'cleared' ? 'RECORD CORRECTED' : facts.get(`met_${c.id}`) ? 'MET' : 'UNKNOWN';
+      const secret = twist && (facts.get(`met_${c.id}`) || c.antagonist) ? `<br><i>${c.first} ${c.secret}.</i>` : '';
+      return `<li><span><b>${c.name}</b> <small>${c.role}${c.antagonist && st === 'guilty' ? ` &middot; ${g.truth.how}` : ''}${secret}</small></span><span class="st ${st || ''}">${label}</span></li>`;
+    }).join('');
+    const choices = story.decks.flatMap((d) => d.beats.filter((b) => b.choice).map((b) => {
+      const v = facts.get(b.choice.fact);
+      const o = v && b.choice.options.find((x) => x.tag === v);
+      return `<li>${b.choice.prompt} <small>${o ? `You chose: ${o.label}.` : 'Not yet decided.'}</small></li>`;
+    })).join('') || '<li class="dim">No choices yet.</li>';
+    const logs = game.log.slice().reverse().map((l) => `<li>${l}</li>`).join('') || '<li class="dim">Nothing yet.</li>';
+    const R = game.rulesHtml(act);
+    $('#journal .body').innerHTML = `
+      <h3>WHERE YOU ARE</h3><p><b>${g.title.toUpperCase()} &middot; ACT ${campaign.deck + 1} OF ${story.decks.length} &middot; ${act.name}</b><br><span class="dim">${act.subtitle} &middot; ${act.open ? 'district' : 'sector'} ${campaign.sector + 1} of ${act.sectors} &middot; ${g.genre.toLowerCase()} &middot; ${g.hero}</span></p>
+      <h3>THE QUESTION</h3><p class="dim">${story.question}</p>
+      <h3>LOCAL RULES</h3><ul class="rr">${R.rows}</ul>
+      <h3>GEAR</h3><div class="tokens">${R.gear}</div>
+      <h3>PEOPLE</h3><ul class="suspects">${people}</ul>
+      <h3>YOUR CHOICES</h3><ul>${choices}</ul>
+      <h3>LOG</h3><ul class="log">${logs}</ul>`;
+  }
+
   // Journal while out on the vessel: progress, the suspects board, logs.
   renderDeckJournal(game) {
+    if (game.story?.forge) return this.renderForgeJournal(game);
     const { story, campaign, facts } = game;
     const deck = story.decks[campaign.deck];
     const sus = story.cast.map((c) => {

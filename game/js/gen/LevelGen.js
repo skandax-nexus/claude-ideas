@@ -426,7 +426,8 @@ export function generateSector(story, deckIdx, sectorIdx, campaignSeed) {
   const storyAt = beat.kind === 'arrival' ? 0 : beat.kind === 'verdict' ? nPuzzles : rng.int(1, Math.max(1, nPuzzles - 1));
   const plan = [];
   const mechIdx = story.mechDeck ?? deckIdx; // which mechanics are unlocked (an edition can say)
-  for (let i = 0; i < nPuzzles; i++) plan.push({ type: 'puzzle', ...planPuzzle(rng, mechIdx, difficulty + i * 0.25, deck.feature, deck.mechs || story.mechs || null) });
+  // a WORLD FORGE act plans its own puzzles, within its local rules (gen/Forge.js)
+  for (let i = 0; i < nPuzzles; i++) plan.push({ type: 'puzzle', ...(deck.planPuzzle ? deck.planPuzzle(sectorIdx, i, rng) : planPuzzle(rng, mechIdx, difficulty + i * 0.25, deck.feature, deck.mechs || story.mechs || null)) });
   plan.splice(storyAt, 0, { type: 'story', beat });
 
   const names = rng.shuffle(deck.rooms);
@@ -706,7 +707,8 @@ function storyRoom(R, beat, deck, rng, level, story) {
   if (A.windows) R.box([-W / 2 + 0.02, 3.9, -12, -W / 2 + 0.08, 5.7, -3], { mat: A.windows === 'dark' ? 'windowDark' : 'windowStars', solid: false });
   // after SUSTAINED the Other hangs from the ceiling of every deck's first room: what you are becoming
   if (A.otherAboard && beat.kind === 'arrival') R.npcs.push({ id: `other_${R.id}`, crew: 'other', pos: [0, R.H, -8], yaw: 0, silent: true, upsideDown: true });
-  if (beat.log) {
+  // a record to play (a contradiction's `log` is what you say after the plaque, not a recording)
+  if (beat.log && typeof beat.log === 'object') {
     R.box([-W / 2 + 0.6, 0, -6.6, -W / 2 + 1.6, 1.0, -5.4], { mat: 'prop' });
     R.inter.push({ id: `log_${R.id}`, kind: 'terminal', pos: [-W / 2 + 1.5, 1.25, -6], yaw: Math.PI / 2, r: 2.4, prompt: 'PLAY LOG', log: beat.log });
   }
@@ -719,7 +721,7 @@ function storyRoom(R, beat, deck, rng, level, story) {
   }
   if (beat.kind === 'encounter') {
     const c = story.cast[beat.crew ?? story.decks[deck.index].crew];
-    R.npcs.push({ id: `npc_${R.id}`, crew: c.id, pos: [1.6, 0, -7.2], yaw: Math.PI * 0.85, hologram: !c.alive, lines: beat.lines, junoAfter: beat.junoAfter, choices: beat.choices, after: beat.after });
+    R.npcs.push({ id: `npc_${R.id}`, crew: c.id, pos: [1.6, 0, -7.2], yaw: Math.PI * 0.85, hologram: !c.alive, lines: beat.lines, junoAfter: beat.junoAfter, choices: beat.choices, after: beat.after, path: beat.path ? [[1.6, -7.2], [-2.4, -9.6], [-2.4, -5.2]] : undefined });
   }
   if (beat.kind === 'choice' || beat.kind === 'scene') {
     // THE LAST VERSION: a device (or a person) at the heart of the room that opens a choice, or plays a scene
@@ -729,8 +731,9 @@ function storyRoom(R, beat, deck, rng, level, story) {
   }
   if (beat.kind === 'verdict') {
     // the crew, in a circle of echoes around the chair
-    for (let k = 0; k < 7; k++) {
-      const a = (k / 7) * Math.PI * 2;
+    const nj = Math.min(7, story.cast.length);
+    for (let k = 0; k < nj; k++) {
+      const a = (k / nj) * Math.PI * 2;
       R.npcs.push({ id: `juror_${k}`, crew: story.cast[k].id, pos: [Math.sin(a) * 3.6, 0, -6.6 + Math.cos(a) * 3.6], yaw: a + Math.PI, hologram: true, silent: true });
     }
     R.box([-0.6, 0, -7.2, 0.6, 0.6, -6.0], { mat: 'prop' });
@@ -739,6 +742,8 @@ function storyRoom(R, beat, deck, rng, level, story) {
     if (A.junoAboard) R.npcs.push({ id: 'guest_juno', crew: 'juno', pos: [-3.2, 0, -2.6], yaw: Math.PI, silent: true, when: 'verdict_right' });
     if (A.otherAboard) R.npcs.push({ id: 'guest_other', crew: 'other', pos: [0, R.H, -6.6], yaw: 0, silent: true, upsideDown: true });
   }
+  // WORLD FORGE, time SWEEPERS: a slow beam turns in the middle of the hall (the walls stay safe)
+  if (deck.rules?.time === 'SWEEPERS') R.hazards.push({ kind: 'sweeper', pivot: [0, 0.75, -8], radius: 3.4, speed: 0.9, phase: 0.6 });
   // a memory beacon: touch it to save
   R.box([W / 2 - 1.4, 0, -2.4, W / 2 - 0.6, 1.2, -1.6], { mat: 'prop' });
   R.inter.push({ id: `beacon_${R.id}`, kind: 'beacon', pos: [W / 2 - 1.0, 1.5, -2.0], r: 2.4, prompt: 'SAVE MEMORY' });

@@ -254,7 +254,7 @@ const HUSH = { who: 'TICK', text: 'EVERYONE DOWN HERE IS ASLEEP. I WILL USE MY I
 // shared with the vessel's SEVERED opening (one recording)
 const SMALL_FIELD = { who: 'TICK', text: 'THE DEVICE STILL WORKS. IT CARRIES A SMALL FIELD OF ITS OWN. THE WATCHERS DO NOT. THEY ARE STANDING VERY STILL.' };
 
-const CRADLE_ZONE = {
+export const CRADLE_ZONE = {
   key: 'cradle', name: 'THE CRADLE', title: 'Where Halcyon Sleeps', theme: 'cradle', feature: 'echo', idPrefix: 'c',
   rooms: ['THE WELL FLOOR', 'ROOT GALLERY', 'THE REGISTRY', 'MERIDIAN WARD', 'ROW ONE', 'NIGHT WATCH'],
   motto: 'SLEEP IS A PROMISE TO WAKE', // the Cryo Bay's motto: the night watch is woken from here

@@ -29,7 +29,7 @@
     <div id="toast"></div>
     <canvas id="minimap" data-act="map"></canvas>
     <!-- one quiet dock for everything; it dims while you play -->
-    <nav id="dock"><button data-act="laws" class="d laws" aria-label="LAWS"><svg viewBox="0 0 24 24"><path d="M12 2l8.5 5v10L12 22l-8.5-5V7z" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="3" fill="currentColor"/></svg><span>LAWS</span><kbd>L</kbd></button><button data-act="journal" class="d journal" aria-label="LOG"><svg viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M9 8h6M9 12h6M9 16h4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span>LOG</span><kbd>J</kbd></button><button data-act="map" class="d map" aria-label="MAP"><svg viewBox="0 0 24 24"><path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2z M9 4v14 M15 6v14" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg><span>MAP</span><kbd>M</kbd></button><button data-act="combo" class="d combo off" aria-label="Next law combo"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="4" rx="1.5" fill="currentColor"/><rect x="4" y="10" width="16" height="4" rx="1.5" fill="currentColor" opacity="0.55"/><rect x="4" y="16" width="10" height="4" rx="1.5" fill="currentColor" opacity="0.3"/><path d="M17 15l3 3-3 3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>COMBO</span><kbd>X</kbd></button><button data-act="hint" class="d hint" aria-label="TICK"><svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="8" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="13" r="3" fill="currentColor"/><path d="M8 3h8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span>TICK</span><kbd>H</kbd></button><button data-act="run" class="d gaitd" aria-label="Walk or run"><svg viewBox="0 0 24 24"><circle cx="14" cy="4.5" r="2.2" fill="currentColor"/><path d="M10 21l2.5-6-3-2.5 1.5-5 4 2.5 3 1M12.5 15l3 2 1 4M7 10l3-2.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>WALK</span><kbd>Z</kbd></button><button data-act="pause" class="d pause" aria-label="MENU"><svg viewBox="0 0 24 24"><rect x="6" y="5" width="4" height="14" rx="1.5" fill="currentColor"/><rect x="14" y="5" width="4" height="14" rx="1.5" fill="currentColor"/></svg><span>MENU</span><kbd>Esc</kbd></button></nav>
+    <nav id="dock"><button data-act="laws" class="d laws" aria-label="LAWS"><svg viewBox="0 0 24 24"><path d="M12 2l8.5 5v10L12 22l-8.5-5V7z" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="3" fill="currentColor"/></svg><span>LAWS</span><kbd>L</kbd></button><button data-act="journal" class="d journal" aria-label="LOG"><svg viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M9 8h6M9 12h6M9 16h4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span>LOG</span><kbd>J</kbd></button><button data-act="map" class="d map" aria-label="MAP"><svg viewBox="0 0 24 24"><path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2z M9 4v14 M15 6v14" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg><span>MAP</span><kbd>M</kbd></button><button data-act="combo" class="d combo off" aria-label="Next law combo"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="4" rx="1.5" fill="currentColor"/><rect x="4" y="10" width="16" height="4" rx="1.5" fill="currentColor" opacity="0.55"/><rect x="4" y="16" width="10" height="4" rx="1.5" fill="currentColor" opacity="0.3"/><path d="M17 15l3 3-3 3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>COMBO</span><kbd>X</kbd></button><button data-act="rules" class="d rules off" aria-label="Local rules"><svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 8h8M8 12h8M8 16h5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span>RULES</span><kbd>K</kbd></button><button data-act="gear:0" class="d gear off" aria-label="Gear 1"><i></i><span></span><kbd>5</kbd></button><button data-act="gear:1" class="d gear off" aria-label="Gear 2"><i></i><span></span><kbd>6</kbd></button><button data-act="gear:2" class="d gear off" aria-label="Gear 3"><i></i><span></span><kbd>7</kbd></button><button data-act="gear:3" class="d gear off" aria-label="Gear 4"><i></i><span></span><kbd>8</kbd></button><button data-act="hint" class="d hint" aria-label="TICK"><svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="8" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="13" r="3" fill="currentColor"/><path d="M8 3h8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span>TICK</span><kbd>H</kbd></button><button data-act="run" class="d gaitd" aria-label="Walk or run"><svg viewBox="0 0 24 24"><circle cx="14" cy="4.5" r="2.2" fill="currentColor"/><path d="M10 21l2.5-6-3-2.5 1.5-5 4 2.5 3 1M12.5 15l3 2 1 4M7 10l3-2.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>WALK</span><kbd>Z</kbd></button><button data-act="pause" class="d pause" aria-label="MENU"><svg viewBox="0 0 24 24"><rect x="6" y="5" width="4" height="14" rx="1.5" fill="currentColor"/><rect x="14" y="5" width="4" height="14" rx="1.5" fill="currentColor"/></svg><span>MENU</span><kbd>Esc</kbd></button></nav>
 
     <!-- touch: a joystick that appears under your thumb, look and pinch-zoom on the right -->
     <div id="lookzone"></div>
@@ -40,6 +40,8 @@
       <button data-act="jump" class="b jump" aria-label="Jump"><svg viewBox="0 0 24 24"><path d="M12 19V6M6 11l6-6 6 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
       <button data-act="shift" class="b shift" aria-label="Shift the room"><span>SHIFT</span></button>
     </div>
+    <!-- WORLD FORGE on phones: the four gear slots -->
+    <div id="gearpad"><button data-act="gear:0" class="g off" aria-label="Gear 1"><i></i><span></span></button><button data-act="gear:1" class="g off" aria-label="Gear 2"><i></i><span></span></button><button data-act="gear:2" class="g off" aria-label="Gear 3"><i></i><span></span></button><button data-act="gear:3" class="g off" aria-label="Gear 4"><i></i><span></span></button></div>
   </div>
 
 
@@ -52,7 +54,7 @@
       <p class="ver">v1.1 · in development</p>
       <div class="body">
         <button class="big" id="continue">CONTINUE<small id="continueInfo"></small></button>
-        <button class="big" id="begin">NEW GAME<small>Choose a chapter: the prologue, HALCYON, the Cradle, the vessel or your own story</small></button>
+        <button class="big" id="begin">NEW GAME<small>Choose a chapter: the prologue, HALCYON, the Cradle, the vessel, your own story, or build your own game</small></button>
         <div class="row"><button id="heroBtn">CHARACTER</button><button id="loadBtn">LOAD</button><button id="settingsBtn">SETTINGS</button></div>
         <div class="controls desktop-only">
           <span><b>WASD</b> move</span><span><b>MOUSE</b> look</span><span><b>SPACE</b> jump</span><span><b>Z</b> walk / run</span>
@@ -133,6 +135,30 @@
     </div>
   </section>
 
+  <section class="overlay side left" id="forge">
+    <div class="panel chap studio forgep">
+      <header><h2>WORLD FORGE</h2><button data-back>&times;</button></header>
+      <p class="dim">Build your own game. The Forge builds it on this device from your choices: it is not a chat AI, it recombines the game's own story parts around what you choose, and plans every puzzle so it can be solved under each location's rules.</p>
+      <div class="body"></div>
+    </div>
+  </section>
+
+  <section class="overlay" id="forgechoice">
+    <div class="panel center">
+      <h2>A CHOICE</h2>
+      <div class="body"></div>
+    </div>
+  </section>
+
+  <section class="overlay side right" id="forgeend">
+    <div class="panel center">
+      <h2>THE LAST CHOICE</h2>
+      <p class="dim" id="forgeQ"></p>
+      <div class="body"></div>
+      <button data-close>NOT YET</button>
+    </div>
+  </section>
+
   <section class="overlay side right" id="saves">
     <div class="panel">
       <header><h2 id="savesTitle">SAVE GAME</h2><button data-back>&times;</button></header>
@@ -165,6 +191,8 @@
   </section>
 
   <div id="card"><div class="inner"><small></small><h2></h2><p></p></div></div>
+  <!-- WORLD FORGE: the local rules of the act you are in -->
+  <div id="rules"><div class="inner"><small>LOCAL RULES</small><h2></h2><ul></ul><div class="gg"></div><p class="k desktop-only">K shows this again</p></div></div>
 
   <section class="overlay" id="ending">
     <div class="panel wide"><div class="body"></div></div>

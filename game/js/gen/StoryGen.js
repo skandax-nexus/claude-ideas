@@ -61,18 +61,18 @@ export const DECKS = [
   },
 ];
 
-const FIRST = ['Amara', 'Bastien', 'Chiara', 'Dae-jung', 'Elif', 'Farid', 'Greta', 'Hiro', 'Ines', 'Jonah', 'Kalani', 'Leila', 'Mateo',
+export const FIRST = ['Amara', 'Bastien', 'Chiara', 'Dae-jung', 'Elif', 'Farid', 'Greta', 'Hiro', 'Ines', 'Jonah', 'Kalani', 'Leila', 'Mateo',
   'Nadia', 'Oskar', 'Priya', 'Quinn', 'Rafael', 'Saoirse', 'Tariq', 'Uma', 'Viktor', 'Wen', 'Ximena', 'Yusuf', 'Zora', 'Anouk',
   'Bilal', 'Camille', 'Dmitri', 'Esi', 'Felix', 'Ngozi', 'Haruka', 'Ilya', 'Jae', 'Kofi', 'Lucia', 'Mei', 'Noor', 'Arjun', 'Sol'];
-const LAST = ['Okafor', 'Lindqvist', 'Moreau', 'Tanaka', 'Haddad', 'Novak', 'Castillo', 'Achterberg', 'Mensah', 'Park', 'Rossi',
+export const LAST = ['Okafor', 'Lindqvist', 'Moreau', 'Tanaka', 'Haddad', 'Novak', 'Castillo', 'Achterberg', 'Mensah', 'Park', 'Rossi',
   'Sato', 'Kowalski', 'Adeyemi', 'Ferreira', 'Nakamura', 'Duarte', 'Varela', 'Iyer', 'Brennan', 'Volkov', 'Asante', 'Dubois',
   'Halloran', 'Kim', 'Oyelaran', 'Petrov', 'Quispe', 'Reyes', 'Sorensen', 'Takeda', 'Wainwright', 'Yilmaz', 'Zhou', 'Abara'];
-const PRONOUNS = [
+export const PRONOUNS = [
   { their: 'her', them: 'her' },
   { their: 'his', them: 'him' },
   { their: 'their', them: 'them' },
 ];
-const TRAITS = {
+export const TRAITS = {
   warm: { tag: 'warm', greet: ['Oh. Oh, you\'re awake. Sit, sit - no, you can\'t sit, the chairs are on the ceiling.', 'You came all this way. Of course you did. You always do.'] },
   dry: { tag: 'dry', greet: ['Cycle forty-two. You\'re late. You\'re always late on the even ones.', 'Before you ask: no, I don\'t know why the gravity does that. Yes, I have theories.'] },
   nervous: { tag: 'nervous', greet: ['Don\'t - sorry. Sorry. I thought you were the watcher. You move like it now.', 'Is it you? The real you? The last one said that too.'] },
@@ -121,10 +121,10 @@ export const WISH_OPTIONS = {
   motive: Object.fromEntries([['save', 'To keep someone alive'], ['arrival', 'To hide where the ship arrived'], ['mistake', 'To undo a terrible mistake'], ['promise', 'Because the dreamers promised a way home']]),
   twist: Object.fromEntries([['you', 'You helped start it'], ['observer', 'The watcher is a lost crew member'], ['juno', 'Juno remembers everything'], ['stars', 'The stars outside are fake']]),
 };
-const MOOD_TRAITS = { thriller: ['dry', 'nervous', 'formal'], horror: ['nervous', 'dreamy', 'nervous'], mystery: ['formal', 'dry', 'dreamy'], hopeful: ['warm', 'dreamy', 'warm'] };
+export const MOOD_TRAITS = { thriller: ['dry', 'nervous', 'formal'], horror: ['nervous', 'dreamy', 'nervous'], mystery: ['formal', 'dry', 'dreamy'], hopeful: ['warm', 'dreamy', 'warm'] };
 
 // a player-typed name, made safe to show and speak
-function cleanName(n) {
+export function cleanName(n) {
   const t = String(n || '').replace(/[^\p{L}\p{M}' -]/gu, '').replace(/\s+/g, ' ').trim().slice(0, 16);
   return t ? t[0].toUpperCase() + t.slice(1) : '';
 }
