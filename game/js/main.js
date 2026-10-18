@@ -7,7 +7,7 @@ import * as THREE from '../vendor/three.module.min.js';
 import { FactStore } from './core/FactStore.js';
 import { RealityEngine } from './core/RealityEngine.js';
 import { Objectives } from './core/Objectives.js';
-import { TOKENS, DEFAULT_LAWS } from './core/Laws.js';
+import { TOKENS, DEFAULT_LAWS, describeLaw } from './core/Laws.js';
 import { compileCondition } from './core/conditions.js';
 import { World } from './world/World.js';
 import { Director } from './world/Director.js';
@@ -169,6 +169,8 @@ class Game {
     this.objectives = new Objectives(objectiveLayers, this.facts);
     this.log = [];
     this.timeline = [];
+    this.combos = [];
+    this.comboIndex = -1;
   }
 
   // Connect systems: any change in facts, room states or laws re-derives the world.
@@ -198,6 +200,7 @@ class Game {
       this.dirty = true;
     });
     engine.on('laws', () => {
+      if (!this.hud.lawsSelf) this.hud.lawDraft = null; // changed elsewhere: redraw from the running laws
       this.world.refresh();
       this.deckWorld?.refresh();
       this.dirty = true;
@@ -418,10 +421,7 @@ class Game {
     if (id === 'laws' && !this.facts.get('has_device')) return;
     this.menu = id;
     this.input.release();
-    if (id === 'laws') {
-      this.hud.lawDraft = null;
-      this.hud.renderLaws(this);
-    }
+    if (id === 'laws') this.hud.renderLaws(this); // the draft is kept between visits
     if (id === 'journal') this.hud.renderJournal(this);
     this.hud.show(id);
     if (id === 'map') {
@@ -1216,6 +1216,58 @@ class Game {
     }
   }
 
+  // --- law combos: a named set of laws you switch to with one press -----------
+  saveCombo(name) {
+    this.combos = this.combos || [];
+    const laws = this.engine.laws.slice(0, this.engine.unlocked).map((l) => (l ? { ...l } : null));
+    if (!laws.some(Boolean)) return '<span class="err">NO LAWS RUNNING TO SAVE</span>';
+    if (this.combos.length >= 8) return '<span class="err">EIGHT COMBOS IS THE LIMIT. DELETE ONE FIRST.</span>';
+    const i = this.combos.findIndex((c) => c.name === name);
+    if (i >= 0) this.combos[i] = { name, laws };
+    else this.combos.push({ name, laws });
+    this.comboIndex = i >= 0 ? i : this.combos.length - 1;
+    this.dirty = true;
+    this.audio.ui('press');
+    return `COMBO ${name} SAVED`;
+  }
+
+  deleteCombo(i) {
+    this.combos?.splice(i, 1);
+    if (this.comboIndex === i) this.comboIndex = -1;
+    else if (this.comboIndex > i) this.comboIndex--;
+    this.dirty = true;
+  }
+
+  // installs every law of the combo; refuses if a token or slot is missing
+  switchCombo(i) {
+    const c = this.combos?.[i];
+    if (!c) return '';
+    for (const l of c.laws) {
+      if (!l) continue;
+      for (const t of [l.subject, l.verb, l.target]) if (!this.facts.get(`token_${t}`)) return `<span class="err">${c.name} NEEDS THE TOKEN ${TOKENS[t]?.label || t}</span>`;
+    }
+    if (c.laws.length > this.engine.unlocked) return `<span class="err">${c.name} NEEDS SLOT ${this.engine.unlocked + 1}, WHICH IS LOCKED</span>`;
+    this.hud.lawsSelf = true;
+    for (let k = 0; k < this.engine.unlocked; k++) this.engine.setLaw(k, c.laws[k] || null);
+    this.hud.lawsSelf = false;
+    this.hud.lawDraft = null;
+    for (let k = 0; k < this.engine.unlocked; k++) this.onLawInstalled(k, c.laws[k] || null);
+    this.comboIndex = i;
+    this.audio.blip(660, 0.25, 'triangle', 0.1);
+    return `COMBO ${c.name} RUNNING`;
+  }
+
+  // the X key / dock button: the next combo in the list
+  nextCombo() {
+    if (!this.facts.get('has_device')) return;
+    if (!this.combos?.length) return this.hud.toast('<small>LAW COMBOS</small><br>No combos yet. In LAWS, save the running laws as a combo.', 2600);
+    const i = ((this.comboIndex ?? -1) + 1) % this.combos.length;
+    const msg = this.switchCombo(i);
+    const c = this.combos[i];
+    this.hud.toast(`<small>${/err/.test(msg) ? 'COMBO BLOCKED' : 'COMBO'}</small><br>${/err/.test(msg) ? msg.replace(/<[^>]+>/g, '') : `${c.name}: ${c.laws.map((l) => (l ? describeLaw(l) : 'empty')).join(' · ')}`}`, 2600);
+    if (this.menu === 'laws') this.hud.renderLaws(this, msg);
+  }
+
   onLawInstalled(i, law) {
     this.audio.blip(520, 0.2, 'square', 0.08);
     const isDefault = law && law.subject === 'GRAVITY' && law.verb === 'INVERTS' && law.target === 'INVERTED';
@@ -1366,6 +1418,8 @@ class Game {
       playTime: this.playTime,
       settingsCamera: this.settings.camera,
       held: this.mode === 'station' ? this.held : undefined,
+      combos: this.combos || [],
+      comboIndex: this.comboIndex ?? -1,
     };
     if (this.mode === 'deck') {
       const p = this.checkpoint || this.level.rooms[this.room].spawn;
@@ -1406,6 +1460,9 @@ class Game {
       this.log = d.log || [];
       this.timeline = d.timeline || [];
       this.playTime = d.playTime || 0;
+      this.combos = d.combos || [];
+      this.comboIndex = d.comboIndex ?? -1;
+      this.hud.lawDraft = null;
       this.restoring = false;
       this.run = d.meta?.run || (d.campaign?.zones ? 'halcyon' : d.mode === 'deck' ? 'vessel' : 'prologue');
       if (d.mode === 'deck' && d.campaign?.zones) {
@@ -1475,6 +1532,7 @@ class Game {
       if (!active) continue;
       if (a === 'use') this.use();
       else if (a === 'hint') (this.mode === 'deck' ? this.deckHint() : this.npcs.hint());
+      else if (a === 'combo') this.nextCombo();
       else if (a === 'shift') this.shift();
       else if (a.startsWith('set:')) this.shift(a.slice(4));
     }
@@ -1538,9 +1596,12 @@ class Game {
     document.body.classList.toggle('calm', calm);
     document.body.classList.toggle('talking', !!this.player.talkTarget);
     const dock = this.dockEls || (this.dockEls = {
-      laws: document.querySelector('#dock .laws'), hint: document.querySelector('#dock .hint'),
+      laws: document.querySelector('#dock .laws'), hint: document.querySelector('#dock .hint'), combo: document.querySelector('#dock .combo'), comboTouch: document.querySelector('#buttons .combo'),
     });
     dock.laws?.classList.toggle('off', !this.facts.get('has_device'));
+    const noCombo = !this.facts.get('has_device') || !this.combos?.length;
+    dock.combo?.classList.toggle('off', noCombo);
+    dock.comboTouch?.classList.toggle('off', noCombo);
     dock.hint?.classList.toggle('off', !this.facts.get('has_tick'));
     dock.hint?.classList.toggle('ready', this.mode === 'deck' || !!this.facts.get('has_tick'));
   }

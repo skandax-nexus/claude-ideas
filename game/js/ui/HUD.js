@@ -221,6 +221,9 @@ export class HUD {
     const { engine, facts } = game;
     const owned = Object.keys(TOKENS).filter((t) => facts.get(`token_${t}`));
     const byKind = (k) => owned.filter((t) => TOKENS[t].kind === k);
+    const sig = (l) => (l && (l.subject || l.verb || l.target) ? `${l.subject}|${l.verb}|${l.target}` : '');
+    // the draft survives closing the panel; it is rebuilt from the running laws only when
+    // they changed elsewhere (a load, a combo switch, the story)
     const draft = (this.lawDraft ||= engine.laws.map((l) => (l ? { ...l } : { subject: null, verb: null, target: null })));
     const rows = draft
       .map((law, i) => {
@@ -230,18 +233,20 @@ export class HUD {
           return `<button class="chip ${kind} ${v ? '' : 'empty'}" data-slot="${i}" data-key="${key}" data-kind="${kind}">${v ? TOKENS[v].label : '+'}</button>`;
         };
         const r = parseLaw(law.subject || law.verb || law.target ? law : null);
-        const sig = (l) => (l && (l.subject || l.verb || l.target) ? `${l.subject}|${l.verb}|${l.target}` : '');
-        const installed = sig(engine.laws[i]) === sig(law);
-        // a law runs the moment its three words make sense; until then the slot says plainly
-        // that it is not running (and what still is), so nothing looks active that isn't
+        const active = sig(engine.laws[i]) === sig(law);
         const running = engine.laws[i] ? parseLaw(engine.laws[i]).text : '';
-        const status = installed ? (engine.laws[i] ? 'RUNNING' : 'EMPTY') : 'NOT RUNNING';
-        const desc = installed ? (r.text || 'Empty slot. Tap the words to write a law.')
-          : `${r.ok ? '' : `${r.error}. `}Not running yet: finish all three words.${running ? ` Still running: ${running}` : ''}`;
-        return `<div class="slot ${installed ? '' : 'editing'}"><span class="n">${i + 1}</span>${chip('subject', 'subject')}${chip('verb', 'verb')}${chip('target', 'target')}
-          <span class="install ${installed && engine.laws[i] ? 'ok' : ''} ${installed ? '' : 'pending'}">${status}</span>
+        // what the slot says: RUNNING for a law in force, ACTIVATE (pressable) for a finished
+        // draft, and for an unfinished one, plainly, that nothing new is running yet
+        const button = active
+          ? `<span class="install ${engine.laws[i] ? 'ok' : ''}">${engine.laws[i] ? 'RUNNING' : 'EMPTY'}</span>`
+          : `<button class="install pending ${r.ok ? '' : 'dim'}" data-install="${i}" ${r.ok ? '' : 'disabled'}>ACTIVATE</button>`;
+        const desc = active ? (r.text || 'Empty slot. Tap the words to write a law.')
+          : r.ok ? `Not running yet. Press ACTIVATE to push it.${running ? ` Still running: ${running}` : ''}`
+            : `${r.error}. Not running.${running ? ` Still running: ${running}` : ''}`;
+        return `<div class="slot ${active ? '' : 'editing'}"><span class="n">${i + 1}</span>${chip('subject', 'subject')}${chip('verb', 'verb')}${chip('target', 'target')}
+          ${button}
           <button class="clear" data-clear="${i}" aria-label="Clear law ${i + 1}">&times;</button>
-          <div class="desc ${installed ? '' : 'err'}">${desc}</div></div>`;
+          <div class="desc ${active ? '' : 'err'}">${desc}</div></div>`;
       })
       .join('');
     const effects = engine.laws
@@ -249,41 +254,67 @@ export class HUD {
       .filter(Boolean)
       .map((l) => `<li>${describeLaw(l)}</li>`)
       .join('');
+    const combos = (game.combos || []).map((c, i) => `<div class="combo ${game.comboIndex === i ? 'cur' : ''}">
+        <span class="cname">${c.name}</span>
+        <span class="claws">${c.laws.map((l) => (l ? describeLaw(l) : 'EMPTY')).join(' · ')}</span>
+        <button data-combo="${i}">SWITCH</button><button class="clear" data-combo-del="${i}" aria-label="Delete combo ${c.name}">&times;</button></div>`).join('');
+    const anyRunning = engine.laws.slice(0, engine.unlocked).some(Boolean);
     $('#laws .body').innerHTML = `
-      <p class="intro">The device does what its laws say. Tap a word to change it: a law runs as soon as its three words make sense.</p>
+      <p class="intro">The device does what its laws say. Tap the words to write a law, then press ACTIVATE to push it.</p>
       ${rows}
       ${flash ? `<div class="flash">${flash}</div>` : ''}
       ${engine.paradoxes.map((p) => `<div class="flash err">${p}</div>`).join('')}
       <h3>RUNNING</h3><ul>${effects || '<li class="dim">No laws. The world is ordinary.</li>'}</ul>
+      <h3>LAW COMBOS <small>switch a whole set at once · X key or the dock</small></h3>
+      ${combos || '<p class="dim">No combos saved yet. Save the running laws as a combo, then switch between combos with one press.</p>'}
+      <div class="comborow"><input id="comboName" maxlength="18" placeholder="Combo name (e.g. CLIMB)" ${anyRunning ? '' : 'disabled'}><button id="comboSave" ${anyRunning ? '' : 'disabled'}>SAVE RUNNING LAWS</button></div>
       <h3>TOKENS FOUND</h3><div class="tokens">${owned.map((t) => `<span class="tk ${TOKENS[t].kind}">${TOKENS[t].label}</span>`).join('')}</div>`;
 
-    // install the slot's draft if it is a complete, valid law (or empty); report it
-    const tryInstall = (i) => {
-      const d = draft[i];
-      const law = d.subject || d.verb || d.target ? { ...d } : null;
-      if (law && !parseLaw(law).ok) return '';
-      const sig = (l) => (l ? `${l.subject}|${l.verb}|${l.target}` : '');
-      if (sig(engine.laws[i]) === sig(law)) return '';
-      const r = engine.setLaw(i, law);
-      if (!r.ok) return `<span class="err">${r.error}</span>`;
-      game.onLawInstalled(i, law);
-      return law ? `LAW ${i + 1} RUNNING: ${r.text}` : `SLOT ${i + 1} CLEARED`;
-    };
     for (const b of document.querySelectorAll('#laws .chip')) {
       b.onclick = () => {
         const i = +b.dataset.slot, key = b.dataset.key;
         const opts = [null, ...byKind(b.dataset.kind)];
         const cur = opts.indexOf(draft[i][key]);
         draft[i][key] = opts[(cur + 1) % opts.length];
-        this.renderLaws(game, tryInstall(i));
+        this.renderLaws(game);
+      };
+    }
+    for (const b of document.querySelectorAll('#laws [data-install]')) {
+      b.onclick = () => {
+        const i = +b.dataset.install;
+        const d = draft[i];
+        const law = d.subject || d.verb || d.target ? { ...d } : null;
+        this.lawsSelf = true;
+        const r = engine.setLaw(i, law);
+        this.lawsSelf = false;
+        if (r.ok) {
+          game.onLawInstalled(i, law);
+          this.renderLaws(game, law ? `LAW ${i + 1} RUNNING: ${r.text}` : `SLOT ${i + 1} CLEARED`);
+        } else {
+          game.audio.deny();
+          this.renderLaws(game, `<span class="err">${r.error}</span>`);
+        }
       };
     }
     for (const b of document.querySelectorAll('#laws [data-clear]')) {
       b.onclick = () => {
         const i = +b.dataset.clear;
         draft[i] = { subject: null, verb: null, target: null };
-        this.renderLaws(game, tryInstall(i));
+        if (engine.laws[i]) {
+          this.lawsSelf = true;
+          engine.setLaw(i, null);
+          this.lawsSelf = false;
+          game.onLawInstalled(i, null);
+          this.renderLaws(game, `SLOT ${i + 1} CLEARED`);
+        } else this.renderLaws(game);
       };
     }
+    for (const b of document.querySelectorAll('#laws [data-combo]')) b.onclick = () => this.renderLaws(game, game.switchCombo(+b.dataset.combo));
+    for (const b of document.querySelectorAll('#laws [data-combo-del]')) b.onclick = () => { game.deleteCombo(+b.dataset.comboDel); this.renderLaws(game); };
+    const save = $('#comboSave');
+    if (save) save.onclick = () => {
+      const name = ($('#comboName').value || '').trim().toUpperCase() || `COMBO ${(game.combos?.length || 0) + 1}`;
+      this.renderLaws(game, game.saveCombo(name));
+    };
   }
 }

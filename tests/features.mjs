@@ -71,7 +71,7 @@ async function desktop() {
   check((await page.$$('#chapters [data-cont]')).length === 0, 'no CONTINUE on a chapter you have not played');
   await page.click('[data-newch="prologue"]');
   await page.waitForTimeout(300);
-  check(await page.isVisible('#saves') && (await page.$$('#saves [data-slot]')).length === 3, 'a new game asks for one of three save slots');
+  check(await page.isVisible('#saves') && (await page.$$('#saves [data-slot]')).length === 10, 'a new game asks for one of ten save slots');
   await page.click('#saves [data-slot="1"]');
   await page.waitForTimeout(500);
   check(await page.isVisible('#hero'), 'then character select');

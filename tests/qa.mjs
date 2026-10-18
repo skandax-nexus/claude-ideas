@@ -54,7 +54,7 @@ await sim(3);
 await az(() => AZ.input.keys.delete('KeyW'));
 check(await az(() => AZ.player.pos.x < -12.6), 'you can walk from the lab into the Observation Hall', await az(() => AZ.player.pos.x.toFixed(2)));
 
-// 2. the LAWS panel: a complete law runs as soon as its words are set, without an INSTALL press
+// 2. the LAWS panel: write a law with the chips, push it with ACTIVATE
 await az(() => { AZ.enterRoom('lab', true); AZ.openMenu('laws'); });
 const chips = async (slot, key, label) => {
   for (let n = 0; n < 12; n++) {
@@ -65,13 +65,18 @@ const chips = async (slot, key, label) => {
   return false;
 };
 await chips(1, 'subject', 'HELD MATTER');
-check(await az(() => AZ.engine.laws[1] === null && /NOT RUNNING/.test(document.querySelector('#laws .slot:nth-of-type(2)')?.textContent || document.querySelector('#laws').textContent)), 'an unfinished law says plainly it is not running');
+check(await az(() => AZ.engine.laws[1] === null && /Not running/.test(document.querySelectorAll('#laws .slot')[1].textContent)), 'an unfinished law says plainly it is not running');
 await chips(1, 'verb', 'PERSISTS THROUGH');
 await chips(1, 'target', 'PHYSICAL');
-check(await az(() => JSON.stringify(AZ.engine.laws[1]) === JSON.stringify({ subject: 'HELD', verb: 'PERSISTS', target: 'PHYSICAL' })), 'the finished law is running (no INSTALL button to forget)');
+check(await az(() => AZ.engine.laws[1] === null && !!document.querySelector('#laws [data-install="1"]:not([disabled])')), 'a finished law waits for ACTIVATE');
+// closing and reopening keeps the draft
 await page.keyboard.press('Escape');
-await az(() => { if (AZ.menu) AZ.closeMenu(); });
-check(await az(() => AZ.engine.has('heldPersists', 'PHYSICAL') && AZ.facts.get('wrote_held_law')), 'closing the panel keeps it, and the game knows the archive law is written');
+await page.waitForFunction(() => !AZ.menu, null, { timeout: 10000 }).catch(() => {});
+await az(() => { if (AZ.menu) AZ.closeMenu(); AZ.openMenu('laws'); });
+check((await page.textContent('#laws .chip[data-slot="1"][data-key="verb"]')).trim() === 'PERSISTS THROUGH', 'closing the panel keeps the unfinished law');
+await page.click('#laws [data-install="1"]');
+check(await az(() => JSON.stringify(AZ.engine.laws[1]) === JSON.stringify({ subject: 'HELD', verb: 'PERSISTS', target: 'PHYSICAL' }) && /RUNNING/.test(document.querySelectorAll('#laws .slot')[1].textContent)), 'ACTIVATE pushes the law and the slot says RUNNING');
+check(await az(() => AZ.engine.has('heldPersists', 'PHYSICAL') && AZ.facts.get('wrote_held_law')), 'the game knows the archive law is written');
 // ... and it changes gameplay: a memory key survives leaving ECHO
 await az(() => {
   AZ.engine.setState('lab', 'ECHO', { force: true });
@@ -80,9 +85,28 @@ await az(() => {
 });
 await sim(0.3);
 check(await az(() => AZ.held === 'key'), 'with the law running, the memory key survives the shift to PHYSICAL');
+
+// 2b. law combos: save the running laws, change them, switch back with one press
+await page.fill('#comboName', 'carry');
+await page.click('#comboSave');
+check(await az(() => AZ.combos.length === 1 && AZ.combos[0].name === 'CARRY' && /CARRY/.test(document.querySelector('#laws .combo')?.textContent)), 'the running laws are saved as a combo');
+await az(() => { AZ.facts.set('token_ECHOES'); AZ.facts.set('token_SOLIDIFIES'); AZ.engine.setLaw(1, { subject: 'ECHOES', verb: 'SOLIDIFIES', target: 'ECHO' }); AZ.hud.renderLaws(AZ); });
+await page.fill('#comboName', 'bridge');
+await page.click('#comboSave');
+check(await az(() => AZ.combos.length === 2 && AZ.comboIndex === 1), 'a second combo');
+await page.click('#laws [data-combo="0"]');
+check(await az(() => AZ.engine.laws[1]?.subject === 'HELD' && AZ.comboIndex === 0), 'SWITCH installs the whole combo');
+await page.keyboard.press('Escape'); // from the combo-name box: leaves it and closes the panel
+await page.waitForFunction(() => !AZ.menu, null, { timeout: 10000 }).catch(() => {});
+check(await az(() => !AZ.menu && document.activeElement?.id !== 'comboName'), 'Escape leaves the text box and closes the panel');
+await az(() => { if (AZ.menu) AZ.closeMenu(); document.activeElement?.blur(); });
+await page.keyboard.press('KeyX');
+await page.waitForFunction(() => AZ.comboIndex === 1, null, { timeout: 10000 }).catch(() => {});
+check(await az(() => AZ.engine.laws[1]?.subject === 'ECHOES' && AZ.comboIndex === 1), 'X switches to the next combo during play', await az(() => JSON.stringify({ idx: AZ.comboIndex, law: AZ.engine.laws[1], pending: AZ.input.actions })));
+check(await az(() => !document.querySelector('#dock .combo').classList.contains('off')), 'the dock shows the COMBO button once a combo exists');
 await az(() => { AZ.engine.setLaw(1, null); AZ.engine.setState('lab', 'ECHO', { force: true }); AZ.held = 'key'; AZ.engine.setState('lab', 'PHYSICAL', { force: true }); });
 await sim(0.3);
-check(await az(() => AZ.held === null), 'without it, the key dissolves (the law really is what made the difference)');
+check(await az(() => AZ.held === null), 'without the law, the key dissolves (the law really is what made the difference)');
 
 // 3. hands full: taking the key while carrying the core doesn't send the core back
 await az(() => { AZ.held = 'core'; AZ.focus = { id: 'item:key', pos: [8.5, 1, -6] }; AZ.use(); });
@@ -98,6 +122,7 @@ await page.waitForFunction(() => AZ.started && AZ.room, null, { timeout: 120000 
 await page.waitForTimeout(500);
 check(await az(() => AZ.held === 'core'), 'a carried item survives save and load', await az(() => String(AZ.held)));
 check(await az(() => AZ.engine.overrides.antechamber?.zeroG === true), 'the antechamber\'s scripted zero-g survives save and load');
+check(await az(() => AZ.combos?.length === 2 && AZ.combos[0].name === 'CARRY'), 'law combos survive save and load');
 
 // 5. conversations that chain: the first line of the next one is shown, not skipped
 await az(() => {

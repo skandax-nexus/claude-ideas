@@ -226,7 +226,9 @@ body.text-lg #objective .txt { font-size: 17px; }
 #dock .d kbd { font: 600 10px Inter, sans-serif; color: var(--ink-soft); background: rgba(35, 48, 60, 0.06); padding: 1px 5px; border-radius: 5px; }
 #dock .d.hint { color: #b07a08; }
 #dock .d.hint.ready svg { animation: tickblink 1.2s ease-in-out infinite; }
-#dock .d.laws.off { display: none; }
+#dock .d.laws.off, #dock .d.combo.off { display: none; }
+body.touch #dock .combo { display: none; } /* phones: the combo switch sits by the WALK button */
+@media (max-width: 1100px) { #dock .d.combo span, #dock .d.combo kbd, #dock .d.gaitd span, #dock .d.gaitd kbd { display: none; } }
 @keyframes tickblink { 50% { opacity: 0.35; } }
 body.touch #dock .d kbd, body.touch #dock .d span { display: none; }
 body.touch #dock .d { padding: 9px 12px; }
@@ -475,3 +477,21 @@ body.touch #buttons .gait.on { background: var(--coral); color: #fff; }
 span.install { display: inline-block; padding: 6px 10px; border-radius: 999px; border: 1px solid var(--line); font-weight: 700; letter-spacing: 0.06em; color: var(--ink-soft); }
 span.install.pending { color: var(--coral); border-color: var(--coral); }
 .slot.editing { box-shadow: 0 0 0 2px var(--coral) inset; }
+
+/* law slots: ACTIVATE pushes a finished law; RUNNING shows one in force */
+button.install.pending { color: #fff; background: var(--coral); border-color: var(--coral); }
+button.install.pending.dim { opacity: 0.45; }
+/* law combos */
+#laws h3 small { font-weight: 500; letter-spacing: 0; text-transform: none; color: var(--ink-soft); margin-left: 6px; }
+.combo { display: grid; grid-template-columns: auto 1fr auto auto; gap: 8px; align-items: center; padding: 8px 10px; border: 1px solid var(--line); border-radius: 12px; margin: 6px 0; font-size: 12px; }
+.combo.cur { border-color: var(--token); box-shadow: 0 0 0 2px rgba(63, 150, 100, 0.18); }
+.combo .cname { font-weight: 700; letter-spacing: 0.06em; }
+.combo .claws { color: var(--ink-soft); min-width: 0; overflow-wrap: anywhere; }
+.combo button { font-size: 11px; padding: 6px 10px; }
+.comborow { display: flex; gap: 8px; margin: 8px 0 4px; }
+.comborow input { flex: 1 1 auto; min-width: 0; font: inherit; font-size: 13px; padding: 8px 12px; border-radius: 12px; border: 1px solid var(--line); background: rgba(255, 255, 255, 0.7); }
+.comborow button { white-space: nowrap; font-size: 11px; }
+/* phones: next law combo, above SHIFT */
+#buttons .combo.off { display: none !important; }
+body.touch #buttons .combo { left: 0; top: 0; width: 52px; height: 52px; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; color: var(--ink); font-size: 8px; font-weight: 800; letter-spacing: 0.08em; }
+body.touch #buttons .combo svg { width: 20px; height: 20px; }

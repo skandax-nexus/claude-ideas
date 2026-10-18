@@ -5,7 +5,7 @@
 
 const SLOT_KEY = (i) => `afterzero.slot.${i}`;
 const AUTO_KEY = 'afterzero.save.v1'; // the v0.1/v0.2 single save doubles as the autosave
-export const SLOTS = 3;
+export const SLOTS = 10;
 
 function store(fn, fallback = null) {
   try {

@@ -27,10 +27,13 @@ export class Input {
     const map = {
       KeyE: 'use', KeyF: 'use', KeyH: 'hint', KeyQ: 'shift', KeyR: 'shift', KeyL: 'laws', Tab: 'laws', KeyJ: 'journal',
       Escape: 'pause', Digit1: 'set:PHYSICAL', Digit2: 'set:INVERTED', Digit3: 'set:ECHO',
-      KeyM: 'map', KeyV: 'camera', F5: 'quicksave', F9: 'quickload',
+      KeyM: 'map', KeyV: 'camera', KeyX: 'combo', F5: 'quicksave', F9: 'quickload',
     };
     window.addEventListener('keydown', (e) => {
-      if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') return;
+      if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') {
+        if (e.code !== 'Escape') return;
+        e.target.blur(); // Escape leaves the text box and closes the panel as usual
+      }
       if (e.code === 'Tab' || e.code === 'F5' || e.code === 'F9') e.preventDefault();
       if (e.code === 'Equal' || e.code === 'NumpadAdd') this.zoom -= 1;
       if (e.code === 'Minus' || e.code === 'NumpadSubtract') this.zoom += 1;
