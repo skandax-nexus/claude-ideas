@@ -243,6 +243,10 @@ export const DIALOGUE = {
         intent('withdraw', 'I have to go in.'),
       ],
     },
+    { when: 'quest_jun == "active" && !jun_rerouted', lines: [{ who: 'JUN', text: 'Relay 41-B, by the gate. Dead since the crash.' }, { who: 'JUN', text: 'But every forty-one seconds, when the announcement plays, it\'s 8:13 again. Just for a breath. I\'ve seen the relay light come on.' }, { who: 'KAI', text: 'Then I\'ll be at the relay at 8:13.' }] },
+    { when: 'jun_rerouted && !jun_choice', lines: [{ who: 'JUN', text: 'You did something to the relay. It\'s holding. So what do we power: the line, or that Helix terminal in my booth?' }] },
+    { when: 'jun_line', lines: [{ who: 'JUN', text: 'They got off. Every one of them. I stopped apologizing about a minute ago.' }] },
+    { when: 'jun_evidence', lines: [{ who: 'JUN', text: 'Your terminal\'s awake. They\'re still in the next carriage. I can still hear them.' }] },
     { when: 'quest_jun', lines: [{ who: 'JUN', text: 'Forty-one seconds. Count it with me if you don\'t believe me.' }] },
   ],
   tala: [

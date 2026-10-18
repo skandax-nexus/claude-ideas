@@ -64,7 +64,7 @@ export class DeckWorld {
     for (const it of level.items) if (it.echo && this.flags[`forged_${it.id}`]) it.echo = false;
 
     // static geometry merged per material, conditional pieces kept separate
-    const groups = new Map();
+    const groups = new Map(), dress = new Map();
     const reskin = RESKIN[level.palette.look] || {};
     for (const el of level.elements) {
       const [x0, y0, z0, x1, y1, z1] = el.box;
@@ -76,6 +76,13 @@ export class DeckWorld {
         // collision only (the visible part is drawn elsewhere, e.g. a tree)
         if (el.solid) this.staticColliders.push(box);
         geo.dispose();
+        continue;
+      }
+      if (el.dress) {
+        // decoration that belongs to one state (THE LAST VERSION): merged per material and condition
+        const k = `${el.mat}|${el.when || ''}|${el.room}`;
+        if (!dress.has(k)) dress.set(k, { el, geos: [] });
+        dress.get(k).geos.push(geo);
         continue;
       }
       if (!el.when && !el.echo && !el.light) {
@@ -91,6 +98,13 @@ export class DeckWorld {
         root.add(mesh);
         this.dynamic.push({ el, kind, mesh, box, cond: compileCondition(el.when) });
       }
+    }
+    for (const { el, geos } of dress.values()) {
+      const mesh = new THREE.Mesh(mergeGeometries(geos), this.mats[el.mat] || this.mats.wall);
+      mesh.receiveShadow = true;
+      root.add(mesh);
+      geos.forEach((g) => g.dispose());
+      this.dynamic.push({ el: { when: el.when, room: el.room, mat: el.mat, solid: false }, kind: null, mesh, box: null, cond: compileCondition(el.when) });
     }
     for (const [mat, geos] of groups) {
       const material = this.mats[mat] || this.mats.wall;
@@ -474,6 +488,12 @@ export class DeckWorld {
     }
     const reversed = this.engine.hasIn('timeReverse', g.room); // INVERTED: selected motion runs backwards
     for (const s of this.sentinels) {
+      // a watcher that only exists in some states (THE LAST VERSION: installed after 2026, say)
+      if (s.def.when) {
+        const on = !!(s.cond ||= compileCondition(s.def.when))(this.ctx(s.def.room));
+        s.model.visible = on;
+        if (!on) { s.mode = 'patrol'; s.suspicion = 0; continue; }
+      }
       if (s.stasisT > 0) s.stasisT -= dt;
       if (s.lure && (s.lure.t -= dt) <= 0) s.lure = null;
       const r = s.update(dt, t, {

@@ -7,7 +7,7 @@
 // cases. The bible's combat is readable stealth and evasion here: the game has no
 // combat, so soldiers, scavengers and security systems are watchers to slip past
 // (docs/lastversion/DESIGN.md says so too).
-import { CAST, DIALOGUE, WATER_HOOK, MARA_HOOK, JUN_HOOK, IVEN_HOOK, intent } from './npcs.js';
+import { CAST, WATER_HOOK, MARA_HOOK, intent } from './npcs.js';
 
 const L = (who, text, when) => (when ? { who, text, when } : { who, text });
 const N = (text) => L('NONE', text);
@@ -91,7 +91,7 @@ export const ACT1 = [
       'A buried panel, far too clean, humming under the mud.',
     ]],
     beats: [
-      { kind: 'scene', goal: 'Divert the river at its head, in the earliest state.', scene: 'divert', prompt: 'LIFT THE HEAD-STONE', npc: 'niko', lines: WATER_HOOK, hologram: false, npcWhen: '@PAST || @PRESENT' },
+      { kind: 'scene', goal: 'Divert the river at its head, in the earliest state.', scene: 'divert', prompt: 'LIFT THE HEAD-STONE', npc: 'niko', lines: WATER_HOOK, hologram: false },
       { kind: 'scene', goal: 'Reinforce the retaining wall in the middle state.', scene: 'wall', prompt: 'BRACE THE WALL' },
       { kind: 'scene', goal: 'Release the pressure gate in the latest state, then find what is buried.', scene: 'gate', prompt: 'RELEASE THE GATE', after: [N('Under the drained mud: a machine, clean and humming, far more advanced than any year the village has seen.'), ...says('niko', ['Helix did not invent the machine. It found it. So did we. So did everyone.'])] },
     ],
@@ -255,7 +255,16 @@ export const ACT2 = [
     ]],
     beats: [
       { kind: 'arrival', goal: 'Cross the active battlefield and find the field orders.', log: { title: 'FIELD ORDER - CONTINUUM 2ND', text: 'Enemy artillery incoming from the south at 09:00. Return fire at 09:09. - Note from the Unwritten side, same paper: enemy artillery incoming from the north at 09:09. Return fire at 09:00.' } },
-      E('soldier', ['You did that already. No - you\'re about to do it. I hate that I know the difference.', 'Three devices. Three years. Nobody on either side can reach all three. You can.'], { goal: 'Disable the three devices in three different temporal states.', after: [K('Both sides are shooting at their own last attack.')] }),
+      {
+        kind: 'tasks', goal: 'Disable the three devices, each in its own temporal state.', npc: 'soldier',
+        lines: says('soldier', ['You did that already. No - you\'re about to do it. I hate that I know the difference.', 'Three devices. Three years. Nobody on either side can reach all three. You can.']),
+        tasks: [
+          { state: 'PAST', prompt: 'DEVICE ONE (2026)', lines: [N('The first device, half buried in 2026 soil. It was planted before the war it starts. You pull its core.')] },
+          { state: 'PRESENT', prompt: 'DEVICE TWO (2049)', lines: [N('The second device, humming in 2049 at a pitch your teeth remember. You cut it.')] },
+          { state: 'FUTURE', prompt: 'DEVICE THREE (2196)', lines: [N('The third device is a ruin in 2196, and still running. You switch off something that has been on for a hundred and forty years.')] },
+        ],
+        after: [K('Both sides are shooting at their own last attack.'), ...says('soldier', ['Then who fired first?']), K('Nobody. That\'s the point.')],
+      },
       { kind: 'choice', goal: 'Destroy the stabilizer, or redirect it to free the trapped population.', scene: 'stabilizer', prompt: 'THE STABILIZER' },
     ],
     scenes: {
@@ -276,7 +285,7 @@ export const ACT2 = [
 export const ACT3 = [
   zone({
     key: 'm14', n: 14, chapter: 'act3', name: 'WELCOME TO 2196', title: 'The 2196 city', subtitle: 'A beautiful, devastated world. Reach the settlement before the Chronolith loses stability.',
-    theme: 'ruin', palette: P.future, states: ['FUTURE', 'PRESENT', 'INVERTED'], canal: true, drones: [0, 1, 2], unstable: true, ambience: 'wind', ambient: 'future',
+    theme: 'ruin', palette: P.future, states: ['FUTURE', 'PRESENT', 'PAST', 'INVERTED'], canal: true, drones: [0, 1, 2], unstable: true, ambience: 'wind', ambient: 'future',
     rooms: ['THE OVERGROWN TOWERS', 'THE TRANSIT LINE', 'THE MEMORIAL'], motto: 'WE TEACH CHILDREN YOUR NAME', gate: 'THE SETTLEMENT',
     crew: C('sera'),
     intro: [N('Skyscrapers wear forests. The transit line runs through a lake. The light is the kindest light you have ever seen, and the Chronolith is losing its grip on you.')],
@@ -368,7 +377,15 @@ export const ACT3 = [
       'The transmission tower\'s log: one message, from Mira, pointing somewhere no map names.',
     ]],
     beats: [
-      { kind: 'arrival', goal: 'Evacuate the settlement, then cross the canyon that exists only in the past.', log: { title: 'ANCHOR STATUS', text: 'Settlement anchor at 11%. Evacuate along the canyon floor; the canyon is in the earliest year only. In every other year it is a wall.' } },
+      {
+        kind: 'tasks', goal: 'Evacuate the settlement before its anchor fails: three houses. Then cross the canyon that exists only in the past.',
+        tasks: [
+          { prompt: 'KNOCK: THE WATER KEEPERS', lines: [N('A family of four, already packed, as if they had been told yesterday.'), L('CREW', 'The canyon. In the old year. We know.')] },
+          { prompt: 'KNOCK: THE POTTER', lines: [N('An old man who will not leave his kiln until you carry the last pot for him.')] },
+          { prompt: 'KNOCK: THE SCHOOLHOUSE', lines: [N('Eleven children and a teacher counting them twice. The anchor light over the door is red.')] },
+        ],
+        after: [N('ANCHOR STATUS: 11%. The settlement walks toward the canyon. The canyon is only there in the earliest year.')],
+      },
       { kind: 'log', goal: 'Navigate the flooded highway in the present.', log: { title: 'SERA - ON THE RADIO', text: 'Highway\'s under water in your year. The lamp posts are above it. Walk the lamp posts if you have to, Kai, I am not coming to get you.' } },
       E('mira', ['I remember the first world.'], { goal: 'Traverse the collapsing skyscraper to the transmission tower.', hologram: true, after: [K('Which one?'), L('MIRA', 'The one before you tried to save me.'), N('Her message points toward the Unwritten Second.')] }),
     ],
@@ -500,6 +517,14 @@ export const FINALE = [
       },
     },
     outro: [N('A post-credit clock begins ticking.'), L('VOICE', 'Version one hundred and eighteen.')],
+    // quest chain A's consequence: the passengers Kai got off the 41 clear the opening streets
+    adjust(level, rt) {
+      if (level.sector !== 0 || !rt.g.facts.get('jun_line')) return;
+      const rid = level.order[0];
+      level.sentinels = [];
+      level.rooms[rid].challenges = level.rooms[rid].challenges.filter((c) => c.key !== 'drones');
+      level.npcs.push({ id: 'jun_safe', crew: 'jun', pos: [2.6, 0, -8], yaw: Math.PI, room: rid, lines: says('jun', ['Kai. This way. The people you got off the 41 cleared this street for you.', 'Nobody is watching it now. Go on. I will keep the line open.']) });
+    },
   }),
 ];
 
@@ -510,32 +535,8 @@ export const ENDINGS = {
 };
 
 // =============================================================================================
-// OPTIONAL CASES: the four quest chains
+// OPTIONAL CASES: quest chains B and C (A, Jun Park, and D, Iven Marr, are part of the Prologue)
 export const CASES = [
-  zone({
-    key: 'c_a', n: 'A', chapter: 'cases', name: 'LAST TRAIN HOME', title: 'Jun Park, Rain City', subtitle: 'A station announcement repeats every 41 seconds.',
-    theme: 'rain', palette: { ...P.loop, weather: 'rain', accent: 0xffc06a }, states: ['PRESENT', 'PAST'], canal: false, drones: [0, 1], ambience: 'rain', ambient: 'rain',
-    rooms: ['THE STATION', 'THE RELAY'], motto: 'FORTY-ONE SECONDS', gate: 'THE LINE',
-    crew: C('jun'),
-    intro: [N('The station after the Zero Second. The announcement repeats every forty-one seconds. The maintenance gate keeps resetting to how it was before.')],
-    beats: [
-      encounterQ('jun', JUN_HOOK.filter((l) => l.who === 'JUN').map((l) => l.text), [
-        intent('investigate', 'Show me the gate.', { lines: says('jun', ['Behind me. The relay is in the present. The power that feeds it is not.']), quest: 'active' }),
-        intent('comfort', 'We\'ll get them off.', { lines: says('jun', ['Forty-one seconds. I have time for one more apology.']), quest: 'active', trust: 1 }),
-      ], { goal: 'Interview Jun. Inspect the damaged relay in the present.' }),
-      { kind: 'choice', goal: 'Reroute the power in the earlier state, return, and choose: the line, or the evidence.', scene: 'relay', prompt: 'THE RELAY' },
-    ],
-    scenes: {
-      relay: {
-        lines: [N('The relay can carry the repaired line for evacuation, or power a Helix evidence terminal. Not both.')],
-        choices: [
-          intent('comfort', 'Run the line. Get them home.', { lines: says('jun', ['They are getting on. Kai - they are getting on.']), set: { jun_line: true, quest_jun: 'resolved' }, beatDone: true }),
-          intent('investigate', 'Power the evidence terminal.', { lines: [N('The terminal wakes. A log with Rook\'s name on it, timestamped before the Zero Second, which the official record says has not happened yet.')], set: { jun_evidence: true, ev_rook_log: true, quest_jun: 'resolved' }, beatDone: true }),
-        ],
-      },
-    },
-    outro: [N('Saved passengers create a later safe-route encounter; the evidence gives a stronger case against Rook.')],
-  }),
   zone({
     key: 'c_b', n: 'B', chapter: 'cases', name: 'THE WATER THAT REMEMBERS', title: 'Tala and Niko, the Ancient Settlement', subtitle: 'A dry channel in the present was a river in the past.',
     theme: 'settlement', palette: P.settlement, states: ['PRESENT', 'PAST', 'FUTURE'], canal: true, drones: [0, 0], ambience: 'water', ambient: 'settlement',
@@ -544,7 +545,7 @@ export const CASES = [
     intro: WATER_HOOK,
     beats: [
       { kind: 'contradiction', goal: 'Follow the water marks. Read the mural, and what it was painted over.', official: 'THE RIVER WAS A GIFT OF THE SKY', echo: 'THE RIVER WAS TAUGHT TO STAY BY THE ONE WITH NO DUST', clue: 'cleared', crew: C('tala'), toast: 'MURAL READ', log: 'The mural says the river was a gift. Under it: the river was taught to stay by the one with no dust.' },
-      { kind: 'scene', goal: 'Find the three stone gates and align the flow without flooding the houses.', scene: 'gates', prompt: 'THE THREE GATES', npc: 'tala', lines: says('tala', ['Three gates. Stone does not argue, it only waits.']), npcWhen: '@PAST' },
+      { kind: 'scene', goal: 'Find the three stone gates and align the flow without flooding the houses.', scene: 'gates', prompt: 'THE THREE GATES', npc: 'tala', lines: says('tala', ['Three gates. Stone does not argue, it only waits.']) },
     ],
     scenes: {
       gates: { when: '@PAST', lines: [N('Left, right, centre. The water takes the channel and leaves the houses. In 2196 the ruins now have a way through.')], set: { water_route: true, quest_tala: 'resolved' }, beatDone: true, log: 'The water route through the settlement is open in every year, including the ruins.' },
@@ -566,29 +567,6 @@ export const CASES = [
       ], { goal: 'Inspect the museum display in another era.' }),
     ],
     outro: [N('The archive is exposed as incomplete without declaring every survivor a liar.')],
-  }),
-  rooms({
-    key: 'c_d', n: 'D', chapter: 'cases', name: 'THE TECHNICIAN\'S KEY', title: 'Iven Marr, Helix', subtitle: 'A maintenance route blocked by a lock that resets after every switch.',
-    deckKey: 'eng', palette: P.helix2, feature: 'sentinel', mechs: ['echo', 'sentinel'], states: ['PRESENT', 'PAST'],
-    roomsNames: ['THE MAINTENANCE ROUTE', 'THE SERVICE PANEL', 'THE TRAPPED TEAM'], motto: 'NOBODY SIGNS FOR IT',
-    ambience: 'hum', ambient: 'helix',
-    beats: [
-      encounterQ('iven', IVEN_HOOK.filter((l) => l.who === 'IVEN').map((l) => l.text), [
-        intent('investigate', 'Where are the shift notes?', { lines: says('iven', ['Service panel, past the drone. Past-state. The panel was installed before the drone was.']), quest: 'active' }),
-        intent('comfort', 'Your team first.', { lines: says('iven', ['Lower conduit. Three of them. You are the first person to say that.']), quest: 'active', trust: 1 }),
-      ], { goal: 'Follow Iven\'s shift notes. Use the past-state service panel while the drone is busy.' }),
-      { kind: 'choice', goal: 'Preserve the raw experiment log, or help Iven evacuate the trapped team first.', scene: 'key', prompt: 'THE SERVICE PANEL' },
-    ],
-    scenes: {
-      key: {
-        lines: [N('The panel can hold the raw experiment log open for one more switch, or open the lower conduit for Marr\'s team. The building is about to change its mind about the year.')],
-        choices: [
-          intent('investigate', 'Keep the log.', { lines: [N('The log holds: Rook\'s order, Marr\'s refusal, the test at 05:40, unedited.'), ...says('iven', ['I would have chosen them. I understand why you did not.'])], set: { ev_raw_log: true, ev_rook_log: true, quest_iven: 'resolved' }, trust: -1, beatDone: true }),
-          intent('comfort', 'Get the team out.', { lines: [N('The conduit opens. Three technicians climb out into the wrong year, which is still better than the right one.'), ...says('iven', ['That is the whole of my statement, when they ask. You got them out.'])], set: { iven_team_saved: true, quest_iven: 'resolved' }, trust: 1, beatDone: true }),
-        ],
-      },
-    },
-    outro: [N('An alternate access route, and a more nuanced record of Rook\'s decisions.')],
   }),
 ];
 

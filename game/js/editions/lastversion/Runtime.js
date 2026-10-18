@@ -11,6 +11,7 @@ import { makeCastModel } from '../../world/People.js';
 import { PROLOGUE } from './prologue.js';
 import { ACTS, ENDINGS } from './acts.js';
 import { CAST, DIALOGUE, NPCS, TRUST, KNOWLEDGE, npcState } from './npcs.js';
+import { dressStates, stateWeather } from './dress.js';
 
 export const CHAPTERS = {
   prologue: { name: 'PROLOGUE', sub: 'The Zero Second: Rain City, Helix, the first switch', question: 'What happened in the chamber, and why does the voice know Kai?' },
@@ -19,7 +20,7 @@ export const CHAPTERS = {
   act3: { name: 'ACT III', sub: 'The Last Version of Earth', question: 'What did the previous attempts cost?' },
   act4: { name: 'ACT IV', sub: 'The Unwritten Second', question: 'Can Mira be saved without repeating the catastrophe?' },
   finale: { name: 'FINALE', sub: 'Afterzero', question: 'What must be accepted rather than fixed?' },
-  cases: { name: 'CASES', sub: 'Four optional quest chains: Jun, Tala, Mara, Iven', question: 'Whose record do you believe, and what does it cost them?' },
+  cases: { name: 'CASES', sub: 'Two optional quest chains: Tala\'s river, Mara\'s two records', question: 'Whose record do you believe, and what does it cost them?' },
 };
 export const ORDER = ['prologue', 'act1', 'act2', 'act3', 'act4', 'finale'];
 export const MISSIONS = { prologue: PROLOGUE, ...ACTS };
@@ -167,8 +168,10 @@ export class LastVersion {
   // --- starting and resuming ------------------------------------------------------------------
   makeStory(chapter) {
     const ms = MISSIONS[chapter];
+    // a generated puzzle may only use what this place's states can do: INVERTED flips gravity, PAST holds the residue
+    const fits = (m) => (k) => (k !== 'gravity' || m.states.includes('INVERTED')) && (k !== 'echo' || m.states.includes('PAST'));
     const decks = ms.map((m, i) => ({
-      ...m, index: i, mkey: m.key, key: m.kind === 'rooms' ? m.deckKey : m.key, rooms: m.roomsNames || m.rooms, names: m.kind === 'zone' ? m.rooms : undefined, crew: m.crew ?? 0,
+      ...m, index: i, mkey: m.key, mechs: (m.mechs || ['echo', 'gravity', 'sentinel', 'time']).filter(fits(m)), key: m.kind === 'rooms' ? m.deckKey : m.key, rooms: m.roomsNames || m.rooms, names: m.kind === 'zone' ? m.rooms : undefined, crew: m.crew ?? 0,
       hints: { roof: HINTS.roof, canal: HINTS.canal, drones: HINTS.drones, gate: HINTS.gate },
     }));
     return {
@@ -236,12 +239,28 @@ export class LastVersion {
     level.deckName = deck.name;
     level.palette = deck.palette;
     const states = level.states || deck.states || ['PRESENT'];
+    // the generator's routes speak Station Zero's states: PHYSICAL is this edition's present, ECHO its past
+    const RENAME = { PHYSICAL: 'PRESENT', ECHO: 'PAST' };
+    for (const id of level.order) for (const w of [...(level.rooms[id].route || []), ...(level.rooms[id].keyRoute || [])]) if (RENAME[w.state]) w.state = RENAME[w.state];
     for (const id of level.order) {
       const room = level.rooms[id];
       g.engine.setAvailable(id, room.states || states);
       for (const ch of room.challenges || []) ch.hints = HINTS[ch.key] || ch.hints;
       // a room keeps the baseline until the player switches it (saves restore the rest)
       if (!c.flags || !Object.keys(c.flags).length) g.engine.setState(id, g.engine.baseline, { force: true });
+    }
+    // a 'tasks' beat: things to do along the avenue, each perhaps in its own state; the last one opens the gate
+    const beat = deck.beats?.[c.sector];
+    if (beat?.kind === 'tasks') {
+      const rid = level.order[0];
+      const spots = [[-3.6, -18], [3.6, -34], [-3.6, -68]];
+      beat.tasks.forEach((t, i) => {
+        const [x, z] = t.at || spots[i % spots.length];
+        level.elements.push({ box: [x - 0.5, 0, z - 0.4, x + 0.5, 1.0, z + 0.4], mat: 'prop', solid: true, room: rid });
+        level.interactables.push({ id: `task_${i}`, kind: 'scene', scene: `task_${i}`, task: i, pos: [x, 1.3, z], r: 2.8, prompt: t.prompt, color: t.state ? { PAST: 0xffc07a, PRESENT: 0x9fd8ff, FUTURE: 0x9fffb0 }[t.state] : 0xffc04a, room: rid });
+        level.texts.push({ text: t.prompt, pos: [x, 2.4, z], rotY: 0, size: 0.3, color: '#ffe6c0', room: rid });
+      });
+      if (beat.npc) level.npcs.push({ id: `npc_${rid}`, crew: beat.npc, pos: [1.8, 0, -8], yaw: Math.PI, room: rid, lines: beat.lines || [], hologram: !!beat.hologram });
     }
     // people who only exist in some of this place's states leave an echo in the others (NPC failure handling)
     for (const n of level.npcs) {
@@ -252,6 +271,7 @@ export class LastVersion {
       if (real.length && here.some((s) => real.includes(s)) && here.some((s) => !real.includes(s))) n.temporal = real;
     }
     deck.adjust?.(level, this); // a consequence of an earlier choice can change the place
+    if (!deck.noDress) dressStates(level, states);
     this.level = level;
     this.unstable = !!(level.unstable || deck.unstable);
     return level;
@@ -263,6 +283,7 @@ export class LastVersion {
     const deck = this.deck;
     const chapter = CHAPTERS[this.chapter];
     g.audio.setAmbience(deck.ambience || null);
+    this.weatherState = null;
     this.loopT = deck.loop || 0;
     this.hintKey = null;
     this.anchored = null;
@@ -402,7 +423,7 @@ export class LastVersion {
       if (sc) this.playNode(sc, n, `npc_${n.n.id}`);
       return;
     }
-    const dialogue = n.n.dialogue || (n.n.lines ? null : DIALOGUE[n.crew.id]);
+    const dialogue = n.n.dialogue || (n.n.lines?.length ? null : DIALOGUE[n.crew.id]);
     if (dialogue) {
       const node = dialogue.find((d) => g.facts.test(d.when || 'true'));
       if (node) {
@@ -412,7 +433,7 @@ export class LastVersion {
     }
     const lines = n.n.lines || [{ who: 'NONE', text: '...' }];
     const beat = this.beat;
-    const isBeat = beat.kind === 'encounter' && n.n.id.startsWith('npc_');
+    const isBeat = beat.kind === 'encounter' && n.n.id.startsWith('npc_'); // a 'tasks' beat's person only talks
     this.playNode({ lines, choices: n.n.choices, after: n.n.after, beatDone: isBeat }, n);
     if (isBeat) g.log.push(`Met ${n.crew.name}${n.n.hologram ? ' - only an echo' : ''}.`);
   }
@@ -421,6 +442,7 @@ export class LastVersion {
   scene(it) {
     const g = this.g;
     const deck = this.deck;
+    if (it.task !== undefined) return this.task(it);
     const sc = deck.scenes?.[it.scene];
     if (!sc) return;
     if (sc.when && !g.facts.test(sc.when, g.engine.state(g.room))) {
@@ -437,6 +459,34 @@ export class LastVersion {
       g.campaign.flags = { ...g.deckWorld.flags };
     }
     this.playNode(sc, null, it.id);
+  }
+
+  // one of a 'tasks' beat's things to do
+  task(it) {
+    const g = this.g;
+    const beat = this.beat;
+    const t = beat.tasks?.[it.task];
+    if (!t) return;
+    const flags = g.deckWorld.flags;
+    if (flags[`done_${it.id}`]) return;
+    if (t.state && g.engine.state(g.room) !== t.state) {
+      g.audio.deny();
+      this.say(t.no || `Not in this year. It only answers in ${this.def.labels[t.state]}.`);
+      return;
+    }
+    flags[`done_${it.id}`] = true;
+    g.campaign.flags = { ...flags };
+    g.audio.terminal();
+    g.fx.burst(it.pos, it.color ?? 0xffc04a, 30, 1.6);
+    const done = beat.tasks.filter((_, i) => flags[`done_task_${i}`]).length;
+    g.hud.toast(`<small>${beat.goal.split(':')[0].split('.')[0].toUpperCase()}</small><br>${done} / ${beat.tasks.length}`, 2000);
+    const all = done === beat.tasks.length;
+    g.hud.say(t.lines || [], g.facts, () => {
+      if (!all) return;
+      if (beat.after?.length) g.hud.say(beat.after, g.facts, () => g.beatDone());
+      else g.beatDone();
+    });
+    g.deckWorld.refresh();
   }
 
   // lines, then (maybe) a choice, then what follows
@@ -534,7 +584,7 @@ export class LastVersion {
         }
         text = ch.hints[Math.min(this.hintTier, 2)];
         this.hintTier++;
-      } else text = g.deckWorld.flags.beat_done ? 'The next door is open. Keep going.' : this.beat.kind === 'contradiction' ? 'Read the record on the wall. Then read it again in the past.' : 'Look around. Someone left something for me.';
+      } else text = g.deckWorld.flags.beat_done ? 'The next door is open. Keep going.' : this.beat.kind === 'contradiction' ? 'Read the record on the wall. Then read it again in the past.' : this.beat.kind === 'tasks' ? 'There are things to do along the avenue. Some of them only answer in their own year.' : 'Look around. Someone left something for me.';
     }
     g.facts.inc('hints_used');
     g.audio.blip(988, 0.1);
@@ -600,7 +650,7 @@ export class LastVersion {
   casesDone() {
     const g = this.g;
     const $ = (s) => document.querySelector(s);
-    $('#ending .body').innerHTML = `<h2>THE CASES ARE CLOSED</h2><p>Jun's passengers, Tala's river, Mara's two records and Iven's team: every chain has an outcome, and the main story remains completable either way.</p>
+    $('#ending .body').innerHTML = `<h2>THE CASES ARE CLOSED</h2><p>Tala's river and Mara's two records: each chain has an outcome, and the main story remains completable either way.</p>
       <button class="big" id="lvTitle">BACK TO THE TITLE</button>`;
     $('#lvTitle').onclick = () => location.reload();
     g.saveTo('auto');
@@ -705,6 +755,7 @@ export class LastVersion {
     g.audio.sweep(s !== engine.baseline);
     if (!g.settings.comfort) g.hud.flash({ PAST: 'rgba(255,200,120,0.35)', FUTURE: 'rgba(120,230,170,0.35)', INVERTED: 'rgba(255,90,180,0.35)' }[s] || 'rgba(255,255,255,0.3)');
     facts.inc('switches');
+    this.deck?.onShift?.(this, s);
     if (!facts.get('first_switch')) {
       facts.set('first_switch');
       g.log.push(`I switched the room to ${this.def.labels[s]}. The place stayed. The year did not.`);
@@ -783,7 +834,15 @@ export class LastVersion {
 
   // each state tints the place
   theme(dt, state) {
-    if (this.g.mode === 'deck') this.g.deckWorld.setLook(state, Math.min(1, dt * 2));
+    const g = this.g;
+    if (g.mode !== 'deck') return;
+    g.deckWorld.setLook(state, Math.min(1, dt * 2));
+    // an open district's weather follows its year
+    if (this.level?.zone && state !== this.weatherState) {
+      this.weatherState = state;
+      const w = this.deck?.stateWeather?.[state] ?? stateWeather(state, this.level.palette);
+      if (w !== g.weather.kind) g.weather.set(w);
+    }
   }
 
   roomEntered() {}
@@ -834,7 +893,7 @@ export class LastVersion {
         <h2>ENDING ${key} — ${e.title}</h2>${e.text.map((p, i) => `<p${i === e.text.length - 1 ? ' class="dim"' : ''}>${i === e.text.length - 1 ? `“${p}”` : p}</p>`).join('')}
         <p class="dim">A post-credit clock begins ticking. A voice confirms: “Version one hundred and eighteen.”</p>
         <div class="stats"><span>${Math.floor(mins / 60)} h ${mins % 60} min</span><span>${evs} pieces of evidence</span><span>standing: ${g.facts.get('faction') || 'neutral'}</span><span>ally: ${g.facts.get('ally') || 'none'}</span></div>
-        <button class="big" id="lvCases">THE CASES<small>Four optional quest chains: Jun, Tala, Mara, Iven</small></button>
+        <button class="big" id="lvCases">THE CASES<small>Two optional quest chains: Tala's river, Mara's two records</small></button>
         <button id="lvTitle">BACK TO THE TITLE</button>`;
       $('#lvCases').onclick = () => g.begin('lv:cases', null, g.slot ?? null);
       $('#lvTitle').onclick = () => location.reload();

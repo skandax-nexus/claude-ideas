@@ -8,7 +8,7 @@
 // follows its voice rules: short in danger, longer in safe places, objects and
 // disagreement instead of speeches, recurring phrases that change meaning.
 import { Deck, makeClock, makeToy, makeScreen, makeCell, makePanel, makeDrawing, makeChronolith, makeBoard } from './Build.js';
-import { AMBIENT, DIALOGUE, JUN_HOOK } from './npcs.js';
+import { AMBIENT, DIALOGUE, JUN_HOOK, IVEN_HOOK, intent } from './npcs.js';
 
 const L = (who, text, when) => (when ? { who, text, when } : { who, text });
 const N = (text, when) => L('NONE', text, when);
@@ -38,7 +38,8 @@ function commuters(M, rng) {
 
 export const M01 = {
   key: 'm01', n: 1, chapter: 'prologue', name: 'THE LAST NORMAL DAY', title: 'Rain City, 2049', subtitle: 'Eight-fourteen on a Tuesday. The 41 is late.',
-  kind: 'zone', theme: 'rain', sectors: 1, states: ['PRESENT'], canal: false, drones: [0],
+  // PAST here is not 2026: it is 8:13, the minute before the crash, which the station keeps falling back into (quest chain A)
+  kind: 'zone', theme: 'rain', sectors: 1, states: ['PRESENT', 'PAST'], canal: false, drones: [0], noDress: true, stateWeather: { PAST: 'rain' },
   ambience: 'rain',
   palette: { fog: 0x6f7c8c, wall: '#5a6470', floor: '#3a4048', accent: 0xffc06a, accent2: 0x9fd8ff, light: 0xffe0b0, tint: 0x6a7890, night: 0.55, weather: 'rain', sky: 'night', grade: { shadowTint: 0x1c2a44, highlightTint: 0xffe6c8, toning: 0.16, contrast: 1.1, saturation: 0.92 } },
   rooms: ['RAIN CITY - SOUTH SQUARE'], motto: 'RAIN CITY',
@@ -87,10 +88,21 @@ export const M01 = {
     M.texts.push({ text: 'OPERATOR', pos: [-12.95, 2.3, -80], rotY: Math.PI / 2, size: 0.34, color: '#ffe0b0' });
     M.npcs.push({ id: 'jun', crew: 'jun', pos: [-12.2, 0, -80], yaw: Math.PI / 2, dialogue: DIALOGUE.jun, freezeWhen: 'zero_second && !after_zero' });
     // the 41, after the Zero Second: three carriages, the last one up on the platform
-    M.box([9, 0, -99, 13, 3.4, -87], { mat: 'car', when: 'zero_second' });
-    M.box([11, 0, -87, 15, 3.4, -78], { mat: 'car', when: 'zero_second' });
-    M.box([5.5, 0.6, -78, 9.5, 4.0, -70.5], { mat: 'car', when: 'zero_second' });
-    M.box([4.8, 0, -79, 5.6, 1.1, -76.5], { mat: 'crate', when: 'zero_second' }); // a bench, thrown
+    M.box([9, 0, -99, 13, 3.4, -87], { mat: 'car', when: 'zero_second && !@PAST' });
+    M.box([11, 0, -87, 15, 3.4, -78], { mat: 'car', when: 'zero_second && !@PAST' });
+    M.box([5.5, 0.6, -78, 9.5, 4.0, -70.5], { mat: 'car', when: 'zero_second && !@PAST' });
+    M.box([4.8, 0, -79, 5.6, 1.1, -76.5], { mat: 'crate', when: 'zero_second && !@PAST' }); // a bench, thrown
+    M.texts.push({ text: '08:13', pos: [-11.6, 3.0, -84], rotY: Math.PI / 2, size: 0.5, color: '#ffe0b0', when: '@PAST' });
+    // quest chain A, LAST TRAIN HOME: relay 41-B feeds the maintenance gate by Jun's booth
+    M.box([-16, 0, -89, -15, 2.4, -87], { mat: 'prop' });
+    M.box([-16.3, 0, -93.6, -15.9, 3.0, -90.4], { mat: 'door', when: '!jun_line', id: 'door_gate41' });
+    M.texts.push({ text: 'MAINTENANCE GATE 41-B', pos: [-15.8, 3.4, -92], rotY: Math.PI / 2, size: 0.32, color: '#ffc06a' });
+    M.texts.push({ text: 'RELAY 41-B', pos: [-14.9, 2.7, -88], rotY: Math.PI / 2, size: 0.3, color: '#9fd8ff' });
+    M.inter.push({ id: 'relay', kind: 'scene', scene: 'relay', pos: [-14.6, 1.4, -88], yaw: Math.PI / 2, r: 2.6, prompt: 'INSPECT THE RELAY', model: () => makePanel(0x9fd8ff), when: 'zero_second && !@PAST && !jun_rerouted' });
+    M.inter.push({ id: 'reroute', kind: 'scene', scene: 'reroute', pos: [-14.6, 1.4, -88], yaw: Math.PI / 2, r: 2.6, prompt: 'REROUTE THE POWER (8:13)', model: () => makePanel(0xffd27a), when: '@PAST && !jun_rerouted' });
+    M.inter.push({ id: 'relay_choice', kind: 'scene', scene: 'relay_choice', pos: [-14.6, 1.4, -88], yaw: Math.PI / 2, r: 2.6, prompt: 'THE RELAY: THE LINE, OR THE EVIDENCE', model: () => makePanel(0x7fe0a8), when: 'jun_rerouted && !jun_choice && !@PAST' });
+    M.texts.push({ text: 'LINE 41 - EVACUATION SERVICE - BOARDING', pos: [0, 3.5, -77.8], rotY: 0, size: 0.36, color: '#7fe0a8', when: 'jun_line' });
+    M.texts.push({ text: 'HELIX EVIDENCE TERMINAL - ONLINE', pos: [-12.95, 1.7, -80], rotY: Math.PI / 2, size: 0.26, color: '#7fe0a8', when: 'jun_evidence' });
     M.glows.push([7, 0.02, -82, 4, 0xff6a48]);
     M.npcs.push({ id: 'trapped_a', crew: 'trapped_a', first: 'Woman', seed: 201, ambient: true, pronoun: { their: 'her', them: 'her' }, pos: [6.2, 0, -89], yaw: -Math.PI / 2, when: 'zero_second && !rescued_a', scene: 'rescue_a', prompt: 'PULL HER FREE' });
     M.npcs.push({ id: 'trapped_b', crew: 'trapped_b', first: 'Man', seed: 202, ambient: true, pronoun: { their: 'his', them: 'him' }, pos: [3.9, 0, -74.5], yaw: Math.PI, when: 'zero_second && !rescued_b', scene: 'rescue_b', prompt: 'PULL HIM FREE' });
@@ -125,6 +137,15 @@ export const M01 = {
     toy: { lines: [N('A child drops a toy. It hits the pavement, bounces once - and then it is in her hand again, as if the pavement had never happened.'), K('I saw that backwards.')], set: { ev_toy: true }, log: 'A toy fell and then un-fell. The child did not notice. I did.' },
     clock: { lines: [N('The transit clock runs backward. The second hand is very sure of itself.'), K('Eight-fourteen. Eight-thirteen. Eight-twelve.')], set: { ev_clock: true }, log: 'A clock on the avenue runs backward, one confident second at a time.' },
     camera: { lines: [N('A security feed in a shop window. The timestamp says tomorrow. In it, this corner is empty and the rain has stopped.'), K('That\'s this corner. That\'s tomorrow.')], set: { ev_camera: true }, log: 'A camera is showing tomorrow. Tomorrow, the rain has stopped.' },
+    relay: { lines: [N('Relay 41-B, the feed for the maintenance gate. Burnt through where the 41 hit the line.'), K('Dead now. It was live at 8:13. And 8:13 keeps coming back.')], set: { ev_relay: true }, log: 'Relay 41-B is dead in the present. Every forty-one seconds the station falls back to 8:13, when it was not.' },
+    reroute: { lines: [N('8:13. The relay is whole and humming. You throw the bypass before the minute closes.'), K('Rerouted. In a minute that has already happened.')], set: { jun_rerouted: true, ev_gate_resets: true }, log: 'I rerouted the relay at 8:13, in the minute before the crash. The bypass held when the station came back.' },
+    relay_choice: {
+      lines: [N('The bypass held through the crash. The relay can carry the repaired line and get the passengers out, or feed the Helix evidence terminal in Jun\'s booth. Not both.')],
+      choices: [
+        intent('comfort', 'Run the line. Get them home.', { lines: [L('JUN', 'They\'re getting on. Kai - they\'re getting on.'), N('The gate opens. People Jun kept apologizing to walk out of the next carriage.')], set: { jun_line: true, jun_choice: true, quest_jun: 'resolved' }, log: 'I gave the relay to the line. Jun\'s passengers got off. Somebody will remember that route.' }),
+        intent('investigate', 'Power the evidence terminal.', { lines: [N('The terminal wakes: a Helix order with Rook\'s name on it, timestamped before the Zero Second, which every recording says has not happened yet.'), L('JUN', 'I hope whatever\'s on it is worth a train.')], set: { jun_evidence: true, jun_choice: true, ev_rook_log: true, ev_rook_terminal: true, quest_jun: 'resolved' }, log: 'I gave the relay to the evidence terminal: Rook\'s order, timestamped before the Zero Second. The passengers stayed in the next carriage.' }),
+      ],
+    },
     station_clock: { lines: [N('Eight-fourteen. Both hands, and the second hand, and the one on the wall behind it. Every clock in the station agrees for the first time all day.')], set: { ev_stopped_clock: true } },
     rescue_a: { lines: [N('A woman pinned under a thrown bench, between the carriage and the wall.'), K('Hold on. I\'ve got you. Don\'t look at it, look at me.')], set: { rescued_a: true } },
     rescue_b: { lines: [N('A man with his coat caught in the door of a carriage that is not on the tracks any more.'), K('Arms out of the sleeves. Leave the coat. Leave it.')], set: { rescued_b: true } },
@@ -190,12 +211,24 @@ export const M01 = {
         g.hud.say([K('Mira?'), N('The crowd closes. There is nobody there.')], f);
       }
     }
-    if (f.get('zero_second') && g.player.pos.z < -72) {
+    if (f.get('after_zero') && g.player.pos.z < -72) {
       rt.annT = (rt.annT ?? 38) + dt;
       if (rt.annT >= 41 && !g.hud.talking) {
         rt.annT = 0;
         g.hud.say([N('[ANNOUNCEMENT] The 8:14 service to Helix North is now arriving. Yesterday.')], f);
+        // quest chain A: with the announcement the station falls back to 8:13 for a few seconds
+        if (f.get('quest_jun') === 'active' && !f.get('jun_rerouted')) {
+          g.engine.setState(g.room, 'PAST', { force: true });
+          g.audio.sweep(true);
+          if (!g.settings.comfort) g.hud.flash('rgba(255,210,150,0.35)');
+          g.hud.toast('<small>08:13</small><br>For a few seconds it is a minute before the crash.', 2600);
+          rt.flickT = 7;
+        }
       }
+    }
+    if (rt.flickT > 0 && (rt.flickT -= dt) <= 0) {
+      g.engine.setState(g.room, 'PRESENT', { force: true });
+      g.audio.sweep(false);
     }
   },
 };
@@ -382,6 +415,22 @@ export const M02 = {
 // --- Mission 3: THE FIRST SWITCH ------------------------------------------------------------
 const SWITCH_PALETTE = { ...HELIX_PALETTE, fog: 0x1e2430, wall: '#58606c', floor: '#363c46', accent: 0x4f9fe8, accent2: 0xc08a3e, light: 0xcfe0ff, tint: 0x4a5a7a, night: 0.4, weather: null, grade: { shadowTint: 0x14243a, highlightTint: 0xe0ecff, toning: 0.18, contrast: 1.12, saturation: 0.96 } };
 
+// Iven Marr in the maintenance route (quest chain D)
+const IVEN_ROUTE = [
+  {
+    when: '!quest_iven', lines: [...IVEN_HOOK, L('IVEN', 'My team is behind that lock. So is the raw log. The lock resets every time the building changes its mind about the year.')],
+    choices: [
+      intent('comfort', 'Your team first.', { lines: [L('IVEN', 'The service panel is in 2026. It was installed before the drone was. I\'ll keep the drone busy.')], trust: 1, quest: 'active', set: { iven_busy: true }, then: 'ivenLure' }),
+      intent('investigate', 'Who signed for the test?', { lines: [L('IVEN', 'Rook\'s name is on the order. Mine is on the sheet that says no. Service panel is in 2026, if you want to see for yourself.')], ev: 'iven_testimony', quest: 'active' }),
+      intent('withdraw', 'Not now.'),
+    ],
+  },
+  { when: 'quest_iven == "active" && !iven_busy', lines: [L('IVEN', 'You came back. Panel in 2026, then in, before you change your mind about the year.'), K('And the drone?'), L('IVEN', 'I\'ll keep it busy. It knows my face. It thinks I\'m still on shift.')], set: { iven_busy: true }, then: 'ivenLure' },
+  { when: 'quest_iven == "active"', lines: [L('IVEN', 'Panel in 2026. Then in. The terminal only answers in your year.')] },
+  { when: 'iven_team_saved', lines: [L('IVEN', 'Three of them. All three. Nobody signs for that either, but I will.')] },
+  { when: 'ev_raw_log', lines: [L('IVEN', 'You have the log. Use it on him. That is the only way it was worth it.')] },
+];
+
 function buildFirstSwitch(story, si, rt) {
   const D = new Deck({ id: 'm03', deckName: 'HELIX', palette: SWITCH_PALETTE, seed: 'lv', states: ['PRESENT', 'PAST', 'FUTURE'], unstable: true, estimateMin: 40 });
   // r0 the chamber: the Chronolith teaches the switch
@@ -432,7 +481,38 @@ function buildFirstSwitch(story, si, rt) {
     R.checkpoint(0, -2, -1.6);
     R.checkpoint(-16, -22, -18);
   });
-  // r3 control: the keycard waits in 2026 (anchor it), the panel works in 2049
+  // r3 quest chain D, THE TECHNICIAN'S KEY: Marr's maintenance route, behind a lock that resets
+  // after every switch; the service panel exists only in 2026, the drone only in 2049
+  D.room({ id: 'route', name: 'MAINTENANCE ROUTE', W: 16, L: 22, H: 6.5 }, (R) => {
+    R.floor();
+    R.npc({ id: 'iven3', crew: 'iven', pos: [-4.2, 0, -3.6], yaw: Math.PI * 0.8, dialogue: IVEN_ROUTE, barks: ['Panel was installed before the drone was.'] });
+    R.pillar(-2.4, -11, 0.6);
+    R.prop('crate', -5.6, -17.4);
+    // the service panel: 2026 only
+    R.box([-8, 0.6, -11.8, -7.7, 2.0, -10.2], { mat: 'prop', when: '@PAST' });
+    R.scene('service_panel', [-7.5, 1.3, -11], 'SERVICE PANEL (2026)', { yaw: Math.PI / 2, model: () => makePanel(0xffd27a), when: '@PAST && !maint_open' });
+    R.text('SERVICE PANEL - REMOVED 2031', [-7.9, 2.4, -11], Math.PI / 2, { size: 0.3, color: '#9fd8ff', when: '!@PAST' });
+    // the maintenance strip along the east wall, behind a partition and a lock
+    R.box([3, 0, -18, 3.4, 6.5, -12]);
+    R.box([3, 0, -9, 3.4, 6.5, -4]);
+    R.box([3, 4, -12, 3.4, 6.5, -9]);
+    R.box([3, 0, -12, 3.4, 4, -9], { mat: 'door', when: '!maint_open', id: 'door_maint' });
+    R.box([3.4, 0, -4.4, 8, 6.5, -4]);
+    R.box([3.4, 0, -18, 8, 6.5, -17.6]);
+    R.text('MAINTENANCE ROUTE - M. TEAM ONLY', [2.95, 4.6, -10.5], -Math.PI / 2, { size: 0.3, color: '#ffb36b' });
+    R.text('LOCK RESETS ON STATE CHANGE', [2.95, 3.9, -10.5], -Math.PI / 2, { size: 0.24, color: '#ff6a48' });
+    R.scene('release', [3.7, 1.3, -7.2], 'MANUAL RELEASE', { yaw: -Math.PI / 2, model: () => makePanel(0xff6a48), when: '!maint_open' });
+    R.prop('console', 6.6, -15.6);
+    R.scene('iven_terminal', [6.6, 1.3, -15.1], 'THE RAW LOG / THE TEAM (2049)', { model: () => makePanel(0x4f9fe8), when: '@PRESENT && quest_iven != "resolved"' });
+    R.text('THE TEAM IS IN 2049', [6.6, 2.6, -17.5], 0, { size: 0.3, color: '#ffd9a0', when: '!@PRESENT' });
+    R.prop('crate', 5.2, -6.2, { size: 0.5 });
+    for (const [k, x, z] of [[0, 5.0, -12.6], [1, 6.4, -11.2], [2, 5.6, -9.4]]) R.npc({ id: `tech_${k}`, crew: `tech_${k}`, first: 'Technician', seed: 310 + k, ambient: true, pronoun: k === 1 ? { their: 'her', them: 'her' } : { their: 'his', them: 'him' }, pos: [x, 0, z], yaw: -Math.PI / 2, silent: true, when: 'iven_team_saved' });
+    // the drone: 2049 only
+    R.sentinel({ path: [[-6, -7], [1.6, -7], [1.6, -15.4], [-6, -15.4]], speed: 1.7, range: 7.5, fov: 0.8, when: '@PRESENT' });
+    R.challenge('helix:route', 0, -22, ['The drone only exists in 2049.', 'Cross in another year, or let Marr keep it busy. Stability drains out of 2049.', 'Switch to 2026 or 2196 and walk straight through to the far door, then switch back.']);
+    R.checkpoint(0, -2, -1.6);
+  });
+  // r4 control: the keycard waits in 2026 (anchor it), the panel works in 2049
   D.room({ id: 'control', name: 'CONTROL', W: 12, L: 16, H: 6, kind: 'encounter', beat: 'custom' }, (R) => {
     R.floor();
     R.prop('desk', 4, -4);
@@ -474,6 +554,15 @@ export const M03 = {
     touch: { lines: [N('You put your hand on the ring. It is cold, and then it is every temperature it has ever been.')], set: { has_chronolith: true }, then: 'firstCycle', log: 'The Chronolith let me in. The room has three dates: 2026, 2049, 2196. I can choose which one I stand in.' },
     power: { when: 'cable_connected', lines: [N('The main feed comes up. Twenty-three years late, the lab has power.'), K('Connected in 2026. Switched on in 2049. That should not work.'), L('ROOK', 'It works. That is the problem.')], set: { power_on: true }, log: 'A cable connected in 2026 carries power in 2049. The years are not separate.' },
     power_no: { lines: [N('The panel is dead. MAIN FEED - NOT CONNECTED.'), K('Not connected. Not connected when?')] },
+    service_panel: { lines: [N('A service panel from 2026, before the drone, before the lock had opinions. The release takes.'), K('Open. Until I change the year.')], set: { maint_open: true }, log: 'The 2026 service panel opens Marr\'s maintenance route. The lock resets the moment the year changes.' },
+    release: { lines: [N('The manual release clunks. The route is open again, until the next switch.')], set: { maint_open: true } },
+    iven_terminal: {
+      lines: [N('The maintenance terminal, in 2049. Three technicians are sealed in the lower conduit, and the raw experiment log is open on the same circuit. The building is about to change its mind about the year.')],
+      choices: [
+        intent('comfort', 'Get the team out first.', { npc: 'iven', lines: [N('The conduit hatch opens. Three technicians climb out into a building that cannot decide what year it is, which is still better than the room they were in.'), L('IVEN', 'That is the whole of my statement, when they ask. You got them out.')], set: { iven_team_saved: true, quest_iven: 'resolved' }, trust: 1, log: 'I opened the conduit for Marr\'s team. The raw log went with the circuit.' }),
+        intent('investigate', 'Keep the raw log.', { npc: 'iven', lines: [N('The log holds, unedited: the director\'s order, Marr\'s refusal, the test at 05:40, and a second entry at 05:40 that nobody wrote.'), L('IVEN', 'I would have chosen them. I understand why you did not.')], set: { ev_raw_log: true, ev_rook_log: true, quest_iven: 'resolved' }, trust: -1, log: 'I kept the raw experiment log: Rook\'s order, Marr\'s refusal, and an entry at 05:40 that nobody wrote. Marr\'s team waited.' }),
+      ],
+    },
     panel: {
       lines: [K('Control. Finally.'), N('The panel shows three dates, and a fourth it cannot name. Then every date on it starts to count the wrong way.'), L('ROOK', 'Kai, get out of there. The chamber is reading-'), N('The floor remembers being earth. The walls remember being nothing. The year lets go of you.')],
       set: { fractured: true }, then: 'fracture', log: 'The facility fractured. I was pulled into the past.',
@@ -482,7 +571,24 @@ export const M03 = {
   rules: [
     { id: 'crossed', when: 'crossed', say: [K('Across. In a year that has not happened yet.')] },
   ],
+  // quest chain D: the maintenance lock resets every time the building changes its mind about the year
+  onShift(rt) {
+    const g = rt.g;
+    if (g.facts.get('maint_open')) {
+      g.facts.set('maint_open', false);
+      g.deckWorld.refresh();
+      g.hud.toast('<small>MAINTENANCE ROUTE</small><br>The lock resets.', 1800);
+    }
+  },
   fx: {
+    ivenLure(rt) {
+      // Marr walks out in front of the drone; it knows his face and follows him for a while
+      const g = rt.g;
+      const iv = g.deckWorld.npcs.find((n) => n.n.id === 'iven3');
+      if (!iv) return;
+      for (const s of g.deckWorld.sentinels) if (s.def.room === 'route') s.lure = { x: iv.model.position.x, z: iv.model.position.z, t: 45 };
+      g.hud.toast('<small>IVEN MARR</small><br>The drone follows him. 45 seconds.', 2400);
+    },
     firstCycle(rt) {
       const g = rt.g;
       const room = g.room;
