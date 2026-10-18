@@ -531,7 +531,7 @@ const _f = { v: new THREE.Vector3(), q: new THREE.Quaternion(), hw: new THREE.Qu
 // A bone face for one frame (rig 'rb'): everything relative to the head, from rest.
 // blink 0..1, open: how far the voice opens the jaw, lift: brow emphasis,
 // target: a world point to look at (weight k), or null.
-const LID_CLOSE = 0.5; // radians the upper lid travels around the eyeball to close
+const LID_CLOSE = 0.62; // radians the upper lid travels around the eyeball to close
 function driveFace(F, head, right, up, dt, blink, open, lift, target, k) {
   for (const [b, q, p] of F.rest) {
     b.quaternion.copy(q);
@@ -552,7 +552,8 @@ function driveFace(F, head, right, up, dt, blink, open, lift, target, k) {
   for (const e of F.eyes) {
     const dir = _f.d.copy(F.gaze);
     if (target) {
-      const t = head.worldToLocal(_f.v.copy(target)).sub(e.position).normalize();
+      // callers pass the listener's chin (body centre + 0.6 m): look them in the eyes
+      const t = head.worldToLocal(_f.v.copy(target).addScaledVector(up, 0.15)).sub(e.position).normalize();
       const ang = F.gaze.angleTo(t);
       if (ang > 0.52) t.copy(F.gaze).lerp(t, 0.52 / ang).normalize();
       dir.lerp(t, k).normalize();
