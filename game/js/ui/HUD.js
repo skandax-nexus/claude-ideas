@@ -89,7 +89,7 @@ export class HUD {
       `<div class="room">${roomName}${locked ? ' <i>(UNRESPONSIVE)</i>' : ''}</div>` +
       this.states
         .map((st, i) => (avail && !avail.includes(st.key) ? '' : `<span class="pip ${st.key.toLowerCase()} ${st.key === state ? 'cur' : ''}"><em>${i + 1}</em>${st.label}</span>`))
-        .join('');
+        .join('') + (this.stabilityBar ? '<div class="stab" title="Chronolith stability"><i></i></div>' : '');
     if (html !== this._stateHtml) {
       this._stateHtml = html;
       this.el.state.innerHTML = html;
@@ -99,6 +99,12 @@ export class HUD {
 
   // Chronolith stability (THE LAST VERSION): a quiet bar that only shows when it matters
   setStability(v, visible, draining = false) {
+    // a thin bar under the year pips: quiet until it matters
+    const st = this.el.state;
+    st.classList.toggle('stab-on', visible);
+    st.classList.toggle('draining', visible && draining);
+    st.classList.toggle('low', visible && v < 0.3);
+    st.style.setProperty('--sv', Math.max(0, Math.min(1, v)).toFixed(3));
     const el = this.el.stability;
     if (!el) return;
     el.classList.toggle('on', visible);

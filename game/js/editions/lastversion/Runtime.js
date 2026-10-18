@@ -94,6 +94,7 @@ export class LastVersion {
     const hud = game.hud;
     hud.states = def.states.map((key) => ({ key, label: def.labels[key] }));
     hud.speakers = def.speakers;
+    hud.stabilityBar = true;
     game.facts.onChange(() => this.onFact());
     // a watcher that rewinds its own damage, lured into a live conduit, stays down
     game.deckWorld.onSentinelDown = (s) => {
@@ -175,7 +176,7 @@ export class LastVersion {
       hints: { roof: HINTS.roof, canal: HINTS.canal, drones: HINTS.drones, gate: HINTS.gate },
     }));
     return {
-      zones: true, lv: true, chapter, seed: 'lv', residue: 'PAST', label: 'THE LAST VERSION',
+      zones: true, lv: true, chapter, seed: `lv-${chapter}`, residue: 'PAST', label: 'THE LAST VERSION', // each chapter its own places
       question: CHAPTERS[chapter].question,
       cast: CAST, captain: CAST[0], truth: {}, decks,
       fragments: decks.map((d) => d.fragments?.[0] || []),
@@ -266,6 +267,7 @@ export class LastVersion {
     for (const n of level.npcs) {
       const def = NPCS[n.crew];
       if (n.temporal || !def?.temporal || n.hologram) continue;
+      if (beat?.kind === 'encounter' && n.id.startsWith('npc_')) continue; // the person a beat is about is always met in person
       const real = def.temporal.filter((s) => this.def.states.includes(s));
       const here = level.rooms[n.room]?.states || states;
       if (real.length && here.some((s) => real.includes(s)) && here.some((s) => !real.includes(s))) n.temporal = real;
@@ -830,6 +832,12 @@ export class LastVersion {
     g.hud.toast(`<small>CAUSAL ANCHOR</small><br>${it.label} will survive the switch.`, 2400);
     g.facts.set('anchored_once');
     g.log.push(`I anchored the ${it.label.toLowerCase()}. It comes with me through the years now.`);
+  }
+
+  // each year of an open district has its own hour: 2026 at dusk, 2196 in a pale dawn
+  stateNight(state, night) {
+    if (!this.level?.zone || this.deck?.noDress) return night;
+    return night * ({ PAST: 0.55, FUTURE: 0.4, INVERTED: 0.85 }[state] ?? 1);
   }
 
   // each state tints the place

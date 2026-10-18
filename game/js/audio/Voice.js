@@ -7,6 +7,7 @@
 // Music ducks under speech (see Synth.setDuck). Toggle in Settings.
 import { voicePieces } from './voiceKey.js';
 import { VOCAB } from '../gen/StoryGen.js';
+import { EDITION } from '../core/Edition.js';
 
 const GAP = 0.05; // between spliced pieces
 
@@ -83,6 +84,7 @@ export class Voice {
   // the recorded pieces for a line, or null if the pack can't say all of it
   plan(text, who, extra = {}) {
     if (!this.pack || !this.packOk) return null;
+    if (EDITION === 'lastversion' && who === 'YOU' && this.pack.index.KAI) who = 'KAI'; // THE LAST VERSION: you are Kai, in his own voice
     let id = who === 'CREW' ? `CREW_${extra.gender || 'n'}` : ALIAS[who] && !this.pack.index[who] ? ALIAS[who] : who;
     if (who === 'YOU' && this.youMale && this.pack.index.YOU_m) id = 'YOU_m'; // your look decides your voice
     if (who === 'OTHER' && this.youMale && this.pack.index.OTHER_m) id = 'OTHER_m'; // and the Other's: it wears your face

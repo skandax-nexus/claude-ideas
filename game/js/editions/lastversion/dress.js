@@ -4,7 +4,7 @@
 // decoration only (nothing here collides, so no route a puzzle needs can change):
 //   PAST (2026, or the thriving settlement)  scaffolding and site barriers on the buildings,
 //                                            lanterns on poles, bare young saplings
-//   FUTURE (2196, the beautiful catastrophe)  vines down the facades, gardens on the roofs,
+//   FUTURE (2196, the beautiful catastrophe)  ivy down the facades, gardens on the roofs,
 //                                            moss over the streets and floors, fallen slabs
 //   INVERTED                                  debris hanging in the air where it will land,
 //                                            or has landed - reality behaving incorrectly
@@ -40,10 +40,10 @@ export function dressStates(level, states, seed = 'lv') {
       // the face toward the avenue (x = 0)
       const fx = Math.abs(x0) < Math.abs(x1) ? x0 : x1, out1 = fx === x0 ? -1 : 1;
       if (has('FUTURE')) {
-        const n = 1 + rng.int(0, 2);
+        const n = 2 + rng.int(0, 3);
         for (let k = 0; k < n; k++) {
-          const zc = rng.float(z0 + 0.6, z1 - 0.6), w = rng.float(0.5, 1.4), len = h * rng.float(0.45, 0.95);
-          add([fx + out1 * 0.02 - 0.09, y1 - len, zc - w, fx + out1 * 0.02 + 0.09, y1, zc + w], 'leaf', '@FUTURE', rid);
+          const zc = rng.float(z0 + 0.6, z1 - 0.6), w = rng.float(0.25, 0.7), len = h * rng.float(0.35, 0.9);
+          add([fx + out1 * 0.03 - 0.1, y1 - len, zc - w, fx + out1 * 0.03 + 0.1, y1, zc + w], 'crown', '@FUTURE', rid);
         }
         if (rng.chance(0.55)) add([x0 + 0.3, y1, z0 + 0.3, x1 - 0.3, y1 + 0.35, z1 - 0.3], 'moss', '@FUTURE', rid);
         if (rng.chance(0.35)) {
@@ -85,7 +85,7 @@ export function dressStates(level, states, seed = 'lv') {
         const x = rng.float(x0 + 1, x1 - 1), z = rng.float(z0 + 1, z1 - 1);
         if (has('FUTURE')) {
           add([x - rng.float(0.5, 1.6), 0.005, z - rng.float(0.5, 1.8), x + rng.float(0.5, 1.6), 0.03, z + rng.float(0.5, 1.8)], 'moss', '@FUTURE', r.id);
-          if (k < 3) add([x - 0.25, H - rng.float(1.2, 2.6), z - 0.06, x + 0.25, H - 0.02, z + 0.06], 'leaf', '@FUTURE', r.id); // hanging vines
+          if (k < 3) add([x - 0.25, H - rng.float(1.2, 2.6), z - 0.06, x + 0.25, H - 0.02, z + 0.06], 'crown', '@FUTURE', r.id); // hanging vines
         }
         if (has('INVERTED') && k < 5) {
           const y = rng.float(2.4, Math.max(2.6, H - 1)), s = rng.float(0.12, 0.4);

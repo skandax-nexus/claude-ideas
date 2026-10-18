@@ -1979,7 +1979,8 @@ class Game {
       else if (a === 'combo') (this.edition ? this.edition.echoStep() : this.nextCombo());
       else if (a === 'anchor') this.edition?.anchor();
       else if (a === 'shift') this.shift();
-      else if (a.startsWith('set:')) this.shift(a.slice(4));
+      // (the number keys pick by position: THE LAST VERSION's 1 2 3 4 are 2049, 2026, 2196, INVERTED)
+      else if (a.startsWith('set:')) this.shift(this.edition ? String(['PHYSICAL', 'INVERTED', 'ECHO'].indexOf(a.slice(4)) + 1 || a.slice(4)) : a.slice(4));
     }
     const z = this.input.consumeZoom();
     if (z) this.zoomBy(z);
@@ -2324,7 +2325,7 @@ class Game {
     const tint = _tint.set(room.tint);
     // each place has its own air: a deck's palette, or a Station Zero room's own fog
     const fog = _fog.set(th.fog);
-    if (deck) fog.lerp(_c.set(pal.fog), 1 - (s === 'PHYSICAL' ? 0.1 : 0.55) * (1 - (pal.night || 0) * 0.6));
+    if (deck) fog.lerp(_c.set(pal.fog), 1 - (s === this.engine.baseline ? 0.1 : 0.55) * (1 - (pal.night || 0) * 0.6));
     else if (room.fog !== undefined) fog.lerp(_c.set(room.fog), s === 'PHYSICAL' ? 0.85 : 0.5);
     this.scene.fog.color.lerp(fog, k);
     this.scene.background.copy(this.scene.fog.color);
@@ -2334,7 +2335,8 @@ class Game {
     _c.set(th.ground);
     if (pal?.look) _c.lerp(_c2.set(pal.fog), 0.5);
     this.hemi.groundColor.lerp(_c, k);
-    const night = (deck ? pal.night || { horror: 0.55, thriller: 0.3 }[this.story?.mood] || this.story?.after?.dark || 0 : room.night || 0) * (1 - this.flare());
+    let night = (deck ? pal.night || { horror: 0.55, thriller: 0.3 }[this.story?.mood] || this.story?.after?.dark || 0 : room.night || 0) * (1 - this.flare());
+    if (deck && this.edition?.stateNight) night = this.edition.stateNight(s, night); // THE LAST VERSION: each year has its own hour
     const env = (this.scene.environment ? 0.85 : 1) * (deck ? 0.72 : 1) * (1 - night * 0.55);
     // a sky photo lights the district: the probe takes over most of the flat hemisphere fill
     // (indoor decks only borrow the sky for reflections)

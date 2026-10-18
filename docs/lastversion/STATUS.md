@@ -1,0 +1,87 @@
+# AFTERZERO: The Last Version of Earth — status
+
+An honest account of what the v2.0 edition is today, measured against the creator's bible.
+The bible describes a 25–30 hour campaign; this is a playable adaptation of all of it on the
+AFTERZERO engine, with the Prologue written by hand and the rest generated around authored
+story beats. How it works: [`DESIGN.md`](DESIGN.md).
+
+## Built (by hand, playable, tested)
+
+- **The edition layer.** Its own title (AFTERZERO / THE LAST VERSION OF EARTH, with its own
+  backdrop), chapter list (Prologue, Acts I–IV, Finale, Cases), save namespace (`afterzero.lv.`),
+  settings, default look (Kai Varen, a realistic man), HUD state names (2049 / 2026 / 2196 /
+  INVERTED), its own Android build (`EDITION=lastversion bash android/build-apk.sh`: app
+  "AFTERZERO: Last Version", `com.afterzero.lastversion`, versionName 2.0.0,
+  `AFTERZERO-LastVersion-v2.0.apk`, preview page with `window.AZ_EDITION='lastversion'`). The
+  default build and every Station Zero chapter are unchanged.
+- **The four temporal states**, authored per region; per-state looks (tint, hour, weather,
+  decoration, music); the Chronolith stability meter with the snap back to PRESENT at the last
+  anchor; causal anchors (`C`); Echo Step (`X`, unlocked in Mission 10); local loops.
+- **The NPC system** of the supplement: trust, knowledge, quest state, temporal state, faction
+  standing and evidence flags in the save; dialogue choices by intent (challenge / comfort /
+  investigate / withdraw); barks; echoes standing in for people absent from a state; the case
+  board (evidence journal).
+- **The Prologue, fully authored**: Mission 1 The Last Normal Day (Rain City, the anomalies,
+  Rook's call, the checkpoint, the Zero Second, the rescue, the voice, Mira), Mission 2 Helix Goes
+  Dark (emergency light, the drone, three cells, the trustworthy officer, the unit that rewinds
+  its damage, the drawing, the chamber), Mission 3 The First Switch (the three years of Helix, the
+  anchor, the fracture), with every quoted line of the bible; **quest chain A** (Jun Park, Last
+  Train Home: the station falls back to 8:13 every 41 seconds; reroute the relay there; the line
+  or the evidence) and **quest chain D** (Iven Marr, The Technician's Key: shift notes, the
+  past-state service panel, the 2049-only drone Iven keeps busy, the lock that resets on every
+  switch, the raw log or the trapped team), each with both outcomes and a later consequence.
+- **The story spine of Acts I–IV and the Finale**: for all 20 missions, the bible's setup, three
+  beats with goals, its quoted lines, scenes and choices, and its mission ending; the Mission 10
+  Echo Step unlock; the Mission 13 faction choice (destroy the stabilizer / free the people); the
+  Mission 15 city choice; the Mission 21 ally (Sera, Anja, Iven, or nobody); the three endings
+  (A The Fixed World, B The Infinite War, C Afterzero) and "Version one hundred and eighteen."
+- **Optional quest chains B and C** (Tala and Niko's river; Mara's two records) as the Cases
+  chapter.
+- **Stealth and evasion stand in for combat** (watchers, cones, the lure, Echo Step decoys);
+  see DESIGN.md.
+- **Voices**: KAI (male), MIRA, WITNESS, ROOK, NIKO, SERA, ANJA, IVEN, JUN, TALA, MARA, ORREN,
+  CHILD and the narrator each have a distinct Kokoro voice in `tools/voice-pack.py`;
+  `tools/voice-pack.mjs` collects the edition's lines (808 lines, 1,165 unique recordings, about
+  44 minutes). **The recordings are not rendered yet**: until they are, the game speaks the
+  edition's lines with the device's speech synthesis where it has one, and shows subtitles always.
+- **Tests**: `tests/lastversion.test.mjs` (unit, in `npm test`) and `tests/lastversion.mjs`
+  (browser bot: the Prologue through both quest chains into Act I, one mission per act and the
+  Finale to an ending, a generated interior walked with real movement).
+
+## Generated (playable, solvable by construction, not hand-tuned)
+
+- **The places of Acts I–IV, the Finale and the Cases**: 64 generated levels (open districts and
+  interiors) dressed per state, each with an authored beat. Every one is checked: each obstacle
+  has a state or the anchor that gets past it, each generated route uses only its room's states,
+  each beat has something that completes it, every place can snap back to the present.
+- **Puzzles** are the generators' pits, ledges, keys, cores, sweepers and watchers, limited to
+  what each mission's states can do. They serve the bible's verbs (cross in the past, walk the
+  ceiling inverted, carry a key out of 2026 and anchor it), but they are not the bible's specific
+  puzzles: the observatory's three instruments aligned by sun and stars, the clockmaker's hidden
+  staircase found by comparing room states, the hospital's sound that gets quieter as you
+  approach, or the Unwritten Second's bridge seen only in reflections exist as beats and text, not
+  as bespoke mechanisms.
+- Room names inside generated interiors are drawn from each mission's list, so a room's name and
+  its puzzle do not always match its story beat.
+
+## Planned / not done
+
+- **Scale.** The bible's campaign is 25–30 hours. A first playthrough of this edition is a few
+  hours: the Prologue is roughly 40–60 minutes, each generated mission 10–20 minutes. Not measured
+  with players.
+- **Bespoke set pieces for Acts I–IV.** The Mission 9 "reach the tower before the reset" is a
+  watcher reset, not a fail state; Mission 12's chase is a route with the Witness at its end, not
+  a pursuit; Mission 13's battle and Mission 18's storms are watchers and weather; Mission 17's
+  "security that mimics Kai" and Mission 21's elites are ordinary watchers; Mission 20's three
+  memories are one district per memory rather than an alignment puzzle; Mission 22's final causal
+  puzzle is read from evidence rather than assembled.
+- **The ten optional missions** of the bible's list (The Child in Three Photographs, The Train
+  That Arrives Yesterday, …) are not built; the Child in the Station appears in Mission 1 only.
+- **Rook as a person after Mission 2.** He speaks on the radio and in recordings; the
+  supplement's exposure / persuasion confrontation is only in his dialogue lines.
+- **Faction support** changes who answers in Mission 21 and what people say; it does not change
+  patrol responses or open safe routes elsewhere (Jun's line in the Finale is the one safe route).
+- **Music** is the engine's procedural score (a chord progression per state, ambience beds per
+  region), not the bible's cues.
+- **Voice recordings** not rendered (see above).
+- **Device testing** of the Android build on phones has not been done in this session.
