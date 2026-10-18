@@ -503,11 +503,14 @@ export class DeckWorld {
       m.userData.setTalking?.(n.talkT > 0);
       if (!frozen) m.userData.animate(dt, speed, t);
       // a bark: something said in passing, never over a conversation
-      if (n.n.barks?.length && m.visible && !frozen && d.length() < 5 && t - n.lastBark > (n.n.barkEvery || 16) && !g.hud.talking) {
-        n.lastBark = t;
-        const text = n.n.barks[n.barkI = ((n.barkI || 0) + 1) % n.n.barks.length];
+      // (one bark at a time across the whole place, each person starting somewhere else in their list)
+      if (n.n.barks?.length && m.visible && !frozen && d.length() < 5 && t - n.lastBark > (n.n.barkEvery || 16) && t - (this.lastBarkT ?? -99) > 9 && !g.hud.talking && !g.menu) {
+        n.lastBark = this.lastBarkT = t;
+        n.barkI = n.barkI === undefined ? (n.n.seed || this.npcs.indexOf(n)) % n.n.barks.length : (n.barkI + 1) % n.n.barks.length;
+        const text = n.n.barks[n.barkI];
         n.talkT = 2.5;
-        g.hud.say([{ who: n.n.voice || 'CREW', name: (n.n.first || n.crew.first || '').toUpperCase(), color: n.crew.color, text, voice: n.n.voiceExtra }], g.facts);
+        const gender = { her: 'f', his: 'm' }[(n.n.pronoun || n.crew.pronoun)?.their] || 'n';
+        g.hud.say([{ who: n.n.voice || n.crew.voice || 'CREW', name: (n.n.first || n.crew.first || '').toUpperCase(), color: n.crew.color, text, voice: n.n.voiceExtra || { gender } }], g.facts);
       }
     }
     return event;
@@ -519,6 +522,7 @@ export class DeckWorld {
     for (const it of this.level.interactables) {
       if (this.flags[`done_${it.id}`] && it.kind !== 'beacon' && it.kind !== 'terminal' && it.kind !== 'chair') continue;
       if ((it.kind === 'lock' || it.kind === 'socket') && this.flags[`open_${it.room}`]) continue;
+      if (it.r === 0 || this.flags[`filled_${it.id}`] || (it.when && !compileCondition(it.when)(this.ctx(it.room)))) continue; // not here (yet), not in this state, or done
       out.push({ id: `deck:${it.id}`, pos: it.pos, r: it.r, prompt: it.prompt, it });
     }
     for (const [id, im] of Object.entries(this.itemMeshes)) {

@@ -184,7 +184,7 @@ class Game {
   newState() {
     this.facts = new FactStore();
     // THE LAST VERSION runs the engine on PAST / PRESENT / FUTURE / INVERTED without laws
-    this.engine = new RealityEngine(this.editionDef ? this.editionDef.makeRuntime.prototype.engineOptions.call({ def: this.editionDef }) : { slots: 3, unlocked: 2, laws: DEFAULT_LAWS });
+    this.engine = new RealityEngine(this.editionDef ? this.editionDef.engineOptions() : { slots: 3, unlocked: 2, laws: DEFAULT_LAWS });
     this.engine.lock('antechamber');
     this.objectives = new Objectives(objectiveLayers, this.facts);
     this.log = [];
@@ -1314,6 +1314,7 @@ class Game {
   }
 
   deckBeat() {
+    if (this.campaign?.lv) return this.edition.beat;
     const deck = this.story.decks[this.campaign.deck];
     return deck.beats[this.campaign.sector];
   }

@@ -51,6 +51,15 @@ export const LV = {
   dialogue: DIALOGUE,
   ambient: AMBIENT,
   hints: HINTS,
+  // the reality engine for this edition: four temporal states, no laws (PAST shows and holds the
+  // residue of what stood there; INVERTED flips gravity and runs selected motion backwards)
+  engineOptions() {
+    return {
+      slots: 3, unlocked: 3, laws: [null, null, null],
+      states: LV.states, baseline: 'PRESENT', residue: 'PAST',
+      stateEffects: { PAST: { echoVisible: true, echoSolid: true }, INVERTED: { gravityFlip: true, timeReverse: true } },
+    };
+  },
   makeRuntime(game) {
     return new LastVersion(game, LV);
   },

@@ -94,14 +94,17 @@ export class LastVersion {
     hud.states = def.states.map((key) => ({ key, label: def.labels[key] }));
     hud.speakers = def.speakers;
     game.facts.onChange(() => this.onFact());
+    // a watcher that rewinds its own damage, lured into a live conduit, stays down
+    game.deckWorld.onSentinelDown = (s) => {
+      if (!game.campaign?.lv) return;
+      game.fx.burst([s.pos.x, 1.2, s.pos.z], 0xffb36b, 50, 2.2);
+      game.audio.door?.();
+      game.facts.set(s.def.downSets || 'unit_down');
+    };
   }
 
   engineOptions() {
-    return {
-      slots: 3, unlocked: 3, laws: [null, null, null],
-      states: this.def.states, baseline: 'PRESENT', residue: 'PAST',
-      stateEffects: { PAST: { echoVisible: true, echoSolid: true }, INVERTED: { gravityFlip: true, timeReverse: true } },
-    };
+    return this.def.engineOptions();
   }
 
   // --- the title and the menus --------------------------------------------------------------
@@ -165,7 +168,7 @@ export class LastVersion {
   makeStory(chapter) {
     const ms = MISSIONS[chapter];
     const decks = ms.map((m, i) => ({
-      ...m, index: i, key: m.kind === 'rooms' ? m.deckKey : m.key, rooms: m.roomsNames || m.rooms, crew: m.crew ?? 0,
+      ...m, index: i, mkey: m.key, key: m.kind === 'rooms' ? m.deckKey : m.key, rooms: m.roomsNames || m.rooms, names: m.kind === 'zone' ? m.rooms : undefined, crew: m.crew ?? 0,
       hints: { roof: HINTS.roof, canal: HINTS.canal, drones: HINTS.drones, gate: HINTS.gate },
     }));
     return {
@@ -417,7 +420,8 @@ export class LastVersion {
   // lines, then (maybe) a choice, then what follows
   playNode(node, n = null, id = null) {
     const g = this.g;
-    const lines = (node.lines || []).map((l) => (l.who === 'CREW' && n ? { ...l, name: l.name || (n.n.first || n.crew.name).toUpperCase(), color: l.color || n.crew.color } : l));
+    const gender = n ? { her: 'f', his: 'm' }[(n.n.pronoun || n.crew.pronoun)?.their] || 'n' : 'n';
+    const lines = (node.lines || []).map((l) => (l.who === 'CREW' && n ? { ...l, name: l.name || (n.n.first || n.crew.name).toUpperCase(), color: l.color || n.crew.color, voice: l.voice || { gender } } : l));
     const after = () => {
       if (node.choices) this.choose(node.choices, n, node, lines[lines.length - 1]);
       else {
@@ -539,7 +543,7 @@ export class LastVersion {
         if (!last) {
           c.sector++;
         } else {
-          g.facts.set(`${deck.key}_done`);
+          g.facts.set(`${deck.mkey}_done`);
           c.sector = 0;
           if (c.deck + 1 < g.story.decks.length) c.deck++;
           else {

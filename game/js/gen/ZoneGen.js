@@ -41,6 +41,7 @@ class District {
     this.glows = []; // pools of light on the ground: [x, y, z, radius, color]
     this.trees = []; // [x, z, height, trunk radius, crown radius, turn]
     this.rocks = []; // [x, z, size, turn]
+    this.triggers = []; // THE LAST VERSION: boxes that set facts when you walk into them
   }
 
   box(b, o = {}) {
@@ -278,7 +279,7 @@ export function generateZone(story, zi, si) {
     [scene.x, 6, scene.z + 2, pal.accent, 2.4, 22],
     [0, 4, ZN + 6, pal.accent2, 1.6, 18],
   ];
-  const name = zone.rooms[(si * 2) % zone.rooms.length];
+  const name = zone.names?.[si] ?? zone.rooms[(si * 2) % zone.rooms.length]; // an edition can name each district
   const room = {
     name, kind: 'district', beat: beat.kind,
     bounds: [[-XW, -12, ZN - 4, XW, H + 2, 4]],
