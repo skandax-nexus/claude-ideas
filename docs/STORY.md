@@ -2,25 +2,54 @@
 
 ## The story in one breath
 
-You are Ren. You wake in a sealed room in Station Zero with no memory and a floating object that becomes a device in your hand. The device shifts any room between PHYSICAL, INVERTED and ECHO, and it obeys laws you write. Juno, an engineer who has been hiding on the ceiling, and TICK, a small hint drone, keep you company. Meanwhile, recordings from Dr. Ilse Varga warn you never to activate the machine in the lab. But those recordings grow new sentences while you are away, one is dated "AFTER", and another is in your own voice, made eighteen years before you were born. A hatch behind the vault leads up into HALCYON, a city under a glass sky. Across twelve districts you learn four things: the city blamed you but its echoes blamed Varga, she flooded the reactor to buy eighteen years, the people are asleep rather than dead, and you were once her student and helped build the machine. Her echo at the top of the Signal Tower sends you home, where you take the power core from the Observer, a sentinel that learns every habit you show it, and wake the machine. The lab's walls turn into windows full of stars, and inside the machine, visible only in ECHO, floats a human brain whose pulse matches the Observer's eye. You choose to sever it or sustain it, or, if you have earned it, to let the Observer see you. Then the story moves to the Vessel, where one of seven crew members rewrote the core's first law at 03:12 and started the loop, and you must sit in the Captain's chair and name them. Every story number deals a new crew and a new truth, and the Story Studio lets you steer it.
+You are Ren. You wake in a sealed room in Station Zero with no memory and a floating object that becomes a device in your hand. The device shifts any room between PHYSICAL, INVERTED and ECHO, and it obeys laws you write. Juno, an engineer who has been hiding on the ceiling, and TICK, a small hint drone, keep you company. Meanwhile, recordings from Dr. Ilse Varga warn you never to activate the machine in the lab. But those recordings grow new sentences while you are away, one is dated "AFTER", and another is in your own voice, made eighteen years before you were born. A hatch behind the vault leads up into HALCYON, a city under a glass sky. Across twelve districts you learn four things: the city blamed you but its echoes blamed Varga, she flooded the reactor to buy eighteen years, the people are asleep rather than dead, and you were once her student and helped build the machine. Her echo at the top of the Signal Tower sends you home, where you take the power core from the Observer, a sentinel that learns every habit you show it, and wake the machine. The lab's walls turn into windows full of stars, and inside the machine, visible only in ECHO, floats a human brain whose pulse matches the Observer's eye. You choose to sever it or sustain it, or, if you have earned it, to let the Observer see you. Then the ladder behind the vault takes you down into THE CRADLE, where Halcyon's people sleep in rows under the forest's roots. There Juno admits that she is the "her" the Custodian saw you carry, and you meet Varga in row one: awake, dreaming, or saying your name, depending on what you chose. The brain is her son, the first Ren, and you are the forty-second Ren grown from him. Last comes the Vessel, the forward night of the same ship, where one of seven crew put their hands on the core's first law at 03:12 and started this cycle, and you must sit in the Captain's chair and name them. The ending you chose at the machine changes the Vessel: its watchers, its windows, its light, who is aboard and the last scene on the Bridge. Every story number deals a new crew and a new truth, and the Story Studio lets you steer it.
+
+---
+
+## The truth (v1.0)
+
+Almost all of this was hinted at before v1.0; THE CRADLE says it out loud.
+
+- **The brain in the machine is the first Ren, Ilse Varga's son.** You are the forty-second Ren the field has grown from his pattern. The Custodian's "You have met him" is literal: you met him as the Observer, his mind looking out of the field's sentinel. It learns you because it is trying to remember being Ren.
+- **"Her" is Juno Hale.** On the night of the Zero Event the first Ren carried her out of the flooded reactor, through the archive door, into the lab. She lived. He did not, and his mother could not let him go.
+- **R. VARGA-ZERO was his relay badge.** The reactor's control deck was keyed to one name, VARGA, and two people carried it. At 03:04 the doors opened for him, not for her. He had scratched the name off in an argument with his mother: nobody gets to choose for everyone. The doors read the chip, not the scratches.
+- **The first law takes a key and a pair of hands.** He wrote the key at 03:04 so that the fold would have to be chosen again, every cycle. The hands at the core at 03:12 are new every cycle: they belong to that cycle's culprit.
+- **Halcyon sleeps in the Cradle beneath Station Zero, with Varga in row one.** A dream monitor wires her pod to the station terminals, which is why her recordings grow new sentences and are "always after".
+
+**The ship.** AFTERZERO is an ark that launched eleven years before the Zero Event. From the bottom up: the Cradle (the long-sleep hold around the lower core well), Station Zero (the keel lab) and HALCYON (the city under the glass sky); the eight working decks run forward along the spine. One core sits at the bottom of the core well. The key is written at the reactor's control deck at the top of the well; the hands sign at the core itself, which the forward crew reach from Engineering. The POWER CORE in the Observation Hall is the machine's own.
+
+**The night of 14 March 2071.**
+1. Before 03:04, one of that night's crew begins rewriting the core's first law so that time folds back at zero hour. Osei's pressure climbs "for no reason I can find".
+2. At 03:04 the first Ren reaches the control deck. The doors read VARGA and open ("They open for her"). He cannot stop the rewrite, so he writes a key into it: the fold holds only while someone chooses it, hands on the law at 03:12, every cycle.
+3. About 03:08, Varga opens the flood valves to slow the runaway core: her good decision, and the water buys eighteen years. Her son goes down into the water for Juno.
+4. At 03:12 the culprit puts their hands on the law and it takes. This is the Zero Event.
+5. Halcyon walks down into the Cradle to sleep ("WAKE THEM WHEN IT IS SAFE"). Kade (who keeps the neon lit for his sleeping wife, Sana) and Theo (who waters Varga's plants) refuse the sleep.
+6. The first Ren carries Juno down the core well, over the archive gap and past the Custodian into the lab. She lives; he does not.
+7. Varga's terrible decision: she puts his mind into the machine (consent signed by the Director, the occupant's line blank). His mind anchors the field, which holds the fold and keeps the Cradle shut. From inside, he rewrites Halcyon's screens to blame Subject Zero instead of his mother, records Recording 0, tells the Custodian to forget, and asks for a new Ren who will not remember, so the choice is honest.
+8. Varga walks the city, leaves her recorders, climbs the tower where she could stop the broadcast and chooses not to choose. She rides the lift all the way down, records her last log and lies down in row one.
+
+**The fold.** One cycle is one turn of the fold. Forward, the night of 14 March 2071 replays from zero hour, and eight sleepers are woken from the Cradle as that cycle's night watch: seven crew and a captain, with their roles and eleven years of memories. Aft, the ship returns to the morning of day 6570 and a new Ren wakes in SUBJECT HOLDING. Every zero hour the tower sends one word to Station Zero: AGAIN. The water held the fold for eighteen years; since day 6570 the field alone does. Records survive a turn (the station's counter resets to CYCLE 0, but its echo reads CYCLE 42), so do the Custodian's two visits, and so does Juno, who lives in the eye of the field and remembers every cycle. Forty-one Rens before you chose SUSTAIN.
+
+**What each ending means.** SEVERED: you let the first Ren go; the field ends, the watchers go dark, the windows go black, and the city opens its eyes, Varga first; the night watch play the last night, and it will reach morning. SUSTAINED: you take Varga's place as keeper, and the next Ren wakes to meet you upside down. OBSERVED: you let him in, two minds, one Ren; the field answers to your name, Varga wakes for you, and the ship will take a heading.
 
 ---
 
 ## Characters
 
-- **Ren (you).** Also called "Subject Zero". The station always calls you Ren, and you only choose how Ren looks. You form the theories, write the laws and make the final choice.
-- **Juno Hale.** "Engineer, last one awake", who has been living on the ceiling. She guides you in the lab, and she is a voice on the radio everywhere else.
-- **TICK.** A small round yellow drone with one glowing eye and a little rotor. He is your hint button and gives each hint in three steps: a nudge, a direction, then the answer.
-- **Dr. Ilse Varga.** The scientist behind the lab and the machine, called "Director" in HALCYON. She speaks through recordings that rewrite themselves, and you meet her once, as an echo.
-- **The Other ("???").** A violet, upside-down hologram that wears your face and speaks the game's first lines.
-- **The Custodian.** A flickering teal hologram that keeps the archive and believes only proof.
-- **The Observer.** A sleek white sentinel nearly three metres tall, with one glowing visor-eye. It hunts the Observation Hall and learns your habits.
-- **The Device.** The object in your hand, which has a clipped, capital-letter voice of its own.
-- **The brain.** The machine's "one occupant".
-- **Kade Mori, Sign Fixer.** Alive in Neon Meridian. He still fixes the neon, though nobody comes.
-- **Abena Osei, Reactor Chief.** An echo in the Drowned Reactor, still running her last shift.
-- **Theo Lark, Botanist.** Alive in the Glass Forest (they/them). Theo has watered Varga's plants for eighteen years.
-- **The Vessel crew.** Seven generated people, one per deck. Secretly, one is the culprit, one is the victim and one is a red herring.
+- **Ren (you).** Also called "Subject Zero". The forty-second Ren the field has grown from the first Ren's pattern, woken on day 6570 with no memories, as he asked. You are younger than he was (Kade's "a kid", Theo's "smaller than she said", the Custodian's "You were older"). The station always calls you Ren, and you only choose how you remember yourself; his recordings play in your own voice. You form the theories, write the laws and make the final choice.
+- **The first Ren (Ren Varga).** Ilse Varga's son, born before the launch, 24 on the night of the Zero Event. Her apprentice, who built TICK as a boy and helped build the machine; as its first test subject he was "Subject Zero" and signed his relay badge R. VARGA-ZERO. He carried Juno out of the flooded reactor and did not survive it. His mind is the machine's one occupant, and the Observer is his mind looking out.
+- **Juno Hale.** Chief Osei's junior reactor engineer, trapped in the lower gallery Osei sealed. Carried into the lab, she refused the sleep and has lived there since, on the ceiling, out of the Observer's sight: the "last one awake down here". The fold does not reset her; she remembers every cycle and never says so first. She guides you in the lab and is a voice on the radio everywhere else, and after SEVERED she walks onto the Bridge herself.
+- **TICK.** A small round yellow drone with one glowing eye and a little rotor, built by the first Ren as a boy ("HE WILL TELL ME WHEN I AM WRONG"). He is your hint button and gives each hint in three steps: a nudge, a direction, then the answer.
+- **Dr. Ilse Varga.** The Director, the first Ren's mother, the scientist behind the lab and the machine. She sleeps in row one of the Cradle; a dream monitor wires her pod to the station terminals, so her recordings rewrite themselves, and her echo at the tower is a recording her dream keeps updating. You meet her in the Cradle, awake or dreaming.
+- **The Other ("???").** A violet, upside-down hologram that wears your face (and speaks in your voice) and says the game's first lines: the echo of the last Ren who chose SUSTAIN, waiting to meet the next one.
+- **The Custodian.** A flickering teal hologram that keeps the archive and believes only proof. The first Ren, speaking through the machine, told it to forget the laboratory; it keeps two visits, his and yours.
+- **The Observer.** A sleek white sentinel nearly three metres tall, with one glowing visor-eye. It hunts the Observation Hall and learns your habits, because it is trying to remember being Ren.
+- **The Device.** The object in your hand, which has a clipped, capital-letter voice of its own. It carries a small field of its own, so laws still work after SEVERED.
+- **The brain.** The machine's "one occupant": the first Ren.
+- **Kade Mori, Sign Fixer.** Alive in Neon Meridian. He propped his pod open with a wrench and keeps the neon lit for his wife Sana, asleep in the Cradle under a tiny OPEN sign.
+- **Abena Osei, Reactor Chief.** An echo in the Drowned Reactor, still running her last shift and calling for Hale. She drowned on her shift.
+- **Theo Lark, Botanist.** Alive in the Glass Forest (they/them). Theo refused the sleep and has watered Varga's plants for eighteen years.
+- **The Vessel crew (the night watch).** Seven generated people, one per deck: sleepers woken from the Cradle each cycle and given the roles and eleven years of memories. Secretly, one is the culprit (the hands on the law at 03:12), one is the victim and one is a red herring.
 - **The Captain.** An eighth generated name. You never meet the Captain and hear them only through a final log.
 
 ---
@@ -46,7 +75,7 @@ Three things on screen tell the story alongside the dialogue:
 
 #### 1. The Antechamber
 
-You are in a small sealed room about eight metres square, with a violet light strip along the floor. A sign on the back wall reads **SUBJECT HOLDING - CYCLE 0**. Debris lies scattered on the floor, and the north wall is dark, with no door. At head height floats a small white crystal inside a slowly turning violet wireframe shell, ringed by a faint halo.
+You are in a small sealed room about eight metres square, with a violet light strip along the floor. A sign on the back wall reads **SUBJECT HOLDING - CYCLE 0** (in ECHO it remembers **CYCLE 42**: the counter resets with you, its echo does not). Debris lies scattered on the floor, and the north wall is dark, with no door. At head height floats a small white crystal inside a slowly turning violet wireframe shell, ringed by a faint halo.
 
 Nothing tells you what to do. If you ask for help, the only answer is your own thought: *"Look closer at the floating thing."*
 
@@ -72,7 +101,7 @@ The Laboratory is a big room, 24 metres square and 10 metres tall, lit cool whit
 Someone lets go of the ceiling, drops to the floor and flips upright:
 
 > JUNO HALE: "Don't scream. Please. It hears screaming."
-> JUNO HALE: "You don't remember me. You never do. I'm Juno - engineer, last one awake. I've been living on the ceiling."
+> JUNO HALE: "You don't remember me. You never do. I'm Juno - engineer, last one awake down here. I've been living on the ceiling."
 > JUNO HALE: "Take TICK. He's been waiting for you longer than I have."
 > TICK: "HELLO. I AM TICK. IF YOU ARE STUCK, ASK ME. I WILL NOT LAUGH. MUCH."
 
@@ -128,7 +157,9 @@ The Archive is a teal-lit room of shelves. A gap six metres wide cuts across its
 > CUSTODIAN: "You told me to forget the laboratory, so you would have to prove it to yourself."
 > CUSTODIAN: "You also told me to give you these."
 
-It gives you **ECHOES** and **SOLIDIFY IN**, and your third law slot unlocks. The far sign changes to **RECORDS RESTORED: LABORATORY (2 VISITS)**. The game never says who "her" is.
+It gives you **ECHOES** and **SOLIDIFY IN**, and your third law slot unlocks. The far sign changes to **RECORDS RESTORED: LABORATORY (2 VISITS)**. "Her" is Juno. The first Ren carried her out of the flooded reactor on the night of the Zero Event; she confesses it in THE CRADLE. Ask her about it now and she flinches:
+
+> JUNO HALE: "The Custodian says you carried someone through that door. ...I'll tell you. Not yet."
 
 **The puzzle.** In ECHO a ghostly bridge appears over the gap, with the words **MEMORY IS LOAD-BEARING**. You write **ECHOES SOLIDIFY IN ECHO** and walk across on a memory. If you leave the right state halfway, you fall, and *"The archive returns you to where it last remembered you."*
 
@@ -145,7 +176,7 @@ If you have already switched the machine on, she also says *"You already did it,
 
 Your objective becomes **"Stop the event you already caused."** The question "Where is Varga?" closes with the answer **"Not where. When."** Then Juno comes in:
 
-> JUNO HALE: "Ren - behind the vault. A service hatch, and a ladder going up. A long way up."
+> JUNO HALE: "Ren - behind the vault. A service hatch, and a ladder. It goes a long way up. And further down."
 > JUNO HALE: "If Varga is later, she went somewhere. I think she went up."
 
 The screen fades, and you climb.
@@ -157,7 +188,7 @@ The screen fades, and you climb.
 > JUNO: "Ren, that hatch goes up. All the way up. There is a whole city on top of Station Zero."
 > JUNO: "They called it Halcyon. One glass sky, a million lights, and nobody left to switch them off."
 
-HALCYON has four chapters of three districts each, twelve in all. Your device now holds all twelve Station Zero words, including OBSERVER and FREEZES IN. Juno's body never appears up here. She is a voice that answers after each recorder, note and person you find. (You can also start straight here by choosing HALCYON from the chapter menu.)
+HALCYON has four chapters of three districts each, twelve in all. Your device now holds all twelve Station Zero words, including OBSERVER and FREEZES IN. Juno's body never appears up here. She is a voice that answers after each recorder, note and person you find. Varga's recorders, notes and echo speak in her own voice: they are her dream, reaching the city's terminals from row one. (You can also start straight here by choosing HALCYON from the chapter menu.)
 
 #### How a district works
 
@@ -193,13 +224,16 @@ Shift to ECHO, and the screen remembers differently:
 
 > "WANTED: ILSE VARGA - FOR TRYING TO STOP IT"
 > YOU: "The screen says the city hunted me. The echo says it hunted Varga. Someone rewrote who the villain was."
+> JUNO: "They put your face on every screen in the city. Somebody wanted you to be the reason."
+
+The screen reads **RECORD CORRECTED: Dr. Ilse Varga**. (Who rewrote it was the first Ren, from inside the machine, so the city would blame Subject Zero instead of his mother.)
 
 **District 3: Glass Market.** In a neon-lit stall past the water is a living man:
 
 > KADE: "Hey - hey! Don't run. Nobody runs on my street. You'll scare the signs."
-> KADE: "Kade. I fix the neon. Twelve years, every night, and not one customer. Feels honest work, though."
+> KADE: "Kade. I fix the neon. Eighteen years, every night, and not one customer. Feels honest work, though."
 > KADE: "The woman with the grey coat? Varga. She came through crying and laughing at the same time. Took the old service lift to the reactor."
-> KADE: "Told me if a kid with a glowing thing in their hand comes by, I should say: the lights are a map."
+> KADE: "Told me if a kid with a glowing thing in their hand comes by, I should say: the lights are a map. I never knew what that meant."
 > JUNO: "The lights are a map. Ren, the pink ones run north, toward the reactor stack."
 
 **What the fragments remember.** A city frozen mid-life:
@@ -231,9 +265,13 @@ Shift to ECHO, and the screen remembers differently:
 
 > OSEI: "Pressure at nine-forty and climbing. Seal the lower gallery. Seal it!"
 > OSEI: "Who is that? You are not on my shift. Nobody is on my shift anymore."
+> OSEI: "The doors said VARGA. I took it for the Director. I never saw a face."
 > OSEI: "She opened the valves. She saved the city and drowned my reactor in the same breath. I would have done the same."
+> OSEI: "Hale. Where is Hale? Somebody get Hale out of the lower gallery!"
 > OSEI: "Go up the core well. The forest is above us. She went to the cabin. She always went to the cabin."
-> JUNO: "That was an echo. Osei has been saying that to an empty room for eighteen years."
+> JUNO: "That was Osei. My chief. She has been calling for me in an empty room for eighteen years."
+
+Juno's first slip: she was on Osei's shift that night.
 
 **What the fragments remember:**
 
@@ -265,12 +303,16 @@ In ECHO it reads:
 
 > "THEY ARE NOT LOST - THEY ARE ASLEEP - WAKE THEM WHEN IT IS SAFE"
 > YOU: "The memorial says Halcyon's people died. The echo says they are asleep. Varga did not kill this city. She put it to sleep."
+> JUNO: "Asleep. A whole city, asleep. Ren, that is what the machine is for."
+
+The memorial reads **RECORD CORRECTED: Dr. Ilse Varga**. "Safe" means the fold is over.
 
 **District 3: The Cabin Road.** Past one drone, at the cabin, someone is alive:
 
 > THEO: "Stop there. Hands where the roots can see them. ...Oh. Oh, it is you. You are smaller than she said."
+> THEO: "Theo. I keep the garden. I kept it for her, and then I kept it because it was the only thing that kept me."
 > THEO: "You were her student, you know. Before. You helped her build the machine. Then you asked her to make you forget."
-> THEO: "She is at the top of the Signal Tower. Or what is left of her is."
+> THEO: "She is at the top of the Signal Tower. Or what is left of her is. Take the canopy road. Do not look down. The forest is very tall and you are very much not."
 > JUNO: "Her student. Ren, you built the machine. That is why it knows your face."
 
 **What the fragments remember:**
@@ -284,8 +326,10 @@ In ECHO it reads:
 
 *"The tallest thing in Halcyon, and the Observer knows you are coming."* A storm beats on the glass, red light everywhere, masts and neon rods on every roof.
 
-> JUNO: "The tower. Storm on the glass, red lights everywhere. And Ren - it is here. The Observer. It got here first."
-> "It has been waiting at the top of the world. It knows the way you climb."
+> JUNO: "The tower. Storm on the glass, red lights everywhere. And Ren - the Observer's eyes are up here. Its drones got here first."
+> "They have been waiting at the top of the world. They know the way you climb."
+
+(The Observer itself stays in its hall below; the tower has only its drones. TICK: *"ITS DRONES PATROL THE DECK. HIDE BEHIND THINGS. OR BE ON THE CEILING. OR WRITE THEM A LAW."*)
 
 This chapter is the stealth finale: two, then three, then four drones, the most anywhere in HALCYON.
 
@@ -296,9 +340,9 @@ This chapter is the stealth finale: two, then three, then four drones, the most 
 
 **District 2: Antenna Field.** Past the water and three drones:
 
-> VARGA - TO REN: "Ren. You asked me to make you forget so that you could choose honestly. Go back down to Station Zero. Install the core. Wake the machine and look inside it. Then decide. I will be the light at the top of the tower when you need me."
+> VARGA - TO REN: "Ren. You asked me to make you forget so that you could choose honestly. You even scratched our name off your badge. Go back down to Station Zero. Install the core. Wake the machine and look inside it. Then decide. I will be the light at the top of the tower when you need me."
 
-**District 3: Last Landing.** At the top of the tower, past four drones, Varga herself waits in a lit alcove, as an echo:
+**District 3: Last Landing.** At the top of the tower, past four drones, Varga herself waits in a lit alcove, as an echo (a recording her dream keeps updating):
 
 > VARGA: "There you are. You climbed it. You always climbed it, every cycle, and every cycle I wondered if this would be the one."
 > VARGA: "Do not grieve me. I am an echo of a woman who made one good decision and one terrible one, the same night."
@@ -310,7 +354,7 @@ The gate behind her reads **LIFT - STATION ZERO**.
 
 **What the fragments remember:**
 
-- a badge reading *"R. VARGA-ZERO. The last name is scratched almost through."*, which the game never explains;
+- a badge reading *"R. VARGA-ZERO. The last name is scratched almost through."*. It belonged to the first Ren, Varga's son, and its chip still opened every door keyed to VARGA (explained in THE CRADLE);
 - *"A cracked visor with a reflection still burned into it: two people, one of them you."*;
 - a map with an X at the top: *"here is where I chose not to choose."*;
 - *"A letter: Ren, you will hate me for this, and then you will understand, and then you will forgive me. In that order."*;
@@ -393,7 +437,7 @@ You shift to ECHO. Inside the ring floats a pink **human brain**, glowing from w
 
 Your last objective appears: **"Decide what the catastrophe is holding back."** The reason it gives: *"The machine keeps something alive. Stopping it may be worse."*
 
-The Custodian now says: *"It was a life-support system. For one occupant. You have met him."* Juno says goodbye in her own way: *"Whatever you choose, I'm glad it was you this time."*
+The Custodian now says: *"It was a life-support system. For one occupant. You have met him."* (The first Ren: you have met him as the Observer.) Juno says goodbye in her own way: *"Whatever you choose, I'm glad it was you this time."*
 
 If you choose to **face the Observer** in the doorway:
 
@@ -412,25 +456,108 @@ You use the Machine once more:
 - **MIRROR:** "Let the Observer see you." This appears only if you have earned it (see Endings).
 - **NOT YET:** walk away and come back later.
 
-Afterwards, an end screen shows your time, how many of 15 discoveries you made, how often you were caught and how many lessons you taught the Observer. It offers: **CONTINUE TO THE VESSEL**: *"Eight decks. A crew that vanished. One of them started the loop."*
+Afterwards, an end screen shows your time, how many of 15 discoveries you made, how often you were caught and how many lessons you taught the Observer. It offers **GO BENEATH** (THE CRADLE), with a line that depends on the ending, or **SKIP TO THE VESSEL**: *"Eight decks. A crew that vanished. One of them started this cycle."*
+
+| Ending | GO BENEATH |
+| --- | --- |
+| SEVERED | *"Far beneath the station, something opened its eyes."* |
+| SUSTAINED | *"The keeper's rounds go down."* |
+| OBSERVED | *"Something below heard the station say your name."* |
+
+The game remembers the ending on this device, so THE CRADLE, THE VESSEL and STORY STUDIO started later from the chapter menu still play in the world that choice made (the cards say "After SEVERED", and so on).
+
+---
+
+### PART THREE AND A HALF: THE CRADLE, "Where Halcyon Sleeps"
+
+The ladder behind the vault goes down as well as up. Below Station Zero, around the lower core well, is the long-sleep hold where HALCYON's million sleep in rows under the roots of the Glass Forest: the "something held shut" that the machine's field kept closed, the pod light buried in the forest moss, the core well that "goes down further than the drawings say". It is one chapter of three districts, about 25 minutes, between the prologue and the Vessel. (Start it from the chapter menu too: THE CRADLE, "Beneath Station Zero, where Halcyon sleeps".)
+
+**The place.** Each district has HALCYON's shape (68 × 108 m, 22 m high, the gate in the north), so every answer you learned still works. The floor is stone, with a dashed violet guide light down the aisle and steel grating along its edges. The walls are rusted hull plates. The ceiling is the underside of the Glass Forest, a mat of roots you can walk on when INVERTED, and roots hang from it; one in five is only a memory. Pod banks on low plinths and tall pod stacks glowing in tiers stand where buildings would, signed ROW 12, MERIDIAN WARD, FOREST WARD, QUIET - SLEEPERS, DO NOT WAKE, DORMANCY 98%. The machine's cables run along the aisle, the core well comes down the middle with the reactor's flood water still falling down its face, and pale violet dust drifts in the pod light.
+
+**Told four ways.** The card reads **BENEATH STATION ZERO · AFTER {ENDING}** and the chapter changes with what you chose:
+
+| | SEVERED | SUSTAINED | OBSERVED | Before the choice |
+| --- | --- | --- | --- | --- |
+| Subtitle | *Below the station, a sleeping city opens its eyes* | *Below the station, the city you are keeping asleep* | *Below the station, a city that heard your name* | *Below the forest, below the station, a city asleep in rows* |
+| The pods | every lid stands open, the lights gone white | closed, amber | closed, amber | closed, amber |
+| Varga | awake, by her open pod | her dream, a hologram over a closed pod | awake | her dream |
+| The drones | dark and still | they hunt with what you taught the Observer | violet-eyed, they stop to watch you | they hunt |
+
+**The way down.**
+- SEVERED. JUNO: *"The lab went dark when you pulled the core. And something down the ladder is breathing, Ren. Hundreds of somethings."* / *"Varga said they sleep below the forest. That means below us. The ladder behind the vault goes down. It always did."* TICK: *"THE DEVICE STILL WORKS. IT CARRIES A SMALL FIELD OF ITS OWN. THE WATCHERS DO NOT. THEY ARE STANDING VERY STILL."*
+- SUSTAINED. JUNO: *"The new one found the door. You were good at that part. Upside down and everything."* / the ladder line. TICK: *"EVERYONE DOWN HERE IS ASLEEP. I WILL USE MY INSIDE VOICE. THIS IS MY INSIDE VOICE."*
+- OBSERVED. YOU: *"I know this ladder. I've carried someone down it."* JUNO: *"Ren? You sound different. Older, at the edges. Go slow. It goes a long way down."* TICK: *"THE DRONES DOWN HERE KNOW YOUR NAME. I CAN TELL. NOBODY TELLS ME ANYTHING."*
+- Before the choice. JUNO: *"You came down without choosing. That's allowed. The machine will wait. It's good at waiting."* / the ladder line, and TICK's inside voice.
+
+**District 1: The Well Floor.** Dry, no drones. Varga's recorder sits on top of a pod stack seven metres up, marked **SLEEP IS A PROMISE TO WAKE** (the Cryo Bay's motto: the night watch is woken from here). Walk the roots upside down, climb the remembered stairs or float up.
+
+> VARGA - LAST LOG - 14 MARCH 2071: "Last log. The city is down here, every pod green. I chose not to choose at the tower, so I will not stay awake to choose here. Row one. When the water runs out, the field will wake a new Ren. Tell Juno I am sorry."
+> TICK: "ROW ONE IS AT THE FAR END. I COUNTED. THERE ARE A LOT OF ROWS."
+> JUNO: "She asked for me. Eighteen years, and she was under our feet the whole time. Keep going, Ren."
+
+**District 2: The Registry.** The flood water cuts the row in two (**WALKWAY FLOODED**; the remembered walkway is solid with ECHOES SOLIDIFY IN ECHO), and one drone watches the aisles. TICK: *"A RECORD ON THE WALL. RECORDS HAVE ECHOES."*
+
+> "SLEEP REGISTRY - SUBJECT ZERO - WOKEN DAY 6570 - NO PARENT ON RECORD"
+
+In ECHO:
+
+> "REN VARGA - SON OF ILSE VARGA - BODY LOST 14 MARCH 2071 - MIND KEPT"
+> YOU: "The registry says nobody made me. The echo says Ren Varga, Ilse Varga's son. Body lost. Mind kept. The one in the machine is him. I'm made of him."
+
+The screen reads **RECORD CORRECTED: Dr. Ilse Varga**, and Juno finally says it:
+
+> JUNO: "Ren. I was on Osei's shift that night. Lower gallery. When the valves opened, the water came in like a wall."
+> JUNO: "You came down for me. Nobody else did. You carried me all the way to the lab."
+> JUNO: "That's the her. The Custodian saw you carry me. I made it. You didn't. I've wanted to say that for forty-two cycles."
+
+**District 3: Row One.** Water and two drones. Juno: *"Someone's in there. Ren - be gentle. It might be Ilse."* In a lit nook, against the back wall, is a pod marked **ROW ONE - I. VARGA**, and Varga stands in front of it. She speaks six lines:
+
+- *SEVERED (awake, by her open pod):* "There you are. Smaller than I made you. Come here. Let me look at you."
+- *SUSTAINED (her dream):* "If you are hearing this, you kept him running. I understand. I kept him for eighteen years."
+- *OBSERVED (awake):* "Ren. Both of you. I can hear it in the way you walk."
+- *Before the choice (her dream):* "If you are hearing this, you have not chosen yet. Good. Look first."
+
+> VARGA: "The one in the machine is my son. The first Ren. I opened the valves, and he went into the water for Juno."
+> VARGA: "He carried her all the way to the lab. Then I could not let him go. That was my terrible decision."
+> VARGA: "That night the control deck opened for my name, on his badge. He could not stop the fold. So he made it ask, every cycle: whose hands?"
+> VARGA: "Someone always answers. Never the same hands twice. You are made of him, Ren. You do not have to be him."
+
+- *SEVERED:* "You let him go. I never could. Go forward and see whose hands were last. Then come back and help me wake the rest." JUNO: *"She's awake. Ren, she's actually awake. Go on - I'll keep her company on the radio."*
+- *SUSTAINED:* "I am asleep, Ren. Let me sleep. Go forward and see whose hands it is this time. Then decide how long you can keep doing this." JUNO: *"That was her dream talking. She's still asleep in there. Go on. The gate goes forward."*
+- *OBSERVED:* "You did not end him and you did not keep him. You let him in. Go forward. The ship will listen to you now." JUNO: *"She knew you. Both of you. Go on - I'll stay on the line with her."*
+- *Before the choice:* "The machine is still waiting upstairs. Go forward first, if you like. See whose hands. Then choose it awake." JUNO: the dream line.
+
+The gate behind her reads **NIGHT WATCH - FORWARD DECKS**. Walk through it and the Vessel begins, in the world your ending made.
+
+**What the fragments remember** (three per district):
+
+- footprints in the dust from the foot of the ladder to row one: *"One set going in. None coming out."*;
+- an empty pod propped open with a wrench: *"NOT TONIGHT. SOMEBODY HAS TO KEEP THE LIGHTS ON. K. MORI."*, and the next pod along, S. MORI, asleep, with a tiny neon sign taped to the glass: *OPEN*;
+- the control deck's door log: *"03:04: KEY ACCEPTED - VARGA. The doors knew one name. Two people carried it. Badge on record: R. VARGA-ZERO."*;
+- a dream monitor labelled ROW ONE, wired to the station terminals, its last output *"If you have already activated it, I am sorry."*;
+- a half-built drone in a toolbox and a note in a child's handwriting: *"TICK. HE WILL TELL ME WHEN I AM WRONG."*;
+- eight empty pods at the end of the row, lids up, still warm, labelled NIGHT WATCH: *"The names on it change every cycle."*;
+- the unredacted broadcast notes: every zero hour the tower sends one word down to Station Zero, *"The word is AGAIN."*;
+- a lab tag dated 14 March 2071: *"LIFE SUPPORT, ONE OCCUPANT, R. VARGA. Consent signed by the Director. The line for the occupant is blank."*
 
 ---
 
 ### PART FOUR: THE VESSEL
 
-**How it fits.** The Vessel plays as the next chapter on the same ship. The lab's own sign already called it VESSEL AFTERZERO. But the Vessel never checks which ending you chose, and its truth changes with every story number (the seed). Each run is one *cycle* among many. Its culprit is always a crew member at the core at 03:12. That sits a little uneasily beside HALCYON, which pointed toward "her" and Varga's keys.
+**How it fits.** The Vessel plays after THE CRADLE, on the forward decks of the same ship. Every cycle the fold wakes eight sleepers from the Cradle into the night watch (seven crew and a captain), which is why every story number has a new crew. The first law takes two signatures. The KEY was written at 03:04 on 14 March 2071 by the first Ren, on a badge that read VARGA. The HANDS at the core at 03:12 are new every cycle, and they are the culprit's. The ending you chose at the machine changes how the Vessel opens, the sentinels, the windows and the last scene on the Bridge.
 
 #### The shared frame
 
-**Getting aboard.** There are three ways in:
+**Getting aboard.** There are four ways in:
 
-- the button at the end of the prologue;
+- the NIGHT WATCH - FORWARD DECKS gate at the end of THE CRADLE;
+- SKIP TO THE VESSEL at the end of the prologue;
 - THE VESSEL on the chapter menu ("Eight generated decks, a crew, a culprit");
-- the **CYCLE 43** button after finishing one Vessel.
+- the replay button after finishing one Vessel (**CYCLE 43**, **TELL IT AGAIN** or **FOLD AGAIN**, depending on the ending).
 
-Your device has all three law slots, and TICK is at your shoulder. Coming straight from the prologue, you keep everything you earned. Juno is never seen on board; she is only a voice on the radio.
+Your device has all three law slots, and TICK is at your shoulder. Coming straight from the prologue or the Cradle, you keep everything you earned. Juno is a voice on the radio (after SEVERED she walks onto the Bridge at the very end).
 
-**The mystery.** The ship is caught in a repeating cycle. It began at the **Zero Event, at 03:12**, when someone at the core rewrote the ship's first law. The crew keep hinting at the repeats: *"Cycle forty-two. You're late."* / *"That matches the last forty-one answers."*
+**The mystery.** The ship is caught in a repeating cycle. The core's first law takes two signatures: a **key**, written at 03:04 on 14 March 2071 by the first Ren on a badge that read VARGA, and a pair of **hands** on the law at **03:12**, which are new every cycle. Every cycle the fold wakes eight sleepers from the Cradle as the night watch, and one of them puts their hands on the law: that is the culprit, a different one every story number. The crew keep hinting at the repeats: *"Cycle forty-two. You're late."* / *"That matches the last forty-one answers."*
 
 Each story number secretly picks:
 
@@ -443,14 +570,14 @@ Each story number secretly picks:
 
 Every innocent person's echo clears them. Only the culprit's echo contradicts their record.
 
-**Your board.** The journal holds THE QUESTION (*"Someone on this ship rewrote the core's first law at 03:12 and started the loop... The echoes don't always agree."*). It also has a SUSPECTS list, where each person is marked UNKNOWN, MET, ALIBI CONFIRMED or ECHO CONTRADICTS, and a log of everything you've read.
+**Your board.** The journal holds THE QUESTION (*"The first law takes a key and a pair of hands. Someone on this ship put their hands on it at 03:12 and started this cycle... The echoes don't always agree."*; after SEVERED, *"...the last time it was ever signed."*). It also has a SUSPECTS list, where each person is marked UNKNOWN, MET, ALIBI CONFIRMED or ECHO CONTRADICTS, and a log of everything you've read.
 
 **How a deck plays.** Every deck has four sectors. Each sector is a chain of rooms with turning corridors and ends at a glowing gate. Each sector holds one story room and one or more puzzle rooms. The four story beats on Decks 1 to 7 are:
 
 1. **Arrival.** The crew member's **LOG 1**. For example: *"Log. {name}. Nobody reads these. I write them anyway, the way you leave a light on for someone who isn't coming."* TICK then remarks on the deck.
 2. **The alibi.** **LOG 2**: where they were on the night of the Zero Event. Innocents say something like *"I remember the lights going soft, like someone exhaling."* The culprit always gives the too-careful version: *"Zero Event, my statement: {place}, alone, all night. The cameras will say the same. I made sure they would."*
 3. **The record.** TICK: *"A RECORD ON THE WALL. RECORDS HAVE ECHOES."* Read the plaque, shift to ECHO and read it again:
-   - **Innocent:** the echo matches, and names someone who was with them.
+   - **Innocent:** the echo matches, and names a witness: *"ON THE RADIO WITH {witness}"* (on the radio, so nobody is ever in two places at once).
    - **Red herring:** "LOCATION UNKNOWN - CAMERAS WIPED", but the echo shows them *"CRYING - NOT ALONE"*.
    - **Culprit:** **"ECHO: {NAME} AT THE CORE - 03:12 - HANDS ON THE FIRST LAW"**.
 4. **The encounter.** Juno: *"Someone's in there. Ren - be gentle."* The crew member is there, solid if alive, a glowing hologram if not.
@@ -514,13 +641,77 @@ The Bridge is the same in every run. Its motto reads **"WHOEVER SITS HERE DECIDE
 > JUNO: "Captain {name} locked the chair from the inside. The ship wants a verdict before it opens."
 
 - **Sector 1.** *CAPTAIN'S LOG - FINAL:* "The crew is asleep, or gone, or both. Someone on this ship {method}. I know who. I will not say it - the ship has to hear it from someone who earned it." TICK: *"LAST DECK. I AM NOT CRYING. I DO NOT HAVE THE HARDWARE."*
-- **Sector 2.** *VARGA - NOTE TO SUBJECT ZERO:* "Ren. If you made it here you have seen every deck and every lie. The chair asks one question. Answer it with what you know, not with what you fear." Juno: *"Varga wrote that to you. Not to me. Interesting."*
-- **Sector 3.** *ZERO EVENT - RECONSTRUCTION:* "03:12. The core's first law was rewritten. One person was at the core. Everyone else has an echo that says where they were. Check your board." Juno: *"Look at who doesn't have one."*
+- **Sector 2.** *VARGA - NOTE TO SUBJECT ZERO* (in her own voice: her dream reaching a terminal): "Ren. If you made it here you have seen every deck and every lie. The chair asks one question. Answer it with what you know, not with what you fear." Juno: *"Varga wrote that to you. Not to me. Interesting."*
+- **Sector 3.** *ZERO EVENT - RECONSTRUCTION:* "03:12. The first law takes a key and a pair of hands. The key never changes. The hands do: one person at the core, every cycle. Everyone else has an echo that says where they were. Check your board." Juno: *"Look at who doesn't have one."*
 - **Sector 4, the verdict.** After three last puzzle rooms, all seven crew stand as silent holograms in a ring around a chair. Juno: *"This is it. The chair. Check your log before you sit."* Try the gate first, and she says: *"The gate won't open for a guess. Sit in the chair first."*
 
 #### The chair
 
-You sit. **THE CHAIR: "Who rewrote the first law at 03:12?"** All seven crew are listed. Each shows what you found: "echo contradicts the record", "alibi confirmed" or "no echo found". Name the wrong person and the ship plays back their innocent echo, then lets you try again. Name the right one and the chair unlocks (see Endings).
+You sit. **THE CHAIR: "Whose hands were on the first law at 03:12?"** All seven crew are listed. Each shows what you found: "echo contradicts the record", "alibi confirmed" or "no echo found". Name the wrong person and the ship plays back their innocent echo, then lets you try again. Name the right one and the chair unlocks: the last scene on the Bridge plays (it depends on your prologue ending, below), then the ending card (see Endings).
+
+#### The Vessel after each ending
+
+The ending you chose at the machine changes the world of the Vessel, never its story: a story number deals the same crew, culprit, victim, motive, method, twist and red herring whatever you chose, and the rooms keep their puzzles. Started before any ending, the Vessel plays as it always has.
+
+| | Before the choice | SEVERED | SUSTAINED | OBSERVED |
+| --- | --- | --- | --- | --- |
+| The watchers (Medbay to the Bridge) | hunt | dark-eyed, still, they never move or see | they hunt with what you taught the Observer: if it learned to look up, the ceiling no longer hides you; if it learned your footsteps, running near one is heard; if it learned patience, it chases longer | violet-eyed, they patrol, stop to watch you pass and never chase |
+| The window band in every story room | stars | black glass | stars | stars |
+| The light | as it was | emergency light | as it was | as it was |
+| Aboard | Juno on the radio | Juno walks into the verdict room when the chair unlocks | the Other, upside down from the ceiling of every deck's first story room and above the chair | Juno on the radio |
+| Deck 1's card | DECK 1 OF 8 | DECK 1 OF 8 · AFTER SEVERED | · AFTER SUSTAINED | · AFTER OBSERVED |
+
+TICK's hints follow the watchers (*"IT IS NOT WATCHING ANYTHING. NOT ANY MORE."* / *"IT REMEMBERS THE HALL. EVERY HABIT YOU TAUGHT IT."* / *"IT IS WATCHING YOU. IT SEEMS TO LIKE WHAT IT SEES."*). OBSERVER FREEZES IN works in every world.
+
+**SEVERED: the last night, in the dark.** Deck 1 opens:
+> JUNO: "Juno here. The radio still works. Not much else does."
+> JUNO: "The windows are black, Ren. The fold let go. This is the last night these decks will ever play."
+> JUNO: "This is the {deck}. {name} was the {role}. If anyone left us a trail, it's {them}."
+> TICK: "THE DEVICE STILL WORKS. IT CARRIES A SMALL FIELD OF ITS OWN. THE WATCHERS DO NOT. THEY ARE STANDING VERY STILL."
+
+On the Bridge, after the right name:
+> "The chair unlocks. Behind you, someone opens the bridge door by hand."
+> JUNO: "I walked. The whole way. Turns out the ceiling was never the only way up."
+> JUNO: "No more folds, Ren. Tonight is just tonight, and then there's a morning. I'd forgotten about mornings."
+> "Far aft, under the glass sky, the lights of Halcyon are coming on. One ward at a time."
+
+A wrong name no longer folds anything back: *"The lights soften. Nothing folds back. The chair simply waits for you to try again."* If the twist is THE WATCHER'S NAME, it ends *"...When the field went dark, it finally closed its eye."* The replay button is **TELL IT AGAIN**: *"The last night, remembered by another watch."*
+
+**SUSTAINED: you are the keeper, and the night goes on.** Deck 1 opens:
+> JUNO: "Juno here. You kept it running, so the night is still going. So are we."
+> JUNO: "Eight sleepers took the night watch again. New faces, same night. One of them chose it again at 03:12."
+> JUNO: (the crew line, as above)
+> TICK: "WHEN THE WATCHERS COME, THEY WILL REMEMBER THE HALL. EVERY HABIT. DO NOT REPEAT YOURSELF." (only if the Observer learned something)
+
+The first time a watcher catches you, TICK says *"IT KNEW WHERE YOU WOULD BE. YOU TAUGHT IT THAT, IN THE HALL."* On the Bridge:
+> "The chair unlocks. Above it, upside down, someone with your face has been waiting."
+> ???: "You kept it running. So did I. So did all of us."
+> ???: "There is a terminal by the helm. It is already recording. You know the words."
+> YOU: "If you're hearing this, you made the shadow. Good."
+> "Far aft, in a sealed room, the new one touches the floating thing twice."
+
+The replay button is **FOLD AGAIN**: *"You are the keeper. The night begins again."*
+
+**OBSERVED: the watchers are your eyes.** Deck 1 opens:
+> JUNO: "Juno here. Ren, the ship heard the station say your name. Every light on this deck came on at once."
+> JUNO: "The watchers further forward will know you now. I don't think they'll chase you. Try not to let it go to your head."
+> JUNO: (the crew line)
+> TICK: "WHEN THE WATCHERS COME, THEY WILL NOT HUNT. THEY WILL WATCH. I WILL WATCH THEM WATCH."
+
+On the Bridge:
+> "The chair unlocks. Then it asks a question it has never asked anyone. NAME?"
+> YOU: "Ren. Ren Varga."
+> JUNO: "Now it wants a heading. Nobody's given it a heading in eighteen years."
+> YOU: "Home."
+> "The stars turn in the windows, slowly, like a ship remembering how."
+
+The replay button is **CYCLE 43**: *"The ship will listen. Give it a new night."*
+
+**Before the choice.** Deck 1 opens with Juno's usual radio call. On the Bridge:
+> "The chair is warm, as if someone sat in it a moment ago."
+> JUNO: "There's a laboratory under all of this, Ren, and a machine that knows your face. Whenever you're ready, it's ready."
+
+The narrator's lines of each last scene also close the ending card.
 
 #### An example run: story number 4242
 
@@ -545,7 +736,7 @@ You sit. **THE CHAIR: "Who rewrote the first law at 03:12?"** All seven crew are
 >
 > The vessel arrived years ago. There was nothing at the destination - no planet, no signal, just a dark place shaped like an answer. Kofi Tanaka could not let the crew wake up to that.
 >
-> The stars outside are an echo. The vessel stopped moving long ago. Every window on board is replaying the last night anyone believed the journey had a point.
+> The stars in the windows were never outside. The vessel stopped moving long ago. Every window on board has been replaying the last night anyone believed the journey had a point.
 
 ---
 
@@ -557,12 +748,12 @@ There is one rule: **a wish replaces only what it names.** Everything else stays
 
 - **Title.** Your own name for the story. It appears wherever the save is described, not inside the game.
 - **Mood.** This changes every crew member's personality, and so their greeting to you. Thriller makes the crew dry, nervous or formal. Horror makes them mostly nervous. Mystery makes them formal, dry or dreamy. Hopeful makes them mostly warm. Horror and Thriller also darken the decks.
-- **Why the time loop exists.** Choose the motive: keep someone alive, hide where the ship arrived, undo a terrible mistake, or because the Observer promised a way home.
+- **Why the time loop exists.** Choose the motive: keep someone alive, hide where the ship arrived, undo a terrible mistake, or because the dreamers promised a way home.
 - **The final twist.** This is the title of your winning ending: You helped start it / The watcher is a lost crew member / Juno remembers everything / The stars outside are fake.
 - **Crew names.** Up to eight first names, given deck by deck. The eighth goes to the Captain. Your device's own voice speaks the names you type.
 - **Story number.** *"The same number and wishes always tell the same story."*
 
-You can't wish for who the culprit is, who the victim is, the method, the red herring, or who survives. Those come from the story number. The eight decks themselves never change.
+You can't wish for who the culprit is, who the victim is, the method, the red herring, or who survives. Those come from the story number. The eight decks themselves never change. A studio story plays in the world of the last prologue ending reached on the device, like THE VESSEL from the menu.
 
 For example, take story 4242 with a Horror mood, the names Aria, Dev and Mina, and the twist "Juno remembers everything". Ximena becomes Aria, Uma becomes Dev and Kalani becomes Mina. Kofi now greets you dreamily, Dev and Yusuf nervously, and the decks are darker. Kofi is still the culprit. But the winning screen now ends: *"Juno has never once been reset. She has lived every cycle, end to end, and every time she let you rediscover it alone - because the one time she told you first, you chose wrong."*
 
@@ -575,10 +766,12 @@ For example, take story 4242 with a Horror mood, the names Aria, Dev and Mina, a
 **SEVERED.** You choose SEVER.
 > You pull the core. The brain goes dark between one pulse and the next. In the doorway, the Observer folds to the floor like a coat with no one in it. The windows go black. The ship stops moving. For a long, quiet moment, nothing happens. Then, far beneath the station, something that was being held shut opens its eyes.
 
+What opens its eyes is the Cradle, Varga first. You let the first Ren go.
+
 **SUSTAINED.** You choose SUSTAIN.
 > You leave the machine running. The brain keeps its slow rhythm. The ship keeps moving. You find a terminal and begin to record: "This is Dr. Ilse Varga..." - no. Your own name. Then you stop. Somewhere behind you, in a sealed room, someone wakes up and sees a glowing object for the first time. You go to stand in the corridor, upside down, and wait to tell them how to move the room.
 
-The text strongly suggests you are about to become the Other from the first room, though the game never says so in words.
+The text strongly suggests you are about to become the Other from the first room, and on the Vessel's Bridge the Other says it outright: *"You kept it running. So did I. So did all of us."*
 
 **OBSERVED (hidden).** You choose MIRROR. The option appears only if you have done all three of these:
 
@@ -588,25 +781,29 @@ The text strongly suggests you are about to become the Other from the first room
 
 > You walk to the doorway and stand where the Observer can see you. You do not hide. It has learned how you hide, how you run, which laws you lean on. Now it learns the last thing: that you chose to be seen. The cables slacken. The brain's rhythm changes to match yours. There are two of you in the doorway. Then there is one, and the station knows your name.
 
+Two minds, one Ren: the first Ren and you. The field answers to your name, Varga wakes for you, and the ship will take a heading.
+
+Every ending is followed by THE CRADLE and the Vessel, each told in the world that choice made.
+
 Being caught by the Observer is never an ending. It just sends you back to the hall's door.
 
 ### The Vessel (in the chair)
 
-- **A wrong name is not an ending.** Each of the six innocents has their own version of this: *"You name {name}. The ship plays back {first}'s echo, calm and complete: {first} was in {place} all night."* / *"The lights soften. Somewhere below, a hatch unseals. The cycle notes your answer and gives you another chance."* The gate stays shut, and you can sit again as often as you like. Every guess is counted.
-- **The right name** opens an ending screen. It is titled by the twist and carries the motive and the twist text. There are four twists:
-  - **YOU HELPED:** "The loop has two signatures. One is {culprit}'s. The other is yours. Cycle one, you agreed to all of this - and asked to forget..."
-  - **THE WATCHER'S NAME:** "The Observer is not a machine. It is {victim}, uploaded on the night of the Zero Event... It learned you because it missed you."
+- **A wrong name is not an ending.** Each of the six innocents has their own version of this: *"You name {name}. The ship plays back {first}'s echo, calm and complete: {first} was in {place} all night."* / *"The lights soften. Somewhere below, a hatch unseals. The cycle notes your answer and gives you another chance."* (After SEVERED: *"The lights soften. Nothing folds back. The chair simply waits for you to try again."*) The gate stays shut, and you can sit again as often as you like. Every guess is counted.
+- **The right name** plays the last scene on the Bridge for your prologue ending (see "The Vessel after each ending"), then opens an ending screen. It is titled by the twist and carries the motive and the twist text. There are four twists:
+  - **YOU HELPED:** "The loop has two signatures. The hands are {culprit}'s. The key is yours, written at 03:04 on a badge that read VARGA-ZERO. Cycle one, you agreed to all of this - and asked to forget..."
+  - **THE WATCHER'S NAME:** "The watchers on these decks are not only machines. The one that followed you deck to deck is {victim}, uploaded on the night of the Zero Event... It learned you because it missed you." (After SEVERED it is told in the past tense and ends *"When the field went dark, it finally closed its eye."* The victim is always met as an echo when this twist is drawn.)
   - **SHE REMEMBERS:** "Juno has never once been reset. She has lived every cycle, end to end..."
-  - **THE WINDOWS:** "The stars outside are an echo. The vessel stopped moving long ago..."
+  - **THE WINDOWS:** "The stars in the windows were never outside. The vessel stopped moving long ago..."
 
   The motive paragraph is one of four:
-  - *to keep {victim} alive*, because the machine keeps one occupant alive while the cycle runs;
+  - *to keep {victim} alive*: inside the fold the night never reaches morning, and neither does dying (the victim is always met alive with this motive);
   - *to hide where we had arrived*;
   - *to undo a mistake*, one navigation error;
-  - *because the Observer promised a way home*.
+  - *because the dreamers promised a way home*: a million dreaming people want to go home, and their dream told the culprit that every cycle brings the vessel one step closer.
 
-  Four twists times four motives makes sixteen possible right endings.
-- **Afterwards** the screen shows your time, how many verdicts you gave, how many crew you met and the story number. Choose **CYCLE 43** ("A new vessel, a new crew, a new truth") to begin again with a new crew. Or choose **STAY ON THE BRIDGE**: the chair now only says *"The chair has its answer."*, and walking through the last gate brings the ending back.
+  Four twists times four motives makes sixteen possible right endings. The method can also be *"sealed the archive core and fed the ship a memory of a quiet night"* or *"taught the watchers to reset anyone who noticed"*.
+- **Afterwards** the screen shows the last scene's narration, your time, how many verdicts you gave, how many crew you met and the story number. Choose the replay button to begin again with a new crew: **CYCLE 43** ("A new vessel, a new crew, a new truth"; after OBSERVED, "The ship will listen. Give it a new night"), **TELL IT AGAIN** after SEVERED or **FOLD AGAIN** after SUSTAINED; the new vessel keeps the same ending. Or choose **STAY ON THE BRIDGE**: the chair now only says *"The chair has its answer."*, and walking through the last gate brings the ending back.
 
 ---
 

@@ -413,6 +413,15 @@ async function chapters() {
   await page.click('#begin');
   const cards = await az(() => Object.fromEntries([...document.querySelectorAll('#chapters .chapcard')].map((c) => [c.querySelector('h3').textContent, !!c.querySelector('[data-cont]')])));
   check(cards['THE VESSEL'] && !cards.PROLOGUE && !cards.HALCYON, 'CONTINUE sits on the chapter you played, only there', JSON.stringify(cards));
+  // v1.0: five chapters; the later ones say which prologue ending they follow
+  const status = () => az(() => [...document.querySelectorAll('#chapters .chapcard')].map((c) => `${c.querySelector('h3').textContent}|${c.querySelector('p.dim')?.textContent || ''}`));
+  const before = await status();
+  check(before.map((s) => s.split('|')[0]).join() === 'PROLOGUE,HALCYON,THE CRADLE,THE VESSEL,STORY STUDIO', 'the chapter picker has five cards, THE CRADLE third', JSON.stringify(before));
+  check(before[2] === 'THE CRADLE|Before the choice' && before[3] === 'THE VESSEL|The ship as it was' && before[0] === 'PROLOGUE|', 'before any ending: "Before the choice" / "The ship as it was"', JSON.stringify(before));
+  await az(() => { localStorage.setItem('afterzero.lastEnding', JSON.stringify({ key: 'MIRROR', lessons: [] })); AZ.openChapters('title'); });
+  const after = await status();
+  check(after[2] === 'THE CRADLE|After OBSERVED' && after[3] === 'THE VESSEL|After OBSERVED' && after[4] === 'STORY STUDIO|After OBSERVED', 'the Cradle card\'s status line follows the last ending reached on this device', JSON.stringify(after));
+  await az(() => { localStorage.removeItem('afterzero.lastEnding'); AZ.openChapters('title'); });
   await page.screenshot({ timeout: 180000, path: path.join(shots, 'f08-chapters.png') });
   await page.click('#chapters [data-cont]');
   await page.waitForFunction(() => AZ.mode === 'deck', null, { timeout: 60000 });

@@ -79,12 +79,22 @@ for (let z = 0; z < 4; z++) {
       AZ.player.place([c.pos[0], Math.max(0.86, c.pos[1] - 0.6), c.pos[2] + 1.2, 0]); AZ.simulate(0.1);
       const beat = AZ.deckBeat();
       if (beat.kind === 'contradiction') { AZ.engine.setState(AZ.room, 'ECHO', { force: true }); AZ.simulate(0.1); }
+      const said = [], say = AZ.hud.say;
+      AZ.hud.say = function (lines, facts, done) { said.push(...lines.map((l) => `${l.who}: ${l.text}`)); return say.call(this, lines, facts, done); };
       AZ.useDeck(c);
+      AZ.hud.say = say;
+      const toast = document.querySelector('#toast').innerHTML;
       for (let i = 0; i < 80; i++) { AZ.hud.subT = 0; AZ.simulate(0.1); }
       if (beat.kind === 'contradiction') { AZ.engine.setState(AZ.room, 'PHYSICAL', { force: true }); AZ.simulate(0.1); }
-      return { ok: !!AZ.deckWorld.flags.beat_done, kind: beat.kind, gate: AZ.deckWorld.dynamic.find((d) => d.el.id?.startsWith('gate_'))?.mesh.visible };
+      return { ok: !!AZ.deckWorld.flags.beat_done, kind: beat.kind, gate: AZ.deckWorld.dynamic.find((d) => d.el.id?.startsWith('gate_'))?.mesh.visible, toast, said, logWho: beat.log?.who, junoAfter: [].concat(beat.junoAfter || []), clues: ['kade', 'osei', 'theo', 'varga'].filter((k) => AZ.facts.get(`clue_${k}`)) };
     });
     check(scene.ok && scene.gate === false, `${label}: the ${scene.kind} scene opens the gate`);
+    if (scene.kind === 'contradiction') {
+      check(/RECORD CORRECTED/.test(scene.toast) && /Dr\. Ilse Varga/.test(scene.toast) && scene.clues.join() === 'varga', `${label}: the screen corrects Varga's record (not ${z === 0 ? 'Kade' : 'Theo'}'s)`, JSON.stringify({ toast: scene.toast, clues: scene.clues }));
+      check(scene.junoAfter.length && scene.junoAfter.every((t) => scene.said.includes(`JUNO: ${t}`)), `${label}: Juno's line after the screen plays`, JSON.stringify(scene.said.filter((l) => l.startsWith('JUNO'))));
+    }
+    if (scene.kind === 'encounter' && z === 3) check(scene.said[0]?.startsWith('VARGA: There you are.'), `${label}: Varga's echo at the top of the tower speaks in her own voice`, String(scene.said[0]));
+    if (scene.logWho === 'VARGA') check(scene.said[0]?.startsWith('VARGA: '), `${label}: Varga's recorder speaks in her own voice`, String(scene.said[0]));
     if (z === 0 && s === 0) {
       const frag = await az(() => {
         const n = AZ.level.interactables.filter((i) => i.kind === 'fragment').length;

@@ -12,7 +12,8 @@
     "features": "node tests/features.mjs",
     "layout": "node tests/layout.mjs",
     "halcyon": "node tests/halcyon.mjs",
-    "qa": "node tests/qa.mjs"
+    "qa": "node tests/qa.mjs",
+    "cradle": "node tests/cradle.mjs"
   },
   "license": "MIT"
 }

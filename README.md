@@ -7,7 +7,7 @@ You wake in a sealed room with a floating object and no instructions. Touch it a
 This repository contains:
 
 - **`unity/AfterZero/` - the Unity 6 (URP) version** with a stronger story, 11 characters, 8 zones (~245 m × 60 m), three adrenaline chase set-pieces, a hint companion, New Game+ and Android touch controls. Start with [`docs/unity/UNITY_GUIDE.md`](docs/unity/UNITY_GUIDE.md).
-- **`game/` - the browser game** (Three.js): the two-hour prologue (Station Zero and the open districts of HALCYON) plus the generated vessel campaign, for desktop and Android browsers.
+- **`game/` - the browser game** (Three.js): the two-hour prologue (Station Zero and the open districts of HALCYON), THE CRADLE beneath it, and the generated vessel campaign, for desktop and Android browsers.
 - **`docs/`** - the design for the full game. The whole story, level by level, is in [`docs/STORY.md`](docs/STORY.md).
 
 ## Versions
@@ -22,6 +22,24 @@ Each version is kept separately. It has its own git commit, its own Android app 
 `android/build-apk.sh` takes the version from `versionName` in `android/AndroidManifest.xml`. To start a new version, raise `versionCode` and `versionName` and change the app label there. The script then names the APK and the app id from it.
 
 To rebuild a saved version, check out its commit and run the script.
+
+## v1.0: one story, THE CRADLE, and a Vessel that remembers your choice
+
+The prologue, HALCYON and the Vessel are now one story with one truth. The whole of it, level by level, is in [`docs/STORY.md`](docs/STORY.md).
+
+- **The truth, said out loud.**
+  - The brain in the machine is the first Ren, Dr. Ilse Varga's son, and you are the forty-second Ren the field has grown from him.
+  - The "her" the Custodian saw you carry is Juno: on the night of the Zero Event the first Ren carried her out of the flooded reactor, and he did not survive it.
+  - The R. VARGA-ZERO badge was his, and the reactor's doors, keyed to the name VARGA, opened for him at 03:04.
+  - The core's first law takes a key and a pair of hands. He wrote the key so the fold has to be chosen again every cycle; whoever puts their hands on the law at 03:12 is that cycle's culprit. So every story number still has its own culprit.
+- **THE CRADLE, a new chapter** ([`docs/CRADLE.md`](docs/CRADLE.md)) between the prologue and the Vessel.
+  - Three districts of sleeping pods beneath Station Zero, under the roots of the Glass Forest, about 25 minutes: Varga's last log, the sleep registry (where Juno finally confesses), and row one, where you meet Varga.
+  - It is told four ways: after SEVERED (the lids stand open, Varga is awake, the drones stand dark and still), after SUSTAINED (Varga's dream, drones that hunt with what you taught the Observer), after OBSERVED (Varga awake, violet drones that only watch) and before the choice.
+  - The prologue's end screen now offers **GO BENEATH** or **SKIP TO THE VESSEL**, and the Cradle's last gate, NIGHT WATCH - FORWARD DECKS, leads into the Vessel. The chapter menu has a fifth card, THE CRADLE, with its own CONTINUE.
+- **The Vessel after each ending.** The ending you chose at the machine changes how Deck 1 opens, the watchers (still, learned or kin), the windows (stars, or black glass after SEVERED), the light (emergency light after SEVERED), who is aboard (Juno on the Bridge after SEVERED, the Other hanging from the ceiling after SUSTAINED), the last scene on the Bridge and the replay button (CYCLE 43, TELL IT AGAIN or FOLD AGAIN). A story number still deals the same crew and the same truth whatever you chose. The game remembers your last ending on the device, so chapters started from the menu play in that world (their cards say "After SEVERED", and so on).
+- **Plot holes fixed.** Kade's eighteen years; two drones in Neon Meridian; the Observer's drones (not the Observer) at the tower; Juno is the last one awake "down here"; Varga speaks in her own voice everywhere; HALCYON's screens correct Varga's record and Juno's lines after them now play; the journal and map speak of districts in HALCYON; the victim always fits the twist and motive; alibis are "on the radio", so nobody is in two places at once; the twists and motives no longer contradict the machine's one occupant; the SUBJECT HOLDING sign remembers CYCLE 42 in ECHO.
+- **Voice.** About 340 new recordings (the voice pack grows from 1681 to 1946 unique pieces): the Cradle, the Vessel's openings and Bridge scenes for each ending, the watchers' hints, Varga's re-voiced logs, the "It might be ..." lines recorded whole, and the Other in your own (male or female) voice.
+- **Tests:** `node tests/cradle.mjs` plays the Cradle's three districts after every ending and walks into the Vessel, and plays the Bridge's last scene for each ending; `tests/vessel.mjs` replays the watched decks after each ending; `npm test` checks every ending against 200 story numbers and keeps HALCYON's twelve districts unchanged.
 
 ## v0.9: chapters, save slots, Story Studio, smart renderer
 

@@ -4,7 +4,13 @@
 // the solution route the generator emits. Fails if any room cannot be
 // finished, or on any page error.
 //
-//   NODE_PATH=$(npm root -g) node tests/vessel.mjs [seeds=2] [decks=0-7]
+// It plays the vessel as it is before the prologue's choice, and after each
+// ending (v1.0): the endings change how the watchers behave, and watchers
+// stand from Medbay (deck 5) on, so the endings replay decks 5-8. After
+// SUSTAINED the watchers carry the hardest lessons the hall can teach
+// (ceiling, runner, patient); the rooms must stay solvable.
+//
+//   NODE_PATH=$(npm root -g) node tests/vessel.mjs [seeds=2] [decks=0-7] [endings=all|none|SEVER,SUSTAIN,...]
 import { createRequire } from 'node:module';
 import http from 'node:http';
 import fs from 'node:fs';
@@ -25,6 +31,8 @@ await new Promise((r) => server.listen(0, r));
 
 const nSeeds = +(process.argv[2] || 2);
 const [d0, d1] = (process.argv[3] || '0-7').split('-').map(Number);
+const endArg = process.argv[4] || 'all';
+const ENDINGS = endArg === 'all' ? [null, 'SEVER', 'SUSTAIN', 'MIRROR'] : endArg.split(',').map((e) => (e === 'none' ? null : e));
 const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
 const page = await browser.newPage({ viewport: { width: 640, height: 360 } });
 const errors = [];
@@ -43,9 +51,13 @@ await page.evaluate(() => {
 });
 
 // The bot, evaluated in the page.
-const SOLVE = ({ seed, deck, sector }) => {
+const SOLVE = ({ seed, deck, sector, ending }) => {
   const g = window.AZ;
-  if (g.mode !== 'deck' || g.campaign.seed !== seed) g.startVessel(seed);
+  if (g.mode !== 'deck' || g.campaign.seed !== seed || g.campaign.ending !== ending) {
+    g.observer.brain.lessons.clear();
+    if (ending === 'SUSTAIN') ['ceiling', 'runner', 'patient'].forEach((l) => g.observer.brain.lessons.add(l));
+    g.startVessel(seed, null, null, ending);
+  }
   g.campaign.deck = deck;
   g.campaign.sector = sector;
   g.campaign.flags = {};
@@ -132,19 +144,24 @@ const SOLVE = ({ seed, deck, sector }) => {
 
 let failed = 0, total = 0;
 const seeds = Array.from({ length: nSeeds }, (_, i) => 101 + i * 7717);
-for (const seed of seeds) {
-  for (let deck = d0; deck <= d1; deck++) {
-    for (let sector = 0; sector < 4; sector++) {
-      const res = await page.evaluate(SOLVE, { seed, deck, sector });
-      for (const r of res) {
-        total++;
-        if (!r.ok) {
-          failed++;
-          console.log(`  FAIL seed ${seed} ${r.rid} [${r.challenges}] ${r.fail}`);
+for (const ending of ENDINGS) {
+  const tag = ending ? `after ${ending}` : 'before the choice';
+  const mode = await page.evaluate(async (e) => (await import('./js/gen/StoryGen.js')).VESSEL_AFTER[e || 'NONE'].sentinels, ending);
+  console.log(`The vessel ${tag} (watchers: ${mode})`);
+  for (const seed of seeds) {
+    for (let deck = ending ? Math.max(d0, 4) : d0; deck <= d1; deck++) {
+      for (let sector = 0; sector < 4; sector++) {
+        const res = await page.evaluate(SOLVE, { seed, deck, sector, ending });
+        for (const r of res) {
+          total++;
+          if (!r.ok) {
+            failed++;
+            console.log(`  FAIL ${tag} seed ${seed} ${r.rid} [${r.challenges}] ${r.fail}`);
+          }
         }
       }
+      console.log(`  seed ${seed} deck ${deck + 1}: done`);
     }
-    console.log(`  seed ${seed} deck ${deck + 1}: done`);
   }
 }
 console.log(`${total - failed}/${total} rooms solved by the bot`);

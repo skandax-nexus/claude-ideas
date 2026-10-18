@@ -42,6 +42,8 @@ const VERSION = '0.3.0';
 const BOOT_KEY = 'afterzero.boot';
 // the film grade for Station Zero and the vessel: clean, cool shadows, warm light
 const STATION_GRADE = { shadowTint: 0x2a4a66, highlightTint: 0xfff0dc, toning: 0.08, contrast: 1.14, saturation: 1.02 };
+// the vessel's emergency light after SEVERED (story.after.dark)
+const EMERGENCY = new THREE.Color(0xff6a48);
 
 // Bright, soft looks per reality state: daylight, rose dusk, mint memory.
 const THEMES = {
@@ -1224,11 +1226,12 @@ class Game {
       this.player.setGravity(this.engine.gravity(id));
       this.player.place(r.spawn);
     }
+    const emergency = this.emergency();
     this.lights.forEach((l, i) => {
       const d = r.lights[i];
       if (!d) return (l.intensity = 0);
       l.position.set(d[0], d[1], d[2]);
-      l.color.setHex(d[3]);
+      l.color.setHex(d[3]).lerp(EMERGENCY, emergency * 1.3);
       l.intensity = d[4] * (this.mode === 'deck' ? 1.25 : 2.2);
       l.distance = d[5];
     });
@@ -1897,6 +1900,11 @@ class Game {
     for (const l of this.lampLights) l.intensity += (l.userData.want - l.intensity) * k;
   }
 
+  // how much the vessel runs on emergency light (after SEVERED; districts have their own night)
+  emergency() {
+    return this.mode === 'deck' && this.level?.palette && this.level.palette.night === undefined ? this.story?.after?.dark || 0 : 0;
+  }
+
   updateTheme(dt) {
     this.updateLamps(dt);
     const s = this.room ? this.engine.state(this.room) : 'PHYSICAL';
@@ -1913,7 +1921,8 @@ class Game {
     this.scene.fog.color.lerp(fog, k);
     this.scene.background.copy(this.scene.fog.color);
     this.scene.fog.density += ((deck ? th.density * 0.3 * (pal.density ?? 1) : th.density * 0.45 * (room.density ?? 1)) - this.scene.fog.density) * k;
-    this.hemi.color.lerp(_c.set(th.sky).lerp(tint, 0.25), k);
+    const emergency = this.emergency();
+    this.hemi.color.lerp(_c.set(th.sky).lerp(tint, 0.25).lerp(EMERGENCY, emergency), k);
     _c.set(th.ground);
     if (pal?.look) _c.lerp(_c2.set(pal.fog), 0.5);
     this.hemi.groundColor.lerp(_c, k);
@@ -1932,7 +1941,7 @@ class Game {
     if (this.bolt) this.hemi.intensity = th.hemi * env + this.bolt * 2.2;
     this.sun.color.lerp(_c.set(th.sunColor), k);
     this.sun.intensity += (th.sun * (deck ? 0.8 : 1) * (1 - night * 0.7) - this.sun.intensity) * k;
-    this.renderer.toneMappingExposure += ((deck ? 0.9 + night * 0.15 : 0.95 + night * 0.1) - this.renderer.toneMappingExposure) * k;
+    this.renderer.toneMappingExposure += ((deck ? 0.9 + night * 0.15 - emergency * 0.5 : 0.95 + night * 0.1) - this.renderer.toneMappingExposure) * k;
     const p = this.player.pos;
     this.sun.position.set(p.x + 6, p.y + 24, p.z + 9);
     this.sun.target.position.set(p.x, p.y, p.z);

@@ -273,6 +273,25 @@ try {
   const report = await az(() => window.AZ.timeline.length);
   console.log('  ok  ending shown; timeline entries:', report);
 
+  // v1.0: the ending leads on to THE CRADLE (or straight to the vessel), and is remembered
+  const end = await az(() => ({
+    cradle: !!document.querySelector('#toCradle'), vessel: !!document.querySelector('#toVessel'),
+    line: document.querySelector('#toCradle small')?.textContent, last: localStorage.getItem('afterzero.lastEnding'),
+  }));
+  if (!end.cradle || !end.vessel || !/heard the station say your name/.test(end.line || '')) throw new Error('the ending should offer GO BENEATH and SKIP TO THE VESSEL: ' + JSON.stringify(end));
+  if (!/"key":"MIRROR"/.test(end.last || '')) throw new Error('the ending should be remembered on this device: ' + end.last);
+  console.log('  ok  GO BENEATH / SKIP TO THE VESSEL offered; the ending is remembered');
+  await page.click('#toCradle');
+  await sim(3);
+  const cr = await az(() => ({
+    mode: window.AZ.mode, set: window.AZ.campaign?.set, ending: window.AZ.campaign?.ending, after: window.AZ.story?.after?.key,
+    run: window.AZ.run, level: window.AZ.level.id, card: document.querySelector('#card small').textContent,
+  }));
+  if (cr.mode !== 'deck' || cr.set !== 'cradle' || cr.ending !== 'MIRROR' || cr.after !== 'MIRROR' || cr.run !== 'cradle' || cr.level !== 'c0s0') throw new Error('GO BENEATH should start THE CRADLE after OBSERVED: ' + JSON.stringify(cr));
+  console.log('  ok  GO BENEATH: THE CRADLE after OBSERVED,', cr.card);
+  await skipTalk();
+  await shot('17b-cradle');
+
   // reload: the save restores the world from facts
   await page.reload();
   await wait(1200);
