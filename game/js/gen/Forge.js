@@ -712,7 +712,7 @@ export function FORGE_LINES() {
     add('JUNO', g.junoAfter);
     g.tick.forEach((t) => add('TICK', t));
     [...g.logs.arrival, ...g.logs.mid].forEach((t) => add('NONE', t));
-    for (const rec of g.records) { add('NONE', rec.official); add('NONE', rec.echo); add('NONE', rec.text); }
+    for (const rec of g.records) { add('NONE', rec.official); add('NONE', rec.echo); add('YOU', rec.text); } // the hero reads the contradiction aloud
     for (const t of Object.values(g.npc)) add('CREW', t);
     add('JUNO', g.finale.codaTrust);
     add('JUNO', g.finale.codaDoubt);

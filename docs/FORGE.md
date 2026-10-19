@@ -100,7 +100,7 @@ Every one of the 324 rule combinations is checked against all six gear in `tests
 
 ## Voice
 
-The Forge writes about 150 new fixed lines in the game's voice (Juno, TICK, the records, the cast); `tools/voice-pack.mjs` collects them (cast lines are recorded once, in the neutral crew voice, which the other crew voices fall back on), and the pack stays under 2,200 recordings. Names the player types, and the few lines that carry them, are spoken by the device's own voice.
+The Forge writes about 150 new fixed lines in the game's voice (Juno, TICK, the records, the cast); `tools/voice-pack.mjs` collects them (cast lines are recorded in each crew voice, so a cast member keeps one voice from line to line; the contradiction lines are recorded in the hero's voices), and the pack stays under 2,200 recordings. Lines that carry a name the player typed are spoken whole by the device's own voice.
 
 ## Saves and the chapter card
 

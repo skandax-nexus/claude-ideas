@@ -155,7 +155,7 @@ test('the Forge writes few new fixed lines, in the game\'s voice', () => {
   const lines = FORGE_LINES();
   assert.ok(lines.length < 220, `${lines.length} lines`);
   for (const [voice, text] of lines) {
-    assert.ok(['JUNO', 'TICK', 'NONE', 'CREW'].includes(voice));
+    assert.ok(['JUNO', 'TICK', 'NONE', 'CREW', 'YOU'].includes(voice));
     if (voice === 'TICK') assert.equal(text, text.toUpperCase(), text);
     assert.ok(!UNFILLED.test(text), text);
   }

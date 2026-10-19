@@ -115,10 +115,10 @@ for (const ending of ['SEVER', 'SUSTAIN', 'MIRROR', null]) {
 }
 
 // WORLD FORGE: every fixed line the Forge can say (gen/Forge.js). Names the player types, and the
-// few lines that carry them, fall back to the device voice; cast lines are recorded once, in the
-// neutral crew voice, which the other crew voices fall back on (audio/Voice.js).
+// lines that carry them, fall back to the device voice; cast lines are recorded in each crew voice,
+// so a cast member keeps one voice from line to line.
 const { FORGE_LINES } = await imp('gen/Forge.js');
-for (const [voice, text] of FORGE_LINES()) add(voice === 'CREW' ? 'CREW_n' : voice, text);
+for (const [voice, text] of FORGE_LINES()) for (const v of voice === 'CREW' ? ['CREW_n', 'CREW_f', 'CREW_m'] : [voice]) add(v, text);
 
 // AFTERZERO: THE LAST VERSION OF EARTH (v2.0): every line the edition can speak (game/js/editions/lastversion),
 // in its own speakers' voices: KAI, MIRA, WITNESS (also the voice in every speaker), ROOK, NIKO, SERA, ANJA,
