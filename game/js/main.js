@@ -2383,7 +2383,8 @@ class Game {
   emergency() {
     if (this.mode !== 'deck' || !this.level?.palette) return 0;
     if (this.level.forge || this.level.palette.emergency !== undefined) return (this.level.palette.emergency || 0) * (1 - this.flare()); // WORLD FORGE's EMERGENCY light (a flare lifts it); THE LAST VERSION's Helix
-    return this.level.palette.night === undefined ? this.story?.after?.dark || 0 : 0;
+    if (this.story?.zones) return this.level.palette.night === undefined ? this.story.after?.dark || 0 : 0; // districts (and THE LAST VERSION) keep their own night
+    return this.story?.after?.dark || 0; // every vessel deck runs on the emergency light after SEVERED
   }
 
   // how much a signal flare is lighting the act right now (0..1)
@@ -2413,7 +2414,10 @@ class Game {
     _c.set(th.ground);
     if (pal?.look) _c.lerp(_c2.set(pal.fog), 0.5);
     this.hemi.groundColor.lerp(_c, k);
-    let night = (deck ? pal.night || { horror: 0.55, thriller: 0.3 }[this.story?.mood] || this.story?.after?.dark || 0 : room.night || 0) * (1 - this.flare());
+    // a vessel deck's own night never hides the story's darkness (a Horror or Thriller mood, SEVERED's dark ship)
+    const mood = { horror: 0.55, thriller: 0.3 }[this.story?.mood] || 0;
+    const deckNight = this.story?.zones ? pal?.night || mood || this.story?.after?.dark || 0 : Math.max(pal?.night || 0, mood, this.story?.after?.dark || 0);
+    let night = (deck ? deckNight : room.night || 0) * (1 - this.flare());
     if (deck && this.edition?.stateNight) night = this.edition.stateNight(s, night); // THE LAST VERSION: each year has its own hour
     const env = (this.scene.environment ? 0.85 : 1) * (deck ? 0.72 : 1) * (1 - night * 0.55);
     // a sky photo lights the district: the probe takes over most of the flat hemisphere fill
