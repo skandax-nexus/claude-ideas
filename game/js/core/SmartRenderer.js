@@ -21,13 +21,20 @@
 // headroom, and it counts frames that missed the screen's refresh, so steady judder
 // (more than one frame in eight late, around 52 fps on a 60 Hz screen) counts as
 // slow even when the average looks fine.
+//
+// Once a state has held for 20 s it is stored on the device, so the next page load
+// (a new game, a load and QUIT all reload the page) starts there instead of
+// stepping down from full again, and compiles one shader set instead of two.
 import { QUALITY } from '../ui/Settings.js';
+import { NS } from './Edition.js';
 
 const ORDER = ['low', 'medium', 'high'];
 const TARGET = 50; // fps we try to stay above
 const GOOD = 58; // fps that counts as headroom
 const LATE = 1.5; // a frame longer than 1.5 refresh intervals missed the screen
 const BAN_MAX = 600; // s: the longest a state that failed is kept out
+const SKEY = `${NS}smart.v1`; // the settled state, per edition
+const KEEP = 864e5; // ms: a stored state older than a day is ignored
 
 export class SmartRenderer {
   constructor(game) {
@@ -46,6 +53,8 @@ export class SmartRenderer {
     this.clock = 0; // seconds of play watched, for the bans
     this.ban = {}; // state -> clock time until which it is not tried again
     this.fails = {}; // state -> how often it had to be left
+    this.held = 0; // judged windows the current state has lasted
+    this.stored = ''; // the state this page last stored
   }
 
   get chosen() {
@@ -59,7 +68,41 @@ export class SmartRenderer {
     this.clock = 0;
     this.ban = {};
     this.fails = {};
+    this.held = 0;
     this.restart();
+    // the first reset of the page (the constructor's applySettings) starts where the
+    // last visit settled; later ones (a new quality setting) start from the top
+    if (!this.restored) {
+      this.restored = true;
+      this.restore();
+    }
+  }
+
+  restore() {
+    try {
+      const s = JSON.parse(localStorage.getItem(SKEY) || 'null');
+      const i = ORDER.indexOf(s?.level);
+      if (s && s.chosen === this.chosen && Date.now() - s.at < KEEP && i >= 0 && i <= ORDER.indexOf(this.chosen)) {
+        this.level = s.level;
+        this.scale = Math.max(0.6, Math.min(1, +s.scale || 1));
+        // what lay just above it did not hold last time: it waits the usual ban
+        if (i < ORDER.indexOf(this.chosen)) this.forbid(`level:${ORDER[i + 1]}`, 120);
+        if (this.scale < 0.99) this.forbid(this.key(this.level, this.scale + 0.1), 60);
+      }
+    } catch {
+      /* storage blocked: start from the top */
+    }
+  }
+
+  remember() {
+    const k = `${this.chosen}:${this.level}@${this.scale}`;
+    if (k === this.stored) return;
+    this.stored = k;
+    try {
+      localStorage.setItem(SKEY, JSON.stringify({ chosen: this.chosen, level: this.level, scale: this.scale, at: Date.now() }));
+    } catch {
+      /* not stored */
+    }
   }
 
   // start a new judging window (and the counts of slow and good windows)
@@ -86,7 +129,9 @@ export class SmartRenderer {
     const late = this.late / this.frames;
     this.restart(false);
     this.fps = fps;
-    if (fps < TARGET || late > 0.12) {
+    const slow = fps < TARGET || late > 0.12;
+    if (++this.held >= 10 && !slow) this.remember(); // settled: 20 s in this state
+    if (slow) {
       this.fast = 0;
       if (++this.slow < 2) return; // two slow windows in a row before acting
       this.slow = 0;
@@ -127,6 +172,7 @@ export class SmartRenderer {
 
   setScale(s) {
     this.scale = Math.max(0.6, Math.min(1, +s.toFixed(2)));
+    this.held = 0;
     this.restart();
     this.apply();
   }
@@ -150,6 +196,7 @@ export class SmartRenderer {
     this.level = level;
     this.scale = Math.min(this.scale, 0.9);
     this.note = note || '';
+    this.held = 0;
     this.restart();
     this.g.applyQuality();
   }
