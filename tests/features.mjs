@@ -111,7 +111,7 @@ async function desktop() {
   await az(() => AZ.saveTo('auto'));
   check(await az(() => { const r = JSON.parse(localStorage.getItem('afterzero.slot.1') || 'null'); return r && r.meta && r.meta.run; }) === 'prologue', 'autosave goes into the chosen slot, tagged with its chapter');
 
-  // smart renderer: eases resolution when slow, gives it back when fast
+  // smart renderer: eases resolution when slow, gives it back after a steady stretch of headroom
   const sm = await az(() => {
     const s = AZ.smart;
     const was = AZ.menu;
@@ -119,12 +119,14 @@ async function desktop() {
     s.reset();
     for (let i = 0; i < 2 * 2 * 30; i++) s.sample(1 / 30); // 4 s at 30 fps
     const low = s.scale;
-    for (let i = 0; i < 6 * 2 * 60; i++) s.sample(1 / 70); // 12 s at 70 fps
+    for (let i = 0; i < 12 * 70; i++) s.sample(1 / 70); // 12 s at 70 fps: a state it just left waits a minute
+    const held = s.scale;
+    for (let i = 0; i < 70 * 70; i++) s.sample(1 / 70); // 70 s more at 70 fps
     const back = s.scale;
     AZ.menu = was;
-    return { low, back, pr: AZ.renderer.getPixelRatio() };
+    return { low, held, back, pr: AZ.renderer.getPixelRatio() };
   });
-  check(sm.low < 1 && sm.back > sm.low, 'smart renderer lowers resolution when slow and raises it with headroom', JSON.stringify(sm));
+  check(sm.low < 1 && sm.held === sm.low && sm.back > sm.low, 'smart renderer lowers resolution when slow, holds it, and raises it after a minute of headroom', JSON.stringify(sm));
   await az(() => { AZ.changeSetting('smart', false); });
   check(await az(() => AZ.renderer.getPixelRatio() === Math.min(devicePixelRatio, AZ.smart.quality().pixelRatio)), 'smart renderer off: full resolution of the chosen quality');
   await az(() => AZ.changeSetting('smart', true));

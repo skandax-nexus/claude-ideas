@@ -13,11 +13,21 @@
 // shader set, which can stall a phone for a moment. So step 2 is only requested
 // here; the game applies it (flush) at a safe moment: behind a menu that has
 // already painted, during a sector load, or after 45 s if neither comes.
+//
+// Every change costs something (a resolution pop and new render targets, or a
+// recompile), so it remembers: a state it had to leave is not tried again for a
+// minute (a preset: two), twice as long each time it fails again, up to ten
+// minutes. It steps down after 4 s of slow frames and up only after 10 s of
+// headroom, and it counts frames that missed the screen's refresh, so steady judder
+// (more than one frame in eight late, around 52 fps on a 60 Hz screen) counts as
+// slow even when the average looks fine.
 import { QUALITY } from '../ui/Settings.js';
 
 const ORDER = ['low', 'medium', 'high'];
 const TARGET = 50; // fps we try to stay above
 const GOOD = 58; // fps that counts as headroom
+const LATE = 1.5; // a frame longer than 1.5 refresh intervals missed the screen
+const BAN_MAX = 600; // s: the longest a state that failed is kept out
 
 export class SmartRenderer {
   constructor(game) {
@@ -26,11 +36,16 @@ export class SmartRenderer {
     this.level = null; // the preset actually in use (<= the chosen one)
     this.acc = 0;
     this.frames = 0;
+    this.late = 0; // frames in this window that missed the refresh
     this.slow = 0;
     this.fast = 0;
     this.note = '';
     this.pending = null; // a preset change waiting for a safe moment
     this.pendingAt = 0;
+    this.vsync = 1 / 60; // the screen's refresh interval (s)
+    this.clock = 0; // seconds of play watched, for the bans
+    this.ban = {}; // state -> clock time until which it is not tried again
+    this.fails = {}; // state -> how often it had to be left
   }
 
   get chosen() {
@@ -41,44 +56,78 @@ export class SmartRenderer {
     this.scale = 1;
     this.level = this.chosen;
     this.pending = null;
-    this.acc = this.frames = 0;
-    this.slow = this.fast = 0;
+    this.clock = 0;
+    this.ban = {};
+    this.fails = {};
+    this.restart();
+  }
+
+  // start a new judging window (and the counts of slow and good windows)
+  restart(counts = true) {
+    this.acc = this.frames = this.late = 0;
+    if (counts) this.slow = this.fast = 0;
   }
 
   // called once per rendered frame with the frame's real duration (seconds)
   sample(dt) {
     const g = this.g;
-    if (!g.settings.smart || g.capturing || !g.started || g.menu || g.paused || document.hidden) return;
+    // a window never spans a menu, a pause or a hidden tab
+    if (!g.settings.smart || g.capturing || !g.started || g.menu || g.paused || document.hidden) return this.restart(false);
     if (this.level === null) this.level = this.chosen;
-    if (this.pending) return; // nothing else changes until the queued preset is in
+    this.clock += dt;
+    // nothing else changes until a queued preset is in; a frame over 250 ms is a load,
+    // a compile or a resume, not the steady rate
+    if (this.pending || dt > 0.25) return this.restart(false);
     this.acc += dt;
     this.frames++;
+    if (dt > LATE * this.vsync) this.late++;
     if (this.acc < 2) return; // judge every two seconds
     const fps = this.frames / this.acc;
-    this.acc = 0;
-    this.frames = 0;
+    const late = this.late / this.frames;
+    this.restart(false);
     this.fps = fps;
-    if (fps < TARGET) {
+    if (fps < TARGET || late > 0.12) {
       this.fast = 0;
       if (++this.slow < 2) return; // two slow windows in a row before acting
       this.slow = 0;
-      if (this.scale > 0.61) this.setScale(this.scale - 0.1);
-      else {
-        const i = ORDER.indexOf(this.level);
-        if (i > 0) this.request(ORDER[i - 1]);
+      const i = ORDER.indexOf(this.level);
+      if (this.scale > 0.61) {
+        this.forbid(this.key(this.level, this.scale), 60);
+        this.setScale(this.scale - 0.1);
+      } else if (i > 0) {
+        this.forbid(this.key(this.level, this.scale), 60);
+        this.forbid(`level:${this.level}`, 120);
+        this.request(ORDER[i - 1]);
       }
-    } else if (fps > GOOD) {
+    } else if (fps > GOOD && late < 0.03) {
       this.slow = 0;
-      if (++this.fast < 3) return; // six seconds of headroom
+      if (++this.fast < 5) return; // ten seconds of headroom
       this.fast = 0;
       const i = ORDER.indexOf(this.level);
-      if (this.scale < 0.99) this.setScale(this.scale + 0.1);
-      else if (i < ORDER.indexOf(this.chosen)) this.request(ORDER[i + 1]);
+      if (this.scale < 0.99) {
+        const to = +(this.scale + 0.1).toFixed(2);
+        if (this.allowed(this.key(this.level, to))) this.setScale(to);
+      } else if (i < ORDER.indexOf(this.chosen) && this.allowed(`level:${ORDER[i + 1]}`)) this.request(ORDER[i + 1]);
     } else this.slow = this.fast = 0;
+  }
+
+  key(level, scale) {
+    return `${level}@${scale.toFixed(1)}`;
+  }
+
+  // keep a state that just failed out for a while: base seconds, doubling each time
+  forbid(k, base) {
+    this.fails[k] = (this.fails[k] || 0) + 1;
+    this.ban[k] = this.clock + Math.min(BAN_MAX, base * 2 ** (this.fails[k] - 1));
+  }
+
+  allowed(k) {
+    return !(this.ban[k] > this.clock);
   }
 
   setScale(s) {
     this.scale = Math.max(0.6, Math.min(1, +s.toFixed(2)));
+    this.restart();
     this.apply();
   }
 
@@ -86,6 +135,7 @@ export class SmartRenderer {
   request(level) {
     this.pending = level;
     this.pendingAt = performance.now();
+    this.restart();
   }
 
   flush() {
@@ -100,8 +150,7 @@ export class SmartRenderer {
     this.level = level;
     this.scale = Math.min(this.scale, 0.9);
     this.note = note || '';
-    this.acc = this.frames = 0;
-    this.slow = this.fast = 0;
+    this.restart();
     this.g.applyQuality();
   }
 

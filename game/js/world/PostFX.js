@@ -147,10 +147,14 @@ export class PostFX {
   }
 
   resize() {
-    if (!this.composer) return;
+    const c = this.composer;
+    if (!c) return;
     const size = this.renderer.getSize(new THREE.Vector2());
-    this.composer.setPixelRatio(this.renderer.getPixelRatio());
-    this.composer.setSize(size.x, size.y);
+    // setPixelRatio already resizes every target and pass to the composer's size, so
+    // resize again only when the canvas size itself changed (a smart renderer step
+    // used to reallocate everything twice)
+    c.setPixelRatio(this.renderer.getPixelRatio());
+    if (size.x !== c._width || size.y !== c._height) c.setSize(size.x, size.y);
   }
 
   // Real-world light for a place: an equirect sky photo (assets/textures/sky_*.jpg)
