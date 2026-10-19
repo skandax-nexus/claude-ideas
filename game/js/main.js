@@ -2446,6 +2446,12 @@ class Game {
 }
 
 window.addEventListener('DOMContentLoaded', async () => {
+  // the title (with 'Loading characters…') shows while the models load, not a blank page with a dead dock;
+  // its buttons wake up when the game exists. (The second edition shows its own title once it starts.)
+  const titleBody = document.querySelector('#title .body');
+  document.body.classList.add('menu');
+  if (!EDITION) document.querySelector('#title')?.classList.add('on');
+  if (titleBody) titleBody.style.pointerEvents = 'none';
   // your look and Juno load first; the crew follow in the background.
   // The procedural cast stands in if the models can't load.
   let saved = null;
@@ -2472,8 +2478,11 @@ window.addEventListener('DOMContentLoaded', async () => {
   try {
     window.AZ = new Game();
     window.AZSynth = Synth;
+    if (titleBody) titleBody.style.pointerEvents = '';
   } catch (e) {
     document.querySelector('#title .body').innerHTML = `<p class="err">This device could not start WebGL.<br><small>${e.message}</small></p>`;
+    document.querySelector('#title')?.classList.add('on'); // the message must be seen
+    document.body.classList.add('menu');
     throw e;
   }
 });
