@@ -72,7 +72,7 @@ export class Director {
       facts.set('shard_touch', 1);
       engine.setOverride('antechamber', { zeroG: true });
       audio.sweep(true);
-      hud.flash('rgba(140,110,255,0.5)');
+      if (!this.g.settings.comfort) hud.flash('rgba(140,110,255,0.5)');
     } else if (n === 1) {
       engine.setOverride('antechamber', null);
       engine.lock('antechamber', false);
@@ -81,7 +81,7 @@ export class Director {
       facts.set('shard_touch', 2);
       engine.setState('antechamber', 'INVERTED');
       audio.sweep(false);
-      hud.flash('rgba(255,90,180,0.55)');
+      if (!this.g.settings.comfort) hud.flash('rgba(255,90,180,0.55)');
       this.after(1.8, () => this.say('other_speaks'));
       this.after(2.5, () =>
         hud.toast(this.g.input.touch
@@ -103,7 +103,7 @@ export class Director {
       if (this.armT > 0) {
         this.armT = 0;
         facts.set('machine_activated');
-        hud.flash('rgba(255,255,255,0.9)');
+        if (!this.g.settings.comfort) hud.flash('rgba(255,255,255,0.9)');
         audio.sweep(true);
         setTimeout(() => audio.sweep(false), 300);
         this.say('machine_activate');

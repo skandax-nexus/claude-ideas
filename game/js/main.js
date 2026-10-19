@@ -2386,7 +2386,7 @@ class Game {
     const skyAmt = probe ? 1 : 0;
     this.skyLight.intensity += (skyAmt * (1 - night * 0.35) * 1.1 - this.skyLight.intensity) * k;
     this.hemi.intensity += (th.hemi * env * (1 - skyAmt * 0.55) - this.hemi.intensity) * k;
-    if (this.bolt) this.hemi.intensity = th.hemi * env + this.bolt * 2.2;
+    if (this.bolt && !this.settings.comfort) this.hemi.intensity = th.hemi * env + this.bolt * 2.2; // Comfort mode: no lightning flashes
     this.sun.color.lerp(_c.set(th.sunColor), k);
     this.sun.intensity += (th.sun * (deck ? 0.8 : 1) * (1 - night * 0.7) - this.sun.intensity) * k;
     this.renderer.toneMappingExposure += ((deck ? 0.9 + night * 0.15 - emergency * 0.5 : 0.95 + night * 0.1) - this.renderer.toneMappingExposure) * k;
