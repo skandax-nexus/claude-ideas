@@ -6,6 +6,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.speech.tts.TextToSpeech;
 import android.webkit.JavascriptInterface;
+import android.webkit.ValueCallback;
 import java.util.Locale;
 import android.view.View;
 import android.view.WindowManager;
@@ -125,7 +126,12 @@ public class MainActivity extends Activity {
     @Override protected void onDestroy() { if (tts != null) tts.shutdown(); web.destroy(); super.onDestroy(); } // a recreated activity leaves no old WebView (or its audio) running
     @Override protected void onResume() { super.onResume(); web.onResume(); web.resumeTimers(); immersive(); }
     @Override public void onBackPressed() {
-        // Back opens the in-game pause menu instead of quitting mid-run.
-        web.evaluateJavascript("window.dispatchEvent(new KeyboardEvent('keydown',{code:'Escape',key:'Escape'}))", null);
+        // Back opens the in-game pause menu (and steps back through menus) instead of quitting mid-run;
+        // on the title, or while the game is still loading, it leaves the app like any other.
+        web.evaluateJavascript("(function(){var g=window.AZ;if(!g||(!g.started&&!g.menu))return 'exit';"
+            + "window.dispatchEvent(new KeyboardEvent('keydown',{code:'Escape',key:'Escape'}));return 'ok';})()",
+            new ValueCallback<String>() {
+                @Override public void onReceiveValue(String v) { if ("\"exit\"".equals(v)) moveTaskToBack(true); }
+            });
     }
 }
