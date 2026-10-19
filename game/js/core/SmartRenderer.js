@@ -8,6 +8,11 @@
 //
 // The quality preset in Settings is the ceiling; the smart renderer never goes
 // above it. Toggle in Settings (on by default).
+//
+// A preset change rebuilds the lights, shadows and post chain and compiles a new
+// shader set, which can stall a phone for a moment. So step 2 is only requested
+// here; the game applies it (flush) at a safe moment: behind a menu that has
+// already painted, during a sector load, or after 45 s if neither comes.
 import { QUALITY } from '../ui/Settings.js';
 
 const ORDER = ['low', 'medium', 'high'];
@@ -24,6 +29,8 @@ export class SmartRenderer {
     this.slow = 0;
     this.fast = 0;
     this.note = '';
+    this.pending = null; // a preset change waiting for a safe moment
+    this.pendingAt = 0;
   }
 
   get chosen() {
@@ -33,6 +40,8 @@ export class SmartRenderer {
   reset() {
     this.scale = 1;
     this.level = this.chosen;
+    this.pending = null;
+    this.acc = this.frames = 0;
     this.slow = this.fast = 0;
   }
 
@@ -41,6 +50,7 @@ export class SmartRenderer {
     const g = this.g;
     if (!g.settings.smart || g.capturing || !g.started || g.menu || g.paused || document.hidden) return;
     if (this.level === null) this.level = this.chosen;
+    if (this.pending) return; // nothing else changes until the queued preset is in
     this.acc += dt;
     this.frames++;
     if (this.acc < 2) return; // judge every two seconds
@@ -55,7 +65,7 @@ export class SmartRenderer {
       if (this.scale > 0.61) this.setScale(this.scale - 0.1);
       else {
         const i = ORDER.indexOf(this.level);
-        if (i > 0) this.setLevel(ORDER[i - 1], 'Graphics eased for smoothness');
+        if (i > 0) this.request(ORDER[i - 1]);
       }
     } else if (fps > GOOD) {
       this.slow = 0;
@@ -63,7 +73,7 @@ export class SmartRenderer {
       this.fast = 0;
       const i = ORDER.indexOf(this.level);
       if (this.scale < 0.99) this.setScale(this.scale + 0.1);
-      else if (i < ORDER.indexOf(this.chosen)) this.setLevel(ORDER[i + 1], 'Graphics raised');
+      else if (i < ORDER.indexOf(this.chosen)) this.request(ORDER[i + 1]);
     } else this.slow = this.fast = 0;
   }
 
@@ -72,12 +82,27 @@ export class SmartRenderer {
     this.apply();
   }
 
+  // queue a preset change; the game calls flush() when a stall will not be seen
+  request(level) {
+    this.pending = level;
+    this.pendingAt = performance.now();
+  }
+
+  flush() {
+    if (!this.pending) return;
+    const l = this.pending;
+    this.pending = null;
+    this.setLevel(l);
+  }
+
+  // change the preset now (flush, and tests that drive the renderer directly)
   setLevel(level, note) {
     this.level = level;
     this.scale = Math.min(this.scale, 0.9);
-    this.note = note;
+    this.note = note || '';
+    this.acc = this.frames = 0;
+    this.slow = this.fast = 0;
     this.g.applyQuality();
-    if (note) this.g.hud.toast(`<small>SMART RENDERER</small><br>${note}`, 1800);
   }
 
   // the preset to render with right now

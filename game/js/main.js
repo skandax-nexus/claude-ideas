@@ -935,6 +935,7 @@ class Game {
   }
 
   returnToStation() {
+    this.smart.flush(); // under the lift's fade
     this.weather.set(null);
     this.postfx.setGrade(STATION_GRADE);
     this.postfx.setEnvironment(null);
@@ -1221,6 +1222,7 @@ class Game {
     }
     this.level = lv;
     this.deckWorld.hero = this.settings.hero; // the Other wears your face
+    this.smart.flush(); // a queued preset change lands here, so the new place compiles once
     this.deckWorld.build(lv, this.story, c.flags);
     this.weather.set(lv.palette.weather);
     this.postfx.setGrade(lv.palette.grade || STATION_GRADE);
@@ -1946,6 +1948,14 @@ class Game {
     this.time += dt;
     // plays the same held upright or sideways
     const active = !this.paused && !this.menu;
+    // a preset change the smart renderer queued compiles a new shader set: do it behind a
+    // panel that has painted (not the character screen, which shows the 3D view), or after
+    // 45 s if no menu comes (sector loads flush too)
+    if (this.menu !== this.menuSeen) {
+      this.menuSeen = this.menu;
+      this.menuAt = this.time;
+    }
+    if (this.smart.pending && ((this.menu && this.menu !== 'hero' && this.time - this.menuAt > 0.25) || performance.now() - this.smart.pendingAt > 45000)) this.smart.flush();
 
     for (let a of this.input.consumeActions()) {
       this.lastEvent = this.time;
