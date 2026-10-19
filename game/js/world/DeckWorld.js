@@ -825,7 +825,8 @@ export class Sentinel {
     U.coneMat.color.setHex(col);
     U.coneMat.opacity = this.mode === 'chase' ? 0.16 : 0.09;
     this.sync(dt, speed);
-    if (this.mode === 'chase' && here && player.pos.distanceTo(_v.set(this.pos.x, player.pos.y, this.pos.z)) < 1.15) {
+    // no catch through the air: on the ceiling you are out of its reach (unless it learned to look up)
+    if (this.mode === 'chase' && here && !hidden && player.pos.distanceTo(_v.set(this.pos.x, player.pos.y, this.pos.z)) < 1.15) {
       this.mode = 'patrol';
       this.suspicion = 0;
       return 'caught';
