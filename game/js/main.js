@@ -2186,7 +2186,7 @@ class Game {
     const held = this.heldItem();
     if (held && held.echo) {
       const s = engine.state(this.room);
-      if (s !== engine.residue && !engine.has('heldPersists', s)) {
+      if (s !== engine.residue && !engine.hasIn('heldPersists', this.room)) { // the room's rules count (a null field)
         this.held = null;
         if (this.edition) this.hud.say([{ who: 'KAI', text: this.edition.line('key_dissolve') }], this.facts);
         else if (this.mode === 'deck') this.hud.say([{ who: 'TICK', text: 'THE KEY WAS A MEMORY. IT STAYED BEHIND IN ECHO. A LAW COULD LET YOU KEEP IT.' }], this.facts);
