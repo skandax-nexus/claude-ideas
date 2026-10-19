@@ -2383,9 +2383,13 @@ window.addEventListener('DOMContentLoaded', async () => {
   if (ver) ver.textContent = 'Loading characters…';
   const ok = await Promise.race([loadActors(first), new Promise((r) => setTimeout(() => r(false), 90000))]);
   if (ver) ver.textContent = ok ? verText : `Characters could not load (${loadErrors[0] || 'timed out'})`;
-  // the realistic crew next, then the older looks (picked on the character screen)
+  // the realistic crew next, in the background. The older stylised looks are not
+  // preloaded: each one costs a long main-thread block when it arrives, so a look
+  // loads only when it is picked on the character screen (pickHero fetches it and
+  // retries), and the stylised crew load only as the fallback if the realistic crew
+  // could not load.
   const rest = Object.keys(MODELS).filter((k) => !first.includes(k));
-  loadActors(rest.filter((k) => k.startsWith('rb_'))).then(() => loadActors(rest.filter((k) => !k.startsWith('rb_'))));
+  loadActors(rest.filter((k) => k.startsWith('rb_'))).then((ok) => ok || loadActors(rest.filter((k) => /^[wm]_/.test(k))));
   try {
     window.AZ = new Game();
     window.AZSynth = Synth;
