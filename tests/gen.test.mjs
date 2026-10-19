@@ -187,7 +187,8 @@ test('the vessel\'s rooms change with the ending, never its puzzles', () => {
 // --- v1.0: HALCYON keeps its districts, THE CRADLE has its own ----------------------------
 // Geometry fingerprints of HALCYON's twelve districts (as in v0.9). Update them only when a
 // district is changed on purpose.
-const HALCYON_GEOMETRY = ['656965bae961', 'bc4374d2cd57', 'b8ad862febf3', '40f561965134', '04211e896344', '8be45034f040', '0a448a0d40dc', '12ae017c2cf6', '5300ca67b92a', 'be7d37bf0eb7', 'ee94220bcd9c', 'e05e892075e1'];
+// (THE GLASS FOREST's arrival, the 7th, changed on purpose: its stair-side corner tree moved out of the stairs' approach)
+const HALCYON_GEOMETRY = ['656965bae961', 'bc4374d2cd57', 'b8ad862febf3', '40f561965134', '04211e896344', '8be45034f040', '4dad1e0995bf', '12ae017c2cf6', '5300ca67b92a', 'be7d37bf0eb7', 'ee94220bcd9c', 'e05e892075e1'];
 const geometry = (lv) => createHash('sha1').update(JSON.stringify({
   e: lv.elements.map((x) => [x.box.map((v) => +v.toFixed(3)), x.mat, x.solid !== false, !!x.echo, x.when || '']),
   s: lv.sentinels.map((x) => [x.path, x.speed]),
