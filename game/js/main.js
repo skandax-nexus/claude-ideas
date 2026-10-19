@@ -2269,7 +2269,7 @@ class Game {
     this.lastObserverMode = this.observer.mode;
     const od = player.pos.distanceTo(this.observer.pos);
     const threat = inHall && !facts.get('observer_tethered') ? Math.max(this.observer.suspicion, Math.max(0, 1 - od / 14) * 0.4) : 0;
-    this.audio.setThreat(threat);
+    this.audio.setThreat(threat, dt);
     this.hud.eye(this.observer.suspicion, inHall && !facts.get('observer_tethered'));
     this.director.update(dt);
   }
@@ -2302,7 +2302,7 @@ class Game {
       threat = Math.max(threat, GENRES[this.forge.genre].threat); // the genre sets the floor of the music's tension
       if (this.flareT > 0) this.flareT -= dt;
     }
-    this.audio.setThreat(threat);
+    this.audio.setThreat(threat, dt);
     this.hud.eye(sus, near);
     if (this.campaign?.lv) this.edition.step(dt);
     this.updateDeckObjective();
