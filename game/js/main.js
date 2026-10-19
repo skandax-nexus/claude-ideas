@@ -1430,7 +1430,10 @@ class Game {
       this.talkWith = [p.x, p.y + 1.55, p.z];
       const choosing = beat.choice && !flags[`chosen_${beat.choice.fact}`] && n.n.id === `npc_${this.level.order.find((rid) => this.level.rooms[rid].beat)}`;
       say(lines.map((l) => (l.who === 'CREW' ? { ...l, voice } : l)), choosing ? () => this.openForgeChoice(beat, n) : undefined);
-      if (n.n.junoAfter && !choosing) say([].concat(n.n.junoAfter).map((text) => ({ who: 'JUNO', text })));
+      if (n.n.junoAfter && !choosing && !flags[`juno_${n.n.id}`]) { // Juno reacts once, not on every talk
+        flags[`juno_${n.n.id}`] = true;
+        say([].concat(n.n.junoAfter).map((text) => ({ who: 'JUNO', text })));
+      }
       if (beat.kind === 'encounter' && !this.facts.get(`met_logged_${n.crew.id}`)) {
         this.facts.set(`met_logged_${n.crew.id}`);
         this.log.push(`Met ${n.crew.name} (${n.crew.role})${n.n.hologram ? ' - only an echo' : ' - alive'}.`);

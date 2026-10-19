@@ -260,6 +260,7 @@ export function makeStory(seed, wish = null, opts = {}) {
     ...extra,
   });
 
+  const said = {}; // lines a story should not repeat (no rng draw: every seed keeps its truth)
   const decks = DECKS.map((d, i) => {
     if (i === 7) return finaleDeck(d, r, cast, captain, truth, V, motive, twist);
     const c = cast[i];
@@ -276,7 +277,7 @@ export function makeStory(seed, wish = null, opts = {}) {
         'The deck {first} never left',
         'What {first} saw on the last night',
       ]), v),
-      intro: juno(r, i, v),
+      intro: juno(r, i, v, said),
       beats: [
         arrival(r, d, c, v),
         personalLog(r, d, c, v, guilty),
@@ -295,7 +296,7 @@ export function makeStory(seed, wish = null, opts = {}) {
 
 // --- beats ---------------------------------------------------------------------
 
-function juno(r, i, v) {
+function juno(r, i, v, said = {}) {
   const opening = [
     [
       'Juno here. I\'m on the radio now - the hatch behind you sealed, but I can hear you.',
@@ -310,7 +311,12 @@ function juno(r, i, v) {
       'The {deck}. {name}\'s deck. Be kind to whatever you find of {them}.',
     ],
   ];
-  return r.pick(opening).map((t) => ({ who: 'JUNO', text: ff(t, v) }));
+  let k = opening.indexOf(r.pick(opening));
+  // the hatch call opens Deck 1 only; 'never made it this far' once, and not before Deck 4
+  if (i === 0) k = 0;
+  else if (k === 0 || (k === 2 && (i < 3 || said.far))) k = 1;
+  if (k === 2) said.far = true;
+  return opening[k].map((t) => ({ who: 'JUNO', text: ff(t, v) }));
 }
 
 function arrival(r, d, c, v) {
@@ -418,7 +424,8 @@ function encounter(r, d, c, v, guilty, red, cast, truth) {
     alive: c.alive,
     lines: lines.map((text) => ({ who: 'CREW', name: c.name.toUpperCase(), color: c.color, text })),
     junoAfter: ff(c.alive
-      ? r.pick(['{first}\'s alive. I didn\'t think anyone was. I\'ll stay on the line with {them}.', 'Leave {first} the radio frequency. {first} shouldn\'t be alone.'])
+      // 'I didn't think anyone was' only for the first survivor you meet
+      ? ((t) => (cast.slice(0, c.deck).some((x) => x.alive) ? 'Leave {first} the radio frequency. {first} shouldn\'t be alone.' : t))(r.pick(['{first}\'s alive. I didn\'t think anyone was. I\'ll stay on the line with {them}.', 'Leave {first} the radio frequency. {first} shouldn\'t be alone.']))
       : r.pick(['That was an echo of {first}. Not {first}. I keep forgetting the difference.', 'Echoes repeat. They don\'t answer questions. {first} would have hated that.']), v),
   };
 }
