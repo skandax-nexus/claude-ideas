@@ -377,6 +377,15 @@ class Game {
       this.muteLabel();
     };
     this.muteLabel();
+    // a hidden tab or an app in the background: pause, and let the sound sleep with it
+    document.addEventListener('visibilitychange', () => {
+      const ctx = this.audio.ctx;
+      if (document.hidden) {
+        this.voice.stop();
+        ctx?.suspend?.().catch(() => {});
+        if (this.started && !this.menu && !this.paused) this.openMenu('pause');
+      } else if (ctx && ctx.state !== 'running') ctx.resume?.().catch(() => {});
+    });
     document.addEventListener('pointerlockchange', () => {
       if (!document.pointerLockElement && !this.paused && !this.menu && !this.touch) this.openMenu('pause');
     });
@@ -384,6 +393,8 @@ class Game {
     $('#heroBtn2').onclick = () => this.openHero('pause');
     // menus answer with a soft tick
     document.addEventListener('pointerdown', (e) => {
+      // the system can suspend or interrupt the sound (a call, another app): any touch brings it back
+      if (this.started && this.audio.ctx && this.audio.ctx.state !== 'running' && !document.hidden) this.audio.ctx.resume?.().catch(() => {});
       if (e.target.closest?.('.overlay button, #dock button')) this.audio.ui('press');
     });
     this.refreshTitle();
