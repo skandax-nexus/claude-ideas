@@ -6,9 +6,9 @@
 //
 // Identifiers resolve to facts (missing facts are false/0).
 // @STATE is true when the room being evaluated is in that reality state.
-// Comparisons: == != >= <= > < against numbers, true/false or identifiers.
+// Comparisons: == != >= <= > < against numbers, true/false, "strings" or identifiers.
 
-const TOKEN = /\s*(&&|\|\||==|!=|>=|<=|[!()<>]|@[A-Z]+|[A-Za-z_][\w.]*|-?\d+(?:\.\d+)?)/y;
+const TOKEN = /\s*(&&|\|\||==|!=|>=|<=|[!()<>]|@[A-Z]+|"[^"]*"|'[^']*'|[A-Za-z_][\w.]*|-?\d+(?:\.\d+)?)/y;
 
 function tokenize(src) {
   const out = [];
@@ -42,6 +42,10 @@ function parse(src) {
     if (/^-?\d/.test(tok)) {
       const n = Number(tok);
       return () => n;
+    }
+    if (tok[0] === '"' || tok[0] === "'") {
+      const str = tok.slice(1, -1);
+      return () => str;
     }
     if (tok === 'true') return () => true;
     if (tok === 'false') return () => false;

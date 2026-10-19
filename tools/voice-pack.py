@@ -39,6 +39,20 @@ VOICES = {
     'CREW_f': ('af_bella', 1.0, 1.0),
     'CREW_m': ('am_michael', 0.97, 1.0),
     'CREW_n': ('af_kore', 0.99, 0.97),
+    # AFTERZERO: THE LAST VERSION OF EARTH (v2.0): one distinct voice per speaker
+    'KAI': ('am_eric', 0.98, 0.98),
+    'MIRA': ('af_river', 0.96, 1.02),
+    'WITNESS': ('am_fenrir', 0.88, 0.9),
+    'ROOK': ('bm_lewis', 0.94, 0.95),
+    'NIKO': ('am_echo', 1.0, 1.02),
+    'SERA': ('af_jessica', 1.02, 0.98),
+    'ANJA': ('bf_isabella', 0.95, 1.0),
+    'IVEN': ('bm_fable', 1.0, 0.96),
+    'JUN': ('bm_daniel', 1.02, 1.0),
+    'TALA': ('af_aoede', 0.95, 1.0),
+    'MARA': ('bf_lily', 0.92, 0.98),
+    'ORREN': ('am_adam', 0.86, 0.88),
+    'CHILD': ('af_nicole', 1.02, 1.18),
 }
 
 

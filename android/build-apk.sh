@@ -6,25 +6,48 @@
 # Every version is its own app: the version in AndroidManifest.xml (versionName) picks the
 # file name and the app id (com.afterzero.v1_0 for 1.0.x), so a new version installs beside
 # the old one, with its own icon and its own saves, instead of replacing it.
+#
+# Editions: EDITION=lastversion bash android/build-apk.sh builds AFTERZERO: THE LAST VERSION
+# OF EARTH as its own app ("AFTERZERO: Last Version", com.afterzero.lastversion, 2.0.0,
+# AFTERZERO-LastVersion-v2.0.apk) from the same sources, with window.AZ_EDITION set in the
+# page. Without EDITION the build is the Station Zero game, unchanged.
 set -euo pipefail
 cd "$(dirname "$0")"
-VER=$(sed -n 's/.*android:versionName="\([0-9]*\.[0-9]*\).*/\1/p' AndroidManifest.xml)
-APP_ID="com.afterzero.v${VER//./_}"
-APK="AFTERZERO-v$VER.apk"
+EDITION=${EDITION:-}
 ANDROID_JAR=${ANDROID_JAR:-/usr/lib/android-sdk/platforms/android-23/android.jar}
 OUT=build
-rm -rf "$OUT" && mkdir -p "$OUT/assets" "$OUT/classes" "$OUT/gen"
+MANIFEST=AndroidManifest.xml
+FLAG=""
+if [ "$EDITION" = "lastversion" ]; then
+  OUT=build-lastversion
+  VER=2.0
+  APP_ID="com.afterzero.lastversion"
+  APK="AFTERZERO-LastVersion-v$VER.apk"
+  FLAG="window.AZ_EDITION='lastversion';"
+  rm -rf "$OUT" && mkdir -p "$OUT/assets" "$OUT/classes" "$OUT/gen"
+  # the edition's own manifest: its label, version and code (the id is renamed by aapt below)
+  MANIFEST="$OUT/AndroidManifest.xml"
+  sed -e 's/android:versionCode="[0-9]*"/android:versionCode="200"/' -e 's/android:versionName="[^"]*"/android:versionName="2.0.0"/' \
+      -e 's/android:label="[^"]*"/android:label="AFTERZERO: Last Version"/' AndroidManifest.xml > "$MANIFEST"
+elif [ -n "$EDITION" ]; then
+  echo "unknown EDITION '$EDITION' (lastversion, or unset for Station Zero)" >&2; exit 1
+else
+  VER=$(sed -n 's/.*android:versionName="\([0-9]*\.[0-9]*\).*/\1/p' AndroidManifest.xml)
+  APP_ID="com.afterzero.v${VER//./_}"
+  APK="AFTERZERO-v$VER.apk"
+  rm -rf "$OUT" && mkdir -p "$OUT/assets" "$OUT/classes" "$OUT/gen"
+fi
 
 # 1. One HTML file with the ES modules bundled in, plus the models and voice pack beside it.
 npx --yes esbuild@0.24.0 ../game/js/main.js --bundle --format=iife --minify --target=es2019 --outfile="$OUT/game.js" --log-level=warning
-node - "$OUT" <<'JS'
-const fs = require('fs'); const out = process.argv[2];
+node - "$OUT" "$FLAG" <<'JS'
+const fs = require('fs'); const out = process.argv[2]; const flag = process.argv[3] || '';
 let html = fs.readFileSync('../game/index.html', 'utf8');
 const css = fs.readFileSync('../game/css/style.css', 'utf8');
 const js = fs.readFileSync(out + '/game.js', 'utf8').replace(/<\/script/gi, '<\\/script');
 html = html.replace(/<link rel="manifest"[^>]*>\n?/, '').replace(/<link rel="icon"[^>]*>\n?/, '')
   .replace(/<link rel="stylesheet"[^>]*>/, () => `<style>${css}</style>`)
-  .replace(/<script type="module" src="js\/main.js"><\/script>/, () => `<script>${js}</script>`);
+  .replace(/<script type="module" src="js\/main.js"><\/script>/, () => `${flag ? `<script>${flag}</script>` : ''}<script>${js}</script>`);
 fs.writeFileSync(out + '/assets/index.html', html);
 JS
 # character models and the voice pack, served by MainActivity from https://afterzero.app/assets/...
@@ -40,14 +63,14 @@ javac --release 8 -classpath "$ANDROID_JAR" -d "$OUT/classes" src/com/afterzero/
 dalvik-exchange --dex --output="$OUT/classes.dex" "$OUT/classes"
 
 # 3. Package, align, sign (debug key generated on first run).
-aapt package -f -0 glb -0 ogg --rename-manifest-package "$APP_ID" -M AndroidManifest.xml -S res -A "$OUT/assets" -I "$ANDROID_JAR" -F "$OUT/unsigned.apk"
+aapt package -f -0 glb -0 ogg --rename-manifest-package "$APP_ID" -M "$MANIFEST" -S res -A "$OUT/assets" -I "$ANDROID_JAR" -F "$OUT/unsigned.apk"
 (cd "$OUT" && aapt add unsigned.apk classes.dex >/dev/null)
 zipalign -f 4 "$OUT/unsigned.apk" "$OUT/aligned.apk"
 [ -f debug.keystore ] || keytool -genkeypair -keystore debug.keystore -storepass android -keypass android \
   -alias afterzero -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=AFTERZERO Debug" 2>&1 | grep -v JAVA_TOOL_OPTIONS || true
 apksigner sign --ks debug.keystore --ks-pass pass:android --key-pass pass:android --out "$OUT/$APK" "$OUT/aligned.apk"
 apksigner verify "$OUT/$APK"
-echo "Built $(pwd)/$OUT/$APK ($APP_ID, $(du -h "$OUT/$APK" | cut -f1))"
+echo "Built $(pwd)/$OUT/$APK ($APP_ID${EDITION:+, edition $EDITION}, $(du -h "$OUT/$APK" | cut -f1))"
 
 # 4. The web preview (AFTERZERO-v<version>-play.html, one claude.ai artifact per version): same page, with the models as glTF JSON
 #    for hosts that don't serve .glb, beside it in build/preview/.
@@ -56,6 +79,7 @@ mkdir -p "$P/assets/voice" "$P/assets/looks" "$P/assets/textures"
 cp ../game/assets/looks/*.webp "$P/assets/looks/"
 cp ../game/assets/textures/*.jpg "$P/assets/textures/"
 python3 -I ../tools/gltf-json.py ../game/assets/characters "$P/assets/characters" >/dev/null
-sed 's#<script>#<script>window.AZ_MODEL_EXT=".json";window.AZ_NO_HDR=1;</script><script>#' "$OUT/assets/index.html" > "$P/index.html"
+# (the first <script> is the edition flag when there is one; the preview flags go in front of it)
+sed '0,/<script>/s#<script>#<script>window.AZ_MODEL_EXT=".json";window.AZ_NO_HDR=1;</script><script>#' "$OUT/assets/index.html" > "$P/index.html"
 [ -f ../game/assets/voice/voice.ogg ] && cp ../game/assets/voice/voice.json ../game/assets/voice/voice.ogg "$P/assets/voice/"
 echo "Preview in $(pwd)/$P"

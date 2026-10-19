@@ -68,6 +68,49 @@ body.menu #ui { visibility: hidden; }
 #state .pip.cur.physical { background: var(--physical); }
 #state .pip.cur.inverted { background: var(--inverted); }
 #state .pip.cur.echo { background: var(--echo); }
+/* THE LAST VERSION OF EARTH: four temporal states */
+:root { --past: #c08a3e; --present: #4f9fe8; --future: #3fa078; }
+#state .pip.past::before { content: "◐ "; }
+#state .pip.present::before { content: "■ "; }
+#state .pip.future::before { content: "❋ "; }
+#state .pip.cur.past { background: var(--past); }
+#state .pip.cur.present { background: var(--present); }
+#state .pip.cur.future { background: var(--future); }
+body[data-state="PAST"] #vignette { box-shadow: inset 0 0 140px rgba(192, 138, 62, 0.18); }
+body[data-state="FUTURE"] #vignette { box-shadow: inset 0 0 140px rgba(63, 160, 120, 0.18); }
+body[data-state="PAST"] #buttons .shift { background: var(--past); }
+body[data-state="FUTURE"] #buttons .shift { background: var(--future); }
+body[data-state="PRESENT"] #buttons .shift { background: var(--inverted); }
+/* Chronolith stability: a thin quiet bar under the state card; it steps forward only while it drains */
+#stability { position: absolute; left: 16px; top: 96px; width: 150px; opacity: 0; transition: opacity 0.5s; --v: 1; }
+#stability.on { opacity: 0.55; }
+#stability.on.draining, #stability.on.low { opacity: 1; }
+#stability small { display: block; font-size: 9px; letter-spacing: 0.2em; color: var(--ink-soft); font-weight: 700; margin-bottom: 4px; text-shadow: 0 1px 4px rgba(255,255,255,0.8); }
+#stability .bar { height: 5px; border-radius: 999px; background: rgba(35, 48, 60, 0.12); overflow: hidden; box-shadow: var(--shadow); }
+#stability .bar i { display: block; height: 100%; width: calc(var(--v) * 100%); border-radius: 999px; background: linear-gradient(90deg, #e2574a, #ffc04a 40%, #4f9fe8); transition: width 0.2s; }
+#stability.low .bar i { animation: tickblink 0.8s ease-in-out infinite; }
+#stability.draining small::after { content: " · DRAINING"; color: var(--danger); }
+body.touch #stability { top: 140px; }
+/* a dialogue choice */
+#choice.overlay { background: linear-gradient(0deg, rgba(228, 237, 245, 0.75), transparent 60%); align-items: flex-end; backdrop-filter: none; }
+#choice .panel { width: min(640px, 100%); margin-bottom: 8vh; }
+#choice .line { color: var(--ink); font-size: 15px; margin: 0 0 12px; }
+#choice .line b { letter-spacing: 0.08em; }
+#choice .body button { display: block; width: 100%; text-align: left; margin: 6px 0; padding: 11px 16px; }
+#choice .body button small { display: inline-block; font-size: 10px; letter-spacing: 0.16em; color: var(--ink-soft); margin-right: 10px; min-width: 86px; }
+#choice .body button.withdraw { color: var(--ink-soft); }
+/* the title of THE LAST VERSION */
+body.lastversion #title h1 span { color: var(--present); }
+body.lastversion #title .sub { font-size: clamp(12px, 2vw, 16px); letter-spacing: 0.3em; color: var(--ink); font-weight: 700; margin: -4px 0 10px; text-wrap: balance; }
+body.lastversion #title.overlay.side { background: linear-gradient(90deg, rgba(228, 236, 246, 0.72), transparent 60%); }
+body.lastversion #begin { background: var(--present); }
+/* the case board */
+.board li { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0; border-bottom: 1px solid var(--line); font-size: 13px; }
+.board li small { color: var(--ink-soft); }
+.board .st { font-size: 10px; letter-spacing: 0.12em; font-weight: 700; color: var(--ink-soft); white-space: nowrap; }
+.board .st.good { color: var(--token); }
+.board .st.bad { color: var(--danger); }
+.board .ev { color: var(--past); }
 
 #objective { position: absolute; right: 16px; top: 14px; text-align: right; max-width: 44vw; opacity: 0; transition: opacity 0.6s; background: var(--card); padding: 10px 14px; border-radius: var(--radius); box-shadow: var(--shadow); backdrop-filter: blur(8px); }
 #objective.on { opacity: 1; }
@@ -586,3 +629,30 @@ body.touch.forge #dock .d.rules { display: flex; }
 #journal .tokens .gc { font-size: 11px; font-weight: 700; letter-spacing: 0.06em; padding: 4px 10px; border-radius: 999px; background: #e3f6ec; color: #2f8a5a; }
 #journal .tokens .gc.no { background: #fde9e4; color: #c0553f; text-decoration: line-through; }
 #journal .tokens .gc small { font-weight: 500; letter-spacing: 0; margin-left: 4px; }
+
+/* v2.0 THE LAST VERSION: Chronolith stability lives under the year pips, quiet until it matters */
+body.lastversion #stability { display: none; }
+#state .stab { height: 5px; margin-top: 8px; border-radius: 999px; background: rgba(12, 20, 30, 0.45); box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.35); overflow: hidden; opacity: 0.35; transition: opacity 0.5s; }
+#state .stab i { display: block; height: 100%; width: calc(var(--sv, 1) * 100%); border-radius: 999px; background: linear-gradient(90deg, #e2574a, #ffc04a 40%, #4f9fe8); transition: width 0.2s; }
+#state.stab-on .stab { opacity: 0.75; }
+#state.stab-on.draining .stab, #state.stab-on.low .stab { opacity: 1; }
+#state.low .stab i { animation: tickblink 0.8s ease-in-out infinite; }
+#state.draining .room::after { content: " · CHRONOLITH DRAINING"; color: #ffb0a0; }
+#state.low .room::after { content: " · CHRONOLITH UNSTABLE"; color: #ff8a70; }
+body.lastversion #objective { top: 104px; }
+body.lastversion.touch #objective { top: 90px; }
+
+/* v2.0: the title stands in front of its own place - rain, a city's glow, and the black ring */
+body.lastversion #title.overlay.side {
+  background:
+    radial-gradient(circle at 70% 47%, transparent 0 18.5vmin, rgba(5, 8, 14, 0.97) 18.8vmin 24.5vmin, rgba(160, 205, 255, 0.6) 24.8vmin, rgba(160, 205, 255, 0.12) 25.6vmin, transparent 26.6vmin),
+    radial-gradient(circle at 70% 47%, transparent 0 29vmin, rgba(160, 205, 255, 0.22) 29.2vmin 29.5vmin, transparent 29.8vmin),
+    radial-gradient(circle at 70% 47%, rgba(80, 140, 225, 0.28) 0 22vmin, transparent 46vmin),
+    repeating-linear-gradient(104deg, rgba(210, 225, 255, 0.07) 0 1px, transparent 1px 11px),
+    radial-gradient(ellipse at 62% 112%, rgba(255, 186, 104, 0.42), transparent 58%),
+    linear-gradient(180deg, #0b111c 0%, #182434 58%, #2b2c34 100%);
+  backdrop-filter: none;
+}
+body.lastversion #title .panel { box-shadow: 0 18px 60px rgba(0, 0, 0, 0.45); }
+/* the calm HUD steps back, but never hides a draining Chronolith */
+body.calm #state.draining, body.calm #state.low { opacity: 1; }

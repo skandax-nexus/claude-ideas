@@ -1,7 +1,9 @@
 // Player settings: camera comfort, controls, graphics quality, audio.
 // Stored per device in localStorage (wrapped: private windows may refuse).
 
-const KEY = 'afterzero.settings.v1';
+import { NS, EDITION } from '../core/Edition.js';
+
+const KEY = `${NS}settings.v1`;
 
 export const CAMERA_PRESETS = {
   close: { label: 'CLOSE', dist: 2.3, shoulder: 0.45, lift: 0.25 },
@@ -29,6 +31,8 @@ export function defaultSettings(touch) {
     volume: 0.8,
     textSize: 1,
     smart: true, // smart renderer: adapts resolution and effects to stay smooth
+    // THE LAST VERSION: you are Kai Varen, a realistic man in shirtsleeves, until you choose otherwise
+    ...(EDITION === 'lastversion' ? { hero: { id: 'real_m' } } : {}),
   };
 }
 

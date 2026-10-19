@@ -345,13 +345,15 @@ function deckTheme(deck) {
   return { props };
 }
 
-function availableMechs(deckIdx) {
-  return Object.entries(MECHANICS).filter(([, m]) => m.deck <= deckIdx).map(([k]) => k);
+function availableMechs(deckIdx, only = null) {
+  const all = Object.entries(MECHANICS).filter(([, m]) => m.deck <= deckIdx).map(([k]) => k);
+  return only ? all.filter((k) => only.includes(k)) : all;
 }
 
 // Plan one puzzle room: which segments and which exit, within the slot budget.
-function planPuzzle(rng, deckIdx, difficulty, feature) {
-  const mechs = availableMechs(deckIdx);
+// only: the mechanics this story allows (THE LAST VERSION: what its temporal states can do)
+function planPuzzle(rng, deckIdx, difficulty, feature, only = null) {
+  const mechs = availableMechs(deckIdx, only);
   const featured = FEATURE_MECH[feature];
   const pickMech = (opts) => {
     const pairs = opts.map((m) => [m, m === featured ? 4 : m === 'gravity' ? 1.2 : 1.5]);
@@ -423,8 +425,9 @@ export function generateSector(story, deckIdx, sectorIdx, campaignSeed) {
   // story room position: first on arrival, last for the finale verdict, otherwise mid-sector
   const storyAt = beat.kind === 'arrival' ? 0 : beat.kind === 'verdict' ? nPuzzles : rng.int(1, Math.max(1, nPuzzles - 1));
   const plan = [];
+  const mechIdx = story.mechDeck ?? deckIdx; // which mechanics are unlocked (an edition can say)
   // a WORLD FORGE act plans its own puzzles, within its local rules (gen/Forge.js)
-  for (let i = 0; i < nPuzzles; i++) plan.push({ type: 'puzzle', ...(deck.planPuzzle ? deck.planPuzzle(sectorIdx, i, rng) : planPuzzle(rng, deckIdx, difficulty + i * 0.25, deck.feature)) });
+  for (let i = 0; i < nPuzzles; i++) plan.push({ type: 'puzzle', ...(deck.planPuzzle ? deck.planPuzzle(sectorIdx, i, rng) : planPuzzle(rng, mechIdx, difficulty + i * 0.25, deck.feature, deck.mechs || story.mechs || null)) });
   plan.splice(storyAt, 0, { type: 'story', beat });
 
   const names = rng.shuffle(deck.rooms);
@@ -570,6 +573,7 @@ export function generateSector(story, deckIdx, sectorIdx, campaignSeed) {
       L, W, H,
     };
     if (p.type === 'story') level.rooms[rid].beat = p.beat.kind;
+    if (deck.states) level.rooms[rid].states = deck.states; // the temporal states this region was authored with
     level.order.push(rid);
     const inner = t.box([-W / 2, 0, -L, W / 2, 1, 0]);
     level.map.rooms.push({ id: rid, rect: [inner[0], inner[2], inner[3], inner[5]], name: level.rooms[rid].name, kind: level.rooms[rid].kind });
@@ -593,6 +597,17 @@ export function generateSector(story, deckIdx, sectorIdx, campaignSeed) {
 
   level.effects = [...level.effects];
   level.spawn = level.rooms[level.order[0]].spawn;
+  level.states = deck.states || null;
+  level.unstable = !!deck.unstable;
+  if (deck.gated) {
+    // THE LAST VERSION: the sector's last door waits for its scene (flag beat_done), like HALCYON's gates
+    const ex = level.exit.box;
+    const lastId = level.order[level.order.length - 1];
+    const horiz = ex[3] - ex[0] > ex[5] - ex[2];
+    const door = horiz ? [ex[0] + 1, ex[1] + 1, (ex[2] + ex[5]) / 2 - 0.2, ex[3] - 1, ex[1] + 1 + DOOR_H, (ex[2] + ex[5]) / 2 + 0.2]
+      : [(ex[0] + ex[3]) / 2 - 0.2, ex[1] + 1, ex[2] + 1, (ex[0] + ex[3]) / 2 + 0.2, ex[1] + 1 + DOOR_H, ex[5] - 1];
+    level.elements.push({ box: door, mat: 'door', solid: true, when: '!beat_done', id: `gate_${level.id}`, room: lastId });
+  }
   return level;
 }
 
@@ -699,14 +714,20 @@ function storyRoom(R, beat, deck, rng, level, story) {
   }
   if (beat.kind === 'contradiction') {
     // the same plaque, two truths: the record in every state, the memory in ECHO
-    R.texts.push({ text: beat.official, pos: [W / 2 - 0.06, 3.0, -6], rotY: -Math.PI / 2, size: 0.34, color: '#4a5a6a', when: '!@ECHO' });
+    R.texts.push({ text: beat.official, pos: [W / 2 - 0.06, 3.0, -6], rotY: -Math.PI / 2, size: 0.34, color: '#4a5a6a', when: story.residue ? `!@${story.residue}` : '!@ECHO' });
     R.texts.push({ text: beat.echo, pos: [W / 2 - 0.06, 3.0, -6], rotY: -Math.PI / 2, size: 0.34, color: '#0e7c88', echo: true });
     R.box([W / 2 - 0.12, 2.3, -9.2, W / 2, 3.7, -2.8], { mat: 'prop', solid: false });
     R.inter.push({ id: `plaque_${R.id}`, kind: 'plaque', pos: [W / 2 - 0.5, 2.6, -6], r: 3.2, prompt: 'READ THE RECORD', beat });
   }
   if (beat.kind === 'encounter') {
     const c = story.cast[beat.crew ?? story.decks[deck.index].crew];
-    R.npcs.push({ id: `npc_${R.id}`, crew: c.id, pos: [1.6, 0, -7.2], yaw: Math.PI * 0.85, hologram: !c.alive, lines: beat.lines, junoAfter: beat.junoAfter, path: beat.path ? [[1.6, -7.2], [-2.4, -9.6], [-2.4, -5.2]] : undefined });
+    R.npcs.push({ id: `npc_${R.id}`, crew: c.id, pos: [1.6, 0, -7.2], yaw: Math.PI * 0.85, hologram: !c.alive, lines: beat.lines, junoAfter: beat.junoAfter, choices: beat.choices, after: beat.after, path: beat.path ? [[1.6, -7.2], [-2.4, -9.6], [-2.4, -5.2]] : undefined });
+  }
+  if (beat.kind === 'choice' || beat.kind === 'scene') {
+    // THE LAST VERSION: a device (or a person) at the heart of the room that opens a choice, or plays a scene
+    R.box([-0.6, 0, -7.2, 0.6, 0.9, -6.0], { mat: 'prop' });
+    R.inter.push({ id: `${beat.kind}_${R.id}`, kind: 'scene', scene: beat.scene, pos: [0, 1.3, -6.6], r: 2.8, prompt: beat.prompt || 'EXAMINE', color: 0xffc04a });
+    if (beat.npc) R.npcs.push({ id: `npc_${R.id}`, crew: beat.npc, pos: [2.2, 0, -7.4], yaw: Math.PI * 0.8, hologram: !!beat.hologram, lines: beat.lines || [], choices: beat.choices, after: beat.after, when: beat.npcWhen });
   }
   if (beat.kind === 'verdict') {
     // the crew, in a circle of echoes around the chair

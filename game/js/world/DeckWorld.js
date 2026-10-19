@@ -11,7 +11,7 @@ import { compileCondition } from '../core/conditions.js';
 import { mergeVertices } from '../../vendor/addons/utils/BufferGeometryUtils.js';
 import { buildDecor, RESKIN } from './DeckDecor.js';
 
-const _v = new THREE.Vector3();
+const _v = new THREE.Vector3(), _c = new THREE.Color();
 
 // named people who can stand in a generated room (they are not crew): see LevelGen storyRoom
 const GUESTS = {
@@ -64,7 +64,7 @@ export class DeckWorld {
     for (const it of level.items) if (it.echo && this.flags[`forged_${it.id}`]) it.echo = false;
 
     // static geometry merged per material, conditional pieces kept separate
-    const groups = new Map();
+    const groups = new Map(), dress = new Map();
     const reskin = RESKIN[level.palette.look] || {};
     for (const el of level.elements) {
       const [x0, y0, z0, x1, y1, z1] = el.box;
@@ -76,6 +76,13 @@ export class DeckWorld {
         // collision only (the visible part is drawn elsewhere, e.g. a tree)
         if (el.solid) this.staticColliders.push(box);
         geo.dispose();
+        continue;
+      }
+      if (el.dress) {
+        // decoration that belongs to one state (THE LAST VERSION): merged per material and condition
+        const k = `${el.mat}|${el.when || ''}|${el.room}`;
+        if (!dress.has(k)) dress.set(k, { el, geos: [] });
+        dress.get(k).geos.push(geo);
         continue;
       }
       if (!el.when && !el.echo && !el.light) {
@@ -91,6 +98,13 @@ export class DeckWorld {
         root.add(mesh);
         this.dynamic.push({ el, kind, mesh, box, cond: compileCondition(el.when) });
       }
+    }
+    for (const { el, geos } of dress.values()) {
+      const mesh = new THREE.Mesh(mergeGeometries(geos), this.mats[el.mat] || this.mats.wall);
+      mesh.receiveShadow = true;
+      root.add(mesh);
+      geos.forEach((g) => g.dispose());
+      this.dynamic.push({ el: { when: el.when, room: el.room, mat: el.mat, solid: false }, kind: null, mesh, box: null, cond: compileCondition(el.when) });
     }
     for (const [mat, geos] of groups) {
       const material = this.mats[mat] || this.mats.wall;
@@ -163,14 +177,26 @@ export class DeckWorld {
 
     for (const n of level.npcs) {
       const guest = GUESTS[n.crew];
-      const crew = guest || story.cast.find((c) => c.id === n.crew) || story.captain;
-      const model = guest ? makeCastModel(n.crew, this.hero) : makeCrewModel(crew, { hologram: !!n.hologram, glow: n.hologram ? crewGlow(crew.color) : undefined });
+      const crew = guest || story.cast.find((c) => c.id === n.crew) || (n.ambient ? { id: n.crew, first: n.first || 'Someone', name: n.first || 'SOMEONE', color: '#4f6170', seed: n.seed || 1, pronoun: n.pronoun } : story.captain);
+      const model = guest ? makeCastModel(n.crew, this.hero) : makeCrewModel(crew, { hologram: !!n.hologram, glow: n.hologram ? crewGlow(crew.color) : undefined, height: n.height });
       if (n.upsideDown) model.rotation.z = Math.PI; // hangs from the ceiling, like the Other in the first corridor
       model.position.set(...n.pos);
       model.rotation.y = n.yaw || 0;
       root.add(model);
-      this.npcs.push({ n, crew, model, talkT: 0, cond: compileCondition(n.when) });
+      // THE LAST VERSION: someone who only exists in some temporal states (n.temporal) leaves an
+      // echo in the others - a translucent impression of them that can still be listened to
+      let echo = null;
+      if (n.temporal && !guest) {
+        echo = makeCrewModel(crew, { hologram: true, glow: crewGlow(crew.color), height: n.height });
+        echo.position.copy(model.position);
+        echo.rotation.y = model.rotation.y;
+        echo.visible = false;
+        root.add(echo);
+      }
+      // ambient people walk a small loop (n.path: [[x, z], ...]) and stand still when the world stops
+      this.npcs.push({ n, crew, model, body: model, echo, talkT: 0, cond: compileCondition(n.when), freeze: compileCondition(n.freezeWhen || 'false'), wp: 0, lastBark: -99 });
     }
+    this.decoy = null; // an Echo Step afterimage the watchers chase instead of you
 
     this.ready = false;
     this.refresh();
@@ -219,6 +245,20 @@ export class DeckWorld {
       obj.userData.gem = gem;
       obj.position.set(...it.pos);
       obj.visible = !this.flags[`done_${it.id}`];
+    } else if (it.kind === 'scene') {
+      // THE LAST VERSION: something to inspect; the edition may hand over its own model
+      obj = new THREE.Group();
+      if (it.model) obj.add(it.model());
+      else {
+        const c = new THREE.Color(it.color ?? 0xffc04a);
+        const gem = new THREE.Mesh(new THREE.OctahedronGeometry(0.16, 0), new THREE.MeshBasicMaterial({ color: c }));
+        const halo = new THREE.Mesh(new THREE.SphereGeometry(0.34, 14, 10), new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: 0.14, depthWrite: false }));
+        obj.add(gem, halo);
+        obj.userData.gem = gem;
+      }
+      obj.position.set(it.pos[0], it.pos[1] - (it.model ? 0 : 0.2), it.pos[2]);
+      obj.rotation.y = it.yaw || 0;
+      obj.visible = !it.when || !!compileCondition(it.when)(this.ctx(it.room));
     } else if (it.kind === 'chair') {
       obj = new THREE.Group();
       const seat = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.12, 0.9), this.mats.door);
@@ -316,8 +356,54 @@ export class DeckWorld {
       if (p.userData.light) p.userData.light.material.color.setHex(open ? 0x5fd39a : 0xffb36b);
       if (p.userData.core) p.userData.core.visible = !!open;
       if (it.kind === 'fragment') p.visible = !this.flags[`done_${it.id}`];
+      if (it.kind === 'scene') p.visible = (!it.when || !!compileCondition(it.when)(this.ctx(it.room))) && !(it.once && this.flags[`done_${it.id}`]);
     }
-    for (const p of this.npcs || []) p.model.visible = !!p.cond(this.ctx(p.n.room));
+    for (const p of this.npcs || []) {
+      const c = this.ctx(p.n.room);
+      const here = !!p.cond(c);
+      if (p.echo) {
+        // in a state they do not exist in, their echo stands where they would be
+        const want = p.n.temporal.includes(c.state) ? p.body : p.echo;
+        if (want !== p.model) {
+          want.position.copy(p.model.position);
+          want.rotation.y = p.model.rotation.y;
+          p.model.visible = false;
+          p.model = want;
+        }
+        p.isEcho = p.model === p.echo;
+      }
+      p.model.visible = here;
+    }
+  }
+
+  // THE LAST VERSION: each temporal state tints the place (warm stone and wood in the past,
+  // cold steel now, moss and rust in 2196, a cold violet when inverted), eased in by main.js
+  setLook(state, k = 1) {
+    if (!this.mats) return;
+    // (materials are shared between levels of one palette: each keeps its own untinted base)
+    const keys = ['wall', 'floor', 'prop', 'prop2', 'trim', 'trimDark', 'facade', 'industrial', 'road', 'sidewalk', 'stone', 'pillar', 'ceil', 'door'];
+    const tint = { PAST: [1.1, 0.96, 0.78], PRESENT: [1, 1, 1], PHYSICAL: [1, 1, 1], FUTURE: [0.82, 0.98, 0.84], INVERTED: [0.94, 0.9, 1.08], ECHO: [0.9, 1.02, 1.04] }[state] || [1, 1, 1];
+    for (const key of keys) {
+      const m = this.mats[key];
+      if (!m?.color) continue;
+      const b = (m.userData.lookBase ??= m.color.clone());
+      _c.set(b.r * tint[0], b.g * tint[1], b.b * tint[2]);
+      m.color.lerp(_c, k);
+    }
+    // the lit windows: in 2196 nobody has power any more
+    const lit = { FUTURE: 0.05, INVERTED: 0.6 }[state] ?? 1;
+    for (const key of ['facade', 'industrial']) {
+      const m = this.mats[key];
+      if (!m?.emissiveMap) continue;
+      const base = (m.userData.litBase ??= m.emissiveIntensity);
+      m.emissiveIntensity += (base * lit - m.emissiveIntensity) * k;
+    }
+  }
+
+
+  // an Echo Step afterimage: the watchers chase it for `secs`, not you
+  setDecoy(pos, secs) {
+    this.decoy = { pos: pos.clone(), until: secs, proxy: null };
   }
 
   isItemAvailable(id) {
@@ -369,6 +455,11 @@ export class DeckWorld {
     }
     this.decor?.update(dt, t, this);
     for (const p of Object.values(this.props)) {
+      for (const ch of p.children) {
+        if (ch.userData.tick) ch.userData.tick(t);
+        if (ch.userData.spin) ch.rotation.y = t * 1.2;
+        if (ch.userData.inner) ch.userData.inner.rotation.z = t * 0.4;
+      }
       if (p.userData.gem) {
         p.userData.gem.rotation.y = t * 1.4;
         p.userData.gem.position.y = Math.sin(t * 2) * 0.06;
@@ -380,7 +471,7 @@ export class DeckWorld {
     for (const h of this.hazards) {
       if (h.stasisT > 0) h.stasisT -= dt; // a stasis pulse holds it still
       const frozen = this.engine.hasIn('timeStop', h.hz.room) || h.stasisT > 0;
-      if (!frozen) h.angle += h.hz.speed * dt;
+      if (!frozen) h.angle += h.hz.speed * dt * (this.engine.hasIn('timeReverse', h.hz.room) ? -1 : 1);
       h.g.rotation.y = h.angle;
       h.beamMat.color.setHex(frozen ? 0xb6a6ff : 0xff8f7a);
       if (frozen || g.room !== h.hz.room) continue;
@@ -394,46 +485,84 @@ export class DeckWorld {
       const perp = Math.abs(dx * -az + dz * ax);
       if (perp < 0.42) event = 'hit';
     }
+    // the afterimage the watchers follow (Echo Step)
+    let who = player;
+    if (this.decoy) {
+      this.decoy.until -= dt;
+      if (this.decoy.until <= 0) this.decoy = null;
+      else who = this.decoy.proxy ||= { pos: this.decoy.pos, running: false, gravity: -1, rayDistance: (o, d, m) => player.rayDistance(o, d, m) };
+    }
+    const reversed = this.engine.hasIn('timeReverse', g.room); // INVERTED: selected motion runs backwards
     for (const s of this.sentinels) {
+      // a watcher that only exists in some states (THE LAST VERSION: installed after 2026, say)
+      if (s.def.when) {
+        const on = !!(s.cond ||= compileCondition(s.def.when))(this.ctx(s.def.room));
+        s.model.visible = on;
+        if (!on) { s.mode = 'patrol'; s.suspicion = 0; continue; }
+      }
       if (s.stasisT > 0) s.stasisT -= dt;
       if (s.lure && (s.lure.t -= dt) <= 0) s.lure = null;
       const r = s.update(dt, t, {
-        player,
+        player: who,
         here: g.room === s.def.room,
         frozen: this.engine.hasIn('observerFrozen', s.def.room) || s.stasisT > 0,
-        hidden: player.gravity === 1,
-        mode: this.story?.after?.sentinels || 'hunt',
+        hidden: who.gravity === 1,
+        mode: s.dead ? 'still' : this.story?.after?.sentinels || 'hunt',
         lessons: g.observer?.brain?.lessons || null,
+        reversed: reversed && s.def.room === g.room,
       });
-      if (r === 'caught') event = 'caught';
+      if (r === 'caught' && who === player) event = 'caught';
+      // a unit that rewinds its own damage can only be lured into a live conduit
+      if (s.def.conduit && !s.dead && s.mode === 'chase' && (!s.def.conduitWhen || this.ctx(s.def.room).fact(s.def.conduitWhen))) {
+        const b = s.def.conduit;
+        if (s.pos.x >= b[0] && s.pos.x <= b[2] && s.pos.z >= b[1] && s.pos.z <= b[3]) {
+          s.dead = true;
+          s.mode = 'patrol';
+          s.suspicion = 0;
+          this.onSentinelDown?.(s);
+        }
+      }
     }
     for (const n of this.npcs) {
       const m = n.model;
+      const frozen = this.flags.freeze_people || !!n.freeze(this.ctx(n.n.room));
       const d = _v.copy(player.pos).sub(m.position);
       d.y = 0;
+      const near = d.length() < 7;
+      // someone you can talk to stops and turns to you; passers-by (and silent echoes) keep walking
+      const talker = !n.n.silent && !(n.n.ambient && !n.n.lines && !n.n.scene);
       let speed = 0;
-      if (!n.n.silent && d.length() < 7) {
+      if (talker && near && !frozen) {
         const yaw = Math.atan2(d.x, d.z);
         m.rotation.y += Math.atan2(Math.sin(yaw - m.rotation.y), Math.cos(yaw - m.rotation.y)) * Math.min(1, dt * 3);
         m.userData.lookAt?.(_v.copy(player.pos).setY(player.pos.y + 0.6));
-      } else if (n.n.path && m.visible) {
-        // a small patrol loop (WORLD FORGE's cast walk their scenes when you are not with them)
-        n.wp = n.wp || 0;
+      } else if (n.n.path && !frozen && m.visible) {
+        // walk the loop (WORLD FORGE's cast walk their scenes; THE LAST VERSION's city walks its streets)
         const w = n.n.path[n.wp];
         const to = _v.set(w[0] - m.position.x, 0, w[1] - m.position.z);
         const dist = to.length();
         if (dist < 0.25) n.wp = (n.wp + 1) % n.n.path.length;
         else {
+          speed = n.n.speed || 0.9;
           const yaw = Math.atan2(to.x, to.z);
           m.rotation.y += Math.atan2(Math.sin(yaw - m.rotation.y), Math.cos(yaw - m.rotation.y)) * Math.min(1, dt * 4);
-          speed = 0.9;
           m.position.addScaledVector(to.divideScalar(dist), Math.min(dist, speed * dt));
         }
         m.userData.lookAt?.(null);
       } else m.userData.lookAt?.(null);
       n.talkT = Math.max(0, n.talkT - dt);
       m.userData.setTalking?.(n.talkT > 0);
-      m.userData.animate(dt, speed, t);
+      if (!frozen) m.userData.animate(dt, speed, t);
+      // a bark: something said in passing, never over a conversation
+      // (one bark at a time across the whole place, each person starting somewhere else in their list)
+      if (n.n.barks?.length && m.visible && !n.isEcho && !frozen && d.length() < 5 && t - n.lastBark > (n.n.barkEvery || 16) && t - (this.lastBarkT ?? -99) > 9 && !g.hud.talking && !g.menu) {
+        n.lastBark = this.lastBarkT = t;
+        n.barkI = n.barkI === undefined ? (n.n.seed || this.npcs.indexOf(n)) % n.n.barks.length : (n.barkI + 1) % n.n.barks.length;
+        const text = n.n.barks[n.barkI];
+        n.talkT = 2.5;
+        const gender = { her: 'f', his: 'm' }[(n.n.pronoun || n.crew.pronoun)?.their] || 'n';
+        g.hud.say([{ who: n.n.voice || n.crew.voice || 'CREW', name: (n.n.first || n.crew.first || '').toUpperCase(), color: n.crew.color, text, voice: n.n.voiceExtra || { gender } }], g.facts);
+      }
     }
     return event;
   }
@@ -444,6 +573,7 @@ export class DeckWorld {
     for (const it of this.level.interactables) {
       if (this.flags[`done_${it.id}`] && it.kind !== 'beacon' && it.kind !== 'terminal' && it.kind !== 'chair') continue;
       if ((it.kind === 'lock' || it.kind === 'socket') && this.flags[`open_${it.room}`]) continue;
+      if (it.r === 0 || this.flags[`filled_${it.id}`] || (it.when && !compileCondition(it.when)(this.ctx(it.room)))) continue; // not here (yet), not in this state, or done
       out.push({ id: `deck:${it.id}`, pos: it.pos, r: it.r, prompt: it.prompt, it });
     }
     for (const [id, im] of Object.entries(this.itemMeshes)) {
@@ -451,9 +581,10 @@ export class DeckWorld {
       out.push({ id: `ditem:${id}`, pos: im.it.pos, r: 2.3, prompt: `TAKE ${im.it.label}` });
     }
     for (const n of this.npcs) {
-      if (n.n.silent || !n.model.visible) continue;
+      if (n.n.silent || !n.model.visible || (n.n.ambient && !n.n.lines && !n.n.scene)) continue;
       const p = n.model.position;
-      out.push({ id: `dnpc:${n.n.id}`, pos: [p.x, p.y + 1.5, p.z], r: 3.2, prompt: `TALK TO ${n.crew.first.toUpperCase()}`, npc: n });
+      const who = (n.n.first || n.crew.first).toUpperCase();
+      out.push({ id: `dnpc:${n.n.id}`, pos: [p.x, p.y + 1.5, p.z], r: 3.2, prompt: n.isEcho ? `LISTEN TO ${who}'S ECHO` : n.n.prompt || `TALK TO ${who}`, npc: n });
     }
     return out;
   }
@@ -614,8 +745,18 @@ export class Sentinel {
     return player.rayDistance(eye, dir, len) >= len - 0.6;
   }
 
-  update(dt, t, { player, here, frozen, hidden, mode = 'hunt', lessons = null }) {
+  update(dt, t, { player, here, frozen, hidden, mode = 'hunt', lessons = null, reversed = false }) {
     const U = this.model.userData;
+    if (reversed && this.mode !== 'chase') {
+      // INVERTED: the patrol runs backwards along its loop
+      if (!this.rev) {
+        this.rev = true;
+        this.wp = (this.wp - 1 + this.def.path.length) % this.def.path.length;
+      }
+    } else if (this.rev) {
+      this.rev = false;
+      this.wp = (this.wp + 1) % this.def.path.length;
+    }
     // SEVERED: nobody looks out of it any more
     if (mode === 'still') {
       U.eyeMat.color.setHex(0x1a1a22);
@@ -677,7 +818,7 @@ export class Sentinel {
       this.turnTo(to, dt);
       this.pos.addScaledVector(to.normalize(), Math.min(d, speed * dt));
     }
-    if (this.mode === 'patrol' && !lured && d < 0.3) this.wp = (this.wp + 1) % this.def.path.length;
+    if (this.mode === 'patrol' && !lured && d < 0.3) this.wp = this.rev ? (this.wp - 1 + this.def.path.length) % this.def.path.length : (this.wp + 1) % this.def.path.length;
     const col = this.mode === 'chase' ? 0xff8a70 : lured ? 0xffd27a : this.suspicion > 0.3 ? 0xffc04a : 0x7fd8ff;
     U.eyeMat.color.setHex(col);
     U.coneMat.color.setHex(col);
