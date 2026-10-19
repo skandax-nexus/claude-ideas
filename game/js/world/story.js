@@ -100,6 +100,12 @@ export const scripts = {
     { who: 'YOU', text: 'Stars. It\'s not a lab. It\'s moving.' },
   ],
   machine_hum: [{ who: 'NONE', text: 'It hums at the edge of hearing. Something inside it only shows in the echo.' }],
+  // the brain seen before Varga's trail is followed: the choice waits (every line already recorded)
+  machine_wait: [
+    { who: 'NONE', text: 'The machine is waiting.' },
+    { who: 'JUNO', text: 'The machine will wait. It\'s good at waiting.' },
+    { who: 'JUNO', text: 'Varga left recordings everywhere.' },
+  ],
 
   brain: [
     { who: 'NONE', text: 'Inside the ring: a human brain, suspended, lit from within.' },

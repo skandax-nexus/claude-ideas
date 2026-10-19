@@ -45,7 +45,7 @@ export class Director {
         return this.say('r2', () => {
           facts.set('vault_seen');
           // Varga went up. The long way through HALCYON starts here (once).
-          if (!facts.get('zones_started')) {
+          if (!facts.get('zones_started') && !facts.get('ending')) {
             this.g.hud.say([
               { who: 'JUNO', text: 'Ren - behind the vault. A service hatch, and a ladder. It goes a long way up. And further down.' },
               { who: 'JUNO', text: 'If Varga is later, she went somewhere. I think she went up.' },
@@ -115,7 +115,8 @@ export class Director {
       }
     } else if (!facts.get('brain_seen') && this.g.engine.state('lab') === 'ECHO') this.use('brain');
     else if (facts.get('ending')) this.g.finish(facts.get('ending')); // the choice is made: show it again
-    else if (facts.get('brain_seen')) this.g.openDecision();
+    else if (facts.get('brain_seen') && facts.get('zones_done')) this.g.openDecision();
+    else if (facts.get('brain_seen')) this.say('machine_wait'); // the choice waits until Varga's trail has been followed up the tower
     else this.say('machine_hum');
   }
 

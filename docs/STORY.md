@@ -447,7 +447,7 @@ If you choose to **face the Observer** in the doorway:
 
 #### 11. The final choice
 
-You use the Machine once more:
+You use the Machine once more. (Until Varga's trail has been followed up the tower, it only waits: "The machine is waiting." Seeing the brain early does not open the choice.)
 
 > **THE MACHINE.** "The machine keeps one occupant alive. The occupant keeps the field alive. The field keeps something else shut."
 
