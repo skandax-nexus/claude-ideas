@@ -50,6 +50,12 @@ for (const f of ['main.js', 'world/Npcs.js', 'world/Director.js', 'world/World.j
     const t = unq(m[1], m[2]);
     if (/^[A-Z][A-Z0-9 ,.'?!()-]{14,}$/.test(t) && / /.test(t) && /[.?!]$/.test(t)) add('TICK', t);
   }
+  // line by line too: a template literal with quotes inside throws the scan above out of step
+  // (and TICK's lines may carry a colon: 'A NEW SUBJECT: TIME.')
+  for (const ln of s.split('\n')) for (const m of ln.matchAll(/'((?:[^'\\]|\\.)*)'/g)) {
+    const t = unq(m[1]);
+    if (/^[A-Z][A-Z0-9 ,.'?!():-]{14,}$/.test(t) && / /.test(t) && /[.?!]$/.test(t)) add('TICK', t);
+  }
 }
 for (const m of src('world/Npcs.js').matchAll(/'([A-Z][a-z][^']{8,}[.?!])'/g)) add('YOU', m[1]);
 for (const m of src('entities/Observer.js').matchAll(/onSay\('([^']+)'\)/g)) add('OBSERVER', m[1]);
@@ -94,6 +100,8 @@ for (let s = 1; s <= SEEDS; s++) {
   }
   st.cast.forEach((c, i) => verdictEnding(st, i).text.forEach((t) => add('NONE', t)));
 }
+// every name as a possessive, for the narrator's reveals ("The hands are Viktor Zhou's.")
+{ const { FIRST, LAST } = await imp('gen/StoryGen.js'); for (const nm of [...FIRST, ...LAST]) add('NONE', `${nm}'s.`); }
 // the vessel after each prologue ending: Deck 1's opening (its {trail} line is spliced like today's),
 // the bridge coda, SEVERED's retry and its telling of THE WATCHER'S NAME
 for (const ending of ['SEVER', 'SUSTAIN', 'MIRROR', null]) {
