@@ -175,6 +175,17 @@ class Game {
     this.timers = []; // game-time timers: deterministic in captures and simulations
 
     window.addEventListener('resize', () => this.resize());
+    // a lost GPU context (memory pressure, a GPU reset): pause, and on restore rebuild the image-based light,
+    // whose render-target textures do not come back by themselves
+    this.canvas.addEventListener('webglcontextlost', () => {
+      if (this.started && !this.menu) this.openMenu('pause');
+    });
+    this.canvas.addEventListener('webglcontextrestored', () => {
+      this.postfx.envTex = null;
+      this.postfx.skies = {};
+      this.appliedQ = null;
+      this.applyQuality();
+    });
     this.applySettings();
     this.setupMenus();
     this.clock = new THREE.Clock();
