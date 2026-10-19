@@ -45,9 +45,14 @@ story beats. How it works: [`DESIGN.md`](DESIGN.md).
   `tools/voice-pack.mjs` collects the edition's lines (808 lines, 1,165 unique recordings, about
   44 minutes). **The recordings are not rendered yet**: until they are, the game speaks the
   edition's lines with the device's speech synthesis where it has one, and shows subtitles always.
-- **Tests**: `tests/lastversion.test.mjs` (unit, in `npm test`) and `tests/lastversion.mjs`
-  (browser bot: the Prologue through both quest chains into Act I, one mission per act and the
-  Finale to an ending, a generated interior walked with real movement).
+- **Tests**: `tests/lastversion.test.mjs` (unit, in `npm test`: 19 tests) and `tests/lastversion.mjs`
+  (browser bot, 76 checks: the Prologue from NEW GAME through both quest chains into Act I,
+  Missions 5, 13, 14 and 19 and the Finale to Ending C, the Museum's generated rooms walked with
+  real movement, the save namespace). Both pass; `npm test` passes (47), and the Station Zero
+  suite `tests/cradle.mjs` passes (167). In this container `tests/qa.mjs` (23 of its checks pass,
+  then its last click times out) and `tests/forge.mjs` (a click's navigation wait times out
+  after the save slot) also time out on the main branch's own code, side by side, so they are
+  timing in this environment rather than this edition; they need a rerun on a quieter machine.
 
 ## Generated (playable, solvable by construction, not hand-tuned)
 
