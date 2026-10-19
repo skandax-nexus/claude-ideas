@@ -122,7 +122,7 @@ public class MainActivity extends Activity {
     @Override public void onWindowFocusChanged(boolean focus) { super.onWindowFocusChanged(focus); if (focus) immersive(); }
     @Override protected void onSaveInstanceState(Bundle out) { super.onSaveInstanceState(out); web.saveState(out); }
     @Override protected void onPause() { super.onPause(); web.onPause(); web.pauseTimers(); if (ttsReady) tts.stop(); }
-    @Override protected void onDestroy() { if (tts != null) tts.shutdown(); super.onDestroy(); }
+    @Override protected void onDestroy() { if (tts != null) tts.shutdown(); web.destroy(); super.onDestroy(); } // a recreated activity leaves no old WebView (or its audio) running
     @Override protected void onResume() { super.onResume(); web.onResume(); web.resumeTimers(); immersive(); }
     @Override public void onBackPressed() {
         // Back opens the in-game pause menu instead of quitting mid-run.
