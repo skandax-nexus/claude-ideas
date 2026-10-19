@@ -596,7 +596,8 @@ body.touch #rules li { font-size: 10px; grid-template-columns: 64px 1fr; margin:
 body.touch #rules li span { display: none; } /* the rule's value is enough at a glance; the journal has the text */
 body.touch #rules .gc { font-size: 9px; padding: 2px 7px; }
 body.touch #rules .k { display: none; }
-@media (orientation: portrait) { #rules { left: 12px; right: 12px; max-width: none; top: 30%; transform: none; } }
+body.touch:has(#rules.on) #objective { opacity: 0; } /* the rules card sits where the objective is */
+@media (orientation: portrait) { #rules, body.touch #rules { left: 12px; right: 12px; max-width: none; top: 30%; transform: none; } }
 
 /* gear in the dock: four slots with a cooldown ring; dimmed where the local rules refuse them */
 #dock .d.gear.off, #dock .d.rules.off { display: none; }
@@ -610,7 +611,7 @@ body.touch #rules .k { display: none; }
 #dock .d.gear.on { color: var(--verb); }
 #gearpad { display: none; }
 body.touch #gearpad { display: grid; position: absolute; right: max(18px, env(safe-area-inset-right)); bottom: 184px; grid-template-columns: 50px 50px; gap: 6px; pointer-events: auto; }
-body.touch #gearpad .g { width: 50px; height: 50px; border-radius: 50%; padding: 0; border: none; background: rgba(255, 255, 255, 0.6); box-shadow: 0 6px 18px rgba(40, 60, 90, 0.14); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; font-size: 7px; font-weight: 800; letter-spacing: 0.06em; color: var(--ink); }
+body.touch #gearpad .g { width: 50px; height: 50px; border-radius: 50%; padding: 0; border: none; background: rgba(255, 255, 255, 0.6); box-shadow: 0 6px 18px rgba(40, 60, 90, 0.14); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; font-size: 9px; font-weight: 800; letter-spacing: 0.06em; color: var(--ink); }
 body.touch #gearpad .g i { width: 22px; height: 22px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; background: conic-gradient(rgba(35, 48, 60, 0.22) calc(var(--cd, 0) * 100%), transparent 0); }
 body.touch #gearpad .g i svg { width: 16px; height: 16px; }
 body.touch #gearpad .g.off { display: none; }
