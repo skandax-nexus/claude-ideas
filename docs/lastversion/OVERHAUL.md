@@ -150,9 +150,11 @@ processes: [{ id: 'm11lock', kind: 'lock', at: 'ward32Door', label: 'THE LOCK', 
   parts: [{ name: 'RING', order: 1 }, ...], settle: 'settled', refuse: null, hints: [3 tiers] }]
 ```
 
-- Facts: `rev_<id>` while held, and `inv_<id>_done` when settled.
+- Facts: `rev_<id>` while held, and `inv_<id>_done` when settled. A lock also saves each bolt that is out as `inv_<id>_<BOLT>`.
 - A REVERSE thread is `{ kind: 'invert', target: '<processId>' }` (§3.3).
-- Refusals (R6) are processes with `refuse: 'A PERSON' | 'A MEMORY'` and a line.
+- Refusals (R6) are processes with `kind: 'refusal'`, `refuse: 'NOT A PROCESS' | 'A MEMORY'` (the label reads "✕ " plus it) and a `line`.
+- As built in U1: `parts` entries are `{ name?, order?, shape, size, mat, at, rot?, rest: { at, rot }, solid?, text? }` in the anchor's frame (a lock may give `bolts: ['RING', ...]` instead); `props` are static boxes placed with the process; `scene` + `prompt` add a scene interactable at the aim; `ambient: { period, on }` runs a held-style process on its own rhythm; `required: true` marks a use the story needs (n ≥ 11 only).
+- Until U3, a mission maps its §5 landmark names to rooms with `anchors: { name: { sector, room: 'story'|'before'|'after'|index, at: [x, y, z] | (room) => [...], yaw } | { sector, room, door: 'exit' } }`; `level.landmarks` / `level.sites` take precedence when a place provides them. The same names place `spots` (scenes with texts), `doors` (`when`-gated doorways), `zones` (trigger boxes), `displays` (the twin lock's loop) and `reversed` (rooms with `timeReverse`).
 
 ### 3.3 Threads (U6 provides; U6–U8 author)
 

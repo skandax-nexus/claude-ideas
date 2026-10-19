@@ -128,7 +128,7 @@ export const ACT1 = [
   }),
   zone({
     key: 'm07', n: 7, chapter: 'act1', name: 'THE BROKEN OBSERVATORY', title: 'Bronze rings under an open sky', subtitle: 'An ancient observatory, tracking alignments that include your birth.',
-    theme: 'tower', palette: P.observatory, states: ['PAST', 'PRESENT', 'FUTURE', 'INVERTED'], canal: true, drones: [0, 1, 2], unstable: true, ambience: 'wind', ambient: 'settlement',
+    theme: 'tower', palette: P.observatory, states: ['PAST', 'PRESENT', 'FUTURE'], canal: true, drones: [0, 1, 2], unstable: true, ambience: 'wind', ambient: 'settlement',
     rooms: ['THE LOWER RING', 'THE INSTRUMENT STAIR', 'THE OUTER RING'], motto: 'THEY DID NOT KNOW WHEN. THEY KNEW WHO', gate: 'THE RING ROOM',
     crew: C('mira'),
     intro: [N('The observatory tracks the sun and the stars across three thousand years. Its rings still turn. Scavengers turn with them, and what they throw lands yesterday.')],
@@ -149,7 +149,7 @@ export const ACT1 = [
   }),
   rooms({
     key: 'm08', n: 8, chapter: 'act1', name: 'THE FIRST DEATH', title: 'Helix, altered', subtitle: 'The facility you return to is not the one you left.',
-    deckKey: 'arch', palette: P.helix2, feature: 'echo', mechs: ['echo', 'gravity', 'sentinel'], states: ['PAST', 'PRESENT', 'INVERTED'], unstable: true,
+    deckKey: 'arch', palette: P.helix2, feature: 'echo', mechs: ['echo', 'sentinel'], states: ['PAST', 'PRESENT'], unstable: true,
     roomsNames: ['THE ALTERED LAB', 'STAFF RECORDS', 'THE CORRUPTED LOG', 'CONTAINMENT', 'THE LAST TEN MINUTES'], motto: 'VERSION 17',
     ambience: 'hum', ambient: 'helix',
     beats: [
@@ -165,11 +165,98 @@ export const ACT1 = [
 ];
 
 // =============================================================================================
+// MISSION 11: where §5's landmarks stand in the hospital's rooms (room-relative until the hospital
+// is an open place; U3 re-places them through level.landmarks), and the processes REVERSE learns on
+export const LOCK_ORDER = ['RING', 'BAR', 'STAR', 'CRESCENT'];
+const CLUE_TAG = 'A 2026 maintenance tag on the lock: WARD 32 LOCK REFITTED 14-03-2026. BOLTS FITTED IN ORDER: RING, BAR, STAR, CRESCENT.';
+const CLUE_TWIN = 'In the reversed ward the twin of the Ward 32 lock comes apart on its loop, last bolt first: CRESCENT, then STAR, then BAR, then RING. Then it fits itself back together.';
+const CLUE_CHIME = 'The intercom chimes before it speaks: four tones, low to high. The bolts answer in the same four tones: RING, BAR, STAR, CRESCENT.';
+const M11_ANCHORS = {
+  // Q0 TRIAGE & THE QUIET COLONNADE
+  atrium: { sector: 0, room: 'story', at: [0, 0, -3] },
+  triage: { sector: 0, room: 'story', at: [-3.5, 0, -9] },
+  quietColonnade: { sector: 0, room: 'after', at: [0, 0, -3] },
+  // Q1 RECORDS
+  recordsHall: { sector: 1, room: 'story', at: [0, 0, -8] },
+  ledger2026: { sector: 1, room: 'story', at: (r) => [r.W / 2 - 0.5, 2.6, -6], yaw: -Math.PI / 2 },
+  tray: { sector: 1, room: 'story', at: (r) => [r.W / 2 - 1.6, 0, -11.2] },
+  waterGlass: { sector: 1, room: 'story', at: [-1.2, 0, -11.6] },
+  burntDoor: { sector: 1, room: 'story', at: (r) => [-r.W / 2 + 3.1, 0, -4.6], yaw: Math.PI / 2 },
+  charredFile: { sector: 1, room: 'story', at: (r) => [-r.W / 2 + 1.2, 0, -5.6] },
+  flatlineMonitor: { sector: 1, room: 'story', at: (r) => [-r.W / 2 + 1.6, 0, -10.2], yaw: Math.PI / 2 },
+  recordsDoor: { sector: 1, room: 'story', door: 'exit' },
+  // Q2 WARD 32
+  twinLock: { sector: 2, room: 'before', at: (r) => [r.W / 2, 0, -2.4], yaw: -Math.PI / 2 },
+  odileStation: { sector: 2, room: 'story', at: [0, 0, -6.6] },
+  intercom: { sector: 2, room: 'story', at: (r) => [r.W / 2, 0, -9], yaw: -Math.PI / 2 },
+  ward32Door: { sector: 2, room: 'story', door: 'exit' },
+  ward32: { sector: 2, room: 'after', at: [0, 0, -6] },
+};
+const M11_PROCESSES = [
+  // the three tutorial objects in the records hall (D22): a fall, a flow, a burn
+  {
+    id: 'tray', kind: 'fall', at: 'tray', label: 'THE TRAY', weight: 0.5, when: '@PRESENT', grain: 'metal', creak: 0.3,
+    props: [{ box: [-0.5, 0, -0.32, 0.5, 0.86, 0.32], mat: 'prop' }],
+    parts: [
+      { shape: 'box', size: [0.62, 0.025, 0.42], mat: 'steel', at: [0, 0.875, 0], rest: { at: [-0.62, 0.013, 0.72], rot: [0.04, 0.55, 0.03] } },
+      { shape: 'disc', size: [0.2, 0.035, 0.2], mat: 'steel', at: [0.16, 0.905, 0.06], rest: { at: [-1.05, 0.018, 0.38], rot: [0.3, 0, 0.2] } },
+      { shape: 'box', size: [0.17, 0.012, 0.04], mat: 'steel', at: [-0.14, 0.894, -0.08], rot: [0, 0.4, 0], rest: { at: [-0.32, 0.006, 1.12], rot: [0, 1.9, 0] } },
+      { shape: 'cyl', size: [0.022, 0.15, 0.022], mat: 'white', at: [0.02, 0.9, -0.11], rot: [0, 0, 1.5708], rest: { at: [-1.12, 0.011, 0.95], rot: [0, 0.8, 1.5708] } },
+    ],
+    aim: [0, 0.9, 0],
+    hints: ['A tray that fell off its trolley. Things that fell can rise again, for a while.', 'Aim at the tray and REVERSE. It goes back up while it holds.', 'Look at the trolley and REVERSE. REVERSE again to let it fall.'],
+  },
+  {
+    id: 'waterGlass', kind: 'flow', mode: 'spill', at: 'waterGlass', label: 'THE GLASS', weight: 0.5, when: '@PRESENT', grain: 'water',
+    props: [{ box: [-0.42, 0, -0.32, 0.42, 0.74, 0.32], mat: 'prop2' }],
+    parts: [
+      { shape: 'glass', size: [0.085, 0.13, 0.085], mat: 'glass', at: [0.12, 0.805, 0.02] },
+      { shape: 'cyl', size: [0.07, 0.1, 0.07], mat: 'water', at: [0.12, 0.795, 0.02] },
+      { shape: 'disc', size: [0.8, 0.006, 0.8], mat: 'water', at: [0.55, 0.004, 0.62] },
+    ],
+    aim: [0.12, 0.82, 0.02],
+    hints: ['A spilled glass of water.', 'Water runs backwards too. Aim at the glass and REVERSE.', 'Look at the glass on the table and REVERSE.'],
+  },
+  {
+    id: 'burntDoor', kind: 'burn', at: 'burntDoor', label: 'THE ANNEX DOOR', weight: 1, when: '@PRESENT', grain: 'fire',
+    props: [
+      { box: [-3.0, 0, -0.07, -0.56, 2.5, 0.07], mat: 'wall' },
+      { box: [0.56, 0, -0.07, 3.0, 2.5, 0.07], mat: 'wall' },
+      { box: [-0.56, 2.15, -0.07, 0.56, 2.5, 0.07], mat: 'wall' },
+    ],
+    parts: [{ shape: 'box', size: [1.0, 2.1, 0.05], mat: 'wood', at: [0, 1.05, 0], rest: { at: [0.15, 0.03, -1.25], rot: [-1.5708, 0, 0.12] } }],
+    aim: [0, 1.1, 0],
+    hints: ['The annex door burned and fell.', 'Fire runs backwards: the char recedes, the door stands up again.', 'Aim at the burnt door in the annex doorway and REVERSE.'],
+  },
+  // the file the ward un-burns for three seconds in ten: readable only while Kai holds it
+  {
+    id: 'charredFile', kind: 'burn', at: 'charredFile', label: 'THE CHARRED FILE', weight: 0.5, max: 12, when: '@PRESENT', grain: 'fire', required: true,
+    ambient: { period: 10, on: 3 }, scene: 'charredFile', prompt: 'READ THE FILE',
+    props: [{ box: [-0.6, 0, -0.42, 0.6, 0.76, 0.42], mat: 'prop' }],
+    parts: [{ shape: 'sheet', size: [0.34, 0, 0.44], mat: 'paper', at: [0, 0.775, 0], rot: [0, 1.5708, 0], text: ['RAIN CITY GENERAL', 'ADMISSION · WARD 32', '14-03-2026 · 16:40', 'VAREN, M. · AGE 9', '', '~Admitted by: K. Varen'] }],
+    aim: [0, 0.8, 0],
+    hints: ['The file was paper once. For three seconds in ten it remembers.', 'Hold it backwards and it stays paper while the charge lasts. Read it then.', 'Aim at the file on the annex desk, REVERSE, then read it while it holds.'],
+  },
+  // R6: never a person
+  {
+    id: 'flatlineMonitor', kind: 'refusal', refuse: 'NOT A PROCESS', at: 'flatlineMonitor', label: 'THE MONITOR', when: '@PRESENT', line: 'Not a person. It won\'t take a person.',
+    props: [{ box: [-1.0, 0, -0.48, 1.0, 0.6, 0.48], mat: 'prop2' }, { box: [0.93, 0, 0.62, 1.01, 1.24, 0.7], mat: 'trimDark' }],
+    parts: [{ shape: 'box', size: [0.46, 0.32, 0.06], mat: 'screen', at: [0.97, 1.4, 0.66] }],
+    aim: [0.97, 1.4, 0.66],
+  },
+  // the reversing lock on Ward 32's door: four bolts, RING, BAR, STAR, CRESCENT fitted in that order
+  {
+    id: 'm11lock', kind: 'lock', at: 'ward32Door', label: 'THE LOCK', weight: 1, grain: 'metal', required: true, bolts: LOCK_ORDER, aim: [0, 1.4, 0.3],
+    hints: ['Four bolts, fitted in an order. Only the last one fitted will come out.', 'The 2026 tag, the twin lock next door and the chime all give the order.', 'RING, BAR, STAR, CRESCENT went in. Reverse CRESCENT, then STAR, then BAR, then RING.'],
+  },
+];
+
+// =============================================================================================
 // ACT II: THE NINE-MINUTE WAR
 export const ACT2 = [
   zone({
     key: 'm09', n: 9, chapter: 'act2', name: 'NINE MINUTES TO ZERO', title: 'Loop City', subtitle: 'The city repeats the same nine minutes. Positions change. You do not.',
-    theme: 'city', palette: P.loop, states: ['PRESENT', 'PAST', 'INVERTED'], canal: true, drones: [1, 2, 2], loop: 41 * 2, ambience: 'rain', ambient: 'loop',
+    theme: 'city', palette: P.loop, states: ['PRESENT', 'PAST'], canal: true, drones: [1, 2, 2], loop: 41 * 2, ambience: 'rain', ambient: 'loop',
     rooms: ['CLOCK A - OBSERVATION', 'CLOCK B - THE ENEMY ROUTE', 'THE CONTROL TOWER'], motto: 'YOU HAVE NINE MINUTES', gate: 'THE TOWER',
     crew: C('engineer'),
     intro: [N('Sirens, then silence, then sirens, every nine minutes. The patrols walk the same loop and then a slightly different one.'), L('WITNESS', 'You have nine minutes.'), K('To do what?'), L('WITNESS', 'To become me.')],
@@ -190,7 +277,7 @@ export const ACT2 = [
   }),
   rooms({
     key: 'm10', n: 10, chapter: 'act2', name: 'ENEMIES WHO REMEMBER', title: 'The Continuum\'s detention block', subtitle: 'They believe time must be controlled. Sera helps you out.',
-    deckKey: 'cryo', palette: P.detention, feature: 'sentinel', mechs: ['echo', 'gravity', 'sentinel', 'time'], states: ['PRESENT', 'PAST', 'INVERTED'],
+    deckKey: 'cryo', palette: P.detention, feature: 'sentinel', mechs: ['echo', 'sentinel', 'time'], states: ['PRESENT', 'PAST'],
     roomsNames: ['THE DETENTION BLOCK', 'POWER SYSTEMS', 'THE TESTING CHAMBER', 'THE PRISONERS', 'THE YARD'], motto: 'TIME MUST BE CONTROLLED',
     ambience: 'hum', ambient: 'loop',
     beats: [
@@ -214,24 +301,72 @@ export const ACT2 = [
     outro: [N('Kai unlocks Echo Step, a limited-use temporal afterimage.')],
   }),
   rooms({
-    key: 'm11', n: 11, chapter: 'act2', name: 'THE INVERTED HOSPITAL', title: 'A hospital in localized inversion', subtitle: 'Some rooms move forward. Others reverse.',
-    deckKey: 'med', palette: P.hospital, feature: 'time', mechs: ['time', 'echo'], states: ['INVERTED', 'PRESENT', 'PAST'], unstable: true,
-    roomsNames: ['TRIAGE, REVERSED', 'THE QUIET CORRIDOR', 'RECORDS', 'THE REVERSING LOCK', 'WARD 32'], motto: 'TEMPORAL DISCONTINUITY',
+    key: 'm11', n: 11, chapter: 'act2', name: 'THE INVERTED HOSPITAL', title: 'A hospital in localized inversion', subtitle: 'Some wards move forward. Others reverse. Kai learns to hold one thing back.',
+    deckKey: 'med', palette: P.hospital, feature: 'time', mechs: ['time', 'echo'], states: ['PRESENT', 'PAST'], unstable: true,
+    roomsNames: ['TRIAGE', 'THE QUIET COLONNADE', 'RECORDS', 'THE REVERSED WARD', 'WARD 32'], motto: 'TEMPORAL DISCONTINUITY',
+    roomNames: [['TRIAGE', 'THE QUIET COLONNADE'], ['THE ANNEX CORRIDOR', 'RECORDS', 'THE STACKS'], ['THE REVERSED WARD', 'WARD 32: THE DOOR', 'WARD 32']],
     ambience: 'hum', ambient: 'loop',
+    anchors: M11_ANCHORS,
+    // the wards that run backwards on their own (not a year: engine.setOverride timeReverse)
+    reversed: [{ sector: 0, room: 'after' }, { sector: 1, room: 'before' }, { sector: 2, room: 'before' }],
+    processes: M11_PROCESSES,
+    spots: [
+      { id: 'maintTag', at: 'ward32Door', scene: 'maintTag', prompt: 'THE MAINTENANCE TAG', model: 'tag', offset: [2.05, 1.5, 0.02], r: 2.2,
+        texts: [{ text: 'WARD 32 LOCK', at: [2.05, 1.92, 0.03], size: 0.09, color: '#7a828a', when: '!@PAST' }, { text: 'WARD 32 LOCK · REFITTED 14-03-2026', at: [2.05, 1.92, 0.03], size: 0.07, color: '#3a3020', when: '@PAST' }, { text: 'RING · BAR · STAR · CRESCENT', at: [2.05, 1.8, 0.03], size: 0.07, color: '#3a3020', when: '@PAST' }] },
+      { id: 'intercom', at: 'intercom', scene: 'chime', prompt: 'THE INTERCOM', model: 'intercom', offset: [0, 1.6, 0.03] },
+      { id: 'twinLockSpot', at: 'twinLock', scene: 'twinLock', prompt: 'THE TWIN LOCK', model: 'none', offset: [0, 1.5, 0.4] },
+    ],
+    doors: [
+      { id: 'door_m11records', at: 'recordsDoor', when: '!ev_admitted_by' },
+      { id: 'door_m11ward32', at: 'ward32Door', when: '!inv_m11lock_done' },
+    ],
+    zones: [{ at: 'charredFile', box: [-1.5, -0.5, -1.9, 1.7, 3, 1.9], set: { m11_saw_file: true }, when: '!has_inversion' }],
+    displays: [{ id: 'twinLock', kind: 'lockLoop', at: 'twinLock', y: 1.5 }],
+    // the three clues to the lock's order: the tag lists the fitting, the twin lock the coming apart, the chime the tones
+    lockClues: [{ scene: 'maintTag', order: 'fit' }, { scene: 'twinLock', order: 'out' }, { scene: 'chime', order: 'fit' }],
     beats: [
       { kind: 'arrival', goal: 'Follow the sound that gets quieter as you approach.', log: { title: 'WARD INTERCOM', text: 'Temporal discontinuity. Temporal discontinuity. Temporal discontinuity.' } },
       { kind: 'contradiction', goal: 'Compare the medical records to find the missing patient.', official: 'PATIENT 32 - VAREN, M. - AGE 32 - DISCHARGED', echo: 'PATIENT 32 - VAREN, M. - AGE 9 - DATE OF DEATH: ', clue: 'cleared', crew: C('mira'), toast: 'RECORD COMPARED', log: 'Mira\'s file lists an age of 32, though the record predates the present by 23 years. Her death date is blank.' },
-      { kind: 'scene', goal: 'Dismantle the reversing lock in the correct order.', scene: 'lock', prompt: 'THE REVERSING LOCK', npc: 'patient', lines: [L('CREW', 'They put me back together every morning. I would like, once, to stay apart.')], npcWhen: '@INVERTED' },
+      { kind: 'scene', goal: 'Dismantle the reversing lock in the correct order.', scene: 'lock', prompt: 'WARD 32: THE REVERSING LOCK', npc: 'patient', lines: [L('CREW', 'They put me back together every morning. I would like, once, to stay apart.')] },
     ],
     scenes: {
-      lock: { when: '@INVERTED', lines: [N('Four bolts. Backwards, they undo themselves in the order they were done. Forwards, they only tighten.')], set: { lock_open: true }, beatDone: true, log: 'The reversing lock comes apart in INVERTED, in the order it was assembled.' },
-      lock_no: { lines: [K('Forwards, it only tightens. It has to be undone the way it was done: in reverse.')] },
+      lock: { when: 'inv_m11lock_done', lines: [N('The last bolt backs out and stays out. Nothing pushes it back in. The door to Ward 32 slides up.')], set: { lock_open: true }, beatDone: true, log: 'The reversing lock came apart the way it went together, last bolt first. Nothing pushes a bolt back in.' },
+      lock_no: { lines: [K('Forwards, it only tightens. It has to come apart the way it went together: last bolt first.')] },
+      charredFile: { when: 'rev_charredFile', lines: [N('For as long as Kai holds it, the file is paper. Rain City General, Ward 32, the fourteenth of March 2026. VAREN, M., nine. At the bottom, in an older hand:'), N('ADMITTED BY: K. VAREN.'), K('My name. Not my handwriting. Not yet.')], set: { ev_admitted_by: true }, log: 'The charred file, held unburnt: Mira, nine, Ward 32, 14 March 2026. ADMITTED BY: K. VAREN, in an older hand.' },
+      charredFile_no: { lines: [L('NONE', 'Ash on a desk in the annex. For three seconds in every ten it is paper again.', '!has_inversion'), L('KAI', 'It goes back to ash. I have to hold it in its unburnt second, and read it while it holds.', 'has_inversion')], then: 'unlock' },
+      maintTag: { when: '@PAST', lines: [N(CLUE_TAG)], set: { ev_lock_order: true }, log: 'The 2026 maintenance tag on the Ward 32 lock: refitted RING, BAR, STAR, CRESCENT.' },
+      maintTag_no: { lines: [K('A maintenance tag, bleached blank. In 2026 it was new.')] },
+      twinLock: { lines: [N(CLUE_TWIN), K('Last in, first out.')], set: { ev_lock_order: true } },
+      chime: { lines: [N(CLUE_CHIME), K('Fitted low to high. So they come out high to low.')], then: 'chime' },
+    },
+    rules: [
+      { id: 'unlock', when: 'm11_saw_file && !has_inversion', then: 'unlock' },
+      { id: 'lockopen', when: 'inv_m11lock_done', then: 'lockOpen' },
+    ],
+    fx: {
+      unlock: (rt) => rt.inv?.unlock(),
+      lockOpen: (rt) => rt.playNode(rt.deck.scenes.lock, null, 'lock'),
+      chime: (rt) => rt.inv?.chime(),
+    },
+    hints: [
+      { at: 'recordsHall', when: '!has_inversion', tiers: ['Something in the annex keeps un-burning.', 'Watch the charred file on the annex desk. For three seconds in every ten it is paper.', 'Stand by the charred file in the annex and watch it come back.'] },
+    ],
+    // what Kai understands, step by step, while the records and the lock teach him REVERSE
+    objectiveFor(rt) {
+      const g = rt.g, f = (k) => g.facts.get(k), s = g.campaign?.sector;
+      if (s === 1) {
+        if (!f('has_inversion')) return 'Find the records. Watch the charred file in the annex.';
+        if (!f('ev_admitted_by')) return f('inv_used') ? 'Hold the charred file in its unburnt second, and read it while it holds.' : 'Practise REVERSE on the tray, the glass or the burnt annex door. Then the file.';
+        if (!g.deckWorld.flags.beat_done) return 'Compare the medical records: read the record now, then in 2026.';
+      }
+      if (s === 2 && !f('inv_m11lock_done')) return f('ev_lock_order') ? 'Reverse only the last-fitted bolt each time. The order is on the tag, in the twin lock, in the chime.' : 'Learn the order the lock went together: the 2026 tag, the twin lock next door, the intercom chime.';
+      return null;
     },
     outro: [N('Mira\'s file lists an age of 32, though the record predates the present by 23 years; her death date is blank.')],
   }),
   rooms({
     key: 'm12', n: 12, chapter: 'act2', name: 'THE MAN BEHIND THE GLASS', title: 'Helix, three years deep', subtitle: 'A figure changes states to escape you.',
-    deckKey: 'eng', palette: P.helix2, feature: 'echo', mechs: ['echo', 'gravity', 'sentinel'], states: ['PRESENT', 'PAST', 'FUTURE', 'INVERTED'], unstable: true,
+    deckKey: 'eng', palette: P.helix2, feature: 'echo', mechs: ['echo', 'sentinel'], states: ['PRESENT', 'PAST', 'FUTURE'], unstable: true,
     roomsNames: ['THE CHASE - 2049', 'THE CORRIDOR THAT WAS - 2026', 'THE RUIN - 2196', 'THE WITNESS\'S ROUTE', 'THE SECOND CHAMBER'], motto: 'THE PERSON YOU BECOME WHEN YOU REFUSE TO LET GO',
     ambience: 'hum', ambient: 'helix',
     beats: [
@@ -243,7 +378,7 @@ export const ACT2 = [
   }),
   zone({
     key: 'm13', n: 13, chapter: 'act2', name: 'THE NINE-MINUTE WAR', title: 'The war zone', subtitle: 'Two factions fight over a stabilizer. Both are reacting to their own past attacks.',
-    theme: 'reactor', palette: P.war, states: ['PRESENT', 'PAST', 'FUTURE', 'INVERTED'], canal: true, drones: [2, 2, 3], unstable: true, ambience: 'wind', ambient: 'loop',
+    theme: 'reactor', palette: P.war, states: ['PRESENT', 'PAST', 'FUTURE'], canal: true, drones: [2, 2, 3], unstable: true, ambience: 'wind', ambient: 'loop',
     rooms: ['THE BATTLEFIELD', 'THE THREE DEVICES', 'THE STABILIZER'], motto: 'THE FUTURE THAT SURVIVES LONG ENOUGH TO REMEMBER US', gate: 'THE DISTRICT',
     crew: C('soldier'),
     intro: [N('A district on fire in three years at once. The Continuum holds the north; the Unwritten hold the south. Every shell that lands was fired by the same side, nine minutes ago.'), ...says('sera', ['This is not the future.']), K('What is it, then?'), ...says('sera', ['The future that survives long enough to remember us.'])],
@@ -287,7 +422,7 @@ export const ACT2 = [
 export const ACT3 = [
   zone({
     key: 'm14', n: 14, chapter: 'act3', name: 'WELCOME TO 2196', title: 'The 2196 city', subtitle: 'A beautiful, devastated world. Reach the settlement before the Chronolith loses stability.',
-    theme: 'ruin', palette: P.future, states: ['FUTURE', 'PRESENT', 'PAST', 'INVERTED'], canal: true, drones: [0, 1, 2], unstable: true, ambience: 'wind', ambient: 'future',
+    theme: 'ruin', palette: P.future, states: ['FUTURE', 'PRESENT', 'PAST'], canal: true, drones: [0, 1, 2], unstable: true, ambience: 'wind', ambient: 'future',
     rooms: ['THE OVERGROWN TOWERS', 'THE TRANSIT LINE', 'THE MEMORIAL'], motto: 'WE TEACH CHILDREN YOUR NAME', gate: 'THE SETTLEMENT',
     crew: C('sera'),
     intro: [N('Skyscrapers wear forests. The transit line runs through a lake. The light is the kindest light you have ever seen, and the Chronolith is losing its grip on you.')],
@@ -342,7 +477,7 @@ export const ACT3 = [
   }),
   rooms({
     key: 'm16', n: 16, chapter: 'act3', name: 'THE MUSEUM OF FAILED WORLDS', title: 'An underground museum', subtitle: 'Objects from worlds that no longer exist.',
-    deckKey: 'arch', palette: P.museum, feature: 'echo', mechs: ['echo', 'gravity'], states: ['FUTURE', 'PAST', 'PRESENT'],
+    deckKey: 'arch', palette: P.museum, feature: 'echo', mechs: ['echo'], states: ['FUTURE', 'PAST', 'PRESENT'],
     roomsNames: ['THE FIRST MEMORY', 'THE SECOND MEMORY', 'THE THIRD MEMORY', 'THE COMPARISON HALL', 'THE PHOTOGRAPH'], motto: 'WE HAD A THOUSAND CHANCES',
     ambience: 'hum', ambient: 'future',
     beats: [
@@ -354,7 +489,7 @@ export const ACT3 = [
   }),
   rooms({
     key: 'm17', n: 17, chapter: 'act3', name: 'THE WITNESS\'S ARCHIVE', title: 'Shifting corridors', subtitle: 'Recordings from multiple versions of your life.',
-    deckKey: 'arch', palette: P.archive, feature: 'echo', mechs: ['echo', 'gravity', 'sentinel'], states: ['PRESENT', 'PAST', 'FUTURE', 'INVERTED'], unstable: true,
+    deckKey: 'arch', palette: P.archive, feature: 'echo', mechs: ['echo', 'sentinel'], states: ['PRESENT', 'PAST', 'FUTURE'], unstable: true,
     roomsNames: ['THE SHIFTING CORRIDOR', 'THE RECORDINGS', 'THE SECURITY THAT MOVES LIKE YOU', 'THE EARLIER ROOMS', 'THE ORIGINAL EXPERIMENT'], motto: 'THEY BECAME THE PRICE',
     ambience: 'hum', ambient: 'liminal',
     beats: [
@@ -366,7 +501,7 @@ export const ACT3 = [
   }),
   zone({
     key: 'm18', n: 18, chapter: 'act3', name: 'THE FRACTURE', title: 'The planet, in three states', subtitle: 'Temporal storms. The landscape changes across the years.',
-    theme: 'settlement', themes: ['settlement', 'rain', 'ruin'], palette: P.fracture, states: ['PAST', 'PRESENT', 'FUTURE', 'INVERTED'], canal: true, drones: [0, 2, 3], unstable: true, ambience: 'wind', ambient: 'future',
+    theme: 'settlement', themes: ['settlement', 'rain', 'ruin'], palette: P.fracture, states: ['PAST', 'PRESENT', 'FUTURE'], canal: true, drones: [0, 2, 3], unstable: true, ambience: 'wind', ambient: 'future',
     rooms: ['THE CANYON THAT EXISTS ONLY IN THE PAST', 'THE FLOODED HIGHWAY', 'THE COLLAPSING SKYSCRAPER'], motto: 'THE ONE BEFORE YOU TRIED TO SAVE ME', gate: 'THE TRANSMISSION TOWER',
     crew: C('mira'),
     intro: [N('Storms stand on the horizon like pillars. The settlement\'s anchor is failing. Sera is at the Chronolith; you are everywhere else.')],
@@ -400,7 +535,7 @@ export const ACT3 = [
 export const ACT4 = [
   zone({
     key: 'm19', n: 19, chapter: 'act4', name: 'THE PLACE OUTSIDE TIME', title: 'Beyond the Chronolith\'s states', subtitle: 'Roads loop. Rooms connect impossibly. The sky shows an unbuilt city.',
-    theme: 'liminal', palette: P.liminal, states: ['PRESENT', 'PAST', 'FUTURE', 'INVERTED'], canal: true, drones: [0, 0, 0], ambience: null, ambient: 'liminal',
+    theme: 'liminal', palette: P.liminal, states: ['PRESENT', 'PAST', 'FUTURE'], canal: true, drones: [0, 0, 0], ambience: null, ambient: 'liminal',
     rooms: ['THE LOOPING ROAD', 'THE BRIDGE IN THE REFLECTION', 'THE DOOR THAT IS EVERYWHERE'], motto: 'FOLLOW WHAT THEY REFUSE TO STEP ON', gate: 'THE DOOR',
     crew: C('orren'),
     intro: [N('No markers. No objective. Symbols: the clockmaker\'s mark, the observatory pattern, the Helix badge. They repeat where the way is.'), ...says('orren', ['Don\'t follow the footsteps. Follow what they refuse to step on.'])],
@@ -442,7 +577,7 @@ export const ACT4 = [
   }),
   rooms({
     key: 'm21', n: 21, chapter: 'act4', name: 'THE LAST BATTLE OF THE CONTINUUM', title: 'The command structure', subtitle: 'The Continuum wants one timeline. The Witness wants Mira. The Unwritten want the network gone.',
-    deckKey: 'bridge', palette: { ...P.detention, look: 'bridge', accent: 0xffc44a }, feature: 'sentinel', mechs: ['echo', 'gravity', 'sentinel', 'time'], states: ['PRESENT', 'PAST', 'FUTURE', 'INVERTED'], unstable: true,
+    deckKey: 'bridge', palette: { ...P.detention, look: 'bridge', accent: 0xffc44a }, feature: 'sentinel', mechs: ['echo', 'sentinel', 'time'], states: ['PRESENT', 'PAST', 'FUTURE'], unstable: true,
     roomsNames: ['THE COMMAND STRUCTURE', 'THE ELITE WATCH', 'THE ARENA', 'THE ALLY', 'THE WITNESS'], motto: 'ONE PERMANENT TIMELINE',
     ambience: 'hum', ambient: 'loop',
     beats: [
@@ -465,7 +600,7 @@ export const ACT4 = [
   }),
   zone({
     key: 'm22', n: 22, chapter: 'act4', name: 'THE FIRST SECOND', title: 'The original activation point', subtitle: 'Previous locations appear around you.',
-    theme: 'liminal', themes: ['settlement', 'liminal', 'liminal'], palette: P.liminal, states: ['PAST', 'PRESENT', 'FUTURE', 'INVERTED'], canal: true, drones: [0, 1, 1], unstable: true, ambience: null, ambient: 'liminal',
+    theme: 'liminal', themes: ['settlement', 'liminal', 'liminal'], palette: P.liminal, states: ['PAST', 'PRESENT', 'FUTURE'], canal: true, drones: [0, 1, 1], unstable: true, ambience: null, ambient: 'liminal',
     rooms: ['THE VILLAGE\'S CHAIN', 'THE CLOCKMAKER\'S PATTERN', 'THE FINAL CHAMBER'], motto: 'YOU WERE TRYING TO STOP ME FROM BECOMING YOU', gate: 'THE FINAL CHAMBER',
     crew: C('witness'),
     intro: [N('Kai and the Witness enter the activation point together. The village, the workshop, the hospital and the museum appear around them like evidence laid on a table.')],
@@ -490,8 +625,8 @@ export const ACT4 = [
 // FINALE: AFTERZERO
 export const FINALE = [
   zone({
-    key: 'm23', n: 23, chapter: 'finale', name: 'AFTERZERO', title: 'Past, present, future and inversion collide', subtitle: 'Fragments of the opening streets, the settlement, the laboratory and the future city.',
-    theme: 'rain', themes: ['rain', 'settlement', 'ruin'], palette: P.fracture, states: ['PAST', 'PRESENT', 'FUTURE', 'INVERTED'], canal: true, drones: [1, 1, 2], unstable: true, ambience: 'rain', ambient: 'rain',
+    key: 'm23', n: 23, chapter: 'finale', name: 'AFTERZERO', title: 'Past, present and future collide', subtitle: 'Fragments of the opening streets, the settlement, the laboratory and the future city.',
+    theme: 'rain', themes: ['rain', 'settlement', 'ruin'], palette: P.fracture, states: ['PAST', 'PRESENT', 'FUTURE'], canal: true, drones: [1, 1, 2], unstable: true, ambience: 'rain', ambient: 'rain',
     rooms: ['THE OPENING STREETS', 'THE SETTLEMENT, AGAIN', 'THE ORIGINAL CHRONOLITH'], motto: 'A SECOND THAT BELONGS TO NOBODY', gate: 'THE ORIGINAL CHRONOLITH',
     crew: C('mira'),
     intro: [N('Rain City, the first fire, the lab and 2196, all at once, held open by two men with the same scar.'), L('WITNESS', 'I will hold the route. Go to her.'), K('Why now?'), L('WITNESS', 'Because this is the version where I ask.')],

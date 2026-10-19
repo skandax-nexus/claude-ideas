@@ -6,8 +6,6 @@
 //                                            lanterns on poles, bare young saplings
 //   FUTURE (2196, the beautiful catastrophe)  ivy down the facades, gardens on the roofs,
 //                                            moss over the streets and floors, fallen slabs
-//   INVERTED                                  debris hanging in the air where it will land,
-//                                            or has landed - reality behaving incorrectly
 // PRESENT is the place as the generator made it. Each state also brings its own
 // weather (main.js eases the tint; the runtime swaps the weather). Pieces of one
 // kind in one state are merged into a single mesh (DeckWorld's `dress` elements).
@@ -18,21 +16,20 @@ const BUILDING = new Set(['facade', 'industrial', 'stone', 'glassWall', 'bark', 
 // the weather each state brings to an open district (interiors keep their own)
 export function stateWeather(state, palette) {
   if (state === 'FUTURE') return 'pollen';
-  if (state === 'INVERTED') return 'stardust';
   if (state === 'PAST') return palette.weather === 'rain' || palette.weather === 'storm' ? null : palette.weather || null;
   return palette.weather || null;
 }
 
 export function dressStates(level, states, seed = 'lv') {
   const has = (s) => states.includes(s);
-  if (!has('PAST') && !has('FUTURE') && !has('INVERTED')) return 0;
+  if (!has('PAST') && !has('FUTURE')) return 0;
   const rng = Rng.from(seed, level.id, 'dress');
   const out = [];
   const add = (box, mat, when, room) => out.push({ box, mat, when, room, solid: false, dress: true });
   if (level.zone) {
     const rid = level.order[0];
     const room = level.rooms[rid];
-    const [bx0, , bz0, bx1, bH, bz1] = room.bounds[0];
+    const [bx0, , bz0, bx1, , bz1] = room.bounds[0];
     const bldg = level.elements.filter((e) => !e.when && !e.echo && BUILDING.has(e.mat) && e.box[4] - e.box[1] >= 4 && e.box[3] - e.box[0] >= 3 && e.box[5] - e.box[2] >= 3);
     for (const e of bldg) {
       const [x0, y0, z0, x1, y1, z1] = e.box;
@@ -63,10 +60,6 @@ export function dressStates(level, states, seed = 'lv') {
     for (let k = 0; k < 26; k++) {
       const x = rng.float(bx0 + 4, bx1 - 4), z = rng.float(bz0 + 6, bz1 - 6), w = rng.float(0.8, 2.6), d = rng.float(0.8, 3.2);
       if (has('FUTURE')) add([x - w, 0.005, z - d, x + w, 0.04, z + d], 'moss', '@FUTURE', rid);
-      if (has('INVERTED') && k < 22) {
-        const y = rng.float(2.2, Math.min(9, bH - 2)), s = rng.float(0.15, 0.55);
-        add([x - s, y - s * 0.6, z - s, x + s, y + s * 0.6, z + s], k % 3 ? 'prop' : 'trimDark', '@INVERTED', rid);
-      }
       if (has('PAST') && k < 10) {
         const lx = rng.chance(0.5) ? -6.2 : 6.2, lz = rng.float(bz0 + 8, -6);
         add([lx - 0.06, 0, lz - 0.06, lx + 0.06, 2.6, lz + 0.06], 'trimDark', '@PAST', rid);
@@ -86,10 +79,6 @@ export function dressStates(level, states, seed = 'lv') {
         if (has('FUTURE')) {
           add([x - rng.float(0.5, 1.6), 0.005, z - rng.float(0.5, 1.8), x + rng.float(0.5, 1.6), 0.03, z + rng.float(0.5, 1.8)], 'moss', '@FUTURE', r.id);
           if (k < 3) add([x - 0.25, H - rng.float(1.2, 2.6), z - 0.06, x + 0.25, H - 0.02, z + 0.06], 'crown', '@FUTURE', r.id); // hanging vines
-        }
-        if (has('INVERTED') && k < 5) {
-          const y = rng.float(2.4, Math.max(2.6, H - 1)), s = rng.float(0.12, 0.4);
-          add([x - s, y - s * 0.6, z - s, x + s, y + s * 0.6, z + s], 'prop', '@INVERTED', r.id);
         }
       }
       if (has('PAST')) {

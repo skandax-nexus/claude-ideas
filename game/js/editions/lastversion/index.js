@@ -3,22 +3,25 @@
 // edition changes about the game lives under this folder:
 //   index.js    this descriptor: title, states, looks, speakers, themes
 //   Runtime.js  chapters, missions, objectives, scenes, choices, stability, Echo Step, anchors, endings
+//   inversion.js REVERSE: the bible's inversion as a local verb (Mission 11 on)
+//   processes.js the things REVERSE can hold, and the mission landmarks they stand at
 //   Build.js    hand-authored interiors (Helix) and small props
 //   npcs.js     the people: roster, state model, barks, quest chains, dialogue
 //   prologue.js Missions 1-3, fully authored
 //   acts.js     Acts I-IV, the Finale, the endings and the four optional cases
-import { LastVersion, CHAPTERS, MISSIONS, ORDER, HINTS } from './Runtime.js';
+import { LastVersion, CHAPTERS, MISSIONS, ORDER, HINTS, HINTS_REVERSE } from './Runtime.js';
 import { NPCS, CAST, DIALOGUE, AMBIENT } from './npcs.js';
 import { ENDINGS } from './acts.js';
+import { INV_LINES, INV_SPEAKERS, RULES } from './inversion.js';
 
 export const LV = {
   key: 'lastversion',
   title: 'AFTERZERO',
   subtitle: 'THE LAST VERSION OF EARTH',
   tagline: 'Every attempt to repair history has helped create the catastrophe.',
-  // the four temporal states, in the order the number keys pick them
-  states: ['PRESENT', 'PAST', 'FUTURE', 'INVERTED'],
-  labels: { PRESENT: '2049', PAST: '2026', FUTURE: '2196', INVERTED: 'INVERTED' },
+  // the three years of one world, in the order the number keys pick them (REVERSE is a verb, not a year)
+  states: ['PRESENT', 'PAST', 'FUTURE'],
+  labels: { PRESENT: '2049', PAST: '2026', FUTURE: '2196' },
   // the light of each state: cold steel now, warm stone and wood then, overgrown ruin later
   themes: {
     PRESENT: { fog: 0xd8e2ec, sky: 0xf4f8ff, ground: 0xc8d0d8, hemi: 0.7, sun: 2.1, sunColor: 0xeef4ff, density: 0.012, device: 0x4f9fe8 },
@@ -51,13 +54,14 @@ export const LV = {
   dialogue: DIALOGUE,
   ambient: AMBIENT,
   hints: HINTS,
-  // the reality engine for this edition: four temporal states, no laws (PAST shows and holds the
-  // residue of what stood there; INVERTED flips gravity and runs selected motion backwards)
+  // the reality engine for this edition: three years, no laws, no law slots (PAST shows and holds
+  // the residue of what stood there). Gravity never changes: engine.gravity() is always -1.
+  // Reversal is local: inversion.js, and engine.setOverride(room, { timeReverse }) for a reversed ward.
   engineOptions() {
     return {
-      slots: 3, unlocked: 3, laws: [null, null, null],
+      slots: 0, unlocked: 0, laws: [],
       states: LV.states, baseline: 'PRESENT', residue: 'PAST',
-      stateEffects: { PAST: { echoVisible: true, echoSolid: true }, INVERTED: { gravityFlip: true, timeReverse: true } },
+      stateEffects: { PAST: { echoVisible: true, echoSolid: true } },
     };
   },
   makeRuntime(game) {
@@ -83,11 +87,18 @@ export function allLines() {
     for (const v of Object.values(o)) if (typeof v === 'object') walk(v, seen);
   };
   for (const ms of Object.values(MISSIONS)) walk(ms);
+  // REVERSE: each process's three hints and its refusal line
+  for (const ms of Object.values(MISSIONS)) for (const m of ms) for (const p of m.processes || []) {
+    (p.hints || []).forEach((t) => add('KAI', t));
+    if (p.line) add('KAI', p.line);
+  }
   walk(DIALOGUE);
   for (const n of Object.values(NPCS)) (n.barks || []).forEach((t) => add(n.voice, t));
   for (const a of Object.values(AMBIENT)) a.barks.forEach((t) => add('CREW_n', t));
   for (const e of Object.values(ENDINGS)) e.text.forEach((t) => add('NONE', t));
-  for (const tiers of Object.values(HINTS)) tiers.forEach((t) => add('KAI', t));
+  for (const tiers of [...Object.values(HINTS), ...Object.values(HINTS_REVERSE)]) tiers.forEach((t) => add('KAI', t));
+  for (const [k, t] of Object.entries(INV_LINES)) add(INV_SPEAKERS[k] || 'KAI', t);
+  for (const [, t] of RULES) add('NONE', t);
   for (const t of ['The Chronolith let go of me. Back to the present, back to the last anchor.', 'Nothing in my hands to hold on to.', 'Not like this. Not now.', 'Not yet. Something here is unfinished.', 'The gate waits for the scene. Finish it first.', 'The next door is open. Keep going.', 'Read the record on the wall. Then read it again in the past.', 'Look around. Someone left something for me.', 'The lock reads the present. The room is somewhere else right now.', 'It wants a key. I saw one in another year.', 'An empty socket. There is a cell for it somewhere near.', 'It came apart when the year changed. Next time, anchor it first. C.', 'It walked me back to the last anchor. It only watches the floor in front of it.', 'Records have a residue. Read it in the past.', 'I can\'t change the year. Not yet.', 'There are things to do along the avenue. Some of them only answer in their own year.']) add('KAI', t);
   add('NONE', 'A post-credit clock begins ticking.');
   add('VOICE', 'Version one hundred and eighteen.');

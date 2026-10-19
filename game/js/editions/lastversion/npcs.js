@@ -89,7 +89,7 @@ export const NPCS = {
   clockmaker: { id: 'clockmaker', first: 'The Clockmaker', name: 'The Clockmaker', role: 'Keeper of loops', pronoun: HIS, color: '#8a6a3a', voice: 'CREW', era: 'past', seed: 27 },
   engineer: { id: 'engineer', first: 'Rhea', name: 'Rhea Odum', role: 'Trapped engineer', pronoun: HER, color: '#4f6170', voice: 'CREW', era: 'present', seed: 28 },
   soldier: { id: 'soldier', first: 'Sergeant', name: 'Loop-aware sergeant', role: 'Continuum soldier', pronoun: HIS, color: '#4f6170', voice: 'CREW', era: 'present', seed: 29 },
-  patient: { id: 'patient', first: 'The Patient', name: 'Patient 32', role: 'Inverted Hospital', pronoun: HER, color: '#4f6170', voice: 'CREW', era: 'present', seed: 30 },
+  patient: { id: 'patient', first: 'The Patient', name: 'Patient 32', role: 'Rain City General, Ward 32', pronoun: HER, color: '#4f6170', voice: 'CREW', era: 'present', seed: 30 },
   warden: { id: 'warden', first: 'Warden', name: 'District Warden', role: 'Warden, 2196', pronoun: HIS, color: '#4f6170', voice: 'CREW', era: 'future', seed: 31 },
   gardener: { id: 'gardener', first: 'Gardener', name: 'The Gardener', role: 'Gardener, 2196', pronoun: HER, color: '#4f6170', voice: 'CREW', era: 'future', seed: 32 },
 };

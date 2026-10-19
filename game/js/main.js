@@ -744,7 +744,7 @@ class Game {
       <div class="setting"><span>Field of view</span>${range('fov', 50, 90, 1)}</div>
       <div class="setting"><span>Look sensitivity</span>${range('sensitivity', 0.3, 2.5, 0.05)}</div>
       <div class="setting"><span>Invert look up/down</span>${toggle('invertY')}</div>
-      <div class="setting"><span>Comfort mode<small>Instant gravity flips, steadier camera, no flashes</small></span>${toggle('comfort')}</div>
+      <div class="setting"><span>Comfort mode<small>${this.edition ? 'Steadier camera, no flashes' : 'Instant gravity flips, steadier camera, no flashes'}</small></span>${toggle('comfort')}</div>
       <h3>SCREEN</h3>
       <div class="setting"><span>Graphics quality<small>The highest the game will use</small></span>${seg('quality', Object.entries(QUALITY).map(([k, q]) => [k, q.label]))}</div>
       <div class="setting"><span>Smart renderer<small>${this.smart.fps ? `Now ${Math.round(this.smart.fps)} fps at ${Math.round(this.smart.scale * 100)}% resolution` : 'Adjusts resolution and effects to stay smooth'}</small></span>${toggle('smart')}</div>

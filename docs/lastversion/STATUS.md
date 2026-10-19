@@ -9,15 +9,26 @@ story beats. How it works: [`DESIGN.md`](DESIGN.md).
 
 - **The edition layer.** Its own title (AFTERZERO / THE LAST VERSION OF EARTH, with its own
   backdrop), chapter list (Prologue, Acts I–IV, Finale, Cases), save namespace (`afterzero.lv.`),
-  settings, default look (Kai Varen, a realistic man), HUD state names (2049 / 2026 / 2196 /
-  INVERTED), its own Android build (`EDITION=lastversion bash android/build-apk.sh`: app
+  settings, default look (Kai Varen, a realistic man), HUD names (the year pips 2049 / 2026 /
+  2196, the REVERSE chip from Mission 11, YEAR on the touch switch button, the ⟲ touch button,
+  THINK / ECHO STEP / CASE in the dock, the CASE BOARD), its own Android build (`EDITION=lastversion bash android/build-apk.sh`: app
   "AFTERZERO: Last Version", `com.afterzero.lastversion`, versionName 2.0.0,
   `AFTERZERO-LastVersion-v2.0.apk`, preview page with `window.AZ_EDITION='lastversion'`, published
   at [claude.ai/artifact/GDpG6YCybK2cj8P3gPXRrr](https://claude.ai/artifact/GDpG6YCybK2cj8P3gPXRrr)). The
   default build and every Station Zero chapter are unchanged.
-- **The four temporal states**, authored per region; per-state looks (tint, hour, weather,
+- **Three years** (2026, 2049, 2196), authored per region; per-year looks (tint, hour, weather,
   decoration, music); the Chronolith stability meter with the snap back to PRESENT at the last
-  anchor; causal anchors (`C`); Echo Step (`X`, unlocked in Mission 10); local loops.
+  anchor; causal anchors (`C`); Echo Step (`X`, unlocked in Mission 10); local loops. No gravity
+  flip, no ceiling routes, no laws, law slots, law tokens or memory keys (v2.1, U1).
+- **REVERSE** (v2.1, U1; the bible's inversion as a local verb, DESIGN.md): `R`, `4` or the touch
+  ⟲ button holds one aimed process backwards while the Chronolith's charge lasts (8 s, 10 s after
+  Mission 13, 12 s after Mission 18), with the six rules on the case board, the REVERSE chip and
+  crosshair ring, procedural sounds, and ten process kinds in `processes.js`. It is taught in
+  Mission 11, in the hospital's current rooms: reversed wards, the unlock in the records, the
+  tray / glass / annex-door tutorial, the charred file readable only while held, the flatline
+  refusal, and Ward 32's four-bolt reversing lock with its three clues. v2.0 saves that stood in
+  an INVERTED room are migrated on load. Mission 11's sound puzzle, hazards and Nurse Odile, and
+  every later mission's processes, come with the story rewrite (U6–U8).
 - **The NPC system** of the supplement: trust, knowledge, quest state, temporal state, faction
   standing and evidence flags in the save; dialogue choices by intent (challenge / comfort /
   investigate / withdraw); barks; echoes standing in for people absent from a state; the case
@@ -45,11 +56,12 @@ story beats. How it works: [`DESIGN.md`](DESIGN.md).
   `tools/voice-pack.mjs` collects the edition's lines (808 lines, 1,165 unique recordings, about
   44 minutes). **The recordings are not rendered yet**: until they are, the game speaks the
   edition's lines with the device's speech synthesis where it has one, and shows subtitles always.
-- **Tests**: `tests/lastversion.test.mjs` (unit, in `npm test`: 19 tests) and `tests/lastversion.mjs`
-  (browser bot, 76 checks: the Prologue from NEW GAME through both quest chains into Act I,
-  Missions 5, 13, 14 and 19 and the Finale to Ending C, the Museum's generated rooms walked with
-  real movement, the save namespace). Both pass; `npm test` passes (47), and the Station Zero
-  suite `tests/cradle.mjs` passes (167). In this container `tests/qa.mjs` (23 of its checks pass,
+- **Tests**: `tests/lastversion.test.mjs` (unit, in `npm test`: 28 tests) and `tests/lastversion.mjs`
+  (browser bot, 91 checks: the Prologue from NEW GAME through both quest chains into Act I,
+  Missions 5, 11 (REVERSE: 15 checks), 13, 14 and 19 and the Finale to Ending C, the Museum's
+  generated rooms walked with real movement, the save namespace). Both pass; `npm test` passes
+  (56), and the Station Zero suite `tests/cradle.mjs` passes (167). (Measured 2026-10-19 for
+  the overhaul's U1.) In this container `tests/qa.mjs` (23 of its checks pass,
   then its last click times out) and `tests/forge.mjs` (a click's navigation wait times out
   after the save slot) also time out on the main branch's own code, side by side, so they are
   timing in this environment rather than this edition; they need a rerun on a quieter machine.
@@ -61,12 +73,12 @@ story beats. How it works: [`DESIGN.md`](DESIGN.md).
   has a state or the anchor that gets past it, each generated route uses only its room's states,
   each beat has something that completes it, every place can snap back to the present.
 - **Puzzles** are the generators' pits, ledges, keys, cores, sweepers and watchers, limited to
-  what each mission's states can do. They serve the bible's verbs (cross in the past, walk the
-  ceiling inverted, carry a key out of 2026 and anchor it), but they are not the bible's specific
+  what each mission's years can do. They serve the bible's verbs (cross in the past, carry a key
+  out of 2026 and anchor it), but they are not the bible's specific
   puzzles: the observatory's three instruments aligned by sun and stars, the clockmaker's hidden
   staircase found by comparing room states, the hospital's sound that gets quieter as you
   approach, or the Unwritten Second's bridge seen only in reflections exist as beats and text, not
-  as bespoke mechanisms.
+  as bespoke mechanisms. (Mission 11's reversing lock is now a real mechanism: REVERSE.)
 - Room names inside generated interiors are drawn from each mission's list, so a room's name and
   its puzzle do not always match its story beat.
 

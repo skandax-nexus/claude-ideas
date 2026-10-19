@@ -4,6 +4,10 @@
 //     Jun Park), Mission 2 (Helix in emergency light, the cells, the officer, the unit that
 //     rewinds its damage), Mission 3 (the first switch, quest chain D with Iven Marr, the
 //     anchor) and on into Act I
+//   - Mission 11, where REVERSE is taught: R does nothing before it, the unlock in the records,
+//     R and the touch ⟲ button start and release a hold, a year switch releases it, the refusal,
+//     the charred file readable only while held, a jammed bolt, a settled bolt through a save
+//     and a load, the lock that opens Ward 32 (LV_SHOT=<png> saves a screenshot of a hold)
 //   - one mission per act to its ending: Mission 5 (three states of one village), Mission 13
 //     (three devices in three years, the faction choice), Mission 14 (2196: stability, the
 //     snap back to the present), Mission 19 (the place outside time, Echo Step), and the
@@ -36,6 +40,11 @@ const check = (ok, label, detail = '') => {
   if (ok) { passed++; console.log(`  ok   ${label}`); } else { failures.push(`${label} ${detail}`); console.log(`  FAIL ${label} ${detail}`); }
 };
 const page = await browser.newPage({ viewport: { width: 960, height: 540 } });
+// only the local server: web fonts and anything remote otherwise hang loads and screenshots
+await page.route('**/*', (route) => {
+  const u = new URL(route.request().url());
+  return u.hostname === 'localhost' || u.hostname === '127.0.0.1' ? route.continue() : route.abort();
+});
 const errors = [];
 page.on('pageerror', (e) => errors.push(e.message));
 // run a function in the page; an exception comes back as 'ERR ...' with its stack
@@ -93,7 +102,27 @@ await az(() => {
     b.click();
     return 'ok';
   };
-  B.state = (st) => { g.engine.setState(g.room, st, { force: true }); g.player.setGravity(g.engine.gravity(g.room)); g.simulate(0.1); };
+  B.state = (st) => { g.engine.setState(g.room, st, { force: true }); g.simulate(0.1); };
+  // turn the view (and so the crosshair) onto a point, from where Kai stands; returns what REVERSE would aim at
+  B.aim = (p) => {
+    const pl = g.player, cam = g.camera;
+    const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
+    for (let i = 0; i < 24; i++) {
+      pl.updateCamera(1);
+      cam.updateMatrixWorld();
+      const f = cam.getWorldDirection(cam.position.clone());
+      const d = [p[0] - cam.position.x, p[1] - cam.position.y, p[2] - cam.position.z];
+      const l = Math.hypot(...d);
+      pl.look(-wrap(Math.atan2(d[0], d[2]) - Math.atan2(f.x, f.z)), -(Math.asin(d[1] / l) - Math.asin(f.y)));
+    }
+    pl.updateCamera(1);
+    cam.updateMatrixWorld();
+    const t = g.edition.inv.findTarget();
+    return t ? `${t.p.rec.id}${t.part >= 0 ? ':' + t.p.rec.parts[t.part].name : ''}` : null;
+  };
+  B.proc = (id) => g.edition.inv.procs.find((p) => p.rec.id === id);
+  B.rev = () => { if (g.menu === 'pause') g.closeMenu(); g.edition.inv.press(); }; // REVERSE, as R does
+  B.inv = () => { const v = g.edition.inv; return { active: v.active ? v.active.p.rec.id : null, charge: +v.state.charge.toFixed(2), cap: v.cap, why: v.lastRelease || null }; };
   B.goMission = (deck, sector = 0) => { g.campaign.deck = deck; g.campaign.sector = sector; g.campaign.flags = {}; g.campaign.visited = []; g.loadSector(true); g.simulate(0.3); B.skip(); };
   B.exit = () => { const ex = g.level.exit.box; B.place((ex[0] + ex[3]) / 2, (ex[2] + ex[5]) / 2); g.simulate(0.3); B.skip(); };
   B.f = (...ks) => Object.fromEntries(ks.map((k) => [k, g.deckWorld.flags[k] ?? g.facts.get(k)]));
@@ -374,6 +403,186 @@ await az(() => LVB.exit());
 await nextPlace();
 check(await az(() => AZ.facts.get('m05_done') && AZ.edition.deck.name === 'THE CLOCKMAKER\'S HOUSE'), 'Mission 5 ends; Mission 6 begins');
 
+// --- Act II: Mission 11, THE INVERTED HOSPITAL: REVERSE -------------------------------------------------
+console.log('Act II, Mission 11: The Inverted Hospital (REVERSE)');
+const SHOT = process.env.LV_SHOT || null; // where to save the REVERSE screenshot (optional)
+await az(() => { AZ.edition.start('act2'); AZ.simulate(0.2); LVB.skip(); LVB.goMission(2); });
+const hosp = await az(() => {
+  const g = AZ, inv = g.edition.inv;
+  const rev = g.level.order.filter((r) => g.engine.hasIn('timeReverse', r));
+  return { name: g.edition.deck.name, rev: rev.length, gravity: rev.map((r) => g.engine.gravity(r)), years: g.engine.statesOf(g.room), on: inv.unlocked, chip: document.querySelector('#lvReverse')?.classList.contains('on'), btn: !!document.querySelector('#buttons #lvRevBtn'), pips: [...document.querySelectorAll('#state .pip')].length };
+});
+check(hosp.name === 'THE INVERTED HOSPITAL' && hosp.rev > 0 && hosp.gravity.every((v) => v === -1) && JSON.stringify(hosp.years) === '["PRESENT","PAST"]' && !hosp.on && !hosp.chip && hosp.btn,
+  'Mission 11: two years, a ward that runs backwards (gravity unchanged), and no REVERSE yet', JSON.stringify(hosp));
+await press('KeyR');
+const early = await az(() => ({ state: AZ.engine.state(AZ.room), active: !!AZ.edition.inv.active, has: !!AZ.facts.get('has_inversion') }));
+check(early.state === 'PRESENT' && !early.active && !early.has, 'before it is taught, R reverses nothing (and is no longer a year switch)', JSON.stringify(early));
+// the records: the charred file un-burns three seconds in ten; the Chronolith catches the rhythm
+await az(() => LVB.goMission(2, 1));
+const unlock = await az(() => {
+  const g = AZ, inv = g.edition.inv, file = LVB.proc('charredFile');
+  if (!file) return 'no charred file';
+  const r = { room: g.room === file.rec.room };
+  LVB.place(file.rec.aim[0] + 1.1, file.rec.aim[2], 0.86, -Math.PI / 2);
+  for (let t = 0; t < 4 && !g.facts.get('has_inversion'); t += 0.5) { g.simulate(0.5); LVB.skip(); }
+  LVB.skip();
+  g.simulate(0.2);
+  Object.assign(r, { saw: g.facts.get('m11_saw_file'), has: g.facts.get('has_inversion'), said: LVB.said.some((l) => l.includes('I can hold one thing. Only one, and only for a while.')), chip: document.querySelector('#lvReverse').classList.contains('on'), chipText: document.querySelector('#lvReverse span').textContent, ...LVB.inv() });
+  r.board = (() => { const el = document.createElement('div'); g.edition.renderJournal(g, el); return el.innerHTML.includes('ABILITIES') && el.innerHTML.includes('R6'); })();
+  return r;
+});
+check(unlock.saw && unlock.has && unlock.said && unlock.chip && unlock.cap === 8 && /⟲ 8s/.test(unlock.chipText) && unlock.board,
+  'in the records hall the Chronolith catches the ward\'s rhythm: has_inversion, Kai\'s line, the REVERSE chip (8 s), the case board\'s ABILITIES', JSON.stringify(unlock));
+// R starts a hold on what the crosshair is on, and R again lets go
+const tray = await az(() => {
+  const g = AZ, p = LVB.proc('tray');
+  LVB.place(p.rec.aim[0] - 0.4, p.rec.aim[2] + 2.4);
+  return { aim: LVB.aim(p.rec.aim), ...LVB.inv() };
+});
+await press('KeyR');
+const trayHeld = await az(() => { const r = { ...LVB.inv(), rev: AZ.facts.get('rev_tray') }; AZ.simulate(1.6); r.P = +LVB.proc('tray').P.toFixed(2); r.label = document.querySelector('#lvTarget').textContent; r.chip = document.querySelector('#lvReverse span').textContent; return r; });
+await press('KeyR');
+const trayOut = await az(() => ({ ...LVB.inv(), rev: AZ.facts.get('rev_tray') }));
+check(tray.aim === 'tray' && trayHeld.active === 'tray' && trayHeld.rev && trayHeld.P === 1 && trayHeld.charge <= tray.charge - 0.5 && /THE TRAY/.test(trayHeld.chip) && /⟲ THE TRAY/.test(trayHeld.label),
+  'R on the fallen tray: it rises back onto its trolley and holds (charge spent, the chip and the label name it)', JSON.stringify({ tray, trayHeld }));
+check(!trayOut.active && trayOut.why === 'press' && !trayOut.rev, 'R again lets it go: it falls forward again', JSON.stringify(trayOut));
+// the touch ⟲ button does the same (it binds its own touches)
+const tap = await az(() => {
+  const g = AZ, p = LVB.proc('waterGlass'), btn = document.querySelector('#lvRevBtn');
+  LVB.place(p.rec.aim[0], p.rec.aim[2] + 2.2);
+  const r = { aim: LVB.aim(p.rec.aim) };
+  g.simulate(1.2);
+  btn.dispatchEvent(new Event('touchstart', { bubbles: true, cancelable: true }));
+  r.held = LVB.inv().active;
+  g.simulate(0.2);
+  r.text = btn.textContent;
+  g.simulate(1.0);
+  btn.dispatchEvent(new Event('touchstart', { bubbles: true, cancelable: true }));
+  r.after = LVB.inv().active;
+  g.simulate(0.2);
+  r.text2 = btn.textContent;
+  return r;
+});
+check(tap.aim === 'waterGlass' && tap.held === 'waterGlass' && /RELEASE/.test(tap.text) && !tap.after && /REVERSE/.test(tap.text2), 'the touch ⟲ button starts a hold (RELEASE) and lets it go', JSON.stringify(tap));
+// a hold belongs to its year: switching year lets go
+const annex = await az(() => {
+  const g = AZ, p = LVB.proc('burntDoor');
+  LVB.place(p.rec.aim[0] + 2.6, p.rec.aim[2] + 0.4);
+  const r = { aim: LVB.aim(p.rec.aim) };
+  g.simulate(1.2);
+  LVB.rev();
+  g.simulate(1.4);
+  r.held = LVB.inv().active;
+  r.P = +p.P.toFixed(2);
+  return r;
+});
+if (SHOT) {
+  await az(() => { AZ.frame(); AZ.frame(); });
+  await page.screenshot({ path: SHOT, timeout: 240000 });
+}
+await press('Digit2');
+const yearOff = await az(() => ({ year: AZ.engine.state(AZ.room), ...LVB.inv(), rev: AZ.facts.get('rev_burntDoor') }));
+await press('Digit1');
+check(annex.aim === 'burntDoor' && annex.held === 'burntDoor' && annex.P === 1 && yearOff.year === 'PAST' && !yearOff.active && yearOff.why === 'year' && !yearOff.rev,
+  'the burnt annex door un-burns and stands while held; switching to 2026 lets it go', JSON.stringify({ annex, yearOff }));
+// R6: never a person
+const refuse = await az(() => {
+  const g = AZ, p = LVB.proc('flatlineMonitor');
+  LVB.place(p.rec.aim[0] + 1.8, p.rec.aim[2] + 1.2);
+  const r = { aim: LVB.aim(p.rec.aim) };
+  g.simulate(0.2);
+  r.label = document.querySelector('#lvTarget').textContent;
+  LVB.rev();
+  LVB.skip();
+  return { ...r, ...LVB.inv(), said: LVB.said.includes('KAI: Not a person. It won\'t take a person.') };
+});
+check(refuse.aim === 'flatlineMonitor' && /✕ NOT A PROCESS/.test(refuse.label) && !refuse.active && refuse.said, 'the flatline monitor: ✕ NOT A PROCESS, "Not a person. It won\'t take a person."', JSON.stringify(refuse));
+// the file is readable only while it is held
+const charred = await az(() => {
+  const g = AZ, p = LVB.proc('charredFile');
+  LVB.place(p.rec.aim[0] + 1.1, p.rec.aim[2] + 0.3);
+  g.simulate(2.5); // the charge comes back
+  const r = {};
+  LVB.use('p_charredFile'); LVB.skip();
+  r.before = !!g.facts.get('ev_admitted_by');
+  r.aim = LVB.aim(p.rec.aim);
+  LVB.rev();
+  r.held = LVB.inv().active;
+  g.simulate(1.2);
+  LVB.use('p_charredFile'); LVB.skip();
+  r.after = !!g.facts.get('ev_admitted_by');
+  r.said = LVB.said.includes('NONE: ADMITTED BY: K. VAREN.');
+  LVB.rev();
+  r.released = !LVB.inv().active;
+  g.simulate(0.3);
+  r.door = g.deckWorld.dynamic.find((d) => d.el.id === 'door_m11records')?.cond(g.deckWorld.ctx(g.room));
+  return r;
+});
+check(!charred.before && charred.aim === 'charredFile' && charred.held === 'charredFile' && charred.after && charred.said && charred.released && charred.door === false,
+  'the charred file reads only while it is held: ADMITTED BY: K. VAREN (and the way on opens)', JSON.stringify(charred));
+// Ward 32's door: a reversing lock of four bolts, fitted RING, BAR, STAR, CRESCENT
+const ward32 = await az(() => { LVB.goMission(2, 2); return { ...LVB.where(), lock: !!LVB.proc('m11lock') }; });
+check(ok(ward32) && ward32.sector === 2 && ward32.lock, 'on to Ward 32\'s door', JSON.stringify(ward32));
+const clue = await az(() => {
+  const g = AZ, r = {};
+  const tag = LVB.cand('maintTag');
+  LVB.place(tag.pos[0] - 0.6, tag.pos[2] + 1.4);
+  LVB.use('maintTag'); LVB.skip();
+  r.now = !!g.facts.get('ev_lock_order');
+  g.edition.shift('PAST'); g.simulate(0.1);
+  LVB.use('maintTag'); LVB.skip();
+  r.then = !!g.facts.get('ev_lock_order');
+  r.said = LVB.said.some((l) => l.includes('BOLTS FITTED IN ORDER: RING, BAR, STAR, CRESCENT'));
+  g.edition.shift('PRESENT'); g.simulate(0.1);
+  return r;
+});
+check(!clue.now && clue.then && clue.said, 'the 2026 maintenance tag gives the fitting order: RING, BAR, STAR, CRESCENT', JSON.stringify(clue));
+const bolt = (name) => az((name) => {
+  const g = AZ, p = LVB.proc('m11lock'), i = p.rec.parts.findIndex((x) => x.name === name);
+  const at = p.rec.parts[i].rest.p;
+  LVB.place(p.rec.aim[0], p.rec.aim[2] + 2.6);
+  g.edition.stability = 1;
+  const r = { aim: LVB.aim(at), before: +g.edition.inv.state.charge.toFixed(2) };
+  LVB.rev();
+  r.after = +g.edition.inv.state.charge.toFixed(2);
+  g.simulate(1.4);
+  r.out = p.partOut.map((v, k) => (v === true ? p.rec.parts[k].name : null)).filter(Boolean);
+  g.simulate(2.0); // the charge comes back
+  LVB.skip();
+  return r;
+}, name);
+await az(() => { AZ.simulate(6); });
+const jam = await bolt('RING');
+check(jam.aim === 'm11lock:RING' && Math.abs(jam.before - jam.after - 1.5) < 0.05 && jam.out.length === 0, 'a wrong bolt (RING went in first) turns half back and jams: −1.5 s of charge', JSON.stringify(jam));
+const first = await bolt('CRESCENT');
+check(first.aim === 'm11lock:CRESCENT' && JSON.stringify(first.out) === '["CRESCENT"]', 'the last-fitted bolt, CRESCENT, backs out and stays out', JSON.stringify(first));
+const reload = await az(() => {
+  AZ.saveTo(2);
+  AZ.load(2);
+  AZ.simulate(0.3);
+  LVB.skip();
+  const p = LVB.proc('m11lock');
+  return { flag: AZ.deckWorld.flags.inv_m11lock_CRESCENT, out: p?.partOut.map((v, k) => (v === true ? p.rec.parts[k].name : null)).filter(Boolean), sector: AZ.campaign.sector, inv: !!AZ.campaign.inv };
+});
+check(reload.flag && JSON.stringify(reload.out) === '["CRESCENT"]' && reload.sector === 2 && reload.inv, 'a settled bolt survives a save and a load', JSON.stringify(reload));
+const rest = [];
+for (const n of ['STAR', 'BAR', 'RING']) rest.push(await bolt(n));
+const opened = await az(() => {
+  const g = AZ;
+  LVB.skip();
+  const d = g.deckWorld.dynamic.find((x) => x.el.id === 'door_m11ward32');
+  const r = { done: g.facts.get('inv_m11lock_done'), beat: !!g.deckWorld.flags.beat_done, shut: d?.cond(g.deckWorld.ctx(d.el.room)), said: LVB.said.some((l) => l.includes('Nothing pushes it back in.')) };
+  const p = LVB.proc('m11lock');
+  LVB.place(p.rec.aim[0], p.rec.aim[2] + 1.8);
+  const ward = g.level.order[g.level.order.indexOf(p.rec.room) + 1];
+  const w = g.level.rooms[ward].spawn;
+  r.left = +LVB.walkTo(w[0], w[2] - 2, 12).toFixed(2);
+  r.inWard = g.room === ward;
+  return r;
+});
+check(rest.every((r) => r.out.length >= 2) && opened.done && opened.beat && opened.shut === false && opened.said && opened.inWard,
+  'CRESCENT, STAR, BAR, RING: inv_m11lock_done, and Ward 32 opens (walked into)', JSON.stringify({ rest, opened }));
+
 // --- Act II: Mission 13, THE NINE-MINUTE WAR --------------------------------------------------------------
 console.log('Act II, Mission 13: The Nine-Minute War');
 await az(() => { AZ.edition.start('act2'); AZ.simulate(0.2); LVB.skip(); LVB.goMission(4); });
@@ -473,7 +682,7 @@ const walkRooms = await az(() => {
       const start = LVB.setbacks;
       let fail = null;
       for (const w of room.route) {
-        if (w.state) { g.engine.setState(rid, w.state, { force: true }); g.player.setGravity(g.engine.gravity(rid)); }
+        if (w.state) g.engine.setState(rid, w.state, { force: true });
         if (w.wait) g.simulate(w.wait);
         const left = LVB.walkTo(w.pos[0], w.pos[2], 20, !!w.jump);
         g.simulate(w.jump ? 1 : 0.15);

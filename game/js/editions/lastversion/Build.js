@@ -19,7 +19,7 @@ export class Deck {
     this.level = {
       id, deck, sector, seed, deckName, palette,
       rooms: {}, order: [], elements: [], texts: [], interactables: [], items: [], tokens: [], hazards: [], sentinels: [], npcs: [], checkpoints: [], triggers: [],
-      map: { rooms: [], corridors: [] }, effects: ['echoSolid', 'gravityFlip'], estimateMin, states, unstable,
+      map: { rooms: [], corridors: [] }, effects: ['echoSolid'], estimateMin, states, unstable,
     };
     this.cursor = 0; // world z of the next room's south wall
     this.rooms = [];

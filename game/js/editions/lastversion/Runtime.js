@@ -1,8 +1,10 @@
 // THE LAST VERSION OF EARTH: the runtime main.js hands the game to when the
 // edition is on. It owns the chapters and missions, the objective layers, scenes
-// and dialogue choices, Chronolith stability, Echo Step, causal anchors, the
-// case board and the endings. The engine, the worlds and the HUD are the same as
-// Station Zero's; this is the layer that tells them what Kai's verbs are.
+// and dialogue choices, Chronolith stability, Echo Step, causal anchors, REVERSE
+// (inversion.js), the case board and the endings. The engine, the worlds and the
+// HUD are the same as Station Zero's; this is the layer that tells them what
+// Kai's verbs are. Three years switch (Q, 1 2 3); nothing flips gravity, and
+// there are no laws.
 import * as THREE from '../../../vendor/three.module.min.js';
 import { generateZone } from '../../gen/ZoneGen.js';
 import { generateSector } from '../../gen/LevelGen.js';
@@ -12,6 +14,8 @@ import { PROLOGUE } from './prologue.js';
 import { ACTS, ENDINGS } from './acts.js';
 import { CAST, DIALOGUE, NPCS, TRUST, KNOWLEDGE, npcState } from './npcs.js';
 import { dressStates, stateWeather } from './dress.js';
+import { Inversion } from './inversion.js';
+import { placeAuthored } from './processes.js';
 
 export const CHAPTERS = {
   prologue: { name: 'PROLOGUE', sub: 'The Zero Second: Rain City, Helix, the first switch', question: 'What happened in the chamber, and why does the voice know Kai?' },
@@ -25,33 +29,63 @@ export const CHAPTERS = {
 export const ORDER = ['prologue', 'act1', 'act2', 'act3', 'act4', 'finale'];
 export const MISSIONS = { prologue: PROLOGUE, ...ACTS };
 
-// facts a chapter started from the menu counts as already true
-const PRIMES = {
+// what the generators may build in this edition: residue bridges and stairs, watchers, sweepers
+export const MECHS = ['echo', 'sentinel', 'time'];
+const EFFECTS = ['echoSolid', 'echoVisible', 'heldPersists', 'timeStop', 'observerFrozen']; // what a level here can ask for
+function mechsFor(m, fits) {
+  const list = (m.mechs || MECHS).filter(fits);
+  return list.length ? list : ['sentinel', 'time']; // never an empty list (the generator would fall back to gravity)
+}
+
+// v2.0 saves came from a four-state engine (INVERTED flipped gravity): the room states it no longer
+// has go back to the baseline, rooms lose a state they cannot have, and REVERSE gets its charge
+export function migrateSave(engine, campaign, def) {
+  const ok = (s) => def.states.includes(s);
+  for (const [rid, s] of Object.entries(engine.rooms)) if (!ok(s)) engine.rooms[rid] = engine.baseline;
+  for (const [rid, list] of Object.entries(engine.available)) engine.available[rid] = list.filter(ok);
+  for (const k of Object.keys(engine.overrides)) delete engine.overrides[k]; // the reversed wards are re-applied on load
+  engine.laws = [];
+  engine.unlocked = Math.min(engine.unlocked, engine.slots); // no law slots (a v2.0 save unlocked a third)
+  engine.recompile();
+  if (campaign) {
+    campaign.inv = { cap: 8, charge: 8, ...(campaign.inv || {}) };
+    campaign.lvFormat = 21;
+  }
+  return campaign;
+}
+
+// facts a chapter started from the menu counts as already true ([fact, value] for a value)
+export const PRIMES = {
   prologue: [],
   act1: ['has_chronolith', 'chronolith_seen', 'drawing_seen', 'fractured', 'mira_gone'],
-  act2: ['version_17', 'ev_witness_recording', 'found_not_built'],
-  act3: ['echo_step', 'ev_prisoners', 'ev_stabilizer'],
-  act4: ['ev_memorial', 'ev_anja_lock', 'ev_version17'],
+  act2: ['version_17', 'ev_witness_recording', 'found_not_built'], // Act II reaches REVERSE by playing Mission 11
+  act3: ['echo_step', 'ev_prisoners', 'ev_stabilizer', 'has_inversion', ['inv_cap', 10]],
+  act4: ['ev_memorial', 'ev_anja_lock', 'ev_version17', ['inv_cap', 12]],
   finale: ['ally'],
-  cases: ['has_chronolith', 'echo_step', 'zero_second', 'after_zero'],
+  cases: ['has_chronolith', 'echo_step', 'zero_second', 'after_zero', 'has_inversion'],
 };
 
-// the generators' challenge hints, said in Kai's voice and in the edition's verbs
+// the generators' challenge hints, said in Kai's voice and in the edition's verbs: three tiers each,
+// and a second set once REVERSE is his (Runtime.hint picks by has_inversion)
 export const HINTS = {
-  roof: ['The scene is on a roof.', 'In the past the old stairs still stand. Where the district can invert, the dome is a floor.', 'Switch to the past and climb the remembered stairs. Or invert the district, walk the dome and switch back above the roof.'],
-  canal: ['The water cuts the district in two.', 'A bridge used to be here. In the past it still does.', 'Switch to the past and cross the old bridge. Or invert and walk over it on the dome.'],
-  drones: ['The watchers look along the street. Only the street.', 'Stay behind buildings. Where the district can invert, go up. An Echo Step draws them off.', 'Invert and cross on the dome, or wait for the patrol to pass and use the alleys. Echo Step if I have it.'],
+  roof: ['The scene is on a roof.', 'In the past the old stairs still stand, and the past holds weight.', 'Switch to the past and climb the remembered stairs.'],
+  canal: ['The water cuts the district in two.', 'A bridge used to be here. In the past it still does.', 'Switch to the past and cross the old bridge.'],
+  drones: ['The watchers look along the street. Only the street.', 'Stay behind buildings and use the alleys. An Echo Step draws them off.', 'Wait for the patrol to pass, then cross behind it. Echo Step if I have it.'],
   gate: ['The way on is closed.', 'It opens when this place has told me what it is for.', 'Finish the scene here. Then walk to the gate.'],
-  'pit:gravity': ['The floor stops. The ceiling does not.', 'Inverted, the ceiling is a floor.', 'Switch to INVERTED, walk across on the ceiling, switch back over the far ledge.'],
   'pit:echo': ['Something was built here once.', 'In the past the bridge still stands, and the past holds weight.', 'Switch to the past and walk the old bridge.'],
   'ledge:echo': ['There were stairs here once.', 'In the past there still are.', 'Switch to the past and climb.'],
-  'exit:ceiling': ['The door is on the ceiling.', 'So walk there.', 'Switch to INVERTED and walk through the door on the ceiling.'],
-  'exit:key': ['The lock wants a key. There is one, somewhere else in time.', 'The key exists in the past. The lock works now. What I carry out of the past comes apart unless I anchor it: C.', 'Take the key in the past, press C to anchor it, switch back, use the lock.'],
-  'exit:core:gravity': ['The socket is empty. A core is on the ceiling.', 'Inverted, the ceiling is a floor.', 'Switch to INVERTED, take the core, switch back, put it in the socket.'],
+  'exit:key': ['The lock wants a key. There is one, somewhere else in time.', 'The key exists in the past. The lock works now. What I carry out of the past comes apart unless I anchor it.', 'Take the key in the past, anchor it, switch back, use the lock.'],
   'exit:core:echo': ['The core is on a high shelf. A stair used to lead there.', 'The stair stands in the past.', 'Switch to the past, climb, take the core, carry it to the socket.'],
-  sweepers: ['The beams sweep on a rhythm. Watch it twice.', 'Learn the loop, then cross between sweeps. Inverted, the loop runs backwards.', 'Wait for the beam to pass, then walk through behind it.'],
-  sentinel: ['It watches the floor in front of it.', 'Stay behind the pillars. Move when it turns. Inverted, it patrols backwards.', 'Wait behind a pillar until it walks away, then cross behind it.'],
+  sweepers: ['The beams sweep on a rhythm. Watch it twice.', 'Learn the loop, then cross between sweeps.', 'Wait for the beam to pass, then walk through behind it.'],
+  sentinel: ['It watches the floor in front of it.', 'Stay behind the pillars. Move when it turns.', 'Wait behind a pillar until it walks away, then cross behind it.'],
   'exit:open': ['The door is open.', 'Just walk.', 'Walk through the door.'],
+};
+export const HINTS_REVERSE = {
+  roof: ['The scene is on a roof.', 'In the past the old stairs still stand. If something here glints silver, it fell from somewhere, and it can go back.', 'Switch to the past and climb the remembered stairs.'],
+  canal: ['The water cuts the district in two.', 'A bridge used to be here. In the past it still does. Anything that glints silver will run backwards for me, for a while.', 'Switch to the past and cross the old bridge.'],
+  drones: ['The watchers look along the street. Only the street.', 'Stay behind buildings. A watcher that glints silver will walk its last few seconds backwards and forget it saw me.', 'Wait for the patrol to pass and use the alleys, or Echo Step. One thing at a time.'],
+  sweepers: ['The beams sweep on a rhythm. Watch it twice.', 'Learn the loop. In a ward that runs backwards the beams turn the other way.', 'Wait for the beam to pass, then walk through behind it.'],
+  sentinel: ['It watches the floor in front of it.', 'Stay behind the pillars. If it glints silver I can walk it back through its own steps.', 'Wait behind a pillar until it walks away, then cross behind it.'],
 };
 
 // the system lines TICK says in Station Zero, in this edition's voice
@@ -68,6 +102,7 @@ const LINES = {
 };
 
 const EV_LABELS = {
+  admitted_by: 'ADMITTED BY: K. VAREN, in an older hand', lock_order: 'The Ward 32 lock went in RING, BAR, STAR, CRESCENT',
   toy: 'A toy that un-fell', clock: 'A clock running backward', camera: 'A camera showing tomorrow', stopped_clock: 'Every clock stopped at 8:14',
   rook_log: 'Rook moved the test to 05:40', rook_evasion: 'Rook denies anything before Helix', dale: 'Dale told the truth about the chamber', drawing: 'Kai and Mira drawn beside the machine, 23 years ago',
   mira_archive: 'Mira in the junior programme, 2026', others_before: 'Others came before the first fire', found_not_built: 'Helix found the machine', clock_question: 'Which version of the question',
@@ -95,6 +130,7 @@ export class LastVersion {
     hud.states = def.states.map((key) => ({ key, label: def.labels[key] }));
     hud.speakers = def.speakers;
     hud.stabilityBar = true;
+    this.inv = new Inversion(this); // REVERSE (Mission 11 on)
     game.facts.onChange(() => this.onFact());
     // a watcher that rewinds its own damage, lured into a live conduit, stays down
     game.deckWorld.onSentinelDown = (s) => {
@@ -125,14 +161,18 @@ export class LastVersion {
     $('#title .ver').textContent = 'v2.0 · The Last Version of Earth';
     $('#begin small').textContent = 'Choose a chapter: the Prologue, Acts I to IV, the Finale, or the Cases';
     const dim = $('#title p.dim');
-    if (dim) dim.textContent = 'A temporal thriller about a machine that lets you stand in different years of the same place. Twenty-three missions, four states of one world, three endings.';
+    if (dim) dim.textContent = 'A temporal thriller about a machine that lets you stand in different years of the same place. Twenty-three missions, three years of one world, three endings.';
     const ctl = $('#title .controls.desktop-only');
-    if (ctl) ctl.innerHTML = '<span><b>WASD</b> move</span><span><b>MOUSE</b> look</span><span><b>SPACE</b> jump</span><span><b>Z</b> walk / run</span><span><b>E</b> / click use</span><span><b>Q</b> switch year</span><span><b>1 2 3 4</b> choose a year</span><span><b>C</b> anchor what you carry</span><span><b>X</b> Echo Step</span><span><b>H</b> think</span><span><b>J</b> / <b>L</b> case board</span><span><b>M</b> map</span><span><b>F5</b> quick save</span><span><b>ESC</b> pause</span>';
+    if (ctl) ctl.innerHTML = '<span><b>WASD</b> move</span><span><b>MOUSE</b> look</span><span><b>SPACE</b> jump</span><span><b>Z</b> walk / run</span><span><b>E</b> / click use</span><span><b>Q</b> switch year</span><span><b>1 2 3</b> choose a year</span><span><b>R</b> reverse</span><span><b>C</b> anchor what you carry</span><span><b>X</b> Echo Step</span><span><b>H</b> think</span><span><b>J</b> / <b>L</b> case board</span><span><b>M</b> map</span><span><b>F5</b> quick save</span><span><b>ESC</b> pause</span>';
     const hero = $('#hero .herohint');
     if (hero) hero.textContent = 'You are Kai Varen, temporal systems engineer. Choose how you look.';
-    for (const [sel, text] of [['#dock .hint span', 'THINK'], ['#dock .combo span', 'ECHO STEP'], ['#buttons .combo span', 'ECHO'], ['#dock .journal span', 'CASE']]) {
+    // no law device, no TICK, no SHIFT: the dock and the touch buttons say what they do here
+    for (const [sel, text] of [['#dock .hint span', 'THINK'], ['#dock .combo span', 'ECHO STEP'], ['#buttons .combo span', 'ECHO'], ['#dock .journal span', 'CASE'], ['#buttons .shift span', 'YEAR'], ['#journal header h2', 'CASE BOARD']]) {
       const el = $(sel);
       if (el) el.textContent = text;
+    }
+    for (const [sel, label] of [['#dock .hint', 'Think'], ['#dock .combo', 'Echo Step'], ['#buttons .combo', 'Echo Step'], ['#buttons .shift', 'Switch year'], ['#dock .journal', 'Case board'], ['#dock .laws', 'Case board']]) {
+      for (const el of document.querySelectorAll(sel)) el.setAttribute('aria-label', label);
     }
     const mapLegend = $('#map .legend .npc');
     if (mapLegend) mapLegend.textContent = 'People';
@@ -169,10 +209,11 @@ export class LastVersion {
   // --- starting and resuming ------------------------------------------------------------------
   makeStory(chapter) {
     const ms = MISSIONS[chapter];
-    // a generated puzzle may only use what this place's states can do: INVERTED flips gravity, PAST holds the residue
-    const fits = (m) => (k) => (k !== 'gravity' || m.states.includes('INVERTED')) && (k !== 'echo' || m.states.includes('PAST'));
+    // a generated puzzle may only use what this place's years can do: PAST holds the residue
+    // (no gravity, ceilings or zero-g: those were Station Zero's laws)
+    const fits = (m) => (k) => MECHS.includes(k) && (k !== 'echo' || m.states.includes('PAST'));
     const decks = ms.map((m, i) => ({
-      ...m, index: i, mkey: m.key, mechs: (m.mechs || ['echo', 'gravity', 'sentinel', 'time']).filter(fits(m)), key: m.kind === 'rooms' ? m.deckKey : m.key, rooms: m.roomsNames || m.rooms, names: m.kind === 'zone' ? m.rooms : undefined, crew: m.crew ?? 0,
+      ...m, index: i, mkey: m.key, mechs: mechsFor(m, fits(m)), key: m.kind === 'rooms' ? m.deckKey : m.key, rooms: m.roomsNames || m.rooms, names: m.kind === 'zone' ? m.rooms : undefined, crew: m.crew ?? 0,
       hints: { roof: HINTS.roof, canal: HINTS.canal, drones: HINTS.drones, gate: HINTS.gate },
     }));
     return {
@@ -181,7 +222,7 @@ export class LastVersion {
       cast: CAST, captain: CAST[0], truth: {}, decks,
       fragments: decks.map((d) => d.fragments?.[0] || []),
       after: { key: 'NONE', sentinels: 'hunt', dark: 0 },
-      mechs: ['echo', 'gravity', 'sentinel', 'time'], mechDeck: 4,
+      mechs: MECHS, mechDeck: 4,
     };
   }
 
@@ -198,15 +239,15 @@ export class LastVersion {
     if (!saved) {
       // everything before this chapter counts as played
       const upTo = chapter === 'cases' ? ['cases'] : ORDER.slice(0, ORDER.indexOf(chapter) + 1);
-      for (const c of upTo) for (const k of PRIMES[c] || []) g.facts.set(k);
+      for (const c of upTo) for (const k of PRIMES[c] || []) (Array.isArray(k) ? g.facts.set(k[0], k[1]) : g.facts.set(k));
     }
     if (!saved && chapter !== 'prologue' && !g.facts.get('faction')) g.facts.set('faction', 'neutral');
-    g.engine.unlockSlot(3);
     g.world.root.visible = false;
     g.observer.mesh.visible = false;
     g.npcs.juno.visible = false;
-    g.campaign = saved || { lv: true, chapter, deck: 0, sector: 0, flags: {}, visited: [], stability: 1 };
+    g.campaign = saved || { lv: true, chapter, deck: 0, sector: 0, flags: {}, visited: [], stability: 1, inv: { cap: 8, charge: 8 } };
     g.campaign.lv = true;
+    g.campaign.inv ||= { cap: 8, charge: 8 };
     this.stability = g.campaign.stability ?? 1;
     g.held = saved ? saved.held || null : null;
     this.anchored = null;
@@ -215,6 +256,7 @@ export class LastVersion {
   }
 
   resume(campaign) {
+    migrateSave(this.g.engine, campaign, this.def); // a v2.0 save may stand in an INVERTED room
     this.start(campaign.chapter, campaign);
   }
 
@@ -230,6 +272,7 @@ export class LastVersion {
   // the level for the current mission and sector
   buildLevel(c) {
     const g = this.g;
+    this.inv?.unload(); // the outgoing level's REVERSE processes leave before DeckWorld disposes of it
     const story = g.story;
     const deck = story.decks[c.deck];
     story.after.dark = deck.dark || 0;
@@ -245,11 +288,24 @@ export class LastVersion {
     for (const id of level.order) for (const w of [...(level.rooms[id].route || []), ...(level.rooms[id].keyRoute || [])]) if (RENAME[w.state]) w.state = RENAME[w.state];
     for (const id of level.order) {
       const room = level.rooms[id];
-      g.engine.setAvailable(id, room.states || states);
+      g.engine.setAvailable(id, (room.states || states).filter((s) => this.def.states.includes(s)));
       for (const ch of room.challenges || []) ch.hints = HINTS[ch.key] || ch.hints;
       // a room keeps the baseline until the player switches it (saves restore the rest)
-      if (!c.flags || !Object.keys(c.flags).length) g.engine.setState(id, g.engine.baseline, { force: true });
+      if (!c.flags || !Object.keys(c.flags).length || !this.def.states.includes(g.engine.state(id))) g.engine.setState(id, g.engine.baseline, { force: true });
     }
+    // what the generators still leave of Station Zero: no law tokens, no gravity effects, no memory keys
+    level.tokens = [];
+    level.effects = (level.effects || []).filter((e) => EFFECTS.includes(e));
+    const pastName = deck.labels?.PAST || this.def.labels.PAST; // the key is from the past: 'KEY (2026)'
+    for (const it of level.items) if (it.label === 'MEMORY KEY') it.label = `KEY (${pastName})`;
+    // a mission can name its rooms per sector (until its place is an open map)
+    const names = deck.roomNames?.[c.sector];
+    if (names) level.order.forEach((id, i) => {
+      if (!names[i]) return;
+      level.rooms[id].name = names[i];
+      const mr = level.map.rooms.find((r) => r.id === id);
+      if (mr) mr.name = names[i];
+    });
     // a 'tasks' beat: things to do along the avenue, each perhaps in its own state; the last one opens the gate
     const beat = deck.beats?.[c.sector];
     if (beat?.kind === 'tasks') {
@@ -273,6 +329,10 @@ export class LastVersion {
       if (real.length && here.some((s) => real.includes(s)) && here.some((s) => !real.includes(s))) n.temporal = real;
     }
     deck.adjust?.(level, this); // a consequence of an earlier choice can change the place
+    // REVERSE processes, scenes, doors and reversed wards at the mission's landmarks (§5)
+    placeAuthored(deck, level);
+    for (const k of Object.keys(g.engine.overrides)) g.engine.setOverride(k, null);
+    for (const rid of level.reversedRooms) g.engine.setOverride(rid, { timeReverse: true });
     if (!deck.noDress) dressStates(level, states);
     this.level = level;
     this.unstable = !!(level.unstable || deck.unstable);
@@ -299,6 +359,7 @@ export class LastVersion {
         if (deck.intro?.length) g.after(2.6, () => g.hud.say(deck.intro, g.facts));
       } else g.hud.card(kicker, this.level.rooms[start].name, deck.subtitle || '', 2600);
     }
+    this.inv?.load(this.level);
     this.objective(true);
   }
 
@@ -317,6 +378,8 @@ export class LastVersion {
       for (const l of deck.objectives) if (g.facts.test(l.when)) text = l.text;
       return text;
     }
+    const own = deck.objectiveFor?.(this); // a mission's own understanding, step by step
+    if (own) return own;
     const done = g.deckWorld.flags.beat_done;
     const beat = this.beat;
     if (done) return 'The way on is open. Walk to the gate.';
@@ -573,7 +636,8 @@ export class LastVersion {
     let text;
     let key;
     if (deck.hints) {
-      const h = deck.hints.find((x) => g.facts.test(x.when));
+      // a mission's own thoughts, some only in the room of their landmark
+      const h = deck.hints.find((x) => (!x.at || this.level?.anchorsAt?.[x.at]?.room === g.room) && g.facts.test(x.when || 'true'));
       if (h) {
         key = h.when;
         if (this.hintKey !== key) {
@@ -585,17 +649,31 @@ export class LastVersion {
       }
     }
     if (!text) {
+      // the nearest thing that will run backwards, once REVERSE is his
+      const ph = this.inv?.hintFor();
+      if (ph) {
+        key = ph.key;
+        if (this.hintKey !== key) {
+          this.hintKey = key;
+          this.hintTier = 0;
+        }
+        text = ph.tiers[Math.min(this.hintTier, ph.tiers.length - 1)];
+        this.hintTier++;
+      }
+    }
+    if (!text) {
       const r = this.level.rooms[g.room];
       const p = g.player.pos;
       const inside = (b) => p.x >= b[0] && p.x < b[3] && p.z >= b[2] && p.z < b[5];
       const ch = r.challenges?.find((c) => inside(c.box)) || r.challenges?.[0];
-      if (ch?.hints) {
+      const tiers = ch && ((g.facts.get('has_inversion') && HINTS_REVERSE[ch.key]) || HINTS[ch.key] || ch.hints);
+      if (tiers) {
         key = ch.key + g.room;
         if (this.hintKey !== key) {
           this.hintKey = key;
           this.hintTier = 0;
         }
-        text = ch.hints[Math.min(this.hintTier, 2)];
+        text = tiers[Math.min(this.hintTier, 2)];
         this.hintTier++;
       } else text = g.deckWorld.flags.beat_done ? 'The next door is open. Keep going.' : this.beat.kind === 'contradiction' ? 'Read the record on the wall. Then read it again in the past.' : this.beat.kind === 'tasks' ? 'There are things to do along the avenue. Some of them only answer in their own year.' : 'Look around. Someone left something for me.';
     }
@@ -720,16 +798,26 @@ export class LastVersion {
       }
     }
     this.deck.step?.(this, dt);
+    this.inv?.step(dt);
+    // the YEAR button wears the colour of the year it will switch to
+    if (typeof document !== 'undefined') {
+      const list = g.engine.statesOf(g.room);
+      const next = list.length > 1 ? list[(list.indexOf(state) + 1) % list.length] : state;
+      if (next !== this.nextYear) {
+        this.nextYear = next;
+        document.body.style.setProperty('--lv-next', `var(--${String(next).toLowerCase()})`);
+      }
+    }
   }
 
   snapBack() {
     const g = this.g;
     g.catching = true;
+    this.inv?.release('snap');
     g.hud.fade(true);
     g.audio.deny();
     setTimeout(() => {
       g.engine.setState(g.room, g.engine.baseline, { force: true });
-      g.player.setGravity(g.engine.gravity(g.room));
       g.player.place(g.checkpoint);
       this.stability = 0.5;
       g.hud.fade(false);
@@ -743,6 +831,8 @@ export class LastVersion {
   shift(to) {
     const g = this.g;
     const { engine, facts } = g;
+    // 4 is REVERSE now, not a fourth year
+    if (to === '4') return this.inv?.trigger();
     if (!facts.get('has_chronolith')) {
       g.audio.deny();
       if (!this.noChronoSaid) {
@@ -754,7 +844,7 @@ export class LastVersion {
     if (engine.locked.has(g.room)) return g.audio.deny();
     if (to) {
       if (/^\d$/.test(to)) to = engine.states[+to - 1];
-      else if (!engine.states.includes(to)) to = engine.states[['PHYSICAL', 'INVERTED', 'ECHO'].indexOf(to)];
+      else if (!engine.states.includes(to)) to = { PHYSICAL: 'PRESENT', ECHO: 'PAST' }[to];
       if (!to) return g.audio.deny();
       if (!engine.statesOf(g.room).includes(to)) {
         g.audio.deny();
@@ -765,8 +855,9 @@ export class LastVersion {
     const ok = to ? engine.setState(g.room, to) : engine.cycle(g.room);
     if (!ok) return g.audio.deny();
     const s = engine.state(g.room);
+    this.inv?.release('year'); // a process belongs to its year
     g.audio.sweep(s !== engine.baseline);
-    if (!g.settings.comfort) g.hud.flash({ PAST: 'rgba(255,200,120,0.35)', FUTURE: 'rgba(120,230,170,0.35)', INVERTED: 'rgba(255,90,180,0.35)' }[s] || 'rgba(255,255,255,0.3)');
+    if (!g.settings.comfort) g.hud.flash({ PAST: 'rgba(255,200,120,0.35)', FUTURE: 'rgba(120,230,170,0.35)' }[s] || 'rgba(255,255,255,0.3)');
     facts.inc('switches');
     this.deck?.onShift?.(this, s);
     if (!facts.get('first_switch')) {
@@ -848,19 +939,19 @@ export class LastVersion {
   // each year of an open district has its own hour: 2026 at dusk, 2196 in a pale dawn
   stateNight(state, night) {
     if (!this.level?.zone || this.deck?.noDress) return night;
-    return night * ({ PAST: 0.55, FUTURE: 0.4, INVERTED: 0.85 }[state] ?? 1);
+    return night * ({ PAST: 0.55, FUTURE: 0.4 }[state] ?? 1);
   }
 
   // ...and its own air: how much of the year's fog colour (warm 2026, pale green 2196) fills the district
   stateFog(state) {
     if (!this.level?.zone || this.deck?.noDress) return undefined;
-    return { PRESENT: 0.1, PAST: 0.8, FUTURE: 0.85, INVERTED: 0.6 }[state];
+    return { PRESENT: 0.1, PAST: 0.8, FUTURE: 0.85 }[state];
   }
 
   // ...and how thick that air is: 2026's warm haze, 2196's pale mist
   stateDensity(state) {
     if (!this.level?.zone || this.deck?.noDress) return 1;
-    return { PAST: 2.4, FUTURE: 2.8, INVERTED: 1.6 }[state] ?? 1;
+    return { PAST: 2.4, FUTURE: 2.8 }[state] ?? 1;
   }
 
   // each state tints the place
@@ -871,9 +962,9 @@ export class LastVersion {
     // an open district's weather follows its year
     if (this.level?.zone && state !== this.weatherState) {
       this.weatherState = state;
-      // a colour grade per year (where the renderer grades at all): sepia then, green-gold later, violet inverted
+      // a colour grade per year (where the renderer grades at all): sepia then, green-gold later
       const base = { shadowTint: 0x2a4a66, highlightTint: 0xfff0dc, toning: 0.08, contrast: 1.14, saturation: 1.02, ...(this.level.palette.grade || {}) };
-      const tone = this.deck?.noDress ? null : { PAST: { shadowTint: 0x3a2814, highlightTint: 0xffdcaa, toning: 0.3, saturation: 0.86 }, FUTURE: { shadowTint: 0x14382a, highlightTint: 0xeaffd8, toning: 0.3, saturation: 1.1 }, INVERTED: { shadowTint: 0x2a1648, highlightTint: 0xffd2f2, toning: 0.32, contrast: 1.2 } }[state];
+      const tone = this.deck?.noDress ? null : { PAST: { shadowTint: 0x3a2814, highlightTint: 0xffdcaa, toning: 0.3, saturation: 0.86 }, FUTURE: { shadowTint: 0x14382a, highlightTint: 0xeaffd8, toning: 0.3, saturation: 1.1 } }[state];
       g.postfx.setGrade({ ...base, ...(tone || {}) });
       const w = this.deck?.stateWeather?.[state] ?? stateWeather(state, this.level.palette);
       if (w !== g.weather.kind) g.weather.set(w);
@@ -898,6 +989,7 @@ export class LastVersion {
     el.innerHTML = `
       <h3>WHERE YOU ARE</h3><p><b>${chapter.name} &middot; ${deck?.name || ''}</b><br><span class="dim">${deck?.title || ''}${deck?.sectors > 1 ? ` &middot; part ${campaign.sector + 1} of ${deck.sectors}` : ''} &middot; stability ${Math.round(this.stability * 100)}%</span></p>
       <h3>THE QUESTION</h3><p class="dim">${story.question}</p>
+      ${this.inv?.abilitiesHtml() || ''}
       <h3>EVIDENCE</h3><ul class="board">${evs}</ul>
       <h3>PEOPLE</h3><ul class="board">${people}</ul>
       ${choices ? `<h3>WHAT YOU CHOSE</h3><ul class="board">${choices}</ul>` : ''}
