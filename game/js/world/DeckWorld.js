@@ -471,6 +471,7 @@ export class DeckWorld {
     const feet = player.pos.y - player.half.y, head = player.pos.y + player.half.y;
     for (const h of this.hazards) {
       if (h.stasisT > 0) h.stasisT -= dt; // a stasis pulse holds it still
+      if (h.zapT > 0) h.zapT -= dt;
       const frozen = this.engine.hasIn('timeStop', h.hz.room) || h.stasisT > 0;
       if (!frozen) h.angle += h.hz.speed * dt * (this.engine.hasIn('timeReverse', h.hz.room) ? -1 : 1);
       h.g.rotation.y = h.angle;
@@ -484,6 +485,8 @@ export class DeckWorld {
       const along = dx * ax + dz * az;
       if (Math.abs(along) > h.hz.radius) continue;
       const perp = Math.abs(dx * -az + dz * ax);
+      // a beam passing close by: its zap (the second edition keeps its own soundscape)
+      if (perp < 1.5 && !(h.zapT > 0) && !g.edition) { g.audio?.zap(); h.zapT = 0.9; }
       if (perp < 0.42) event = 'hit';
     }
     // the afterimage the watchers follow (Echo Step)

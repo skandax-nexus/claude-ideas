@@ -979,6 +979,7 @@ class Game {
 
   returnToStation() {
     this.weather.set(null);
+    this.audio.setAmbience(null);
     this.postfx.setGrade(STATION_GRADE);
     this.postfx.setEnvironment(null);
     this.deckWorld.dispose();
@@ -1269,6 +1270,7 @@ class Game {
     this.deckWorld.hero = this.settings.hero; // the Other wears your face
     this.deckWorld.build(lv, this.story, c.flags);
     this.weather.set(lv.palette.weather);
+    if (!c.lv) this.audio.setAmbience(['rain', 'storm'].includes(lv.palette.weather) ? 'rain' : null); // you hear the rain you see (the second edition sets its own beds)
     this.postfx.setGrade(lv.palette.grade || STATION_GRADE);
     this.postfx.setEnvironment(lv.palette.sky || null);
     this.minimap.setMap(lv.map, c.visited);
