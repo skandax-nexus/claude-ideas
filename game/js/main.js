@@ -503,7 +503,7 @@ class Game {
       <label>Mood${opt('mood')}</label>
       <label>Why the time loop exists${opt('motive')}</label>
       <label>The final twist${opt('twist')}</label>
-      <label>Crew names <small>up to 8, separated by commas</small><input id="st_names" maxlength="160" placeholder="e.g. Aria, Dev, Mina, Rohan"></label>
+      <label>Crew names <small>up to 8, separated by commas; lines with them are spoken by your device's own voice</small><input id="st_names" maxlength="160" placeholder="e.g. Aria, Dev, Mina, Rohan"></label>
       <label>Story number <small>the same number and wishes always tell the same story</small><input id="st_seed" inputmode="numeric" maxlength="9" placeholder="random"></label>
       <p class="dim">Names you type are spoken by your device's own voice; everything else uses the recorded voices.</p>
       <button class="big" id="st_go">CREATE STORY<small>Then choose a save slot</small></button>`;
@@ -556,7 +556,7 @@ class Game {
       </div>
       <h3>THE WORLD <small>one location per act, with its local rules; leave anything to the Forge</small></h3>
       <div id="fg_acts">${actsHtml(LENGTHS[len].acts, pre.acts)}</div>
-      <h3>THE CAST <small>up to 8 names and roles; one of them will be the ${'antagonist'}. Typed names are spoken by your device's own voice</small></h3>
+      <h3>THE CAST <small>up to 8 names and roles; one of them will be the ${'antagonist'}. Lines with a typed name are spoken by your device's own voice</small></h3>
       ${castHtml}
       <h3>THE KIT <small>four reality tools, not weapons: AFTERZERO has no combat. Each location's rules decide which work there</small></h3>
       <div class="grow">${gearHtml}</div>
