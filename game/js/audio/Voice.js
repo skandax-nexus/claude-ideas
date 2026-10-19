@@ -160,6 +160,8 @@ export class Voice {
   }
 
   speakDevice(text, who, extra) {
+    const vol = this.audio ? (this.audio.muted ? 0 : this.audio.volume ?? 1) : 1;
+    if (vol <= 0) return; // SOUND OFF and volume 0 silence the device voice too
     const plain = text.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
     const spoken = plain === plain.toUpperCase() ? plain.toLowerCase() : plain; // TICK and records shout in caps
     const p = { ...(PROFILES[(who === 'YOU' || who === 'OTHER') && this.youMale ? `${who}_m` : who] || PROFILES.NONE), ...extra };
@@ -173,7 +175,7 @@ export class Voice {
       const u = new SpeechSynthesisUtterance(spoken);
       u.pitch = Math.min(2, p.pitch);
       u.rate = p.rate;
-      u.volume = 0.95;
+      u.volume = Math.min(1, 0.95 * vol);
       const v = this.pickVoice(p.gender);
       if (v) u.voice = v;
       this.synth.speak(u);

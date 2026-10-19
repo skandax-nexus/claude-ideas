@@ -323,6 +323,11 @@ class Game {
     this.smart.apply();
   }
 
+  muteLabel() {
+    const b = document.querySelector('#mute');
+    if (b) b.textContent = (this.audio.ctx ? this.audio.muted : this.settings.muted) ? 'SOUND: OFF' : 'SOUND: ON';
+  }
+
   changeSetting(k, v) {
     this.settings[k] = v;
     saveSettings(this.settings);
@@ -361,7 +366,14 @@ class Game {
       this.saveTo('auto');
       location.reload();
     };
-    $('#mute').onclick = () => this.audio.toggleMute();
+    $('#mute').onclick = () => {
+      this.audio.toggleMute();
+      if (this.audio.muted) this.voice.stop(); // a line the device is already saying stops too
+      this.settings.muted = !!this.audio.muted; // remembered across loads and new games
+      saveSettings(this.settings);
+      this.muteLabel();
+    };
+    this.muteLabel();
     document.addEventListener('pointerlockchange', () => {
       if (!document.pointerLockElement && !this.paused && !this.menu && !this.touch) this.openMenu('pause');
     });
@@ -421,6 +433,8 @@ class Game {
     this.player.cinema = null;
     this.audio.start();
     this.audio.setVolume?.(this.settings.volume);
+    if (this.settings.muted && !this.audio.muted) this.audio.toggleMute(); // SOUND OFF stays off
+    this.muteLabel();
     let ok = false;
     if (action === 'load') ok = this.load(slot);
     else if (['cradle', 'vessel', 'studio'].includes(action)) this.adoptLastEnding();
