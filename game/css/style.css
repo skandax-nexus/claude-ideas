@@ -257,6 +257,8 @@ body.menu #card.on { opacity: 0; } /* never over an open menu */
 .suspects .st.guilty { background: #fde9e4; color: #c0553f; }
 body.text-lg .sub { font-size: 19px; }
 body.text-lg #objective .txt { font-size: 17px; }
+body.text-lg.touch .sub { font-size: 17px; } /* beats the phone sizes below */
+body.text-lg.touch #objective .txt { font-size: 15px; }
 
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 
