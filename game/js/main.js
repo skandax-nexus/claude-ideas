@@ -1184,27 +1184,30 @@ class Game {
     this.facts.set('verdict_right');
     this.facts.set('forge_ending', key);
     this.beatDone();
+    const show = () => this.showForgeEnding(end);
+    this.closeMenu();
+    this.hud.say(end.coda, this.facts, show);
+  }
+
+  // the Forge's ending card: after the coda, and again at the last gate (also after a reload)
+  showForgeEnding(end = forgeEnding(this.forge, this.facts.get('forge_ending'), this.facts)) {
     const $ = (q) => document.querySelector(q);
     const mins = Math.round(this.playTime / 60);
     const g = this.forge;
-    const show = () => {
-      $('#ending .body').innerHTML = `
+    $('#ending .body').innerHTML = `
       <h2>${end.title}</h2>${end.text.map((t) => `<p>${t}</p>`).join('')}
       <p class="dim">${end.coda[0].text}</p>
       <div class="stats"><span>${g.title.toUpperCase()} · ${GENRES[g.genre].label}</span><span>${Math.floor(mins / 60)} h ${mins % 60} min</span><span>${g.cast.filter((c) => this.facts.get(`met_${c.id}`)).length}/${g.cast.length} met</span><span>trusted ${end.trust} · doubted ${end.doubt}</span><span>Forge ${g.seed}</span></div>
       <button class="big" id="forgeAgain">BACK TO THE FORGE<small>Build another game, or the same one with a new number</small></button>
       <button id="keepPlaying">STAY HERE</button>`;
-      $('#forgeAgain').onclick = () => {
-        this.saveTo('auto');
-        session((s) => s.setItem(BOOT_KEY, JSON.stringify({ action: 'forgePanel', opts: { choices: { ...(this.campaign.choices || {}), seed: '' } } })));
-        location.reload();
-      };
-      $('#keepPlaying').onclick = () => this.closeMenu();
+    $('#forgeAgain').onclick = () => {
       this.saveTo('auto');
-      this.openMenu('ending');
+      session((s) => s.setItem(BOOT_KEY, JSON.stringify({ action: 'forgePanel', opts: { choices: { ...(this.campaign.choices || {}), seed: '' } } })));
+      location.reload();
     };
-    this.closeMenu();
-    this.hud.say(end.coda, this.facts, show);
+    $('#keepPlaying').onclick = () => { this.stayAtGate = true; this.closeMenu(); }; // the gate waits until you step out of it
+    this.saveTo('auto');
+    this.openMenu('ending');
   }
 
   loadSector(intro, roomId, pos) {
@@ -1300,8 +1303,11 @@ class Game {
       return;
     }
     if (c.deck === lastDeck && c.sector === per - 1) {
-      // the last gate: the vessel is done; offer the next cycle
-      if (this.menu !== 'ending') this.openMenu('ending');
+      // the last gate: the vessel is done; offer the next cycle. The card is rebuilt from the
+      // facts (a reload starts with an empty one); a closing coda still talking opens it itself.
+      if (this.menu === 'ending' || this.stayAtGate || this.hud.talking) return;
+      if (c.forge) this.showForgeEnding();
+      else this.showVesselEnding();
       return;
     }
     this.transitioning = true;
@@ -1496,28 +1502,32 @@ class Game {
     }
     this.facts.set('verdict_right');
     this.deckWorld.refresh(); // whoever waits for the verdict steps in (Juno, after SEVERED)
-    const $ = (s) => document.querySelector(s);
-    const mins = Math.round(this.playTime / 60);
     const A = this.story.after || {};
-    const again = A.again || ['CYCLE 43', 'A new vessel, a new crew, a new truth'];
-    const coda = (A.coda || []).filter((l) => l.who === 'NONE').map((l) => `<p class="dim">${l.text}</p>`).join('');
-    const show = () => {
-      $('#ending .body').innerHTML = `
-      <h2>${end.title}</h2>${end.text.map((p) => `<p>${p}</p>`).join('')}${coda}
-      <div class="stats"><span>${Math.floor(mins / 60)} h ${mins % 60} min</span><span>${this.facts.get('verdicts')} verdict${this.facts.get('verdicts') > 1 ? 's' : ''}</span>
-      <span>${this.story.cast.filter((c) => this.facts.get(`met_${c.id}`)).length}/7 crew met</span><span>seed ${this.campaign.seed}</span></div>
-      <button class="big" id="newVessel">${again[0]}<small>${again[1]}</small></button>
-      <button id="keepPlaying">STAY ON THE BRIDGE</button>`;
-      $('#newVessel').onclick = () => this.begin('vessel', null, null, { ending: this.campaign.ending ?? null });
-      $('#keepPlaying').onclick = () => this.closeMenu();
-      this.saveTo('auto');
-      this.openMenu('ending');
-    };
+    const show = () => this.showVesselEnding(end);
     // the last scene on the bridge plays first, in the world the prologue ending made
     if (A.coda?.length) {
       this.closeMenu();
       this.hud.say(A.coda, this.facts, show);
     } else show();
+  }
+
+  // the Vessel's ending card: after the coda, and again at the last gate (also after a reload)
+  showVesselEnding(end = verdictEnding(this.story, this.story.truth.culprit)) {
+    const $ = (s) => document.querySelector(s);
+    const mins = Math.round(this.playTime / 60);
+    const A = this.story.after || {};
+    const again = A.again || ['CYCLE 43', 'A new vessel, a new crew, a new truth'];
+    const coda = (A.coda || []).filter((l) => l.who === 'NONE').map((l) => `<p class="dim">${l.text}</p>`).join('');
+    $('#ending .body').innerHTML = `
+      <h2>${end.title}</h2>${end.text.map((p) => `<p>${p}</p>`).join('')}${coda}
+      <div class="stats"><span>${Math.floor(mins / 60)} h ${mins % 60} min</span><span>${this.facts.get('verdicts')} verdict${this.facts.get('verdicts') > 1 ? 's' : ''}</span>
+      <span>${this.story.cast.filter((c) => this.facts.get(`met_${c.id}`)).length}/7 crew met</span><span>seed ${this.campaign.seed}</span></div>
+      <button class="big" id="newVessel">${again[0]}<small>${again[1]}</small></button>
+      <button id="keepPlaying">STAY ON THE BRIDGE</button>`;
+    $('#newVessel').onclick = () => this.begin('vessel', null, null, { ending: this.campaign.ending ?? null });
+    $('#keepPlaying').onclick = () => { this.stayAtGate = true; this.closeMenu(); }; // the gate waits until you step out of it
+    this.saveTo('auto');
+    this.openMenu('ending');
   }
 
   deckHint() {
@@ -1955,6 +1965,7 @@ class Game {
           this.player.cinema = null;
           this.back();
         }
+        else if (this.menu === 'ending' && !document.querySelector('#ending .body button')) this.closeMenu(); // an empty card is never a trap
         else if (this.menu === 'ending' || this.menu === 'decision' || this.menu === 'forgechoice') { /* choose; endings are final */ }
         else if (this.menu) this.closeMenu();
         else if (!this.paused) this.openMenu('pause');
@@ -2242,6 +2253,7 @@ class Game {
       for (const cp of lv.checkpoints) if (cp.room === this.room && inBox(cp.box)) this.checkpoint = cp.spawn;
     }
     if (lv.exit && inBox(lv.exit.box)) this.completeSector();
+    else this.stayAtGate = false; // STAY at the last gate lasts until you step out of it
     const ev = this.deckWorld.update(dt, this.time, this);
     if (ev && !this.catching) this.deckSetback(ev);
     // threat music + the watcher meter follow the nearest sentinel
