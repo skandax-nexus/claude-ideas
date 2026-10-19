@@ -73,6 +73,11 @@ await context.addInitScript(({ noHdr }) => {
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
   if (noHdr) window.AZ_NO_HDR = 1;
+  // every long task of the page, from the start: [startTime, duration]
+  window.__LT = [];
+  try {
+    new PerformanceObserver((l) => { for (const e of l.getEntries()) window.__LT.push([e.startTime, e.duration]); }).observe({ type: 'longtask' });
+  } catch { /* no long task API */ }
 }, { noHdr: !!process.env.PERF_NO_HDR });
 const page = await context.newPage();
 const errors = [];
@@ -145,6 +150,10 @@ const HELPERS = () => {
     W(g.audio, ['setThreat', 'setDuck', 'footstep', 'setState'], 'audio.');
     W(g.objectives, ['update'], 'objectives.');
     for (const p of g.postfx.composer?.passes || []) P.wrap(p, 'render', `pass.${p.constructor.name}`);
+    // every animated character (player, Juno, crew, watchers): mixer + face + look-at, per frame
+    g.scene.traverse((o) => { if (o.userData?.mixer && typeof o.userData.animate === 'function') P.wrap(o.userData, 'animate', 'actor.animate'); });
+    const s0 = g.deckWorld.sentinels?.[0];
+    if (s0) P.wrap(Object.getPrototypeOf(s0), 'update', 'sentinel.update');
   };
   // frame(): one record per frame (phase times, heap, programs, textures)
   P.hookFrame = () => {
@@ -327,10 +336,12 @@ const HELPERS = () => {
     const progNames = {};
     for (const p of info.programs) { const k = P.progKind(p); progNames[k] = (progNames[k] || 0) + 1; }
     // expensive things in the page around the canvas: visible blurred panels, running CSS animations
-    let blur = 0;
-    for (const el of document.querySelectorAll('#ui *, .overlay')) {
+    const blur = [];
+    for (const el of document.querySelectorAll('body *')) {
       const cs = getComputedStyle(el);
-      if (cs.backdropFilter && cs.backdropFilter !== 'none' && cs.display !== 'none' && cs.visibility !== 'hidden' && +cs.opacity > 0 && el.offsetWidth) blur++;
+      if (cs.backdropFilter && cs.backdropFilter !== 'none' && cs.display !== 'none' && cs.visibility !== 'hidden' && +cs.opacity > 0 && el.offsetWidth) {
+        blur.push(`${el.id ? `#${el.id}` : el.tagName.toLowerCase()}${el.classList.length ? `.${[...el.classList].join('.')}` : ''} ${cs.backdropFilter} ${el.offsetWidth}x${el.offsetHeight}`);
+      }
     }
     const v2 = { x: g.renderer.domElement.width, y: g.renderer.domElement.height };
     return {
@@ -344,15 +355,15 @@ const HELPERS = () => {
       shadowMap: g.renderer.shadowMap.enabled ? g.sun.shadow.mapSize.x : 0,
       composer: g.postfx.composer ? g.postfx.composer.passes.map((p) => p.constructor.name) : null,
       env: !!g.scene.environment, fog: g.scene.fog?.density,
-      dom: { elements: document.getElementsByTagName('*').length, visibleBackdropBlur: blur, animations: document.getAnimations().length },
+      dom: { elements: document.getElementsByTagName('*').length, visibleBackdropBlur: blur.length, backdropBlur: blur.slice(0, 8), animations: document.getAnimations().filter((a) => a.playState === 'running').length },
       jsHeapMB: +((performance.memory?.usedJSHeapSize || 0) / 1048576).toFixed(1),
     };
   };
   // a program's kind: the built-in shader (standard, physical, basic...) or the material's name
   P.progKind = (p) => {
-    const head = String(p.cacheKey || '').split(',')[0];
-    const builtin = /^[a-z]+$/.test(head) ? head : 'custom';
-    return p.name ? `${builtin}:${p.name}` : builtin;
+    // WebGLProgram: type = the material's type (MeshStandardMaterial, ShaderMaterial...), name = material.name
+    const type = String(p.type || 'unknown').replace(/^Mesh|Material$/g, '');
+    return p.name ? `${type}:${p.name}` : type;
   };
   // GL time of one call to fn(): where a stall goes (shader compile/link, texture upload, buffers)
   P.glTime = (fn) => {
@@ -424,6 +435,7 @@ const HELPERS = () => {
     const e = now();
     g.frame();
     const f = now();
+    P.lastTransitionEnd = f;
     return {
       call_ms: +(b - a).toFixed(1), layout_ms: +(c - b).toFixed(1), frame1_ms: +(d - c).toFixed(1), frame2_ms: +(e - d).toFixed(1), frame3_ms: +(f - e).toFixed(1),
       ms_blocked: +(d - a).toFixed(1), programs_added: info.programs.length - p0, programs_added_frame1: p1 - p0, textures_added: info.memory.textures - t0x, geometries_added: info.memory.geometries - g0,
@@ -472,12 +484,18 @@ const settle = async () => {
   });
 };
 const waitSky = async () => {
-  // the district's sky (HDR -> PMREM, plus the light probe) loads asynchronously
+  // the district's sky (HDR parse + light probe on the CPU, then PMREM on the GPU) loads
+  // asynchronously after the build: on a phone that is a hitch in the first seconds of play
   const name = await az(() => window.AZ.postfx.envName || null);
   if (!name) return { sky: null, ms: 0 };
   const t = Date.now();
   await page.waitForFunction((n) => window.AZ.postfx.skies?.[n] || !window.AZ.postfx.q?.env, name, { timeout: 60000 }).catch(() => {});
-  return { sky: name, ms: Date.now() - t };
+  await page.waitForTimeout(300); // let the long task observer deliver
+  const lt = await az(() => {
+    const t0 = window.__P.lastTransitionEnd || 0;
+    return window.__LT.filter(([s]) => s >= t0).map(([, d]) => Math.round(d));
+  });
+  return { sky: name, ms: Date.now() - t, hdr: !process.env.PERF_NO_HDR, longTasksAfterBuild: lt.slice(0, 8), maxLongTaskMs: Math.max(0, ...lt) };
 };
 
 async function heapProfile(fn, frames) {
@@ -589,7 +607,7 @@ async function walk(scene, sec) {
     g.renderer.setAnimationLoop(() => g.frame());
   });
   const m0 = await metrics();
-  await browser.startTracing(page, { categories: ['devtools.timeline', 'v8', 'disabled-by-default-v8.gc'] });
+  await browser.startTracing(page, { categories: ['devtools.timeline', 'disabled-by-default-v8.gc'] });
   await page.keyboard.down('KeyW');
   await page.waitForTimeout(sec * 1000);
   await page.keyboard.up('KeyW');
@@ -613,6 +631,9 @@ async function walk(scene, sec) {
     return {
       frames: fr.length, fps: +(fr.length / span).toFixed(1), interval: P.stats(iv), frameJs: P.stats(fr.map((f) => f.frame)),
       over33: iv.filter((v) => v > 33.4).length, over50: iv.filter((v) => v > 50).length, over100: iv.filter((v) => v > 100).length,
+      // a gap the frame's own JS does not explain: the main thread waited (GPU process / SwiftShader JIT, GC, other tasks)
+      gapsNotJs: iv.filter((v, i) => v > 50 && fr[i].frame < 20).length,
+      gapsNotJsMs: Math.round(iv.reduce((s, v, i) => s + (v > 50 && fr[i].frame < 20 ? v - fr[i].frame : 0), 0)),
       longTasks: { n: lt.length, totalMs: Math.round(lt.reduce((s, e) => s + e.d, 0)), maxMs: Math.round(Math.max(0, ...lt.map((e) => e.d))) },
       longFramesTop: longFrames.sort((a, b) => b.ms - a.ms).slice(0, 6),
       programsAddedWhileWalking: progs.length ? progs[progs.length - 1] - P.prog0 : 0, compileFrames: progFrames.slice(0, 8),
@@ -633,12 +654,17 @@ async function walk(scene, sec) {
     const ev = JSON.parse(trace.toString()).traceEvents;
     const main = new Set(ev.filter((e) => e.name === 'thread_name' && e.args?.name === 'CrRendererMain').map((e) => `${e.pid}:${e.tid}`));
     const gc = { minor: 0, major: 0, minorMs: 0, majorMs: 0, maxMs: 0 };
-    for (const e of ev) {
-      if (!main.has(`${e.pid}:${e.tid}`) || e.ph !== 'X') continue;
+    // one name per GC: the timeline's MinorGC / MajorGC, or V8's own events when those are missing
+    const onMain = ev.filter((e) => main.has(`${e.pid}:${e.tid}`) && e.ph === 'X');
+    const timeline = onMain.some((e) => e.name === 'MinorGC' || e.name === 'MajorGC');
+    const MINOR = timeline ? ['MinorGC'] : ['V8.GC_SCAVENGER', 'V8.GC_MC_SCAVENGER', 'V8.GC_MINOR_MARK_SWEEPER'];
+    const MAJOR = timeline ? ['MajorGC'] : ['V8.GC_MARK_COMPACTOR'];
+    for (const e of onMain) {
       const d = (e.dur || 0) / 1000;
-      if (e.name === 'MinorGC' || e.name === 'V8.GC_SCAVENGER') { gc.minor++; gc.minorMs += d; gc.maxMs = Math.max(gc.maxMs, d); }
-      if (e.name === 'MajorGC' || e.name === 'V8.GC_MARK_COMPACTOR') { gc.major++; gc.majorMs += d; gc.maxMs = Math.max(gc.maxMs, d); }
+      if (MINOR.includes(e.name)) { gc.minor++; gc.minorMs += d; gc.maxMs = Math.max(gc.maxMs, d); }
+      if (MAJOR.includes(e.name)) { gc.major++; gc.majorMs += d; gc.maxMs = Math.max(gc.maxMs, d); }
     }
+    gc.source = timeline ? 'timeline' : 'v8.gc';
     gc.minorMs = +gc.minorMs.toFixed(1); gc.majorMs = +gc.majorMs.toFixed(1); gc.maxMs = +gc.maxMs.toFixed(1);
     gc.perSec = +((gc.minor + gc.major) / WALK).toFixed(2);
     res.gc = gc;
