@@ -134,7 +134,8 @@ export function generateZone(story, zi, si) {
     // a landmark roof: a tower block, a pump house, a giant tree's platform, a relay hut
     M.box([rx - 6, 0, rz - 6, rx + 6, rh, rz + 6], { mat: theme === 'forest' || theme === 'settlement' ? 'bark' : theme === 'reactor' || theme === 'ruin' ? 'industrial' : theme === 'cradle' ? 'pods' : theme === 'liminal' ? 'glassWall' : 'facade' });
     if (theme === 'forest' || theme === 'settlement') {
-      for (const [dx, dz] of [[-7, -7], [7, -7], [-7, 7], [7, 7]]) {
+      for (const [dx0, dz] of [[-7, -7], [7, -7], [-7, 7], [7, 7]]) {
+        const dx = dz > 0 && dx0 === -sceneSide * 7 ? dx0 * 1.25 : dx0; // keep the memory stairs' approach clear
         M.trees.push([rx + dx, rz + dz, rh + 6, 0.9, 3.4, dx + dz]);
         M.box([rx + dx - 0.7, 0, rz + dz - 0.7, rx + dx + 0.7, rh + 6, rz + dz + 0.7], { mat: 'bark', invisible: true });
       }
