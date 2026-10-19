@@ -109,6 +109,9 @@ class Game {
     this.renderer.toneMappingExposure = 1.0;
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    // the shadow map is drawn once per frame: PostFX.render asks for it, so the extra scene
+    // renders in a frame (ambient occlusion's normal pass, sky PMREM bakes) reuse it
+    this.renderer.shadowMap.autoUpdate = false;
     this.scene = new THREE.Scene();
     this.scene.fog = new THREE.FogExp2(0xe4edf5, 0.012);
     this.scene.background = new THREE.Color(0xe4edf5);

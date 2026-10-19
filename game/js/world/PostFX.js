@@ -122,8 +122,10 @@ export class PostFX {
     this.composer = this.bloom = this.ao = this.grade = null;
     if (!q.bloom && !q.ao) return;
     const size = renderer.getSize(new THREE.Vector2());
-    // multisampled target: clean edges on geometry even with post-processing on
-    const rt = new THREE.WebGLRenderTarget(size.x, size.y, { type: THREE.HalfFloatType, samples: q.msaa || 0 });
+    // multisampled target: clean edges on geometry even with post-processing on. Only its colour
+    // is read after the scene pass (bloom, output, grade; ambient occlusion renders its own depth),
+    // so each multisample resolve copies colour alone, not depth too.
+    const rt = new THREE.WebGLRenderTarget(size.x, size.y, { type: THREE.HalfFloatType, samples: q.msaa || 0, resolveDepthBuffer: false });
     const c = new EffectComposer(renderer, rt);
     c.addPass(new RenderPass(scene, camera));
     if (q.ao) {
@@ -218,7 +220,10 @@ export class PostFX {
     }
   }
 
+  // Every scene render goes through here (main.js sets shadowMap.autoUpdate = false): the shadow
+  // map is redrawn once, by the first scene render of the frame, and reused by the rest.
   render() {
+    this.renderer.shadowMap.needsUpdate = true;
     if (this.grade) this.grade.uniforms.time.value = (this.grade.uniforms.time.value + 0.017) % 100;
     if (this.composer) this.composer.render();
     else this.renderer.render(this.scene, this.camera);
