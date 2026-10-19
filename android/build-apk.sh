@@ -13,6 +13,22 @@
 # page. Without EDITION the build is the Station Zero game, unchanged.
 set -euo pipefail
 cd "$(dirname "$0")"
+# The signing key, checked first. Every build must be signed with the same key, or Android
+# refuses it as an update and the player has to uninstall (which deletes their saves): the key
+# lives outside the checkout (AZ_KEYSTORE, default ~/.afterzero/debug.keystore) and is never
+# made silently. AZ_NEW_KEY=1 makes one, for a first release only.
+KS=${AZ_KEYSTORE:-$HOME/.afterzero/debug.keystore}
+if [ ! -f "$KS" ]; then
+  if [ "${AZ_NEW_KEY:-}" = 1 ]; then
+    mkdir -p "$(dirname "$KS")"
+    keytool -genkeypair -keystore "$KS" -storepass android -keypass android \
+      -alias afterzero -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=AFTERZERO Debug" 2>&1 | grep -v JAVA_TOOL_OPTIONS || true
+  else
+    echo "no signing key at $KS: copy the key the released APKs were signed with there (or set AZ_KEYSTORE)." >&2
+    echo "AZ_NEW_KEY=1 makes a new key, but APKs signed with it cannot update installed copies." >&2
+    exit 1
+  fi
+fi
 EDITION=${EDITION:-}
 ANDROID_JAR=${ANDROID_JAR:-/usr/lib/android-sdk/platforms/android-23/android.jar}
 OUT=build
@@ -62,13 +78,11 @@ else echo "warning: no voice pack (tools/voice-pack.*); dialogue will use device
 javac --release 8 -classpath "$ANDROID_JAR" -d "$OUT/classes" src/com/afterzero/preview/MainActivity.java 2>&1 | grep -v JAVA_TOOL_OPTIONS || true
 dalvik-exchange --dex --output="$OUT/classes.dex" "$OUT/classes"
 
-# 3. Package, align, sign (debug key generated on first run).
+# 3. Package, align, sign (with the key checked at the top).
 aapt package -f -0 glb -0 ogg --rename-manifest-package "$APP_ID" -M "$MANIFEST" -S res -A "$OUT/assets" -I "$ANDROID_JAR" -F "$OUT/unsigned.apk"
 (cd "$OUT" && aapt add unsigned.apk classes.dex >/dev/null)
 zipalign -f 4 "$OUT/unsigned.apk" "$OUT/aligned.apk"
-[ -f debug.keystore ] || keytool -genkeypair -keystore debug.keystore -storepass android -keypass android \
-  -alias afterzero -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=AFTERZERO Debug" 2>&1 | grep -v JAVA_TOOL_OPTIONS || true
-apksigner sign --ks debug.keystore --ks-pass pass:android --key-pass pass:android --out "$OUT/$APK" "$OUT/aligned.apk"
+apksigner sign --ks "$KS" --ks-pass pass:android --key-pass pass:android --out "$OUT/$APK" "$OUT/aligned.apk"
 apksigner verify "$OUT/$APK"
 echo "Built $(pwd)/$OUT/$APK ($APP_ID${EDITION:+, edition $EDITION}, $(du -h "$OUT/$APK" | cut -f1))"
 

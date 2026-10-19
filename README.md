@@ -21,7 +21,7 @@ Each version is kept separately. It has its own git commit, its own Android app 
 | **v1.0** | saved | `c6b8682` (tag `v1.0.0`) | `AFTERZERO-v1.0.apk`, app "AFTERZERO 1.0" (`com.afterzero.v1_0`) | [claude.ai/artifact/8Vz91NGuA5NzYydryybv8q](https://claude.ai/artifact/8Vz91NGuA5NzYydryybv8q) |
 | **v0.9** | saved | `293d857` (tag `v0.9.0`) | `AFTERZERO-v0.9.apk`, app "AFTERZERO" (`com.afterzero.preview`) | [claude.ai/artifact/6m2ucDKS4hUW5bE818FZQz](https://claude.ai/artifact/6m2ucDKS4hUW5bE818FZQz) |
 
-`android/build-apk.sh` takes the version from `versionName` in `android/AndroidManifest.xml`. To start a new version, raise `versionCode` and `versionName` and change the app label there. The script then names the APK and the app id from it.
+`android/build-apk.sh` takes the version from `versionName` in `android/AndroidManifest.xml`. To start a new version, raise `versionCode` and `versionName` and change the app label there. The script then names the APK and the app id from it. It signs every APK with one key kept outside the checkout (`~/.afterzero/debug.keystore`, or `AZ_KEYSTORE`), so a new build installs as an update over the old one and keeps the player's saves; it stops if the key is missing instead of making a new one (`AZ_NEW_KEY=1` makes one on purpose).
 
 To rebuild a saved version, check out its commit and run the script.
 
