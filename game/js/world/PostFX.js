@@ -1,14 +1,15 @@
 // Post-processing by quality level: soft ambient occlusion (HIGH), a gentle
-// bloom on light strips and holograms (MEDIUM+), then tone mapping and colour
-// output. LOW renders straight to the screen.
+// bloom on light strips and holograms (MEDIUM+), then tone mapping, colour
+// output and the film grade in one last pass. LOW renders straight to the screen.
 import * as THREE from '../../vendor/three.module.min.js';
 import { EffectComposer } from '../../vendor/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from '../../vendor/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from '../../vendor/addons/postprocessing/UnrealBloomPass.js';
 import { GTAOPass } from '../../vendor/addons/postprocessing/GTAOPass.js';
 import { OutputPass } from '../../vendor/addons/postprocessing/OutputPass.js';
-import { ShaderPass } from '../../vendor/addons/postprocessing/ShaderPass.js';
+import { OutputShader } from '../../vendor/addons/shaders/OutputShader.js';
 import { RGBELoader } from '../../vendor/addons/loaders/RGBELoader.js';
+import { RoomEnvironment } from '../../vendor/addons/environments/RoomEnvironment.js';
 
 // Ambient light from a sky photo: project the HDR onto 9 spherical-harmonic
 // coefficients (THREE.LightProbe), so characters and props are lit by the sky's
@@ -50,7 +51,6 @@ function skyProbe(tex) {
 // highlights by default), a touch of saturation, vignette and fine grain.
 const GradeShader = {
   uniforms: {
-    tDiffuse: { value: null },
     time: { value: 0 },
     contrast: { value: 1.08 },
     saturation: { value: 1.06 },
@@ -60,14 +60,11 @@ const GradeShader = {
     vignette: { value: 0.32 },
     grain: { value: 0.035 },
   },
-  vertexShader: `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
-  fragmentShader: `
-    uniform sampler2D tDiffuse; uniform float time, contrast, saturation, toning, vignette, grain;
-    uniform vec3 shadowTint, highlightTint; varying vec2 vUv;
+  pars: `
+    uniform float time, contrast, saturation, toning, vignette, grain;
+    uniform vec3 shadowTint, highlightTint;
     float hash(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
-    void main() {
-      vec4 c = texture2D(tDiffuse, vUv);
-      vec3 col = c.rgb;
+    vec3 grade(vec3 col) {
       float l = dot(col, vec3(0.2126, 0.7152, 0.0722));
       col = mix(vec3(l), col, saturation);
       col = (col - 0.5) * contrast + 0.5;
@@ -76,10 +73,123 @@ const GradeShader = {
       vec2 d = vUv - 0.5;
       col *= 1.0 - vignette * smoothstep(0.25, 0.85, dot(d, d) * 2.2);
       col += (hash(vUv * 1000.0 + time) - 0.5) * grain;
-      gl_FragColor = vec4(clamp(col, 0.0, 1.0), c.a);
+      return clamp(col, 0.0, 1.0);
     }`,
 };
-import { RoomEnvironment } from '../../vendor/addons/environments/RoomEnvironment.js';
+
+// The last pass, straight to the screen: the bloom added over the scene, tone mapping and
+// sRGB output (three's OutputPass, whose render() still rebuilds the defines and reads
+// renderer.toneMappingExposure every frame), then the grade, in one full-screen draw. It used to
+// be two passes (output into a second half-float target, then the grade) and the bloom was
+// blended back into the multisampled scene target, which reloaded, stored and resolved it.
+class GradeOutputPass extends OutputPass {
+  constructor() {
+    super();
+    this.material.dispose(); // OutputPass's own material: never compiled, replaced here
+    this.uniforms = {
+      ...THREE.UniformsUtils.clone(OutputShader.uniforms), // tDiffuse, toneMappingExposure
+      ...THREE.UniformsUtils.clone(GradeShader.uniforms),
+      tBloom: { value: null },
+      bloomOn: { value: 0 },
+    };
+    this.material = new THREE.RawShaderMaterial({
+      name: 'GradeOutputShader',
+      uniforms: this.uniforms,
+      vertexShader: OutputShader.vertexShader,
+      fragmentShader: `
+        precision highp float;
+        uniform sampler2D tDiffuse;
+        uniform sampler2D tBloom;
+        uniform float bloomOn;
+        varying vec2 vUv;
+        #include <tonemapping_pars_fragment>
+        #include <colorspace_pars_fragment>
+        ${GradeShader.pars}
+        void main() {
+          vec4 c = texture2D(tDiffuse, vUv);
+          // the bloom, as UnrealBloomPass blended it (additive: SRC_ALPHA, ONE)
+          vec4 b = texture2D(tBloom, vUv);
+          c.rgb += bloomOn * b.rgb * b.a;
+          c.a += bloomOn * b.a * b.a;
+          // tone mapping and colour space: OutputShader
+          #ifdef LINEAR_TONE_MAPPING
+            c.rgb = LinearToneMapping(c.rgb);
+          #elif defined(REINHARD_TONE_MAPPING)
+            c.rgb = ReinhardToneMapping(c.rgb);
+          #elif defined(CINEON_TONE_MAPPING)
+            c.rgb = CineonToneMapping(c.rgb);
+          #elif defined(ACES_FILMIC_TONE_MAPPING)
+            c.rgb = ACESFilmicToneMapping(c.rgb);
+          #elif defined(AGX_TONE_MAPPING)
+            c.rgb = AgXToneMapping(c.rgb);
+          #elif defined(NEUTRAL_TONE_MAPPING)
+            c.rgb = NeutralToneMapping(c.rgb);
+          #endif
+          #ifdef SRGB_TRANSFER
+            c = sRGBTransferOETF(c);
+          #endif
+          gl_FragColor = vec4(grade(c.rgb), c.a);
+        }`,
+    });
+    this.fsQuad.material = this.material;
+    this.needsSwap = false; // the last pass: it draws to the screen
+  }
+}
+
+// UnrealBloomPass that leaves its result in renderTargetsHorizontal[0] for GradeOutputPass to
+// add, instead of blending it back over the scene target (with MSAA a reload, store and resolve
+// of the whole screen every frame). render() is a copy of three r169's UnrealBloomPass.render
+// (vendor/addons/postprocessing/UnrealBloomPass.js) that stops after the mip composite, and is
+// never the last pass: keep it in step if three is upgraded.
+class BloomPass extends UnrealBloomPass {
+  render(renderer, writeBuffer, readBuffer, deltaTime, maskActive) {
+    renderer.getClearColor(this._oldClearColor);
+    this.oldClearAlpha = renderer.getClearAlpha();
+    const oldAutoClear = renderer.autoClear;
+    renderer.autoClear = false;
+    renderer.setClearColor(this.clearColor, 0);
+    if (maskActive) renderer.state.buffers.stencil.setTest(false);
+
+    // 1. extract the bright areas
+    this.highPassUniforms.tDiffuse.value = readBuffer.texture;
+    this.highPassUniforms.luminosityThreshold.value = this.threshold;
+    this.fsQuad.material = this.materialHighPassFilter;
+    renderer.setRenderTarget(this.renderTargetBright);
+    renderer.clear();
+    this.fsQuad.render(renderer);
+
+    // 2. blur all the mips progressively
+    let inputRenderTarget = this.renderTargetBright;
+    for (let i = 0; i < this.nMips; i++) {
+      const blur = this.separableBlurMaterials[i];
+      this.fsQuad.material = blur;
+      blur.uniforms.colorTexture.value = inputRenderTarget.texture;
+      blur.uniforms.direction.value = UnrealBloomPass.BlurDirectionX;
+      renderer.setRenderTarget(this.renderTargetsHorizontal[i]);
+      renderer.clear();
+      this.fsQuad.render(renderer);
+      blur.uniforms.colorTexture.value = this.renderTargetsHorizontal[i].texture;
+      blur.uniforms.direction.value = UnrealBloomPass.BlurDirectionY;
+      renderer.setRenderTarget(this.renderTargetsVertical[i]);
+      renderer.clear();
+      this.fsQuad.render(renderer);
+      inputRenderTarget = this.renderTargetsVertical[i];
+    }
+
+    // 3. composite all the mips into renderTargetsHorizontal[0] (GradeOutputPass adds it)
+    this.fsQuad.material = this.compositeMaterial;
+    this.compositeMaterial.uniforms.bloomStrength.value = this.strength;
+    this.compositeMaterial.uniforms.bloomRadius.value = this.radius;
+    this.compositeMaterial.uniforms.bloomTintColors.value = this.bloomTintColors;
+    renderer.setRenderTarget(this.renderTargetsHorizontal[0]);
+    renderer.clear();
+    this.fsQuad.render(renderer);
+
+    if (maskActive) renderer.state.buffers.stencil.setTest(true);
+    renderer.setClearColor(this._oldClearColor, this.oldClearAlpha);
+    renderer.autoClear = oldAutoClear;
+  }
+}
 
 // Frees what a post pass holds on the GPU: its render targets and its own textures
 // (the passes are built here without outside textures). Its materials are left alone
@@ -137,11 +247,12 @@ export class PostFX {
     }
     if (q.bloom) {
       // threshold high: only the brightest strips and holograms glow
-      this.bloom = new UnrealBloomPass(new THREE.Vector2(size.x, size.y), 0.3, 0.5, 1.7); // only lamps, neon, screens and holograms; lit walls never haze
+      this.bloom = new BloomPass(new THREE.Vector2(size.x, size.y), 0.3, 0.5, 1.7); // only lamps, neon, screens and holograms; lit walls never haze
       c.addPass(this.bloom);
     }
-    c.addPass(new OutputPass());
-    this.grade = new ShaderPass(GradeShader);
+    // bloom added, tone mapped, sRGB and graded in one pass to the screen: with no swap the scene
+    // pass always draws into the same target, so at MEDIUM the composer's other target is never used
+    this.grade = new GradeOutputPass();
     c.addPass(this.grade);
     if (this.gradeLook) this.setGrade(this.gradeLook);
     this.composer = c;
@@ -157,6 +268,10 @@ export class PostFX {
     // used to reallocate everything twice)
     c.setPixelRatio(this.renderer.getPixelRatio());
     if (size.x !== c._width || size.y !== c._height) c.setSize(size.x, size.y);
+    // the final pass adds the bloom's result: linked here, which apply() runs too, so a rebuilt
+    // chain and every resize point it at the bloom target in use (resized in place, same texture)
+    this.grade.uniforms.tBloom.value = this.bloom ? this.bloom.renderTargetsHorizontal[0].texture : null;
+    this.grade.uniforms.bloomOn.value = this.bloom ? 1 : 0;
   }
 
   // Real-world light for a place: an equirect sky photo (assets/textures/sky_*.jpg)
