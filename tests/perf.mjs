@@ -25,8 +25,11 @@
 // mid-range phone is several times slower); SwiftShader times are reported only as "swiftshader*".
 // Deterministic: seeded Math.random, fixed seeds and spots, fixed dt, the same walk every run.
 //
-//   NODE_PATH=$(npm root -g) node tests/perf.mjs            (about 20 minutes)
-//   env: PERF_OUT=path (default the scratchpad's perf/perf-baseline.json)
+//   NODE_PATH=$(npm root -g) node tests/perf.mjs > summary.json      (about 20 minutes)
+// The first run writes perf/perf-baseline.json in the scratchpad; later runs write
+// perf/perf-run-<time>.json beside it and add "vsBaseline" (before -> after) to the summary, also
+// saved as perf-run-<time>.compare.json.
+//   env: PERF_DIR=dir (where the baseline and runs live)  PERF_OUT=path  PERF_BASELINE=path (raw results to compare with)
 //        PERF_SCENES=station_antechamber,station_lab,halcyon_neon,halcyon_reactor,cradle,vessel_medbay,forge
 //        PERF_QUALITIES=high,low  PERF_LIGHT_QUALITIES=medium  PERF_FRAMES=240  PERF_RENDER_CPU_FRAMES=90
 //        PERF_RENDER_FRAMES=1  PERF_TINY=0.1  PERF_WALK=15  PERF_WALK_QUALITY=low  PERF_DPR=2.625
@@ -41,7 +44,11 @@ const require = createRequire(import.meta.url);
 const { chromium } = require('playwright');
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.join(here, '..', 'game');
-const OUT = process.env.PERF_OUT || '/tmp/claude-0/-home-user-claude-ideas/172dbda8-49ff-56a9-a901-22c181c25683/scratchpad/perf/perf-baseline.json';
+const DIR = process.env.PERF_DIR || '/tmp/claude-0/-home-user-claude-ideas/172dbda8-49ff-56a9-a901-22c181c25683/scratchpad/perf';
+const BASE_FILE = path.join(DIR, 'perf-baseline.json');
+// the first run writes the baseline; later runs write beside it (never over it) and compare with it
+const OUT = process.env.PERF_OUT || (fs.existsSync(BASE_FILE) ? path.join(DIR, `perf-run-${new Date().toISOString().replace(/[:.]/g, '-')}.json`) : BASE_FILE);
+const COMPARE = process.env.PERF_BASELINE || (OUT !== BASE_FILE && fs.existsSync(BASE_FILE) ? BASE_FILE : null);
 const ALL_SCENES = ['station_antechamber', 'station_lab', 'halcyon_neon', 'halcyon_reactor', 'vessel_medbay', 'cradle', 'forge'];
 const SCENES = (process.env.PERF_SCENES || ALL_SCENES.join(',')).split(',').filter(Boolean);
 const QUALITIES = (process.env.PERF_QUALITIES || 'high,low').split(',').filter(Boolean);
@@ -84,6 +91,7 @@ await context.addInitScript(({ noHdr }) => {
     t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
+  window.__reseed = (n) => { s = n | 0; }; // each scene starts from its own point in the stream
   if (noHdr) window.AZ_NO_HDR = 1;
   // every long task of the page, from the start: [startTime, duration]
   window.__LT = [];
@@ -774,6 +782,9 @@ async function walk(scene, sec) {
 async function measureScene(name, reach) {
   const t = Date.now();
   log(`scene ${name}: reaching`);
+  // the same random stream and game clock for a scene whatever ran before it (the walks run in real time)
+  sceneIndex++;
+  await az((i) => { const g = window.AZ; window.__reseed(0x5eed + i * 7919); g.time = 10000 * i; g.timers = []; }, sceneIndex);
   let reached;
   try {
     reached = await reach();
@@ -784,7 +795,12 @@ async function measureScene(name, reach) {
   }
   const sky = await waitSky();
   await settle();
-  await az(() => window.__P.savePose());
+  reached.pose = await az(() => {
+    const P = window.__P, g = window.AZ;
+    P.savePose();
+    const r = (v) => [+v.x.toFixed(2), +v.y.toFixed(2), +v.z.toFixed(2)];
+    return { pos: r(g.player.pos), heading: r(g.player.H), camera: r(g.camera.position), room: g.room, state: g.engine.state(g.room), talking: !!g.hud.talking };
+  });
   const sc = (results.scenes[name] = { reached, sky, qualities: {} });
   for (const q of QUALITIES) {
     log(`  ${name} @ ${q}`);
@@ -816,6 +832,7 @@ async function measureScene(name, reach) {
   sc.wallSec = Math.round((Date.now() - t) / 1000);
 }
 
+let sceneIndex = 0;
 const trans = async (name, fn, arg) => {
   const r = await az(([src, arg]) => {
     const f = new Function('arg', `return (${src})(arg)`);
@@ -1065,6 +1082,44 @@ const sumOf = (re) => {
 summary.leakCheck = { qualityRoundTrips_high_low_high_x2: sumOf(/^quality (high|low) -> (low|high)/), smartSetLevel_high_med_low_med_high: sumOf(/^smart setLevel/) };
 for (const tr of results.transitions) summary.transitions[tr.name] = `${tr.ms_blocked}ms (call ${tr.call_ms}, frame1 ${tr.frame1_ms}; compile ${tr.gl_frame1?.compileMs ?? '?'}+${tr.gl_call?.compileMs ?? 0}, upload ${tr.gl_frame1?.uploadMs ?? '?'}+${tr.gl_call?.uploadMs ?? 0}) +${tr.programs_added}p +${tr.textures_added}tex`;
 for (const [k, v] of Object.entries(results.smart)) summary.smart[k] = `${v.perMinute.changes} changes, ${v.perMinute.scaleOrLevelFlips} flips, ${v.perMinute.applyQuality} applyQuality, ${v.perMinute.setSize} setSize -> ${v.final}`;
+// before / after: the same measures from a previous raw results file ("before -> after")
+if (COMPARE) {
+  try {
+    const base = JSON.parse(fs.readFileSync(COMPARE, 'utf8'));
+    const d = (a, b) => (a == null || b == null ? null : a === b ? `${b}` : `${a} -> ${b}`);
+    const cmp = { against: COMPARE, scenes: {}, transitions: {} };
+    for (const [name, sc] of Object.entries(results.scenes)) {
+      const bs = base.scenes?.[name];
+      if (!bs) continue;
+      const o = (cmp.scenes[name] = {});
+      for (const [q, m] of Object.entries(sc.qualities)) {
+        const b = bs.qualities?.[q];
+        if (!b) continue;
+        o[q] = {
+          draws: d(b.render?.calls, m.render?.calls), tris: d(b.render?.triangles, m.render?.triangles), targets: d(b.render?.gl?.targets?.length, m.render?.gl?.targets?.length),
+          programs: d(b.census?.programs, m.census?.programs), textures: d(b.census?.memory?.textures, m.census?.memory?.textures),
+          pointLights: d(b.census?.lights?.PointLight?.n, m.census?.lights?.PointLight?.n),
+          renderCpuMs: d(r1(b.renderCpu?.['postfx.render']?.avg), r1(m.renderCpu?.['postfx.render']?.avg)),
+          renderCalls: d(b.renderCpu?.['renderer.render']?.callsPerFrame, m.renderCpu?.['renderer.render']?.callsPerFrame),
+          logicMs: d(r1(b.logic?.phases?.frame?.avg), r1(m.logic?.phases?.frame?.avg)), logicP95: d(r1(b.logic?.phases?.frame?.p95), r1(m.logic?.phases?.frame?.p95)),
+          allocKBf: d(b.alloc?.kbPerFrame, m.alloc?.kbPerFrame),
+        };
+      }
+      if (sc.walk && bs.walk) o.walk = { frameJsP95: d(r1(bs.walk.frameJs?.p95), r1(sc.walk.frameJs?.p95)), frameJsMax: d(r1(bs.walk.frameJs?.max), r1(sc.walk.frameJs?.max)), longTasks: d(bs.walk.longTasks?.n, sc.walk.longTasks?.n), gc: d((bs.walk.gc?.minor || 0) + (bs.walk.gc?.major || 0), (sc.walk.gc?.minor || 0) + (sc.walk.gc?.major || 0)), newPrograms: d(bs.walk.programsAddedWhileWalking, sc.walk.programsAddedWhileWalking) };
+    }
+    const bt = Object.fromEntries((base.transitions || []).map((x) => [x.name, x]));
+    for (const tr of results.transitions) {
+      const b = bt[tr.name];
+      if (b) cmp.transitions[tr.name] = `${d(b.ms_blocked, tr.ms_blocked)} ms, programs ${d(b.programs_added, tr.programs_added)}, textures ${d(b.textures_added, tr.textures_added)}`;
+    }
+    const bsm = base.smart || {};
+    cmp.smart = Object.fromEntries(Object.entries(results.smart).filter(([k]) => bsm[k]).map(([k, v]) => [k, `changes ${d(bsm[k].perMinute.changes, v.perMinute.changes)}, flips ${d(bsm[k].perMinute.scaleOrLevelFlips, v.perMinute.scaleOrLevelFlips)}`]));
+    summary.vsBaseline = cmp;
+    fs.writeFileSync(OUT.replace(/\.json$/, '.compare.json'), JSON.stringify(cmp, null, 1));
+  } catch (e) {
+    summary.vsBaseline = { error: e.message };
+  }
+}
 console.log(JSON.stringify(summary, null, 1));
 await browser.close();
 server.close();
