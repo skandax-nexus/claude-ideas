@@ -1,28 +1,36 @@
 // Performance harness (read-only: it measures, it changes nothing in the game).
 //
 // Plays representative scenes on an emulated phone (landscape 915x412 CSS px, devicePixelRatio
-// 2.625, touch) and records, per scene and quality preset (smart renderer off):
-//   - what the GPU is asked to do: draw calls, triangles, shader programs, geometries, textures,
-//     lights by type (and shadow casters), meshes (visible / in view / skinned / transparent /
-//     shadow-casting), animation mixers, GL calls of one frame split by render target, canvas size
-//   - JS CPU time per frame by phase (game logic with rendering stubbed out, then rendering on
-//     its own; under SwiftShader the render numbers are software rasterisation, not a phone GPU)
-//   - allocation pressure (V8 sampling heap profiler: bytes per frame and the hottest allocators)
-//   - DOM work per frame (mutations, style recalcs, layouts) and expensive visible CSS
-//   - the real animation loop while walking (W held): long tasks, frame intervals, GC events,
-//     lazily compiled shaders, and which phase each long frame spent its time in
-//   - main-thread stalls and shader compiles per transition (rooms, reality states, sectors,
-//     menus, quality changes, smart renderer steps)
-//   - the smart renderer, fed synthetic frame times: how often scale / preset change per minute
-// Writes the raw results (PERF_OUT, default the scratchpad's perf/perf-baseline.json) and prints a
-// compact JSON summary. Deterministic: seeded Math.random, fixed seeds, fixed dt for the
-// measured frames, the same walk every run.
+// 2.625, touch, so no MSAA on the canvas and the game's own touch defaults) and records, per scene,
+// at HIGH and LOW in full and at MEDIUM (the touch default) in brief, smart renderer off:
+//   - what the GPU is asked to do in one full-size frame: draw calls, triangles, GL calls split by
+//     render target with their sizes (shadow maps, composer passes), shader programs, geometries,
+//     textures; lights by type (lit / shadow-casting), meshes (visible / in view / skinned /
+//     transparent / shadow-casting), animated characters (all / visible / in view), canvas size
+//   - JS CPU per frame by phase over FRAMES frames with rendering stubbed (game logic), then the
+//     render CPU on its own (three.js traversal, sorting, uniforms, submission; composer passes)
+//   - allocation pressure (V8 sampling heap profiler: KB per frame and the hottest allocators)
+//   - DOM work per frame (mutations, style recalcs, layouts), backdrop blurs and CSS animations
+//   - the real animation loop while walking (W held): frame JS, long tasks, GC (trace), lazily
+//     compiled shaders, style/layout; frame intervals are compositor-bound under SwiftShader
+//   - main-thread stalls, shader compiles and texture uploads per transition (rooms, reality
+//     states, sectors / districts / acts, menus, quality changes, smart renderer steps)
+//   - the smart renderer fed synthetic frame times: changes and flip-flops per minute
 //
-//   NODE_PATH=$(npm root -g) node tests/perf.mjs
-//   env: PERF_OUT=path  PERF_SCENES=station_antechamber,station_lab,halcyon_neon,halcyon_reactor,
-//        vessel_medbay,cradle,forge   PERF_QUALITIES=high,low   PERF_FRAMES=240   PERF_WALK=15
-//        PERF_DPR=2.625   PERF_VIEW=915x412   PERF_NO_HDR=1 (the claude.ai preview: JPG skies)
-//        PERF_SKIP_WALK=1  PERF_SKIP_SMART=1
+// SwiftShader (software GL on this machine's CPU) is not a phone GPU. Its GPU process lags behind
+// and blocks JS at random points, so: every rendered frame is measured with the GPU process idle
+// (one pixel read back between frames; gl.finish() does not wait here), and all frames but the one
+// full-size census frame render at PERF_TINY of the game's pixel ratio (every setPixelRatio is
+// scaled, the game's own calls included). Counts are exact; CPU times are this x86 machine's (a
+// mid-range phone is several times slower); SwiftShader times are reported only as "swiftshader*".
+// Deterministic: seeded Math.random, fixed seeds and spots, fixed dt, the same walk every run.
+//
+//   NODE_PATH=$(npm root -g) node tests/perf.mjs            (about 20 minutes)
+//   env: PERF_OUT=path (default the scratchpad's perf/perf-baseline.json)
+//        PERF_SCENES=station_antechamber,station_lab,halcyon_neon,halcyon_reactor,cradle,vessel_medbay,forge
+//        PERF_QUALITIES=high,low  PERF_LIGHT_QUALITIES=medium  PERF_FRAMES=240  PERF_RENDER_CPU_FRAMES=90
+//        PERF_RENDER_FRAMES=1  PERF_TINY=0.1  PERF_WALK=15  PERF_WALK_QUALITY=low  PERF_DPR=2.625
+//        PERF_VIEW=915x412  PERF_NO_HDR=1 (the claude.ai preview: JPG skies)  PERF_SKIP_WALK=1  PERF_SKIP_SMART=1
 import { createRequire } from 'node:module';
 import http from 'node:http';
 import fs from 'node:fs';
@@ -38,8 +46,12 @@ const ALL_SCENES = ['station_antechamber', 'station_lab', 'halcyon_neon', 'halcy
 const SCENES = (process.env.PERF_SCENES || ALL_SCENES.join(',')).split(',').filter(Boolean);
 const QUALITIES = (process.env.PERF_QUALITIES || 'high,low').split(',').filter(Boolean);
 const FRAMES = +(process.env.PERF_FRAMES || 240);
-const RENDER_FRAMES = +(process.env.PERF_RENDER_FRAMES || 24);
+const RENDER_FRAMES = +(process.env.PERF_RENDER_FRAMES || 1); // full-size SwiftShader frames (seconds each at HIGH)
+const RENDER_CPU_FRAMES = +(process.env.PERF_RENDER_CPU_FRAMES || 90);
+const TINY = +(process.env.PERF_TINY || 0.1); // render scale for everything that is not about pixels
+const LIGHT_QUALITIES = (process.env.PERF_LIGHT_QUALITIES ?? 'medium').split(',').filter(Boolean); // census + render CPU only
 const WALK = +(process.env.PERF_WALK || 15);
+const WALK_QUALITY = process.env.PERF_WALK_QUALITY || 'low'; // LOW has no shadow maps: the loop is then paced by the main thread, not by SwiftShader
 const DPR = +(process.env.PERF_DPR || 2.625);
 const [VW, VH] = (process.env.PERF_VIEW || '915x412').split('x').map(Number);
 const T0 = Date.now();
@@ -88,7 +100,7 @@ const az = (fn, a) => page.evaluate(fn, a);
 
 const results = {
   meta: {
-    date: new Date().toISOString(), viewport: `${VW}x${VH}`, dpr: DPR, touch: true, hdr: !process.env.PERF_NO_HDR, frames: FRAMES, renderFrames: RENDER_FRAMES, walkSec: WALK,
+    date: new Date().toISOString(), viewport: `${VW}x${VH}`, dpr: DPR, touch: true, hdr: !process.env.PERF_NO_HDR, frames: FRAMES, renderFrames: RENDER_FRAMES, renderCpuFrames: RENDER_CPU_FRAMES, renderScale: TINY, lightQualities: LIGHT_QUALITIES, walkSec: WALK, walkQuality: WALK_QUALITY,
     gl: 'SwiftShader (software): GPU-side timings are not a phone GPU; counts (draws, triangles, programs, lights) are exact',
     load: fs.existsSync('/proc/loadavg') ? fs.readFileSync('/proc/loadavg', 'utf8').trim() : null,
   },
@@ -260,7 +272,7 @@ const HELPERS = () => {
     let shadowLights = 0;
     const meshes = { total: 0, visible: 0, inView: 0, skinned: 0, skinnedVisible: 0, instanced: 0, instances: 0, transparent: 0, castShadow: 0, receiveShadow: 0, noCull: 0, sprites: 0, points: 0, lines: 0 };
     const mats = new Set(), matTypes = {}, geos = new Set(), texs = new Set();
-    let tris = 0, mixers = 0, actions = 0, bones = 0, morph = 0;
+    let tris = 0, mixers = 0, mixersVisible = 0, mixersInView = 0, actions = 0, bones = 0, morph = 0;
     const isVisible = (o) => { for (let p = o; p; p = p.parent) if (!p.visible) return false; return true; };
     // frustum test with the camera as last rendered
     const cam = g.camera;
@@ -285,10 +297,18 @@ const HELPERS = () => {
       return planes.every(([a, b, cc, d]) => a * c.x + b * c.y + cc * c.z + d > -r);
     };
     scene.traverse((o) => {
-      if (o.userData?.mixer) { mixers++; actions += o.userData.mixer._actions?.filter((x) => x.isRunning()).length || 0; }
+      if (o.userData?.mixer) {
+        mixers++;
+        actions += o.userData.mixer._actions?.filter((x) => x.isRunning()).length || 0;
+        // a character is animated every frame whether or not it can be seen: how many can be?
+        const c = o.getWorldPosition(new o.position.constructor());
+        c.y += 0.9;
+        if (isVisible(o) && planes.every(([a, b, cc, d]) => a * c.x + b * c.y + cc * c.z + d > -1.2)) mixersInView++;
+        if (isVisible(o)) mixersVisible++;
+      }
       if (o.isLight) {
         if (!isVisible(o)) return;
-        const k = o.type;
+        const k = o.isLightProbe ? 'LightProbe' : o.type;
         lights[k] = lights[k] || { n: 0, lit: 0, shadow: 0 };
         lights[k].n++;
         if (o.intensity > 0) lights[k].lit++;
@@ -348,14 +368,15 @@ const HELPERS = () => {
       lights, shadowLights,
       meshes, uniqueMaterials: mats.size, materialTypes: matTypes, uniqueGeometries: geos.size, sceneTriangles: Math.round(tris),
       sceneTextures: texs.size, sceneTextureMB: +(texBytes / 1048576).toFixed(1),
-      mixers, runningActions: actions, skinnedBones: bones, morphMeshes: morph,
+      mixers, mixersVisible, mixersInView, runningActions: actions, skinnedBones: bones, morphMeshes: morph,
       programs: info.programs.length, programNames: progNames,
       memory: { ...info.memory },
       canvas: { css: `${innerWidth}x${innerHeight}`, buffer: `${v2.x}x${v2.y}`, pixelRatio: +g.renderer.getPixelRatio().toFixed(3), devicePixelRatio: devicePixelRatio, megapixels: +((v2.x * v2.y) / 1e6).toFixed(2) },
       shadowMap: g.renderer.shadowMap.enabled ? g.sun.shadow.mapSize.x : 0,
       composer: g.postfx.composer ? g.postfx.composer.passes.map((p) => p.constructor.name) : null,
       env: !!g.scene.environment, fog: g.scene.fog?.density,
-      dom: { elements: document.getElementsByTagName('*').length, visibleBackdropBlur: blur.length, backdropBlur: blur.slice(0, 8), animations: document.getAnimations().filter((a) => a.playState === 'running').length },
+      dom: { elements: document.getElementsByTagName('*').length, visibleBackdropBlur: blur.length, backdropBlur: blur.slice(0, 8), animations: document.getAnimations().filter((a) => a.playState === 'running').length,
+        running: document.getAnimations().filter((a) => a.playState === 'running').slice(0, 8).map((a) => { const el = a.effect?.target; return `${a.animationName || a.transitionProperty || 'anim'} ${el ? (el.id ? `#${el.id}` : `${el.tagName.toLowerCase()}.${[...el.classList].join('.')}`) : ''}${Number.isFinite(a.effect?.getTiming?.().iterations) ? '' : ' (infinite)'}`; }) },
       jsHeapMB: +((performance.memory?.usedJSHeapSize || 0) / 1048576).toFixed(1),
     };
   };
@@ -399,8 +420,77 @@ const HELPERS = () => {
       top: Object.entries(ms).sort((a, b) => b[1] - a[1]).slice(0, 6).map(([k, v]) => `${k} ${v.toFixed(1)}ms x${n[k]}`),
     };
   };
-  // wait until the GPU process has caught up (so a measurement does not pay for earlier frames)
-  P.drain = () => window.AZ.renderer.getContext().finish();
+  // Wait until the GPU process has caught up, so a measurement does not pay for earlier frames.
+  // gl.finish() returns at once here (ANGLE/SwiftShader in Chromium's GPU process); reading one
+  // pixel back really waits for every queued command.
+  P.px = new Uint8Array(4);
+  P.drain = () => {
+    const gl = window.AZ.renderer.getContext();
+    const rfb = gl.getParameter(gl.READ_FRAMEBUFFER_BINDING);
+    if (rfb) gl.bindFramebuffer(gl.READ_FRAMEBUFFER, null);
+    gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, P.px);
+    if (rfb) gl.bindFramebuffer(gl.READ_FRAMEBUFFER, rfb);
+  };
+  // frames, each started with the GPU process idle: the frame's JS time is then its CPU cost
+  // (three.js submits asynchronously), and the drain after it is SwiftShader's time
+  P.syncFrames = (n) => {
+    const g = window.AZ;
+    P.gpuWait = P.gpuWait || [];
+    for (let i = 0; i < n; i++) {
+      g.frame();
+      const t0 = now();
+      P.drain();
+      P.gpuWait.push(now() - t0);
+    }
+  };
+  // Render scale: SwiftShader rasterises on this machine's CPU, so a full-size frame at HIGH costs
+  // seconds. Every pixel ratio the game sets (SmartRenderer.apply on quality changes included) is
+  // multiplied by P.renderScale: CPU-side work (traversal, sorting, uniforms, draw submission, shader
+  // compiles, uploads) stays the same, rasterisation shrinks. Full size only where pixels matter.
+  P.renderScale = 1;
+  P.hookPixelRatio = () => {
+    const r = window.AZ.renderer;
+    if (r.setPixelRatio.__orig) return;
+    const orig = r.setPixelRatio;
+    P.prWanted = r.getPixelRatio();
+    const f = function (v) {
+      P.prWanted = v;
+      return orig.call(this, v * P.renderScale);
+    };
+    f.__orig = orig;
+    r.setPixelRatio = f;
+  };
+  P.setRenderScale = (s) => {
+    P.renderScale = s;
+    window.AZ.renderer.setPixelRatio(P.prWanted);
+    window.AZ.resize();
+  };
+  // the same spot and heading for every measurement in a scene
+  P.savePose = () => {
+    const p = window.AZ.player;
+    P.pose = { pos: p.pos.clone(), H: p.H.clone(), facing: p.facing.clone(), pitch: p.pitch, room: window.AZ.room };
+  };
+  P.restorePose = () => {
+    const g = window.AZ, p = g.player, s = P.pose;
+    if (!s) return;
+    p.pos.copy(s.pos); p.vel.set(0, 0, 0); p.H.copy(s.H); p.facing.copy(s.facing); p.pitch = s.pitch; p.camPos = null;
+    if (g.room !== s.room) g.enterRoom(s.room);
+    p.updateCamera(1);
+  };
+  // wall time of whole rendered frames, GPU process included (gl.finish): SwiftShader, not a phone
+  P.wallFrames = (n) => {
+    const g = window.AZ, out = [];
+    P.fixedDt = 1 / 60;
+    P.drain();
+    for (let i = 0; i < n; i++) {
+      const t0 = now();
+      g.frame();
+      P.drain();
+      out.push(now() - t0);
+    }
+    P.fixedDt = null;
+    return out.map((v) => Math.round(v));
+  };
   // one rendered frame's renderer.info (with the composer, autoReset would keep only the last pass)
   P.renderInfo = () => {
     const g = window.AZ, info = g.renderer.info;
@@ -416,6 +506,9 @@ const HELPERS = () => {
   P.mo = new MutationObserver((list) => { P.mutations += list.length; });
   P.mo.observe(document.body, { subtree: true, childList: true, attributes: true, characterData: true });
   // a transition: the call, then the frames after it (shader compiles and uploads land in frame 1)
+  // The JS-visible block (the call + the first frame: compiles, uploads and their sync points);
+  // the GPU process is drained before and between frames, and its catch-up (SwiftShader) is
+  // reported apart.
   P.transition = (fn) => {
     const g = window.AZ, info = g.renderer.info;
     P.drain();
@@ -428,17 +521,23 @@ const HELPERS = () => {
     const c = now();
     const gl1 = P.glTime(() => g.frame());
     const d = now();
+    P.drain();
+    const d2 = now();
     const p1 = info.programs.length;
     const kinds = {};
     for (const p of info.programs.slice(p0)) { const k = P.progKind(p); kinds[k] = (kinds[k] || 0) + 1; }
     g.frame();
     const e = now();
+    P.drain();
+    const e2 = now();
     g.frame();
     const f = now();
-    P.lastTransitionEnd = f;
+    P.drain();
+    P.lastTransitionEnd = now();
     return {
-      call_ms: +(b - a).toFixed(1), layout_ms: +(c - b).toFixed(1), frame1_ms: +(d - c).toFixed(1), frame2_ms: +(e - d).toFixed(1), frame3_ms: +(f - e).toFixed(1),
-      ms_blocked: +(d - a).toFixed(1), programs_added: info.programs.length - p0, programs_added_frame1: p1 - p0, textures_added: info.memory.textures - t0x, geometries_added: info.memory.geometries - g0,
+      call_ms: +(b - a).toFixed(1), layout_ms: +(c - b).toFixed(1), frame1_ms: +(d - c).toFixed(1), frame2_ms: +(e - d2).toFixed(1), frame3_ms: +(f - e2).toFixed(1),
+      ms_blocked: +(d - a).toFixed(1), swiftshader_after_frame1_ms: +(d2 - d).toFixed(1),
+      programs_added: info.programs.length - p0, programs_added_frame1: p1 - p0, textures_added: info.memory.textures - t0x, geometries_added: info.memory.geometries - g0,
       new_programs: kinds, gl_call: glCall, gl_frame1: gl1,
     };
   };
@@ -459,9 +558,11 @@ async function runFrames(n, { render = true, turn = 0, walk = true } = {}) {
     }
   }, { render, turn, walk });
   let left = n;
+  if (render) await az(() => window.__P.drain());
   while (left > 0) {
     const k = Math.min(30, left);
-    await az((k) => { for (let i = 0; i < k; i++) window.AZ.frame(); }, k);
+    if (render) await az((k) => window.__P.syncFrames(k), k);
+    else await az((k) => { for (let i = 0; i < k; i++) window.AZ.frame(); }, k);
     left -= k;
   }
   await az(({ render }) => {
@@ -527,20 +628,37 @@ async function metrics() {
 }
 
 // --- measuring one scene at one quality ----------------------------------------------------------
-async function measureQuality(scene, q) {
+// light: only what the GPU is asked to do and the render CPU (for the phone default, MEDIUM)
+async function measureQuality(scene, q, { light = false } = {}) {
   const out = {};
   // switch quality (the cost of the switch itself is a transition)
   const prevQ = await az(() => window.AZ.settings.quality);
   if (prevQ !== q) {
     const tr = await az((q) => window.__P.transition(() => window.AZ.changeSetting('quality', q)), q);
-    results.transitions.push({ name: `${scene}: quality ${prevQ} -> ${q}`, ...tr });
+    results.transitions.push({ name: `${scene}: quality ${prevQ} -> ${q}`, ...tr, renderScale: TINY });
   }
-  await az(() => { window.__P.unwrapAll(); window.__P.instrument(); });
-  // warm up: compile what is in view, upload textures
-  await runFrames(6, { render: true, walk: false });
+  await az(() => { const P = window.__P; P.restorePose(); P.unwrapAll(); P.instrument(); });
+  // warm up at the small buffer: compile what is in view, upload textures
+  await runFrames(4, { render: true, walk: false });
+  // one full-size frame: draw calls, triangles, render targets and their sizes, then the census
+  await az(() => window.__P.setRenderScale(1));
   out.render = await az(() => window.__P.renderInfo());
   out.census = await az(() => window.__P.census());
-  // game logic, rendering stubbed: what a phone's CPU really runs per frame
+  // whole frames at full size, GPU process included (SwiftShader: software rasterisation, NOT phone GPU time)
+  out.swiftshaderFullFrameWallMs = await az((n) => window.__P.wallFrames(n), RENDER_FRAMES);
+  await az((s) => window.__P.setRenderScale(s), TINY);
+  // render CPU: three.js traversal, sorting, uniforms and draw submission, at the small buffer
+  await az(() => { window.__P.restorePose(); window.__P.frames = []; window.__P.gpuWait = []; });
+  await runFrames(light ? 60 : RENDER_CPU_FRAMES, { render: true, turn: 0.004 });
+  out.renderCpu = await az(() => {
+    const P = window.__P, s = P.summarize(P.frames);
+    return Object.fromEntries(Object.entries(s).filter(([k]) => /^(frame|postfx\.render|renderer\.render|shadowMap\.render|pass\.|actor\.animate|updateTheme|updateWorlds|step$)/.test(k)));
+  });
+  // SwiftShader's own time per frame at the small buffer: what does not shrink with resolution (shadow maps)
+  out.swiftshaderSmallFrameMs = await az(() => window.__P.stats(window.__P.gpuWait));
+  if (light) return out;
+  // game logic, rendering stubbed: what a phone's CPU runs per frame besides rendering
+  await az(() => window.__P.restorePose());
   const m0 = await metrics();
   const mut0 = await az(() => { window.__P.frames = []; return window.__P.mutations; });
   await runFrames(FRAMES, { render: false, turn: 0.004 });
@@ -559,34 +677,12 @@ async function measureQuality(scene, q) {
   logic.layoutMsPerFrame = +(((m1.LayoutDuration - m0.LayoutDuration) * 1000) / FRAMES).toFixed(3);
   out.logic = logic;
   // allocation pressure, without any instrumentation in the way (rendering included: three.js allocates too)
-  await az(() => { window.__P.snap = window.__P.frames; window.__P.unwrapAll(); window.__P.bare = true; });
-  const AF = Math.min(FRAMES, 120);
+  await az(() => { const P = window.__P; P.unwrapAll(); P.bare = true; P.restorePose(); });
+  const AF = Math.min(FRAMES, 60), AL = Math.min(FRAMES, 120);
   out.alloc = await heapProfile(() => runFrames(AF, { render: true, turn: 0.004 }), AF);
-  out.allocLogicOnly = await heapProfile(() => runFrames(AF, { render: false, turn: 0.004 }), AF);
-  await az(() => { window.__P.bare = false; window.__P.instrument(); });
-  // rendering on its own (SwiftShader: software rasterisation, NOT phone GPU time)
-  await az(() => { window.__P.frames = []; });
-  await runFrames(RENDER_FRAMES, { render: true, turn: 0.004 });
-  out.renderTiming = await az(() => {
-    const P = window.__P, s = P.summarize(P.frames);
-    const pick = Object.fromEntries(Object.entries(s).filter(([k]) => /^(frame|postfx\.render|renderer\.render|shadowMap\.render|pass\.)/.test(k)));
-    return pick;
-  });
-  // the same frames at a tiny drawing buffer: what is left is mostly CPU-side submission
-  out.renderTimingTiny = await az(async () => {
-    const g = window.AZ, P = window.__P;
-    const pr = g.renderer.getPixelRatio();
-    g.renderer.setPixelRatio(0.06);
-    g.resize();
-    P.frames = [];
-    P.fixedDt = 1 / 60;
-    for (let i = 0; i < 12; i++) g.frame();
-    P.fixedDt = null;
-    const s = P.summarize(P.frames);
-    g.renderer.setPixelRatio(pr);
-    g.resize();
-    return Object.fromEntries(Object.entries(s).filter(([k]) => /^(frame|postfx\.render|renderer\.render|shadowMap\.render)$/.test(k)));
-  });
+  await az(() => window.__P.restorePose());
+  out.allocLogicOnly = await heapProfile(() => runFrames(AL, { render: false, turn: 0.004 }), AL);
+  await az(() => { const P = window.__P; P.bare = false; P.instrument(); P.restorePose(); });
   return out;
 }
 
@@ -595,6 +691,7 @@ async function walk(scene, sec) {
   if (process.env.PERF_SKIP_WALK || !sec) return null;
   await az(() => {
     const P = window.__P, g = window.AZ;
+    P.restorePose();
     P.unwrapAll();
     P.instrument();
     P.frames = [];
@@ -637,7 +734,7 @@ async function walk(scene, sec) {
       longTasks: { n: lt.length, totalMs: Math.round(lt.reduce((s, e) => s + e.d, 0)), maxMs: Math.round(Math.max(0, ...lt.map((e) => e.d))) },
       longFramesTop: longFrames.sort((a, b) => b.ms - a.ms).slice(0, 6),
       programsAddedWhileWalking: progs.length ? progs[progs.length - 1] - P.prog0 : 0, compileFrames: progFrames.slice(0, 8),
-      phases: Object.fromEntries(Object.entries(P.summarize(fr)).filter(([k]) => /^(frame|step|updateWorlds|updateTheme|minimap\.drawMini|postfx\.render|hud\.update|updateHudMood|saveTo|player\.updateCamera)$/.test(k))),
+      phases: Object.fromEntries(Object.entries(P.summarize(fr)).filter(([k]) => /^(frame|step|updateWorlds|updateTheme|minimap\.drawMini|postfx\.render|renderer\.render|shadowMap\.render|hud\.update|updateHudMood|saveTo|player\.updateCamera|player\.update|findFocus|actor\.animate|deckWorld\.update|world\.update|npcs\.update|enterRoom)$/.test(k))),
       domMutationsPerFrame: +((P.mutations - P.mut0) / Math.max(1, fr.length)).toFixed(1),
       heap: P.stats(fr.map((f) => f.heap / 1048576)),
       endPos: [+pos.x.toFixed(2), +pos.y.toFixed(2), +pos.z.toFixed(2)],
@@ -687,19 +784,35 @@ async function measureScene(name, reach) {
   }
   const sky = await waitSky();
   await settle();
+  await az(() => window.__P.savePose());
   const sc = (results.scenes[name] = { reached, sky, qualities: {} });
   for (const q of QUALITIES) {
     log(`  ${name} @ ${q}`);
     sc.qualities[q] = await measureQuality(name, q);
   }
-  // walk in the real loop at the last quality measured
-  log(`  ${name}: walking ${WALK}s @ ${QUALITIES[QUALITIES.length - 1]}`);
-  sc.walk = await walk(name, WALK);
-  if (sc.walk) sc.walk.quality = QUALITIES[QUALITIES.length - 1];
-  // back to the first quality for the next transition
-  const first = QUALITIES[0];
-  const tr = await az((q) => window.__P.transition(() => window.AZ.changeSetting('quality', q)), first);
-  results.transitions.push({ name: `${name}: quality ${QUALITIES[QUALITIES.length - 1]} -> ${first} (again)`, ...tr });
+  for (const q of LIGHT_QUALITIES.filter((x) => !QUALITIES.includes(x))) {
+    log(`  ${name} @ ${q} (census + render CPU)`);
+    sc.qualities[q] = await measureQuality(name, q, { light: true });
+  }
+  // walk in the real loop (at the phone default quality)
+  const wq = WALK && !process.env.PERF_SKIP_WALK ? WALK_QUALITY : null;
+  const cur = await az(() => window.AZ.settings.quality);
+  if (wq && cur !== wq) {
+    const tr = await az((q) => window.__P.transition(() => window.AZ.changeSetting('quality', q)), wq);
+    results.transitions.push({ name: `${name}: quality ${cur} -> ${wq}`, ...tr, renderScale: TINY });
+  }
+  if (wq) {
+    log(`  ${name}: walking ${WALK}s @ ${wq}`);
+    sc.walk = await walk(name, WALK);
+    if (sc.walk) { sc.walk.quality = wq; sc.walk.renderScale = TINY; }
+  }
+  // back to the first quality for what comes next
+  const now = await az(() => window.AZ.settings.quality);
+  if (now !== QUALITIES[0]) {
+    const tr = await az((q) => window.__P.transition(() => window.AZ.changeSetting('quality', q)), QUALITIES[0]);
+    results.transitions.push({ name: `${name}: quality ${now} -> ${QUALITIES[0]}`, ...tr, renderScale: TINY });
+  }
+  await az(() => window.__P.restorePose());
   sc.wallSec = Math.round((Date.now() - t) / 1000);
 }
 
@@ -708,7 +821,7 @@ const trans = async (name, fn, arg) => {
     const f = new Function('arg', `return (${src})(arg)`);
     return window.__P.transition(() => f(arg));
   }, [fn.toString(), arg]);
-  results.transitions.push({ name, ...r });
+  results.transitions.push({ name, ...r, renderScale: TINY });
   log(`  transition ${name}: blocked ${r.ms_blocked} ms, +${r.programs_added} programs`);
   return r;
 };
@@ -721,14 +834,18 @@ await page.evaluate(() => localStorage.clear());
 await page.reload();
 await page.waitForFunction(() => window.AZ, null, { timeout: 300000 });
 results.boot.toGameMs = Date.now() - t;
+await az(() => window.AZ.renderer.setAnimationLoop(null)); // the title backdrop is not measured
 await az(HELPERS);
-await az(() => {
-  const g = window.AZ;
+// what this page chose on its own (software GL is detected and starts on LOW; a phone starts on MEDIUM)
+results.boot.defaults = await az(() => ({ touch: window.AZ.touch, quality: window.AZ.settings.quality, smart: window.AZ.settings.smart, pixelRatio: window.AZ.renderer.getPixelRatio(), antialias: window.AZ.renderer.getContextAttributes().antialias, renderer: (() => { const gl = window.AZ.renderer.getContext(); const e = gl.getExtension('WEBGL_debug_renderer_info'); return e ? gl.getParameter(e.UNMASKED_RENDERER_WEBGL) : ''; })(), parallelShaderCompile: !!window.AZ.renderer.getContext().getExtension('KHR_parallel_shader_compile') }));
+await az((s) => {
+  const g = window.AZ, P = window.__P;
+  P.hookPixelRatio();
+  P.renderScale = s;
   g.changeSetting('smart', false);
   g.changeSetting('hero', { id: 'nova' });
   g.changeSetting('quality', 'high');
-});
-results.boot.defaults = await az(() => ({ touch: window.AZ.touch, antialias: window.AZ.renderer.getContextAttributes().antialias, renderer: (() => { const gl = window.AZ.renderer.getContext(); const e = gl.getExtension('WEBGL_debug_renderer_info'); return e ? gl.getParameter(e.UNMASKED_RENDERER_WEBGL) : ''; })() }));
+}, TINY);
 await az(() => window.__P.hookFrame());
 t = Date.now();
 await az(() => { window.AZ.renderer.setAnimationLoop(null); window.AZ.begin('new'); });
@@ -911,29 +1028,42 @@ fs.mkdirSync(path.dirname(OUT), { recursive: true });
 fs.writeFileSync(OUT, JSON.stringify(results, null, 1));
 
 const r1 = (v) => (v == null ? null : +(+v).toFixed(1));
-const summary = { out: OUT, wallSec: results.meta.wallSec, view: `${VW}x${VH}@${DPR}`, scenes: {}, transitions: {}, smart: {}, skipped: results.skipped, errors: errors.slice(0, 5) };
+const summary = { out: OUT, wallSec: results.meta.wallSec, view: `${VW}x${VH}@${DPR}`, renderScale: TINY, boot: { defaults: results.boot.defaults, firstFrameMs: results.boot.firstFrame?.ms_blocked, firstFramePrograms: results.boot.firstFrame?.programs_added }, scenes: {}, transitions: {}, smart: {}, skipped: results.skipped, errors: errors.slice(0, 5) };
 for (const [name, sc] of Object.entries(results.scenes)) {
-  const o = (summary.scenes[name] = {});
+  const o = (summary.scenes[name] = { sky: sc.sky?.sky ? `${sc.sky.sky} ${sc.sky.ms}ms, max long task ${sc.sky.maxLongTaskMs}ms` : null });
   for (const [q, m] of Object.entries(sc.qualities)) {
-    const ph = m.logic.phases;
-    const c = m.census;
-    o[q] = {
-      draws: m.render.calls, tris: m.render.triangles, gl: m.render.gl.total, progs: c.programs, geos: c.memory.geometries, texs: c.memory.textures,
-      lights: Object.entries(c.lights).map(([k, v]) => `${k.replace('Light', '')}:${v.n}${v.shadow ? `(${v.shadow}sh)` : ''}`).join(' '),
+    const c = m.census, rc = m.renderCpu || {};
+    const e = (o[q] = {
+      draws: m.render.calls, tris: m.render.triangles, gl: m.render.gl.total, targets: m.render.gl.targets.length, progs: c.programs, geos: c.memory.geometries, texs: c.memory.textures,
+      lights: Object.entries(c.lights).map(([k, v]) => `${k.replace('Light', '')}:${v.n}${v.lit !== v.n ? `(${v.lit}lit)` : ''}${v.shadow ? `(${v.shadow}sh)` : ''}`).join(' '),
       meshes: `${c.meshes.visible}v/${c.meshes.inView}inview/${c.meshes.skinnedVisible}sk/${c.meshes.transparent}tr/${c.meshes.castShadow}cast`,
-      buffer: c.canvas.buffer, mixers: c.mixers,
-      logicMs: { avg: r1(ph.frame?.avg), p95: r1(ph.frame?.p95) },
-      step: r1(ph.step?.avg), worlds: r1(ph.updateWorlds?.avg), theme: r1(ph.updateTheme?.avg), mini: r1(ph['minimap.drawMini']?.avg), hudMood: r1(ph.updateHudMood?.avg),
-      renderMs_swiftshader: r1(m.renderTiming['postfx.render']?.avg), renderMsTiny: r1(m.renderTimingTiny['postfx.render']?.avg),
-      allocKBf: m.alloc.kbPerFrame, domMutF: m.logic.domMutationsPerFrame, styleF: m.logic.recalcStylePerFrame, layoutF: m.logic.layoutPerFrame,
-    };
+      buffer: `${c.canvas.buffer}@${c.canvas.pixelRatio}`, mixers: c.mixers, mixersInView: c.mixersInView,
+      renderCpuMs: { avg: r1(rc['postfx.render']?.avg), p95: r1(rc['postfx.render']?.p95) }, renderCallsPerFrame: rc['renderer.render']?.callsPerFrame, shadowCpuMs: r1(rc['shadowMap.render']?.avg), actorsMs: r1(rc['actor.animate']?.avg),
+      shadowMapPasses: c.shadowMap ? m.render.gl.targets.filter((t) => t.vp === `${c.shadowMap}x${c.shadowMap}`).length : 0,
+      sceneTextureMB: c.sceneTextureMB, jsHeapMB: c.jsHeapMB,
+      swiftshaderFrameMs: { full: m.swiftshaderFullFrameWallMs, small: r1(m.swiftshaderSmallFrameMs?.avg) },
+    });
+    if (m.logic) {
+      const ph = m.logic.phases;
+      Object.assign(e, {
+        logicMs: { avg: r1(ph.frame?.avg), p95: r1(ph.frame?.p95) },
+        step: r1(ph.step?.avg), worlds: r1(ph.updateWorlds?.avg), theme: r1(ph.updateTheme?.avg), mini: r1(ph['minimap.drawMini']?.avg), actors: r1(ph['actor.animate']?.avg), hudMood: r1(ph.updateHudMood?.avg),
+        allocKBf: m.alloc.kbPerFrame, allocLogicKBf: m.allocLogicOnly.kbPerFrame, domMutF: m.logic.domMutationsPerFrame, styleF: m.logic.recalcStylePerFrame, layoutF: m.logic.layoutPerFrame,
+      });
+    }
   }
   if (sc.walk) {
     const w = sc.walk;
-    o.walk = { q: w.quality, fps: w.fps, p95ms: r1(w.interval?.p95), over50: w.over50, longTasks: w.longTasks, gc: w.gc && { n: (w.gc.minor || 0) + (w.gc.major || 0), ms: r1((w.gc.minorMs || 0) + (w.gc.majorMs || 0)), max: w.gc.maxMs }, newPrograms: w.programsAddedWhileWalking, styleF: w.recalcStylePerFrame, layoutF: w.layoutPerFrame };
+    o.walk = { q: w.quality, frameJsMs: w.frameJs && { avg: r1(w.frameJs.avg), p95: r1(w.frameJs.p95), max: r1(w.frameJs.max) }, longFrames: w.longFramesTop?.length || 0, fps_compositorBound: w.fps, intervalP95: r1(w.interval?.p95), gapsNotJs: w.gapsNotJs, longTasks: w.longTasks, gc: w.gc && { n: (w.gc.minor || 0) + (w.gc.major || 0), ms: r1((w.gc.minorMs || 0) + (w.gc.majorMs || 0)), max: w.gc.maxMs }, newPrograms: w.programsAddedWhileWalking, styleF: w.recalcStylePerFrame, layoutF: w.layoutPerFrame };
   }
 }
-for (const tr of results.transitions) summary.transitions[tr.name] = `${tr.ms_blocked}ms +${tr.programs_added}p`;
+// GPU objects left behind by switching presets back and forth (each pair ends where it started)
+const sumOf = (re) => {
+  const ts = results.transitions.filter((x) => re.test(x.name));
+  return { transitions: ts.length, textures: ts.reduce((n, x) => n + x.textures_added, 0), geometries: ts.reduce((n, x) => n + x.geometries_added, 0), programs: ts.reduce((n, x) => n + x.programs_added, 0) };
+};
+summary.leakCheck = { qualityRoundTrips_high_low_high_x2: sumOf(/^quality (high|low) -> (low|high)/), smartSetLevel_high_med_low_med_high: sumOf(/^smart setLevel/) };
+for (const tr of results.transitions) summary.transitions[tr.name] = `${tr.ms_blocked}ms (call ${tr.call_ms}, frame1 ${tr.frame1_ms}; compile ${tr.gl_frame1?.compileMs ?? '?'}+${tr.gl_call?.compileMs ?? 0}, upload ${tr.gl_frame1?.uploadMs ?? '?'}+${tr.gl_call?.uploadMs ?? 0}) +${tr.programs_added}p +${tr.textures_added}tex`;
 for (const [k, v] of Object.entries(results.smart)) summary.smart[k] = `${v.perMinute.changes} changes, ${v.perMinute.scaleOrLevelFlips} flips, ${v.perMinute.applyQuality} applyQuality, ${v.perMinute.setSize} setSize -> ${v.final}`;
 console.log(JSON.stringify(summary, null, 1));
 await browser.close();
