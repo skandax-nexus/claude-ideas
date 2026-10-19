@@ -81,6 +81,16 @@ const GradeShader = {
 };
 import { RoomEnvironment } from '../../vendor/addons/environments/RoomEnvironment.js';
 
+// Frees what a post pass holds on the GPU: its render targets and its own textures
+// (the passes are built here without outside textures). Its materials are left alone
+// on purpose: disposing them would drop their compiled shaders, and the next chain
+// (raising the quality again) would stall recompiling them.
+function freeBuffers(pass) {
+  for (const v of Object.values(pass)) {
+    for (const o of Array.isArray(v) ? v : [v]) if (o?.isRenderTarget || o?.isTexture) o.dispose();
+  }
+}
+
 export class PostFX {
   constructor(renderer, scene, camera) {
     this.renderer = renderer;
@@ -103,8 +113,13 @@ export class PostFX {
     scene.environmentIntensity = 0.35;
     if (q.env && this.envName) this.setEnvironment(this.envName, this.envIntensity);
     renderer.shadowMap.enabled = q.shadows;
-    this.composer?.dispose();
-    this.composer = null;
+    // free the old chain's GPU buffers too (bloom mips, AO targets and noise):
+    // EffectComposer.dispose() frees only its own two targets
+    if (this.composer) {
+      for (const p of this.composer.passes) freeBuffers(p);
+      this.composer.dispose();
+    }
+    this.composer = this.bloom = this.ao = this.grade = null;
     if (!q.bloom && !q.ao) return;
     const size = renderer.getSize(new THREE.Vector2());
     // multisampled target: clean edges on geometry even with post-processing on

@@ -296,22 +296,30 @@ class Game {
   }
 
   // the quality preset in use: the one chosen, or lower while the smart renderer eases off
+  // Every settings change comes through here (volume, FOV and sensitivity sliders, looks,
+  // camera presets), so the lights, shadow map and post-processing are rebuilt only when
+  // the preset itself changes. (QUALITY entries are fixed objects; clear appliedQ to force it.)
   applyQuality() {
     const q = this.smart.quality();
-    // street lamps that really light whoever walks under them (more of them on better quality)
-    this.lampLights = this.lampLights || [];
-    while (this.lampLights.length > (q.lamps || 0)) this.scene.remove(this.lampLights.pop());
-    while (this.lampLights.length < (q.lamps || 0)) {
-      const l = new THREE.PointLight(0xffd2a0, 0, 10, 2);
-      l.userData.want = 0;
-      this.lampLights.push(l);
-      this.scene.add(l);
+    if (q !== this.appliedQ) {
+      this.appliedQ = q;
+      // street lamps that really light whoever walks under them (more of them on better quality)
+      this.lampLights = this.lampLights || [];
+      while (this.lampLights.length > (q.lamps || 0)) this.scene.remove(this.lampLights.pop());
+      while (this.lampLights.length < (q.lamps || 0)) {
+        const l = new THREE.PointLight(0xffd2a0, 0, 10, 2);
+        l.userData.want = 0;
+        this.lampLights.push(l);
+        this.scene.add(l);
+      }
+      if (this.sun.shadow.mapSize.x !== q.shadowMap) {
+        this.sun.shadow.mapSize.set(q.shadowMap, q.shadowMap);
+        this.sun.shadow.map?.dispose();
+        this.sun.shadow.map = null;
+      }
+      this.postfx.apply(q);
+      setActorQuality(q); // skin, eye and hair shading follow the preset
     }
-    this.sun.shadow.mapSize.set(q.shadowMap, q.shadowMap);
-    this.sun.shadow.map?.dispose();
-    this.sun.shadow.map = null;
-    this.postfx.apply(q);
-    setActorQuality(q); // skin, eye and hair shading follow the preset
     this.smart.apply();
   }
 
