@@ -112,6 +112,22 @@ for (const ending of ['SEVER', 'SUSTAIN', 'MIRROR', null]) {
 const { FORGE_LINES } = await imp('gen/Forge.js');
 for (const [voice, text] of FORGE_LINES()) add(voice === 'CREW' ? 'CREW_n' : voice, text);
 
+// AFTERZERO: THE LAST VERSION OF EARTH (v2.0): every line the edition can speak (game/js/editions/lastversion),
+// in its own speakers' voices: KAI, MIRA, WITNESS (also the voice in every speaker), ROOK, NIKO, SERA, ANJA,
+// IVEN, JUN, TALA, MARA, ORREN, CHILD, the narrator (NONE) and the neutral crew voice for the people in passing
+const { allLines: lastVersionLines } = await imp('editions/lastversion/index.js');
+const lvFrom = lines.length;
+for (const [voice, text] of lastVersionLines()) add(voice === 'YOU' ? 'KAI' : voice === 'VOICE' ? 'WITNESS' : voice, text);
+// (and the lines its scripted moments speak from code: L('WHO', '...'), N('...') the narrator, K('...') Kai)
+for (const f of ['prologue.js', 'acts.js']) {
+  const code = src(`editions/lastversion/${f}`);
+  const q = String.raw`'((?:[^'\\]|\\.)*)'`;
+  for (const m of code.matchAll(new RegExp(String.raw`\bL\('(\w+)', ${q}`, 'g'))) add(m[1] === 'CREW' ? 'CREW_n' : m[1] === 'VOICE' ? 'WITNESS' : m[1], unq(m[2]));
+  for (const m of code.matchAll(new RegExp(String.raw`\bN\(${q}`, 'g'))) add('NONE', unq(m[1]));
+  for (const m of code.matchAll(new RegExp(String.raw`\bK\(${q}`, 'g'))) add('KAI', unq(m[1]));
+}
+const lvLines = lines.slice(lvFrom);
+
 // you sound like your look: everything Ren says is also recorded in a male voice
 for (const [voice, text] of [...lines]) if (voice === 'YOU' || voice === 'OTHER') add(`${voice}_m`, text);
 
@@ -133,3 +149,9 @@ const byVoice = {};
 for (const p of list) byVoice[p.voice] = (byVoice[p.voice] || 0) + 1;
 const chars = list.reduce((a, p) => a + p.say.length, 0);
 console.log(`${lines.length} lines, ${n} pieces, ${list.length} unique recordings (${chars} chars, ~${Math.round(chars / 14.5 / 60)} min)`, byVoice);
+{
+  const lv = new Set();
+  for (const [voice, text] of lvLines) for (const p of voicePieces(text, vocab)) if (p.key) lv.add(voice + '|' + p.key);
+  const lvChars = [...lv].reduce((a, k) => a + pieces.get(k).say.length, 0);
+  console.log(`THE LAST VERSION OF EARTH: ${lvLines.length} lines, ${lv.size} unique recordings (${lvChars} chars, ~${Math.round(lvChars / 14.5 / 60)} min) in ${new Set(lvLines.map(([v]) => v)).size} voices`);
+}

@@ -27,7 +27,7 @@ export class Input {
     const map = {
       KeyE: 'use', KeyF: 'use', KeyH: 'hint', KeyQ: 'shift', KeyR: 'shift', KeyL: 'laws', Tab: 'laws', KeyJ: 'journal',
       Escape: 'pause', Digit1: 'set:PHYSICAL', Digit2: 'set:INVERTED', Digit3: 'set:ECHO',
-      KeyM: 'map', KeyV: 'camera', KeyX: 'combo', F5: 'quicksave', F9: 'quickload',
+      KeyM: 'map', KeyV: 'camera', KeyX: 'combo', F5: 'quicksave', F9: 'quickload', KeyC: 'anchor', Digit4: 'set:4',
       // WORLD FORGE: the four gear slots and the local rules card
       Digit5: 'gear:0', Digit6: 'gear:1', Digit7: 'gear:2', Digit8: 'gear:3', KeyK: 'rules',
     };

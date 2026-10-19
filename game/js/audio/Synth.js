@@ -10,6 +10,17 @@ const MOODS = {
   PHYSICAL: { name: 'Daylight', chords: [[48, 55, 64, 71, 74], [45, 52, 60, 67, 71], [41, 48, 57, 64, 69], [43, 50, 59, 64, 69]], cutoff: 2200, bell: 0.2 },
   INVERTED: { name: 'Upside Dream', chords: [[50, 57, 66, 69, 76], [47, 54, 62, 66, 73], [43, 50, 59, 66, 71], [45, 52, 61, 66, 73]], cutoff: 1800, bell: 0.35 },
   ECHO: { name: 'Memory', chords: [[51, 58, 67, 70, 74], [48, 55, 63, 67, 74], [44, 51, 60, 67, 72], [46, 53, 62, 65, 70]], cutoff: 2800, bell: 0.75 },
+  // THE LAST VERSION OF EARTH: the present is dry and precise, the past warm and plucked, the future wide and sparse
+  PRESENT: { name: 'The Need to Fix It', chords: [[45, 52, 60, 67, 71], [41, 48, 57, 64, 69], [43, 50, 59, 64, 69], [40, 47, 55, 62, 67]], cutoff: 1900, bell: 0.12 },
+  PAST: { name: 'Living History', chords: [[43, 50, 59, 62, 67], [41, 48, 57, 60, 65], [38, 45, 54, 57, 62], [40, 47, 56, 59, 64]], cutoff: 1500, bell: 0.55 },
+  FUTURE: { name: 'Beautiful Catastrophe', chords: [[36, 43, 52, 59, 64], [33, 40, 48, 55, 60], [34, 41, 50, 57, 62], [38, 45, 54, 61, 66]], cutoff: 3200, bell: 0.4 },
+};
+// ambience beds (filtered noise loops) per era: rain and traffic now, water and wood then, wind in 2196
+const AMBIENCE = {
+  rain: { type: 'bandpass', freq: 1400, q: 0.5, vol: 0.05, lfo: 0.15, depth: 400 },
+  water: { type: 'bandpass', freq: 520, q: 0.7, vol: 0.035, lfo: 0.3, depth: 120 },
+  wind: { type: 'lowpass', freq: 380, q: 0.4, vol: 0.05, lfo: 0.09, depth: 220 },
+  hum: { type: 'bandpass', freq: 120, q: 6, vol: 0.03, lfo: 0.02, depth: 4 },
 };
 const BPM = 76;
 const STEP = 60 / BPM / 2; // eighth notes
@@ -161,6 +172,52 @@ export class Synth {
 
   setState(state) {
     this.state = MOODS[state] ? state : 'PHYSICAL';
+  }
+
+  // THE LAST VERSION: the place sounds different in each era (crossfaded over ~1.5 s)
+  setAmbience(kind) {
+    if (!this.ctx || this.ambience === kind) return;
+    this.ambience = kind;
+    const c = this.ctx, t = c.currentTime;
+    this.beds ||= {};
+    for (const [k, b] of Object.entries(this.beds)) b.gain.gain.setTargetAtTime(k === kind ? AMBIENCE[k].vol : 0, t, 0.5);
+    if (!kind || this.beds[kind] || !AMBIENCE[kind]) return;
+    const a = AMBIENCE[kind];
+    const len = c.sampleRate * 4;
+    const buf = c.createBuffer(1, len, c.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = this.rand() * 2 - 1;
+    const src = c.createBufferSource();
+    src.buffer = buf;
+    src.loop = true;
+    const f = c.createBiquadFilter();
+    f.type = a.type;
+    f.frequency.value = a.freq;
+    f.Q.value = a.q;
+    const lfo = c.createOscillator();
+    lfo.frequency.value = a.lfo;
+    const lg = c.createGain();
+    lg.gain.value = a.depth;
+    lfo.connect(lg).connect(f.frequency);
+    lfo.start();
+    const gain = c.createGain();
+    gain.gain.value = 0;
+    gain.gain.setTargetAtTime(a.vol, t, 0.8);
+    src.connect(f).connect(gain).connect(this.master);
+    src.start();
+    this.beds[kind] = { src, gain, lfo };
+  }
+
+  // the Zero Second: rain, crowd and score stop for one second, then a low metallic resonance
+  silence(sec = 1.0) {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+    const g = this.master.gain;
+    g.cancelScheduledValues(t);
+    g.setTargetAtTime(0.0001, t, 0.015);
+    g.setTargetAtTime(this.volume ?? 0.7, t + sec, 0.12);
+    this.osc('sine', 55, t + sec, 2.4, 0.22, 0.01, 1.8, this.sfx);
+    this.osc('triangle', 110.5, t + sec + 0.05, 1.6, 0.06, 0.01, 1.2, this.sfx);
   }
 
   /** 0..1: how exciting things are right now (adds energy, never dread). */

@@ -16,6 +16,7 @@ Each version is kept separately. It has its own git commit, its own Android app 
 
 | Version | Status | Commit | Android app | Web preview |
 | --- | --- | --- | --- | --- |
+| **v2.0** | in development (separate edition) | this branch | `AFTERZERO-LastVersion-v2.0.apk`, app "AFTERZERO: Last Version" (`com.afterzero.lastversion`); build with `EDITION=lastversion bash android/build-apk.sh` | [claude.ai/artifact/GDpG6YCybK2cj8P3gPXRrr](https://claude.ai/artifact/GDpG6YCybK2cj8P3gPXRrr) |
 | **v1.1** | in development | this branch | `AFTERZERO-v1.1.apk`, app "AFTERZERO 1.1" (`com.afterzero.v1_1`) | [claude.ai/artifact/UoHrkWc9QD6USztzpRLcSg](https://claude.ai/artifact/UoHrkWc9QD6USztzpRLcSg) |
 | **v1.0** | saved | `c6b8682` (tag `v1.0.0`) | `AFTERZERO-v1.0.apk`, app "AFTERZERO 1.0" (`com.afterzero.v1_0`) | [claude.ai/artifact/8Vz91NGuA5NzYydryybv8q](https://claude.ai/artifact/8Vz91NGuA5NzYydryybv8q) |
 | **v0.9** | saved | `293d857` (tag `v0.9.0`) | `AFTERZERO-v0.9.apk`, app "AFTERZERO" (`com.afterzero.preview`) | [claude.ai/artifact/6m2ucDKS4hUW5bE818FZQz](https://claude.ai/artifact/6m2ucDKS4hUW5bE818FZQz) |
@@ -23,6 +24,8 @@ Each version is kept separately. It has its own git commit, its own Android app 
 `android/build-apk.sh` takes the version from `versionName` in `android/AndroidManifest.xml`. To start a new version, raise `versionCode` and `versionName` and change the app label there. The script then names the APK and the app id from it.
 
 To rebuild a saved version, check out its commit and run the script.
+
+**v2.0 is "AFTERZERO: The Last Version of Earth"**, a separate edition built from the same sources: Kai Varen, the Chronolith, four temporal states (2026, 2049, 2196, Inverted), the Witness, Mira, 23 missions and three endings, from the creator's gameplay bible in [`docs/lastversion/`](docs/lastversion/). `EDITION=lastversion bash android/build-apk.sh` builds it as its own app with its own saves (`com.afterzero.lastversion`, versionName 2.0.0); without `EDITION` the script builds the Station Zero game exactly as before. In a browser, `index.html?edition=lastversion` opens it. How the bible maps onto the engine: [`docs/lastversion/DESIGN.md`](docs/lastversion/DESIGN.md); what is built, generated and planned: [`docs/lastversion/STATUS.md`](docs/lastversion/STATUS.md).
 
 ## v1.0: one story, THE CRADLE, and a Vessel that remembers your choice
 
