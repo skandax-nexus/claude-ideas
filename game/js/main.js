@@ -747,8 +747,8 @@ class Game {
     if (s.voice === undefined) s.voice = true;
     document.querySelector('#settings .body').innerHTML = `
       <h3>CAMERA</h3>
-      <div class="setting"><span>View<small>V cycles views in game</small></span>${seg('camera', Object.entries(CAMERA_PRESETS).map(([k, p]) => [k, p.label]))}</div>
-      <div class="setting"><span>Zoom<small>Pinch with two fingers or use the mouse wheel; double-tap to reset</small></span>${range('zoom', 0.5, 2.5, 0.05)}</div>
+      <div class="setting"><span>View<small>${this.touch ? 'How close the camera follows you' : 'V cycles views in game'}</small></span>${seg('camera', Object.entries(CAMERA_PRESETS).map(([k, p]) => [k, p.label]))}</div>
+      <div class="setting"><span>Zoom<small>${this.touch ? 'Pinch with two fingers; double-tap to reset' : 'Mouse wheel or + / -'}</small></span>${range('zoom', 0.5, 2.5, 0.05)}</div>
       <div class="setting"><span>Field of view</span>${range('fov', 50, 90, 1)}</div>
       <div class="setting"><span>Look sensitivity</span>${range('sensitivity', 0.3, 2.5, 0.05)}</div>
       <div class="setting"><span>Invert look up/down</span>${toggle('invertY')}</div>

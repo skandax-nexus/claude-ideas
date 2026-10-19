@@ -231,6 +231,8 @@ li small { display: block; color: var(--ink-soft); font-size: 12px; }
 .setting { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 10px; margin: 12px 0; font-size: 14px; font-weight: 600; }
 .setting small { display: block; color: var(--ink-soft); font-weight: 500; font-size: 12px; }
 .setting input[type=range] { width: 150px; accent-color: var(--coral); }
+.setting > span:first-child { min-width: 8.5em; } /* the label keeps its width; the buttons wrap */
+body.touch .setting input[type=range] { height: 32px; }
 .seg { display: flex; gap: 4px; flex-wrap: wrap; justify-content: flex-end; }
 .seg button { font-size: 11px; padding: 7px 10px; }
 .seg button.sel { background: var(--ink); color: #fff; border-color: var(--ink); }
