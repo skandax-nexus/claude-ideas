@@ -48,6 +48,7 @@ export class HUD {
       this.subT = 0;
       return;
     }
+    this.cur = s;
     this.onLine?.(s.who, s);
     const sp = s.name ? { name: s.name, color: s.color || '#23303c' } : this.speakers[s.who] || SPEAKERS[s.who] || SPEAKERS.NONE;
     const name = sp.name ? `<b style="color:${sp.color}">${sp.name}</b> ` : '';
@@ -55,6 +56,14 @@ export class HUD {
     this.el.subs.innerHTML = `<div class="sub ${cls}">${name}<span style="color:${sp.color}">${s.text}</span></div>`;
     this.subT = s.dur;
     this.subSeq = (this.subSeq || 0) + 1;
+  }
+
+  // a menu closed over a line: say it again from the start, so voice and text stay together
+  replay() {
+    if (this.subT > 0 && this.cur) {
+      this.subs.unshift(this.cur);
+      this.nextSub();
+    }
   }
 
   // end the whole conversation now (its end callbacks still run)

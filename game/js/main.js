@@ -289,7 +289,10 @@ class Game {
     this.input.touchSensitivity = 0.0065 * s.sensitivity;
     this.input.invertY = s.invertY;
     this.audio.setVolume?.(s.volume);
-    if (this.voice) this.voice.enabled = s.voice !== false;
+    if (this.voice) {
+      this.voice.enabled = s.voice !== false;
+      if (!this.voice.enabled) this.voice.stop(); // switching voices off silences the line being spoken
+    }
     document.body.classList.toggle('minimap', s.minimap);
     document.body.classList.toggle('text-lg', s.textSize > 1);
     this.resize();
@@ -471,6 +474,7 @@ class Game {
   openMenu(id) {
     if (id === 'laws' && !this.facts.get('has_device')) return;
     this.menu = id;
+    this.voice.stop(); // the subtitle waits under the menu; the line is said again when it closes
     this.input.release();
     this.hud.rulesHide?.(); // the local rules card steps aside for any panel
     if (id === 'laws') this.hud.renderLaws(this); // the draft is kept between visits
@@ -489,6 +493,7 @@ class Game {
   closeMenu() {
     this.menu = null;
     this.hud.show(null);
+    this.hud.replay();
     if (!this.touch && this.started) this.canvas.requestPointerLock?.();
     if (!this.started) this.hud.show('title');
   }
