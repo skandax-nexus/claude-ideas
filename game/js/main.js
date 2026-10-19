@@ -1250,7 +1250,7 @@ class Game {
         if (deck.ruleTick) this.after(5.4, () => this.hud.say([{ who: 'TICK', text: deck.ruleTick }], this.facts));
       } else {
         this.hud.card(`${deck.name} · ${deck.open ? 'DISTRICT' : 'SECTOR'} ${c.sector + 1} OF ${deck.sectors}`, this.level.rooms[lv.order[0]].name, '', 2600);
-        this.after(1.2, () => this.showRules(5000));
+        this.after(3.0, () => this.showRules(5000)); // after the sector card, not over it
       }
     } else if (intro) {
       this.held = null;
