@@ -449,7 +449,8 @@ function planPuzzle(rng, rules, difficulty) {
     used.add(effOf(seg));
   }
   const exitOpts = nul ? [[['open', null], 1]]
-    : zero ? [[['open', null], 1], [['ledge', 'zerog'], zerogUsed ? 0 : 2], [['key', 'echo'], 1.2], [['core', 'zerog'], zerogUsed ? 0 : 1]]
+    // (no zero-g core: its socket sits on the floor, and in a ZERO act no state brings you down to it)
+    : zero ? [[['open', null], 1], [['ledge', 'zerog'], zerogUsed ? 0 : 2], [['key', 'echo'], 1.2]]
       : [[['open', null], 0.8], [['ceiling', 'gravity'], 1.2], [['ledge', 'zerog'], zerogUsed ? 0 : 1], [['ledge', 'echo'], 1], [['ledge', 'light'], 1], ...(inv ? [] : [[['key', 'echo'], 1]]),
         [['core', 'gravity'], 0.7], [['core', 'zerog'], zerogUsed ? 0 : 0.5], [['core', 'echo'], 0.6], [['core', 'light'], 0.6]];
   const exits = exitOpts.filter(([, w]) => w > 0);
@@ -694,7 +695,7 @@ export function checkSolvable(level, act, kit = []) {
     }
     if (rules.nullField && effects.size) out.push(`${rid}: null field but needs ${[...effects]}`);
     if (effects.size > 3) out.push(`${rid}: needs ${effects.size} laws`);
-    if (rules.gravity === 'ZERO') for (const c of req) if (['exit:ceiling', 'ledge:echo', 'ledge:light', 'exit:core:gravity', 'exit:core:echo', 'exit:core:light'].includes(c.key)) out.push(`${rid}: ${c.key} unreachable in zero gravity`);
+    if (rules.gravity === 'ZERO') for (const c of req) if (['exit:ceiling', 'ledge:echo', 'ledge:light', 'exit:core:gravity', 'exit:core:zerog', 'exit:core:echo', 'exit:core:light'].includes(c.key)) out.push(`${rid}: ${c.key} unreachable in zero gravity`);
     if (rules.gravity === 'INVERTED') for (const c of req) if (c.key === 'exit:key') out.push(`${rid}: a key lock cannot be reached upside down`);
     if (rules.watchers === 'NONE' && level.sentinels.some((s) => s.room === rid)) out.push(`${rid}: watchers where the rules say none`);
   }
