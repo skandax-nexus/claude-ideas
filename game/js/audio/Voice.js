@@ -108,14 +108,17 @@ export class Voice {
 
   clip(key, ref) {
     let c = this.clips.get(key);
-    if (!c) {
+    if (c) this.clips.delete(key); // set again below: the most recently used is last
+    else {
       const [off, len] = ref;
       c = this.audio.ctx.decodeAudioData(this.pack.bin.slice(off, off + len)).catch((e) => {
         this.packOk = false; // e.g. no Opus decoder: use device speech from now on
         throw e;
       });
-      this.clips.set(key, c);
     }
+    this.clips.set(key, c);
+    // a small LRU: decoded speech is ~190 KB a second and few lines repeat (the line playing keeps its own buffers)
+    while (this.clips.size > 64) this.clips.delete(this.clips.keys().next().value);
     return c;
   }
 
