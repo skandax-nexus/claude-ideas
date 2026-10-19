@@ -488,8 +488,7 @@ class Game {
       this.hud.objective(this.objectives.text, false);
     }
     if (this.touch) {
-      document.documentElement.requestFullscreen?.().catch(() => {});
-      screen.orientation?.lock?.('landscape').catch(() => {});
+      document.documentElement.requestFullscreen?.().catch(() => {}); // fullscreen, held upright or sideways
     } else this.canvas.requestPointerLock?.();
   }
 

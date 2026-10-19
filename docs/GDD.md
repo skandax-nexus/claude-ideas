@@ -210,7 +210,7 @@ These are development targets; real playtime is established by testing (§9).
 - All 5 systems working together, 6 law grammars, 13 law tokens, 3 laws slots.
 - 5 characters (see [`CHARACTERS.md`](CHARACTERS.md)).
 - 4 objective layers, 7 open questions, 17 theory-log anomalies, 3 endings.
-- Desktop (keyboard/mouse) and Android (touch: stick, look-drag, buttons; fullscreen landscape; installable PWA).
+- Desktop (keyboard/mouse) and Android (touch: stick, look-drag, buttons; fullscreen, upright or sideways; installable PWA).
 - Autosave (facts, laws, room states, Observer memory).
 - Built-in **playtest report**: time, discoveries, catches, lessons taught to the Observer, the objective history, a discovery timeline, and the three post-demo questions.
 

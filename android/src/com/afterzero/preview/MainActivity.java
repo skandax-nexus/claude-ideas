@@ -57,7 +57,7 @@ public class MainActivity extends Activity {
         @JavascriptInterface public void stop() { if (ttsReady) tts.stop(); }
     }
 
-    /** Menus work upright; gameplay locks to landscape: window.AndroidUI.setLandscape(true|false). */
+    /** Menus and gameplay work upright or sideways; setLandscape(true|false) is kept for callers but unused. */
     public class UI {
         @JavascriptInterface public void setLandscape(final boolean on) {
             runOnUiThread(new Runnable() {
