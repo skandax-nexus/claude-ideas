@@ -74,15 +74,26 @@ export class HUD {
   }
 
   // --- small widgets -----------------------------------------------------
+  // prompt, held and setState run every frame: each touches the DOM only when
+  // what it shows has changed (rewriting it every frame cost style, layout and
+  // paint work, and garbage that brought on long GC pauses)
   prompt(text) {
-    const t = this.el.prompt.querySelector('.txt');
-    if (t) t.textContent = text || '';
-    else this.el.prompt.textContent = text || '';
-    this.el.prompt.classList.toggle('on', !!text);
+    text = text || '';
+    const el = this.el.prompt;
+    if (text === this._promptText && el.classList.contains('on') === !!text) return;
+    this._promptText = text;
+    const t = el.querySelector('.txt');
+    if (t) t.textContent = text;
+    else el.textContent = text;
+    el.classList.toggle('on', !!text);
   }
 
   // avail: the states this room was authored with (others are not shown)
   setState(visible, room, state, roomName, locked, avail = null) {
+    const c = this._stateIn;
+    if (c && c.visible === visible && (!visible || (c.room === room && c.state === state && c.roomName === roomName && c.locked === locked
+      && c.avail === avail && c.states === this.states && c.bar === this.stabilityBar))) return;
+    this._stateIn = { visible, room, state, roomName, locked, avail, states: this.states, bar: this.stabilityBar };
     this.el.state.classList.toggle('on', visible);
     if (!visible) return;
     const html =
@@ -94,7 +105,8 @@ export class HUD {
       this._stateHtml = html;
       this.el.state.innerHTML = html;
     }
-    document.body.dataset.state = state || this.states[0].key;
+    const ds = state || this.states[0].key;
+    if (document.body.dataset.state !== ds) document.body.dataset.state = ds;
   }
 
   // Chronolith stability (THE LAST VERSION): a quiet bar that only shows when it matters
@@ -150,6 +162,10 @@ export class HUD {
   }
 
   held(label, echo) {
+    label = label || '';
+    if (label === this._heldLabel && !!echo === this._heldEcho) return;
+    this._heldLabel = label;
+    this._heldEcho = !!echo;
     this.el.held.innerHTML = label ? `CARRYING <b class="${echo ? 'echo' : ''}">${label}</b>` : '';
   }
 

@@ -2027,6 +2027,7 @@ class Game {
 
     this.updateWorlds(active ? dt : 0, dt);
     this.player.updateCamera(dt);
+    if (active) this.placeFocus();
     this.updateTheme(dt);
     if (this.settings.minimap && this.started && !this.menu && ++this.frameN % 3 === 0) this.minimap.drawMini(this.player, this.room, this.mapMarkers());
     this.postfx.render();
@@ -2063,7 +2064,11 @@ class Game {
         b.classList.toggle('cooling', left > 0);
         b.classList.toggle('spent', !!GEAR[key].once && !!this.deckWorld.flags[`gear_KEYFORGE_${act.index}`]);
         b.classList.toggle('on', (key === 'FLARE' && this.flareT > 0) || (key === 'LENS' && this.deckWorld.lensT > 0) || ((key === 'GRAPPLE' || key === 'RIG') && this.deckWorld.temps.length > 0));
-        b.style.setProperty('--cd', (left / GEAR[key].cooldown || 0).toFixed(2));
+        const cd = (left / GEAR[key].cooldown || 0).toFixed(2);
+        if (b._cd !== cd) {
+          b._cd = cd;
+          b.style.setProperty('--cd', cd);
+        }
       }
     }
   }
@@ -2143,7 +2148,7 @@ class Game {
     this.focus = this.findFocus();
     const showFocus = this.focus && !this.hud.talking;
     this.hud.prompt(showFocus ? this.focus.prompt : '');
-    this.placePrompt(showFocus ? this.focus.pos : null);
+    this.promptPos = showFocus ? this.focus.pos : null; // placed by placeFocus, after the camera moves
     const it = this.heldItem();
     this.hud.held(it?.label, it?.echo);
     if (this.edition) this.hud.setState(!!facts.get('has_chronolith'), this.room, engine.state(this.room), room.name, engine.locked.has(this.room), engine.statesOf(this.room));
@@ -2165,7 +2170,13 @@ class Game {
   }
 
   // The prompt floats over the thing you can use (tap it on touch screens),
-  // and a soft ring marks it in the world.
+  // and a soft ring marks it in the world. Placed after the camera has moved
+  // for this frame, so neither trails the object by a frame when you look around.
+  placeFocus() {
+    this.camera.updateMatrixWorld();
+    this.placePrompt(this.promptPos ?? null);
+  }
+
   placePrompt(pos) {
     this.fx.focus(pos, 0xffffff, this.time, this.camera);
     if (!pos) return;
@@ -2176,8 +2187,12 @@ class Game {
       return;
     }
     const w = window.innerWidth, h = window.innerHeight;
-    const x = THREE.MathUtils.clamp((v.x * 0.5 + 0.5) * w, 90, w - 90);
-    const y = THREE.MathUtils.clamp((-v.y * 0.5 + 0.5) * h, 120, h - 140);
+    // whole pixels, written only when they change (each write costs a layout)
+    const x = Math.round(THREE.MathUtils.clamp((v.x * 0.5 + 0.5) * w, 90, w - 90));
+    const y = Math.round(THREE.MathUtils.clamp((-v.y * 0.5 + 0.5) * h, 120, h - 140));
+    if (x === this._promptX && y === this._promptY) return;
+    this._promptX = x;
+    this._promptY = y;
     el.style.left = `${x}px`;
     el.style.top = `${y}px`;
   }
@@ -2252,6 +2267,7 @@ class Game {
       this.updateWorlds(dt, dt);
     }
     this.player.updateCamera(1);
+    this.placeFocus();
   }
 
   // Frame-exact capture for trailers: stop the real-time loop, then advance
@@ -2264,9 +2280,11 @@ class Game {
   tickFrame(dt, noRender = false) {
     this.time += dt;
     this.updateHudMood();
-    if (!this.paused && !this.menu) this.step(dt);
+    const active = !this.paused && !this.menu;
+    if (active) this.step(dt);
     this.updateWorlds(dt, dt);
     this.player.updateCamera(dt);
+    if (active) this.placeFocus();
     if (noRender) return;
     this.updateTheme(dt);
     if (this.settings.minimap && this.started) this.minimap.drawMini(this.player, this.room, this.mapMarkers());
