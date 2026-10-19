@@ -284,7 +284,8 @@ export function generateZone(story, zi, si) {
     name, kind: 'district', beat: beat.kind,
     bounds: [[-XW, -12, ZN - 4, XW, H + 2, 4]],
     spawn: [0, 0.86, -2, 0],
-    lights, tint: pal.tint, killY: -2, floatY: 8.4,
+    // a ZERO act has no state to come down in: drift at street height (jump to rise to the roofs)
+    lights, tint: pal.tint, killY: -2, floatY: rules?.gravity === 'ZERO' && !rules.nullField ? 1.3 : 8.4,
     challenges: M.challenges.map((c) => ({ ...c, box: [-XW, -12, Math.min(c.z0, c.z1), XW, H + 2, Math.max(c.z0, c.z1)] })),
     route: [], exitSide: 'N', L: -ZN, W: XW * 2, H,
   };
