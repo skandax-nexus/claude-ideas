@@ -37,7 +37,7 @@ import { Voice } from './audio/Voice.js';
 import { Fx } from './world/Fx.js';
 import { HEROES, OPTIONS, heroSpec, hex } from './ui/Heroes.js';
 import { loadActors, actorsReady, actorLoaded, MODELS, loadErrors, setActorQuality } from './world/Actors.js';
-import { LOOKS, HAIR, TOPS, LOOK_DEFAULT, lookOf } from './world/People.js';
+import { LOOKS, HAIR, TOPS, LOOK_DEFAULT, lookOf, crewModelKey } from './world/People.js';
 import { EDITION, NS } from './core/Edition.js';
 import { LV } from './editions/lastversion/index.js';
 
@@ -95,7 +95,10 @@ function crewVoice(c) {
   const v = ((c.seed || 0) % 7) - 3;
   if (c.pronoun?.their === 'her') return { pitch: 1.14 + v * 0.03, gender: 'f', rate: 1.0 };
   if (c.pronoun?.their === 'his') return { pitch: 0.84 + v * 0.03, gender: 'm', rate: 0.97 };
-  return { pitch: 1.0 + v * 0.03, gender: 'n', rate: 0.99 };
+  // they/them crew speak with the voice of the body they wear (HALCYON's Theo is the gardener)
+  const k = crewModelKey(c);
+  const g = k ? (/_f$|^w_/.test(k) ? 'f' : 'm') : 'n';
+  return { pitch: 1.0 + v * 0.03, gender: g, rate: 0.99 };
 }
 
 class Game {

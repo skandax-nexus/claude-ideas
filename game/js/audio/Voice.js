@@ -90,20 +90,26 @@ export class Voice {
     if (who === 'OTHER' && this.youMale && this.pack.index.OTHER_m) id = 'OTHER_m'; // and the Other's: it wears your face
     // the Other speaks with your voice when it has no recording of its own
     const you = this.youMale && this.pack.index.YOU_m ? 'YOU_m' : 'YOU';
-    // a crew voice falls back on the neutral crew recordings (WORLD FORGE's cast lines are recorded once)
-    const libs = [[id, this.pack.index[id]], ...(who === 'OTHER' ? [[you, this.pack.index[you]]] : []), ...(who === 'CREW' && id !== 'CREW_n' ? [['CREW_n', this.pack.index.CREW_n]] : [])].filter(([, l]) => l);
-    if (!libs.length) return null;
-    const out = [];
-    for (const p of voicePieces(text, this.pack.vocab)) {
-      if (p.pause) {
-        out.push(p);
-        continue;
+    const pieces = voicePieces(text, this.pack.vocab);
+    const say = (names) => {
+      const libs = names.map((n) => [n, this.pack.index[n]]).filter(([, l]) => l);
+      if (!libs.length) return null;
+      const out = [];
+      for (const p of pieces) {
+        if (p.pause) {
+          out.push(p);
+          continue;
+        }
+        const hit = libs.find(([, l]) => l[p.key]);
+        if (!hit) return null;
+        out.push({ key: hit[0] + '|' + p.key, ref: hit[1][p.key] });
       }
-      const hit = libs.find(([, l]) => l[p.key]);
-      if (!hit) return null;
-      out.push({ key: hit[0] + '|' + p.key, ref: hit[1][p.key] });
-    }
-    return out.length ? out : null;
+      return out.length ? out : null;
+    };
+    // a crew line is said whole in one voice: the person's own, else the neutral crew voice (a line the
+    // pack has not recorded in every crew voice yet); splicing the two is the last resort
+    if (who === 'CREW' && id !== 'CREW_n') return say([id]) || say(['CREW_n']) || say([id, 'CREW_n']);
+    return say([id, ...(who === 'OTHER' ? [you] : [])]);
   }
 
   clip(key, ref) {

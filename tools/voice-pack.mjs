@@ -22,7 +22,8 @@ const vocab = VOCAB();
 
 const lines = []; // [voice, text]
 const add = (voice, text) => text && lines.push([voice, text]);
-const crewVoice = (c) => 'CREW_' + ({ her: 'f', his: 'm' }[c.pronoun?.their] || 'n');
+// they/them crew speak with the voice of the body they wear, so their lines are recorded in every crew voice
+const crewVoices = (c) => ({ her: ['CREW_f'], his: ['CREW_m'] }[c.pronoun?.their] || ['CREW_n', 'CREW_f', 'CREW_m']);
 
 // hand-written prologue
 const walk = (o) => {
@@ -65,7 +66,6 @@ const { makeZoneStory, makeCradleStory, FRAGMENTS, CRADLE_FRAGMENTS, CRADLE_HINT
 [...FRAGMENTS.flat(), ...CRADLE_FRAGMENTS].forEach((t) => add('NONE', t));
 const { ZONE_HINTS } = await imp('gen/ZoneGen.js');
 {
-  const voiceOf = (c) => 'CREW_' + ({ her: 'f', his: 'm' }[c.pronoun?.their] || 'n');
   for (const zs of [makeZoneStory(), ...['SEVER', 'SUSTAIN', 'MIRROR', null].map((e) => makeCradleStory(e))]) {
     for (const d of zs.decks) {
       d.intro.forEach((l) => add(l.who, l.text));
@@ -75,7 +75,7 @@ const { ZONE_HINTS } = await imp('gen/ZoneGen.js');
         if (b.tick) add('TICK', b.tick);
         if (b.junoAfter) [].concat(b.junoAfter).forEach((t) => add('JUNO', t));
         if (b.kind === 'contradiction') { add('NONE', b.official); add('NONE', b.echo); }
-        if (b.lines) b.lines.forEach((l) => add(l.who === 'CREW' ? voiceOf(c) : l.who, l.text));
+        if (b.lines) b.lines.forEach((l) => (l.who === 'CREW' ? crewVoices(c) : [l.who]).forEach((v) => add(v, l.text)));
         // main.onDeckRoom's line is spoken whole: zone names (Kade, Abena, Theo, Ilse) are not generated words
         if (b.kind === 'encounter') add('JUNO', `Someone's in there. Ren - be gentle. It might be ${c.first}.`);
       }
@@ -95,7 +95,7 @@ for (let s = 1; s <= SEEDS; s++) {
       if (b.tick) add('TICK', b.tick);
       if (b.junoAfter) add('JUNO', b.junoAfter);
       if (b.kind === 'contradiction') { add('NONE', b.official); add('NONE', b.echo); add('YOU', b.log); }
-      if (b.lines) b.lines.forEach((l) => add(crewVoice(c), l.text));
+      if (b.lines) b.lines.forEach((l) => crewVoices(c).forEach((v) => add(v, l.text)));
     }
   }
   st.cast.forEach((c, i) => verdictEnding(st, i).text.forEach((t) => add('NONE', t)));
