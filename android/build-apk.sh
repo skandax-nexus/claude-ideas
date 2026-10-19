@@ -97,7 +97,7 @@ python3 -I ../tools/gltf-json.py ../game/assets/characters "$P/assets/characters
 sed '0,/<script>/s#<script>#<script>window.AZ_MODEL_EXT=".json";window.AZ_NO_HDR=1;</script><script>#' "$OUT/assets/index.html" > "$P/index.html"
 [ -f ../game/assets/voice/voice.ogg ] && cp ../game/assets/voice/voice.json ../game/assets/voice/voice.ogg "$P/assets/voice/"
 # a claude.ai preview takes binary files up to 15 MB: say so before the voice pack outgrows it
-VOICE_MB=$(( $(stat -c %s ../game/assets/voice/voice.ogg 2>/dev/null || echo 0) / 1048576 ))
+VOICE_MB=$(( $(stat -c %s ../game/assets/voice/voice.ogg 2>/dev/null || echo 0) / 1000000 )) # decimal MB, to be safe
 if [ "$VOICE_MB" -ge 15 ]; then echo "error: voice.ogg is $VOICE_MB MB; the web preview cannot be published (15 MB per file). Split the pack per edition." >&2; exit 1
 elif [ "$VOICE_MB" -ge 14 ]; then echo "warning: voice.ogg is $VOICE_MB MB, close to the preview's 15 MB per-file limit" >&2; fi
 echo "Preview in $(pwd)/$P"
