@@ -21,10 +21,26 @@ export function canvasTex(size, draw, repeat = true, height = size) {
 // repeats per UV unit (boxGeometry gives 1 UV unit per 2 m).
 const _texLoader = new THREE.TextureLoader();
 const _texCache = new Map();
+// a neutral stand-in while a photo loads, or if it never does (three.js would bind black, so a floor
+// or a pillar would vanish): white colour and roughness (the material's own colour shows), flat normals
+function flatImage(role) {
+  const c = document.createElement('canvas');
+  c.width = c.height = 1;
+  const g = c.getContext('2d');
+  g.fillStyle = role === 'normal' ? '#8080ff' : '#ffffff';
+  g.fillRect(0, 0, 1, 1);
+  return c;
+}
 export function pbrTex(name, role, repeat = 1) {
   const key = `${name}_${role}_${repeat}`;
   if (_texCache.has(key)) return _texCache.get(key);
-  const t = _texLoader.load(`assets/textures/${name}_${role}.jpg`);
+  // r169 keeps a texture's GPU storage at the size of its first upload: when the photo arrives, drop the
+  // stand-in's GPU copy so the photo is allocated at its own size (never a stand-in without this)
+  const t = _texLoader.load(`assets/textures/${name}_${role}.jpg`, (tex) => tex.dispose());
+  if (!t.image) {
+    t.image = flatImage(role);
+    t.needsUpdate = true;
+  }
   t.wrapS = t.wrapT = THREE.RepeatWrapping;
   t.repeat.set(repeat, repeat);
   t.anisotropy = 8;
