@@ -837,7 +837,8 @@ class Game {
         return;
       }
       try {
-        for (const k of Object.keys(localStorage)) if (k.startsWith('afterzero.')) localStorage.removeItem(k);
+        // this edition's keys only: on a shared origin the other edition keeps its saves and settings
+        for (const k of Object.keys(localStorage)) if (k.startsWith(NS) && (EDITION || !k.startsWith('afterzero.lv.'))) localStorage.removeItem(k);
         sessionStorage.clear();
       } catch {
         /* no storage */
