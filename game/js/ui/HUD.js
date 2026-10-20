@@ -419,5 +419,13 @@ export class HUD {
       const name = ($('#comboName').value || '').replace(/[<>&"]/g, '').trim().toUpperCase() || `COMBO ${(game.combos?.length || 0) + 1}`; // no markup: the name is shown as HTML
       this.renderLaws(game, game.saveCombo(name));
     };
+    // Enter (or the keyboard's Go) saves the combo and closes the keyboard (Android IMEs often send key 'Enter' with no code)
+    const cn = $('#comboName');
+    if (cn && save) cn.onkeydown = (e) => {
+      if (e.key !== 'Enter' && e.keyCode !== 13) return;
+      e.preventDefault();
+      cn.blur();
+      save.click();
+    };
   }
 }
