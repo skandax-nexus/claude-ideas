@@ -98,7 +98,8 @@ function crewVoice(c) {
   // they/them crew speak with the voice of the body they wear (HALCYON's Theo is the gardener)
   const k = crewModelKey(c);
   const g = k ? (/_f$|^w_/.test(k) ? 'f' : 'm') : 'n';
-  return { pitch: 1.0 + v * 0.03, gender: g, rate: 0.99 };
+  // ...at that voice's own pitch: the pack plays a crew voice faster or slower by its pitch offset
+  return { pitch: { f: 1.14, m: 0.84, n: 1.0 }[g] + v * 0.03, gender: g, rate: 0.99 };
 }
 
 class Game {
