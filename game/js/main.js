@@ -1263,7 +1263,9 @@ class Game {
       // the act's local rules, applied to every room (RealityEngine overrides)
       for (const k of Object.keys(this.engine.overrides)) if (/^(d\d+s\d+r\d+|f\d+s\d+)$/.test(k)) delete this.engine.overrides[k];
       const o = rulesOverride(act.rules);
+      this.hud.lawsSelf = true; // the act's rules are not a change of laws: keep the player's unsent draft
       for (const rid of lv.order) this.engine.setOverride(rid, o);
+      this.hud.lawsSelf = false;
       this.flareT = 0;
     }
     this.level = lv;
