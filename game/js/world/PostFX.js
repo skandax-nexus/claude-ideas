@@ -27,6 +27,10 @@ import { RoomEnvironment } from '../../vendor/addons/environments/RoomEnvironmen
   else console.warn('point-light skip patch not applied');
 }
 
+// Every image-based light is a 256 cube before prefiltering: the size three's PMREMGenerator
+// gives the default room light (fromScene), so swapping skies never changes a shader program.
+const SKY_CUBE = 256;
+
 // Ambient light from a sky photo: project the HDR onto 9 spherical-harmonic
 // coefficients (THREE.LightProbe), so characters and props are lit by the sky's
 // real colours from the right directions. Runs once per sky on the CPU.
@@ -230,11 +234,8 @@ export class PostFX {
     const { renderer, scene, camera } = this;
     this.q = q;
     // soft image-based light for the PBR materials (armour, glass, metal)
-    if (q.env && !this.envTex) {
-      const pm = new THREE.PMREMGenerator(renderer);
-      this.envTex = pm.fromScene(new RoomEnvironment(), 0.04).texture;
-      pm.dispose();
-    }
+    // (three's fromScene is fixed at a 256 cube: the skies match it, see skyEnv)
+    if (q.env && !this.envTex) this.envTex = this.pmrem().fromScene(new RoomEnvironment(), 0.04).texture;
     scene.environment = q.env ? this.envTex : null;
     scene.environmentIntensity = 0.35;
     if (q.env && this.envName) this.setEnvironment(this.envName, this.envIntensity);
@@ -290,6 +291,54 @@ export class PostFX {
     this.grade.uniforms.bloomOn.value = this.bloom ? 1 : 0;
   }
 
+  // One PMREM generator for the page's life: disposing it after each use released its blur and
+  // sky shaders, so every new sky compiled them again.
+  pmrem() {
+    return (this.pm = this.pm || new THREE.PMREMGenerator(this.renderer));
+  }
+
+  // An equirect sky photo prefiltered for image-based light, the same size as the default room
+  // light (a 256 cube). The PMREM size is part of every lit shader's program: the 512x256 HDR
+  // skies, prefiltered straight from the equirect (a cube a quarter of its width, 128), made every
+  // PBR material (world, people, the player) compile again on the first frame after the sky
+  // arrived, a moment after the fade into a new place. Drawn into a 256 cube map first, every sky
+  // matches (the 1024-wide JPG skies were 256 already). Returns the environment texture; the
+  // photo is left to the caller.
+  skyEnv(tex) {
+    if (!this.toCube) {
+      // three's WebGLCubeRenderTarget.fromEquirectangularTexture, with its shader kept (three
+      // disposes its own after each use)
+      this.toCube = new THREE.Mesh(new THREE.BoxGeometry(5, 5, 5), new THREE.ShaderMaterial({
+        name: 'CubemapFromEquirect',
+        uniforms: { tEquirect: { value: null } },
+        vertexShader: `
+          varying vec3 vWorldDirection;
+          void main() {
+            vWorldDirection = normalize((modelMatrix * vec4(position, 0.0)).xyz);
+            #include <begin_vertex>
+            #include <project_vertex>
+          }`,
+        fragmentShader: `
+          uniform sampler2D tEquirect;
+          varying vec3 vWorldDirection;
+          #include <common>
+          void main() {
+            gl_FragColor = texture2D(tEquirect, equirectUv(normalize(vWorldDirection)));
+          }`,
+        side: THREE.BackSide,
+        blending: THREE.NoBlending,
+      }));
+    }
+    const cube = new THREE.WebGLCubeRenderTarget(SKY_CUBE, { type: THREE.HalfFloatType });
+    tex.minFilter = THREE.LinearFilter; // no mipmaps (not uploaded yet): they would blur the poles
+    this.toCube.material.uniforms.tEquirect.value = tex;
+    new THREE.CubeCamera(1, 10, cube).update(this.renderer, this.toCube);
+    this.toCube.material.uniforms.tEquirect.value = null;
+    const env = this.pmrem().fromCubemap(cube.texture).texture;
+    cube.dispose();
+    return env;
+  }
+
   // Real-world light for a place: an equirect sky photo (assets/textures/sky_*.jpg)
   // turned into image-based lighting and reflections. null: the default room light.
   setEnvironment(name, intensity = 0.6) {
@@ -310,10 +359,7 @@ export class PostFX {
     this.probes = this.probes || {};
     if (this.skies[name]) return use(this.skies[name]);
     const done = (tex) => {
-      tex.mapping = THREE.EquirectangularReflectionMapping;
-      const pm = new THREE.PMREMGenerator(this.renderer);
-      this.skies[name] = pm.fromEquirectangular(tex).texture;
-      pm.dispose();
+      this.skies[name] = this.skyEnv(tex);
       tex.dispose();
       use(this.skies[name]);
       this.onSky?.(name);
