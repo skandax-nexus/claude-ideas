@@ -63,7 +63,7 @@ export class Director {
       case 'brain':
         return this.say('brain', () => {
           facts.set('brain_seen');
-          this.say('observer_tethered');
+          if (facts.get('observer_arrived')) this.say('observer_tethered'); // else when it reaches the doorway (update)
         });
       case 'observer': return this.say('observer_face', () => facts.set('observer_faced'));
     }
@@ -206,6 +206,7 @@ export class Director {
     // When the Observer reaches the doorway after activation.
     if (facts.get('observer_tethered') && !facts.get('observer_arrived') && !observer.path.length && observer.mode === 'tethered') {
       facts.set('observer_arrived');
+      if (facts.get('brain_seen')) this.say('observer_tethered'); // the doorway line waited for it
     }
   }
 }
