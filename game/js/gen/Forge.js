@@ -491,9 +491,17 @@ export function forgeGame(seed, choices = {}) {
   const firsts = r.shuffle(FIRST), lasts = r.shuffle(LAST);
   const roleOrder = r.shuffle(ROLE_KEYS.filter((k) => k !== 'guide'));
   const cast = [];
+  // a generated name that matches a typed one gives way to the next unused name further down the deal
+  const typedNames = new Set(typed.filter((t) => t?.name).map((t) => t.name.toLowerCase()));
+  let spare = 8;
   for (let i = 0; i < Math.min(8, size); i++) {
     const t = typed[i] || {};
-    const first = t.name || firsts[i];
+    let gen = firsts[i];
+    if (!t.name && typedNames.has(gen.toLowerCase())) {
+      while (typedNames.has(firsts[spare].toLowerCase())) spare++;
+      gen = firsts[spare++];
+    }
+    const first = t.name || gen;
     const role = t.role || (i === 0 ? 'guide' : roleOrder[(i - 1) % roleOrder.length]);
     cast.push({
       id: `f${i}`, first, name: `${first} ${lasts[i]}`, typed: !!t.name, role: ROLES[role].label, roleKey: role,

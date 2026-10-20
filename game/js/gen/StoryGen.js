@@ -210,6 +210,14 @@ export function makeStory(seed, wish = null, opts = {}) {
   const firsts = r.shuffle(FIRST);
   const wished = (wish?.names || []).map(cleanName).filter(Boolean).slice(0, 8);
   wished.forEach((n, i) => (firsts[i] = n));
+  // a generated name that matches a typed one gives way to the next unused name further down the
+  // deal (only those slots change: stories without typed names, or without clashes, stay the same)
+  const typedNames = new Set(wished.map((n) => n.toLowerCase()));
+  for (let i = wished.length, j = 8; i < 8; i++) {
+    if (!typedNames.has(firsts[i].toLowerCase())) continue;
+    while (typedNames.has(firsts[j].toLowerCase())) j++;
+    firsts[i] = firsts[j++];
+  }
   const lasts = r.shuffle(LAST);
   const traits = Object.keys(TRAITS);
   const cast = DECKS.slice(0, 7).map((d, i) => {
