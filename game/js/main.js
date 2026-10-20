@@ -58,6 +58,15 @@ const THEMES = {
 
 const _c = new THREE.Color(), _c2 = new THREE.Color(), _fog = new THREE.Color(), _tint = new THREE.Color(); // per-frame scratch colours
 const _sv = new THREE.Vector3(); // per-frame scratch vector (the sun's snapped centre)
+const TEX_SLOTS = ['map', 'normalMap', 'roughnessMap', 'metalnessMap', 'alphaMap', 'emissiveMap', 'aoMap', 'bumpMap'];
+// every texture the materials under root use (into out)
+function texturesOf(root, out = new Set()) {
+  root.traverse((o) => {
+    const ms = Array.isArray(o.material) ? o.material : o.material ? [o.material] : [];
+    for (const m of ms) for (const k of TEX_SLOTS) if (m[k]?.isTexture) out.add(m[k]);
+  });
+  return out;
+}
 
 // Every token the prologue can teach; the vessel starts with all of them.
 const BASE_TOKENS = ['GRAVITY', 'INVERTS', 'INVERTED', 'PHYSICAL', 'ECHO', 'HELD', 'PERSISTS', 'OBSERVER', 'FREEZES', 'ALL', 'ECHOES', 'SOLIDIFIES'];
@@ -190,6 +199,32 @@ class Game {
     this.setupMenus();
     this.clock = new THREE.Clock();
     this.renderer.setAnimationLoop(() => this.frame());
+    this.warmStation();
+  }
+
+  // On the title, Station Zero's textures upload one at a time while the page is idle, so the
+  // first look into each room does not stall on them. Stops as soon as the game starts.
+  warmStation() {
+    if (this.editionDef) return; // THE LAST VERSION never goes into Station Zero
+    const done = new Set();
+    let queue = [], scans = 0;
+    const idle = (f) => (window.requestIdleCallback ? window.requestIdleCallback(f, { timeout: 1000 }) : setTimeout(f, 50));
+    const tick = () => {
+      if (this.started) return;
+      if (!queue.length) {
+        // textures still loading in the background join on a later pass
+        if (scans++ >= 6) return;
+        const all = new Set();
+        for (const r of [this.world.root, this.npcs.juno, this.player.model, this.observer.mesh]) if (r) texturesOf(r, all);
+        queue = [...all].filter((t) => t.version > 0 && !done.has(t));
+        if (!queue.length) return void setTimeout(() => idle(tick), 2000);
+      }
+      const t = queue.pop();
+      done.add(t);
+      this.renderer.initTexture(t);
+      idle(tick);
+    };
+    setTimeout(() => idle(tick), 1500); // after the title's first frames
   }
 
   newState() {
@@ -1235,6 +1270,9 @@ class Game {
     this.deckWorld.hero = this.settings.hero; // the Other wears your face
     this.smart.flush(); // a queued preset change lands here, so the new place compiles once
     this.deckWorld.build(lv, this.story, c.flags);
+    // everyone in the sector, hidden or not, uploads their textures now, behind the fade,
+    // not on the frame they first appear
+    for (const n of this.deckWorld.npcs) for (const m of [n.model, n.echo]) if (m) for (const t of texturesOf(m)) this.renderer.initTexture(t);
     this.weather.set(lv.palette.weather);
     this.postfx.setGrade(lv.palette.grade || STATION_GRADE);
     this.postfx.setEnvironment(lv.palette.sky || null);

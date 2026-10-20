@@ -282,10 +282,19 @@ export class DeckWorld {
   dispose() {
     if (!this.root) return;
     this.scene.remove(this.root);
-    this.root.traverse((o) => {
-      if (o.geometry) o.geometry.dispose();
-      if (o.material && o.material.map && !o.material.userData.keep && !Object.values(this.mats || {}).includes(o.material)) o.material.map.dispose?.();
-    });
+    // Free what this sector made. Characters are clones that share the loaded models' buffers
+    // and textures (and the contact-shadow blob), and anything marked keep comes from a shared
+    // cache: those stay on the GPU for the next sector instead of being re-uploaded. (Every
+    // sprite shares three's one sprite quad, also used outside the sector.)
+    const own = new Set(Object.values(this.mats || {}));
+    const walk = (o) => {
+      if (o.userData.actor) return;
+      if (o.geometry && !o.isSprite && !o.geometry.userData.keep) o.geometry.dispose();
+      const m = o.material;
+      if (m && !Array.isArray(m) && m.map && !m.userData.keep && !m.map.userData.keep && !own.has(m)) m.map.dispose?.();
+      for (const c of o.children) walk(c);
+    };
+    walk(this.root);
     this.root = null;
     this.level = null;
     this.decor = null;
@@ -669,6 +678,7 @@ function lightPools(glows) {
     g.fillStyle = gr;
     g.fillRect(0, 0, 128, 128);
     poolTex = new THREE.CanvasTexture(c);
+    poolTex.userData.keep = true; // every district's pools share it
   }
   const out = [];
   const plane = new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2);

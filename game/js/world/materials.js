@@ -29,6 +29,7 @@ export function pbrTex(name, role, repeat = 1) {
   t.repeat.set(repeat, repeat);
   t.anisotropy = 8;
   if (role === 'color') t.colorSpace = THREE.SRGBColorSpace;
+  t.userData.keep = true; // cached and shared: DeckWorld.dispose leaves it alone
   _texCache.set(key, t);
   return t;
 }
