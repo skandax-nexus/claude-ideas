@@ -811,7 +811,7 @@ Being caught by the Observer is never an ending. It just sends you back to the h
   - **THE WINDOWS:** "The stars in the windows were never outside. The vessel stopped moving long ago..."
 
   The motive paragraph is one of four:
-  - *to keep {victim} alive*: inside the fold the night never reaches morning, and neither does dying (the victim is always met alive with this motive);
+  - *to keep {victim} alive*: inside the fold the night never reaches morning, and neither does dying (the victim is met alive with this motive, unless the twist is THE WATCHER'S NAME: then *"{victim} was dying. {culprit} could not keep the body, so {culprit} kept the night: inside the fold, what was uploaded of {victim} never has to end."*);
   - *to hide where we had arrived*;
   - *to undo a mistake*, one navigation error;
   - *because the dreamers promised a way home*: a million dreaming people want to go home, and their dream told the culprit that every cycle brings the vessel one step closer.

@@ -258,6 +258,8 @@ export function makeStory(seed, wish = null, opts = {}) {
   // whoever you meet must fit the ending you will read (no rng draw: every seed keeps its truth)
   if (twist.key === 'observer') cast[victim].alive = false; // uploaded: only an echo is left
   else if (motive.key === 'save') cast[victim].alive = true; // the fold keeps them from dying
+  // kept alive and uploaded that night: the fold keeps what was uploaded of them (no rng draw)
+  if (twist.key === 'observer' && motive.key === 'save') motive = { ...motive, long: '{victim} was dying. {culprit} could not keep the body, so {culpritFirst} kept the night: inside the fold, what was uploaded of {victimFirst} never has to end.' };
 
   const V = (extra = {}) => ({
     culprit: cast[culprit].name,
