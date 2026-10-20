@@ -157,8 +157,10 @@ export const VESSEL_AFTER = {
       TRAIL,
       { who: 'TICK', text: 'THE DEVICE STILL WORKS. IT CARRIES A SMALL FIELD OF ITS OWN. THE WATCHERS DO NOT. THEY ARE STANDING VERY STILL.' },
     ],
+    // told in the past tense: the field let go, the watchers stand still, the windows are black
     twists: {
-      observer: 'The watchers on these decks were not only machines. The one that followed you deck to deck was {victim}, uploaded on the night of the Zero Event, watching the ship the only way it could. It learned you because it missed you. When the field went dark, it finally closed its eye.',
+      observer: 'The watchers on these decks were not only machines. The one that stood watch on these decks was {victim}, uploaded on the night of the Zero Event, watching the ship the only way it could. It learned you because it missed you. When the field went dark, it finally closed its eye.',
+      stars: 'The stars in the windows were never outside. The vessel had stopped moving long before you pulled the core. Every window on board had been replaying the last night anyone believed the journey had a point, until the field let go and the glass went black.',
     },
     coda: [
       { who: 'NONE', text: 'The chair unlocks. Behind you, someone opens the bridge door by hand.' },

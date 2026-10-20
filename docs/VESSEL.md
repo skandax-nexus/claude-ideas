@@ -73,7 +73,7 @@ v1.0 also makes every story number agree with itself: the victim is met as an ec
 | Deck 1 card | DECK 1 OF 8 | · AFTER SEVERED | · AFTER SUSTAINED | · AFTER OBSERVED |
 | replay button | CYCLE 43 | TELL IT AGAIN | FOLD AGAIN | CYCLE 43 ("The ship will listen") |
 
-Deck 1 opens with the ending's own lines (its `{trail}` line is the existing recorded crew line), and after the right name the Bridge plays the ending's last scene before the ending card; its narration closes the card. After SEVERED a wrong name no longer "folds back", and THE WATCHER'S NAME is told in the past tense. OBSERVER FREEZES IN works in every mode and watched halls stay optional, so no room loses its answer.
+Deck 1 opens with the ending's own lines (its `{trail}` line is the existing recorded crew line), and after the right name the Bridge plays the ending's last scene before the ending card; its narration closes the card. After SEVERED a wrong name no longer "folds back", and THE WATCHER'S NAME and THE WINDOWS are told in the past tense. OBSERVER FREEZES IN works in every mode and watched halls stay optional, so no room loses its answer.
 
 Where the ending comes from (`main.startVessel`): a save's own `campaign.ending` (v0.9 saves have none and play as before), else the Cradle's gate or the replay button, else `facts.ending` (set at the machine, or adopted from `afterzero.lastEnding` when a chapter starts from the menu). If the ending is SUSTAINED but the Observer learned nothing, the watchers simply hunt.
 
