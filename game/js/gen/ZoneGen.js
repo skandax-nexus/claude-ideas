@@ -25,11 +25,10 @@ export const ZONE_HINTS = {
   drones: ['THE DRONES WATCH THE STREET. ONLY THE STREET.', 'STAY BEHIND BUILDINGS. OR GO WHERE THEY DO NOT LOOK: UP.', 'SHIFT TO INVERTED AND CROSS ON THE DOME. OR WRITE  OBSERVER  FREEZES IN  (THIS STATE).'],
   gate: ['THE WAY ON IS LOCKED.', 'IT OPENS WHEN YOU HAVE SEEN WHAT THIS DISTRICT IS FOR.', 'FINISH THE SCENE HERE. THEN WALK NORTH TO THE GATE.'],
   // WORLD FORGE acts with INVERTED gravity (PHYSICAL is the upside-down state there) or ZERO gravity
-  // (no state flips you: you drift at street height and jump to rise)
+  // (no state flips you: you drift at street height)
   'inv:roof': ['THE SCENE IS ON A ROOF.', 'HERE PHYSICAL PUTS YOU ON THE CEILING. OR THE OLD STAIRS ARE A MEMORY.', 'SHIFT TO PHYSICAL, WALK THE CEILING UNTIL YOU ARE ABOVE THE ROOF, SHIFT TO INVERTED. OR: ECHOES SOLIDIFY IN ECHO, SHIFT TO ECHO, CLIMB.'],
   'inv:canal': ['THE WATER CUTS THE DISTRICT IN TWO.', 'A BRIDGE USED TO BE HERE. ECHO REMEMBERS IT. THE CEILING DOES NOT CARE ABOUT WATER.', 'ECHOES SOLIDIFY IN ECHO, SHIFT TO ECHO, CROSS. OR SHIFT TO PHYSICAL AND WALK OVER IT ON THE CEILING.'],
   'inv:drones': ['THE DRONES WATCH THE STREET. ONLY THE STREET.', 'STAY BEHIND BUILDINGS. OR GO WHERE THEY DO NOT LOOK: UP. HERE PHYSICAL TAKES YOU THERE.', 'SHIFT TO PHYSICAL AND CROSS ON THE CEILING. OR WRITE  OBSERVER  FREEZES IN  (THIS STATE).'],
-  'zero:roof': ['THE SCENE IS ON A ROOF.', 'NOTHING WEIGHS ANYTHING HERE. NOT EVEN YOU. JUMP, AND KEEP JUMPING.', 'PRESS JUMP AGAIN AND AGAIN TO RISE ABOVE THE ROOF, THEN DRIFT OVER IT AND SETTLE.'],
   'zero:canal': ['THE WATER CUTS THE DISTRICT IN TWO.', 'NOTHING WEIGHS ANYTHING HERE. THE WATER CANNOT PULL YOU IN.', 'DRIFT ACROSS THE WATER.'],
   'zero:drones': ['THE DRONES WATCH THE STREET. AND EVERYTHING THAT FLOATS IN IT.', 'STAY BEHIND BUILDINGS. OR FREEZE THEM.', 'WRITE  OBSERVER  FREEZES IN  (THIS STATE). OR KEEP A BUILDING BETWEEN YOU AND THEM.'],
 };
@@ -129,8 +128,10 @@ export function generateZone(story, zi, si) {
   const scene = { x: sceneSide * rng.float(14, 22), z: far(rng.float(-62, -84)) };
   if (beat.kind === 'custom') {
     // the edition places its own scene (zone.overlay below): nothing here
-  } else if (beat.kind === 'arrival' && rules?.nullField) {
-    // a null field: no law reaches a roof, so the recorder waits on a plinth in the street
+  } else if (beat.kind === 'arrival' && (rules?.nullField || rules?.gravity === 'ZERO')) {
+    // a null field: no law reaches a roof, so the recorder waits on a plinth in the street. So it does under
+    // ZERO gravity: you drift at street height (under the gate), and only a long run of jumps would lift you
+    // to a roof
     const rx = sceneSide * 16, rz = canal ? -76 : -38;
     M.box([rx - 2.5, 0, rz - 2.5, rx + 2.5, 0.6, rz + 2.5], { mat: 'trim' });
     M.box([rx - 0.5, 0.6, rz - 0.4, rx + 0.5, 1.6, rz + 0.4], { mat: 'prop' });

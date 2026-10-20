@@ -705,6 +705,7 @@ export function checkSolvable(level, act, kit = []) {
     if (effects.size > 3) out.push(`${rid}: needs ${effects.size} laws`);
     if (rules.gravity === 'ZERO') for (const c of req) if (['exit:ceiling', 'ledge:echo', 'ledge:light', 'exit:core:gravity', 'exit:core:zerog', 'exit:core:echo', 'exit:core:light'].includes(c.key)) out.push(`${rid}: ${c.key} unreachable in zero gravity`);
     if (level.zone && rules.gravity === 'ZERO' && !rules.nullField && (room.floatY ?? 1.25) > 4.5 - 0.85) out.push(`${rid}: floats at ${room.floatY} m, over the 4.5 m gate`);
+    if (level.zone && rules.gravity === 'ZERO' && !rules.nullField && req.some((c) => c.key === 'roof')) out.push(`${rid}: a roof scene, but you drift at street height`);
     if (rules.gravity === 'INVERTED') for (const c of req) if (c.key === 'exit:key') out.push(`${rid}: a key lock cannot be reached upside down`);
     if (rules.watchers === 'NONE' && level.sentinels.some((s) => s.room === rid)) out.push(`${rid}: watchers where the rules say none`);
   }
