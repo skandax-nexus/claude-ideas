@@ -937,8 +937,11 @@ class Game {
     $('#again').onclick = () => this.begin('new', null, this.freeSlot()); // a slot of its own, not the hidden old autosave
     $('#toCradle').onclick = () => {
       this.closeMenu();
+      const free = this.freeSlot();
+      if (free !== null) this.slot = free; // the finished prologue stays in its slot (as SKIP TO THE VESSEL)
       this.run = 'cradle';
       this.startZones(null, 'cradle', key);
+      if (free !== null) this.hud.toast(`<small>THE CRADLE</small><br>Saving in slot ${free + 1}.`, 2400);
     };
     $('#toVessel').onclick = () => {
       this.closeMenu();
