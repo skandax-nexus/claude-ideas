@@ -2044,8 +2044,9 @@ class Game {
         return true;
       }
       this.held = d.held || null;
-      // quit between Varga's vault recording and the climb: the way up is still waiting
-      if (this.facts.get('vault_seen') && !this.facts.get('zones_done')) {
+      // quit between Varga's vault recording and the climb: the way up is still waiting (not after
+      // the choice: Recording 2 no longer opens the hatch then, see Director)
+      if (this.facts.get('vault_seen') && !this.facts.get('zones_done') && !this.facts.get('ending')) {
         this.enterRoom('archive', true);
         this.enterHalcyon();
         return true;
