@@ -384,7 +384,7 @@ class Game {
     $('#quit').onclick = (e) => {
       // a save the browser refused asks first: quitting now would lose the progress
       const b = e.currentTarget;
-      if (this.saveTo('auto') === false && !b.classList.contains('sure')) {
+      if (this.saveTo('auto') === false && !this.confirmTap(b)) {
         b.classList.add('sure');
         b.textContent = 'NOT SAVED: STORAGE IS BLOCKED · TAP AGAIN TO QUIT';
         return;
@@ -697,7 +697,7 @@ class Game {
     $('#saves .body').innerHTML = rows;
     for (const b of document.querySelectorAll('#saves [data-del]')) {
       b.onclick = () => {
-        if (!b.classList.contains('sure')) {
+        if (!this.confirmTap(b)) {
           b.classList.add('sure');
           b.textContent = 'SURE?';
           return;
@@ -711,7 +711,7 @@ class Game {
         const slot = b.dataset.slot === 'auto' ? 'auto' : +b.dataset.slot;
         if (mode === 'new') {
           // a used slot needs a second tap: it will be overwritten
-          if (!b.classList.contains('empty') && !b.classList.contains('sure')) {
+          if (!b.classList.contains('empty') && !this.confirmTap(b)) {
             b.classList.add('sure');
             b.querySelector('small').textContent = 'Tap again to replace this save with a new game';
             return;
@@ -833,8 +833,7 @@ class Game {
       <h3>DATA</h3>
       <div class="setting"><span>Start fresh<small>Clears saves, settings and your look on this device, then reloads</small></span><span class="seg"><button id="resetData">CLEAR</button></span></div>`;
     document.querySelector('#resetData').onclick = (e) => {
-      if (e.currentTarget.dataset.sure !== '1') {
-        e.currentTarget.dataset.sure = '1';
+      if (!this.confirmTap(e.currentTarget)) {
         e.currentTarget.textContent = 'TAP AGAIN TO CLEAR';
         return;
       }
@@ -1984,6 +1983,15 @@ class Game {
       this.hud.toast('<small>NOT SAVED</small><br>This browser is blocking storage or is out of space.', 5000);
     }
     return ok;
+  }
+
+  // a second tap confirms, but not the second half of a double tap or double click (two clicks
+  // within 350 ms): DELETE, replacing a used slot, Start fresh, quitting unsaved
+  confirmTap(b) {
+    const t = +b.dataset.sureAt || 0, now = Date.now();
+    if (t && now - t > 350) return true;
+    if (!t) b.dataset.sureAt = String(now);
+    return false;
   }
 
   // the first empty slot (null when all ten are used: the game then autosaves as before)

@@ -442,6 +442,7 @@ async function chapters() {
   await page.click('#saves [data-del="0"]');
   check(await az(() => !!localStorage.getItem('afterzero.slot.0')), 'DELETE asks for a second tap');
   await page.screenshot({ timeout: 180000, path: path.join(shots, 'f09-slots.png') });
+  await page.waitForTimeout(400); // a second tap within 350 ms would be the second half of a double tap
   await page.click('#saves [data-del="0"]');
   check(await az(() => !localStorage.getItem('afterzero.slot.0')), 'the second tap deletes the save');
   check(await az(() => document.querySelector('#saves [data-slot="0"]').classList.contains('empty')), 'the slot shows as empty again');

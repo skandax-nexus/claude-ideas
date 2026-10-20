@@ -170,7 +170,7 @@ check(!hint || /CUSTODIAN/.test(JSON.stringify(hint)), 'after the archive opens,
 await az(() => { if (AZ.menu) AZ.closeMenu(); AZ.openMenu('pause'); AZ.openSettings('pause'); });
 const tapClear = () => az(() => { const b = document.querySelector('#resetData'); b.scrollIntoView(); setTimeout(() => b.click(), 0); });
 await tapClear();
-await page.waitForTimeout(300);
+await page.waitForTimeout(600); // a second tap within 350 ms is the second half of a double tap, not a confirmation
 check((await page.textContent('#resetData')).includes('AGAIN'), 'CLEAR asks for a second tap');
 await Promise.all([page.waitForNavigation({ timeout: 120000 }), tapClear()]);
 await page.waitForFunction(() => window.AZ, null, { timeout: 400000 });
