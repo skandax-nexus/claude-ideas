@@ -230,6 +230,7 @@ export const juno = [
   { when: '!core_installed', lines: [{ who: 'JUNO', text: 'The core is in the observation hall. The sentinel there learns. Don\'t teach it the same trick twice.' }] },
   { when: '!machine_activated', lines: [{ who: 'JUNO', text: 'It\'s ready. Varga said don\'t. I say... your call.' }] },
   { when: '!brain_seen', lines: [{ who: 'JUNO', text: 'Stars. I\'d forgotten what they look like. Look at the machine in the echo - something\'s inside.' }] },
+  { when: 'ending', lines: [{ who: 'JUNO', text: 'The machine will wait. It\'s good at waiting.' }] }, // a save after the choice: the way on is the machine
   { when: 'true', lines: [{ who: 'JUNO', text: 'Whatever you choose, I\'m glad it was you this time.' }] },
 ];
 
@@ -248,4 +249,5 @@ export const hints = [
   { when: '!machine_activated', tiers: ['THE MACHINE IS READY.', 'SOMEONE TOLD YOU NOT TO.', 'USE THE MACHINE TWICE.'] },
   { when: '!brain_seen', tiers: ['THE MACHINE IS HIDING SOMETHING.', 'LOOK AT IT IN THE ECHO.', 'SHIFT THE LAB TO ECHO AND LOOK INTO THE RING.'] },
   { when: 'brain_seen && !ending', tiers: ['THIS IS YOUR CHOICE.', 'THE MACHINE IS WAITING.', 'USE THE MACHINE WHEN YOU ARE READY.'] },
+  { when: 'ending', tiers: ['THE MACHINE IS WAITING.', 'USE THE MACHINE WHEN YOU ARE READY.', 'USE THE MACHINE WHEN YOU ARE READY.'] }, // it shows your choice again, and the way on
 ];
