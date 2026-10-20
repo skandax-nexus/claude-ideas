@@ -283,12 +283,16 @@ export class DeckWorld {
     if (!this.root) return;
     this.scene.remove(this.root);
     // Free what this sector made. Characters are clones that share the loaded models' buffers
-    // and textures (and the contact-shadow blob), and anything marked keep comes from a shared
-    // cache: those stay on the GPU for the next sector instead of being re-uploaded. (Every
-    // sprite shares three's one sprite quad, also used outside the sector.)
+    // and textures (and the contact-shadow blob texture), and anything marked keep comes from a
+    // shared cache: those stay on the GPU for the next sector instead of being re-uploaded. Only
+    // a character's own contact-shadow plane is freed with it. (Every sprite shares three's one
+    // sprite quad, also used outside the sector.)
     const own = new Set(Object.values(this.mats || {}));
     const walk = (o) => {
-      if (o.userData.actor) return;
+      if (o.userData.actor) {
+        for (const c of o.children) if (c.userData.ownGeometry) c.geometry.dispose();
+        return;
+      }
       if (o.geometry && !o.isSprite && !o.geometry.userData.keep) o.geometry.dispose();
       const m = o.material;
       if (m && !Array.isArray(m) && m.map && !m.userData.keep && !m.map.userData.keep && !own.has(m)) m.map.dispose?.();

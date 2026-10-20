@@ -522,6 +522,7 @@ function contactShadow(radius) {
   m.rotation.x = -Math.PI / 2;
   m.position.y = 0.015;
   m.renderOrder = -1;
+  m.userData.ownGeometry = true; // the texture is shared, this plane is the character's own
   return m;
 }
 
