@@ -23,7 +23,9 @@ export class Player {
     this.distNow = 3.6;
     this.comfort = false; // instant gravity flips, steadier camera
     this.talkTarget = null; // [x, y, z] of whoever you're talking to: the camera frames you both
+    this.lastTalk = null; // the last talkTarget, so the framing eases out after the conversation ends
     this.talkK = 0;
+    this.cramped = false; // the camera is using the higher over-the-shoulder angle near a wall
     this.camPos = null;
     this.cinema = null; // { pos: Vector3, target: Vector3 } overrides the camera (trailers)
     this.pos = new THREE.Vector3();
@@ -62,6 +64,10 @@ export class Player {
     this.pitch = -0.12;
     this.facing.copy(this.H);
     this.camPos = null;
+    this.cramped = false;
+    // a teleport or respawn starts the camera fresh, never blending from a stale conversation
+    this.lastTalk = null;
+    this.talkK = 0;
   }
 
   get upTarget() {
@@ -231,21 +237,33 @@ export class Player {
     const dir = desired.clone().sub(head);
     const len = dir.length();
     dir.divideScalar(len);
-    let dist = Math.max(0.35, this.rayDistance(head, dir, len) - 0.15);
+    const hit = this.rayDistance(head, dir, len);
+    let dist = Math.max(0.35, hit - 0.15);
     let target = head.clone().addScaledVector(dir, dist);
-    if (dist < 1.8) {
+    if (dist < 1.8 || this.cramped) {
       // cramped: try a higher, closer angle looking down over the shoulder
       const alt = head.clone().addScaledVector(F, -2.0).addScaledVector(up, 1.3).addScaledVector(right, 0.3).sub(head);
       const altLen = alt.length();
       alt.divideScalar(altLen);
       const altDist = Math.max(0.35, this.rayDistance(head, alt, altLen) - 0.15);
-      if (altDist > dist + 0.3) { dist = altDist; target = head.clone().addScaledVector(alt, altDist); }
+      // enter only when clearly better; leave only once the normal shot reaches as far out,
+      // so the camera swoops back instead of cutting (the wall guard below can't fire on the way out).
+      // A zoomed-in shot with nothing behind it (shorter than the high angle even in the open)
+      // leaves at the old 1.8 m line, so it never sticks to the high angle in open space.
+      const open = hit >= len && dist >= 1.8;
+      const useAlt = this.cramped ? dist < altDist - 0.05 && !open : dist < 1.8 && altDist > dist + 0.3;
+      this.cramped = useAlt;
+      if (useAlt) { dist = altDist; target = head.clone().addScaledVector(alt, altDist); }
     }
     // conversation framing: over your shoulder, looking at whoever is talking
     this.talkK += ((this.talkTarget ? 1 : 0) - this.talkK) * (1 - Math.exp(-dt * 3));
     let aim = head.clone().addScaledVector(F, 6);
-    if (this.talkK > 0.01 && this.talkTarget) {
-      const who = new THREE.Vector3(...this.talkTarget);
+    // after the conversation ends, keep framing the last speaker while talkK fades,
+    // so the view eases back over about a second instead of whipping round in one frame
+    if (this.talkTarget) this.lastTalk = this.talkTarget;
+    const tt = this.talkTarget || this.lastTalk;
+    if (this.talkK > 0.01 && tt) {
+      const who = new THREE.Vector3(...tt);
       const flat = who.clone().sub(head);
       flat.y = 0;
       if (flat.lengthSq() > 0.04) {
@@ -260,7 +278,7 @@ export class Player {
         aim.lerp(who.clone().lerp(head, 0.3), this.talkK);
         dist = Math.min(dist, free);
       }
-    }
+    } else if (!this.talkTarget) this.lastTalk = null;
     if (!this.camPos || this.camPos.distanceTo(target) > 6) this.camPos = target.clone();
     else this.camPos.lerp(target, 1 - Math.exp(-dt * (this.comfort ? 8 : 14)));
     // never let smoothing drag the camera behind a wall
