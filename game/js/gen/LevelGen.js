@@ -748,8 +748,9 @@ function storyRoom(R, beat, deck, rng, level, story) {
     if (A.junoAboard) R.npcs.push({ id: 'guest_juno', crew: 'juno', pos: [-3.2, 0, -2.6], yaw: Math.PI, silent: true, when: 'verdict_right' });
     if (A.otherAboard) R.npcs.push({ id: 'guest_other', crew: 'other', pos: [0, R.H, -6.6], yaw: 0, silent: true, upsideDown: true });
   }
-  // WORLD FORGE, time SWEEPERS: a slow beam turns in the middle of the hall (the walls stay safe)
-  if (deck.rules?.time === 'SWEEPERS') R.hazards.push({ kind: 'sweeper', pivot: [0, 0.75, -8], radius: 3.4, speed: 0.9, phase: 0.6 });
+  // WORLD FORGE, time SWEEPERS: a slow beam turns by the way out (the walls stay safe), clear of the
+  // chair and of whoever waits here, so nobody is swept mid-conversation
+  if (deck.rules?.time === 'SWEEPERS') R.hazards.push({ kind: 'sweeper', pivot: [0, 0.75, -12.4], radius: 3.4, speed: 0.9, phase: 0.6 });
   // a memory beacon: touch it to save
   R.box([W / 2 - 1.4, 0, -2.4, W / 2 - 0.6, 1.2, -1.6], { mat: 'prop' });
   R.inter.push({ id: `beacon_${R.id}`, kind: 'beacon', pos: [W / 2 - 1.0, 1.5, -2.0], r: 2.4, prompt: 'SAVE MEMORY' });
