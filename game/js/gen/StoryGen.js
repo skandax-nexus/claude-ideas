@@ -283,7 +283,7 @@ export function makeStory(seed, wish = null, opts = {}) {
         arrival(r, d, c, v),
         personalLog(r, d, c, v, guilty),
         contradiction(r, d, c, v, guilty, red, cast, culprit),
-        encounter(r, d, c, v, guilty, red, cast, truth),
+        encounter(r, d, c, v, guilty, red, cast, truth, said),
       ],
     };
   });
@@ -387,9 +387,13 @@ function contradiction(r, d, c, v, guilty, red, cast, culprit) {
   };
 }
 
-function encounter(r, d, c, v, guilty, red, cast, truth) {
+function encounter(r, d, c, v, guilty, red, cast, truth, said = {}) {
   const t = TRAITS[c.trait];
-  const lines = [r.pick(t.greet)];
+  // a sentence an innocent says is said once per story: the drawn one, else the other one not yet
+  // said, else none (the draw is kept, so every seed keeps its truth)
+  const once = (pool, pick) => { const u = [pick, ...pool.filter((x) => x !== pick)].find((x) => !said[x]); if (u) said[u] = true; return u; };
+  const greet = r.pick(t.greet);
+  const lines = [once(t.greet, greet) || greet]; // two crew of one temper greet you differently while they can
   if (guilty) {
     lines.push(
       r.pick([
@@ -404,26 +408,28 @@ function encounter(r, d, c, v, guilty, red, cast, truth) {
     );
   } else {
     const suspect = cast[r.pick([0, 1, 2, 3, 4, 5, 6].filter((k) => k !== c.deck))];
+    const A = [
+      'I wasn\'t the one. I know everyone says that. I have an echo that says it too.',
+      'I don\'t know who did it. I know who didn\'t, and that\'s me, and that\'s not enough.',
+    ];
+    const B = [
+      'Whoever did it - they loved someone. That\'s the only reason anyone breaks a ship.',
+      'Find the truth, Ren. Then decide if it\'s yours to tell.',
+    ];
     lines.push(
-      r.pick([
-        'I wasn\'t the one. I know everyone says that. I have an echo that says it too.',
-        'I don\'t know who did it. I know who didn\'t, and that\'s me, and that\'s not enough.',
-      ]),
-      ff(r.pick([
+      once(A, r.pick(A)),
+      ((C) => { const p = r.pick(C); return once(C, p) || p; })([
         'If I were you I\'d look at {s}. {s} stopped sleeping a week before the Zero Event.',
         'Talk to the {r} - {s}. {s} knew the core better than anyone admits.',
         '{s} cried at dinner the night before. {s} never cries.',
-      ]), { s: suspect.first, r: suspect.role.toLowerCase() }),
-      r.pick([
-        'Whoever did it - they loved someone. That\'s the only reason anyone breaks a ship.',
-        'Find the truth, Ren. Then decide if it\'s yours to tell.',
-      ]),
+      ].map((x) => ff(x, { s: suspect.first, r: suspect.role.toLowerCase() }))),
+      once(B, r.pick(B)),
     );
   }
   return {
     kind: 'encounter',
     alive: c.alive,
-    lines: lines.map((text) => ({ who: 'CREW', name: c.name.toUpperCase(), color: c.color, text })),
+    lines: lines.filter(Boolean).map((text) => ({ who: 'CREW', name: c.name.toUpperCase(), color: c.color, text })),
     junoAfter: ff(c.alive
       // 'I didn't think anyone was' only for the first survivor you meet
       ? ((t) => (cast.slice(0, c.deck).some((x) => x.alive) ? 'Leave {first} the radio frequency. {first} shouldn\'t be alone.' : t))(r.pick(['{first}\'s alive. I didn\'t think anyone was. I\'ll stay on the line with {them}.', 'Leave {first} the radio frequency. {first} shouldn\'t be alone.']))
