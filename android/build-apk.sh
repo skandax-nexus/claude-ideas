@@ -86,8 +86,8 @@ apksigner sign --ks "$KS" --ks-pass pass:android --key-pass pass:android --out "
 apksigner verify "$OUT/$APK"
 echo "Built $(pwd)/$OUT/$APK ($APP_ID${EDITION:+, edition $EDITION}, $(du -h "$OUT/$APK" | cut -f1))"
 
-# 4. The web preview (AFTERZERO-v<version>-play.html, one claude.ai artifact per version): same page, with the models as glTF JSON
-#    for hosts that don't serve .glb, beside it in build/preview/.
+# 4. The web preview ($OUT/preview/index.html with its assets beside it, published as one claude.ai artifact per
+#    version): the same page, with the models as glTF JSON for hosts that don't serve .glb.
 P="$OUT/preview"
 mkdir -p "$P/assets/voice" "$P/assets/looks" "$P/assets/textures"
 cp ../game/assets/looks/*.webp "$P/assets/looks/"

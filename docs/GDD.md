@@ -1,5 +1,7 @@
 # AFTERZERO — Game Design Document
 
+> **Pre-v1.0 design notes.** This describes the first vertical slice. The canon is [STORY.md](STORY.md): the brain in the machine is the first Ren, Dr. Ilse Varga's son (not a future copy of you), and the Observer is his mind looking out; the field holds the fold (there is no "Undertow"); Varga is met in HALCYON and THE CRADLE; Juno and TICK are part of the cast. Where this file disagrees, STORY.md is right.
+
 > A sci-fi thriller in which the player does not just solve puzzles inside a world, but **discovers, tests and rewrites the laws that govern it.**
 
 Status: playable vertical slice (Chapters 1–4 plus a compressed 6–8) in `game/`. This document covers the full two-hour game; anything marked **[SLICE]** is implemented and playable now.
