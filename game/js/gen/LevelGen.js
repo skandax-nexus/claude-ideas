@@ -62,6 +62,8 @@ export const HINTS = {
   'inv:exit:ceiling': ['THE DOOR IS IN A STRANGE PLACE.', 'IT IS ON THE CEILING. HERE PHYSICAL TAKES YOU THERE.', 'SHIFT TO PHYSICAL AND WALK THROUGH THE DOOR ON THE CEILING.'],
   'inv:exit:core:gravity': ['THE SOCKET IS EMPTY. A CORE IS ON THE CEILING.', 'HERE PHYSICAL IS THE STATE THAT PUTS YOU UP THERE.', 'SHIFT TO PHYSICAL, TAKE THE CORE, SHIFT TO INVERTED, PUT IT IN THE SOCKET.'],
   'inv:sentinel': ['IT WATCHES THE FLOOR. ONLY THE FLOOR.', 'STAY BEHIND THE PILLARS. OR WALK ON THE CEILING. OR FREEZE IT.', 'OBSERVER  FREEZES IN  (THIS ROOM\'S STATE) STOPS IT COLD. HERE PHYSICAL KEEPS YOU ON THE CEILING, OUT OF ITS SIGHT.'],
+  // ...and with ZERO gravity: no state puts you on the ceiling, you float where it can see you
+  'zero:sentinel': ['IT WATCHES THE FLOOR. AND EVERYTHING THAT FLOATS ABOVE IT.', 'STAY BEHIND THE PILLARS. OR FREEZE IT.', 'OBSERVER  FREEZES IN  (THIS ROOM\'S STATE) STOPS IT COLD. OR KEEP A PILLAR BETWEEN YOU AND IT.'],
 };
 
 // ---------------------------------------------------------------------------------
@@ -437,6 +439,7 @@ export function generateSector(story, deckIdx, sectorIdx, campaignSeed) {
 
   const names = rng.shuffle(deck.rooms);
   const inv = deck.rules?.gravity === 'INVERTED' && !deck.rules.nullField; // WORLD FORGE: the states swap roles
+  const zero = deck.rules?.gravity === 'ZERO' && !deck.rules.nullField; // ...or none of them flips you
   const level = {
     id: `d${deckIdx}s${sectorIdx}`, deck: deckIdx, sector: sectorIdx, seed: campaignSeed,
     deckName: deck.name, palette: deck.palette,
@@ -573,7 +576,7 @@ export function generateSector(story, deckIdx, sectorIdx, campaignSeed) {
       tint: deck.palette.tint,
       killY: R.killY,
       floatY: R.floatY,
-      challenges: R.challenges.map((c) => ({ ...c, hints: (inv && HINTS[`inv:${c.key}`]) || (c.key === 'sentinel' && HINTS[`sentinel:${story.after?.sentinels}`]) || HINTS[c.key] || HINTS['exit:open'], box: t.box([-W / 2, -12, c.z1, W / 2, 30, c.z0]) })),
+      challenges: R.challenges.map((c) => ({ ...c, hints: (inv && HINTS[`inv:${c.key}`]) || (zero && HINTS[`zero:${c.key}`]) || (c.key === 'sentinel' && HINTS[`sentinel:${story.after?.sentinels}`]) || HINTS[c.key] || HINTS['exit:open'], box: t.box([-W / 2, -12, c.z1, W / 2, 30, c.z0]) })),
       exitSide: side,
       route,
       L, W, H,
