@@ -110,6 +110,7 @@ export const VOCAB = () => [
 ];
 
 const ff = (s, v) => s.replace(/\{(\w+)\}/g, (m, k) => (v[k] !== undefined ? v[k] : m));
+const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1); // a line that opens with a {place} ('the music room') starts a sentence
 
 // Pastel speaker colors for generated crew (dark enough to read on white cards).
 const CREW_COLORS = ['#2f8a5a', '#3b7fb8', '#6c5bc4', '#c0762a', '#1f9a90', '#c4566a', '#2b8f7a', '#a8862a'];
@@ -349,11 +350,11 @@ function personalLog(r, d, c, v, guilty) {
   return {
     kind: 'log',
     log: { title: `${c.name.toUpperCase()} - LOG 2`, text: ff(`${line} ${r.pick(after)}`, v) },
-    junoAfter: ff(r.pick([
+    junoAfter: cap(ff(r.pick([
       '{place}. Remember that. Statements are cheap down here.',
       'Write that down. {first} says {place}. We\'ll see what the echo says.',
       'Huh. I always thought {first} was somewhere else that night.',
-    ]), v),
+    ]), v)),
   };
 }
 
