@@ -474,7 +474,7 @@ function finaleDeck(d, r, cast, captain, truth, V, motive, twist) {
       {
         kind: 'log',
         log: { title: 'ZERO EVENT - RECONSTRUCTION', text: ff('03:12. The first law takes a key and a pair of hands. The key never changes. The hands do: one person at the core, every cycle. Everyone else has an echo that says where they were. Check your board.', v) },
-        junoAfter: 'Your log has every echo you found. Look at who doesn\'t have one.',
+        junoAfter: 'Your log has every echo you found. Look for what doesn\'t match.', // the echo that contradicts its record, not the plaques you skipped
       },
       { kind: 'verdict', motive: ff(motive.long, v), twist: { ...twist, text: ff(twist.text, v) } },
     ],

@@ -643,7 +643,7 @@ The Bridge is the same in every run. Its motto reads **"WHOEVER SITS HERE DECIDE
 
 - **Sector 1.** *CAPTAIN'S LOG - FINAL:* "The crew is asleep, or gone, or both. Someone on this ship {method}. I know who. I will not say it - the ship has to hear it from someone who earned it." TICK: *"LAST DECK. I AM NOT CRYING. I DO NOT HAVE THE HARDWARE."*
 - **Sector 2.** *VARGA - NOTE TO SUBJECT ZERO* (in her own voice: her dream reaching a terminal): "Ren. If you made it here you have seen every deck and every lie. The chair asks one question. Answer it with what you know, not with what you fear." Juno: *"Varga wrote that to you. Not to me. Interesting."*
-- **Sector 3.** *ZERO EVENT - RECONSTRUCTION:* "03:12. The first law takes a key and a pair of hands. The key never changes. The hands do: one person at the core, every cycle. Everyone else has an echo that says where they were. Check your board." Juno: *"Look at who doesn't have one."*
+- **Sector 3.** *ZERO EVENT - RECONSTRUCTION:* "03:12. The first law takes a key and a pair of hands. The key never changes. The hands do: one person at the core, every cycle. Everyone else has an echo that says where they were. Check your board." Juno: *"Your log has every echo you found. Look for what doesn't match."*
 - **Sector 4, the verdict.** After three last puzzle rooms, all seven crew stand as silent holograms in a ring around a chair. Juno: *"This is it. The chair. Check your log before you sit."* Try the gate first, and she says: *"The gate won't open for a guess. Sit in the chair first."*
 
 #### The chair
