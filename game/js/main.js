@@ -1807,9 +1807,12 @@ class Game {
       for (const s of this.deckWorld.sentinels) s.reset();
       this.hud.fade(false);
       this.catching = false;
-      if (kind === 'caught' && !this.facts.get('sentinel_tip')) {
-        this.facts.set('sentinel_tip');
-        const learned = this.story?.after?.sentinels === 'learned';
+      // the 'learned' watchers (after SUSTAINED) keep their own one-time line: a HALCYON drone's catch
+      // must not use it up (THE LAST VERSION keeps its key)
+      const learned = this.story?.after?.sentinels === 'learned';
+      const tip = learned && !this.edition ? 'sentinel_tip_learned' : 'sentinel_tip';
+      if (kind === 'caught' && !this.facts.get(tip)) {
+        this.facts.set(tip);
         this.hud.say(this.edition ? [{ who: 'KAI', text: this.edition.line('caught') }] : [{ who: 'TICK', text: learned ? 'IT KNEW WHERE YOU WOULD BE. YOU TAUGHT IT THAT, IN THE HALL.' : 'IT ONLY WATCHES THE FLOOR. OR YOU COULD ASK IT TO HOLD STILL. POLITELY. WITH A LAW.' }], this.facts);
       }
     }, kind === 'caught' ? 700 : 350);
