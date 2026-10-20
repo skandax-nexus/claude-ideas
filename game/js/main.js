@@ -2002,8 +2002,12 @@ class Game {
   frame() {
     const raw = this.clock.getDelta();
     this.smart.sample(raw);
-    const dt = Math.min(0.05, raw);
-    this.time += dt;
+    // a slow frame (below 20 fps) runs as up to three steps of at most 0.05 s, so the game keeps
+    // real speed, and voiced lines their pace, down to about 7 fps without longer physics steps
+    const real = Math.min(0.15, raw);
+    const steps = Math.max(1, Math.ceil(real / 0.05 - 1e-6));
+    const dt = real / steps;
+    this.time += real;
     // plays the same held upright or sideways
     const active = !this.paused && !this.menu;
 
@@ -2060,9 +2064,9 @@ class Game {
       this.zoomSaveT = 1;
     }
     this.updateHudMood();
-    if (this.zoomSaveT > 0 && (this.zoomSaveT -= dt) <= 0) saveSettings(this.settings);
+    if (this.zoomSaveT > 0 && (this.zoomSaveT -= real) <= 0) saveSettings(this.settings);
 
-    if (active) this.step(dt);
+    if (active) for (let i = 0; i < steps && !this.menu && !this.paused; i++) this.step(dt); // a step may open a menu
     else this.input.consumeLook();
     if (!this.started && this.menu !== 'hero') {
       // title backdrop: drift slowly around the floating object
@@ -2094,10 +2098,10 @@ class Game {
       this.player.grounded = true; // stand for the portrait, even in a weightless room
     }
 
-    this.updateWorlds(active ? dt : 0, dt);
-    this.player.updateCamera(dt);
+    this.updateWorlds(active ? real : 0, real);
+    this.player.updateCamera(real);
     if (active) this.placeFocus();
-    this.updateTheme(dt);
+    this.updateTheme(real);
     if (this.settings.minimap && this.started && !this.menu && ++this.frameN % 3 === 0) this.minimap.drawMini(this.player, this.room, this.mapMarkers());
     this.postfx.render();
   }
