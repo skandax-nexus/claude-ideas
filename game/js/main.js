@@ -1933,6 +1933,7 @@ class Game {
       held: this.mode === 'station' ? this.held : undefined,
       combos: this.combos || [],
       comboIndex: this.comboIndex ?? -1,
+      stationVisited: [...this.stationVisited], // Station Zero's map remembers where you have been
     };
     if (this.mode === 'deck') {
       const p = this.checkpoint || this.level.rooms[this.room].spawn;
@@ -1983,6 +1984,8 @@ class Game {
       this.playTime = d.playTime || 0;
       this.combos = d.combos || [];
       this.comboIndex = d.comboIndex ?? -1;
+      for (const id of d.stationVisited || []) this.stationVisited.add(id);
+      if (d.mode !== 'deck') for (const id of this.stationVisited) this.minimap.markVisited(id); // the title already set the station map
       this.hud.lawDraft = null;
       this.restoring = false;
       this.run = d.meta?.run || (d.campaign?.forge ? 'forge' : d.campaign?.zones ? (d.campaign.set === 'cradle' ? 'cradle' : 'halcyon') : d.mode === 'deck' ? 'vessel' : 'prologue');
