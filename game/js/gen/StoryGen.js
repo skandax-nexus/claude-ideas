@@ -324,12 +324,14 @@ function juno(r, i, v, said = {}) {
       'The {deck}. {name}\'s deck. Be kind to whatever you find of {them}.',
     ],
   ];
-  let k = opening.indexOf(r.pick(opening));
-  // the hatch call opens Deck 1 only; 'never made it this far' once, and not before Deck 4
-  if (i === 0) k = 0;
-  else if (k === 0 || (k === 2 && (i < 3 || said.far))) k = 1;
-  if (k === 2) said.far = true;
-  return opening[k].map((t) => ({ who: 'JUNO', text: ff(t, v) }));
+  const drawn = opening.indexOf(r.pick(opening)); // always drawn: every seed keeps its truth
+  const k = i === 0 ? 0 : drawn;
+  // the hatch call opens Deck 1 only; 'never made it this far' once, and not before Deck 4. Where the
+  // drawn opening can't be said, Juno says only its deck line, so the decks keep three openings
+  let lines = opening[k];
+  if (i > 0 && (k === 0 || (k === 2 && (i < 3 || said.far)))) lines = [opening[k][1]];
+  else if (k === 2) said.far = true;
+  return lines.map((t) => ({ who: 'JUNO', text: ff(t, v) }));
 }
 
 function arrival(r, d, c, v) {
