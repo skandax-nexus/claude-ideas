@@ -286,7 +286,8 @@ export class HUD {
     const deck = story.decks[campaign.deck];
     const sus = story.cast.map((c) => {
       const st = facts.get(`clue_${c.id}`);
-      const label = st === 'guilty' ? 'ECHO CONTRADICTS' : st === 'cleared' ? 'ALIBI CONFIRMED' : facts.get(`met_${c.id}`) ? 'MET' : 'UNKNOWN';
+      // (HALCYON and the Cradle clear Varga by correcting the record: nobody there has an alibi)
+      const label = st === 'guilty' ? 'ECHO CONTRADICTS' : st === 'cleared' ? (story.zones ? 'RECORD CORRECTED' : 'ALIBI CONFIRMED') : facts.get(`met_${c.id}`) ? 'MET' : 'UNKNOWN';
       return `<li><span><b>${c.name}</b> <small>${c.role}${st || c.deck === undefined ? '' : ` &middot; deck ${c.deck + 1}`}</small></span><span class="st ${st || ''}">${label}</span></li>`;
     }).join('');
     const logs = game.log.slice().reverse().map((l) => `<li>${l}</li>`).join('') || '<li class="dim">Nothing yet.</li>';
