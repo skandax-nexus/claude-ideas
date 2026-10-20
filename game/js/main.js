@@ -772,9 +772,18 @@ class Game {
   }
 
   pickHero(choice, from, then) {
+    this.heroWant = choice;
     if (actorsReady() && !actorLoaded(lookOf(choice).model)) {
-      // a look that hasn't arrived yet: fetch it, then try again
-      loadActors([lookOf(choice).model]).then((ok) => ok && this.menu === 'hero' && this.pickHero(choice, from, then));
+      // a look that hasn't arrived yet: say so, fetch it, then try again (unless the player has
+      // picked another look meanwhile); a failed fetch says so and the next tap retries
+      const label = document.querySelector(`#hero [data-hero="${choice.id}"] span`);
+      if (label) label.textContent = 'LOADING…';
+      loadActors([lookOf(choice).model]).then((ok) => {
+        if (this.menu !== 'hero') return;
+        if (this.heroWant !== choice) { if (label) label.textContent = LOOKS[choice.id]?.name || ''; return; }
+        if (ok) this.pickHero(choice, from, then);
+        else if (label) label.textContent = 'COULD NOT LOAD · TAP AGAIN';
+      });
       return;
     }
     this.changeSetting('hero', choice);

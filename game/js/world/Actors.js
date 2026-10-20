@@ -132,6 +132,7 @@ export function loadActors(keys = Object.keys(MODELS), dir) {
     })().catch((e) => {
       console.warn(`Character ${key} could not load`, e);
       loadErrors.push(`${key}: ${e?.message || e}`);
+      delete pending[key]; // the next request tries again
       return false;
     });
     return pending[key];
