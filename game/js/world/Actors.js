@@ -526,6 +526,13 @@ function contactShadow(radius) {
 }
 
 const _v = new THREE.Vector3(), _e = new THREE.Euler();
+// animate()'s per-frame scratch (one actor at a time, so shared): no garbage per character per frame
+const _a = {
+  rootQ: new THREE.Quaternion(), rootQi: new THREE.Quaternion(), right: new THREE.Vector3(), fwd: new THREE.Vector3(), up: new THREE.Vector3(),
+  hp: new THREE.Vector3(), turn: new THREE.Quaternion(), worldTurn: new THREE.Quaternion(), pw: new THREE.Quaternion(), local: new THREE.Quaternion(),
+};
+const _rw = { pw: new THREE.Quaternion(), nw: new THREE.Quaternion(), bw: new THREE.Quaternion() };
+const GAITS = ['idle', 'walk', 'run', 'air']; // the locomotion weights, in a fixed order
 const _f = { v: new THREE.Vector3(), q: new THREE.Quaternion(), hw: new THREE.Quaternion(), r: new THREE.Vector3(), u: new THREE.Vector3(), d: new THREE.Vector3() };
 
 // A bone face for one frame (rig 'rb'): everything relative to the head, from rest.
@@ -576,8 +583,8 @@ function driveFace(F, head, right, up, dt, blink, open, lift, target, k) {
 
 // world-space rotation of a bone around an axis (works on any rig)
 function rotWorld(bone, axis, ang) {
-  const pw = bone.parent.getWorldQuaternion(new THREE.Quaternion());
-  const nw = new THREE.Quaternion().setFromAxisAngle(axis, ang).multiply(pw.clone().multiply(bone.quaternion));
+  const pw = bone.parent.getWorldQuaternion(_rw.pw);
+  const nw = _rw.nw.setFromAxisAngle(axis, ang).multiply(_rw.bw.copy(pw).multiply(bone.quaternion));
   bone.quaternion.copy(pw.invert().multiply(nw));
   bone.updateMatrixWorld(true);
 }
@@ -592,6 +599,16 @@ export function makeActor(spec = {}) {
   const pivot = new THREE.Group(); // scales the model to its height
   root.add(pivot);
   const model = SkeletonUtils.clone(L.gltf.scene);
+  // SkeletonUtils.clone gives every skinned primitive its own copy of the skeleton, and the
+  // renderer computes and uploads bone matrices once per skeleton: the primitives of one
+  // glTF skin (same bones, same inverse bind matrices) share a single skeleton again
+  const sks = [];
+  model.traverse((o) => {
+    if (!o.isSkinnedMesh) return;
+    const s = sks.find((s) => s.bones.length === o.skeleton.bones.length && s.bones.every((b, i) => b === o.skeleton.bones[i]) && s.boneInverses.every((m, i) => m.equals(o.skeleton.boneInverses[i])));
+    if (s) o.bind(s, o.bindMatrix);
+    else sks.push(o.skeleton);
+  });
   pivot.add(model);
   const height = spec.height || L.def.height;
   const scale = height / L.nativeHeight;
@@ -748,6 +765,7 @@ export function makeActor(spec = {}) {
   };
 
   const w = { idle: 1, walk: 0, run: 0, air: 0 };
+  const tw = { idle: 0, walk: 0, run: 0, air: 0 }; // this frame's target weights
   let phase = 0, talking = false, talkK = 0, talkT = 0, look = null, lastLook = null, waveT = -1, lookK = 0;
   let blinkT = 1 + Math.random() * 3, clock = Math.random() * 10;
 
@@ -763,14 +781,20 @@ export function makeActor(spec = {}) {
       clock += dt;
       // locomotion weights, eased so states never snap
       const ease = 1 - Math.exp(-dt * 8);
-      const tw = { idle: 0, walk: 0, run: 0, air: airborne ? 1 : 0 };
+      tw.idle = tw.walk = tw.run = 0;
+      tw.air = airborne ? 1 : 0;
       if (!airborne) {
         const mid = (walkSpeed + runSpeed) / 2;
         if (speed < 0.15) tw.idle = 1;
         else if (speed < mid) { const k = Math.min(1, speed / (walkSpeed * 0.8)); tw.idle = 1 - k; tw.walk = k; }
         else { const k = Math.min(1, (speed - mid) / (runSpeed - mid)); tw.walk = 1 - k; tw.run = k; }
       }
-      for (const k of Object.keys(w)) w[k] += (tw[k] - w[k]) * (k === 'air' ? 1 - Math.exp(-dt * 10) : ease);
+      for (const k of GAITS) {
+        w[k] += (tw[k] - w[k]) * (k === 'air' ? 1 - Math.exp(-dt * 10) : ease);
+        // a faded gait ends at exactly 0, so the mixer skips it (else walk and run are
+        // evaluated forever at weights like 1e-20)
+        if (tw[k] === 0 && w[k] < 1e-3) w[k] = 0;
+      }
       // one stride phase for walk and run, advanced at the rate that matches the
       // ground speed, so the feet stay planted while the gaits blend
       const wd = A.walk.getClip().duration, rd = A.run.getClip().duration;
@@ -785,25 +809,27 @@ export function makeActor(spec = {}) {
       A.run.setEffectiveWeight(Math.max(w.run * (1 - w.air), w.air));
       mixer.update(dt);
 
-      root.updateMatrixWorld(true);
-      const rootQ = root.getWorldQuaternion(new THREE.Quaternion());
-      const right = new THREE.Vector3(1, 0, 0).applyQuaternion(rootQ);
-      const fwd = new THREE.Vector3(0, 0, 1).applyQuaternion(rootQ);
-      const up = new THREE.Vector3(0, 1, 0).applyQuaternion(rootQ);
+      // (no whole-rig matrix update here: every world-space read below updates its own
+      // chain of parents, and the renderer updates the rest before drawing)
+      const rootQ = root.getWorldQuaternion(_a.rootQ);
+      const rootQi = _a.rootQi.copy(rootQ).invert();
+      const right = _a.right.set(1, 0, 0).applyQuaternion(rootQ);
+      const fwd = _a.fwd.set(0, 0, 1).applyQuaternion(rootQ);
+      const up = _a.up.set(0, 1, 0).applyQuaternion(rootQ);
       const head = bones.Head;
 
       // the head turns toward whoever you're talking to
       lookK += ((look ? 1 : 0) - lookK) * (1 - Math.exp(-dt * 4));
       if (head && lookK > 0.01 && (look || lastLook)) {
         if (look) lastLook = look;
-        const hp = head.getWorldPosition(new THREE.Vector3());
-        const dir = _v.copy(lastLook).sub(hp).applyQuaternion(rootQ.clone().invert()).normalize();
+        const hp = head.getWorldPosition(_a.hp);
+        const dir = _v.copy(lastLook).sub(hp).applyQuaternion(rootQi).normalize();
         const yaw = THREE.MathUtils.clamp(Math.atan2(dir.x, dir.z), -1.1, 1.1);
         const pitch = THREE.MathUtils.clamp(Math.asin(THREE.MathUtils.clamp(-dir.y, -1, 1)), -0.45, 0.4);
-        const turn = new THREE.Quaternion().setFromEuler(_e.set(pitch, yaw, 0, 'YXZ'));
-        const worldTurn = rootQ.clone().multiply(turn).multiply(rootQ.clone().invert());
-        const pw = head.parent.getWorldQuaternion(new THREE.Quaternion());
-        const local = pw.clone().invert().multiply(worldTurn.multiply(pw.multiply(head.quaternion)));
+        const turn = _a.turn.setFromEuler(_e.set(pitch, yaw, 0, 'YXZ'));
+        const worldTurn = _a.worldTurn.copy(rootQ).multiply(turn).multiply(rootQi);
+        const pw = head.parent.getWorldQuaternion(_a.pw);
+        const local = _a.local.copy(pw).invert().multiply(worldTurn.multiply(pw.multiply(head.quaternion)));
         head.quaternion.slerp(local, lookK * 0.8);
         head.updateMatrixWorld(true);
       }
