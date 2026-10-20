@@ -197,8 +197,10 @@ class Game {
     window.addEventListener('resize', () => this.resize());
     this.applySettings();
     this.setupMenus();
-    this.clock = new THREE.Clock();
-    this.renderer.setAnimationLoop(() => this.frame());
+    // the real-time loop: three.js passes the rAF timestamp (see loop)
+    this.minFrame = 0; // ms: the shortest gap between rendered frames (0: every refresh)
+    this.pace = { prev: undefined, gaps: [], again: false, from: undefined }; // the refresh measurement
+    this.renderer.setAnimationLoop((t) => this.loop(t));
     this.warmStation();
   }
 
@@ -1990,8 +1992,67 @@ class Game {
   }
 
   // --- main loop --------------------------------------------------------------
-  frame() {
-    const raw = this.clock.getDelta();
+  // The real-time loop. t is the rAF timestamp: the frame's vsync-aligned start, so motion steps
+  // by whole refresh intervals whatever ran before the callback (input, timers, GC). All pacing
+  // lives here; frame() can still be called on its own (tests, tools) and just steps.
+  //  - a phone with a 90/120 Hz panel renders a frame every 1/60 s at most, on whole refreshes
+  //    (45 fps at 90 Hz, 60 at 120, both even), and the GPU rests in between; 60 Hz renders all
+  //  - a phone behind a menu (not the character screen, which shows the 3D view) or on the title
+  //    renders about 30 fps; the canvas keeps its last frame, queued input waits a callback
+  loop(t) {
+    if (this.touch) this.measureRefresh(t);
+    if (this.lastT !== undefined) {
+      const idle = this.touch && this.menu !== 'hero' && (!this.started || this.menu || this.paused);
+      const min = idle ? 1000 / 30 : this.minFrame;
+      const since = t - this.lastT;
+      // 2 ms for timestamp jitter; a timestamp behind the last frame (a direct frame() call) resyncs
+      if (since >= 0 && since < min - 2) return;
+    }
+    this.frame(t);
+  }
+
+  // The panel's refresh interval: the median of 60 gaps between callbacks under 40 ms (a hitch
+  // only makes gaps longer, never shorter). Taken on the title, and once more 3 s after the game
+  // starts if the first found no fast panel (a heavy title, or a phone that only switches to
+  // 90/120 Hz once touched). Not after a fast panel is found: with the cap, gaps between callbacks
+  // no longer show the panel's rate reliably, and the cap's threshold already holds whole
+  // refreshes if the panel drops back to 60 Hz.
+  measureRefresh(t) {
+    const m = this.pace;
+    const gap = t - m.prev;
+    m.prev = t;
+    if (!m.gaps) {
+      if (m.again || this.minFrame || !this.started) return;
+      m.from ??= t;
+      if (t - m.from < 3000) return;
+      m.again = true;
+      m.gaps = [];
+      return;
+    }
+    if (gap > 4 && gap < 40) m.gaps.push(gap);
+    if (m.gaps.length < 60) return;
+    const iv = m.gaps.sort((a, b) => a - b)[30];
+    m.gaps = null;
+    this.setRefresh(iv);
+  }
+
+  // A panel faster than ~77 Hz (under 13 ms) gets the 60 fps cap. The smart renderer judges the
+  // frame rate the screen then allows: the smallest whole number of refreshes the cap lets through
+  // (2 at 90 and 120 Hz). Anything slower keeps 1/60 s: a gap measured on a phone that cannot keep
+  // up is its frame time, not its panel's.
+  setRefresh(iv) {
+    this.refresh = iv;
+    const fast = iv < 13;
+    this.minFrame = fast ? 1000 / 60 : 0;
+    this.smart.panel = fast ? iv / 1000 : 1 / 60;
+    this.smart.vsync = fast ? (iv * Math.ceil((this.minFrame - 2) / iv)) / 1000 : 1 / 60;
+    this.smart.restart();
+  }
+
+  frame(t = performance.now()) {
+    // dt from the timestamps (loop's from rAF); the first frame steps 1/60 s
+    const raw = this.lastT === undefined ? 1 / 60 : Math.max(0, (t - this.lastT) / 1000);
+    this.lastT = t;
     this.smart.sample(raw);
     const dt = Math.min(0.05, raw);
     this.time += dt;

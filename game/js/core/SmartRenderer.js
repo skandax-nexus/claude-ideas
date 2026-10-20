@@ -29,9 +29,12 @@ import { QUALITY } from '../ui/Settings.js';
 import { NS } from './Edition.js';
 
 const ORDER = ['low', 'medium', 'high'];
-const TARGET = 50; // fps we try to stay above
-const GOOD = 58; // fps that counts as headroom
-const LATE = 1.5; // a frame longer than 1.5 refresh intervals missed the screen
+// TARGET and GOOD are shares of the frame rate the screen allows (1 / vsync): 50 and 58 fps at
+// 60 Hz, and on a 90/120 Hz phone that the game caps at 45/60 fps, the same shares of the cap,
+// so a capped 60 is not read as missing 120 and an uncapped 90 is not read as headroom.
+const TARGET = 5 / 6; // what we try to stay above
+const GOOD = 29 / 30; // what counts as headroom
+const LATE = 1.5; // a frame later than its slot by half a refresh missed the screen (1.5 intervals at 60 Hz)
 const BAN_MAX = 600; // s: the longest a state that failed is kept out
 const SKEY = `${NS}smart.v1`; // the settled state, per edition
 const KEEP = 864e5; // ms: a stored state older than a day is ignored
@@ -49,7 +52,8 @@ export class SmartRenderer {
     this.note = '';
     this.pending = null; // a preset change waiting for a safe moment
     this.pendingAt = 0;
-    this.vsync = 1 / 60; // the screen's refresh interval (s)
+    this.vsync = 1 / 60; // the interval between frames the screen allows (s): its refresh, or the game's cap (main.js setRefresh)
+    this.panel = 1 / 60; // the screen's refresh interval (s)
     this.clock = 0; // seconds of play watched, for the bans
     this.ban = {}; // state -> clock time until which it is not tried again
     this.fails = {}; // state -> how often it had to be left
@@ -123,13 +127,14 @@ export class SmartRenderer {
     if (this.pending || dt > 0.25) return this.restart(false);
     this.acc += dt;
     this.frames++;
-    if (dt > LATE * this.vsync) this.late++;
+    if (dt > this.vsync + (LATE - 1) * this.panel) this.late++;
     if (this.acc < 2) return; // judge every two seconds
     const fps = this.frames / this.acc;
     const late = this.late / this.frames;
+    const hz = 1 / this.vsync;
     this.restart(false);
     this.fps = fps;
-    const slow = fps < TARGET || late > 0.12;
+    const slow = fps < TARGET * hz || late > 0.12;
     if (++this.held >= 10 && !slow) this.remember(); // settled: 20 s in this state
     if (slow) {
       this.fast = 0;
@@ -144,7 +149,7 @@ export class SmartRenderer {
         this.forbid(`level:${this.level}`, 120);
         this.request(ORDER[i - 1]);
       }
-    } else if (fps > GOOD && late < 0.03) {
+    } else if (fps > GOOD * hz && late < 0.03) {
       this.slow = 0;
       if (++this.fast < 5) return; // ten seconds of headroom
       this.fast = 0;
