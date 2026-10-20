@@ -410,13 +410,13 @@ const CLOSERS = ['Find the truth, Ren. Then decide if it\'s yours to tell.', 'Wh
 
 function normalise(choices = {}) {
   const c = {};
-  c.title = String(choices.title || '').trim().slice(0, 40) || null;
+  c.title = String(choices.title || '').replace(/[<>&"]/g, '').trim().slice(0, 40) || null; // shown as HTML in the save list: no markup
   c.hero = cleanName(choices.hero) || null;
   c.genre = GENRES[choices.genre] ? choices.genre : null;
   c.length = LENGTHS[choices.length] ? choices.length : null;
   c.acts = (choices.acts || []).map((a) => ({
     theme: THEMES[a?.theme] ? a.theme : null,
-    name: String(a?.name || '').trim().slice(0, 28).toUpperCase() || null,
+    name: String(a?.name || '').replace(/[<>&"]/g, '').trim().slice(0, 28).toUpperCase() || null,
     rules: Object.fromEntries(RULE_KEYS.map((k) => [k, RULE_OPTIONS[k][a?.rules?.[k]] ? a.rules[k] : null])),
     nullField: a?.rules?.nullField === true || a?.rules?.nullField === 'true' ? true : a?.rules?.nullField === false || a?.rules?.nullField === 'false' ? false : null,
   }));

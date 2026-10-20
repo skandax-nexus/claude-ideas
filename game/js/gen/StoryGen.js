@@ -302,7 +302,7 @@ export function makeStory(seed, wish = null, opts = {}) {
   if (after.intro) decks[0].intro = after.intro.map((l) => (l.text === '{trail}' ? { who: 'JUNO', text: ff('This is the {deck}. {name} was the {role}. If anyone left us a trail, it\'s {them}.', V({ name: cast[0].name, role: cast[0].role.toLowerCase(), them: cast[0].pronoun.them, deck: DECKS[0].name.toLowerCase() })) } : l));
   const twistText = after.twists?.[twist.key] || twist.text;
   if (twistText !== twist.text) decks[7].beats[3].twist = { ...twist, text: ff(twistText, V()) };
-  return { seed, cast, captain, truth, decks, after, question: after.question || null, motive: ff(motive.long, V()), twist: { ...twist, text: ff(twistText, V()) }, title: wish?.title ? String(wish.title).slice(0, 40) : null, mood: wish?.mood || null };
+  return { seed, cast, captain, truth, decks, after, question: after.question || null, motive: ff(motive.long, V()), twist: { ...twist, text: ff(twistText, V()) }, title: wish?.title ? String(wish.title).replace(/[<>&"]/g, '').slice(0, 40) || null : null, mood: wish?.mood || null };
 }
 
 // --- beats ---------------------------------------------------------------------

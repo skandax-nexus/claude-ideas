@@ -416,7 +416,7 @@ export class HUD {
     for (const b of document.querySelectorAll('#laws [data-combo-del]')) b.onclick = () => { game.deleteCombo(+b.dataset.comboDel); this.renderLaws(game); };
     const save = $('#comboSave');
     if (save) save.onclick = () => {
-      const name = ($('#comboName').value || '').trim().toUpperCase() || `COMBO ${(game.combos?.length || 0) + 1}`;
+      const name = ($('#comboName').value || '').replace(/[<>&"]/g, '').trim().toUpperCase() || `COMBO ${(game.combos?.length || 0) + 1}`; // no markup: the name is shown as HTML
       this.renderLaws(game, game.saveCombo(name));
     };
   }
