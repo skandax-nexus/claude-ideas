@@ -538,7 +538,8 @@ class Game {
       this.menu = null;
       this.refreshTitle();
       this.hud.show('title');
-    } else {
+    } else if (to === 'chapters') this.openChapters('title'); // rebuilt: a save may have been deleted meanwhile
+    else {
       this.openMenu(to);
       // back from the slot list: the Studio and the Forge still go back where they were opened from
       if (to === 'studio') this.menuBack = this.studioBack;
