@@ -532,13 +532,18 @@ class Game {
       this.menu = null;
       this.refreshTitle();
       this.hud.show('title');
-    } else this.openMenu(to);
+    } else {
+      this.openMenu(to);
+      // back from the slot list: the Studio and the Forge still go back where they were opened from
+      if (to === 'studio') this.menuBack = this.studioBack;
+      else if (to === 'forge') this.menuBack = this.forgeBack;
+    }
   }
 
   // STORY STUDIO: a vessel story made from the player's wishes (offline: the
   // story generator composes it; see gen/StoryGen.js WISH_OPTIONS).
   openStudio(from) {
-    this.menuBack = from;
+    this.menuBack = this.studioBack = from;
     this.menu = 'studio';
     this.input.release();
     const $ = (q) => document.querySelector(q);
@@ -570,7 +575,7 @@ class Game {
   // WORLD FORGE: build your own game. Everything is optional except the Forge number, which can
   // be random; the Forge decides whatever is left blank (gen/Forge.js).
   openForge(from, preset = null) {
-    this.menuBack = from;
+    this.menuBack = this.forgeBack = from;
     this.menu = 'forge';
     this.input.release();
     const $ = (q) => document.querySelector(q);
