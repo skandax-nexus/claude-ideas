@@ -14,6 +14,7 @@ export class Input {
     this.touchSensitivity = 0.0065;
     this.enabled = true;
     this.stick = { id: null, x: 0, y: 0, ox: 0, oy: 0 };
+    this.rimRun = false; // the stick pushed to its rim runs, with hysteresis (on above 97%, off below 85%)
     this.lookTouch = { id: null, x: 0, y: 0 };
     this.zoom = 0; // accumulated zoom steps (+ out, - in)
     this.invertY = false;
@@ -119,6 +120,7 @@ export class Input {
       for (const t of e.changedTouches) if (t.identifier === this.stick.id) {
         this.stick.id = null;
         this.stick.x = this.stick.y = 0;
+        this.rimRun = false;
         knob.style.transform = 'translate(-50%,-50%)';
         stickEl.classList.remove('on');
         rest();
@@ -207,9 +209,17 @@ export class Input {
     let s = (k.has('KeyD') || k.has('ArrowRight') ? 1 : 0) - (k.has('KeyA') || k.has('ArrowLeft') ? 1 : 0);
     let run = this.runMode !== (k.has('ShiftLeft') || k.has('ShiftRight')); // Shift flips the current gait
     if (this.stick.id !== null) {
-      f = -this.stick.y;
-      s = this.stick.x;
-      run = this.runMode || Math.hypot(this.stick.x, this.stick.y) > 0.97;
+      // one continuous curve: a dead zone for a settling thumb (12%), then linear to full
+      // deflection at 92%, so the speed never steps as the thumb trembles
+      const raw = Math.hypot(this.stick.x, this.stick.y);
+      const m = raw <= 0.12 ? 0 : Math.min(1, (raw - 0.12) / 0.8);
+      const sc = raw > 0 ? m / raw : 0;
+      f = -this.stick.y * sc;
+      s = this.stick.x * sc;
+      // the rim runs: on above 97%, off only below 85%, so a thumb resting at the edge doesn't flicker
+      if (raw > 0.97) this.rimRun = true;
+      else if (raw < 0.85) this.rimRun = false;
+      run = this.runMode || this.rimRun;
     }
     this.state.forward = f;
     this.state.strafe = s;

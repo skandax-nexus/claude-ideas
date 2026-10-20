@@ -41,6 +41,7 @@ export class Player {
     this.grounded = false;
     this.running = false;
     this.speed = 0;
+    this.topSpeed = null; // the gait's top speed, eased between walk (3.9) and run (7.6)
     this.bob = 0;
     this.half = HALF;
     this.floatY = 1.25;
@@ -120,8 +121,12 @@ export class Player {
     wish.y = 0;
     const mag = Math.min(1, wish.length());
     if (mag > 0) wish.normalize();
-    this.running = input.run && mag > 0.3;
-    const speed = (this.running ? 7.6 : 3.9) * Math.max(mag, this.running ? 0.85 : 0) * (input.slow ? 0.7 : 1);
+    // one continuous speed curve: the gait sets a top speed that eases over ~0.3 s when it
+    // changes, and the stick scales it, so neither a gait switch nor a trembling thumb lurches
+    const top = input.run ? 7.6 : 3.9;
+    this.topSpeed = this.topSpeed === null ? top : this.topSpeed + (top - this.topSpeed) * (1 - Math.exp(-dt * 5));
+    const speed = this.topSpeed * mag * (input.slow ? 0.7 : 1);
+    this.running = input.run && speed > 4.5; // 'running' (noise, stealth, footsteps) means actually fast
     const accel = this.gravity === 0 ? 1.5 : this.grounded ? 14 : 5;
     const k = Math.min(1, accel * dt);
     this.vel.x += (wish.x * speed - this.vel.x) * k;
