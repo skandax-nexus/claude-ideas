@@ -360,6 +360,8 @@ class Game {
     this.camera.fov = w < h ? Math.min(96, Math.max(this.settings.fov, hfov)) : this.settings.fov;
     this.camera.updateProjectionMatrix();
     this.postfx.resize();
+    // the big map's bitmap follows its new box (a rotation or a window resize while it is open)
+    if (this.menu === 'map') requestAnimationFrame(() => this.menu === 'map' && this.minimap.drawBig(this.player, this.room, this.mapMarkers()));
   }
 
   // --- menus ------------------------------------------------------------
