@@ -90,6 +90,8 @@ async function desktop() {
   check(await az(() => document.querySelectorAll('#hero .sw button').length) === 0, 'the realistic look has no colour swatches');
   await page.click('[data-hero="nova"]');
   await page.waitForTimeout(1500);
+  // a look that is not loaded yet is fetched first: on a busy machine that can take far longer than the fixed wait
+  await page.waitForFunction(() => AZ.player.model.userData.spec?.model === 'nova', null, { timeout: 300000 }).catch(() => {});
   check(await az(() => AZ.player.model.userData.spec.model) === 'nova', 'the stylised Nova look is still offered');
   await page.click('#hero .sw button[data-k="hair"]:nth-child(3)');
   await page.click('#hero .sw button[data-k="top"]:nth-child(3)');
@@ -98,6 +100,7 @@ async function desktop() {
   check(nova.hero.hair === 0xc79a62 && nova.hero.top === 0x8fc6e8 && nova.spec.hair === 0xc79a62, 'hair and outfit colours apply to the model', JSON.stringify(nova));
   await page.click('[data-hero="scifi"]');
   await page.waitForTimeout(1500);
+  await page.waitForFunction(() => AZ.settings.hero.id === 'scifi' && AZ.player.model.userData.spec?.model === 'scifi', null, { timeout: 300000 }).catch(() => {});
   await page.waitForTimeout(200);
   check(await az(() => AZ.settings.hero.id) === 'scifi', 'picking a look updates the choice');
   check(await az(() => AZ.player.model.userData.actor && AZ.player.model.userData.spec.model) === 'scifi', 'player model rebuilt with the new look');
@@ -267,6 +270,8 @@ async function desktop() {
   await page.waitForTimeout(300);
   await page.click('[data-hero="ren"]');
   await page.waitForTimeout(300);
+  // a look that is not loaded yet is fetched first: on a busy machine that can take far longer than the fixed wait
+  await page.waitForFunction(() => AZ.settings.hero.id === 'ren', null, { timeout: 300000 }).catch(() => {});
   check(await az(() => AZ.settings.hero.id === 'ren' && AZ.menu === 'hero'), 'look can be changed from the pause menu');
   await page.screenshot({ timeout: 180000, path: path.join(shots, 'f04-character-midgame.png') });
   await page.click('#heroGo');
@@ -308,6 +313,7 @@ async function phone() {
   check(heroBox && heroBox.y + heroBox.height <= 412, 'START is on screen on a phone', JSON.stringify(heroBox));
   await page.tap('[data-hero="spacer"]');
   await page.waitForTimeout(1500);
+  await page.waitForFunction(() => AZ.settings.hero.id === 'spacer', null, { timeout: 300000 }).catch(() => {});
   await page.waitForTimeout(200);
   await page.tap('#heroGo');
   await page.waitForTimeout(1500);
