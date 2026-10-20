@@ -684,7 +684,9 @@ function lightPools(glows) {
   const lamps = glows.filter((g) => g[5]);
   if (lamps.length) {
     const cone = new THREE.ConeGeometry(1, 1, 20, 1, true).translate(0, -0.5, 0);
-    const coneMat = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.018, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: true });
+    // additive with no depth writes: one pass over both faces looks the same as three's
+    // back-then-front passes, without rebuilding the program twice a frame
+    const coneMat = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.018, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: true, forceSinglePass: true });
     // haze you see from a distance: it fades out as the camera comes close, so walking
     // past (or through) a lamp never washes half the screen
     coneMat.onBeforeCompile = (sh) => {
