@@ -1762,7 +1762,7 @@ class Game {
     this.audio.blip(520, 0.2, 'square', 0.08);
     const isDefault = law && law.subject === 'GRAVITY' && law.verb === 'INVERTS' && law.target === 'INVERTED';
     if (law && !isDefault) this.facts.set('wrote_law');
-    if (law && law.subject === 'HELD' && law.verb === 'PERSISTS' && (law.target === 'PHYSICAL' || law.target === 'ALL')) this.facts.set('wrote_held_law');
+    this.facts.set('wrote_held_law', this.engine.has('heldPersists', 'PHYSICAL')); // follows the running laws: an overwritten or cleared law no longer counts
     this.dirty = true;
   }
 
