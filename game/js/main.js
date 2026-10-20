@@ -384,6 +384,7 @@ class Game {
     $('#quit').onclick = (e) => {
       // a save the browser refused asks first: quitting now would lose the progress
       const b = e.currentTarget;
+      if (Date.now() - (+b.dataset.sureAt || 0) > 8000) delete b.dataset.sureAt; // a warning from an earlier visit asks again
       if (this.saveTo('auto') === false && !this.confirmTap(b)) {
         b.classList.add('sure');
         b.textContent = 'NOT SAVED: STORAGE IS BLOCKED · TAP AGAIN TO QUIT';
