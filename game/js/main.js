@@ -431,6 +431,7 @@ class Game {
       this.openForge('title', boot.opts?.choices || null);
     } else if (boot) {
       session((s) => s.removeItem(BOOT_KEY));
+      this.pendingBoot = boot; // CONTINUE enters what was asked for before the reload
       $('#continue').style.display = '';
       $('#continueInfo').textContent = 'Tap to enter';
       $('#continue').onclick = () => this.begin(boot.action, boot.slot, boot.saveSlot, boot.opts);
@@ -438,6 +439,7 @@ class Game {
   }
 
   refreshTitle() {
+    if (this.pendingBoot) return; // keep 'Tap to enter': its button runs the start asked for before the reload, not the latest save
     const $ = (s) => document.querySelector(s);
     const l = latestSave();
     $('#continue').style.display = l ? '' : 'none';
