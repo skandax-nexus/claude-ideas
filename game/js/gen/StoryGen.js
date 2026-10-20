@@ -410,10 +410,11 @@ function encounter(r, d, c, v, guilty, red, cast, truth, said = {}) {
         'You\'ve read the plaque. I can tell. You have that look the Observer gets.',
         'Whatever the echo showed you - echoes are only what we were afraid of.',
       ]),
-      ff(r.pick([
+      // the victim's name only where the motive is the victim (the draw is kept: every seed keeps its truth)
+      ((pair) => ff(truth.motive === 'save' ? r.pick(pair) : (r.pick(pair), pair[1]), { ...cast[truth.victim], victimFirst: cast[truth.victim].first }))([
         'I did what anyone would have done for {victimFirst}. Ask yourself what you would have done.',
         'You think there was a choice that night? There was a door. I closed it.',
-      ]), { ...cast[truth.victim], victimFirst: cast[truth.victim].first }),
+      ]),
       'Go on to the bridge. Sit in the chair. Then judge me.',
     );
   } else {
