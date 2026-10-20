@@ -381,8 +381,14 @@ class Game {
     $('#loadBtn2').onclick = () => this.openSaves('load', 'pause');
     $('#mapBtn').onclick = () => this.openMenu('map');
     $('#settingsBtn2').onclick = () => this.openSettings('pause');
-    $('#quit').onclick = () => {
-      this.saveTo('auto');
+    $('#quit').onclick = (e) => {
+      // a save the browser refused asks first: quitting now would lose the progress
+      const b = e.currentTarget;
+      if (this.saveTo('auto') === false && !b.classList.contains('sure')) {
+        b.classList.add('sure');
+        b.textContent = 'NOT SAVED: STORAGE IS BLOCKED · TAP AGAIN TO QUIT';
+        return;
+      }
       location.reload();
     };
     $('#mute').onclick = () => {
@@ -1522,10 +1528,10 @@ class Game {
         say(kind === 'lock' ? sys('lock_key', 'IT WANTS A KEY. I SAW ONE IN ANOTHER STATE OF THIS ROOM.') : sys('socket_empty', 'AN EMPTY CORE SOCKET. THERE IS A CORE IN THIS ROOM.'));
       }
     } else if (kind === 'beacon') {
-      this.saveTo('auto');
+      const ok = this.saveTo('auto');
       this.audio.beacon();
       this.fx.burst(it.pos, 0x9fe8ff, 40, 1.4);
-      this.hud.toast('<small>MEMORY BEACON</small><br>Progress saved.');
+      this.hud.toast(ok ? '<small>MEMORY BEACON</small><br>Progress saved.' : '<small>MEMORY BEACON</small><br>Not saved: storage is blocked or full.');
     } else if (kind === 'fragment') {
       if (!flags[`done_${it.id}`]) {
         flags[`done_${it.id}`] = true;
@@ -1960,10 +1966,16 @@ class Game {
     return { where: 'STATION ZERO', chapter: STATION_ROOMS[this.room]?.name || '' };
   }
 
+  // true when written, false when the browser refused (blocked or full storage), undefined before a game
   saveTo(slot) {
     if (!this.started || !this.room) return;
     if (slot === 'auto' && this.slot !== null && this.slot !== undefined) slot = this.slot; // this game's own slot
-    writeSave(slot, this.snapshot(), { ...this.saveMeta(), run: this.run || 'prologue' });
+    const ok = writeSave(slot, this.snapshot(), { ...this.saveMeta(), run: this.run || 'prologue' });
+    if (!ok && !this.saveFailWarned) {
+      this.saveFailWarned = true; // once: autosaves run often
+      this.hud.toast('<small>NOT SAVED</small><br>This browser is blocking storage or is out of space.', 5000);
+    }
+    return ok;
   }
 
   // kept for tools and old callers
@@ -2055,8 +2067,8 @@ class Game {
         continue;
       }
       if (a === 'quicksave' && !this.paused) {
-        this.saveTo('auto');
-        this.hud.toast('Quick saved.', 1400);
+        const ok = this.saveTo('auto');
+        if (ok !== undefined) this.hud.toast(ok ? 'Quick saved.' : '<small>NOT SAVED</small><br>Storage is blocked or full.', ok ? 1400 : 2600);
         continue;
       }
       if (a === 'quickload' && this.started) {
