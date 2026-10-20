@@ -56,6 +56,7 @@ const SPY = () => {
 async function desktop() {
   console.log('Desktop');
   const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
+  page.setDefaultNavigationTimeout(300000); // a reload loads every model and the voice pack again: on a busy machine that outlasts 30 s
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
   page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
@@ -290,6 +291,7 @@ async function phone() {
   console.log('Phone (touch)');
   const ctx = await browser.newContext({ viewport: { width: 915, height: 412 }, isMobile: true, hasTouch: true });
   const page = await ctx.newPage();
+  page.setDefaultNavigationTimeout(300000); // a reload loads every model and the voice pack again: on a busy machine that outlasts 30 s
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
   await page.goto(url);
@@ -395,6 +397,7 @@ async function phone() {
 async function chapters() {
   console.log('Chapters, save slots, Story Studio');
   const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
+  page.setDefaultNavigationTimeout(300000); // a reload loads every model and the voice pack again: on a busy machine that outlasts 30 s
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
   const ready = () => page.waitForFunction(() => window.AZ && document.querySelector('#begin'), null, { timeout: 180000 });
