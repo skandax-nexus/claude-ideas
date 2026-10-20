@@ -403,6 +403,16 @@ function measure(L) {
   return out;
 }
 
+// A clip holding one pose: every track of `clip` sampled at time t, one key each.
+function poseClip(clip, t, name) {
+  const tracks = clip.tracks.map((tr) => {
+    const out = new tr.ValueBufferType(tr.getValueSize());
+    tr.createInterpolant(out).evaluate(t);
+    return new tr.constructor(tr.name, [0], Array.from(out));
+  });
+  return new THREE.AnimationClip(name, clip.duration, tracks);
+}
+
 // --- one character instance -------------------------------------------------------
 
 // a soft rim light: edges facing away from the camera catch a little light, so
@@ -699,6 +709,13 @@ export function makeActor(spec = {}) {
     A[n].setEffectiveWeight(n === 'idle' ? 1 : 0);
     A[n].timeScale = n === 'idle' ? 1 : 0;
   }
+  // the mid-air leap (the run held at a quarter stride) is its own action, so the gaits and
+  // the leap always weigh 1 in total: any shortfall mixes in the bind pose (an A/T-pose flash)
+  if (!L.clips.leap) L.clips.leap = poseClip(L.clips.run, L.clips.run.duration * 0.25, 'leap');
+  A.leap = mixer.clipAction(L.clips.leap);
+  A.leap.play();
+  A.leap.setEffectiveWeight(0);
+  A.leap.timeScale = 0;
   const walkSpeed = L.speeds.walk * height, runSpeed = L.speeds.run * height;
 
   // hands: attach points at the palm, cancelling the skeleton's own scale
@@ -786,12 +803,12 @@ export function makeActor(spec = {}) {
       const ease = 1 - Math.exp(-dt * 8);
       tw.idle = tw.walk = tw.run = 0;
       tw.air = airborne ? 1 : 0;
-      if (!airborne) {
-        const mid = (walkSpeed + runSpeed) / 2;
-        if (speed < 0.15) tw.idle = 1;
-        else if (speed < mid) { const k = Math.min(1, speed / (walkSpeed * 0.8)); tw.idle = 1 - k; tw.walk = k; }
-        else { const k = Math.min(1, (speed - mid) / (runSpeed - mid)); tw.walk = 1 - k; tw.run = k; }
-      }
+      // the ground gaits follow the speed even in the air (they are scaled by 1 - air below),
+      // so they always sum to 1 and the landing blends back into the right gait
+      const mid = (walkSpeed + runSpeed) / 2;
+      if (speed < 0.15) tw.idle = 1;
+      else if (speed < mid) { const k = Math.min(1, speed / (walkSpeed * 0.8)); tw.idle = 1 - k; tw.walk = k; }
+      else { const k = Math.min(1, (speed - mid) / (runSpeed - mid)); tw.walk = 1 - k; tw.run = k; }
       for (const k of GAITS) {
         w[k] += (tw[k] - w[k]) * (k === 'air' ? 1 - Math.exp(-dt * 10) : ease);
         // a faded gait ends at exactly 0, so the mixer skips it (else walk and run are
@@ -808,10 +825,13 @@ export function makeActor(spec = {}) {
       // faster gaits are not carried by legs moving too slowly
       phase = (phase + dt * THREE.MathUtils.clamp(rate, 0, U.maxCadence || 2.2)) % 1;
       A.walk.time = phase * wd;
-      A.run.time = w.air > 0.01 ? rd * 0.25 : phase * rd; // in the air: a leap, mid-stride
-      A.idle.setEffectiveWeight(w.idle * (1 - w.air));
-      A.walk.setEffectiveWeight(w.walk * (1 - w.air));
-      A.run.setEffectiveWeight(Math.max(w.run * (1 - w.air), w.air));
+      A.run.time = phase * rd;
+      // in the air: the leap (a held mid-stride pose) takes over from the gaits
+      const ground = 1 - w.air;
+      A.idle.setEffectiveWeight(w.idle * ground);
+      A.walk.setEffectiveWeight(w.walk * ground);
+      A.run.setEffectiveWeight(w.run * ground);
+      A.leap.setEffectiveWeight(w.air);
       mixer.update(dt);
 
       // (no whole-rig matrix update here: every world-space read below updates its own

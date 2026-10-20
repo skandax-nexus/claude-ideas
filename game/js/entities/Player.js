@@ -8,11 +8,19 @@ import { makePlayerModel } from '../world/People.js';
 const HALF = new THREE.Vector3(0.3, 0.85, 0.3);
 const EYE = 0.68;
 const G = 22;
+// a ledge up to this high is walked onto (district kerbs are 0.16 m), and the ground is
+// followed down over a drop up to this deep instead of leaving it for a few frames
+const STEP = 0.35;
 // stride cycles per second the player's legs may reach (5.2 steps/s, a sprint cadence; NPCs keep
 // 2.2), so the 3.9 m/s walk is carried by the legs instead of sliding
 const MAX_CADENCE = 2.6;
 const _v = new THREE.Vector3();
 const _m = new THREE.Matrix4();
+// does the box centred at p with half-size h overlap the collider c?
+const overlaps = (p, h, c) => {
+  for (let a = 0; a < 3; a++) if (p[a] + h[a] <= c.min[a] || p[a] - h[a] >= c.max[a]) return false;
+  return true;
+};
 
 export class Player {
   constructor(camera, scene) {
@@ -42,6 +50,9 @@ export class Player {
     this.running = false;
     this.speed = 0;
     this.topSpeed = null; // the gait's top speed, eased between walk (3.9) and run (7.6)
+    this.stepOff = 0; // how far the model lags a step up (+) or down (-) along U, eased away
+    this.airT = 0; // seconds since the feet last touched the ground
+    this._canStep = false; // set during update(): walking into a low ledge climbs it
     this.bob = 0;
     this.half = HALF;
     this.floatY = 1.25;
@@ -65,6 +76,8 @@ export class Player {
   place([x, y, z, yaw = 0]) {
     this.pos.set(x, y, z);
     this.vel.set(0, 0, 0);
+    this.stepOff = 0;
+    this.airT = 0;
     this.H.set(-Math.sin(yaw), 0, -Math.cos(yaw));
     this.U.set(0, this.gravity === 1 ? -1 : 1, 0);
     this.pitch = -0.12;
@@ -132,19 +145,22 @@ export class Player {
     this.vel.x += (wish.x * speed - this.vel.x) * k;
     this.vel.z += (wish.z * speed - this.vel.z) * k;
 
+    const jump = input.jump;
     if (this.gravity === 0) {
       // weightless: drift, with a gentle pull back to mid-air so nobody gets stranded
       this.vel.y += (this.floatY - this.pos.y) * 0.9 * dt;
       this.vel.y *= Math.pow(0.6, dt);
-      if (input.jump) this.vel.y += 2.2;
+      if (jump) this.vel.y += 2.2;
     } else {
       this.vel.y += this.gravity * G * dt;
       this.vel.y = THREE.MathUtils.clamp(this.vel.y, -24, 24);
-      if (input.jump && this.grounded) this.vel.y = -this.gravity * 7.2;
+      if (jump && this.grounded) this.vel.y = -this.gravity * 7.2;
     }
     input.jump = false;
 
     // --- integrate with collision, in substeps ----------------------------
+    const wasGrounded = this.grounded;
+    this._canStep = wasGrounded && this.gravity !== 0; // steps are climbed from the ground, never weightless
     this.grounded = false;
     const steps = Math.max(1, Math.ceil((this.vel.length() * dt) / 0.25));
     const sdt = dt / steps;
@@ -154,6 +170,21 @@ export class Player {
       this.moveAxis(2, this.vel.z * sdt, near);
       this.moveAxis(1, this.vel.y * sdt, near);
     }
+    this._canStep = false;
+    // walking off a kerb or a low ledge follows the ground down instead of leaving it for a few
+    // frames (no jump, not weightless, not moving against gravity): probe up to STEP below
+    if (wasGrounded && !this.grounded && !jump && this.gravity !== 0 && this.vel.y * this.gravity >= 0) {
+      const y0 = this.pos.y, vy0 = this.vel.y;
+      this.moveAxis(1, this.gravity * STEP, near);
+      const drop = (this.pos.y - y0) * this.gravity; // how far it moved along gravity
+      if (this.grounded && drop >= 0) this.stepOff -= drop;
+      else {
+        this.pos.y = y0;
+        this.vel.y = vy0;
+        this.grounded = false;
+      }
+    }
+    this.airT = this.grounded ? 0 : this.airT + dt;
     this.speed = Math.hypot(this.vel.x, this.vel.z);
     if (this.grounded) this.bob += this.speed * dt * 1.8;
   }
@@ -177,14 +208,22 @@ export class Player {
     const h = [HALF.x, HALF.y, HALF.z];
     const p = [this.pos.x, this.pos.y, this.pos.z];
     for (const c of cols) {
-      let overlap = true;
-      for (let a = 0; a < 3; a++) {
-        if (p[a] + h[a] <= c.min[a] || p[a] - h[a] >= c.max[a]) {
-          overlap = false;
-          break;
+      if (!overlaps(p, h, c)) continue;
+      if (axis !== 1 && this._canStep) {
+        // a ledge no higher than STEP above the feet (feet toward gravity) is climbed, if
+        // there is headroom above it; the model eases up (stepOff) instead of popping
+        const rise = this.gravity < 0 ? c.max[1] - (p[1] - h[1]) : (p[1] + h[1]) - c.min[1];
+        if (rise > 0 && rise <= STEP) {
+          const y = p[1];
+          p[1] = y - this.gravity * (rise + 1e-4);
+          if (!cols.some((o) => overlaps(p, h, o))) {
+            this.pos.y = p[1];
+            this.stepOff += rise;
+            continue;
+          }
+          p[1] = y;
         }
       }
-      if (!overlap) continue;
       if (d > 0) p[axis] = c.min[axis] - h[axis] - 1e-4;
       else p[axis] = c.max[axis] + h[axis] + 1e-4;
       this.pos[key] = p[axis];
@@ -239,7 +278,7 @@ export class Player {
     const F = this.forward(new THREE.Vector3());
     const up = new THREE.Vector3().copy(this.U).multiplyScalar(Math.cos(this.pitch)).addScaledVector(this.H, -Math.sin(this.pitch));
     const right = new THREE.Vector3().crossVectors(F, up).normalize();
-    const head = new THREE.Vector3().copy(this.pos).addScaledVector(this.U, 0.6);
+    const head = new THREE.Vector3().copy(this.pos).addScaledVector(this.U, 0.6 - this.stepOff); // eases over steps
     const wantDist = THREE.MathUtils.clamp(this.cam.dist * this.zoom, 1.4, 12);
     this.distNow += (wantDist - this.distNow) * (1 - Math.exp(-dt * 8));
     const k = this.distNow / Math.max(0.1, this.cam.dist);
@@ -309,8 +348,14 @@ export class Player {
     const x = new THREE.Vector3().crossVectors(this.U, z).normalize();
     _m.makeBasis(x, this.U, z);
     m.quaternion.setFromRotationMatrix(_m);
-    m.position.copy(this.pos).addScaledVector(this.U, -0.85);
-    m.userData.animate(dt, this.speed, performance.now() / 1000, !this.grounded && this.gravity !== 0);
+    // a step up or down moved the body at once: the model follows it smoothly
+    this.stepOff = THREE.MathUtils.clamp(this.stepOff * Math.exp(-dt * 12), -STEP, STEP);
+    if (Math.abs(this.stepOff) < 1e-4) this.stepOff = 0;
+    m.position.copy(this.pos).addScaledVector(this.U, -0.85 - this.stepOff);
+    // in the air only after a moment off the ground, or when really rising or falling: a blip
+    // (the edge of a ledge) keeps the stride instead of flashing the leap
+    const airborne = this.gravity !== 0 && !this.grounded && (this.airT > 0.15 || Math.abs(this.vel.y) > 3);
+    m.userData.animate(dt, this.speed, performance.now() / 1000, airborne);
   }
 
   // Is the player standing on (or near) the ceiling?
