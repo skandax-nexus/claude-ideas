@@ -1160,7 +1160,7 @@ class Game {
       for (const s of this.deckWorld.sentinels) if (s.def.room === room) s.lure = { x: p.x, z: p.z, t: rule.dur };
       this.fx.burst(this.flareAt, 0xffb060, 40, 2.6);
     } else if (key === 'KEYFORGE') {
-      if (flags[`gear_KEYFORGE_${act.index}`]) {
+      if (this.facts.get(`gear_KEYFORGE_${act.index}`)) { // once per location: kept in the facts, which outlive the sector's flags
         this.audio.deny();
         say(gearTick(key, 'spent'));
         return 'spent';
@@ -1173,7 +1173,7 @@ class Game {
       }
       it.echo = false;
       flags[`forged_${it.id}`] = true;
-      flags[`gear_KEYFORGE_${act.index}`] = true;
+      this.facts.set(`gear_KEYFORGE_${act.index}`, true);
       this.campaign.flags = { ...flags };
       this.fx.burst([p.x, p.y + 0.6, p.z], 0xffd27a, 30, 1.6);
     }
@@ -2131,7 +2131,7 @@ class Game {
         const left = Math.max(0, (this.gearCd[key] || 0) - this.time);
         b.classList.toggle('no', !rule.ok);
         b.classList.toggle('cooling', left > 0);
-        b.classList.toggle('spent', !!GEAR[key].once && !!this.deckWorld.flags[`gear_KEYFORGE_${act.index}`]);
+        b.classList.toggle('spent', !!GEAR[key].once && !!this.facts.get(`gear_KEYFORGE_${act.index}`));
         b.classList.toggle('on', (key === 'FLARE' && this.flareT > 0) || (key === 'LENS' && this.deckWorld.lensT > 0) || ((key === 'GRAPPLE' || key === 'RIG') && this.deckWorld.temps.length > 0));
         const cd = (left / GEAR[key].cooldown || 0).toFixed(2);
         if (b._cd !== cd) {
