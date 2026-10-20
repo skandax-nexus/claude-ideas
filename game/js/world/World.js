@@ -71,7 +71,8 @@ export class World {
       if (mat.transparent) mesh.renderOrder = 2;
       const matName = k.split('|')[1];
       mesh.castShadow = !(matName === 'ceil' || matName === 'glass' || matName.startsWith('strip'));
-      mesh.receiveShadow = true;
+      // ceilings face down, away from the sun: no shadow-map lookups for light that never lands
+      mesh.receiveShadow = matName !== 'ceil';
       this.root.add(mesh);
       geos.forEach((g) => g.dispose());
     }

@@ -113,7 +113,9 @@ export class DeckWorld {
       // the glass sky and see-through walls let the light through (a dome shadow cut a hard
       // diagonal edge across HALCYON where the sun's shadow area ended)
       mesh.castShadow = !['ceil', 'glass', 'glow', 'gate', 'leaf', 'dome', 'roots', 'glassWall', 'neon', 'lamp', 'shopfront', 'screen', 'podLight', 'windowStars', 'windowDark'].includes(mat);
-      mesh.receiveShadow = true;
+      // ceilings, the dome and the roots face down, away from the sun: it adds nothing to them
+      // shadowed or not, so they skip the 16 shadow-map lookups per pixel
+      mesh.receiveShadow = !['ceil', 'roots', 'dome'].includes(mat);
       root.add(mesh);
       geos.forEach((g) => g.dispose());
     }

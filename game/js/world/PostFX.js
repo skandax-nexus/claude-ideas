@@ -11,6 +11,22 @@ import { OutputShader } from '../../vendor/addons/shaders/OutputShader.js';
 import { RGBELoader } from '../../vendor/addons/loaders/RGBELoader.js';
 import { RoomEnvironment } from '../../vendor/addons/environments/RoomEnvironment.js';
 
+// Point lights that add nothing to a pixel skip the lighting maths. three counts every visible
+// PointLight into each lit shader whatever its intensity (the room slots a room does not use and
+// the street lamp slots sit at 0), and its unrolled loop ran the full GGX + Lambert for each one,
+// even where the light is off or the pixel is beyond its range. getPointLightInfo already marks
+// those (visible = color != 0): only the shadow lookup used it. Skipping a light that adds exactly
+// 0 changes no pixel. Patched once here, at module load (main.js imports this file statically),
+// before any shader compiles: programs are cached without the chunk text. Written against three
+// r169's lights_fragment_begin; if an upgrade changes the text, nothing is patched.
+{
+  const C = THREE.ShaderChunk;
+  const s = C.lights_fragment_begin;
+  const i = s.indexOf('RE_Direct( directLight', s.indexOf('NUM_POINT_LIGHTS > 0'));
+  if (i > 0 && i < s.indexOf('NUM_SPOT_LIGHTS')) C.lights_fragment_begin = s.slice(0, i) + 'if ( directLight.visible ) ' + s.slice(i);
+  else console.warn('point-light skip patch not applied');
+}
+
 // Ambient light from a sky photo: project the HDR onto 9 spherical-harmonic
 // coefficients (THREE.LightProbe), so characters and props are lit by the sky's
 // real colours from the right directions. Runs once per sky on the CPU.

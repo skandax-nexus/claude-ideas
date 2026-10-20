@@ -289,7 +289,9 @@ function zoneMaterials(pal, std, basic) {
     rock: pbr('rock', 0.5),
     // THE CRADLE (theme 'cradle'): stone floor, the forest's roots for a ceiling, amber pod lights
     stone: pbr('stone', 0.5, { color: 0x8a8494, roughness: 0.7 }),
-    roots: pbr('bark', 0.25, { color: 0x4a3c48, emissive: new THREE.Color(pal.accent), emissiveIntensity: 0.05, side: THREE.DoubleSide }),
+    // the roots and the dome are slabs overhead, only ever seen from below: their underside alone is drawn
+    // (two-sided, the top face was shaded first and then painted over by the bottom one)
+    roots: pbr('bark', 0.25, { color: 0x4a3c48, emissive: new THREE.Color(pal.accent), emissiveIntensity: 0.05, side: THREE.FrontSide }),
     root: pbr('bark', 0.6, { color: 0x6a5866, emissive: new THREE.Color(pal.accent), emissiveIntensity: 0.06 }), // one hanging root
     podLight: basic(new THREE.Color(pal.accent2).multiplyScalar(1.4)),
     pods: podStack(pal, std),
@@ -297,7 +299,7 @@ function zoneMaterials(pal, std, basic) {
     neon: basic(new THREE.Color(pal.accent).multiplyScalar(1.6)),
     screen: basic(new THREE.Color(pal.accent).lerp(new THREE.Color(0x101828), 0.55)),
     water: new THREE.MeshStandardMaterial({ color: new THREE.Color(pal.accent2).lerp(new THREE.Color(0x05101a), 0.8), normalMap: waterNormal, normalScale: new THREE.Vector2(0.6, 0.6), roughness: 0.06, metalness: 0.8, envMapIntensity: 1.6, transparent: true, opacity: 0.92 }),
-    dome: std({ color: new THREE.Color(pal.fog).lerp(new THREE.Color(0x000000), 0.35), emissive: 0xffffff, emissiveMap: skyTex, emissiveIntensity: 0.9, roughness: 0.3, metalness: 0.4, side: THREE.DoubleSide }),
+    dome: std({ color: new THREE.Color(pal.fog).lerp(new THREE.Color(0x000000), 0.35), emissive: 0xffffff, emissiveMap: skyTex, emissiveIntensity: 0.9, roughness: 0.3, metalness: 0.4, side: THREE.FrontSide }),
     glassWall: new THREE.MeshStandardMaterial({ color: new THREE.Color(pal.fog).lerp(new THREE.Color(0xffffff), 0.15), roughness: 0.15, metalness: 0.3, transparent: true, opacity: 0.55 }),
     trim: std({ color: new THREE.Color(wall).lerp(new THREE.Color(0xffffff), 0.25), roughness: 0.4, metalness: 0.3 }),
     trimDark: std({ color: new THREE.Color(wall).lerp(new THREE.Color(0x000000), 0.35), roughness: 0.5, metalness: 0.4 }),
