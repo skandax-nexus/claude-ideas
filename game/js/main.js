@@ -91,12 +91,14 @@ function session(fn, fallback = null) {
 }
 
 // Generated crew get a voice that fits them, varied a little per person.
-function crewVoice(c) {
+// worn: the model the person was built with (their body's userData.spec.model)
+function crewVoice(c, worn) {
   const v = ((c.seed || 0) % 7) - 3;
   if (c.pronoun?.their === 'her') return { pitch: 1.14 + v * 0.03, gender: 'f', rate: 1.0 };
   if (c.pronoun?.their === 'his') return { pitch: 0.84 + v * 0.03, gender: 'm', rate: 0.97 };
-  // they/them crew speak with the voice of the body they wear (HALCYON's Theo is the gardener)
-  const k = crewModelKey(c);
+  // they/them crew speak with the voice of the body they wear (HALCYON's Theo is the gardener): the body
+  // already built, since the pick changes as more models load or when you change your own look
+  const k = worn || crewModelKey(c);
   const g = k ? (/_f$|^w_/.test(k) ? 'f' : 'm') : 'n';
   // ...at that voice's own pitch: the pack plays a crew voice faster or slower by its pitch offset
   return { pitch: { f: 1.14, m: 0.84, n: 1.0 }[g] + v * 0.03, gender: g, rate: 0.99 };
@@ -1236,7 +1238,7 @@ class Game {
     this.log.push(`<b>${ch.prompt}</b> You chose: ${o.label}.`);
     this.closeMenu();
     const reply = ch.reply[o.tag];
-    const voice = npc ? crewVoice(npc.crew) : undefined;
+    const voice = npc ? crewVoice(npc.crew, npc.model?.userData?.spec?.model) : undefined;
     this.hud.say([{ ...reply, voice }, { who: 'TICK', text: ch.tick }], this.facts);
     if (beat.junoAfter) this.hud.say([{ who: 'JUNO', text: beat.junoAfter }], this.facts);
     this.audio.chime();
@@ -1463,7 +1465,7 @@ class Game {
       n.model.userData.wave?.();
       this.facts.set(`met_${n.crew.id}`);
       const lines = n.n.lines || [{ who: 'CREW', name: n.crew.name.toUpperCase(), color: n.crew.color, text: '...' }];
-      const voice = crewVoice(n.crew);
+      const voice = crewVoice(n.crew, n.model?.userData?.spec?.model);
       this.audio.greet('CREW');
       const p = n.model.position;
       this.talkWith = [p.x, p.y + 1.55, p.z];
