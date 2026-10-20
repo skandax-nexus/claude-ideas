@@ -224,8 +224,9 @@ export class World {
     for (const id of ['r0', 'r1', 'r2']) P[id].userData.screen.material.opacity = 0.7 + Math.sin(t * 9 + id.length) * 0.08;
     P.custodian.userData.setOpacity?.(0.62 + Math.sin(t * 13) * 0.05 + (Math.random() < 0.03 ? -0.25 : 0));
     P.other.userData.setOpacity?.(0.6 + Math.sin(t * 3) * 0.12);
-    P.custodian.userData.animate(1 / 60, 0, t);
-    P.other.userData.animate(1 / 60, 0, t);
+    // the holograms only move while they can be seen
+    if (P.custodian.visible && this.root.visible) P.custodian.userData.animate(dt, 0, t);
+    if (P.other.visible && this.root.visible) P.other.userData.animate(dt, 0, t);
 
     for (const tm of this.tokenMeshes) {
       tm.mesh.visible = !this.facts.get(`token_${tm.tk.token}`);

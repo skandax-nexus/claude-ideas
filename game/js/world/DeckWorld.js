@@ -552,6 +552,7 @@ export class DeckWorld {
       } else m.userData.lookAt?.(null);
       n.talkT = Math.max(0, n.talkT - dt);
       m.userData.setTalking?.(n.talkT > 0);
+      if (!m.visible) continue; // hidden (not here in this state, or their echo stands in): no pose to compute, nothing to say
       if (!frozen) m.userData.animate(dt, speed, t);
       // a bark: something said in passing, never over a conversation
       // (one bark at a time across the whole place, each person starting somewhere else in their list)

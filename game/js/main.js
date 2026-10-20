@@ -2099,7 +2099,15 @@ class Game {
     this.fx.update(dt);
     this.bolt = this.weather.update(dt, this.time, this.player.pos);
     for (const t of WATER_NORMALS) { t.offset.x += dt * 0.012; t.offset.y += dt * 0.007; } // water moves
-    this.world.update(dt, this.time, this.held);
+    // Station Zero only lives in the scene while you are in it: out on a deck, district or
+    // Forge it is neither animated nor carried through the renderer's matrix update (a hidden
+    // subtree still is). Checked every frame, so every way in and out of deck mode is covered.
+    const inDeck = this.mode === 'deck';
+    if (!inDeck) this.world.update(dt, this.time, this.held);
+    if (inDeck === !!this.world.root.parent) {
+      if (inDeck) this.world.root.removeFromParent();
+      else this.scene.add(this.world.root);
+    }
     this.npcs.update(simDt, this.time);
     this.hud.update(simDt);
   }
