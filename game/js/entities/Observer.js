@@ -333,7 +333,7 @@ export class Observer {
         const step = Math.min(d, speed * dt);
         this.pos.x += (vx / d) * step;
         this.pos.z += (vz / d) * step;
-        moved = step / dt;
+        moved = dt > 0 ? step / dt : 0; // a frame with no time (a coarse clock) must not make the walk cycle NaN for good
         this.faceToward(wp.x, wp.z, dt, 6);
       }
     }
