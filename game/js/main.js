@@ -2328,9 +2328,14 @@ class Game {
     this.postfx.render();
   }
 
-  // the nearest street lamps and lit shopfronts become real lights (every 0.25 s)
+  // the nearest street lamps and lit shopfronts become real lights (chosen every 0.25 s)
+  // Lights follow lamps by identity: a light keeps its lamp while that lamp is still among the
+  // nearest (or only a little farther than the last of them), so two lamps swapping places in
+  // the order changes nothing. A light that loses its lamp fades out first and only then moves
+  // to a lamp that has none; no light ever drops to dark in one frame.
   updateLamps(dt) {
     const glows = this.mode === 'deck' && this.deckWorld.glows?.length && this.deckWorld.glows;
+    const lights = this.lampLights;
     this.lampT = (this.lampT || 0) - dt;
     if (this.lampT <= 0) {
       this.lampT = 0.25;
@@ -2338,22 +2343,43 @@ class Game {
       const near = glows ? glows.filter((g) => g[5] || g[3] >= 3)
         .map((g) => ({ g, d: (g[0] - p.x) ** 2 + (g[2] - p.z) ** 2 }))
         .filter((o) => o.d < 18 * 18).sort((a, b) => a.d - b.d) : [];
-      this.lampLights.forEach((l, i) => {
-        const o = near[i];
-        if (!o) return (l.userData.want = 0);
-        const [x, , z, , c, h] = o.g;
-        if (l.userData.at !== o.g) {
-          l.userData.at = o.g;
-          l.intensity = 0;
-          l.position.set(x, h ? h - 0.35 : 2.4, z);
-          l.color.setHex(h ? 0xffd2a0 : c);
-          l.distance = h ? 11 : 7;
-        }
-        l.userData.want = h ? 14 : 6;
-      });
+      const n = lights.length;
+      const top = near.slice(0, n);
+      // keep a lamp while it is among the n nearest, or within 1.3x the n-th one's squared distance
+      const reach = top.length === n && n ? top[n - 1].d * 1.3 : Infinity;
+      const held = new Set();
+      const free = [];
+      for (const l of lights) {
+        const u = l.userData, g = u.at;
+        const o = g && !held.has(g) ? near.find((o) => o.g === g) : null;
+        if (o && o.d <= reach) {
+          held.add(g);
+          u.want = g[5] ? 14 : 6;
+          u.next = null;
+        } else free.push(l);
+      }
+      for (const l of free) {
+        const o = top.find((o) => !held.has(o.g));
+        if (o) held.add(o.g);
+        l.userData.want = 0;
+        l.userData.next = o ? o.g : null;
+      }
     }
-    const k = Math.min(1, dt * 4);
-    for (const l of this.lampLights) l.intensity += (l.userData.want - l.intensity) * k;
+    const up = Math.min(1, dt * 4), down = 1 - Math.exp(-dt * 20); // out in about 0.3 s, in gently
+    for (const l of lights) {
+      const u = l.userData;
+      if (u.next && l.intensity < 0.05) {
+        // faded out: move to the new lamp and fade in there
+        const [x, , z, , c, h] = u.next;
+        l.position.set(x, h ? h - 0.35 : 2.4, z);
+        l.color.setHex(h ? 0xffd2a0 : c);
+        l.distance = h ? 11 : 7;
+        u.at = u.next;
+        u.next = null;
+        u.want = h ? 14 : 6;
+      }
+      l.intensity += (u.want - l.intensity) * (u.want < l.intensity ? down : up);
+    }
   }
 
   // how much the vessel runs on emergency light (after SEVERED; districts have their own night)
