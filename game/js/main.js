@@ -1069,7 +1069,7 @@ class Game {
   }
 
   showRules(ms = 7000) {
-    if (!this.campaign?.forge) return;
+    if (!this.campaign?.forge || this.menu) return; // an arrival timer that fires behind a menu would print over it (K shows it again)
     const act = this.forgeAct();
     const R = this.rulesHtml(act);
     this.hud.rules(`ACT ${act.index + 1} · ${act.name}`, R.rows, R.gear, ms);
