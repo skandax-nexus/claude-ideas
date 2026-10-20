@@ -1520,7 +1520,8 @@ class Game {
         this.audio.token();
         this.fx.burst(it.pos, this.level.palette.accent2 ?? 0x9fe8ff, 30, 1.4);
         const found = Object.keys(flags).filter((k) => k.startsWith('done_frag_')).length;
-        this.hud.toast(`<small>MEMORY FRAGMENT ${found} / 3</small><br>${this.level.deckName}`, 2600);
+        const total = this.level.interactables.filter((i) => i.kind === 'fragment').length; // the Glass Forest's districts hold two
+        this.hud.toast(`<small>MEMORY FRAGMENT ${found} / ${total}</small><br>${this.level.deckName}`, 2600);
         this.log.push(`<b>Memory fragment.</b> ${it.text}`);
         say([{ who: 'NONE', text: it.text }]);
       }

@@ -319,6 +319,7 @@ The memorial reads **RECORD CORRECTED: Dr. Ilse Varga**. "Safe" means the fold i
 
 - *"A seed packet labelled for Ren, in Varga's handwriting. Inside: one seed, already sprouting."*;
 - Theo's watering schedule, *"Every day for eighteen years. Not one day missed."*;
+- *"A sleeping pod's status light, buried in moss. It pulses slowly. Someone is still dreaming in there."* (The Still Pond: the Cradle's first sign);
 - *"A drawing of the machine, in a child's hand. The child has drawn a heart inside it."*;
 - a trail marker to the cabin with *"HURRY"* added.
 
