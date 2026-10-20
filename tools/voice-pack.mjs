@@ -73,7 +73,7 @@ const { ZONE_HINTS } = await imp('gen/ZoneGen.js');
       for (const b of d.beats) {
         if (b.log) add(b.kind === 'contradiction' ? 'YOU' : b.log.who || 'NONE', typeof b.log === 'string' ? b.log : b.log.text);
         if (b.tick) add('TICK', b.tick);
-        if (b.junoAfter) [].concat(b.junoAfter).forEach((t) => add('JUNO', t));
+        if (b.junoAfter) [].concat(b.junoAfter).forEach((t) => add('JUNO', t.text ?? t)); // a line may be { text, when }
         if (b.kind === 'contradiction') { add('NONE', b.official); add('NONE', b.echo); }
         if (b.lines) b.lines.forEach((l) => (l.who === 'CREW' ? crewVoices(c) : [l.who]).forEach((v) => add(v, l.text)));
         // main.onDeckRoom's line is spoken whole: zone names (Kade, Abena, Theo, Ilse) are not generated words

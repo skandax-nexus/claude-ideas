@@ -88,7 +88,7 @@ for (let z = 0; z < 4; z++) {
       const toast = document.querySelector('#toast').innerHTML;
       for (let i = 0; i < 80; i++) { AZ.hud.subT = 0; AZ.simulate(0.1); }
       if (beat.kind === 'contradiction') { AZ.engine.setState(AZ.room, 'PHYSICAL', { force: true }); AZ.simulate(0.1); }
-      return { ok: !!AZ.deckWorld.flags.beat_done, kind: beat.kind, gate: AZ.deckWorld.dynamic.find((d) => d.el.id?.startsWith('gate_'))?.mesh.visible, toast, said, logWho: beat.log?.who, junoAfter: [].concat(beat.junoAfter || []), clues: ['kade', 'osei', 'theo', 'varga'].filter((k) => AZ.facts.get(`clue_${k}`)) };
+      return { ok: !!AZ.deckWorld.flags.beat_done, kind: beat.kind, gate: AZ.deckWorld.dynamic.find((d) => d.el.id?.startsWith('gate_'))?.mesh.visible, toast, said, logWho: beat.log?.who, junoAfter: [].concat(beat.junoAfter || []).filter((l) => !l.when || AZ.facts.test(l.when)).map((l) => l.text ?? l), clues: ['kade', 'osei', 'theo', 'varga'].filter((k) => AZ.facts.get(`clue_${k}`)) };
     });
     check(scene.ok && scene.gate === false, `${label}: the ${scene.kind} scene opens the gate`);
     if (scene.kind === 'contradiction') {

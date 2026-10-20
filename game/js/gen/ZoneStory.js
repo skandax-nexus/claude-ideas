@@ -80,7 +80,8 @@ export const ZONES = [
       {
         kind: 'log', goal: 'Find Varga\'s note in the pump hall.',
         log: { title: 'VARGA - NOTE ON A PUMP', who: 'VARGA', text: 'I opened the flood valves myself. It was the only way to slow the core down. Osei, I am sorry. Ren, if you read this: the water bought us eighteen years. Do not waste them.' },
-        junoAfter: 'Eighteen years. That number again. Recording 0 was eighteen years before you were born.',
+        // Recording 0 is optional (and a HALCYON chapter start counts it heard): mention it only once it was
+        junoAfter: ['Eighteen years. That number again.', { text: 'Recording 0 was eighteen years before you were born.', when: 'heard_self' }],
       },
       {
         kind: 'encounter', goal: 'Find Chief Osei.',

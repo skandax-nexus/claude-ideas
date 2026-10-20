@@ -1446,6 +1446,7 @@ class Game {
     const flags = this.deckWorld.flags;
     const beat = this.deckBeat();
     const say = (lines, done) => this.hud.say(lines, this.facts, done);
+    const juno = (x) => [].concat(x).map((l) => (typeof l === 'string' ? { who: 'JUNO', text: l } : { who: 'JUNO', ...l })); // a line may carry a 'when'
     const sys = (key, tick) => (this.edition ? [{ who: 'KAI', text: this.edition.line(key) }] : [{ who: 'TICK', text: tick }]);
     if (f.id.startsWith('ditem:')) {
       this.held = f.id.slice(6);
@@ -1468,7 +1469,7 @@ class Game {
       say(lines.map((l) => (l.who === 'CREW' ? { ...l, voice } : l)), choosing ? () => this.openForgeChoice(beat, n) : undefined);
       if (n.n.junoAfter && !choosing && !flags[`juno_${n.n.id}`]) { // Juno reacts once, not on every talk
         flags[`juno_${n.n.id}`] = true;
-        say([].concat(n.n.junoAfter).map((text) => ({ who: 'JUNO', text })));
+        say(juno(n.n.junoAfter));
       }
       if (beat.kind === 'encounter' && !this.facts.get(`met_logged_${n.crew.id}`)) {
         this.facts.set(`met_logged_${n.crew.id}`);
@@ -1486,7 +1487,7 @@ class Game {
       if (!flags[`done_${it.id}`]) {
         flags[`done_${it.id}`] = true;
         this.log.push(`<b>${it.log.title}</b> ${it.log.text}`);
-        if (beat.junoAfter) say([].concat(beat.junoAfter).map((text) => ({ who: 'JUNO', text })));
+        if (beat.junoAfter) say(juno(beat.junoAfter));
         if (beat.kind === 'arrival' && beat.tick) say([{ who: 'TICK', text: beat.tick }]);
         if (beat.kind === 'arrival' || beat.kind === 'log') this.beatDone();
       }
@@ -1512,7 +1513,7 @@ class Game {
             ? `${l} <i>↻ ${beat.clue === 'guilty' ? 'The echo contradicts this.' : 'The echo confirms this.'}</i>` : l));
           this.log.push(beat.log);
           this.hud.toast(`<small>${beat.toast || (beat.clue === 'guilty' ? 'CONTRADICTION FOUND' : 'ALIBI CONFIRMED')}</small><br>${crew.name}`, 4200);
-          if (beat.junoAfter) say([].concat(beat.junoAfter).map((text) => ({ who: 'JUNO', text })));
+          if (beat.junoAfter) say(juno(beat.junoAfter));
           this.beatDone();
         }
       }

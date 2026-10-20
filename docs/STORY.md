@@ -259,7 +259,7 @@ The screen reads **RECORD CORRECTED: Dr. Ilse Varga**. (Who rewrote it was the f
 **District 2: The Sump.** Past the water, a note is fixed to a pump:
 
 > VARGA: "I opened the flood valves myself. It was the only way to slow the core down. Osei, I am sorry. Ren, if you read this: the water bought us eighteen years. Do not waste them."
-> JUNO: "Eighteen years. That number again. Recording 0 was eighteen years before you were born."
+> JUNO: "Eighteen years. That number again. Recording 0 was eighteen years before you were born." (the last sentence only if you heard Recording 0, which is optional)
 
 **District 3: Control Deck.** One drone patrols here. In the control deck you find Abena Osei, now only a glowing echo still running her last shift:
 
