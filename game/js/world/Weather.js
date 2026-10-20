@@ -28,6 +28,8 @@ export class Weather {
     this.kind = null;
     this.flash = 0;
     this.nextBolt = 6;
+    this.cx = 0; // the centre the cloud last wrapped around (the player)
+    this.cz = 0;
     const pos = new Float32Array(N * 3);
     for (let i = 0; i < N; i++) {
       pos[i * 3] = (Math.random() - 0.5) * 2 * R;
@@ -36,6 +38,8 @@ export class Weather {
     }
     this.geo = new THREE.BufferGeometry();
     this.geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    // rewritten every frame: a dynamic buffer, and update() uploads only the particles in use
+    this.geo.attributes.position.setUsage(THREE.DynamicDrawUsage);
     // a soft round sprite, so drops and fireflies aren't square
     const c = document.createElement('canvas');
     c.width = c.height = 32;
@@ -66,16 +70,24 @@ export class Weather {
     const box = (k.R || R) * 100 + (k.H || 20);
     this.n = k.n || N;
     this.geo.setDrawRange(0, this.n);
+    const p = this.geo.attributes.position, a = p.array, r = k.R || R, r2 = 2 * r, cx = this.cx, cz = this.cz;
     if (this.box !== box) {
       this.box = box;
-      const a = this.geo.attributes.position.array, r = k.R || R, h = k.H || 20;
+      const h = k.H || 20;
       for (let i = 0; i < N; i++) {
         a[i * 3] = (Math.random() - 0.5) * 2 * r;
         a[i * 3 + 1] = Math.random() * h;
         a[i * 3 + 2] = (Math.random() - 0.5) * 2 * r;
       }
-      this.geo.attributes.position.needsUpdate = true;
     }
+    // particles live in world space: wrap them all around where the cloud last was and upload the
+    // whole buffer, so a change made after this frame's update() (an edition's year) draws in place
+    for (let i = 0; i < N * 3; i += 3) {
+      a[i] -= r2 * Math.floor((a[i] - cx + r) / r2);
+      a[i + 2] -= r2 * Math.floor((a[i + 2] - cz + r) / r2);
+    }
+    p.clearUpdateRanges();
+    p.needsUpdate = true;
   }
 
   // returns extra light for the frame (lightning)
@@ -84,6 +96,9 @@ export class Weather {
     const p = this.geo.attributes.position;
     const a = p.array;
     const K = this.k, fall = K.fall || 0, drift = K.drift ?? (fall ? 0 : 1), top = K.H || 20, n = this.n;
+    // the cloud stays at the world origin and each particle wraps around the centre on its own,
+    // so particles move continuously instead of the whole box jumping 4 m as the player walks
+    const r = K.R || R, r2 = 2 * r, cx = (this.cx = center.x), cz = (this.cz = center.z);
     for (let i = 0; i < n; i++) {
       const k = i * 3;
       if (fall) a[k + 1] -= fall * dt;
@@ -94,9 +109,16 @@ export class Weather {
       }
       if (fall > 0 && a[k + 1] < 0) a[k + 1] += top;
       if (fall < 0 && a[k + 1] > 8) a[k + 1] -= 8;
+      // wrap into [-r, r) around the centre: a branch, since a float % per particle made rain ~9x slower
+      const dx = a[k] - cx, dz = a[k + 2] - cz;
+      if (dx < -r || dx >= r) a[k] -= r2 * Math.floor((dx + r) / r2);
+      if (dz < -r || dz >= r) a[k + 2] -= r2 * Math.floor((dz + r) / r2);
     }
+    // only the drawn particles changed (set() clears the range, so a change of kind uploads them all)
+    p.clearUpdateRanges();
+    p.addUpdateRange(0, n * 3);
     p.needsUpdate = true;
-    this.points.position.set(Math.round(center.x / 4) * 4, 0, Math.round(center.z / 4) * 4);
+    this.points.position.set(0, 0, 0);
     if (this.kind === 'storm') {
       this.nextBolt -= dt;
       if (this.nextBolt <= 0) {
