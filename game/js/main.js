@@ -57,6 +57,7 @@ const THEMES = {
 };
 
 const _c = new THREE.Color(), _c2 = new THREE.Color(), _fog = new THREE.Color(), _tint = new THREE.Color(); // per-frame scratch colours
+const _sv = new THREE.Vector3(); // per-frame scratch vector (the sun's snapped centre)
 
 // Every token the prologue can teach; the vessel starts with all of them.
 const BASE_TOKENS = ['GRAVITY', 'INVERTS', 'INVERTED', 'PHYSICAL', 'ECHO', 'HELD', 'PERSISTS', 'OBSERVER', 'FREEZES', 'ALL', 'ECHOES', 'SOLIDIFIES'];
@@ -133,6 +134,13 @@ class Game {
     this.sun.shadow.bias = -0.0008;
     this.sun.shadow.normalBias = 0.03;
     this.scene.add(this.sun, this.sun.target);
+    // The sun sits at a fixed offset from the player. Its shadow camera looks along that offset
+    // with up = +Y, so this is the camera's own basis (as Matrix4.lookAt builds it): the shadow
+    // box is snapped to whole shadow-map texels in it, and static shadow edges stop crawling.
+    this._sunOff = new THREE.Vector3(6, 24, 9);
+    this._LZ = this._sunOff.clone().normalize();
+    this._LX = new THREE.Vector3(0, 1, 0).cross(this._LZ).normalize();
+    this._LY = this._LZ.clone().cross(this._LX);
     this.lights = Array.from({ length: 4 }, () => {
       const l = new THREE.PointLight(0xffffff, 0, 20, 1);
       this.scene.add(l);
@@ -2399,9 +2407,14 @@ class Game {
     this.sun.color.lerp(_c.set(th.sunColor), k);
     this.sun.intensity += (th.sun * (deck ? 0.8 : 1) * (1 - night * 0.7) - this.sun.intensity) * k;
     this.renderer.toneMappingExposure += ((deck ? 0.9 + night * 0.15 - emergency * 0.5 : 0.95 + night * 0.1) - this.renderer.toneMappingExposure) * k;
+    // follow the player, snapped to whole shadow-map texels across the light's view
+    // (the preset's map size is read every frame, so a quality switch is picked up)
     const p = this.player.pos;
-    this.sun.position.set(p.x + 6, p.y + 24, p.z + 9);
-    this.sun.target.position.set(p.x, p.y, p.z);
+    const sc = this.sun.shadow.camera, tx = (sc.right - sc.left) / this.sun.shadow.mapSize.x;
+    const u = Math.round(p.dot(this._LX) / tx) * tx, v = Math.round(p.dot(this._LY) / tx) * tx;
+    _sv.copy(this._LX).multiplyScalar(u).addScaledVector(this._LY, v).addScaledVector(this._LZ, p.dot(this._LZ));
+    this.sun.target.position.copy(_sv);
+    this.sun.position.copy(_sv).add(this._sunOff);
     const dc = this.device.userData;
     dc.shell.material.color.lerp(_c.set(th.device), k);
     dc.shell.rotation.y += dt * 1.5;
