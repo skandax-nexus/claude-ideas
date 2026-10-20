@@ -479,7 +479,7 @@ class Game {
     if (ok) this.hud.toast('Memory restored.');
     else if (action.startsWith('lv:')) this.edition.start(action.slice(3));
     else if (action === 'vessel') this.startVessel(undefined, null, null, opts?.ending);
-    else if (action === 'studio') this.startVessel(opts?.seed, null, opts?.wish);
+    else if (action === 'studio') this.startVessel(opts?.seed, null, opts?.wish, opts?.ending);
     else if (action === 'cradle') this.beginCradle();
     else if (action === 'forge') this.startForge(opts?.seed, null, opts?.choices);
     else if (action === 'halcyon') {
@@ -935,7 +935,7 @@ class Game {
       navigator.clipboard?.writeText(txt).then(() => this.hud.toast('Report copied.'), () => {});
       $('#copyReport').textContent = 'COPIED';
     };
-    $('#again').onclick = () => this.begin('new');
+    $('#again').onclick = () => this.begin('new', null, this.freeSlot()); // a slot of its own, not the hidden old autosave
     $('#toCradle').onclick = () => {
       this.closeMenu();
       this.run = 'cradle';
@@ -1602,7 +1602,10 @@ class Game {
       <span>${this.story.cast.filter((c) => this.facts.get(`met_${c.id}`)).length}/7 crew met</span><span>seed ${this.campaign.seed}</span></div>
       <button class="big" id="newVessel">${again[0]}<small>${again[1]}</small></button>
       <button id="keepPlaying">STAY ON THE BRIDGE</button>`;
-    $('#newVessel').onclick = () => this.begin('vessel', null, null, { ending: this.campaign.ending ?? null });
+    // a new run gets a free slot of its own (not the hidden old autosave); a Story Studio run keeps its wishes
+    $('#newVessel').onclick = () => (this.run === 'studio'
+      ? this.begin('studio', null, this.freeSlot(), { seed: (Math.random() * 1e9) | 0, wish: this.campaign.wish, ending: this.campaign.ending ?? null })
+      : this.begin('vessel', null, this.freeSlot(), { ending: this.campaign.ending ?? null }));
     $('#keepPlaying').onclick = () => { this.stayAtGate = true; this.closeMenu(); }; // the gate waits until you step out of it
     this.saveTo('auto');
     this.openMenu('ending');
@@ -1981,6 +1984,11 @@ class Game {
       this.hud.toast('<small>NOT SAVED</small><br>This browser is blocking storage or is out of space.', 5000);
     }
     return ok;
+  }
+
+  // the first empty slot (null when all ten are used: the game then autosaves as before)
+  freeSlot() {
+    return listSaves().find((s) => s.slot !== 'auto' && !s.data)?.slot ?? null;
   }
 
   // kept for tools and old callers
