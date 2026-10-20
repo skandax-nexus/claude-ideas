@@ -394,9 +394,11 @@ function measure(L) {
     }
     out[n] = (2 * (hi - lo)) / clip.duration / L.nativeHeight;
   }
-  // sane bounds (m/s for a 1.75 m person: walk 0.9-2.0, run 2.4-6)
+  // sane bounds (m/s for a 1.75 m person: walk 0.9-2.0, run 1.6-6). The run floor sits below
+  // the library's own run (about 1.22 body heights/s): a higher floor overstated its stride by
+  // ~15%, so the legs turned over too slowly for the ground speed and the feet slid
   out.walk = THREE.MathUtils.clamp(out.walk || 0.8, 0.5, 1.15);
-  out.run = THREE.MathUtils.clamp(out.run || 2.2, 1.4, 3.4);
+  out.run = THREE.MathUtils.clamp(out.run || 2.2, 0.9, 3.4);
   mixer.stopAllAction();
   return out;
 }
@@ -802,7 +804,9 @@ export function makeActor(spec = {}) {
       const rw = speed / walkSpeed / wd, rr = speed / runSpeed / rd;
       const ws = w.walk + w.run;
       const rate = ws > 0.01 ? (w.walk * rw + w.run * rr) / ws : 0;
-      phase = (phase + dt * THREE.MathUtils.clamp(rate, 0, 2.2)) % 1;
+      // capped at a natural cadence; the player raises its own cap (userData.maxCadence) so its
+      // faster gaits are not carried by legs moving too slowly
+      phase = (phase + dt * THREE.MathUtils.clamp(rate, 0, U.maxCadence || 2.2)) % 1;
       A.walk.time = phase * wd;
       A.run.time = w.air > 0.01 ? rd * 0.25 : phase * rd; // in the air: a leap, mid-stride
       A.idle.setEffectiveWeight(w.idle * (1 - w.air));

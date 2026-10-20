@@ -8,6 +8,9 @@ import { makePlayerModel } from '../world/People.js';
 const HALF = new THREE.Vector3(0.3, 0.85, 0.3);
 const EYE = 0.68;
 const G = 22;
+// stride cycles per second the player's legs may reach (5.2 steps/s, a sprint cadence; NPCs keep
+// 2.2), so the 3.9 m/s walk is carried by the legs instead of sliding
+const MAX_CADENCE = 2.6;
 const _v = new THREE.Vector3();
 const _m = new THREE.Matrix4();
 
@@ -15,6 +18,7 @@ export class Player {
   constructor(camera, scene) {
     this.camera = camera;
     this.model = makePlayerModel(null);
+    this.model.userData.maxCadence = MAX_CADENCE;
     if (scene) scene.add(this.model);
     this.facing = new THREE.Vector3(0, 0, -1);
     this.colliders = [];
@@ -46,6 +50,7 @@ export class Player {
   setModel(choice) {
     const old = this.model;
     this.model = makePlayerModel(choice);
+    this.model.userData.maxCadence = MAX_CADENCE;
     this.model.position.copy(old.position);
     this.model.quaternion.copy(old.quaternion);
     if (old && old.parent) {
