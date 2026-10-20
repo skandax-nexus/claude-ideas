@@ -700,8 +700,7 @@ class Game {
           return;
         }
         deleteSave(b.dataset.del === 'auto' ? 'auto' : +b.dataset.del);
-        this.hud.toast('Save deleted.');
-        this.openSaves(mode, from, pending);
+        this.openSaves(mode, from, pending); // the row turning EMPTY says it (a toast would wait, hidden, for the next game)
       };
     }
     for (const b of document.querySelectorAll('#saves [data-slot]')) {
@@ -717,9 +716,11 @@ class Game {
           this.menu = null;
           this.begin(pending.action, null, slot, pending.opts || null);
         } else if (mode === 'save') {
-          this.saveTo(slot);
-          this.hud.toast(`Saved to slot ${slot + 1}.`);
+          // confirmed in the panel: toasts are hidden (and frozen) while a menu is open
+          const ok = this.saveTo(slot);
           this.openSaves('save', from);
+          const note = document.querySelector(`#saves [data-slot="${slot}"] small`);
+          if (note) note.textContent = ok ? 'Saved just now' : 'Could not save: storage is blocked or full';
         } else if (from === 'title') {
           this.menu = null;
           this.begin('load', slot);
