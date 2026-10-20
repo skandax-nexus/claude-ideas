@@ -153,7 +153,7 @@ export const rules = [
   { id: 'a_varga', when: 'heard_varga', then: [{ log: 'Varga warned me not to activate the machine. Who was she warning?' }] },
   { id: 'a_vault', when: 'vault_seen', then: [{ log: 'Varga\'s last recording was made after the activation. She is not missing. She is later.' }] },
   { id: 'a_act', when: 'machine_activated', then: [{ log: 'The walls are windows. The lab is a ship. It is moving.' }] },
-  { id: 'a_r1x', when: 'machine_activated && heard_varga', then: [{ log: 'Varga\'s first recording now has a sentence it didn\'t have before.' }] },
+  { id: 'a_r1x', when: 'heard_varga_after', then: [{ log: 'Varga\'s first recording now has a sentence it didn\'t have before.' }] },
   { id: 'a_brain', when: 'brain_seen', then: [{ log: 'A human brain is inside the machine. Cables run from it to the Observer.' }] },
   { id: 'a_face', when: 'observer_faced', then: [{ log: 'The Observer was not hunting me. It was learning me.' }] },
 

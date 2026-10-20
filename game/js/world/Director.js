@@ -39,7 +39,11 @@ export class Director {
     const { facts } = this.g;
     switch (id) {
       case 'shard': return this.touchShard();
-      case 'r1': return this.say('r1', () => facts.set('heard_varga'));
+      case 'r1':
+        return this.say('r1', () => {
+          if (facts.get('heard_varga') && facts.get('machine_activated')) facts.set('heard_varga_after'); // the grown recording, heard (not a first hearing after the activation)
+          facts.set('heard_varga');
+        });
       case 'r0': return this.say('r0', () => facts.set('heard_self'));
       case 'r2':
         return this.say('r2', () => {
