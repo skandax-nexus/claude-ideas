@@ -483,6 +483,7 @@ body.touch #dock { bottom: max(10px, env(safe-area-inset-bottom)); }
 #hero .heroes.looks button.look img { width: 100%; aspect-ratio: 4 / 5; object-fit: cover; border-radius: 10px; background: linear-gradient(180deg, rgba(220, 232, 244, 0.9), rgba(244, 247, 250, 0.6)); }
 #hero .heroes.looks button.look.sel { background: var(--ink); color: #fff; }
 #hero .heroes.looks button.look.sel img { box-shadow: 0 0 0 2px #fff inset; }
+#hero .heroes.looks button.look.loading img { animation: tickblink 0.9s ease-in-out infinite; } /* picked, still loading */
 @media (max-height: 520px) and (orientation: landscape) { #hero .heroes.looks button.look img { aspect-ratio: 1; object-position: top; } }
 #hero .heroes.looks { max-height: min(46vh, 380px); overflow-y: auto; padding-right: 2px; }
 @media (orientation: portrait) { #hero .heroes.looks { max-height: 26vh; } }

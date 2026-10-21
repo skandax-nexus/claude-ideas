@@ -293,8 +293,17 @@ async function desktop() {
   await az(() => { AZ.openMenu('pause'); });
   await page.click('#heroBtn2');
   await page.waitForTimeout(300);
+  // a stylised look loads when first picked: it is marked at once, and the latest pick wins
+  const was = await az(() => AZ.settings.hero.id);
+  const renModel = page.waitForResponse((r) => /Michelle\.(glb|json)/.test(r.url()), { timeout: 120000 }).catch(() => null);
   await page.click('[data-hero="ren"]');
-  await page.waitForTimeout(300);
+  check(await az(() => document.querySelector('#hero [data-hero="ren"]').classList.contains('sel')), 'a look still loading is marked as picked at once');
+  await page.click(`[data-hero="${was}"]`);
+  await renModel;
+  await page.waitForTimeout(2000);
+  check(await az((w) => AZ.settings.hero.id === w && AZ.player.model.userData.spec.model === w, was), 'a look that arrives after another was picked does not replace it');
+  await page.click('[data-hero="ren"]');
+  await page.waitForFunction(() => AZ.settings.hero.id === 'ren', null, { timeout: 60000 }).catch(() => {});
   check(await az(() => AZ.settings.hero.id === 'ren' && AZ.menu === 'hero'), 'look can be changed from the pause menu');
   await page.screenshot({ timeout: 180000, path: path.join(shots, 'f04-character-midgame.png') });
   await page.click('#heroGo');

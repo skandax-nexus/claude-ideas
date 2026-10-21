@@ -722,10 +722,12 @@ class Game {
   }
 
   // --- character select -----------------------------------------------------
-  openHero(from, then = null) {
+  openHero(from, then = null, again = false) {
     this.menuBack = from;
     this.menu = 'hero';
     this.heroThen = then;
+    // a look still loading from an earlier visit is not put on behind this one
+    if (!again) this.heroWant = this.heroLoad = null;
     this.input.release();
     if (!this.room) this.enterRoom('antechamber', true);
     const $ = (q) => document.querySelector(q);
@@ -759,29 +761,56 @@ class Game {
       };
     }
     $('#heroGo').textContent = then ? 'START' : 'DONE';
-    $('#heroGo').onclick = () => {
+    const go = () => {
       if (!this.settings.hero) this.changeSetting('hero', actorsReady() ? { ...LOOK_DEFAULT } : { id: 'ren' });
       this.player.cinema = null;
       this.menu = null;
       if (then) then();
       else this.back();
     };
+    $('#heroGo').onclick = () => {
+      if (!this.heroLoad) return go();
+      // the picked look is still on its way: go once it is on (or could not load), unless the
+      // screen is left or another look is picked meanwhile
+      const want = this.heroWant;
+      $('#heroGo').textContent = 'LOADING…';
+      const wait = () => {
+        if (this.menu !== 'hero' || this.heroWant !== want) return;
+        if (this.heroLoad) return void this.heroLoad.then(wait);
+        go();
+      };
+      this.heroLoad.then(wait);
+    };
     this.hud.show('hero');
   }
 
-  pickHero(choice, from, then) {
+  pickHero(choice, from, then, quiet = false) {
+    this.heroWant = choice; // the latest pick wins
     if (actorsReady() && !actorLoaded(lookOf(choice).model)) {
-      // a look that hasn't arrived yet: fetch it, then try again
-      loadActors([lookOf(choice).model]).then((ok) => ok && this.menu === 'hero' && this.pickHero(choice, from, then));
+      // a look that hasn't arrived yet (the stylised looks load when first picked): shown as
+      // picked at once, fetched, and put on when it arrives if it is still the one wanted
+      for (const b of document.querySelectorAll('#hero [data-hero]')) {
+        b.classList.toggle('sel', b.dataset.hero === choice.id);
+        b.classList.toggle('loading', b.dataset.hero === choice.id);
+      }
+      document.querySelector('#heroGo').textContent = then ? 'START' : 'DONE'; // a waiting START is off
+      this.audio.ui('press');
+      const p = (this.heroLoad = loadActors([lookOf(choice).model]).then((ok) => {
+        if (this.heroLoad === p) this.heroLoad = null;
+        if (this.heroWant !== choice || this.menu !== 'hero') return;
+        if (ok) this.pickHero(choice, from, then, true);
+        else this.openHero(from, then, true); // could not load: show the look still on
+      }));
       return;
     }
+    this.heroLoad = null;
     this.changeSetting('hero', choice);
     this.player.setModel(choice);
     this.voice.youMale = actorsReady() && lookOf(choice).voice === 'm';
     this.buildViewModels();
     this.world.refreshCast(choice);
-    this.audio.ui('press');
-    this.openHero(from, then);
+    if (!quiet) this.audio.ui('press'); // (a look that just arrived was acknowledged when tapped)
+    this.openHero(from, then, true);
   }
 
   openSettings(from) {
