@@ -162,7 +162,7 @@ export default {
     P.vbox([-OA, RIM + 5, -24, -PX - 10, RIM + 5.4, 24], 'roofLight');
     for (const z of [-22, 22]) P.cyl(-PX - 12, RIM, z, 0.3, 5, 'steel', { seg: 8, solid: true });
     // --- Q0: the north gate, the tunnel under the north stand, the rail halt on its platform -----------------------
-    P.land('northGate', 0, 0, -OB - 8, 0);
+    P.land('northGate', 6, 0, -OB - 15, -0.36); // (on the station's forecourt, the north stand and its gate ahead)
     P.land('gateTunnel', 0, 0, -OB + 2, 0);
     P.land('railHalt', 0, 3, -96, 0);
     P.land('departureBoard', -12, 3, -92, 0);

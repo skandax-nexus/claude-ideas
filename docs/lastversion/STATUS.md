@@ -89,19 +89,17 @@ story beats. How it works: [`DESIGN.md`](DESIGN.md).
 
 ## Generated (playable, solvable by construction, not hand-tuned)
 
-- **The places of Acts II–IV, the Finale and the Cases** (until U3): the generated levels (open districts and
-  interiors) dressed per state, each with an authored beat. Every one is checked: each obstacle
-  has a state or the anchor that gets past it, each generated route uses only its room's states,
-  each beat has something that completes it, every place can snap back to the present.
-- **Puzzles** are the generators' pits, ledges, keys, cores, sweepers and watchers, limited to
-  what each mission's years can do. They serve the bible's verbs (cross in the past, carry a key
-  out of 2026 and anchor it), but they are not the bible's specific
-  puzzles: the observatory's three instruments aligned by sun and stars, the clockmaker's hidden
-  staircase found by comparing room states, the hospital's sound that gets quieter as you
-  approach, or the Unwritten Second's bridge seen only in reflections exist as beats and text, not
-  as bespoke mechanisms. (Mission 11's reversing lock is now a real mechanism: REVERSE.)
-- Room names inside generated interiors are drawn from each mission's list, so a room's name and
-  its puzzle do not always match its story beat.
+- **Nothing of the places since U3.** Every mission and both cases stand in an authored open place;
+  the edition no longer imports `gen/ZoneGen.js` or `gen/LevelGen.js` (a unit test greps every
+  edition file), and `dress.js` and the `P` palettes are removed. What is still seeded is the scatter
+  inside each authored place (debris, grass, the order of facade tints), the same on every build.
+- **Puzzles** in Acts II–IV are the places' own crossings (the 2026 stone arch over Mission 18's
+  chasm, the 2049 lamp-post heads, the 2196 tilted floors; Mission 19's bridge seen only in its
+  reflection, which holds in 2026 or once the reflection is brought back in step; the Museum's
+  spiral, drowned in 2049) and the beats at their landmarks. The bible's bespoke mechanisms of
+  those missions (the reflection lag, the arena's collapse order, the alignment of three memories,
+  the slabs reversed into a stair) have their landmarks and geometry; their REVERSE processes and
+  scenes are U6–U8's.
 
 ## Planned / not done
 
@@ -112,8 +110,9 @@ story beats. How it works: [`DESIGN.md`](DESIGN.md).
   watcher reset, not a fail state; Mission 12's chase is a route with the Witness at its end, not
   a pursuit; Mission 13's battle and Mission 18's storms are watchers and weather; Mission 17's
   "security that mimics Kai" and Mission 21's elites are ordinary watchers; Mission 20's three
-  memories are one district per memory rather than an alignment puzzle; Mission 22's final causal
-  puzzle is read from evidence rather than assembled.
+  memories are three years of one plot rather than an alignment puzzle; Mission 22's final causal
+  puzzle is read from evidence rather than assembled. (Their places, landmarks and years exist since
+  U3; the mechanisms come with U6–U8.)
 - **The ten optional missions** of the bible's list (The Child in Three Photographs, The Train
   That Arrives Yesterday, …) are not built; the Child in the Station appears in Mission 1 only.
 - **Rook as a person after Mission 2.** He speaks on the radio and in recordings; the

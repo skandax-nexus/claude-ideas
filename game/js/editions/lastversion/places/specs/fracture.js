@@ -95,6 +95,10 @@ export default {
       [[46, -160, 'containerHouse'], [50, -182, 'containerOrange'], [24, -184, 'containerGreen']].forEach(([x, z, m]) => container(P, x, z, Math.PI / 2, m, { len: 10, y: 6 }));
       for (const [x, z] of [[-14, -192], [-14, -164], [12, -200], [30, -134]]) prop(P, 'tarp', x, z, P.rng.float(0, 3));
       for (const [x, z] of [[-8, -178], [6, -130]]) prop(P, 'firePit', x, z, 0);
+      // the settlement's gate across the old carriageway: two stacks of containers and one laid across them
+      for (const s of [-1, 1]) container(P, s * 8.4, -186, 0, ['containerRed', 'containerHouse', 'containerOrange'], { n: 3, len: 8 });
+      P.obox(0, 7.8, -186, 20, 2.6, 2.5, 0, 'containerGreen');
+      sign(P, 'ANCHOR', 0, 9.1, -187.3, Math.PI, { size: 0.6, color: '#f4e8c8', board: 0 });
       container(P, -40, -184, Math.PI / 2, 'containerOrange', { n: 2, len: 10 });
       for (const [x, z] of [[-20, -200], [-46, -120], [50, -132]]) container(P, x, z, 0.3, 'containerHouse', { len: 8 });
       P.cyl(-30, 0, -170, 0.25, 18, 'latticeSteel', { seg: 6, solid: true });

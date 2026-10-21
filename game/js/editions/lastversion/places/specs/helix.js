@@ -167,7 +167,7 @@ export default {
           hemi: { sky: 0xe8d890, ground: 0x3a4a30, k: 0.85 }, sunColor: 0xffe8a0, sunK: 1.0, grade: { shadowTint: 0x14301c, highlightTint: 0xfff0b0, toning: 0.22, contrast: 1.08, saturation: 1.08 } },
       },
       quarters: [
-        { name: 'THE CHASE — 2049', area: [-70, -90, 70, -38], spawn: [-40, WING_H, -44, -2.4], threshold: { at: 'gangway2026', kind: 'gangway' } },
+        { name: 'THE CHASE — 2049', area: [-70, -90, 70, -38], spawn: [-40, WING_H, -44, -Math.PI / 2], threshold: { at: 'gangway2026', kind: 'gangway' } },
         { name: 'THE CORRIDOR THAT WAS — 2026', area: [-38, -38, 38, 38], spawn: [0, 0, 26, 3.1416], threshold: { at: 'eastRuin', kind: 'ruin' } },
         { name: 'THE RUIN — 2196', area: [38, -38, 70, 44], spawn: [30, 0, 4, -0.6], threshold: { at: 'sinkTerraces', kind: 'stair' } },
         { name: 'THE SECOND CHAMBER', area: [-46, -70, 46, -38], spawnAt: 'sinkTerraces', threshold: null },
@@ -228,6 +228,20 @@ export default {
     if (mission === 'm12') {
       // 2049 and 2026: the north wing stands; 2196: it has fallen into the sinkhole (northRuin below)
       wing(P, [-62, -62, 62, -38], { court: 'S', era: ['PRESENT', 'PAST'] });
+      // the lift's overrun and its water tank on the roof, the chase's first cover (east of where it starts)
+      P.E(['PRESENT', 'PAST'], () => {
+        P.box([-33, WING_H, -51, -26, WING_H + 6.5, -44.5], 'rawConcrete');
+        P.cyl(-29.5, WING_H + 6.5, -47.8, 2.4, 3.2, 'steel', { seg: 14 });
+      });
+      // 2196: of the wing's west end only its stair core still stands, ivied, beside the hole
+      P.E('FUTURE', () => {
+        P.box([-33, 0, -51, -26, WING_H + 10, -44.5], 'rawConcrete');
+        P.obox(-29.5, WING_H + 10, -47.8, 7.4, 1.2, 6.8, 0.2, 'rawConcrete', { rz: 0.18 }); // (its broken head, the tank long gone)
+        // and the piece of roof it still carries, where the chase begins, grown over
+        P.box([-46, WING_H - 0.6, -51, -33, WING_H, -39], 'rawConcrete');
+        for (let i = 0; i < 5; i++) P.tree(i % 2 ? 'shrub' : 'grass', -44 + i * 2.4, -49 + (i % 3) * 3, 1, { y: WING_H, solid: false });
+        for (let k = 0; k < 4; k++) P.vbox([-33.1, 2 + k * 3, -50.5 + k, -32.9, 6 + k * 3.4, -48 + k], 'ivy', { noShadow: 1 });
+      });
       northRuin(P);
     } else wing(P, [-62, -62, 62, -38], { court: 'S' });
     wing(P, [38, -38, 62, 44], { court: 'W', era: ['PRESENT', 'FUTURE'] });

@@ -136,6 +136,10 @@ export default {
     }
     // --- Q0: the gate and the entrance hall on the south rim ------------------------------------------------------
     P.land('rimGate', 0, RIM, 66, Math.PI);
+    // the museum's gate on the rim: two cut-stone piers and a lintel, the hole framed beyond
+    for (const s of [-1, 1]) P.box([s * 3.4 - 0.7, RIM, 61.3, s * 3.4 + 0.7, RIM + 6.6, 62.7], 'quarryCut');
+    P.box([-4.4, RIM + 5.6, 61.1, 4.4, RIM + 6.9, 62.9], 'quarryCut', { solid: false });
+    P.E('FUTURE', () => sign(P, 'THE MUSEUM OF FAILED WORLDS', 0, RIM + 6.25, 62.95, 0, { size: 0.32, color: '#ffc27a', board: 0 }));
     P.land('rimBench', 18, RIM, 64, Math.PI);
     P.land('entranceHall', -22, RIM, 68, Math.PI);
     P.land('spiralBend', ...pt(220).slice(0, 1), yAt(220), pt(220)[1], (-220 + 90) * deg);

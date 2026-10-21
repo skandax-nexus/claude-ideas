@@ -106,6 +106,11 @@ export default {
     }
     // --- Q0: the arrival platform on the viaduct, the bank tower and its roof garden, the fallen tower ------------------
     P.land('arrivalPlatform', VX, VY, 92, Math.PI);
+    // the line's signal gantry over the viaduct, just ahead of the platform (rusted, ivied in 2196)
+    for (const s of [-1, 1]) P.box([VX + s * 4.6 - 0.3, VY, 81.7, VX + s * 4.6 + 0.3, VY + 6.4, 82.3], 'ironDark');
+    P.vbox([VX - 4.9, VY + 5.6, 81.6, VX + 4.9, VY + 6.6, 82.4], 'ironDark');
+    for (const dx of [-2, 0, 2]) { P.vbox([VX + dx - 0.35, VY + 4.3, 81.9, VX + dx + 0.35, VY + 5.6, 82.3], 'signBoard'); P.sphere(VX + dx, VY + 5.2, 82.35, 0.14, 'lampGlow'); }
+    P.E('FUTURE', () => P.vbox([VX - 4.9, VY + 3.2, 81.5, VX - 3.9, VY + 6.6, 82.5], 'ivy', { noShadow: 1 }));
     P.land('partsList', VX - 1.6, VY, 84, Math.PI / 2);
     P.land('bankTower', -60, 0, 64, 0);
     P.land('liftCar', -56, 0, 70, Math.PI / 2);

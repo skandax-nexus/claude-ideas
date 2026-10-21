@@ -72,7 +72,9 @@ export function horizonFor(key, era, opts = {}) {
     for (let i = 0; i <= n; i++) {
       const p = [f.from[0] + ((f.to[0] - f.from[0]) * i) / n, f.from[1] + ((f.to[1] - f.from[1]) * i) / n];
       const d = dist(at, p);
-      out.push({ kind: 'ridge', b: bearing(at, p), w: deg(Math.atan2(260, d)), h: elevOf(f.h * (0.75 + 0.25 * Math.sin(i * 1.7)), d), haze: 0.42 });
+      // (a ridge close by would fill the band to its top edge, a flat wall: above 9° its height is eased, U3)
+      const e = elevOf(f.h * (0.75 + 0.25 * Math.sin(i * 1.7)), d);
+      out.push({ kind: 'ridge', b: bearing(at, p), w: deg(Math.atan2(260, d)), h: e > 9 ? 9 + (e - 9) * 0.1 : e, haze: 0.42 });
     }
     // the observatory's rings glint on the Ridge
     const o = ATLAS.observatory, d = dist(at, o);

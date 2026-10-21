@@ -66,6 +66,12 @@ export default {
     });
     // --- Q0: the quay trench, the field orders, the battery on the south ----------------------------------------
     P.land('quayTrench', 0, 0, 84, Math.PI);
+    // 2196: a coaster that broke its moorings in the war lies on the quay, rusted through, grown over
+    P.E('FUTURE', () => {
+      P.obox(-8, 0, 68, 24, 7, 6, 0.35, 'rust', { solid: true, rz: 0.12 });
+      P.obox(-14, 7, 70, 5, 4, 4, 0.35, 'rust', { rz: 0.12 });
+      for (let i = 0; i < 6; i++) P.tree('birch', -18 + i * 4, 72 + (i % 2) * 2, 1.1, { solid: false });
+    });
     P.land('fieldOrders', -6, 0, 76, 0);
     P.land('helmetPile', 18, 0, 80, 0);
     P.land('flagPost', -40, 0, 82, 0);
@@ -88,6 +94,9 @@ export default {
       }
       for (const [x, z] of [[40, 30], [70, 50], [86, 36], [52, 60], [-104, -2], [-88, -16]]) P.disc(x, 0.03, z, 3.4, 'crater', { noShadow: 1 });
       sign(P, 'HOLD THE STABILIZER', -6, 2.6, 75.4, 0, { size: 0.32, color: '#ff8a3d', board: 0 });
+      // the Unwritten's command post behind the trench: a stack of containers, sandbagged
+      container(P, 12, 74.8, Math.PI / 2, ['containerGrey', 'containerRed', 'containerGrey'], { n: 3 });
+      P.box([5, 0, 76.2, 19, 1.3, 77.4], 'sandbag');
     });
     // --- the container canyons (west of the shell zone) ----------------------------------------------------------
     P.land('canyonGate', 22, 0, 10, Math.PI);

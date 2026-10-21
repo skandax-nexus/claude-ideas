@@ -92,6 +92,11 @@ export default {
       P.vbox([-6, 0, -30.05, -4, 2.2, -29.95], 'doorDark');
       for (let i = 0; i < 14; i++) P.cyl(-65 + i * 10, 0, 66, 0.4, 0.9, 'steel', { seg: 6 });
       for (let i = 0; i < 6; i++) P.box([-70 + i * 22, 0, -74, -60 + i * 22, 1.2, -70], 'steel');
+      // the roof's plant room and the lift's motor tower, by the stair head where the citadel's arrival deck will be
+      P.box([-14, 0, 50, -6, 6.5, 58], 'concrete');
+      P.vbox([-13.5, 6.5, 50.5, -6.5, 7.2, 57.5], 'steel');
+      P.box([14, 0, 34, 21, 10, 41], 'concrete');
+      for (let k = 0; k < 4; k++) P.vbox([14.2 + k * 1.7, 7, 41, 15.4 + k * 1.7, 9, 41.05], 'serverGlass', { noShadow: 1 });
     });
     // --- PRESENT and FUTURE: the citadel (FUTURE: its ruin, the same terraces frosted, glass broken) -------------------
     P.E(['PRESENT', 'FUTURE'], () => {
