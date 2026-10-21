@@ -2010,7 +2010,10 @@ class Game {
       const min = idle ? 1000 / 30 : this.minFrame;
       const since = t - this.lastT;
       // 2 ms for timestamp jitter; a timestamp behind the last frame (a direct frame() call) resyncs
-      if (since >= 0 && since < min - 2) return;
+      if (since >= 0 && since < min - 2) {
+        this.pace.skip = t; // did no work: the next callback comes on the next refresh
+        return;
+      }
     }
     this.frame(t);
   }
@@ -2018,14 +2021,21 @@ class Game {
   // The panel's refresh interval: the median of 60 gaps between callbacks under 40 ms (a hitch
   // only makes gaps longer, never shorter). Taken on the title, and once more 3 s after the game
   // starts if the first found no fast panel (a heavy title, or a phone that only switches to
-  // 90/120 Hz once touched). Not after a fast panel is found: with the cap, gaps between callbacks
-  // no longer show the panel's rate reliably, and the cap's threshold already holds whole
-  // refreshes if the panel drops back to 60 Hz.
+  // 90/120 Hz once touched). After that it follows a panel that changes its rate (battery saver,
+  // a hot phone, adaptive refresh) through the gaps that follow a skipped callback: one that did
+  // no work, so the next comes on the very next refresh. Gaps after a rendered frame are not used,
+  // since a frame that takes longer than a refresh makes them two refreshes long.
   measureRefresh(t) {
     const m = this.pace;
     const gap = t - m.prev;
+    const clean = m.skip === m.prev;
     m.prev = t;
     if (!m.gaps) {
+      if (clean && gap > 4 && gap < 40 && (m.clean ||= []).push(gap) >= 30) {
+        const iv = m.clean.sort((a, b) => a - b)[15];
+        m.clean = [];
+        if (Math.abs(iv - this.refresh) > 0.1 * this.refresh) this.setRefresh(iv);
+      }
       if (m.again || this.minFrame || !this.started) return;
       m.from ??= t;
       if (t - m.from < 3000) return;
@@ -2043,15 +2053,20 @@ class Game {
   // A panel faster than ~77 Hz (under 13 ms) renders every second refresh: 45 fps at 90 Hz, 60 at
   // 120, 72 at 144, 82 at 165, all even. The shortest gap the cap allows is two refreshes but
   // never more than 1/60 s (at 90 Hz both let the same refreshes through), so a panel that drops
-  // back to 60 Hz still renders every refresh. The smart renderer judges the frame rate the screen
-  // then allows: the smallest whole number of refreshes the cap lets through (2). Anything slower
-  // keeps 1/60 s: a gap measured on a phone that cannot keep up is its frame time, not its panel's.
+  // back to 60 Hz still renders every refresh. 72 and 82 fps at 144 and 165 Hz are a choice: the
+  // GPU works about half as much again as at an even 48 or 55 fps, for smoother motion on the
+  // panels bought for it, and resolution gives way first if that is too much.
+  // The smart renderer judges the frame rate the cap lets through (two refreshes) but never more
+  // than 60 fps: a 144 Hz panel that drops to 60 or 120 Hz (battery saver, heat) renders 60 fps,
+  // and that must not read as slow (at 60 Hz every callback renders, so the measurement above
+  // only sees the new rate behind the next menu). Anything slower than 77 Hz keeps 1/60 s: a gap
+  // measured on a phone that cannot keep up is its frame time.
   setRefresh(iv) {
     this.refresh = iv;
     const fast = iv < 13;
     this.minFrame = fast ? Math.min(2 * iv, 1000 / 60) : 0;
     this.smart.panel = fast ? iv / 1000 : 1 / 60;
-    this.smart.vsync = fast ? (iv * Math.ceil((this.minFrame - 2) / iv)) / 1000 : 1 / 60;
+    this.smart.vsync = fast ? Math.max(iv * Math.ceil((this.minFrame - 2) / iv), 1000 / 60) / 1000 : 1 / 60;
     this.smart.restart();
   }
 

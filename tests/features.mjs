@@ -131,6 +131,33 @@ async function desktop() {
   check(await az(() => AZ.renderer.getPixelRatio() === Math.min(devicePixelRatio, AZ.smart.quality().pixelRatio)), 'smart renderer off: full resolution of the chosen quality');
   await az(() => AZ.changeSetting('smart', true));
 
+  // frame pacing on a phone, fed synthetic refresh timestamps (frame() only counts and feeds the
+  // smart renderer): a 144 Hz panel renders an even 72 fps; when it drops to 60 Hz mid-play
+  // (battery saver, heat) the game renders 60 and keeps full resolution; a pause lets the cap follow
+  const pace = await az(() => {
+    const g = AZ, s = g.smart;
+    const keep = { touch: g.touch, menu: g.menu, pace: g.pace, minFrame: g.minFrame, refresh: g.refresh, vsync: s.vsync, panel: s.panel };
+    g.renderer.setAnimationLoop(null);
+    let n = 0, t = 0;
+    g.frame = function (ts) { s.sample(this.lastT === undefined ? 1 / 60 : (ts - this.lastT) / 1000); this.lastT = ts; n++; };
+    Object.assign(g, { touch: true, menu: null, lastT: undefined, minFrame: 0, pace: { prev: undefined, gaps: [], again: true, from: undefined } });
+    s.reset();
+    const run = (hz, sec) => { const n0 = n; for (const end = t + sec * 1000; t < end; t += 1000 / hz) g.loop(t); return Math.round((n - n0) / sec); };
+    run(144, 1);
+    const r = { at144: run(144, 10), at60: run(60, 40), scale: s.scale, level: s.level, chosen: s.chosen, pending: s.pending };
+    g.menu = 'pause';
+    run(60, 3);
+    g.menu = null;
+    r.capAfterPause = g.minFrame;
+    delete g.frame;
+    Object.assign(g, keep, { lastT: undefined });
+    Object.assign(s, { vsync: keep.vsync, panel: keep.panel });
+    s.reset();
+    g.renderer.setAnimationLoop((ts) => g.loop(ts));
+    return r;
+  });
+  check(pace.at144 === 72 && pace.at60 === 60 && pace.scale === 1 && pace.level === pace.chosen && !pace.pending && pace.capAfterPause === 0, 'a 144 Hz phone renders 72 fps, and 60 at full resolution when its panel drops to 60 Hz; a pause drops the cap', JSON.stringify(pace));
+
   // dock: laws hidden until the device, map and log open, key hints present
   check(await az(() => document.querySelector('#dock .laws').classList.contains('off')), 'LAWS hidden in the dock before you have the device');
   // (LAWS and COMBO wait for the device; RULES and the four gear slots belong to WORLD FORGE)
