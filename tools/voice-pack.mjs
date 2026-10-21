@@ -22,7 +22,8 @@ const vocab = VOCAB();
 
 const lines = []; // [voice, text]
 const add = (voice, text) => text && lines.push([voice, text]);
-const crewVoice = (c) => 'CREW_' + ({ her: 'f', his: 'm' }[c.pronoun?.their] || 'n');
+// they/them crew speak with the voice of the body they wear, so their lines are recorded in every crew voice
+const crewVoices = (c) => ({ her: ['CREW_f'], his: ['CREW_m'] }[c.pronoun?.their] || ['CREW_n', 'CREW_f', 'CREW_m']);
 
 // hand-written prologue
 const walk = (o) => {
@@ -50,6 +51,12 @@ for (const f of ['main.js', 'world/Npcs.js', 'world/Director.js', 'world/World.j
     const t = unq(m[1], m[2]);
     if (/^[A-Z][A-Z0-9 ,.'?!()-]{14,}$/.test(t) && / /.test(t) && /[.?!]$/.test(t)) add('TICK', t);
   }
+  // line by line too: a template literal with quotes inside throws the scan above out of step
+  // (and TICK's lines may carry a colon: 'A NEW SUBJECT: TIME.')
+  for (const ln of s.split('\n')) for (const m of ln.matchAll(/'((?:[^'\\]|\\.)*)'/g)) {
+    const t = unq(m[1]);
+    if (/^[A-Z][A-Z0-9 ,.'?!():-]{14,}$/.test(t) && / /.test(t) && /[.?!]$/.test(t)) add('TICK', t);
+  }
 }
 for (const m of src('world/Npcs.js').matchAll(/'([A-Z][a-z][^']{8,}[.?!])'/g)) add('YOU', m[1]);
 for (const m of src('entities/Observer.js').matchAll(/onSay\('([^']+)'\)/g)) add('OBSERVER', m[1]);
@@ -59,7 +66,6 @@ const { makeZoneStory, makeCradleStory, FRAGMENTS, CRADLE_FRAGMENTS, CRADLE_HINT
 [...FRAGMENTS.flat(), ...CRADLE_FRAGMENTS].forEach((t) => add('NONE', t));
 const { ZONE_HINTS } = await imp('gen/ZoneGen.js');
 {
-  const voiceOf = (c) => 'CREW_' + ({ her: 'f', his: 'm' }[c.pronoun?.their] || 'n');
   for (const zs of [makeZoneStory(), ...['SEVER', 'SUSTAIN', 'MIRROR', null].map((e) => makeCradleStory(e))]) {
     for (const d of zs.decks) {
       d.intro.forEach((l) => add(l.who, l.text));
@@ -67,9 +73,9 @@ const { ZONE_HINTS } = await imp('gen/ZoneGen.js');
       for (const b of d.beats) {
         if (b.log) add(b.kind === 'contradiction' ? 'YOU' : b.log.who || 'NONE', typeof b.log === 'string' ? b.log : b.log.text);
         if (b.tick) add('TICK', b.tick);
-        if (b.junoAfter) [].concat(b.junoAfter).forEach((t) => add('JUNO', t));
+        if (b.junoAfter) [].concat(b.junoAfter).forEach((t) => add('JUNO', t.text ?? t)); // a line may be { text, when }
         if (b.kind === 'contradiction') { add('NONE', b.official); add('NONE', b.echo); }
-        if (b.lines) b.lines.forEach((l) => add(l.who === 'CREW' ? voiceOf(c) : l.who, l.text));
+        if (b.lines) b.lines.forEach((l) => (l.who === 'CREW' ? crewVoices(c) : [l.who]).forEach((v) => add(v, l.text)));
         // main.onDeckRoom's line is spoken whole: zone names (Kade, Abena, Theo, Ilse) are not generated words
         if (b.kind === 'encounter') add('JUNO', `Someone's in there. Ren - be gentle. It might be ${c.first}.`);
       }
@@ -89,11 +95,13 @@ for (let s = 1; s <= SEEDS; s++) {
       if (b.tick) add('TICK', b.tick);
       if (b.junoAfter) add('JUNO', b.junoAfter);
       if (b.kind === 'contradiction') { add('NONE', b.official); add('NONE', b.echo); add('YOU', b.log); }
-      if (b.lines) b.lines.forEach((l) => add(crewVoice(c), l.text));
+      if (b.lines) b.lines.forEach((l) => crewVoices(c).forEach((v) => add(v, l.text)));
     }
   }
   st.cast.forEach((c, i) => verdictEnding(st, i).text.forEach((t) => add('NONE', t)));
 }
+// every name as a possessive, for the narrator's reveals ("The hands are Viktor Zhou's.")
+{ const { FIRST, LAST } = await imp('gen/StoryGen.js'); for (const nm of [...FIRST, ...LAST]) add('NONE', `${nm}'s.`); }
 // the vessel after each prologue ending: Deck 1's opening (its {trail} line is spliced like today's),
 // the bridge coda, SEVERED's retry and its telling of THE WATCHER'S NAME
 for (const ending of ['SEVER', 'SUSTAIN', 'MIRROR', null]) {
@@ -107,10 +115,10 @@ for (const ending of ['SEVER', 'SUSTAIN', 'MIRROR', null]) {
 }
 
 // WORLD FORGE: every fixed line the Forge can say (gen/Forge.js). Names the player types, and the
-// few lines that carry them, fall back to the device voice; cast lines are recorded once, in the
-// neutral crew voice, which the other crew voices fall back on (audio/Voice.js).
+// lines that carry them, fall back to the device voice; cast lines are recorded in each crew voice,
+// so a cast member keeps one voice from line to line.
 const { FORGE_LINES } = await imp('gen/Forge.js');
-for (const [voice, text] of FORGE_LINES()) add(voice === 'CREW' ? 'CREW_n' : voice, text);
+for (const [voice, text] of FORGE_LINES()) for (const v of voice === 'CREW' ? ['CREW_n', 'CREW_f', 'CREW_m'] : [voice]) add(v, text);
 
 // AFTERZERO: THE LAST VERSION OF EARTH (v2.0): every line the edition can speak (game/js/editions/lastversion),
 // in its own speakers' voices: KAI, MIRA, WITNESS (also the voice in every speaker), ROOK, NIKO, SERA, ANJA,

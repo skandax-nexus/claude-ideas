@@ -21,11 +21,17 @@ Each version is kept separately. It has its own git commit, its own Android app 
 | **v1.0** | saved | `c6b8682` (tag `v1.0.0`) | `AFTERZERO-v1.0.apk`, app "AFTERZERO 1.0" (`com.afterzero.v1_0`) | [claude.ai/artifact/8Vz91NGuA5NzYydryybv8q](https://claude.ai/artifact/8Vz91NGuA5NzYydryybv8q) |
 | **v0.9** | saved | `293d857` (tag `v0.9.0`) | `AFTERZERO-v0.9.apk`, app "AFTERZERO" (`com.afterzero.preview`) | [claude.ai/artifact/6m2ucDKS4hUW5bE818FZQz](https://claude.ai/artifact/6m2ucDKS4hUW5bE818FZQz) |
 
-`android/build-apk.sh` takes the version from `versionName` in `android/AndroidManifest.xml`. To start a new version, raise `versionCode` and `versionName` and change the app label there. The script then names the APK and the app id from it.
+`android/build-apk.sh` takes the version from `versionName` in `android/AndroidManifest.xml`. To start a new version, raise `versionCode` and `versionName` and change the app label there. The script then names the APK and the app id from it. It signs every APK with one key kept outside the checkout (`~/.afterzero/debug.keystore`, or `AZ_KEYSTORE`), so a new build installs as an update over the old one and keeps the player's saves; it stops if the key is missing instead of making a new one (`AZ_NEW_KEY=1` makes one on purpose).
 
 To rebuild a saved version, check out its commit and run the script.
 
 **v2.0 is "AFTERZERO: The Last Version of Earth"**, a separate edition built from the same sources: Kai Varen, the Chronolith, four temporal states (2026, 2049, 2196, Inverted), the Witness, Mira, 23 missions and three endings, from the creator's gameplay bible in [`docs/lastversion/`](docs/lastversion/). `EDITION=lastversion bash android/build-apk.sh` builds it as its own app with its own saves (`com.afterzero.lastversion`, versionName 2.0.0); without `EDITION` the script builds the Station Zero game exactly as before. In a browser, `index.html?edition=lastversion` opens it. How the bible maps onto the engine: [`docs/lastversion/DESIGN.md`](docs/lastversion/DESIGN.md); what is built, generated and planned: [`docs/lastversion/STATUS.md`](docs/lastversion/STATUS.md).
+
+## v1.1: WORLD FORGE
+
+v1.1 is the version this branch builds (`AFTERZERO-v1.1.apk`). It adds a sixth chapter card and the play-test fixes made on top of v1.0.
+
+- **WORLD FORGE, "build your own game"** ([`docs/FORGE.md`](docs/FORGE.md)): a sixth chapter card. The Forge is an offline, deterministic engine (a Forge number plus your choices always builds the same game): you choose a genre (thriller, horror, mystery, adventure, heist, survival), a title and a hero's name, 3 to 8 locations from the thirteen the engine renders (five open districts, eight decks) with a name and local rules for each (gravity NORMAL / INVERTED / ZERO, echoes HIDDEN / VISIBLE / SOLID, time NORMAL / SWEEPERS, watchers NONE / PATROL / HUNT, light DAY / NIGHT / EMERGENCY, and a NULL FIELD where no law and no gear works), up to eight cast members with roles, and a four-slot kit of gear (reality tools, not weapons: STASIS PULSE, GRAPPLE LINE, ECHO LENS, LIGHT RIG, SIGNAL FLARE, KEY FORGE), and the length (SHORT, FULL, EPIC). The genre drives the cast's moods, the plot grammar (setup, complications, twist, finale with a last decision), the weather and film grade, the watchers and the threat music. Each act shows a LOCAL RULES card on arrival; the rules decide which gear works there; every puzzle is planned so it can be solved under its act's rules; the cast speak 3-6 lines per act from the genre's line banks and offer two-option choices that change later lines and the ending. Ten save slots, CONTINUE on the card. The Forge adds about 150 fixed lines to the voice pack; lines with typed names use the device voice.
 
 ## v1.0: one story, THE CRADLE, and a Vessel that remembers your choice
 
@@ -42,7 +48,10 @@ The prologue, HALCYON and the Vessel are now one story with one truth. The whole
   - The prologue's end screen now offers **GO BENEATH** or **SKIP TO THE VESSEL**, and the Cradle's last gate, NIGHT WATCH - FORWARD DECKS, leads into the Vessel. The chapter menu has a fifth card, THE CRADLE, with its own CONTINUE.
 - **The Vessel after each ending.** The ending you chose at the machine changes how Deck 1 opens, the watchers (still, learned or kin), the windows (stars, or black glass after SEVERED), the light (emergency light after SEVERED), who is aboard (Juno on the Bridge after SEVERED, the Other hanging from the ceiling after SUSTAINED), the last scene on the Bridge and the replay button (CYCLE 43, TELL IT AGAIN or FOLD AGAIN). A story number still deals the same crew and the same truth whatever you chose. The game remembers your last ending on the device, so chapters started from the menu play in that world (their cards say "After SEVERED", and so on).
 - **Plot holes fixed.** Kade's eighteen years; two drones in Neon Meridian; the Observer's drones (not the Observer) at the tower; Juno is the last one awake "down here"; Varga speaks in her own voice everywhere; HALCYON's screens correct Varga's record and Juno's lines after them now play; the journal and map speak of districts in HALCYON; the victim always fits the twist and motive; alibis are "on the radio", so nobody is in two places at once; the twists and motives no longer contradict the machine's one occupant; the SUBJECT HOLDING sign remembers CYCLE 42 in ECHO.
-- **WORLD FORGE, "build your own game"** ([`docs/FORGE.md`](docs/FORGE.md)): a sixth chapter card. The Forge is an offline, deterministic engine (a Forge number plus your choices always builds the same game): you choose a genre (thriller, horror, mystery, adventure, heist, survival), a title and a hero's name, 3 to 8 locations from the thirteen the engine renders (five open districts, eight decks) with a name and local rules for each (gravity NORMAL / INVERTED / ZERO, echoes HIDDEN / VISIBLE / SOLID, time NORMAL / SWEEPERS, watchers NONE / PATROL / HUNT, light DAY / NIGHT / EMERGENCY, and a NULL FIELD where no law and no gear works), up to eight cast members with roles, and a four-slot kit of gear (reality tools, not weapons: STASIS PULSE, GRAPPLE LINE, ECHO LENS, LIGHT RIG, SIGNAL FLARE, KEY FORGE), and the length (SHORT, FULL, EPIC). The genre drives the cast's moods, the plot grammar (setup, complications, twist, finale with a last decision), the weather and film grade, the watchers and the threat music. Each act shows a LOCAL RULES card on arrival; the rules decide which gear works there; every puzzle is planned so it can be solved under its act's rules; the cast speak 3-6 lines per act from the genre's line banks and offer two-option choices that change later lines and the ending. Ten save slots, CONTINUE on the card. The Forge adds about 150 fixed lines to the voice pack; typed names use the device voice.
+- **Laws you push, combos, ten slots.**
+  - A law written in LAWS runs only when you press its **ACTIVATE** button; until then the panel says it is not running yet, and the old law keeps running. An unsent draft stays in the panel when you close it.
+  - **Law combos:** save the running laws under a name (up to eight combos) and switch a whole set at once with **X**, the **COMBO** button in the dock, or the COMBO button on phones.
+  - **Ten save slots** (they were three).
 - **Voice.** About 340 new recordings (the voice pack grows from 1681 to 1946 unique pieces): the Cradle, the Vessel's openings and Bridge scenes for each ending, the watchers' hints, Varga's re-voiced logs, the "It might be ..." lines recorded whole, and the Other in your own (male or female) voice.
 - **Tests:** `node tests/cradle.mjs` plays the Cradle's three districts after every ending and walks into the Vessel, and plays the Bridge's last scene for each ending; `tests/vessel.mjs` replays the watched decks after each ending; `npm test` checks every ending against 200 story numbers and keeps HALCYON's twelve districts unchanged.
 
@@ -76,7 +85,7 @@ Station Zero turns out to be the basement of **HALCYON**, a city-sized arcology.
 | **The Glass Forest** | Glowing forest under a dome, quiet and eerie | The Canopy, The Still Pond, The Cabin Road | Theo, who kept the garden |
 | **The Signal Tower** | Storm and lightning, the Observer hunting | Storm Deck, Antenna Field, Last Landing | Varga's echo |
 
-- **Open maps:** each district is one big open space (72 × 108 m) of streets, buildings, water, trees or masts. Every obstacle has more than one answer:
+- **Open maps:** each district is one big open space (68 × 108 m) of streets, buildings, water, trees or masts. Every obstacle has more than one answer:
   - Fall up to the glass dome (INVERTED), walk across it, then drop onto a roof or past the water.
   - The old stairs and bridges are memories: ECHOES SOLIDIFY IN ECHO.
   - Float up in zero gravity, or freeze the drones with a law.
@@ -193,8 +202,16 @@ Or serve the `game/` folder with any static web server (it's plain ES modules, s
 | Use / skip line | E or left-click | USE |
 | Shift the room | Q or right-click; 1 / 2 / 3 to choose | SHIFT |
 | Jump / run | Space / Shift | JUMP / push the stick fully |
+| Walk or run (stays on) | Z or Caps Lock | WALK/RUN |
 | Device laws | L or Tab | LAWS |
+| Next law combo | X | COMBO (dock or phone button) |
 | Log (theory log, questions, Observer) | J | LOG |
+| Map | M | MAP, or tap the minimap |
+| Camera view / zoom | V / mouse wheel or + - | pinch, double-tap to reset |
+| Ask TICK | H | TICK |
+| WORLD FORGE: local rules / gear 1-4 | K / 5 6 7 8 | RULES / the gear buttons in the dock |
+| Quick save / quick load | F5 / F9 | pause menu |
+| Menu | Esc | MENU |
 
 The game gives you no tutorial on purpose. Look closer.
 
@@ -213,21 +230,38 @@ The game gives you no tutorial on purpose. Look closer.
 ## Repository
 
 ```
-game/                    the playable slice (Three.js r169, vendored; no build step)
+game/                    the browser game (Three.js r169, vendored; no build step)
+  index.html css/        the page and its styles
+  js/main.js             modes, menus, saves, chapters and the main loop
   js/core/               pure, unit-tested systems: conditions, laws, reality engine,
-                         facts & rules, Observer brain, objectives
-  js/world/              maps (data), story (data), world builder, director, models
+                         facts & rules, Observer brain, objectives, editions, smart renderer
+  js/gen/                generators: the vessel's story and sectors, the districts of
+                         HALCYON and THE CRADLE, WORLD FORGE
+  js/world/              Station Zero (maps, story, director), the decks and districts,
+                         characters, post FX, materials, weather, effects
   js/entities/           player controller (gravity + camera roll), Observer
-  js/ui/ js/audio/       HUD, law editor, journal, touch input, procedural audio
+  js/ui/                 HUD and law editor, input (keys, touch), ten save slots,
+                         settings, minimap, looks
+  js/audio/              procedural music and sound, the voice pack player
+  js/editions/           v2.0, THE LAST VERSION OF EARTH
+  assets/                character models, look portraits, photo textures, voice pack
+android/                 the APK host (MainActivity) and build-apk.sh
+tools/                   asset tools: voice pack, look portraits, textures, models, videos
 docs/
-  GDD.md                 game design document: pillars, systems, loop, 2-hour structure
+  STORY.md               the canon: the whole story, level by level
+  HALCYON.md CRADLE.md   the open districts and the chapter beneath them
+  VESSEL.md FORGE.md     the generated vessel and WORLD FORGE
+  GDD.md                 the first vertical slice's design document (pre-v1.0)
   MAPS.md                level designs for the slice and the full campaign
-  CHARACTERS.md          the cast and how each one drives a system
+  CHARACTERS.md          the slice's cast (pre-v1.0; the canon is STORY.md)
   REALITY_ENGINE.md      engine spec: law language, conditions, Observer AI, UE5 port
+  ART_AND_AUDIO.md       the calm look and the soundtrack (v0.2)
   PRODUCTION.md          phases, Android test checklist, team, risks
+  lastversion/ unity/    v2.0's bible and design; the Unity version
 tests/
-  core.test.mjs          unit tests for the core systems (npm test)
-  smoke.mjs              headless browser playthrough of the whole slice (npm run smoke)
+  *.test.mjs             unit tests: core systems, generators, the Forge, v2.0 (npm test)
+  smoke.mjs qa.mjs ...   headless browser playthroughs (see Tests)
+  perf.mjs               frame times on an emulated phone
 ```
 
 ## Tests
@@ -235,6 +269,7 @@ tests/
 ```bash
 npm test                                   # core systems + generator invariants over many seeds (Node 20+)
 NODE_PATH=$(npm root -g) npm run smoke     # full prologue playthrough in headless Chromium (needs playwright)
+NODE_PATH=$(npm root -g) npm run qa        # replays the bugs play-testers found, through real input
 NODE_PATH=$(npm root -g) npm run vessel    # QA bot plays every generated room of 2 seeds (pass a seed count to test more)
 NODE_PATH=$(npm root -g) npm run features  # features on desktop and a touch phone: chapters, slots, Story Studio, smart renderer, looks, voice pack, zoom, stick
 NODE_PATH=$(npm root -g) npm run layout    # no HUD piece overlaps another, on nine screen sizes

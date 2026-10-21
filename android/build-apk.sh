@@ -13,6 +13,22 @@
 # page. Without EDITION the build is the Station Zero game, unchanged.
 set -euo pipefail
 cd "$(dirname "$0")"
+# The signing key, checked first. Every build must be signed with the same key, or Android
+# refuses it as an update and the player has to uninstall (which deletes their saves): the key
+# lives outside the checkout (AZ_KEYSTORE, default ~/.afterzero/debug.keystore) and is never
+# made silently. AZ_NEW_KEY=1 makes one, for a first release only.
+KS=${AZ_KEYSTORE:-$HOME/.afterzero/debug.keystore}
+if [ ! -f "$KS" ]; then
+  if [ "${AZ_NEW_KEY:-}" = 1 ]; then
+    mkdir -p "$(dirname "$KS")"
+    keytool -genkeypair -keystore "$KS" -storepass android -keypass android \
+      -alias afterzero -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=AFTERZERO Debug" 2>&1 | grep -v JAVA_TOOL_OPTIONS || true
+  else
+    echo "no signing key at $KS: copy the key the released APKs were signed with there (or set AZ_KEYSTORE)." >&2
+    echo "AZ_NEW_KEY=1 makes a new key, but APKs signed with it cannot update installed copies." >&2
+    exit 1
+  fi
+fi
 EDITION=${EDITION:-}
 ANDROID_JAR=${ANDROID_JAR:-/usr/lib/android-sdk/platforms/android-23/android.jar}
 OUT=build
@@ -62,18 +78,16 @@ else echo "warning: no voice pack (tools/voice-pack.*); dialogue will use device
 javac --release 8 -classpath "$ANDROID_JAR" -d "$OUT/classes" src/com/afterzero/preview/MainActivity.java 2>&1 | grep -v JAVA_TOOL_OPTIONS || true
 dalvik-exchange --dex --output="$OUT/classes.dex" "$OUT/classes"
 
-# 3. Package, align, sign (debug key generated on first run).
+# 3. Package, align, sign (with the key checked at the top).
 aapt package -f -0 glb -0 ogg --rename-manifest-package "$APP_ID" -M "$MANIFEST" -S res -A "$OUT/assets" -I "$ANDROID_JAR" -F "$OUT/unsigned.apk"
 (cd "$OUT" && aapt add unsigned.apk classes.dex >/dev/null)
 zipalign -f 4 "$OUT/unsigned.apk" "$OUT/aligned.apk"
-[ -f debug.keystore ] || keytool -genkeypair -keystore debug.keystore -storepass android -keypass android \
-  -alias afterzero -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=AFTERZERO Debug" 2>&1 | grep -v JAVA_TOOL_OPTIONS || true
-apksigner sign --ks debug.keystore --ks-pass pass:android --key-pass pass:android --out "$OUT/$APK" "$OUT/aligned.apk"
+apksigner sign --ks "$KS" --ks-pass pass:android --key-pass pass:android --out "$OUT/$APK" "$OUT/aligned.apk"
 apksigner verify "$OUT/$APK"
 echo "Built $(pwd)/$OUT/$APK ($APP_ID${EDITION:+, edition $EDITION}, $(du -h "$OUT/$APK" | cut -f1))"
 
-# 4. The web preview (AFTERZERO-v<version>-play.html, one claude.ai artifact per version): same page, with the models as glTF JSON
-#    for hosts that don't serve .glb, beside it in build/preview/.
+# 4. The web preview ($OUT/preview/index.html with its assets beside it, published as one claude.ai artifact per
+#    version): the same page, with the models as glTF JSON for hosts that don't serve .glb.
 P="$OUT/preview"
 mkdir -p "$P/assets/voice" "$P/assets/looks" "$P/assets/textures"
 cp ../game/assets/looks/*.webp "$P/assets/looks/"
@@ -82,4 +96,8 @@ python3 -I ../tools/gltf-json.py ../game/assets/characters "$P/assets/characters
 # (the first <script> is the edition flag when there is one; the preview flags go in front of it)
 sed '0,/<script>/s#<script>#<script>window.AZ_MODEL_EXT=".json";window.AZ_NO_HDR=1;</script><script>#' "$OUT/assets/index.html" > "$P/index.html"
 [ -f ../game/assets/voice/voice.ogg ] && cp ../game/assets/voice/voice.json ../game/assets/voice/voice.ogg "$P/assets/voice/"
+# a claude.ai preview takes binary files up to 15 MB: say so before the voice pack outgrows it
+VOICE_MB=$(( $(stat -c %s ../game/assets/voice/voice.ogg 2>/dev/null || echo 0) / 1000000 )) # decimal MB, to be safe
+if [ "$VOICE_MB" -ge 15 ]; then echo "error: voice.ogg is $VOICE_MB MB; the web preview cannot be published (15 MB per file). Split the pack per edition." >&2; exit 1
+elif [ "$VOICE_MB" -ge 14 ]; then echo "warning: voice.ogg is $VOICE_MB MB, close to the preview's 15 MB per-file limit" >&2; fi
 echo "Preview in $(pwd)/$P"

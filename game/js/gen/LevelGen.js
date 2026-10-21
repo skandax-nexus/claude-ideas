@@ -45,7 +45,7 @@ export const HINTS = {
   'ledge:echo': ['THERE WERE STAIRS HERE ONCE.', 'SHIFT TO ECHO TO SEE THE STAIRS. THEN MAKE MEMORIES SOLID.', 'ECHOES  SOLIDIFY IN  ECHO, SHIFT TO ECHO, CLIMB.'],
   'ledge:light': ['GOLD OUTLINES. STEPS, MAYBE.', 'THE LIGHT STAIRS NEED A LAW.', 'HARD LIGHT  SOLIDIFY IN  (THIS ROOM\'S STATE), THEN CLIMB.'],
   'exit:ceiling': ['THE DOOR IS IN A STRANGE PLACE.', 'IT IS ON THE CEILING. SO WALK THERE.', 'SHIFT TO INVERTED AND WALK THROUGH THE DOOR ON THE CEILING.'],
-  'exit:key': ['THE LOCK WANTS A KEY. THERE IS ONE - SOMEWHERE ELSE IN TIME.', 'THE KEY ONLY EXISTS IN ECHO. THE LOCK ONLY WORKS IN PHYSICAL.', 'WRITE  HELD MATTER  PERSISTS THROUGH  PHYSICAL, TAKE THE KEY IN ECHO, SHIFT TO PHYSICAL, USE THE LOCK.'],
+  'exit:key': ['THE LOCK WANTS A KEY. THERE IS ONE - SOMEWHERE ELSE IN TIME.', 'THE KEY ONLY EXISTS IN ECHO. THE LOCK ONLY WORKS IN PHYSICAL.', 'WRITE  HELD MATTER  PERSISTS THROUGH  ALL STATES, TAKE THE KEY IN ECHO, SHIFT TO PHYSICAL, USE THE LOCK.'],
   'exit:core:gravity': ['THE SOCKET IS EMPTY. A CORE IS ON THE CEILING.', 'GO GET IT. THE CEILING IS A FLOOR IF YOU ASK NICELY.', 'SHIFT TO INVERTED, TAKE THE CORE, SHIFT BACK, PUT IT IN THE SOCKET.'],
   'exit:core:zerog': ['THE CORE IS ON A HIGH SHELF.', 'FLOAT UP.', 'GRAVITY  FREEZES IN  (A STATE), DRIFT UP TO THE SHELF, TAKE THE CORE, BRING IT TO THE SOCKET.'],
   'exit:core:echo': ['THE CORE IS ON A HIGH SHELF. A STAIR USED TO LEAD THERE.', 'THE STAIR IS AN ECHO.', 'ECHOES  SOLIDIFY IN  ECHO, CLIMB TO THE CORE, CARRY IT TO THE SOCKET.'],
@@ -57,6 +57,13 @@ export const HINTS = {
   'sentinel:learned': ['IT REMEMBERS THE HALL. EVERY HABIT YOU TAUGHT IT.', 'IF IT LEARNED TO LOOK UP, THE CEILING WILL NOT HIDE YOU. IF IT LEARNED YOUR FOOTSTEPS, DO NOT RUN.', 'OBSERVER  FREEZES IN  (THIS ROOM\'S STATE) STILL STOPS IT COLD. OR KEEP SOMETHING SOLID BETWEEN YOU.'],
   'sentinel:kin': ['IT IS WATCHING YOU. IT SEEMS TO LIKE WHAT IT SEES.', 'IT WILL NOT CHASE YOU. IT KNOWS YOUR NAME NOW.', 'WALK PAST IT. IT ONLY WANTS TO SEE YOU GO.'],
   'exit:open': ['THE DOOR IS OPEN. GO ON.', 'JUST WALK.', 'WALK THROUGH THE DOOR.'],
+  // WORLD FORGE acts with INVERTED gravity: PHYSICAL is the upside-down state there, INVERTED and ECHO are upright
+  'inv:pit:gravity': ['THE FLOOR STOPS. THE CEILING DOES NOT.', 'HERE PHYSICAL IS THE STATE THAT PUTS YOU ON THE CEILING.', 'SHIFT THIS ROOM TO PHYSICAL, WALK ACROSS ON THE CEILING, THEN SHIFT TO INVERTED OVER THE FAR LEDGE.'],
+  'inv:exit:ceiling': ['THE DOOR IS IN A STRANGE PLACE.', 'IT IS ON THE CEILING. HERE PHYSICAL TAKES YOU THERE.', 'SHIFT TO PHYSICAL AND WALK THROUGH THE DOOR ON THE CEILING.'],
+  'inv:exit:core:gravity': ['THE SOCKET IS EMPTY. A CORE IS ON THE CEILING.', 'HERE PHYSICAL IS THE STATE THAT PUTS YOU UP THERE.', 'SHIFT TO PHYSICAL, TAKE THE CORE, SHIFT TO INVERTED, PUT IT IN THE SOCKET.'],
+  'inv:sentinel': ['IT WATCHES THE FLOOR. ONLY THE FLOOR.', 'STAY BEHIND THE PILLARS. OR WALK ON THE CEILING. OR FREEZE IT.', 'OBSERVER  FREEZES IN  (THIS ROOM\'S STATE) STOPS IT COLD. HERE PHYSICAL KEEPS YOU ON THE CEILING, OUT OF ITS SIGHT.'],
+  // ...and with ZERO gravity: no state puts you on the ceiling, you float where it can see you
+  'zero:sentinel': ['IT WATCHES THE FLOOR. AND EVERYTHING THAT FLOATS ABOVE IT.', 'STAY BEHIND THE PILLARS. OR FREEZE IT.', 'OBSERVER  FREEZES IN  (THIS ROOM\'S STATE) STOPS IT COLD. OR KEEP A PILLAR BETWEEN YOU AND IT.'],
 };
 
 // ---------------------------------------------------------------------------------
@@ -431,6 +438,8 @@ export function generateSector(story, deckIdx, sectorIdx, campaignSeed) {
   plan.splice(storyAt, 0, { type: 'story', beat });
 
   const names = rng.shuffle(deck.rooms);
+  const inv = deck.rules?.gravity === 'INVERTED' && !deck.rules.nullField; // WORLD FORGE: the states swap roles
+  const zero = deck.rules?.gravity === 'ZERO' && !deck.rules.nullField; // ...or none of them flips you
   const level = {
     id: `d${deckIdx}s${sectorIdx}`, deck: deckIdx, sector: sectorIdx, seed: campaignSeed,
     deckName: deck.name, palette: deck.palette,
@@ -567,7 +576,7 @@ export function generateSector(story, deckIdx, sectorIdx, campaignSeed) {
       tint: deck.palette.tint,
       killY: R.killY,
       floatY: R.floatY,
-      challenges: R.challenges.map((c) => ({ ...c, hints: (c.key === 'sentinel' && HINTS[`sentinel:${story.after?.sentinels}`]) || HINTS[c.key] || HINTS['exit:open'], box: t.box([-W / 2, -12, c.z1, W / 2, 30, c.z0]) })),
+      challenges: R.challenges.map((c) => ({ ...c, hints: (inv && HINTS[`inv:${c.key}`]) || (zero && HINTS[`zero:${c.key}`]) || (c.key === 'sentinel' && HINTS[`sentinel:${story.after?.sentinels}`]) || HINTS[c.key] || HINTS['exit:open'], box: t.box([-W / 2, -12, c.z1, W / 2, 30, c.z0]) })),
       exitSide: side,
       route,
       L, W, H,
@@ -742,8 +751,9 @@ function storyRoom(R, beat, deck, rng, level, story) {
     if (A.junoAboard) R.npcs.push({ id: 'guest_juno', crew: 'juno', pos: [-3.2, 0, -2.6], yaw: Math.PI, silent: true, when: 'verdict_right' });
     if (A.otherAboard) R.npcs.push({ id: 'guest_other', crew: 'other', pos: [0, R.H, -6.6], yaw: 0, silent: true, upsideDown: true });
   }
-  // WORLD FORGE, time SWEEPERS: a slow beam turns in the middle of the hall (the walls stay safe)
-  if (deck.rules?.time === 'SWEEPERS') R.hazards.push({ kind: 'sweeper', pivot: [0, 0.75, -8], radius: 3.4, speed: 0.9, phase: 0.6 });
+  // WORLD FORGE, time SWEEPERS: a slow beam turns by the way out (the walls stay safe), clear of the
+  // chair and of whoever waits here, so nobody is swept mid-conversation
+  if (deck.rules?.time === 'SWEEPERS') R.hazards.push({ kind: 'sweeper', pivot: [0, 0.75, -12.4], radius: 3.4, speed: 0.9, phase: 0.6 });
   // a memory beacon: touch it to save
   R.box([W / 2 - 1.4, 0, -2.4, W / 2 - 0.6, 1.2, -1.6], { mat: 'prop' });
   R.inter.push({ id: `beacon_${R.id}`, kind: 'beacon', pos: [W / 2 - 1.0, 1.5, -2.0], r: 2.4, prompt: 'SAVE MEMORY' });

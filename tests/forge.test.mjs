@@ -67,6 +67,12 @@ test('every act of every genre and length is solvable under its rules (300 seeds
           if (act.rules.nullField) for (const rid of lv.order) for (const c of lv.rooms[rid].challenges) assert.ok(c.optional || !c.effect, `${rid} needs ${c.key} in a null field`);
           if (act.rules.watchers === 'NONE') assert.equal(lv.sentinels.length, 0);
           if (act.rules.time === 'SWEEPERS') assert.ok(lv.hazards.length > 0, `${genre} seed ${seed} act ${act.index}: SWEEPERS but no beams`);
+          // TICK's answers name a state that does what they say (INVERTED: PHYSICAL is upside down; ZERO: no state flips you)
+          if (!act.rules.nullField) for (const rid of lv.order) for (const c of lv.rooms[rid].challenges) {
+            const said = (c.hints || []).join(' ');
+            if (act.rules.gravity === 'INVERTED') assert.ok(!/SHIFT TO INVERTED(,| AND) (WALK|CROSS)/.test(said), `${rid} ${c.key}: ${said}`);
+            if (act.rules.gravity === 'ZERO') assert.ok(!/INVERTED/.test(said), `${rid} ${c.key}: ${said}`);
+          }
         }
       }
     }
@@ -155,7 +161,7 @@ test('the Forge writes few new fixed lines, in the game\'s voice', () => {
   const lines = FORGE_LINES();
   assert.ok(lines.length < 220, `${lines.length} lines`);
   for (const [voice, text] of lines) {
-    assert.ok(['JUNO', 'TICK', 'NONE', 'CREW'].includes(voice));
+    assert.ok(['JUNO', 'TICK', 'NONE', 'CREW', 'YOU'].includes(voice));
     if (voice === 'TICK') assert.equal(text, text.toUpperCase(), text);
     assert.ok(!UNFILLED.test(text), text);
   }

@@ -319,8 +319,9 @@ export class DeckWorld {
     this.leftTex = null;
   }
 
-  echoVisible(state) {
-    return state === 'ECHO' || this.lensT > 0 || this.engine.has('echoVisible', state);
+  // with a room, its local rules count too (WORLD FORGE: ECHOES VISIBLE / SOLID, a null field)
+  echoVisible(state, room) {
+    return state === 'ECHO' || this.lensT > 0 || (room ? this.engine.hasIn('echoVisible', room) : this.engine.has('echoVisible', state));
   }
 
   // WORLD FORGE gear: a solid hard-light box (a grapple line, a stair) for a few seconds
@@ -350,13 +351,13 @@ export class DeckWorld {
       const c = this.ctx(d.el.room);
       const present = !!d.cond(c);
       if (d.kind === 'echo') {
-        const solid = present && this.engine.has('echoSolid', c.state) && d.el.solid !== false;
-        d.mesh.visible = present && (solid || this.echoVisible(c.state));
+        const solid = present && this.engine.hasIn('echoSolid', d.el.room) && d.el.solid !== false;
+        d.mesh.visible = present && (solid || this.echoVisible(c.state, d.el.room));
         d.mesh.material = solid ? this.mats.echoSolid : this.mats.echo;
         if (solid) cols.push(d.box);
       } else if (d.kind === 'light') {
         // hard light is always outlined; a law decides whether it carries weight
-        const solid = present && this.engine.has('lightSolid', c.state);
+        const solid = present && this.engine.hasIn('lightSolid', d.el.room);
         d.mesh.visible = present;
         d.mesh.material = solid ? this.mats.lightSolid : this.mats.light;
         if (solid) cols.push(d.box);
@@ -376,7 +377,7 @@ export class DeckWorld {
     this.colliders = cols;
     for (const tm of this.textMeshes) {
       const c = this.ctx(tm.t.room);
-      tm.mesh.visible = !!tm.cond(c) && (!tm.t.echo || this.echoVisible(c.state));
+      tm.mesh.visible = !!tm.cond(c) && (!tm.t.echo || this.echoVisible(c.state, tm.t.room));
     }
     for (const it of this.level.interactables) {
       const p = this.props[it.id];
@@ -441,7 +442,7 @@ export class DeckWorld {
   isItemAvailable(id) {
     const im = this.itemMeshes[id];
     if (!im || this.flags[`used_${id}`]) return false;
-    return !im.it.echo || this.echoVisible(this.engine.state(im.it.room));
+    return !im.it.echo || this.echoVisible(this.engine.state(im.it.room), im.it.room);
   }
 
   roomAt(p, fallback) {
@@ -502,6 +503,7 @@ export class DeckWorld {
     const feet = player.pos.y - player.half.y, head = player.pos.y + player.half.y;
     for (const h of this.hazards) {
       if (h.stasisT > 0) h.stasisT -= dt; // a stasis pulse holds it still
+      if (h.zapT > 0) h.zapT -= dt;
       const frozen = this.engine.hasIn('timeStop', h.hz.room) || h.stasisT > 0;
       if (!frozen) h.angle += h.hz.speed * dt * (this.engine.hasIn('timeReverse', h.hz.room) ? -1 : 1);
       h.g.rotation.y = h.angle;
@@ -515,6 +517,8 @@ export class DeckWorld {
       const along = dx * ax + dz * az;
       if (Math.abs(along) > h.hz.radius) continue;
       const perp = Math.abs(dx * -az + dz * ax);
+      // a beam passing close by: its zap (the second edition keeps its own soundscape)
+      if (perp < 1.5 && !(h.zapT > 0) && !g.edition) { g.audio?.zap(); h.zapT = 0.9; }
       if (perp < 0.42) event = 'hit';
     }
     // the afterimage the watchers follow (Echo Step)
@@ -860,7 +864,8 @@ export class Sentinel {
     U.coneMat.color.setHex(col);
     U.coneMat.opacity = this.mode === 'chase' ? 0.16 : 0.09;
     this.sync(dt, speed);
-    if (this.mode === 'chase' && here && player.pos.distanceTo(_v.set(this.pos.x, player.pos.y, this.pos.z)) < 1.15) {
+    // no catch through the air: on the ceiling you are out of its reach (unless it learned to look up)
+    if (this.mode === 'chase' && here && !hidden && player.pos.distanceTo(_v.set(this.pos.x, player.pos.y, this.pos.z)) < 1.15) {
       this.mode = 'patrol';
       this.suspicion = 0;
       return 'caught';

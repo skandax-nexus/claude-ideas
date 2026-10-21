@@ -39,13 +39,17 @@ export class Director {
     const { facts } = this.g;
     switch (id) {
       case 'shard': return this.touchShard();
-      case 'r1': return this.say('r1', () => facts.set('heard_varga'));
+      case 'r1':
+        return this.say('r1', () => {
+          if (facts.get('heard_varga') && facts.get('machine_activated')) facts.set('heard_varga_after'); // the grown recording, heard (not a first hearing after the activation)
+          facts.set('heard_varga');
+        });
       case 'r0': return this.say('r0', () => facts.set('heard_self'));
       case 'r2':
         return this.say('r2', () => {
           facts.set('vault_seen');
           // Varga went up. The long way through HALCYON starts here (once).
-          if (!facts.get('zones_started')) {
+          if (!facts.get('zones_started') && !facts.get('ending')) {
             this.g.hud.say([
               { who: 'JUNO', text: 'Ren - behind the vault. A service hatch, and a ladder. It goes a long way up. And further down.' },
               { who: 'JUNO', text: 'If Varga is later, she went somewhere. I think she went up.' },
@@ -59,7 +63,7 @@ export class Director {
       case 'brain':
         return this.say('brain', () => {
           facts.set('brain_seen');
-          this.say('observer_tethered');
+          if (facts.get('observer_arrived')) this.say('observer_tethered'); // else when it reaches the doorway (update)
         });
       case 'observer': return this.say('observer_face', () => facts.set('observer_faced'));
     }
@@ -72,7 +76,7 @@ export class Director {
       facts.set('shard_touch', 1);
       engine.setOverride('antechamber', { zeroG: true });
       audio.sweep(true);
-      hud.flash('rgba(140,110,255,0.5)');
+      if (!this.g.settings.comfort) hud.flash('rgba(140,110,255,0.5)');
     } else if (n === 1) {
       engine.setOverride('antechamber', null);
       engine.lock('antechamber', false);
@@ -81,7 +85,7 @@ export class Director {
       facts.set('shard_touch', 2);
       engine.setState('antechamber', 'INVERTED');
       audio.sweep(false);
-      hud.flash('rgba(255,90,180,0.55)');
+      if (!this.g.settings.comfort) hud.flash('rgba(255,90,180,0.55)');
       this.after(1.8, () => this.say('other_speaks'));
       this.after(2.5, () =>
         hud.toast(this.g.input.touch
@@ -103,7 +107,7 @@ export class Director {
       if (this.armT > 0) {
         this.armT = 0;
         facts.set('machine_activated');
-        hud.flash('rgba(255,255,255,0.9)');
+        if (!this.g.settings.comfort) hud.flash('rgba(255,255,255,0.9)');
         audio.sweep(true);
         setTimeout(() => audio.sweep(false), 300);
         this.say('machine_activate');
@@ -115,7 +119,8 @@ export class Director {
       }
     } else if (!facts.get('brain_seen') && this.g.engine.state('lab') === 'ECHO') this.use('brain');
     else if (facts.get('ending')) this.g.finish(facts.get('ending')); // the choice is made: show it again
-    else if (facts.get('brain_seen')) this.g.openDecision();
+    else if (facts.get('brain_seen') && facts.get('zones_done')) this.g.openDecision();
+    else if (facts.get('brain_seen')) this.say('machine_wait'); // the choice waits until Varga's trail has been followed up the tower
     else this.say('machine_hum');
   }
 
@@ -201,6 +206,7 @@ export class Director {
     // When the Observer reaches the doorway after activation.
     if (facts.get('observer_tethered') && !facts.get('observer_arrived') && !observer.path.length && observer.mode === 'tethered') {
       facts.set('observer_arrived');
+      if (facts.get('brain_seen')) this.say('observer_tethered'); // the doorway line waited for it
     }
   }
 }

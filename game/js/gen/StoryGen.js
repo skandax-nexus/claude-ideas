@@ -110,6 +110,7 @@ export const VOCAB = () => [
 ];
 
 const ff = (s, v) => s.replace(/\{(\w+)\}/g, (m, k) => (v[k] !== undefined ? v[k] : m));
+const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1); // a line that opens with a {place} ('the music room') starts a sentence
 
 // Pastel speaker colors for generated crew (dark enough to read on white cards).
 const CREW_COLORS = ['#2f8a5a', '#3b7fb8', '#6c5bc4', '#c0762a', '#1f9a90', '#c4566a', '#2b8f7a', '#a8862a'];
@@ -156,8 +157,10 @@ export const VESSEL_AFTER = {
       TRAIL,
       { who: 'TICK', text: 'THE DEVICE STILL WORKS. IT CARRIES A SMALL FIELD OF ITS OWN. THE WATCHERS DO NOT. THEY ARE STANDING VERY STILL.' },
     ],
+    // told in the past tense: the field let go, the watchers stand still, the windows are black
     twists: {
-      observer: 'The watchers on these decks were not only machines. The one that followed you deck to deck was {victim}, uploaded on the night of the Zero Event, watching the ship the only way it could. It learned you because it missed you. When the field went dark, it finally closed its eye.',
+      observer: 'The watchers on these decks were not only machines. The one that stood watch on these decks was {victim}, uploaded on the night of the Zero Event, watching the ship the only way it could. It learned you because it missed you. When the field went dark, it finally closed its eye.',
+      stars: 'The stars in the windows were never outside. The vessel had stopped moving long before you pulled the core. Every window on board had been replaying the last night anyone believed the journey had a point, until the field let go and the glass went black.',
     },
     coda: [
       { who: 'NONE', text: 'The chair unlocks. Behind you, someone opens the bridge door by hand.' },
@@ -209,6 +212,14 @@ export function makeStory(seed, wish = null, opts = {}) {
   const firsts = r.shuffle(FIRST);
   const wished = (wish?.names || []).map(cleanName).filter(Boolean).slice(0, 8);
   wished.forEach((n, i) => (firsts[i] = n));
+  // a generated name that matches a typed one gives way to the next unused name further down the
+  // deal (only those slots change: stories without typed names, or without clashes, stay the same)
+  const typedNames = new Set(wished.map((n) => n.toLowerCase()));
+  for (let i = wished.length, j = 8; i < 8; i++) {
+    if (!typedNames.has(firsts[i].toLowerCase())) continue;
+    while (typedNames.has(firsts[j].toLowerCase())) j++;
+    firsts[i] = firsts[j++];
+  }
   const lasts = r.shuffle(LAST);
   const traits = Object.keys(TRAITS);
   const cast = DECKS.slice(0, 7).map((d, i) => {
@@ -249,6 +260,8 @@ export function makeStory(seed, wish = null, opts = {}) {
   // whoever you meet must fit the ending you will read (no rng draw: every seed keeps its truth)
   if (twist.key === 'observer') cast[victim].alive = false; // uploaded: only an echo is left
   else if (motive.key === 'save') cast[victim].alive = true; // the fold keeps them from dying
+  // kept alive and uploaded that night: the fold keeps what was uploaded of them (no rng draw)
+  if (twist.key === 'observer' && motive.key === 'save') motive = { ...motive, long: '{victim} was dying. {culprit} could not keep the body, so {culpritFirst} kept the night: inside the fold, what was uploaded of {victimFirst} never has to end.' };
 
   const V = (extra = {}) => ({
     culprit: cast[culprit].name,
@@ -260,6 +273,7 @@ export function makeStory(seed, wish = null, opts = {}) {
     ...extra,
   });
 
+  const said = {}; // lines a story should not repeat (no rng draw: every seed keeps its truth)
   const decks = DECKS.map((d, i) => {
     if (i === 7) return finaleDeck(d, r, cast, captain, truth, V, motive, twist);
     const c = cast[i];
@@ -276,12 +290,12 @@ export function makeStory(seed, wish = null, opts = {}) {
         'The deck {first} never left',
         'What {first} saw on the last night',
       ]), v),
-      intro: juno(r, i, v),
+      intro: juno(r, i, v, said),
       beats: [
         arrival(r, d, c, v),
         personalLog(r, d, c, v, guilty),
         contradiction(r, d, c, v, guilty, red, cast, culprit),
-        encounter(r, d, c, v, guilty, red, cast, truth),
+        encounter(r, d, c, v, guilty, red, cast, truth, said),
       ],
     };
   });
@@ -290,12 +304,12 @@ export function makeStory(seed, wish = null, opts = {}) {
   if (after.intro) decks[0].intro = after.intro.map((l) => (l.text === '{trail}' ? { who: 'JUNO', text: ff('This is the {deck}. {name} was the {role}. If anyone left us a trail, it\'s {them}.', V({ name: cast[0].name, role: cast[0].role.toLowerCase(), them: cast[0].pronoun.them, deck: DECKS[0].name.toLowerCase() })) } : l));
   const twistText = after.twists?.[twist.key] || twist.text;
   if (twistText !== twist.text) decks[7].beats[3].twist = { ...twist, text: ff(twistText, V()) };
-  return { seed, cast, captain, truth, decks, after, question: after.question || null, motive: ff(motive.long, V()), twist: { ...twist, text: ff(twistText, V()) }, title: wish?.title ? String(wish.title).slice(0, 40) : null, mood: wish?.mood || null };
+  return { seed, cast, captain, truth, decks, after, question: after.question || null, motive: ff(motive.long, V()), twist: { ...twist, text: ff(twistText, V()) }, title: wish?.title ? String(wish.title).replace(/[<>&"]/g, '').slice(0, 40) || null : null, mood: wish?.mood || null };
 }
 
 // --- beats ---------------------------------------------------------------------
 
-function juno(r, i, v) {
+function juno(r, i, v, said = {}) {
   const opening = [
     [
       'Juno here. I\'m on the radio now - the hatch behind you sealed, but I can hear you.',
@@ -310,7 +324,14 @@ function juno(r, i, v) {
       'The {deck}. {name}\'s deck. Be kind to whatever you find of {them}.',
     ],
   ];
-  return r.pick(opening).map((t) => ({ who: 'JUNO', text: ff(t, v) }));
+  const drawn = opening.indexOf(r.pick(opening)); // always drawn: every seed keeps its truth
+  const k = i === 0 ? 0 : drawn;
+  // the hatch call opens Deck 1 only; 'never made it this far' once, and not before Deck 4. Where the
+  // drawn opening can't be said, Juno says only its deck line, so the decks keep three openings
+  let lines = opening[k];
+  if (i > 0 && (k === 0 || (k === 2 && (i < 3 || said.far)))) lines = [opening[k][1]];
+  else if (k === 2) said.far = true;
+  return lines.map((t) => ({ who: 'JUNO', text: ff(t, v) }));
 }
 
 function arrival(r, d, c, v) {
@@ -343,11 +364,11 @@ function personalLog(r, d, c, v, guilty) {
   return {
     kind: 'log',
     log: { title: `${c.name.toUpperCase()} - LOG 2`, text: ff(`${line} ${r.pick(after)}`, v) },
-    junoAfter: ff(r.pick([
+    junoAfter: cap(ff(r.pick([
       '{place}. Remember that. Statements are cheap down here.',
       'Write that down. {first} says {place}. We\'ll see what the echo says.',
       'Huh. I always thought {first} was somewhere else that night.',
-    ]), v),
+    ]), v)),
   };
 }
 
@@ -380,45 +401,53 @@ function contradiction(r, d, c, v, guilty, red, cast, culprit) {
   };
 }
 
-function encounter(r, d, c, v, guilty, red, cast, truth) {
+function encounter(r, d, c, v, guilty, red, cast, truth, said = {}) {
   const t = TRAITS[c.trait];
-  const lines = [r.pick(t.greet)];
+  // a sentence an innocent says is said once per story: the drawn one, else the other one not yet
+  // said, else none (the draw is kept, so every seed keeps its truth)
+  const once = (pool, pick) => { const u = [pick, ...pool.filter((x) => x !== pick)].find((x) => !said[x]); if (u) said[u] = true; return u; };
+  const greet = r.pick(t.greet);
+  const lines = [once(t.greet, greet) || greet]; // two crew of one temper greet you differently while they can
   if (guilty) {
     lines.push(
       r.pick([
         'You\'ve read the plaque. I can tell. You have that look the Observer gets.',
         'Whatever the echo showed you - echoes are only what we were afraid of.',
       ]),
-      ff(r.pick([
+      // the victim's name only where the motive is the victim (the draw is kept: every seed keeps its truth)
+      ((pair) => ff(truth.motive === 'save' ? r.pick(pair) : (r.pick(pair), pair[1]), { ...cast[truth.victim], victimFirst: cast[truth.victim].first }))([
         'I did what anyone would have done for {victimFirst}. Ask yourself what you would have done.',
         'You think there was a choice that night? There was a door. I closed it.',
-      ]), { ...cast[truth.victim], victimFirst: cast[truth.victim].first }),
+      ]),
       'Go on to the bridge. Sit in the chair. Then judge me.',
     );
   } else {
     const suspect = cast[r.pick([0, 1, 2, 3, 4, 5, 6].filter((k) => k !== c.deck))];
+    const A = [
+      'I wasn\'t the one. I know everyone says that. I have an echo that says it too.',
+      'I don\'t know who did it. I know who didn\'t, and that\'s me, and that\'s not enough.',
+    ];
+    const B = [
+      'Whoever did it - they loved someone. That\'s the only reason anyone breaks a ship.',
+      'Find the truth, Ren. Then decide if it\'s yours to tell.',
+    ];
     lines.push(
-      r.pick([
-        'I wasn\'t the one. I know everyone says that. I have an echo that says it too.',
-        'I don\'t know who did it. I know who didn\'t, and that\'s me, and that\'s not enough.',
-      ]),
-      ff(r.pick([
+      once(A, r.pick(A)),
+      ((C) => { const p = r.pick(C); return once(C, p) || p; })([
         'If I were you I\'d look at {s}. {s} stopped sleeping a week before the Zero Event.',
         'Talk to the {r} - {s}. {s} knew the core better than anyone admits.',
         '{s} cried at dinner the night before. {s} never cries.',
-      ]), { s: suspect.first, r: suspect.role.toLowerCase() }),
-      r.pick([
-        'Whoever did it - they loved someone. That\'s the only reason anyone breaks a ship.',
-        'Find the truth, Ren. Then decide if it\'s yours to tell.',
-      ]),
+      ].map((x) => ff(x, { s: suspect.first, r: suspect.role.toLowerCase() }))),
+      once(B, r.pick(B)),
     );
   }
   return {
     kind: 'encounter',
     alive: c.alive,
-    lines: lines.map((text) => ({ who: 'CREW', name: c.name.toUpperCase(), color: c.color, text })),
+    lines: lines.filter(Boolean).map((text) => ({ who: 'CREW', name: c.name.toUpperCase(), color: c.color, text })),
     junoAfter: ff(c.alive
-      ? r.pick(['{first}\'s alive. I didn\'t think anyone was. I\'ll stay on the line with {them}.', 'Leave {first} the radio frequency. {first} shouldn\'t be alone.'])
+      // 'I didn't think anyone was' only for the first survivor you meet
+      ? ((t) => (cast.slice(0, c.deck).some((x) => x.alive) ? 'Leave {first} the radio frequency. {first} shouldn\'t be alone.' : t))(r.pick(['{first}\'s alive. I didn\'t think anyone was. I\'ll stay on the line with {them}.', 'Leave {first} the radio frequency. {first} shouldn\'t be alone.']))
       : r.pick(['That was an echo of {first}. Not {first}. I keep forgetting the difference.', 'Echoes repeat. They don\'t answer questions. {first} would have hated that.']), v),
   };
 }
@@ -449,7 +478,7 @@ function finaleDeck(d, r, cast, captain, truth, V, motive, twist) {
       {
         kind: 'log',
         log: { title: 'ZERO EVENT - RECONSTRUCTION', text: ff('03:12. The first law takes a key and a pair of hands. The key never changes. The hands do: one person at the core, every cycle. Everyone else has an echo that says where they were. Check your board.', v) },
-        junoAfter: 'Your log has every echo you found. Look at who doesn\'t have one.',
+        junoAfter: 'Your log has every echo you found. Look for what doesn\'t match.', // the echo that contradicts its record, not the plaques you skipped
       },
       { kind: 'verdict', motive: ff(motive.long, v), twist: { ...twist, text: ff(twist.text, v) } },
     ],

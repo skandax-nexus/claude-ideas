@@ -294,24 +294,32 @@ try {
 
   // reload: the save restores the world from facts
   await page.reload();
+  await page.waitForFunction(() => window.AZ, null, { timeout: 300000 }); // CONTINUE shows once the game has read the saves
   await wait(1200);
   const cont = await page.isVisible('#continue');
   if (!cont) throw new Error('continue should be offered after a save');
   console.log('  ok  save found after reload');
 
-  // mobile layout
+  // mobile layout. The desktop page is done: close it, so two WebGL pages do not share the machine,
+  // and tap inside the page with long waits (a busy machine can take more than 30 s to acknowledge
+  // a Playwright tap), as tests/forge.mjs and features.mjs do
+  await page.close();
   const mob = await browser.newPage({ viewport: { width: 915, height: 412 }, isMobile: true, hasTouch: true });
   mob.on('pageerror', (e) => errors.push(e.message));
   await mob.goto(url);
-  await mob.waitForFunction(() => window.AZ, null, { timeout: 180000 }); // the characters load first
+  await mob.waitForFunction(() => window.AZ, null, { timeout: 300000 }); // the characters load first
   await mob.evaluate(() => localStorage.clear());
-  await mob.tap('#begin');
-  await mob.tap('[data-newch="prologue"]');
-  await mob.tap('#saves [data-slot="0"]');
-  await mob.waitForTimeout(500);
-  await mob.tap('#heroGo');
+  const tapIn = async (sel) => {
+    await mob.waitForSelector(sel, { state: 'visible', timeout: 300000 });
+    await mob.evaluate((q) => setTimeout(() => document.querySelector(q).click(), 0), sel);
+  };
+  await tapIn('#begin');
+  await tapIn('[data-newch="prologue"]');
+  await tapIn('#saves [data-slot="0"]');
+  await tapIn('#heroGo');
+  await mob.waitForFunction(() => window.AZ.started && !window.AZ.menu, null, { timeout: 300000 });
   await mob.waitForTimeout(1500);
-  await mob.screenshot({ path: path.join(shots, '18-android-layout.png') });
+  await mob.screenshot({ timeout: 240000, path: path.join(shots, '18-android-layout.png') });
   console.log('  screenshot 18-android-layout');
 } catch (e) {
   errors.push(e.message);

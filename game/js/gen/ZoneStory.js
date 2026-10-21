@@ -80,7 +80,8 @@ export const ZONES = [
       {
         kind: 'log', goal: 'Find Varga\'s note in the pump hall.',
         log: { title: 'VARGA - NOTE ON A PUMP', who: 'VARGA', text: 'I opened the flood valves myself. It was the only way to slow the core down. Osei, I am sorry. Ren, if you read this: the water bought us eighteen years. Do not waste them.' },
-        junoAfter: 'Eighteen years. That number again. Recording 0 was eighteen years before you were born.',
+        // Recording 0 is optional (and a HALCYON chapter start counts it heard): mention it only once it was
+        junoAfter: ['Eighteen years. That number again.', { text: 'Recording 0 was eighteen years before you were born.', when: 'heard_self' }],
       },
       {
         kind: 'encounter', goal: 'Find Chief Osei.',
@@ -203,8 +204,8 @@ export const FRAGMENTS = [
     'A school trip register for the glass forest. Thirty names, thirty ticks, one question mark.',
     'A bench plaque: for everyone who came here to be quiet. Someone has left a pillow.',
     'Theo\'s watering schedule. Every day for eighteen years. Not one day missed.',
+    'A sleeping pod\'s status light, buried in moss. It pulses slowly. Someone is still dreaming in there.', // index 4: placed (the forest's districts hold two fragments each: 0 1, 3 4, 6 7); the Cradle's setup
     'A pressed flower in a book about leaving. The book has no ending; the pages were cut out.',
-    'A sleeping pod\'s status light, buried in moss. It pulses slowly. Someone is still dreaming in there.',
     'A drawing of the machine, in a child\'s hand. The child has drawn a heart inside it.',
     'A trail marker: CABIN, 300 METRES. Someone added: HURRY.',
     'A recording of birdsong, playing on loop for birds that never came.',

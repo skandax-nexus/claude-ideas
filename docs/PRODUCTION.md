@@ -23,7 +23,7 @@ Run the slice on at least three devices (low / mid / high tier). For each, recor
 - [ ] Memory (Chrome `about:memory` / Android Studio profiler) — target < 400 MB for the web slice.
 - [ ] Touch accuracy: can testers pick up the key and use the archive panel on the first try? Count misses.
 - [ ] Battery drain over 30 minutes at 50 % brightness.
-- [ ] Landscape lock / fullscreen works; safe areas (notches) don't cover controls.
+- [ ] Fullscreen works upright and sideways; safe areas (notches) don't cover controls.
 - [ ] Audio starts after the first tap.
 
 Web slice mobile settings already applied: pixel ratio capped at 1.25 on touch devices, no MSAA, no shadow maps, 4 point lights reused per room, static geometry merged per room/material, procedural textures (no image downloads), ~700 KB total JS.

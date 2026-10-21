@@ -56,6 +56,7 @@ const SPY = () => {
 async function desktop() {
   console.log('Desktop');
   const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
+  page.setDefaultNavigationTimeout(300000); // a reload loads every model and the voice pack again: on a busy machine that outlasts 30 s
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
   page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
@@ -89,6 +90,8 @@ async function desktop() {
   check(await az(() => document.querySelectorAll('#hero .sw button').length) === 0, 'the realistic look has no colour swatches');
   await page.click('[data-hero="nova"]');
   await page.waitForTimeout(1500);
+  // a look that is not loaded yet is fetched first: on a busy machine that can take far longer than the fixed wait
+  await page.waitForFunction(() => AZ.player.model.userData.spec?.model === 'nova', null, { timeout: 300000 }).catch(() => {});
   check(await az(() => AZ.player.model.userData.spec.model) === 'nova', 'the stylised Nova look is still offered');
   await page.click('#hero .sw button[data-k="hair"]:nth-child(3)');
   await page.click('#hero .sw button[data-k="top"]:nth-child(3)');
@@ -97,6 +100,7 @@ async function desktop() {
   check(nova.hero.hair === 0xc79a62 && nova.hero.top === 0x8fc6e8 && nova.spec.hair === 0xc79a62, 'hair and outfit colours apply to the model', JSON.stringify(nova));
   await page.click('[data-hero="scifi"]');
   await page.waitForTimeout(1500);
+  await page.waitForFunction(() => AZ.settings.hero.id === 'scifi' && AZ.player.model.userData.spec?.model === 'scifi', null, { timeout: 300000 }).catch(() => {});
   await page.waitForTimeout(200);
   check(await az(() => AZ.settings.hero.id) === 'scifi', 'picking a look updates the choice');
   check(await az(() => AZ.player.model.userData.actor && AZ.player.model.userData.spec.model) === 'scifi', 'player model rebuilt with the new look');
@@ -303,7 +307,7 @@ async function desktop() {
   await page.waitForTimeout(2000);
   check(await az((w) => AZ.settings.hero.id === w && AZ.player.model.userData.spec.model === w, was), 'a look that arrives after another was picked does not replace it');
   await page.click('[data-hero="ren"]');
-  await page.waitForFunction(() => AZ.settings.hero.id === 'ren', null, { timeout: 60000 }).catch(() => {});
+  await page.waitForFunction(() => AZ.settings.hero.id === 'ren', null, { timeout: 300000 }).catch(() => {}); // a look still downloading can take long on a busy machine
   check(await az(() => AZ.settings.hero.id === 'ren' && AZ.menu === 'hero'), 'look can be changed from the pause menu');
   await page.screenshot({ timeout: 180000, path: path.join(shots, 'f04-character-midgame.png') });
   await page.click('#heroGo');
@@ -328,6 +332,7 @@ async function phone() {
   console.log('Phone (touch)');
   const ctx = await browser.newContext({ viewport: { width: 915, height: 412 }, isMobile: true, hasTouch: true });
   const page = await ctx.newPage();
+  page.setDefaultNavigationTimeout(300000); // a reload loads every model and the voice pack again: on a busy machine that outlasts 30 s
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
   await page.goto(url);
@@ -344,6 +349,7 @@ async function phone() {
   check(heroBox && heroBox.y + heroBox.height <= 412, 'START is on screen on a phone', JSON.stringify(heroBox));
   await page.tap('[data-hero="spacer"]');
   await page.waitForTimeout(1500);
+  await page.waitForFunction(() => AZ.settings.hero.id === 'spacer', null, { timeout: 300000 }).catch(() => {});
   await page.waitForTimeout(200);
   await page.tap('#heroGo');
   await page.waitForTimeout(1500);
@@ -433,6 +439,7 @@ async function phone() {
 async function chapters() {
   console.log('Chapters, save slots, Story Studio');
   const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
+  page.setDefaultNavigationTimeout(300000); // a reload loads every model and the voice pack again: on a busy machine that outlasts 30 s
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
   const ready = () => page.waitForFunction(() => window.AZ && document.querySelector('#begin'), null, { timeout: 180000 });
@@ -480,6 +487,7 @@ async function chapters() {
   await page.click('#saves [data-del="0"]');
   check(await az(() => !!localStorage.getItem('afterzero.slot.0')), 'DELETE asks for a second tap');
   await page.screenshot({ timeout: 180000, path: path.join(shots, 'f09-slots.png') });
+  await page.waitForTimeout(400); // a second tap within 350 ms would be the second half of a double tap
   await page.click('#saves [data-del="0"]');
   check(await az(() => !localStorage.getItem('afterzero.slot.0')), 'the second tap deletes the save');
   check(await az(() => document.querySelector('#saves [data-slot="0"]').classList.contains('empty')), 'the slot shows as empty again');

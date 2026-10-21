@@ -132,7 +132,7 @@ export class Weather {
         this.nextBolt = 7 + Math.random() * 9;
       }
       this.flash = Math.max(0, this.flash - dt * 3.2);
-      return this.flash * (0.6 + 0.4 * Math.sin(t * 90));
+      return this.flash * this.flash; // one soft pulse per bolt (no strobe: a 14 Hz flicker is a seizure risk)
     }
     return 0;
   }

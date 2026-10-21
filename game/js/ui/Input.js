@@ -37,6 +37,8 @@ export class Input {
         if (e.code !== 'Escape') return;
         e.target.blur(); // Escape leaves the text box and closes the panel as usual
       }
+      // in a menu, Tab moves between its buttons (it still toggles the laws, log and map panels)
+      if (e.code === 'Tab' && document.body.classList.contains('menu') && !document.querySelector('#laws.on, #journal.on, #map.on')) return;
       if (e.code === 'Tab' || e.code === 'F5' || e.code === 'F9') e.preventDefault();
       if (e.code === 'Equal' || e.code === 'NumpadAdd') this.zoom -= 1;
       if (e.code === 'Minus' || e.code === 'NumpadSubtract') this.zoom += 1;

@@ -1,5 +1,7 @@
 # AFTERZERO — Game Design Document
 
+> **Pre-v1.0 design notes.** This describes the first vertical slice. The canon is [STORY.md](STORY.md): the brain in the machine is the first Ren, Dr. Ilse Varga's son (not a future copy of you), and the Observer is his mind looking out; the field holds the fold (there is no "Undertow"); Varga is met in HALCYON and THE CRADLE; Juno and TICK are part of the cast. Where this file disagrees, STORY.md is right.
+
 > A sci-fi thriller in which the player does not just solve puzzles inside a world, but **discovers, tests and rewrites the laws that govern it.**
 
 Status: playable vertical slice (Chapters 1–4 plus a compressed 6–8) in `game/`. This document covers the full two-hour game; anything marked **[SLICE]** is implemented and playable now.
@@ -210,7 +212,7 @@ These are development targets; real playtime is established by testing (§9).
 - All 5 systems working together, 6 law grammars, 13 law tokens, 3 laws slots.
 - 5 characters (see [`CHARACTERS.md`](CHARACTERS.md)).
 - 4 objective layers, 7 open questions, 17 theory-log anomalies, 3 endings.
-- Desktop (keyboard/mouse) and Android (touch: stick, look-drag, buttons; fullscreen landscape; installable PWA).
+- Desktop (keyboard/mouse) and Android (touch: stick, look-drag, buttons; fullscreen, upright or sideways; installable PWA).
 - Autosave (facts, laws, room states, Observer memory).
 - Built-in **playtest report**: time, discoveries, catches, lessons taught to the Observer, the objective history, a discovery timeline, and the three post-demo questions.
 

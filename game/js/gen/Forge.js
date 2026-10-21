@@ -410,13 +410,13 @@ const CLOSERS = ['Find the truth, Ren. Then decide if it\'s yours to tell.', 'Wh
 
 function normalise(choices = {}) {
   const c = {};
-  c.title = String(choices.title || '').trim().slice(0, 40) || null;
+  c.title = String(choices.title || '').replace(/[<>&"]/g, '').trim().slice(0, 40) || null; // shown as HTML in the save list: no markup
   c.hero = cleanName(choices.hero) || null;
   c.genre = GENRES[choices.genre] ? choices.genre : null;
   c.length = LENGTHS[choices.length] ? choices.length : null;
   c.acts = (choices.acts || []).map((a) => ({
     theme: THEMES[a?.theme] ? a.theme : null,
-    name: String(a?.name || '').trim().slice(0, 28).toUpperCase() || null,
+    name: String(a?.name || '').replace(/[<>&"]/g, '').trim().slice(0, 28).toUpperCase() || null,
     rules: Object.fromEntries(RULE_KEYS.map((k) => [k, RULE_OPTIONS[k][a?.rules?.[k]] ? a.rules[k] : null])),
     nullField: a?.rules?.nullField === true || a?.rules?.nullField === 'true' ? true : a?.rules?.nullField === false || a?.rules?.nullField === 'false' ? false : null,
   }));
@@ -449,7 +449,8 @@ function planPuzzle(rng, rules, difficulty) {
     used.add(effOf(seg));
   }
   const exitOpts = nul ? [[['open', null], 1]]
-    : zero ? [[['open', null], 1], [['ledge', 'zerog'], zerogUsed ? 0 : 2], [['key', 'echo'], 1.2], [['core', 'zerog'], zerogUsed ? 0 : 1]]
+    // (no zero-g core: its socket sits on the floor, and in a ZERO act no state brings you down to it)
+    : zero ? [[['open', null], 1], [['ledge', 'zerog'], zerogUsed ? 0 : 2], [['key', 'echo'], 1.2]]
       : [[['open', null], 0.8], [['ceiling', 'gravity'], 1.2], [['ledge', 'zerog'], zerogUsed ? 0 : 1], [['ledge', 'echo'], 1], [['ledge', 'light'], 1], ...(inv ? [] : [[['key', 'echo'], 1]]),
         [['core', 'gravity'], 0.7], [['core', 'zerog'], zerogUsed ? 0 : 0.5], [['core', 'echo'], 0.6], [['core', 'light'], 0.6]];
   const exits = exitOpts.filter(([, w]) => w > 0);
@@ -490,9 +491,17 @@ export function forgeGame(seed, choices = {}) {
   const firsts = r.shuffle(FIRST), lasts = r.shuffle(LAST);
   const roleOrder = r.shuffle(ROLE_KEYS.filter((k) => k !== 'guide'));
   const cast = [];
+  // a generated name that matches a typed one gives way to the next unused name further down the deal
+  const typedNames = new Set(typed.filter((t) => t?.name).map((t) => t.name.toLowerCase()));
+  let spare = 8;
   for (let i = 0; i < Math.min(8, size); i++) {
     const t = typed[i] || {};
-    const first = t.name || firsts[i];
+    let gen = firsts[i];
+    if (!t.name && typedNames.has(gen.toLowerCase())) {
+      while (typedNames.has(firsts[spare].toLowerCase())) spare++;
+      gen = firsts[spare++];
+    }
+    const first = t.name || gen;
     const role = t.role || (i === 0 ? 'guide' : roleOrder[(i - 1) % roleOrder.length]);
     cast.push({
       id: `f${i}`, first, name: `${first} ${lasts[i]}`, typed: !!t.name, role: ROLES[role].label, roleKey: role,
@@ -694,7 +703,9 @@ export function checkSolvable(level, act, kit = []) {
     }
     if (rules.nullField && effects.size) out.push(`${rid}: null field but needs ${[...effects]}`);
     if (effects.size > 3) out.push(`${rid}: needs ${effects.size} laws`);
-    if (rules.gravity === 'ZERO') for (const c of req) if (['exit:ceiling', 'ledge:echo', 'ledge:light', 'exit:core:gravity', 'exit:core:echo', 'exit:core:light'].includes(c.key)) out.push(`${rid}: ${c.key} unreachable in zero gravity`);
+    if (rules.gravity === 'ZERO') for (const c of req) if (['exit:ceiling', 'ledge:echo', 'ledge:light', 'exit:core:gravity', 'exit:core:zerog', 'exit:core:echo', 'exit:core:light'].includes(c.key)) out.push(`${rid}: ${c.key} unreachable in zero gravity`);
+    if (level.zone && rules.gravity === 'ZERO' && !rules.nullField && (room.floatY ?? 1.25) > 4.5 - 0.85) out.push(`${rid}: floats at ${room.floatY} m, over the 4.5 m gate`);
+    if (level.zone && rules.gravity === 'ZERO' && !rules.nullField && req.some((c) => c.key === 'roof')) out.push(`${rid}: a roof scene, but you drift at street height`);
     if (rules.gravity === 'INVERTED') for (const c of req) if (c.key === 'exit:key') out.push(`${rid}: a key lock cannot be reached upside down`);
     if (rules.watchers === 'NONE' && level.sentinels.some((s) => s.room === rid)) out.push(`${rid}: watchers where the rules say none`);
   }
@@ -710,7 +721,7 @@ export function FORGE_LINES() {
     add('JUNO', g.junoAfter);
     g.tick.forEach((t) => add('TICK', t));
     [...g.logs.arrival, ...g.logs.mid].forEach((t) => add('NONE', t));
-    for (const rec of g.records) { add('NONE', rec.official); add('NONE', rec.echo); add('NONE', rec.text); }
+    for (const rec of g.records) { add('NONE', rec.official); add('NONE', rec.echo); add('YOU', rec.text); } // the hero reads the contradiction aloud
     for (const t of Object.values(g.npc)) add('CREW', t);
     add('JUNO', g.finale.codaTrust);
     add('JUNO', g.finale.codaDoubt);
