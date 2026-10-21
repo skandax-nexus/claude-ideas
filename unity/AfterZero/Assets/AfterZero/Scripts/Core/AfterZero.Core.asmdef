@@ -1,0 +1,11 @@
+{
+    "name": "AfterZero.Core",
+    "rootNamespace": "AfterZero.Core",
+    "references": [],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "autoReferenced": true,
+    "noEngineReferences": true
+}
