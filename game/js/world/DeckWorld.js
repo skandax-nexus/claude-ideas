@@ -402,6 +402,9 @@ export class DeckWorld {
         p.isEcho = p.model === p.echo;
       }
       p.model.visible = here;
+      // a hidden person is not animated, so their shading may still be for an earlier quality:
+      // brought up to date as they appear, so that frame draws with the programs already in use
+      if (here) p.model.userData.refreshShading?.();
     }
   }
 

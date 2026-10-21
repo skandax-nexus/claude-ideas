@@ -119,6 +119,12 @@ export class Weather {
     p.addUpdateRange(0, n * 3);
     p.needsUpdate = true;
     this.points.position.set(0, 0, 0);
+    // three sorts see-through objects by the bounding sphere's centre, computed once: keep it on
+    // the player, so the weather sorts against nearby hair, holograms and effects as it did when
+    // the cloud moved with the player. (Not culled and never ray-cast: it is only the sort key.)
+    const bs = (this.geo.boundingSphere ??= new THREE.Sphere());
+    bs.center.set(cx, top / 2, cz);
+    bs.radius = r * 1.5;
     if (this.kind === 'storm') {
       this.nextBolt -= dt;
       if (this.nextBolt <= 0) {

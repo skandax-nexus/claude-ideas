@@ -796,6 +796,9 @@ export function makeActor(spec = {}) {
     lookAt(p) { look = p ? p.clone() : null; },
     wave() { waveT = 0; },
     setOpacity(a) { for (const m of mats) { m.transparent = a < 1 || !!spec.hologram || m.alphaTest > 0; m.opacity = spec.hologram ? 0.55 * a : a; } },
+    // the per-surface shading follows the quality preset (animate does this every frame; DeckWorld
+    // calls it alone for someone who appears after being hidden, and so not animated)
+    refreshShading() { for (const r of shading) r(); },
     animate(dt, speed, t, airborne = false) {
       dt = Math.min(dt, 0.1);
       clock += dt;

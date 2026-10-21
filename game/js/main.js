@@ -2360,13 +2360,16 @@ class Game {
 
   placePrompt(pos) {
     this.fx.focus(pos, 0xffffff, this.time, this.camera);
-    if (!pos) return;
-    const v = new THREE.Vector3(pos[0], pos[1] + 0.55, pos[2]).project(this.camera);
+    const v = pos && new THREE.Vector3(pos[0], pos[1] + 0.55, pos[2]).project(this.camera);
     const el = this.hud.el.prompt;
-    if (v.z > 1) {
-      el.classList.remove('on');
-      return;
+    // behind the camera: hidden by a class of its own, so HUD.prompt's record of what it shows
+    // stays true and the text is not rewritten every frame this lasts
+    const behind = !!v && v.z > 1;
+    if (behind !== !!this._promptBehind) {
+      this._promptBehind = behind;
+      el.classList.toggle('behind', behind);
     }
+    if (!v || behind) return;
     const w = window.innerWidth, h = window.innerHeight;
     // whole pixels, written only when they change (each write costs a layout)
     const x = Math.round(THREE.MathUtils.clamp((v.x * 0.5 + 0.5) * w, 90, w - 90));
@@ -2502,6 +2505,7 @@ class Game {
           u.next = null;
         } else free.push(l);
       }
+      free.sort((a, b) => a.intensity - b.intensity); // dark lights first: they light up at once
       for (const l of free) {
         const o = top.find((o) => !held.has(o.g));
         if (o) held.add(o.g);
