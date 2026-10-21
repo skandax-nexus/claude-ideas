@@ -17,7 +17,7 @@ Each version is kept separately. It has its own git commit, its own Android app 
 | Version | Status | Commit | Android app | Web preview |
 | --- | --- | --- | --- | --- |
 | **v2.0** | in development (separate edition) | this branch | `AFTERZERO-LastVersion-v2.0.apk`, app "AFTERZERO: Last Version" (`com.afterzero.lastversion`); build with `EDITION=lastversion bash android/build-apk.sh` | [claude.ai/artifact/GDpG6YCybK2cj8P3gPXRrr](https://claude.ai/artifact/GDpG6YCybK2cj8P3gPXRrr) |
-| **v1.1** | in development | this branch | `AFTERZERO-v1.1.apk`, app "AFTERZERO 1.1" (`com.afterzero.v1_1`) | [claude.ai/artifact/UoHrkWc9QD6USztzpRLcSg](https://claude.ai/artifact/UoHrkWc9QD6USztzpRLcSg) |
+| **v1.1** | 1.1.1 update (smoother play, full game check) | this branch | `AFTERZERO-v1.1.apk`, app "AFTERZERO 1.1" (`com.afterzero.v1_1`) | [claude.ai/artifact/UoHrkWc9QD6USztzpRLcSg](https://claude.ai/artifact/UoHrkWc9QD6USztzpRLcSg) |
 | **v1.0** | saved | `c6b8682` (tag `v1.0.0`) | `AFTERZERO-v1.0.apk`, app "AFTERZERO 1.0" (`com.afterzero.v1_0`) | [claude.ai/artifact/8Vz91NGuA5NzYydryybv8q](https://claude.ai/artifact/8Vz91NGuA5NzYydryybv8q) |
 | **v0.9** | saved | `293d857` (tag `v0.9.0`) | `AFTERZERO-v0.9.apk`, app "AFTERZERO" (`com.afterzero.preview`) | [claude.ai/artifact/6m2ucDKS4hUW5bE818FZQz](https://claude.ai/artifact/6m2ucDKS4hUW5bE818FZQz) |
 
@@ -32,6 +32,21 @@ To rebuild a saved version, check out its commit and run the script.
 v1.1 is the version this branch builds (`AFTERZERO-v1.1.apk`). It adds a sixth chapter card and the play-test fixes made on top of v1.0.
 
 - **WORLD FORGE, "build your own game"** ([`docs/FORGE.md`](docs/FORGE.md)): a sixth chapter card. The Forge is an offline, deterministic engine (a Forge number plus your choices always builds the same game): you choose a genre (thriller, horror, mystery, adventure, heist, survival), a title and a hero's name, 3 to 8 locations from the thirteen the engine renders (five open districts, eight decks) with a name and local rules for each (gravity NORMAL / INVERTED / ZERO, echoes HIDDEN / VISIBLE / SOLID, time NORMAL / SWEEPERS, watchers NONE / PATROL / HUNT, light DAY / NIGHT / EMERGENCY, and a NULL FIELD where no law and no gear works), up to eight cast members with roles, and a four-slot kit of gear (reality tools, not weapons: STASIS PULSE, GRAPPLE LINE, ECHO LENS, LIGHT RIG, SIGNAL FLARE, KEY FORGE), and the length (SHORT, FULL, EPIC). The genre drives the cast's moods, the plot grammar (setup, complications, twist, finale with a last decision), the weather and film grade, the watchers and the threat music. Each act shows a LOCAL RULES card on arrival; the rules decide which gear works there; every puzzle is planned so it can be solved under its act's rules; the cast speak 3-6 lines per act from the genre's line banks and offer two-option choices that change later lines and the ending. Ten save slots, CONTINUE on the card. The Forge adds about 150 fixed lines to the voice pack; lines with typed names use the device voice.
+
+### The 1.1 update (1.1.1): smoother play and a full game check
+
+It installs over AFTERZERO 1.1 and keeps its saves (same app, same signing key, `versionCode` 11).
+
+- **Smoother on phones.** A phone-sized benchmark (`tests/perf.mjs`) timed every kind of scene and found four causes of stutter; 22 fixes address them.
+  - **No freezes after a load:** the optional character looks load one at a time in the background instead of in blocking chunks.
+  - **No shader stalls mid-play:** auto-quality changes wait for a menu, a loading fade or 45 s, settle instead of flip-flopping resolution, and remember their level after a reload. Pickups, flares and holograms are compiled before you tap them.
+  - **Less work per frame:** the HUD is no longer rebuilt every frame; the sun's shadow is drawn once; Medium does bloom and the film grade in one pass; hidden scenery and people stop animating; switched-off lights and useless shadow lookups are skipped; character textures stay loaded between sectors; settings changes no longer leak GPU memory.
+  - **Steadier motion:** frames are timed from the screen's refresh (120 Hz phones run at an even 60 fps) and the GPU rests behind menus; shadows snap to their texels and stop crawling; street lamps stop blinking; the camera blends instead of cutting; weather stops jumping; feet stop sliding; the touch stick's speed follows how far you push; kerbs up to 35 cm can be stepped up.
+  - Measured against 1.1: high-quality draw calls 10-17% lower, render CPU time up to 35% lower, frames over 33 ms on the Cradle walk down from 59 to 21.
+- **A complete game check.** Six testers checked 1.1 and everything both editions share: 84 findings, each reproduced before it was fixed, 80 fixed.
+  - **Critical:** an ending panel that nothing could close (Vessel, Story Studio, WORLD FORGE); Android 15 and newer refusing the APK (it now targets API 24); WORLD FORGE zero-gravity districts and decks that could not be finished.
+  - **Major:** updates that would have wiped saves (every build now uses one signing key); rotating, folding or a theme change restarting the app; comfort mode still flashing; title cards that never showed; the prologue's final choice reachable too early; STAY ON THE BRIDGE doing nothing; sentinels catching you on the ceiling; a TICK hint that failed; missing recordings; mute not muting everything; Juno contradicting herself; and more.
+  - Two are left for later: a cutout mode for phones with a notch, and splitting the voice pack per edition.
 
 ## v1.0: one story, THE CRADLE, and a Vessel that remembers your choice
 
