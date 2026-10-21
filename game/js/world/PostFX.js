@@ -329,7 +329,8 @@ export class PostFX {
         blending: THREE.NoBlending,
       }));
     }
-    const cube = new THREE.WebGLCubeRenderTarget(SKY_CUBE, { type: THREE.HalfFloatType });
+    // no depth buffer: one back-faced box with no blending covers every texel of every face
+    const cube = new THREE.WebGLCubeRenderTarget(SKY_CUBE, { type: THREE.HalfFloatType, depthBuffer: false });
     tex.minFilter = THREE.LinearFilter; // no mipmaps (not uploaded yet): they would blur the poles
     this.toCube.material.uniforms.tEquirect.value = tex;
     new THREE.CubeCamera(1, 10, cube).update(this.renderer, this.toCube);
@@ -351,14 +352,21 @@ export class PostFX {
       return;
     }
     this.skies = this.skies || {};
+    // only while this sky is still wanted, and the preset still lights with one
     const use = (t) => {
-      if (this.envName !== name) return;
+      if (this.envName !== name || !this.q?.env) return;
       this.scene.environment = t;
-      this.scene.environmentIntensity = intensity;
+      this.scene.environmentIntensity = this.envIntensity;
     };
     this.probes = this.probes || {};
     if (this.skies[name]) return use(this.skies[name]);
+    // one load per sky: asked again while it is on its way (a preset change, the next place's
+    // chain built just before the place sets its sky), the first load's use() serves both
+    this.loading = this.loading || new Set();
+    if (this.loading.has(name)) return;
+    this.loading.add(name);
     const done = (tex) => {
+      this.loading.delete(name);
       this.skies[name] = this.skyEnv(tex);
       tex.dispose();
       use(this.skies[name]);
@@ -367,7 +375,7 @@ export class PostFX {
     const jpg = () => new THREE.TextureLoader().load(`assets/textures/sky_${name}.jpg`, (tex) => {
       tex.colorSpace = THREE.SRGBColorSpace;
       done(tex);
-    });
+    }, undefined, () => this.loading.delete(name));
     // real HDR skies where the host serves them (the web preview uses the JPG copies)
     if (window.AZ_NO_HDR) return jpg();
     new RGBELoader().setDataType(THREE.HalfFloatType).load(`assets/textures/sky_${name}.hdr`, (tex) => {

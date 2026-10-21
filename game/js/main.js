@@ -983,10 +983,11 @@ class Game {
   }
 
   returnToStation() {
-    this.smart.flush(); // under the lift's fade
     this.weather.set(null);
     this.postfx.setGrade(STATION_GRADE);
     this.postfx.setEnvironment(null);
+    // under the lift's fade, after the sky is gone: a new preset must not fetch the old one
+    this.smart.flush();
     this.deckWorld.dispose();
     this.level = this.stationLevel;
     this.minimap.stationMode = false; // redraw Station Zero's map
@@ -1270,7 +1271,10 @@ class Game {
     }
     this.level = lv;
     this.deckWorld.hero = this.settings.hero; // the Other wears your face
-    this.smart.flush(); // a queued preset change lands here, so the new place compiles once
+    // a queued preset change lands here, so the new place compiles once. The new preset's chain
+    // takes the new place's sky (not the one being left, which it would otherwise fetch and bake)
+    this.postfx.envName = lv.palette.sky || null;
+    this.smart.flush();
     this.deckWorld.build(lv, this.story, c.flags);
     // everyone in the sector, hidden or not, uploads their textures now, behind the fade,
     // not on the frame they first appear
