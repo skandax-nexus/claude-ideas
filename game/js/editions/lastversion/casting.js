@@ -75,7 +75,7 @@ export const MANIFEST = [...new Set([...Object.values(SHARED_MODELS).map((m) => 
 export const COMMON = ['xbot', 'rb_ren_m'];
 // (exactly the models the chapter's levels cast today; the story units add the people they place)
 export const CHAPTER_CAST = {
-  prologue: ['rb_child_m2', 'rb_florist', 'rb_security_f', 'rb_jun', 'rb_civ_f1', 'rb_courier', 'rb_child_f', 'rb_mira', 'rb_civ_m2', 'rb_civ_m1', 'rb_civ_f2', 'rb_contractor', 'rb_captain_m', 'rb_medic_f', 'rb_engineer_m'],
+  prologue: ['rb_child_m2', 'rb_florist', 'rb_security_f', 'rb_jun', 'rb_civ_f1', 'rb_courier', 'rb_child_f', 'rb_mira', 'rb_civ_m2', 'rb_civ_m1', 'rb_civ_f2', 'rb_contractor', 'rb_captain_m', 'rb_medic_f', 'rb_engineer_m', 'rb_rook', 'rb_security_m'],
   act1: ['rb_tala', 'rb_child_f2', 'rb_robe_m', 'rb_elder', 'rb_niko', 'rb_civ_f1', 'rb_civ_m2', 'rb_courier', 'rb_civ_f2', 'rb_civ_m1', 'rb_ezra', 'rb_scav', 'rb_contractor', 'rb_mira', 'rb_doctor_m'],
   act2: ['rb_trooper', 'rb_courier', 'rb_civ_f2', 'rb_civ_m1', 'rb_civ_f1', 'rb_civ_m2', 'rb_medic_f', 'rb_contractor', 'rb_engineer_f', 'rb_juno', 'rb_doctor_m', 'rb_odile', 'rb_mira', 'rb_scav', 'rb_trader', 'rb_soldier_m'],
   act3: ['rb_scav', 'rb_villager_f', 'rb_civ_f3', 'rb_civ_m2', 'rb_civ_f1', 'rb_civ_m1', 'rb_civ_f2', 'rb_courier', 'rb_contractor', 'rb_juno', 'rb_child_m2', 'rb_trader', 'rb_doctor_f', 'rb_office_f', 'rb_doctor_m', 'rb_mira'],

@@ -271,7 +271,7 @@ export function castLevel(level, deck, { facts = null } = {}) {
       level.npcs.push({
         id, crew: id, first, ambient: true, crowd: true, seed: 300 + k, pronoun: PRONOUN[sex] || PRONOUN.m, pos: [x, y, z], yaw: r() * 6.28, height,
         path: path.length > 1 ? path : undefined, speed: Math.round(1.05 * walk * 100) / 100, when, silent: true, room: level.outdoorRoom || level.order[0],
-        hologram: !!c.echo, ...(c.echo ? {} : { barks: pool.barks, barkEvery: 24 + (k % 4) * 3 }),
+        hologram: !!c.echo, ...(c.echo ? {} : { barks: c.barks || pool.barks, barkEvery: 24 + (k % 4) * 3 }), // (a crowd may say its own)
         ...(deck.crowdFreeze ? { freezeWhen: deck.crowdFreeze } : {}),
         voiceExtra: { id: vlist?.[k % vlist.length] || null, gender: sex },
       });

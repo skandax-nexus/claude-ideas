@@ -62,7 +62,7 @@ export const NPCS = {
     id: 'jun', first: 'Jun', name: 'Jun Park', role: 'Transit operator, Rain City', pronoun: HIS, color: '#3b7fb8', voice: 'JUN', era: 'present', seed: 9, model: 'rb_jun', variant: 'transit', height: 1.74, vid: 'JUN', walk: 1,
     temporal: ['PRESENT'], want: 'To keep the station running.', fear: 'Leaving passengers behind.',
     barks: ['Mind the yellow line. The board is wrong but the line is right.', 'Forty-one seconds. I\'ve timed it. Forty-one.'],
-    echo: [{ who: 'NONE', text: 'For a few seconds it is a minute before the crash. The Jun in the booth is an echo, calling the 41 in.' }, { who: 'JUN', text: 'Line 41, platform two, on time. On time. On time.' }],
+    echo: [{ who: 'NONE', text: 'For a few seconds it is a minute before the crash. The Jun in the booth is an echo, calling the 41 in.' }, { who: 'JUN', text: 'Line 41, platform two, on time. On time.' }],
   },
   tala: {
     id: 'tala', first: 'Tala', name: 'Tala', role: 'Water keeper', pronoun: HER, color: '#2b8f7a', voice: 'TALA', era: 'past', seed: 10, model: 'rb_tala', variant: 'tala', height: 1.66, vid: 'TALA', walk: 1,
@@ -271,7 +271,7 @@ export const DIALOGUE = {
     { when: 'quest_iven', lines: [{ who: 'IVEN', text: 'Locker code is my badge number backwards. Everything in this building is something backwards.' }] },
   ],
   jun: [
-    { when: '!zero_second', lines: [{ who: 'JUN', text: 'Platform\'s closed past the yellow line. The board\'s wrong. The board\'s been wrong since six.' }, { who: 'KAI', text: 'Wrong how?' }, { who: 'JUN', text: 'Says the 41 arrives yesterday. I\'ve called it in twice.' }] },
+    { when: '!zero_second', lines: [{ who: 'JUN', text: 'Platform\'s closed past the yellow line. The board\'s wrong. The board\'s been wrong since six.' }, { who: 'KAI', text: 'Wrong how?' }, { who: 'JUN', text: 'Says the 41 arrives yesterday. I\'ve called it in twice.' }], set: { jun_board: true } },
     {
       when: 'zero_second && !quest_jun', lines: JUN_HOOK,
       choices: [
@@ -316,24 +316,16 @@ export const DIALOGUE = {
       when: 'true', lines: [{ who: 'CHILD', text: 'Do you know the song? It goes up and then it goes up again and then it stops.' }],
       choices: [
         intent('comfort', 'Hum it for me.', { lines: [{ who: 'NONE', text: 'Three notes. Up, up, and a stop. You know it. You have not heard it in twenty-three years.' }], ev: 'three_notes', trust: 1 }),
-        intent('investigate', 'Where are your parents?', { lines: [{ who: 'CHILD', text: 'In the photo. All three of me are.' }], ev: 'three_photos' }),
+        intent('investigate', 'Where are your parents?', { lines: [{ who: 'CHILD', text: 'In the photo. All three of me are.' }], ev: 'three_photos', set: { case_c_child: 'active' } }),
         intent('withdraw', 'Stay where it\'s dry.'),
       ],
     },
   ],
   witness: [
-    { when: 'true', lines: [{ who: 'WITNESS', text: 'You were trying to stop me from becoming you.' }, { who: 'KAI', text: 'I was trying to find a version of me that didn\'t have to.' }] },
+    { when: 'true', lines: [{ who: 'KAI', text: 'You were trying to stop me from becoming you.' }, { who: 'WITNESS', text: 'I was trying to find a version of me that didn\'t have to.' }] }, // (D16: the bible's speakers)
   ],
+  // (the checkpoint conversation is Mission 1's own: prologue.js M01.talks.guard)
   guard: [
-    {
-      when: '!checkpoint_passed', lines: [{ who: 'CREW', text: 'Helix? Badge.' }, { who: 'KAI', text: 'Varen. Temporal systems.' }, { who: 'CREW', text: 'Everyone\'s temporal something this morning.' }],
-      choices: [
-        intent('investigate', 'What\'s the line for?', { lines: [{ who: 'CREW', text: 'Clocks. Half the city\'s clocks say the wrong thing and everyone wants to blame a building. Go on through.' }], set: { checkpoint_passed: true }, know: 1 }),
-        intent('challenge', 'I have a director waiting.', { lines: [{ who: 'CREW', text: 'Then he can wait with the rest of us. ...Go. Before I change my mind.' }], set: { checkpoint_passed: true }, trust: -1 }),
-        intent('comfort', 'Long morning?', { lines: [{ who: 'CREW', text: 'Longest one yet. Go on through, Varen.' }], set: { checkpoint_passed: true }, trust: 1 }),
-        intent('withdraw', 'I\'ll wait.'),
-      ],
-    },
-    { when: 'checkpoint_passed', lines: [{ who: 'CREW', text: 'Staff gate\'s past the platform. Mind the line.' }] },
+    { when: 'true', lines: [{ who: 'CREW', text: 'Staff gate\'s past the platform. Mind the line.' }] },
   ],
 };

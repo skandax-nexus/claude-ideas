@@ -192,6 +192,43 @@ Thread kinds:
 
 Missions not yet rewritten run through a shim that turns each legacy beat into one thread in quarter *i*.
 
+**As built (U6).** `game/js/editions/lastversion/Threads.js` and `ledger.js`; Missions 1–3 in `prologue.js` are
+the first written to it. What U7–U8 author against:
+
+- A thread's fact is `t_<mkey>_<id>`, set the first time the thread counts as done, with its `set`, `ev`
+  (`ev_<ev>`), `log` and `say` paid out once (`t_<mkey>_<id>_paid`: a trigger, a chase's end, a staged
+  moment, a deduction or a record sets the thread's fact itself). `done` is any condition (`'ev_relay || jun_rerouted'`); without one a
+  `clue` / `tasks` counts `need` of `of`, an `invert` reads `inv_<target>_done`, and every other kind waits
+  for its own fact. `after: [ids]` orders threads; `until` marks a thread walked past (a clue not found): it
+  stops being the objective. A side story's fact is `side_<mkey>_<id>` (set once it is active).
+- `placeThreads` builds what a kind needs at its landmark: a `go` / `stealth` trigger (radius `r`, 4 m), a
+  `spot` or `spots` (a scene with `prompt`, `offset`, `r`, `model`, `kit`, `texts`), a `deduce` spot
+  (scene `deduce:<id>`, only when `deductions[<id>]` exists), a `residue` record (scene `residue:<id>`:
+  `record: { official, echo, after?, hint?, prompt?, log? }`, done when read in PAST), and a `chase` (`npc`
+  walks `path` of landmarks or points through DeckWorld's own walker, `leash` 14 m, `ahead` 10 m, `speed`;
+  she waits while Kai is beyond the leash, never fails, and sets the thread's fact at the end).
+- `deductions: { id: { question: lines, answers: [{ intent, label, correct?, needs?, lines }], unproven?: lines,
+  set, log, reveal? } }`: every answer is offered; a correct one without its evidence says `unproven`; a
+  wrong one is said and the question stays open.
+- `coldOpen: { shots, lines, cue, first?, title?: { shots?, lines, cue? }, set?, then?, minutes? }`. With
+  `first` the cold open plays before the mission's card and `title.lines` after it. SKIP (`#lvSkip`, shown
+  with the letterbox; Enter on a keyboard, where the locked pointer cannot reach the button) ends the whole
+  opening at once; `set` is still set and `then` (a name in the
+  mission's `fx`) still runs. `hook: { lines, cue, shots?, minutes? }` is the mission's last word (`outro`).
+- `talks: { npcId: [nodes] }` as before; a node's `show: fact` holds that fact while the node plays (a
+  recording's hologram). `autoExit: s` ends a mission `s` seconds after `beat_done` (no walk to a gate).
+  `stableOutdoors: true` keeps the Chronolith's stability from draining in the open place (Mission 3's
+  dig is outdoors); `carryOut: [roomIds]` gives the open place the year of the room Kai walks out of
+  (Mission 3's lab, a frame in 2026, opens onto the court in 2026); only those rooms carry, and a room
+  keeps its own year.
+- A quarter is `{ name, threads, sides, barks }`; its `spawn` and `area` come from the place sheet. The
+  furthest quarter reached is `campaign.quarter`: a toast and an autosave at each new one, and a load
+  spawns there after a PREVIOUSLY card. `campaign.track = '<mkey>:<sideId>'` is the side story tracked
+  from the case board (its next thread under the objective). Saves are `lvFormat` 22; an older save in a
+  rewritten mission restarts that mission at quarter 0 with the facts it had.
+- `time_<mkey>`: the seconds of play a mission took, set when it ends (the ending screen sums them per
+  chapter).
+
 ### 3.4 People (U4 provides; U5 voices; U6–U8 write lines)
 
 An NPC entry (`npcs.js`) is:

@@ -659,13 +659,8 @@ export const ENDINGS = {
 };
 
 // the epilogue: one line for each consequence the player set (U8's ledger replaces this short list)
-export const EPILOGUE = [
-  { when: 'jun_line', who: 'JUN', text: 'They all got off. I stopped apologizing.' },
-  { when: 'water_route', who: 'CREW', name: 'THE GARDENER', color: '#4f6170', voice: { id: 'GARDENER' }, text: 'The channel is running again. Nobody alive remembers who opened it.' },
-  { when: 'clock_set', who: 'CREW', name: 'EZRA MOLL', color: '#8a6a3a', voice: { id: 'CLOCKMAKER' }, text: 'Wednesday. Imagine that.' },
-  { when: 'city_freed', who: 'ANJA', text: 'We planted things.' },
-  { when: 'ev_raw_log', who: 'IVEN', text: 'Elias Rook testified for nine days. The log said I refused to sign, forty-one times.' },
-];
+// the epilogue's lines (one per fact the player set) are the story's ledger now: ledger.js EPILOGUE
+export { EPILOGUE } from './ledger.js';
 
 // =============================================================================================
 // OPTIONAL CASES: quest chains B and C (A, Jun Park, and D, Iven Marr, are part of the Prologue)

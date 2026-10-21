@@ -12,6 +12,7 @@ import { ground, groundHoles, terrace, stair, water, railing, block, prop, sign,
 const WING_H = 13.5;
 const SINK = [-30, -62, 30, -38]; // (Mission 12) the north wing's middle, fallen into the hill by 2196
 const COURT_R = 32;
+const DIG = [-6, 12, 14, 28]; // the dig at Site Zero, in the old riverbed at the foot of the chamber
 export const CHAMBER = { at: [0, 12], y: -11.5, W: 24, L: 24, H: 12 };
 
 // a wing: bays along its length; a bay a mission's room stands in is left to the room (only what
@@ -131,7 +132,7 @@ export default {
         { name: 'THE CHAMBER', area: [-26, -26, 26, 26], spawn: [0, -11.5, 10.4, 0] },
       ],
       // a cleaner in the lobby (one bark: the ring was humming at five)
-      crowd: [{ era: 'present', years: ['PRESENT'], region: 'helix', role: 'cleaner', path: [[-51, 36], [-51, 29]], n: 1 }],
+      crowd: [{ era: 'present', years: ['PRESENT'], region: 'helix', role: 'cleaner', path: [[-51, 36], [-51, 29]], n: 1, barks: ['The ring was humming at five. It hums a song.', 'Lockdown. Stay where the lights are.'] }],
     },
     m03: {
       primary: 'controlRoom',
@@ -186,9 +187,14 @@ export default {
     // --- the court and its apron, with the chamber and its stair beneath (holes in the paving) -------
     const cx0 = CHAMBER.at[0] - CHAMBER.W / 2 - 0.4, cz1 = CHAMBER.at[1] + 0.4;
     const sink = mission === 'm12' ? [[SINK[0], SINK[1], SINK[2], SINK[3]]] : [];
-    groundHoles(P, [-70, -90, 70, 70], [[cx0, cz1 - CHAMBER.L - 0.8, -cx0, cz1], ...holes, ...sink], 0, 'stoneWet');
+    // (the 2026 dig at Site Zero is a real pit in 2026, paved over from 2049 on: Mission 3 walks out to it)
+    groundHoles(P, [-70, -90, 70, 70], [[cx0, cz1 - CHAMBER.L - 0.8, -cx0, cz1], ...holes, ...sink, DIG], 0, 'stoneWet');
+    P.E(['PRESENT', 'FUTURE'], () => ground(P, DIG, 0, 'stoneWet'));
     P.E(['PRESENT', 'FUTURE'], () => P.disc(0, 0.012, 0, COURT_R, 'courtStone', { seg: 48, noShadow: 1 }));
-    P.E('PAST', () => P.disc(0, 0.012, 0, COURT_R, 'dirt', { seg: 48, noShadow: 1 }));
+    // 2026: bare earth round the open chamber and the dig (both left open)
+    P.E('PAST', () => {
+      for (const [x0, z0, x1, z1] of [[-32, -32, 32, -12.4], [-32, -12.4, -12.4, 12.4], [12.4, -12.4, 32, 12.4], [-32, 12.4, -6.4, 32], [14.4, 12.4, 32, 32], [-6.4, 28.4, 14.4, 32]]) P.plane(x0, z0, x1, z1, 0.012, 'dirt', { noShadow: 1 });
+    });
     // the oculus: a 20 m lens of glass and steel over the chamber, glowing from below
     P.land('oculus', 0, 0, 0, 0);
     P.E(['PRESENT'], () => {
@@ -276,7 +282,8 @@ export default {
       // the dig: a pit cut in the old riverbed, the ring's upper arc showing in the clay
       for (const [b, m] of [[[-6, -3.4, 12, 14, -3, 28], 'clay'], [[-6.4, -3.4, 11.6, -6, 0, 28.4], 'clay'], [[14, -3.4, 11.6, 14.4, 0, 28.4], 'clay'], [[-6.4, -3.4, 11.6, 14.4, 0, 12], 'clay']]) P.vbox(b, m);
       P.torus(4, -3.0, 19.6, 3.6, 0.42, 'blackRing', { rx: 0, ry: 0.3, arc: Math.PI * 0.9, rz: 0.15, seg: 24 });
-      for (let i = 0; i < 5; i++) P.box([-5 + i * 0.7, -3 + i * 0.6 - 0.3, 26, -4.3 + i * 0.7, -3 + i * 0.6, 28], 'timber');
+      // (timber steps down into the pit, a step the engine walks: 0.3 m a rise)
+      for (let i = 0; i < 9; i++) P.box([-5.6 + i * 0.6, -3 + i * 0.3 - 0.3, 26, -5.0 + i * 0.6, -3 + i * 0.3 + 0.3, 28], 'timber');
       prop(P, 'siteHut', -10, 31, 0);
       prop(P, 'tarp', 8, 30, 0.2, { w: 5, d: 3 });
       prop(P, 'floodlight', 15, 30, 0);

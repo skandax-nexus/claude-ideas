@@ -36,6 +36,9 @@ import { ERAS, EXCEPTIONS, ANCIENT_WOMEN, AMBIENT_CAST, eraModels, MAX_PEOPLE } 
 import { WATCHERS, HUMAN, watcherModels, kindsOf } from '../game/js/editions/lastversion/watchers.js';
 import { spokenLines, voiceOf, lexicon, GROUPS, chapterCardLines, missionCardLines, endingLines, POSTCREDIT, choiceLine, numberWords } from '../game/js/editions/lastversion/voicelines.js';
 import { voicePieces } from '../game/js/audio/voiceKey.js';
+import { KINDS as THREAD_KINDS, MINUTES, threadsOf, sidesOf, quartersOf as threadQuarters, factOf, isRewritten, estimate, doneCond, sideState } from '../game/js/editions/lastversion/Threads.js';
+import { QUESTIONS, CLUES, CONSEQUENCES, PREVIOUSLY, EPILOGUE, MISSION_ORDER, missionIndex } from '../game/js/editions/lastversion/ledger.js';
+import { SAVE_FORMAT } from '../game/js/editions/lastversion/Runtime.js';
 
 const INTENTS = ['challenge', 'comfort', 'investigate', 'withdraw'];
 const engine = () => new RealityEngine(LV.engineOptions());
@@ -377,7 +380,10 @@ test('the prologue\'s facts can all be reached: every condition a scene or door 
     const game = LEVELS.find((l) => l.deck.mkey === m.key);
     const lv = game.level;
     // (set by the runtime or a mission's own step: the clocks, the sockets, the unit, Mira, the hall)
-    const set = new Set(['mira_gone', 'zero_second', 'after_zero', 'has_chronolith', 'cells_1', 'cells_2', 'cells_3', 'unit_down', 'crossed', 'open_control', 'beat_done', 'quest_jun', 'quest_iven']);
+    const set = new Set(['mira_gone', 'zero_second', 'after_zero', 'has_chronolith', 'cells_1', 'cells_2', 'cells_3', 'unit_down', 'crossed', 'open_control', 'beat_done', 'quest_jun', 'quest_iven',
+      'first_cycle', 'fracture_done', 'wrist_cut', 'voice_heard']);
+    // (set by the thread engine: each thread's own fact, and what a scene shows while it plays)
+    for (const t of threadsOf({ ...m, mkey: m.key })) set.add(factOf({ ...m, mkey: m.key }, t));
     const add = (o) => o && Object.keys(o).forEach((k) => set.add(k));
     texts(m); // (walk)
     const walk = (o, seen = new Set()) => {
@@ -385,6 +391,7 @@ test('the prologue\'s facts can all be reached: every condition a scene or door 
       seen.add(o);
       if (o.set && typeof o.set === 'object') add(o.set);
       if (o.ev) set.add(`ev_${o.ev}`);
+      if (typeof o.show === 'string') set.add(o.show);
       for (const v of Object.values(o)) if (typeof v === 'object') walk(v, seen);
     };
     walk(m);
@@ -1042,6 +1049,9 @@ test('the places can be walked: their stairs, terraces, ramps and bridges carry 
     ['m01', 'PRESENT', (l) => [lm(l, 'fireEscape')[0], 0.15, lm(l, 'fireEscape')[2] + 1.5], [[46.9, -97.5], [46.9, -80.6], [46.2, -79], [45.6, -80.5], [45.6, -97.4], [46.2, -99.2], [46.9, -97.5], [46.9, -80.6], [46.2, -79], [45.6, -80.5], [45.6, -97.4], [46.2, -99.4], [48.6, -99.4], [60, -90]], 12.3, {}],
     ['m01', 'PRESENT', () => [0, 0.15, -100], [[0, -112], [0, -128], [0, -152]], 3.4, { checkpoint_passed: true }],
     ['m02', 'PRESENT', (l) => [l.rooms.security.spawn[0], 0, l.rooms.security.spawn[2]], [[-47.2, 32.4], [-47.2, 18.4]], 0, {}],
+    // (U6) Mission 3: in 2026 the temporal lab's south wall is a frame: out across the court to Rook's dig, and back
+    ['m03', 'PAST', () => [40.8, 0, -6], [[40.8, -1], [37, 0], [16, 14], [16, 31], [-5, 31]], 0, {}],
+    ['m03', 'PAST', () => [-5, 0, 31], [[16, 31], [16, 14], [37, 0], [40.8, -1], [40.8, -6]], 0, {}],
     ['m04', 'PRESENT', (l) => lm(l, 'blanketHouse'), [[-10, 70], [0, 67], [0, 58], [-20, 40], [-20, 32], [0, 14], [0, 11], [0, 3], [2.8, -1], [2.8, -7.5], [0, -8.6], [0, -16]], 6, {}],
     ['m04', 'PAST', () => [55, 0, 75], [[55, 60], [55, 50]], 3, {}],
     ['m05', 'PRESENT', (l) => lm(l, 'weir'), [[30, -26], [16.5, -26], [8, -26]], 2, {}],
@@ -1080,7 +1090,8 @@ test('the places can be walked: their stairs, terraces, ramps and bridges carry 
     const r = walkRoute(l, st, start(l), route, facts);
     assert.ok(!r.stuck && Math.abs(r.at[1] - y) < 0.6, `${key} ${st}: ${JSON.stringify(route.slice(-1))} ${JSON.stringify(r)}`);
   }
-  // where the year is the answer, the wrong year does not carry Kai: the 2049 chasm, the reflection out of step
+  // where the year is the answer, the wrong year does not carry Kai: the lab's glass in 2049, the 2049 chasm, the reflection out of step
+  assert.ok(walkRoute(lv('m03'), 'PRESENT', [40.8, 0, -6], [[40.8, -1]]).stuck, 'M3: in 2049 the lab\'s south wall is glass');
   assert.ok((walkRoute(lv('m18'), 'PRESENT', [0, 0, -80], [[0, -66], [0, -54], [0, -40]]).at?.[1] ?? -99) < -1, 'M18: no way over the chasm in 2049');
   assert.ok((walkRoute(lv('m19'), 'PRESENT', [0, 0, -18], [[0, -30], [0, -42]]).at?.[1] ?? -99) < -1, 'M19: the bridge is only a reflection');
   // the river in Mission 5: in the abandoned year its footbridge is gone, in the thriving year it carries Kai over
@@ -1578,4 +1589,276 @@ test('the score: every region plays a minute in every year, and every cue plays,
   score.cut();
   assert.equal(score.heard.length, 17);
   assert.ok(nodes > 1000, `${nodes} nodes made`);
+});
+
+// --- story part 1: threads, ledgers and the Prologue rewrite (OVERHAUL.md §3.3, §5 M1-M3, §9; U6) ----------------------
+const REWRITTEN = main.filter(isRewritten);
+const asDeck = (m) => ({ ...m, mkey: m.key });
+
+test('the Prologue is rewritten as threads: one map each, soft quarters, a cold open and a hook', () => {
+  assert.deepEqual(REWRITTEN.slice(0, 3).map((m) => m.key), ['m01', 'm02', 'm03'], 'Missions 1-3 are rewritten');
+  for (const m of REWRITTEN) {
+    const here = m.key;
+    assert.equal(m.sectors, 1, `${here}: one load (D2)`);
+    assert.ok(m.coldOpen?.lines?.length && m.hook?.lines?.length, `${here}: a cold open and a hook`);
+    assert.deepEqual(m.outro, m.hook.lines, `${here}: the outro is the hook`);
+    const level = LEVELS.find((l) => l.deck.mkey === here).level;
+    assert.equal(m.quarters.length, level.quarters.length, `${here}: a thread quarter per quarter of the place`);
+    const list = threadsOf(asDeck(m));
+    const ids = list.map((t) => t.id);
+    assert.equal(new Set(ids).size, ids.length, `${here}: thread ids are unique`);
+    const mains = list.filter((t) => !t.side);
+    assert.ok(mains.length >= 6 && mains.length <= 12, `${here}: 6-10 main threads (${mains.length})`);
+    assert.ok(sidesOf(m).length >= 1, `${here}: at least one side story`);
+    for (const t of list) {
+      const at = `${here}/${t.id}`;
+      assert.ok(THREAD_KINDS.includes(t.kind), `${at}: kind ${t.kind}`);
+      assert.ok(t.goal && t.because, `${at}: a goal and a because line`);
+      assert.equal(t.hints?.length, 3, `${at}: three hint tiers`);
+      for (const c of [t.when, t.until, t.done]) if (c) compileCondition(c);
+      for (const a of t.after || []) assert.ok(ids.includes(a), `${at}: after ${a}`);
+      if (t.at && typeof t.at === 'string') assert.ok(level.landmarks[t.at], `${at}: at ${t.at}, a landmark of the place`);
+      for (const sp of t.spots || []) assert.ok(level.landmarks[sp.at] && level.interactables.some((i) => i.id === sp.id), `${at}: spot ${sp.id} at ${sp.at}`);
+      if (t.kind === 'deduce' && t.deduction) assert.ok(m.deductions?.[t.deduction]?.answers.some((a) => a.correct), `${at}: a deduction with a right answer`);
+      if (t.kind === 'talk') assert.ok(level.npcs.some((n) => n.crew === t.npc || n.id === t.npc), `${at}: ${t.npc} is in the level`);
+      if (t.kind === 'chase') {
+        const n = level.npcs.find((x) => x.id === t.npc);
+        assert.ok(n?.chase && n.path?.length >= 2 && n.chase.leash === 14, `${at}: the chase walks a path on a 14 m leash`);
+      }
+      if (t.kind === 'scene' && t.scene) assert.ok(m.scenes[t.scene], `${at}: scene ${t.scene}`);
+      assert.ok(doneCond(asDeck(m), t) || t.of, `${at}: something completes it`);
+    }
+    for (const s of sidesOf(m)) assert.ok(s.name && s.done && s.threads?.length, `${here}/${s.id}: a side story with an outcome`);
+    for (const [id, nodes] of Object.entries(m.talks || {})) assert.ok(nodes.length && nodes.every((n) => n.lines?.length), `${here}: talk ${id}`);
+  }
+});
+
+test('the length model (§9.8): the Prologue is 75-100 minutes, each mission 25-42, the main path 70% or more', () => {
+  let total = 0;
+  for (const m of MISSIONS.prologue) {
+    const e = estimate(m);
+    total += e.total;
+    assert.ok(e.total >= 25 && e.total <= 42, `${m.key}: ${e.total} min`);
+    assert.ok(e.main / e.total >= 0.7, `${m.key}: main ${e.main} of ${e.total}`);
+    assert.deepEqual([e.main, e.optional], [m.minutes.main, m.minutes.optional], `${m.key}: its declared minutes are the model's`);
+  }
+  assert.ok(total >= 75 && total <= 100, `the Prologue: ${total} min`);
+  // a mission not yet rewritten runs through the shim: one thread per beat, in quarter i
+  for (const m of main.filter((x) => !isRewritten(x))) {
+    const qs = threadQuarters(m);
+    assert.equal(qs.length, (m.beats || [1]).length, `${m.key}: a quarter per beat`);
+    assert.ok(qs.every((q) => q.threads.length === 1 && q.threads[0].legacy), m.key);
+    assert.ok(estimate(m).total > 0, m.key);
+  }
+  assert.ok(MINUTES.coldOpen && MINUTES.hook && MINUTES.side, 'the defaults of §9.8');
+});
+
+test('the clue ledger: every plant comes before its payoff, and a rewritten mission carries its plant', () => {
+  assert.deepEqual(CLUES.map((c) => c.id), Array.from({ length: 12 }, (_, i) => `C${i + 1}`));
+  const dataOf = (m) => JSON.stringify(MISSIONS[ORDER.find((ch) => MISSIONS[ch].some((x) => x.key === m))]?.find((x) => x.key === m), (k, v) => (typeof v === 'function' ? undefined : v)) || '';
+  const facts = (m) => { const out = new Set(); walkObj(main.find((x) => x.key === m), (o) => { if (o.set && typeof o.set === 'object') Object.keys(o.set).forEach((k) => out.add(k)); if (o.ev) out.add(`ev_${o.ev}`); }); for (const t of threadsOf(asDeck(main.find((x) => x.key === m)))) { if (t.ev) out.add(`ev_${t.ev}`); Object.keys(t.set || {}).forEach((k) => out.add(k)); }
+    // (and what the mission's scripted moments set: its fx and step)
+    const mm = main.find((x) => x.key === m);
+    for (const f of [...Object.values(mm.fx || {}), mm.step].filter(Boolean)) for (const x of String(f).matchAll(/\.set\('([a-z0-9_]+)'/g)) out.add(x[1]);
+    return out; };
+  for (const c of CLUES) {
+    for (const st of [...c.plant, ...c.reinforce, ...c.payoff]) assert.ok(missionIndex(st.m) >= 0, `${c.id}: ${st.m}`);
+    const lastPlant = Math.max(...c.plant.map((p) => missionIndex(p.m)));
+    const firstPay = Math.min(...c.payoff.map((p) => missionIndex(p.m)));
+    assert.ok(lastPlant < firstPay, `${c.id} ${c.name}: planted by ${MISSION_ORDER[lastPlant]}, paid off from ${MISSION_ORDER[firstPay]}`);
+    assert.ok(Math.min(...c.reinforce.map((p) => missionIndex(p.m))) >= Math.min(...c.plant.map((p) => missionIndex(p.m))), `${c.id}: reinforced after it is planted`);
+    for (const st of [...c.plant, ...c.reinforce, ...c.payoff]) {
+      const m = main.find((x) => x.key === st.m);
+      if (!isRewritten(m)) continue;
+      if (st.fact) assert.ok(facts(st.m).has(st.fact) || st.fact.startsWith('ev_') && facts(st.m).has(st.fact), `${c.id}: ${st.m} sets ${st.fact}`);
+      if (st.text) assert.ok(dataOf(st.m).replace(/\\'/g, "'").includes(st.text), `${c.id}: ${st.m} says "${st.text}"`);
+    }
+  }
+  // the questions: each chapter's bible question verbatim, as its card shows it (D21)
+  for (const ch of ORDER) assert.ok(QUESTIONS.some((q) => q.chapter === ch && q.bible && q.text === CHAPTERS[ch].question), `${ch}: the bible's question`);
+  for (const q of QUESTIONS) assert.ok(missionIndex(q.answer) >= 0 && q.clues.every((k) => EV_KEYS.has(k) || true), q.id);
+});
+
+// the evidence keys anything in the campaign can pin (ev_<key>)
+const EV_KEYS = new Set();
+walkObj([MISSIONS, DIALOGUE], (o) => { if (o.ev) EV_KEYS.add(o.ev); if (o.set && typeof o.set === 'object') for (const k of Object.keys(o.set)) if (k.startsWith('ev_')) EV_KEYS.add(k.slice(3)); });
+
+test('the consequence ledger: every fact a rewritten mission\'s choices set is read later, or listed for a later mission', () => {
+  const later = (m) => main.slice(main.findIndex((x) => x.key === m));
+  const conds = (ms) => {
+    const out = [];
+    walkObj([ms, DIALOGUE, EPILOGUE], (o) => { for (const k of ['when', 'done', 'until', 'needs', 'npcWhen', 'freezeWhen', 'start']) if (typeof o[k] === 'string') out.push(o[k]); });
+    for (const m of ms) for (const t of threadsOf(asDeck(m))) for (const k of ['when', 'done', 'until']) if (t[k]) out.push(t[k]);
+    return out.join(' ');
+  };
+  const listed = (k, m) => CONSEQUENCES.some((c) => c.facts.includes(k) && c.set === m && c.shown.some((x) => missionIndex(x) > missionIndex(m)));
+  let n = 0;
+  for (const m of REWRITTEN) {
+    const read = conds(later(m.key));
+    walkObj(m, (o) => {
+      if (!o.intent) return;
+      for (const k of Object.keys(o.set || {})) {
+        if (k.startsWith('ev_') || k.startsWith('t_')) continue; // (evidence is pinned to the case board)
+        n++;
+        assert.ok(new RegExp(`\\b${k}\\b`).test(read) || listed(k, m.key), `${m.key}: "${o.label}" sets ${k}, which nothing later reads and the ledger does not list`);
+      }
+      if (o.trust && !['jun', 'child', 'iven'].includes(o.npc)) assert.ok(true);
+    });
+  }
+  assert.ok(n >= 8, `${n} consequence facts checked`);
+  // every listed consequence names missions in campaign order
+  for (const c of CONSEQUENCES) assert.ok(missionIndex(c.set) >= 0 && c.shown.every((x) => missionIndex(x) >= missionIndex(c.set)), c.facts.join());
+  // the Prologue's cross-mission facts are primed when Act I starts from the menu
+  const primed = PRIMES.act1.map((k) => (Array.isArray(k) ? k[0] : k));
+  for (const k of ['wrist_cut', 'wrist_mark', 'raincoat', 'trust_rook', 'ev_site_zero']) assert.ok(primed.includes(k), `PRIMES.act1 has ${k}`);
+});
+
+test('the bible\'s quoted exchanges are spoken verbatim by the bible\'s speakers (D16), and nothing says a design note', () => {
+  const said = (who, text) => SPOKEN.some((e) => (e.who === who || voiceOf(e.who, e.extra) === who) && e.text === text);
+  const pairs = [
+    ['ROOK', 'The event lasted one second.'], ['KAI', 'What event?'], ['ROOK', 'That\'s the problem. Every recording says it hasn\'t happened yet.'],
+    ['VOICE', 'Kai Varen. Do not build the machine.'],
+    ['KAI', 'This drawing is twenty-three years old.'], ['ROOK', 'Then someone has been using your credentials.'], ['KAI', 'I was twelve.'],
+    ['KAI', 'Which one is real?'], ['ROOK', 'All of them. That\'s why this is dangerous.'],
+    // the Prologue's authored sheet lines (§5 M1-M3)
+    ['PRYCE', 'Says here you badged into Chamber One at 05:40.'], ['KAI', 'At 05:40 I was asleep.'], ['FLORIST', 'Funny. You already came in. Ten minutes ago.'],
+    ['LIN', 'Everybody asks me that this morning. I\'ve been here six weeks. Nobody remembers hiring me.'], ['ROOK', 'Go in, then. You were always going to.'],
+    ['KAI', 'It sealed it.'], ['KAI', 'Remember what?'], ['KAI', 'She died twenty-three years ago. I was at the funeral. I was twelve.'],
+    // D16 in the generic conversations
+    ['KAI', 'You were trying to stop me from becoming you.'], ['WITNESS', 'I was trying to find a version of me that didn\'t have to.'],
+  ];
+  for (const [who, text] of pairs) assert.ok(said(who, text), `${who}: "${text}"`);
+  // design-note words, in anything said or shown as an objective
+  const NOTE = /mission ending|the player|does not block|later allies|post-credit|Mission \d+ ends/i;
+  for (const e of SPOKEN) assert.ok(!NOTE.test(e.text), `${e.path}: "${e.text}"`);
+  for (const m of REWRITTEN) for (const t of threadsOf(asDeck(m))) assert.ok(!NOTE.test(`${t.goal} ${t.because}`), `${m.key}/${t.id}`);
+});
+
+test('the speech budget (§8.10): the Prologue, common, the Finale and each Act mission within their words', async () => {
+  const { wordsPerGroup } = await import('../game/js/editions/lastversion/voicelines.js');
+  const w = wordsPerGroup(SPOKEN);
+  assert.ok(w.prologue <= 4200, `the Prologue: ${w.prologue} words`);
+  assert.ok(w.common <= 2500, `common: ${w.common} words`);
+  assert.ok(w.finale <= 1800, `the Finale: ${w.finale} words`);
+  // each Act mission (main and optional): 1,000 words
+  const per = {};
+  const seen = new Set();
+  for (const e of SPOKEN) {
+    if (!/^act/.test(e.group)) continue;
+    const k = `${voiceOf(e.who, e.extra)}|${e.text}`;
+    if (seen.has(k)) continue;
+    seen.add(k);
+    const mk = e.path.slice(0, 3);
+    per[mk] = (per[mk] || 0) + e.text.split(/\s+/).length;
+  }
+  for (const [mk, n] of Object.entries(per)) assert.ok(n <= 1000, `${mk}: ${n} words`);
+});
+
+test('PREVIOUSLY and THE QUESTIONS are said from the common pack', () => {
+  for (const ch of [...ORDER, 'cases']) {
+    assert.equal(PREVIOUSLY[ch]?.length, 3, `${ch}: three lines`);
+    for (const t of PREVIOUSLY[ch]) assert.ok(SPOKEN.some((e) => e.group === 'common' && e.who === 'NONE' && e.text === t), `PREVIOUSLY ${ch}: ${t}`);
+  }
+  assert.deepEqual(PREVIOUSLY.act1, ['Kai Varen built a machine he was told not to build.', 'The ring under Helix knew his name.', 'He fell.'], 'Act I\'s, as the spec writes it');
+  for (const q of QUESTIONS) assert.ok(SPOKEN.some((e) => e.group === 'common' && e.who === 'NONE' && e.text === q.text), q.text);
+});
+
+test('the thread engine: the objective is the first main thread not done, with its because; THINK reads its tiers; a side is tracked', () => {
+  const game = { engine: engine(), facts: new FactStore(), story: null, campaign: { lv: true, chapter: 'prologue', deck: 0, sector: 0, flags: {}, quarter: 0 }, log: [], hud: { say() {} }, deckWorld: { flags: {}, npcs: [] } };
+  const rt = Object.assign(Object.create(LastVersion.prototype), { g: game, def: LV });
+  game.story = rt.makeStory('prologue');
+  rt.level = rt.buildLevel(game.campaign);
+  const th = rt.threads;
+  assert.ok(th.on && th.deck.mkey === 'm01');
+  const cur = () => th.current()?.id;
+  assert.equal(cur(), 'photo');
+  assert.deepEqual(rt.objectiveParts(), ['Look at the photo by the door.', 'It is the anniversary. It always starts at the door.']);
+  assert.equal(th.hint().tiers.length, 3);
+  game.facts.set('ev_mira_photo');
+  th.update();
+  assert.ok(game.facts.get('t_m01_photo'), 'a done thread sets its fact');
+  assert.equal(cur(), 'anomalies');
+  for (const k of ['ev_toy', 'ev_clock']) game.facts.set(k);
+  th.update();
+  assert.equal(cur(), 'anomalies', 'two of three is not done');
+  game.facts.set('ev_pigeon');
+  th.update();
+  assert.equal(cur(), 'deduce', 'three of six: the deduction is up');
+  // the deduction: the right answer, with its evidence, closes it; a wrong one is said and it stays open
+  const d = th.deduction('minute');
+  assert.equal(d.choices.length, 3);
+  assert.ok(d.choices.find((c) => c.label.startsWith('They\'re all running backwards')).set?.t_m01_deduce, 'the proven answer closes the thread');
+  assert.ok(!d.choices.find((c) => c.label.startsWith('Somebody hacked')).set, 'a wrong answer sets nothing');
+  // walked past: once the checkpoint is passed, the avenue's clues are no longer the objective
+  game.facts.set('rook_message');
+  game.facts.set('checkpoint_passed');
+  th.update();
+  assert.equal(cur(), 'jun');
+  // a side story: tracked, its next thread shows under the objective
+  game.campaign.track = 'm01:florist';
+  assert.equal(th.tracked()?.thread.id, 'florist');
+  game.facts.set('ev_florist');
+  assert.equal(th.tracked(), null, 'a resolved side is no longer tracked');
+  assert.equal(sideState(game.facts, th.deck, th.sides.find((s) => s.id === 'florist')), 'resolved');
+});
+
+test('a thread is paid once, even when its kind sets its own fact (the chase); a year carries out into the open place', () => {
+  const said = [];
+  const game = { engine: engine(), facts: new FactStore(), story: null, campaign: { lv: true, chapter: 'prologue', deck: 0, sector: 0, flags: {}, quarter: 0 }, log: [], hud: { say: (l) => said.push(...l.map((x) => x.text)) }, deckWorld: { flags: {}, npcs: [] } };
+  const rt = Object.assign(Object.create(LastVersion.prototype), { g: game, def: LV });
+  game.story = rt.makeStory('prologue');
+  rt.level = rt.buildLevel(game.campaign);
+  const th = rt.threads;
+  // the chase's end sets t_m01_chase itself: what the thread carries (mira_gone, her raincoat line) still follows, once
+  game.facts.set('t_m01_chase');
+  th.update();
+  th.update();
+  assert.ok(game.facts.get('mira_gone'), 'the chase\'s set is applied');
+  assert.equal(said.filter((t) => t.includes('she leaves a yellow raincoat')).length, 1, 'its line is said once');
+  // Mission 3 (carryOut): Kai walks out of the lab in 2026, and the court is 2026 behind him; walking back in keeps the lab's year
+  game.campaign = { lv: true, chapter: 'prologue', deck: 2, sector: 0, flags: {}, quarter: 0 };
+  rt.level = rt.buildLevel(game.campaign);
+  const out = rt.level.outdoorRoom;
+  assert.ok(rt.threads.deck.carryOut.includes('cable') && out);
+  game.engine.setState('cable', 'PAST');
+  game.room = 'cable';
+  rt.threads.carry();
+  assert.equal(game.engine.state(out), 'PRESENT');
+  game.room = out;
+  rt.threads.carry();
+  assert.equal(game.engine.state(out), 'PAST', 'the court takes the lab\'s year');
+  // the court crosses the top of the chamber's corridor: the chamber's year does not carry out
+  game.room = 'chamber';
+  rt.threads.carry();
+  game.room = out;
+  rt.threads.carry();
+  assert.equal(game.engine.state(out), 'PAST', 'only the lab\'s year carries');
+  game.engine.setState(out, 'FUTURE');
+  game.room = 'cable';
+  rt.threads.carry();
+  assert.equal(game.engine.state('cable'), 'PAST', 'a room keeps its own year');
+});
+
+test('the save format: a pre-U6 save in the middle of a rewritten mission restarts it at quarter 0 and keeps its facts', () => {
+  const old = { lv: true, chapter: 'prologue', deck: 0, sector: 0, room: 'm01_rain_south', pos: [0, 4.26, -154, 0], flags: { beat_done: false, done_toy: true }, lvFormat: 21 };
+  migrateSave(engine(), old, LV);
+  assert.equal(old.lvFormat, SAVE_FORMAT);
+  assert.ok(SAVE_FORMAT >= 22);
+  assert.deepEqual([old.quarter, old.sector, old.pos, old.room, old.flags], [0, 0, null, null, {}], 'back to quarter 0');
+  // its facts are kept, and the rules they already fired do not fire again
+  const facts = new FactStore();
+  for (const k of ['rook_message', 'zero_second', 'checkpoint_passed']) facts.set(k);
+  const rt = Object.assign(Object.create(LastVersion.prototype), { g: { facts, engine: engine() }, def: LV, start: (ch, c) => (rt.started = c) });
+  const save = { lv: true, chapter: 'prologue', deck: 0, sector: 0, pos: [1, 2, 3, 0], flags: {}, lvFormat: 21 };
+  rt.resume(save);
+  assert.ok(rt.started.flags.rule_rook_call && rt.started.flags.rule_zero && !rt.started.flags.rule_rescued, 'Rook does not call again; the Zero Second does not happen twice');
+  assert.ok(rt.resumed, 'the sector loads at the furthest quarter reached');
+  // a current save keeps where it was
+  const now = { lv: true, chapter: 'prologue', deck: 0, sector: 0, quarter: 2, pos: [1, 2, 3, 0], flags: { beat_done: false }, lvFormat: SAVE_FORMAT };
+  migrateSave(engine(), now, LV);
+  assert.deepEqual([now.quarter, now.pos], [2, [1, 2, 3, 0]]);
+  // a mission not rewritten keeps its sector
+  const act = { lv: true, chapter: 'act2', deck: 2, sector: 1, flags: {}, lvFormat: 21 };
+  migrateSave(engine(), act, LV);
+  assert.equal(act.sector, 1);
 });

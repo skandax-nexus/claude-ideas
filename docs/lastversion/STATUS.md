@@ -82,7 +82,30 @@ story beats. How it works: [`DESIGN.md`](DESIGN.md).
   standing and evidence flags in the save; dialogue choices by intent (challenge / comfort /
   investigate / withdraw); barks; echoes standing in for people absent from a state; the case
   board (evidence journal).
-- **The Prologue, fully authored**: Mission 1 The Last Normal Day (Rain City, the anomalies,
+- **The story's threads, and the Prologue rewritten on them** (v2.1, U6; DESIGN.md "Threads and ledgers";
+  OVERHAUL.md §3.3, §5 M1–M3, §9): `Threads.js` (twelve thread kinds, side stories tracked from the case board, the
+  objective with its *because* line, THINK's three tiers per thread, the chase, staged moments, deductions and
+  residue records; every mission not yet rewritten runs through the legacy-beat shim) and `ledger.js` (the
+  campaign's questions, clues C1–C12, consequences, what WHAT YOU CHOSE says, PREVIOUSLY and the epilogue lines).
+  Missions 1–3 are one map each with soft quarters (3, 5 and 5), a cold open and a hook; a save loads at the
+  furthest quarter after a PREVIOUSLY card, each new quarter autosaves, and the case board has THE QUESTIONS, SIDE
+  STORIES (TRACK), WHAT YOU CHOSE and ABILITIES. Mission 1: the 05:40 cold open before the title, the photo, the
+  avenue's anomalies read together at the plaza clock, the florist's older Kai, the photo booth, Officer Pryce's
+  05:40 line, Jun and the board, the Zero Second, the rescue that cuts Kai's wrist (`wrist_cut`), the voice, the
+  pursuit of the woman with Mira's face (a chase that waits for him) and her yellow raincoat. Mission 2: what the
+  lobby kept of 05:38, Dr. Lin with no shadow, the Site Zero print, the camera room, the three officers'
+  recordings in their own voices, Iven, the unit, the junior pass, and Rook in person at the chamber door
+  (`trust_rook`). Mission 3: the touch and `wrist_mark`, the first cycle, the lab whose wall is a frame in 2026
+  onto the court and Rook's 2026 excavation office (`ev_site_zero`), the 2196 plaque, chain D, the fracture.
+  The length model (§9.8): Mission 1 25 + 10 minutes (main + side), Mission 2 27 + 7, Mission 3 22 + 6; the
+  Prologue 97 minutes, 76% of it main. **Mission 1 walked by the bot** (`tests/lastversion.mjs`, real movement,
+  every line at its own length, with the florist and Last Train Home, 2026-10-21): **10.4 minutes** of game
+  time against the model's 35: the bot knows every coordinate, reads nothing twice, never looks around or
+  gets lost, and skips no line but asks for no hint. The packs were re-recorded for it: `prologue` 604
+  recordings (2.39 MB, 4,142 words of the 4,200 budget), `common` 668 (2.55 MB, 2,236 words), `finale` 62
+  (0.33 MB), and `act1`, `act2`, `act4` and `cases` re-packed from the cache for lines that moved between
+  groups; the edition's voice is 9.0 MB.
+- **The Prologue, fully authored** (before U6; rewritten above): Mission 1 The Last Normal Day (Rain City, the anomalies,
   Rook's call, the checkpoint, the Zero Second, the rescue, the voice, Mira), Mission 2 Helix Goes
   Dark (emergency light, the drone, three cells, the trustworthy officer, the unit that rewinds
   its damage, the drawing, the chamber), Mission 3 The First Switch (the three years of Helix, the
@@ -166,6 +189,26 @@ story beats. How it works: [`DESIGN.md`](DESIGN.md).
   but one crowd child's line at 25). An earlier automatic pass caught "KAI + MIRA" spelled out as letters and "-3"
   read without its minus (both fixed and re-rendered). The audition page for a human listen stays in the
   session's scratchpad (not shipped).
+- **Tests** (U6, 2026-10-21): `tests/lastversion.test.mjs` has 74 tests (`npm test`: 102, all pass), the new
+  ones: the Prologue as threads (one map each, quarters, a cold open and a hook, every thread a known kind and
+  three hint tiers); the length model (Prologue 75–100 minutes, each mission in range, the main path ≥ 70%); the
+  clue ledger (every plant before its payoff, in the missions' own facts and lines); the consequence ledger
+  (every fact a rewritten mission's choices set is read later or listed for a later mission); the bible's quoted
+  exchanges verbatim with their speakers, and no design-note words; the speech budget; PREVIOUSLY and THE
+  QUESTIONS from the common pack; the thread engine (objective, because, tiers, walked-past clues, deductions,
+  tracking); a thread paid once when its kind sets its own fact, and a year carried out of Mission 3's lab into
+  the court; the save format (a pre-U6 save restarts its rewritten mission at quarter 0 with its facts); and
+  Mission 3's routes walked with the game's physics (out through the lab's 2026 frame to the dig and back; not in
+  2049). The coverage test plans every line from the packs (0 misses). The browser bot's Prologue run
+  (`LV_ONLY=prologue`, the Prologue into Act I) passes 77 checks, keeping the Prologue's fact IDs (§3.6), the new
+  ones: the cold open before the title, the objective with its because line, the three anomalies and the
+  deduction (a wrong answer leaves it open), the florist, Officer Pryce's 05:40 line in her own recorded voice,
+  `wrist_cut` and "Your wrist—" in the man's voice, the chase and the raincoat, an M1 save that loads at its
+  furthest quarter after a PREVIOUSLY card (a tap on SKIP ends that card), SKIP (Enter) ending Mission 2's
+  whole opening, Mission 2's cold open, Lin with no shadow, Dale's statement in his voice with his hologram, the
+  junior pass, Rook at the chamber door setting `trust_rook`, `wrist_mark`, the lab's 2026 frame and the
+  excavation office (`ev_site_zero`), the 2196 plaque, `time_<mkey>` stored as each mission ends, Act I's
+  PREVIOUSLY card, and the case board's new sections. U6 changed no shared file.
 - **Tests** (U5, 2026-10-21): `tests/lastversion.test.mjs` has 64 tests (`npm test`: 92, all pass), the
   eight new ones for voice and score: every `spokenLines()` entry plans fully from `common` and its own
   group's pack (2,248 lines, no CREW voice), the spoken-text lint, the pack budgets and Station Zero's
@@ -220,8 +263,9 @@ story beats. How it works: [`DESIGN.md`](DESIGN.md).
 ## Planned / not done
 
 - **Scale.** The bible's campaign is 25–30 hours. A first playthrough of this edition is a few
-  hours: the Prologue is roughly 40–60 minutes, each later mission 10–20 minutes. Not measured
-  with players.
+  hours: the Prologue's length model says 97 minutes (74 main, 23 side), and the bot walks Mission 1 in
+  10.4 minutes of its model's 35; each later mission is still 10–20 minutes until U7–U8 rewrite it. Not
+  measured with players.
 - **Bespoke set pieces for Acts I–IV.** The Mission 9 "reach the tower before the reset" is a
   watcher reset, not a fail state; Mission 12's chase is a route with the Witness at its end, not
   a pursuit; Mission 13's battle and Mission 18's storms are watchers and weather; Mission 17's
@@ -233,8 +277,8 @@ story beats. How it works: [`DESIGN.md`](DESIGN.md).
   That Arrives Yesterday, …) are not built; the Child in the Station appears in Mission 1 only.
 - **Rook as a person after Mission 2.** He speaks on the radio and in recordings; the
   supplement's exposure / persuasion confrontation is only in his dialogue lines.
-- **People cast but not yet placed** (U4 gave them a face; U6–U8 put them in their missions): Rook in
-  person (M2, M8), Officers Dale and Haig and Pryce's M2 recording, the receptionist, the District
+- **People cast but not yet placed** (U4 gave them a face; U6 placed Rook at Mission 2's chamber door and the
+  three officers' recordings; U7–U8 the rest): Rook in person in Mission 8, the receptionist, the District
   Warden and the Gardener (M14, M15), young Kai (M11, M17, M20), Tomas (M15), the Director of
   Continuity (M10, M21). Missions 22 and 23 still carry watchers from their v2.0 beats (the fragment's
   drone or scavenger), where the spec has none.
@@ -249,6 +293,8 @@ story beats. How it works: [`DESIGN.md`](DESIGN.md).
   stands in for it.
 - **The score** is procedural (Synth's oscillators and noise, 0 bytes of assets): the bible's cues are
   there by name and shape, not as composed music; the crowd walla is the crowds' own barks far off.
-- **Cold opens** are today's intros staged with a default camera (behind and over Kai's shoulder);
-  authored shots, hooks and the story's cold opens come with U6–U8, which record their own lines.
+- **Cold opens** of the Prologue are authored (U6: shots, lines, hooks); every later mission's are still its
+  intro staged with a default camera (behind and over Kai's shoulder) until U7–U8.
+- **A human playtest** of the rewritten Prologue (does the deduction read fairly, does the chase feel like a
+  pursuit, is 97 minutes what a player takes) has not been done; the bot and the length model stand in for it.
 - **Device testing** of the Android build on phones has not been done in this session.

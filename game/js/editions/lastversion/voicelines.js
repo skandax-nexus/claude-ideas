@@ -17,6 +17,7 @@ import { MISSIONS, CHAPTERS, ORDER, HINTS, HINTS_REVERSE, LINES, LINE_SPEAKERS, 
 import { ENDINGS, EPILOGUE } from './acts.js';
 import { NPCS, CAST, DIALOGUE, AMBIENT } from './npcs.js';
 import { INV_LINES, INV_SPEAKERS, RULES } from './inversion.js';
+import { QUESTIONS, PREVIOUSLY } from './ledger.js';
 import { RealityEngine } from '../../core/RealityEngine.js';
 import { FactStore } from '../../core/FactStore.js';
 
@@ -185,6 +186,7 @@ export function spokenLines({ levels = true } = {}) {
       lines(ch, `${P}.intro`, m.intro);
       lines(ch, `${P}.outro`, m.outro);
       if (m.coldOpen) lines(ch, `${P}.coldOpen`, m.coldOpen.lines);
+      if (m.coldOpen?.title) lines(ch, `${P}.coldOpen.title`, m.coldOpen.title.lines);
       if (m.hook) lines(ch, `${P}.hook`, m.hook.lines);
       for (const [k, ls] of Object.entries(m.spoken || {})) lines(ch, `${P}.spoken.${k}`, ls);
       (m.rules || []).forEach((r) => lines(ch, `${P}.rule:${r.id}`, r.say));
@@ -215,13 +217,38 @@ export function spokenLines({ levels = true } = {}) {
         if (p.clip?.text) add(ch, `${P}.process:${p.id}.clip`, p.clip.who || 'NONE', p.clip.text, { fx: 'recording' });
       }
       // threads, sides, talks and deductions (U6 on): the shape §3.3 gives them
+      const thread = (t, tp) => {
+        (t.hints || []).forEach((h, j) => add(ch, `${tp}.hint${j}`, 'KAI', h));
+        lines(ch, `${tp}.say`, t.say);
+        if (t.record) {
+          add(ch, `${tp}.official`, 'NONE', t.record.official);
+          add(ch, `${tp}.echo`, 'NONE', t.record.echo);
+          if (t.record.hint) add(ch, `${tp}.recordHint`, 'KAI', t.record.hint);
+          lines(ch, `${tp}.recordAfter`, t.record.after);
+          if (typeof t.record.log === 'string') add(ch, `${tp}.log`, 'KAI', t.record.log);
+        }
+        if (typeof t.log === 'string') add(ch, `${tp}.log`, 'KAI', t.log);
+      };
       for (const q of m.quarters || []) {
-        for (const t of q.threads || []) (t.hints || []).forEach((h, j) => add(ch, `${P}.thread:${t.id}.hint${j}`, 'KAI', h));
-        for (const sd of q.sides || []) lines(ch, `${P}.side:${sd.id}.hook`, sd.hook, vidOf(sd.giver));
+        for (const t of q.threads || []) thread(t, `${P}.thread:${t.id}`);
+        for (const sd of q.sides || []) {
+          lines(ch, `${P}.side:${sd.id}.hook`, sd.hook, vidOf(sd.giver));
+          for (const t of sd.threads || []) thread(t, `${P}.side:${sd.id}.thread:${t.id}`);
+        }
         lines(ch, `${P}.quarter:${q.name}.barks`, q.barks);
       }
       for (const [id, nodes] of Object.entries(m.talks || {})) (nodes || []).forEach((d, j) => node(ch, `${P}.talk:${id}${j}`, d, vidOf(id)));
-      for (const [id, d] of Object.entries(m.deductions || {})) (d.answers || []).forEach((a, j) => lines(ch, `${P}.deduce:${id}${j}`, a.lines));
+      for (const [id, d] of Object.entries(m.deductions || {})) {
+        lines(ch, `${P}.deduce:${id}.question`, d.question);
+        lines(ch, `${P}.deduce:${id}.unproven`, d.unproven);
+        if (typeof d.log === 'string') add(ch, `${P}.deduce:${id}.log`, 'KAI', d.log);
+        (d.answers || []).forEach((a, j) => {
+          const said = choiceLine(a);
+          if (said) add(ch, `${P}.deduce:${id}${j}.label`, said.who, said.text);
+          lines(ch, `${P}.deduce:${id}${j}`, a.lines);
+          lines(ch, `${P}.deduce:${id}${j}.unproven`, a.unproven);
+        });
+      }
       if (ch === 'finale') {
         for (const k of Object.keys(ENDINGS)) lines(ch, `ending:${k}`, endingLines(k));
         lines(ch, 'postcredit', POSTCREDIT);
@@ -278,13 +305,15 @@ export function spokenLines({ levels = true } = {}) {
   for (const [k, t] of Object.entries(LINES)) add('common', `LINES.${k}`, LINE_SPEAKERS[k] || 'KAI', t);
   for (const [k, t] of Object.entries(INV_LINES)) add('common', `INV_LINES.${k}`, INV_SPEAKERS[k] || 'KAI', t, k === 'intercom' ? { fx: 'pa' } : {});
   for (const [k, t] of RULES) add('common', `RULES.${k}`, 'NONE', t);
-  // the cards: every chapter's, every mission's
+  // the cards: every chapter's, every mission's; what came before (PREVIOUSLY); the case board's questions (▶)
   for (const ch of [...ORDER, 'cases']) lines('common', `card:${ch}`, chapterCardLines(ch));
+  for (const [ch, ls] of Object.entries(PREVIOUSLY)) ls.forEach((t, i) => add('common', `previously:${ch}${i}`, 'NONE', t));
+  for (const q of QUESTIONS) add('common', `question:${q.id}`, 'NONE', q.text);
   for (const ch of Object.keys(MISSIONS)) for (const m of MISSIONS[ch]) lines('common', `card:${m.key}`, missionCardLines(m));
   return out;
 }
 
-// the speech budget (§8.10): spoken words per group
+// the speech budget (§8.10): spoken words per group (each recording once, counted where it is first said)
 export function wordsPerGroup(list = spokenLines()) {
   const out = {};
   const seen = new Set();

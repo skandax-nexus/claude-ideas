@@ -1,31 +1,62 @@
-// THE LAST VERSION OF EARTH: the Prologue, THE ZERO SECOND (about two hours).
+// THE LAST VERSION OF EARTH: the Prologue, THE ZERO SECOND (OVERHAUL.md §5 M1-M3; about 97 minutes).
 //
-//   Mission 1  THE LAST NORMAL DAY   Rain City, 2049 (an open district, theme 'rain')
-//   Mission 2  HELIX GOES DARK       the Helix facility under emergency light (authored rooms)
-//   Mission 3  THE FIRST SWITCH      the facility cycling 2049 / 2026 / 2196 (authored rooms, three states)
+//   Mission 1  THE LAST NORMAL DAY   Rain City South, 2049 08:14 (an open district under a dark overcast morning)
+//   Mission 2  HELIX GOES DARK       Helix's west wing round the court, at night in the storm, under emergency light
+//   Mission 3  THE FIRST SWITCH      Helix's east wing, the court and the 2026 dig, in three years at dawn, noon and mist
 //
-// Everything here is authored. Lines quoted from the bible are verbatim; the rest
-// follows its voice rules: short in danger, longer in safe places, objects and
-// disagreement instead of speeches, recurring phrases that change meaning.
-import { Deck, makeClock, makeToy, makeScreen, makeCell, makePanel, makeDrawing, makeChronolith, makeBoard } from './Build.js';
-import { AMBIENT, DIALOGUE, JUN_HOOK, IVEN_HOOK, intent } from './npcs.js';
+// Each mission is one map with soft quarters, threads and side stories (Threads.js), a cold open and a hook.
+// Lines quoted from the bible are verbatim, with the bible's speakers; the rest follows its voice rules: short in
+// danger, longer in safe places, objects and disagreement instead of speeches, phrases that come back changed.
+import { Deck, makeClock, makeToy, makeScreen, makeCell, makePanel, makeDrawing, makeChronolith, makeBoard,
+  makePhoto, makePhotoStrip, makeThermos, makePolaroid, makeFootprints, makeRaincoat, makePigeon, makePass, makeCoatPegs, makeNotebook, makeLogbook, makePlaque } from './Build.js';
+import { DIALOGUE, IVEN_HOOK, intent } from './npcs.js';
+import { NO_MODEL } from './processes.js';
 
 const L = (who, text, when) => (when ? { who, text, when } : { who, text });
 const N = (text, when) => L('NONE', text, when);
 const K = (text, when) => L('KAI', text, when);
-// Rook is never in the room in the Prologue: the phone, the intercom, the comms (fx 'radio')
+// Rook on the phone, the intercom and the comms (fx 'radio'); in person at the chamber door he is ROOK, dry
 const R = (text, when) => ({ ...L('ROOK', text, when), voice: { fx: 'radio' } });
+// a person a scene names, in their own recorded voice
+const SAYS = (name, id, text, fx) => ({ who: 'CREW', name, color: '#4f6170', voice: { id, ...(fx ? { fx } : {}) }, text });
+const CREW = (text, when) => L('CREW', text, when); // (said by the person being talked to, in their voice)
+const NONE_MODEL = NO_MODEL; // (a spot with nothing of its own to show: the place is the thing)
 
+// =============================================================================================================
+// Mission 1: THE LAST NORMAL DAY
+// =============================================================================================================
 // what Mission 1's scripted moments say (its fx and step play them; voicelines.js walks them for the packs)
 const M01_SAY = {
   clocks: [N('All the clocks stop.')],
   train: [N('The 41 comes in at full speed and does not stop.'), K('Get back! Get off the platform!')],
+  wrist: [N('The broken door glass opens your wrist on the way out. A clean curve, like a bracket.'), SAYS('MAN', 'CROWD_M', 'Your wrist—'), K('It\'s nothing. Go.')],
   event: [R('The event lasted one second.'), K('What event?'), R('That\'s the problem. Every recording says it hasn\'t happened yet.')],
   speakers: [N('Every speaker in the station, at once:'), { who: 'VOICE', text: 'Kai Varen. Do not build the machine.', voice: { fx: 'pa' } }],
-  face: [N('A woman in the crowd at the far end turns. For one second she has Mira\'s face.')],
-  gone: [K('Mira?'), N('The crowd closes. There is nobody there.')],
+  face: [N('A woman in the crowd at the far end turns. For one second she has Mira\'s face.'), K('She has our mother\'s face. She has Mira\'s eyes.')],
+  follow: [K('Wait. Please, wait.')],
   // the station announcer, through the platform speakers, after a two-tone chime
   announcement: [{ who: 'PA', text: 'The 8:14 service to Helix North is now arriving. Yesterday.', voice: { fx: 'pa', cue: 'pa' } }],
+};
+
+const M01_HINTS = {
+  photo: ['The photo. It always starts with the photo.', 'Beside my door, at eye height.', 'Look at the photo beside the door.'],
+  anomalies: ['Things are wrong on this street. Look at them.', 'A toy, a clock, a shop camera, a puddle, a pigeon, the roof.', 'The toy by the market, the plaza clock, the laundromat screen.'],
+  deduce: ['Three wrong things is not weather.', 'Which way are they all going?', 'Piece it together at the plaza clock.'],
+  rook: ['Work is north.', 'Up the avenue to the plaza.', 'Walk north into the plaza.'],
+  checkpoint: ['The checkpoint is a conversation.', 'The officer at the booth by the bridge.', 'Talk to the officer. Any answer gets me through.'],
+  jun: ['Jun Park will know why the board is wrong.', 'His booth is at the west end of the platform.', 'Talk to Jun in the operator\'s booth.'],
+  zero: ['The 41 is due.', 'East along the platform.', 'Walk east along the platform.'],
+  rescue: ['Two people are trapped in the wreck.', 'One under a bench, one caught in a door.', 'Walk to each of them and pull them free.'],
+  voice: ['Listen.', 'Something is in the speakers.', 'Stay here and listen.'],
+  chase: ['Keep her in sight.', 'North, through the crowd.', 'Follow her down the north stair to the staff gate.'],
+  raincoat: ['She left something.', 'Something yellow on the steps.', 'Pick up the raincoat by the staff gate.'],
+  florist: ['Flowers. Same as every year.', 'The florist on the market lane.', 'Talk to the florist.'],
+  booth: ['The photo booth printed something.', 'The booth on the west side of the plaza.', 'Take the strip from the booth.'],
+  junHook: ['Jun is talking to an empty carriage.', 'His booth.', 'Talk to Jun.'],
+  relay: ['The relay by the maintenance gate.', 'Relay 41-B, at the west end.', 'Look at the relay.'],
+  reroute: ['When the announcement plays, it is 8:13 again.', 'Wait at the relay for it.', 'At 8:13, reroute the relay.'],
+  choice: ['The bypass held.', 'The line, or the evidence.', 'Use the relay and choose.'],
+  child: ['A girl is singing on the platform.', 'At the west end, after the clocks stopped.', 'Talk to the girl with no shadow.'],
 };
 
 export const M01 = {
@@ -35,12 +66,79 @@ export const M01 = {
   place: 'rain_south', sectors: 1, states: ['PRESENT', 'PAST'], drones: [0],
   ambience: 'rain', ambient: 'rain',
   crowdFreeze: 'zero_second && !after_zero', // Rain City's crowds stop with the clocks
+  minutes: { main: 25, optional: 10 },
   fragments: [[
     'A wet newspaper on a bench: HELIX DENIES "TIME TESTS" - DIRECTOR ROOK: "WE STUDY CLOCKS, NOT MIRACLES".',
     'A pharmacy receipt dated tomorrow. The total is right. The date is not.',
     'A child\'s mitten on the platform railing. Somebody has tied it there so it will not be lost twice.',
   ]],
   beats: [{ kind: 'custom', goal: 'Get to work.' }],
+  // the cold open, before the title: Helix across the river before dawn, one window pulsing; then 08:02 at door 4B
+  coldOpen: {
+    first: true, minutes: 2, cue: 'card',
+    shots: [{ cam: [0, 14, -150], to: [0, 16, -196], look: [0, 40, -560], t: 9 }, { cam: [0, 9, -214], to: [0, 10, -222], look: [0, 46, -640], t: 9 }, { cam: [24, 12, -20], to: [20, 8, -10], look: 'door4B', t: 8 }],
+    lines: [N('Rain City. 05:40.'), N('At Helix Temporal Research, a card opens Chamber One. The name on the card is KAI VAREN.'), N('Kai Varen is asleep, four kilometres away. His phone lights once on the table. One voicemail. He does not wake.')],
+    title: { lines: [N('08:02.'), K('Twenty-three years today.'), K('I\'ll go after work. I always go after work.'), K('The 41 is late. The 41 is never late.')] },
+  },
+  quarters: [
+    {
+      name: 'HOME & MARKET',
+      threads: [
+        { id: 'photo', kind: 'scene', scene: 'photo', at: 'photoByDoor', spot: { prompt: 'LOOK AT THE PHOTO', offset: [0, 0, 0], r: 2.6, model: makePhoto },
+          goal: 'Look at the photo by the door.', because: 'It is the anniversary. It always starts at the door.', done: 'ev_mira_photo', hints: M01_HINTS.photo, minutes: 1 },
+        { id: 'anomalies', kind: 'clue', need: 3, of: ['ev_toy', 'ev_clock', 'ev_camera', 'ev_puddle', 'ev_pigeon', 'ev_helix_window'], until: 'checkpoint_passed',
+          spots: [
+            { id: 'puddle', scene: 'puddle', at: 'puddle', prompt: 'WATCH THE PUDDLE', offset: [0, 0.5, 0], r: 2.8, model: NONE_MODEL },
+            { id: 'pigeon', scene: 'pigeon', at: 'pigeonLedge', prompt: 'THE PIGEON', offset: [0, 0.32, 0], r: 7.5, model: makePigeon },
+            { id: 'helix_view', scene: 'helix_view', at: 'roofTerrace', prompt: 'LOOK AT HELIX', offset: [0, 1.4, -3], r: 3.2, model: NONE_MODEL },
+          ],
+          goal: 'Something on the avenue is running backwards. Find three things that are wrong.', because: 'A city does not do that. Not even this one.', hints: M01_HINTS.anomalies, minutes: 4 },
+        { id: 'deduce', kind: 'deduce', deduction: 'minute', at: 'plazaClock', after: ['anomalies'], until: 'checkpoint_passed', spotOpts: { offset: [1.4, 1.3, 1.2], r: 2.8 },
+          goal: 'Put it together: which way is everything wrong going?', because: 'A toy, a clock, a camera. Three is not a coincidence.', hints: M01_HINTS.deduce, minutes: 2 },
+      ],
+      sides: [
+        { id: 'florist', name: 'THE FLORIST', giver: 'florist', done: 'ev_florist', minutes: 2,
+          threads: [{ id: 'florist', kind: 'talk', npc: 'florist', at: 'floristStall', goal: 'Buy the white chrysanthemums. Same as every year.', because: 'Twenty-three years today.', done: 'ev_florist', hints: M01_HINTS.florist, minutes: 2 }] },
+      ],
+    },
+    {
+      name: 'TRANSIT PLAZA & CHECKPOINT',
+      threads: [
+        { id: 'rook', kind: 'go', at: 'rookCall', goal: 'Walk north to the transit plaza.', because: 'The 41 is late. Walking is faster than waiting.', done: 'rook_message', hints: M01_HINTS.rook, minutes: 1 },
+        { id: 'checkpoint', kind: 'talk', npc: 'guard', at: 'checkpointBooth', goal: 'Get through the Helix checkpoint at the bridge.', because: 'Rook said come in now. Rook never says now.', done: 'checkpoint_passed', hints: M01_HINTS.checkpoint, minutes: 2 },
+      ],
+      sides: [
+        { id: 'booth', name: 'THE CHILD IN THREE PHOTOGRAPHS', giver: 'child', case: 'c_child', done: 'ev_three_photos', minutes: 1,
+          threads: [{ id: 'booth', kind: 'scene', scene: 'booth', at: 'photoBooth', spot: { prompt: 'THE PHOTO BOOTH', offset: [0, 1.0, 0.75], r: 2.6, model: makePhotoStrip },
+            goal: 'Take the strip from the photo booth.', because: 'Nobody was in the booth. It printed anyway.', done: 'ev_three_photos', hints: M01_HINTS.booth, minutes: 1 }] },
+      ],
+    },
+    {
+      name: 'LINE 41',
+      threads: [
+        { id: 'jun', kind: 'talk', npc: 'jun', at: 'junBooth', after: ['checkpoint'], until: 'zero_second', goal: 'Ask the operator why the board is wrong.', because: 'The board says the 41 arrives yesterday.', done: 'jun_board', hints: M01_HINTS.jun, minutes: 1 },
+        { id: 'zero', kind: 'cinema', at: 'platform', after: ['checkpoint'], goal: 'Cross the platform to the staff gate.', because: 'The staff gate is past the station. Rook is waiting.', done: 'after_zero', hints: M01_HINTS.zero, minutes: 2 },
+        { id: 'rescue', kind: 'tasks', of: ['rescued_a', 'rescued_b'], after: ['zero'], goal: 'Get the trapped people out of the wreck.', because: 'The 41 came in at full speed. The clocks stopped first.', done: 'wrist_cut', hints: M01_HINTS.rescue, minutes: 3 },
+        { id: 'voice', kind: 'cinema', after: ['rescue'], goal: 'Listen.', because: 'Every speaker in the station is about to say something.', done: 'voice_heard', hints: M01_HINTS.voice, minutes: 1 },
+        { id: 'chase', kind: 'chase', npc: 'mira', after: ['voice'], path: [[0, 3.4, -186.4], [0, 0.15, -193.8], [0.4, 0.15, -206], [0.8, 0.15, -219.4]], leash: 14, ahead: 10, speed: 1.7,
+          set: { mira_gone: true }, say: [N('She goes through the staff gate without looking back. On the wet steps she leaves a yellow raincoat.')],
+          goal: 'Follow the woman with Mira\'s face.', because: 'She has been dead for twenty-three years.', hints: M01_HINTS.chase, minutes: 3 },
+        { id: 'raincoat', kind: 'scene', scene: 'raincoat', at: 'staffGate', after: ['chase'], spot: { prompt: 'THE YELLOW RAINCOAT', offset: [-1.0, 1.15, -1.8], r: 2.6, model: makeRaincoat, when: 'mira_gone && !raincoat' },
+          goal: 'She left something on the steps.', because: 'She went through the staff gate. Nobody checked her badge.', done: 'raincoat', hints: M01_HINTS.raincoat, minutes: 1 },
+      ],
+      sides: [
+        { id: 'lasttrain', name: 'LAST TRAIN HOME', giver: 'jun', start: 'quest_jun', done: 'jun_choice', minutes: 6,
+          threads: [
+            { id: 'junHook', kind: 'talk', npc: 'jun', when: 'zero_second', goal: 'Jun Park keeps apologising to a carriage that isn\'t there.', because: 'Every forty-one seconds the station forgets the crash.', done: 'quest_jun', hints: M01_HINTS.junHook, minutes: 1 },
+            { id: 'relay', kind: 'scene', after: ['junHook'], goal: 'Look at relay 41-B by the maintenance gate.', because: 'The gate keeps locking itself back to how it was.', done: 'ev_relay || jun_rerouted', hints: M01_HINTS.relay, minutes: 1 },
+            { id: 'reroute', kind: 'scene', after: ['relay'], goal: 'At 8:13, reroute the relay.', because: 'It was live at 8:13. And 8:13 keeps coming back.', done: 'jun_rerouted', hints: M01_HINTS.reroute, minutes: 2 },
+            { id: 'junChoice', kind: 'choice', after: ['reroute'], goal: 'The relay: the line, or the evidence.', because: 'It can carry one of them. Not both.', done: 'jun_choice', hints: M01_HINTS.choice, minutes: 2 },
+          ] },
+        { id: 'child', name: 'THE CHILD IN THE STATION', giver: 'child', done: 'ev_three_notes', minutes: 1,
+          threads: [{ id: 'child', kind: 'talk', npc: 'child', when: 'zero_second', goal: 'A girl on the platform is singing to herself.', because: 'She is the only one in the station who is not afraid.', done: 'ev_three_notes', hints: M01_HINTS.child, minutes: 1 }] },
+      ],
+    },
+  ],
   // Mission 1's set pieces, each on its landmark in Rain City South (places/specs/rain_south.js)
   overlay(P, si, { A }) {
     const L = (n) => P.at(n);
@@ -51,14 +149,14 @@ export const M01 = {
     P.texts.push({ text: 'VAREN - 4B', pos: [dx + 1.66, dy + 2.4, dz - 2.6], rotY: -Math.PI / 2, size: 0.3, color: '#ffe0b0', room: rid });
     // (Rain City's commuters, the queue at the checkpoint and the platform staff are the place's crowds:
     // rain_south's paths, cast by crowds.js. They stop with the clocks at the Zero Second.)
-    // --- the optional anomalies -----------------------------------------------------
+    // --- the anomalies (the puddle, the pigeon and the view from the roof are the anomalies thread's spots) ---------
     const [tx, ty, tz] = L('toyChild');
     A.prop(P, 'bench', tx, tz, 0.4, { y: ty });
     // the toy child: a boy in a red raincoat (yellow is Mira's), silent (crowds.js casts him)
     P.npcs.push({ id: 'amb_child', crew: 'amb_child', first: 'Child', seed: 77, ambient: true, pronoun: { their: 'his', them: 'him' }, pos: [tx - 0.6, ty, tz - 1.7], yaw: 0.4, silent: true, height: 1.26, freezeWhen: 'zero_second && !after_zero', room: rid });
-    // the Florist at her stall (her side story comes with the Prologue's rewrite)
+    // the Florist at her stall: her side story
     const [fx, fy, fz, fyaw] = L('floristStall');
-    P.npcs.push({ id: 'florist', crew: 'florist', pos: [fx + 0.4, fy, fz + 1.4], yaw: fyaw, silent: true, freezeWhen: 'zero_second && !after_zero', room: rid });
+    P.npcs.push({ id: 'florist', crew: 'florist', pos: [fx + 0.4, fy, fz + 1.4], yaw: fyaw, prompt: 'TALK TO THE FLORIST', freezeWhen: 'zero_second && !after_zero', room: rid });
     P.inter.push({ id: 'toy', kind: 'scene', scene: 'toy', pos: [tx + 0.4, ty + 0.25, tz - 1.1], r: 2.4, prompt: 'LOOK', model: () => makeToy(), once: true, room: rid });
     const [cx, cy, cz] = L('plazaClock');
     P.inter.push({ id: 'clock', kind: 'scene', scene: 'clock', pos: [cx, cy + 6.15, cz + 0.95], yaw: 0, r: 7, prompt: 'LOOK AT THE CLOCK', model: () => { const m = makeClock({ mode: 'backwards' }); m.scale.setScalar(2.4); return m; }, once: true, room: rid });
@@ -67,13 +165,13 @@ export const M01 = {
     // --- Rook's call, on the way into the plaza ----------------------------------------
     const [rx, , rz] = L('rookCall');
     P.triggers.push({ box: [rx - 46, -1, rz - 3, rx + 46, 5, rz + 3], set: { rook_message: true }, once: true, room: rid });
-    // --- the checkpoint at the bridge -------------------------------------------------
+    // --- the checkpoint at the bridge: Officer Pryce, Helix security (her conversation is this mission's talks.guard)
     const [bx, by, bz] = L('checkpointBooth');
     A.prop(P, 'booth', bx, bz, 0, { y: by, m: 'helixWhite' });
     P.texts.push({ text: 'CHECKPOINT - HELIX CONTRACTORS', pos: [bx + 4.2, by + 3.4, bz - 3.6], rotY: 0, size: 0.36, color: '#ffc06a', room: rid });
     box([-4.85, by, bz - 6.4, 4.85, by + 2.6, bz - 6.0], { mat: 'door', when: '!checkpoint_passed', id: 'gate_checkpoint', lvMat: 'gateBarrier' });
     P.glow(bx + 4, by + 0.02, bz - 3.5, 3.2, 0xffc06a);
-    P.npcs.push({ id: 'guard', crew: 'guard', pos: [bx + 5.4, by, bz - 3.0], yaw: 0, dialogue: DIALOGUE.guard, prompt: 'TALK TO THE OFFICER', freezeWhen: 'zero_second && !after_zero', room: rid });
+    P.npcs.push({ id: 'guard', crew: 'guard', pos: [bx + 5.4, by, bz - 3.0], yaw: 0, prompt: 'TALK TO THE OFFICER', freezeWhen: 'zero_second && !after_zero', room: rid });
     // --- the station --------------------------------------------------------------------
     const [sx, sy, sz] = L('boardSign');
     P.texts.push({ text: 'LINE 41 - ON TIME - 08:14', pos: [sx, sy + 0.1, sz + 0.08], rotY: 0, size: 0.42, color: '#9fd8ff', when: '!zero_second', room: rid });
@@ -110,49 +208,90 @@ export const M01 = {
     P.glow(kx + 2, ky + 0.02, kz - 2, 4, 0xff6a48);
     P.npcs.push({ id: 'trapped_a', crew: 'trapped_a', first: 'Woman', seed: 201, ambient: true, pronoun: { their: 'her', them: 'her' }, pos: [kx - 3.2, ky, kz + 2.4], yaw: Math.PI, when: 'zero_second && !rescued_a', scene: 'rescue_a', prompt: 'PULL HER FREE', room: rid });
     P.npcs.push({ id: 'trapped_b', crew: 'trapped_b', first: 'Man', seed: 202, ambient: true, pronoun: { their: 'his', them: 'him' }, pos: [kx + 6, ky, kz + 0.9], yaw: Math.PI, when: 'zero_second && !rescued_b', scene: 'rescue_b', prompt: 'PULL HIM FREE', room: rid });
-    // the Child in the Station (optional, recurring): only after the clocks stop
-    P.npcs.push({ id: 'child', crew: 'child', pos: [px - 31, py, pz - 7], yaw: 0.6, hologram: true, height: 1.22, dialogue: DIALOGUE.child, when: 'zero_second', barks: ['Do you know the song? It goes up and then it goes up again and then it stops.'], room: rid });
-    // Mira, for one second, at the far end: on the north platform by the stair down to the staff gate
-    P.npcs.push({ id: 'mira', crew: 'mira', variant: 'raincoat', pos: [px + 3, py, pz - 30], yaw: 0, silent: true, when: 'voice_heard && !mira_gone', room: rid });
-    P.triggers.push({ box: [px - 35, py - 1, pz - 14, px + 35, py + 6, pz + 8], set: { zero_second: true }, once: true, when: 'checkpoint_passed && rook_message', room: rid });
+    // the Child in the Station (her side story): only after the clocks stop
+    P.npcs.push({ id: 'child', crew: 'child', pos: [px - 31, py, pz - 7], yaw: 0.6, hologram: true, height: 1.22, when: 'zero_second', barks: ['Do you know the song? It goes up and then it goes up again and then it stops.'], room: rid });
+    // the woman with Mira's face, at the far end of the platform by the north stair: she walks to the staff gate
+    // ahead of Kai (the chase thread), and is gone there
+    P.npcs.push({ id: 'mira', crew: 'mira', variant: 'raincoat', pos: [px + 3, py, pz - 30], yaw: Math.PI, silent: true, when: 'voice_heard && !mira_gone', room: rid });
+    // the Zero Second: a moment after Jun has told Kai about the board (the rule below), or as soon as Kai walks on
+    // east along the platform toward the 41's track without asking
+    P.triggers.push({ box: [px + 4, py - 1, pz - 14, px + 35, py + 6, pz + 8], set: { zero_second: true }, once: true, when: 'checkpoint_passed && rook_message', room: rid });
   },
-  intro: [
-    N('Rain City, 2049. Eight-fourteen on a Tuesday.'),
-    K('The 41 is late. The 41 is never late.'),
-  ],
-  objectives: [
-    { when: 'true', text: 'Get to Helix. The 41 is late, so walk.', because: 'It is a Tuesday.' },
-    { when: 'rook_message', text: 'Reach the Helix staff gate, past the station.', because: 'Rook called. Rook never calls.' },
-    { when: 'checkpoint_passed', text: 'Cross the station to the staff gate.', because: 'The checkpoint let me through.' },
-    { when: 'zero_second', text: 'Get the trapped people out of the wreck.', because: 'The 41 came in at full speed. The clocks stopped first.' },
-    { when: 'rescued', text: 'Find out who spoke through the speakers.', because: 'Every speaker said my name.' },
-    { when: 'voice_heard', text: 'Follow the woman with Mira\'s face.', because: 'She has been dead for twenty-three years.' },
-    { when: 'mira_gone', text: 'Go in. Rook is waiting.', because: 'The crowd closed. She was never there. The staff gate is open.' },
-  ],
-  hints: [
-    { when: '!rook_message', tiers: ['Work is north. Everything in this city is north.', 'Follow the avenue. The phone will ring.', 'Walk north along the avenue until Rook calls.'] },
-    { when: '!checkpoint_passed', tiers: ['The checkpoint is a conversation.', 'Talk to the officer at the gate. Any answer but silence gets me through.', 'Walk to the checkpoint, talk to the officer and pick anything but WAIT.'] },
-    { when: '!zero_second', tiers: ['The station is past the checkpoint.', 'The platform. Jun Park is in the operator booth if I want to know why the board is wrong.', 'Walk onto the platform. Whatever is going to happen will happen there.'] },
-    { when: '!rescued', tiers: ['Two people did not get clear of the train.', 'One by the carriage on the platform. One by the first carriage, further up the tracks.', 'Walk up to each of them and PULL FREE.'] },
-    { when: '!mira_gone', tiers: ['She was at the far end of the station.', 'Walk toward her. Do not expect her to wait.', 'Walk to the woman by the north gate.'] },
-    { when: 'mira_gone', tiers: ['The staff gate is open now.', 'North. Past where she stood.', 'Walk through the gate at the north end.'] },
-  ],
+  talks: {
+    // Officer Pryce, Helix security, at the checkpoint: every answer gets Kai through
+    guard: [
+      {
+        when: '!checkpoint_passed',
+        lines: [CREW('Helix? Badge.'), K('Varen. Temporal systems.'), CREW('Says here you badged into Chamber One at 05:40.'), K('At 05:40 I was asleep.'), CREW('Then somebody\'s been sleepwalking with your card.')],
+        choices: [
+          intent('investigate', 'Who else came through at 05:40?', { lines: [CREW('Nobody. That\'s what bothers me. The door logged you. The camera logged an empty corridor.'), CREW('Go on through. And Varen: find out who you were.')], set: { checkpoint_passed: true, ev_card_0540: true }, know: 1, log: 'My card opened Chamber One at 05:40, while I slept.' }),
+          intent('challenge', 'Then your system is wrong.', { lines: [CREW('My system is the only thing in this city telling the time right this morning. Go through.')], set: { checkpoint_passed: true }, trust: -1 }),
+          intent('comfort', 'Long morning?', { lines: [CREW('Longest one yet. Night desk, then this. Go on through, Varen.')], set: { checkpoint_passed: true }, trust: 1 }),
+          intent('withdraw', 'I\'ll let them sort it out.', { lines: [CREW('Somebody had better. Go on. You\'re holding up the line.')], set: { checkpoint_passed: true } }),
+        ],
+      },
+      { when: 'checkpoint_passed', lines: [CREW('Staff gate\'s past the platform. Mind the line.')] },
+    ],
+    // the Florist: white chrysanthemums, and a man who already came in
+    florist: [
+      {
+        when: '!ev_florist',
+        lines: [CREW('White chrysanthemums. Same as every year.'), K('Same as every year.'), CREW('Funny. You already came in. Ten minutes ago.'), K('I didn\'t.'),
+          CREW('Grey at the temples, same coat, a scar on the wrist. Paid cash. Said you would come in and say you didn\'t.'), K('I don\'t have a scar.'), CREW('Then he was a very good impression.'),
+          N('She gives you his receipt with the flowers. 08:04. White chrysanthemums. Paid.')],
+        set: { ev_florist: true }, log: 'The florist sold my flowers at 08:04 to an older me, with a scar.',
+      },
+      { when: 'ev_florist && !wrist_cut', lines: [CREW('Paid for twice. I\'ve never had that before.')] },
+      { when: 'wrist_cut', lines: [CREW('That cut. He had one just like it, only older.')] },
+    ],
+    // the Child in the Station: she sings Kai's way, up, up, stop
+    child: [
+      {
+        when: 'true', lines: [L('CHILD', 'Do you know the song? It goes up and then it goes up again and then it stops.'), N('Under the station lights she has no shadow.')],
+        choices: [
+          intent('comfort', 'Hum it for me.', { lines: [N('Three notes. Up, up, and a stop. You know it. You have not heard it in twenty-three years.')], ev: 'three_notes', trust: 1 }),
+          intent('investigate', 'Where are your parents?', { lines: [L('CHILD', 'In the photo. All three of me are.')], ev: 'three_photos', set: { case_c_child: 'active' } }),
+          intent('withdraw', 'Stay where it\'s dry.'),
+        ],
+      },
+    ],
+  },
+  deductions: {
+    // the avenue's anomalies, read together at the plaza clock
+    minute: {
+      question: [K('A toy that falls up. A clock running down. A camera showing tomorrow. What do they have in common?')],
+      answers: [
+        { intent: 'investigate', label: 'They\'re all running backwards, toward 8:14.', correct: true, needs: 't_m01_anomalies', lines: [K('Everything odd is running backwards toward the same minute: 8:14.'), K('Whatever happens at 8:14, the city already remembers it.')] },
+        { intent: 'challenge', label: 'Somebody hacked the city\'s clocks.', lines: [K('A hack doesn\'t put a toy back in a child\'s hand.')] },
+        { intent: 'comfort', label: 'I didn\'t sleep. That\'s all this is.', lines: [K('I slept fine. The city didn\'t.')] },
+      ],
+      unproven: [K('Maybe. I haven\'t seen enough to say it out loud.')],
+      set: { ev_minute_814: true }, log: 'Everything odd runs backwards toward 8:14.', reveal: true,
+    },
+  },
   scenes: {
-    toy: { lines: [N('A child drops a toy. It hits the pavement, bounces once - and then it is in her hand again, as if the pavement had never happened.'), K('I saw that backwards.')], set: { ev_toy: true }, log: 'A toy fell and then un-fell. The child did not notice. I did.' },
-    clock: { lines: [N('The transit clock runs backward. The second hand is very sure of itself.'), K('Eight-fourteen. Eight-thirteen. Eight-twelve.')], set: { ev_clock: true }, log: 'A clock on the avenue runs backward, one confident second at a time.' },
-    camera: { lines: [N('A security feed in a shop window. The timestamp says tomorrow. In it, this corner is empty and the rain has stopped.'), K('That\'s this corner. That\'s tomorrow.')], set: { ev_camera: true }, log: 'A camera is showing tomorrow. Tomorrow, the rain has stopped.' },
-    relay: { lines: [N('Relay 41-B, the feed for the maintenance gate. Burnt through where the 41 hit the line.'), K('Dead now. It was live at 8:13. And 8:13 keeps coming back.')], set: { ev_relay: true }, log: 'Relay 41-B is dead in the present. Every forty-one seconds the station falls back to 8:13, when it was not.' },
-    reroute: { lines: [N('8:13. The relay is whole and humming. You throw the bypass before the minute closes.'), K('Rerouted. In a minute that has already happened.')], set: { jun_rerouted: true, ev_gate_resets: true }, log: 'I rerouted the relay at 8:13, in the minute before the crash. The bypass held when the station came back.' },
+    photo: { lines: [N('A photograph by the door: a girl of nine in a yellow raincoat and yellow boots, laughing.'), K('Mira. She hated having her picture taken. She loved those boots.')], set: { ev_mira_photo: true } },
+    toy: { lines: [N('A child drops a toy. It bounces once, and then it is in his hand again.'), K('I saw that backwards.')], set: { ev_toy: true } },
+    clock: { lines: [N('The transit clock runs backward. The second hand is very sure of itself.'), K('Eight-fourteen. Eight-thirteen. Eight-twelve.')], set: { ev_clock: true } },
+    camera: { lines: [N('A shop camera, timestamped tomorrow. In it, this corner is empty and the rain has stopped.'), K('That\'s this corner. That\'s tomorrow.')], set: { ev_camera: true } },
+    puddle: { lines: [N('A ring spreads across the puddle. Then the drop that made it lands, a second late.'), K('The ripple came first.')], set: { ev_puddle: true } },
+    pigeon: { lines: [N('A pigeon lands on the ledge, tail first, its wings folding the wrong way.'), K('It landed backwards. It doesn\'t seem to mind.')], set: { ev_pigeon: true } },
+    helix_view: { lines: [N('From the roof, Helix on its hill. One window in the crescent pulses, slow, like a sleeper\'s light.'), K('Chamber One. Nobody should be in there at this hour.')], set: { ev_helix_window: true } },
+    booth: { lines: [N('The photo booth has printed a strip for nobody: three photographs of one girl, nine years old.'), N('The dates stamped under them read 2026, 2049 and 2196.'), K('Same girl. Same age. A hundred and seventy years apart.')],
+      set: { ev_three_photos: true, case_c_child: 'active' } },
+    relay: { lines: [N('Relay 41-B, the feed for the maintenance gate. Burnt through where the 41 hit the line.'), K('Dead now. It was live at 8:13. And 8:13 keeps coming back.')], set: { ev_relay: true } },
+    reroute: { lines: [N('8:13. The relay is whole and humming. You throw the bypass before the minute closes.'), K('Rerouted. In a minute that has already happened.')], set: { jun_rerouted: true, ev_gate_resets: true }, log: 'I rerouted the relay at 8:13. It held.' },
     relay_choice: {
-      lines: [N('The bypass held through the crash. The relay can carry the repaired line and get the passengers out, or feed the Helix evidence terminal in Jun\'s booth. Not both.')],
+      lines: [N('The bypass held. The relay can carry the repaired line and get the passengers out, or feed the evidence terminal in Jun\'s booth. Not both.')],
       choices: [
-        intent('comfort', 'Run the line. Get them home.', { consequence: true, lines: [L('JUN', 'They\'re getting on. Kai - they\'re getting on.'), N('The gate opens. People Jun kept apologizing to walk out of the next carriage.')], set: { jun_line: true, jun_choice: true, quest_jun: 'resolved' }, log: 'I gave the relay to the line. Jun\'s passengers got off. Somebody will remember that route.' }),
-        intent('investigate', 'Power the evidence terminal.', { consequence: true, lines: [N('The terminal wakes: a Helix order with Rook\'s name on it, timestamped before the Zero Second, which every recording says has not happened yet.'), L('JUN', 'I hope whatever\'s on it is worth a train.')], set: { jun_evidence: true, jun_choice: true, ev_rook_log: true, ev_rook_terminal: true, quest_jun: 'resolved' }, log: 'I gave the relay to the evidence terminal: Rook\'s order, timestamped before the Zero Second. The passengers stayed in the next carriage.' }),
+        intent('comfort', 'Run the line. Get them home.', { consequence: true, lines: [L('JUN', 'They\'re getting on. Kai, they\'re getting on.'), N('The gate opens. People Jun kept apologizing to walk out of the next carriage.')], set: { jun_line: true, jun_choice: true, quest_jun: 'resolved' }, log: 'I gave the relay to the line. Jun\'s passengers got off.' }),
+        intent('investigate', 'Power the evidence terminal.', { consequence: true, lines: [N('The terminal wakes: a Helix order with Rook\'s name on it, timestamped before the Zero Second.'), L('JUN', 'I hope whatever\'s on it is worth a train.')], set: { jun_evidence: true, jun_choice: true, ev_rook_log: true, ev_rook_terminal: true, quest_jun: 'resolved' }, log: 'I powered the evidence terminal. The passengers waited.' }),
       ],
     },
-    station_clock: { lines: [N('Eight-fourteen. Both hands, and the second hand, and the one on the wall behind it. Every clock in the station agrees for the first time all day.')], set: { ev_stopped_clock: true } },
+    station_clock: { lines: [N('Eight-fourteen. Every clock in the station agrees, for the first time all day.')], set: { ev_stopped_clock: true } },
     rescue_a: { lines: [N('A woman pinned under a thrown bench, between the carriage and the wall.'), K('Hold on. I\'ve got you. Don\'t look at it, look at me.')], set: { rescued_a: true } },
     rescue_b: { lines: [N('A man with his coat caught in the door of a carriage that is not on the tracks any more.'), K('Arms out of the sleeves. Leave the coat. Leave it.')], set: { rescued_b: true } },
+    raincoat: { lines: [N('A yellow raincoat, a woman\'s, folded on the step. It is dry inside.'), K('Dry. In this.')], set: { raincoat: true }, log: 'She left a yellow raincoat, dry inside. I kept it.' },
   },
   rules: [
     { id: 'rook_call', when: 'rook_message', say: [
@@ -160,16 +299,20 @@ export const M01 = {
       R('Not the front entrance. Staff gate, past the station. Come in now. Something happened in the chamber last night and I need you to tell me it didn\'t.'),
       K('Tell you what didn\'t happen?'), R('Just come in.'),
     ] },
+    { id: 'board', when: 'jun_board && checkpoint_passed && rook_message && !zero_second', then: 'zeroSoon' },
     { id: 'zero', when: 'zero_second', then: 'zeroSecond' },
     { id: 'rescued', when: 'rescued_a && rescued_b', set: { rescued: true }, then: 'afterRescue' },
   ],
-  outro: [
-    K('She died twenty-three years ago. I was at the funeral. I was twelve.'),
-    N('The staff gate is open. Nobody is checking badges any more.'),
-  ],
-  done: 'mira_gone',
+  // the hook (§5 M1): the voicemail stays unheard until Mission 12
+  hook: { cue: 'cliff', minutes: 2, lines: [K('She died twenty-three years ago. I was at the funeral. I was twelve.'), N('One voicemail. Received 05:40. Caller unknown.'), K('Not now.'), N('The staff gate is open. Nobody is checking badges any more.')] },
+  done: 'raincoat',
   // mission-specific behaviour the runtime calls by name
   fx: {
+    // Jun has said the board is wrong: the minute comes
+    zeroSoon(rt) {
+      const g = rt.g;
+      g.after(2.5, () => rt.deck?.key === 'm01' && !g.facts.get('zero_second') && g.facts.set('zero_second'));
+    },
     zeroSecond(rt) {
       const g = rt.g;
       // the Zero Second's cue (score.js): the ticks stop, one second of silence under the narration, the 41
@@ -191,30 +334,25 @@ export const M01 = {
         g.facts.set('after_zero');
       });
     },
+    // the second rescue: the glass opens Kai's wrist; Rook; the voice in every speaker; the woman with Mira's face
     afterRescue(rt) {
-      const g = rt.g;
-      g.after(1.0, () => g.hud.say(M01_SAY.event, g.facts, () => {
-        g.hud.say(M01_SAY.speakers, g.facts, () => {
-          g.facts.set('voice_heard');
-          g.deckWorld.refresh();
-          g.hud.say(M01_SAY.face, g.facts);
-        });
+      const g = rt.g, f = g.facts;
+      g.after(0.4, () => g.hud.say(M01_SAY.wrist, f, () => {
+        f.set('wrist_cut');
+        g.after(0.6, () => g.hud.say(M01_SAY.event, f, () => {
+          g.hud.say(M01_SAY.speakers, f, () => {
+            f.set('voice_heard');
+            g.deckWorld.refresh();
+            g.hud.say([...M01_SAY.face, ...M01_SAY.follow], f);
+          });
+        }));
       }));
     },
   },
-  // Mira vanishes when you come close; the announcement repeats every 41 seconds
+  // the announcement repeats every 41 seconds
   step(rt, dt) {
     const g = rt.g;
     const f = g.facts;
-    if (f.get('voice_heard') && !f.get('mira_gone')) {
-      const m = g.deckWorld.npcs.find((n) => n.n.id === 'mira');
-      if (m && m.model.visible && g.player.pos.distanceTo(m.model.position) < 3.6) {
-        f.set('mira_gone');
-        g.fx.burst(m.model.position.clone().setY(1.2).toArray(), 0xc4566a, 40, 1.6);
-        g.deckWorld.refresh();
-        g.hud.say(M01_SAY.gone, f);
-      }
-    }
     const plat = rt.level?.landmarks?.platform;
     if (f.get('after_zero') && plat && g.player.pos.z < plat[2] + 10 && g.player.pos.y > plat[1] - 1.5) {
       rt.annT = (rt.annT ?? 38) + dt;
@@ -237,19 +375,44 @@ export const M01 = {
     }
   },
 };
+M01.outro = M01.hook.lines;
 
-// --- Mission 2: HELIX GOES DARK -------------------------------------------------------------
+// =============================================================================================================
+// Mission 2: HELIX GOES DARK
+// =============================================================================================================
 // Helix's rooms take the light of their own palette (DeckWorld's few pieces: doors, the gate); the
 // place draws everything else in the Helix style (places/specs/helix.js). No Vessel look.
 const HELIX_PALETTE = { emergency: 0.85, fog: 0x2a2226, density: 1.6, wall: '#e8ecf0', floor: '#202428', accent: 0xff6a48, accent2: 0xffb36b, light: 0xffb0a0, tint: 0x6a4a4a, night: 0.7, weather: 'storm', sky: 'night', probe: false, ink: 0.85, grade: { shadowTint: 0x2a1418, highlightTint: 0xffc0a8, toning: 0.24, contrast: 1.14, saturation: 0.92 } };
 
-const HELIX_SENTINEL_HINTS = ['The drone watches the floor in front of it. Only that.', 'Stay behind the pillars. Move when it turns. The cell is in the alcove past its loop.', 'Wait behind a pillar until the drone walks away, then cross behind it to the alcove on the east side.'];
 const T0 = 0.4;
+
+// the three officers' recordings, each in its speaker's own voice through the recording chain, with a hologram
+const REC = {
+  pryce: SAYS('OFFICER PRYCE · 05:52', 'PRYCE', 'Pryce, night desk. Chamber door logged shut all night. Nobody went in. I checked the log myself. It is clean. There is nothing to discuss.', 'recording'),
+  haig: SAYS('OFFICER HAIG · 05:58', 'HAIG', 'Haig. I was not on shift. I was home. If the roster says otherwise, the roster is wrong.', 'recording'),
+  dale: SAYS('OFFICER DALE · 06:01', 'DALE', 'Dale, chamber watch. At 05:40 the door opened on Varen\'s card, on an empty corridor. I logged it. Somebody has edited the log since, and I want that on record.', 'recording'),
+};
+
+const M02_HINTS = {
+  intercom: ['Someone is calling the lobby.', 'The intercom on the desk.', 'Answer the intercom.'],
+  print: ['The glass case by the turnstiles.', 'Helix\'s famous boot print.', 'Look at the print in its case.'],
+  lin: ['Someone else is still here.', 'The researcher by the turnstiles.', 'Talk to Dr. Lin.'],
+  gallery: ['One cell is past the drone.', 'It only watches what is in front of it.', 'Wait behind a pillar, then take the cell from the east alcove.'],
+  cells: ['Three sockets, three cells.', 'The alcove, the gantry, Marr\'s locker.', 'Talk to Iven and his locker opens. Carry each cell to a socket.'],
+  records: ['One officer told the truth.', 'Compare each statement with the roster and the door log.', 'Dale\'s statement matches the door log. Enter Dale\'s code.'],
+  unit: ['It rewinds its own damage.', 'The breaker makes the damaged conduit live.', 'Throw the breaker and lead the unit through the conduit.'],
+  archive: ['Mira\'s name is in this room.', 'The file, the drawer, the drawing.', 'Open the drawer and look at the drawing.'],
+  rook: ['Rook is in the way.', 'He wants to talk first.', 'Talk to Rook.'],
+  chamber: ['The ring.', 'Walk up to it. Don\'t touch it.', 'Walk toward the ring.'],
+  linDesk: ['Lin\'s things are on this floor.', 'Her coat peg, and her desk in the gallery.', 'Look at the peg marked LIN, and at her desk.'],
+  iven: ['Iven Marr is on the plant terrace.', 'His shift notes are on a panel.', 'Talk to Iven and read his notes.'],
+  camera: ['The cameras saw something at 05:40.', 'The camera console in the lobby.', 'Watch the 05:40 feed.'],
+};
 
 // Mission 2's rooms in Helix's west wing, round the court (the bible's map: ENTRY → DARK CORRIDOR →
 // POWER ROOM → LIFT, with the archive): the lobby faces the city, the dark gallery the court, the
 // plant terrace is open to the storm, the conduit hall is a glass bridge-hall over the court's edge,
-// and the glass lift drops into the chamber under the oculus.
+// and the glass lift drops into the chamber under the oculus, where Rook is waiting.
 function helixDarkRooms(P, story, si, rt) {
   const D = new Deck({ id: 'm02', deckName: 'HELIX', palette: HELIX_PALETTE, seed: 'lv', states: ['PRESENT'], estimateMin: 40, place: P, start: { at: [-48, 40], rot: 0 } });
   const land = (R, name, at, yaw = 0) => { const w = R.p(at); P.land(name, w[0], w[1], w[2], yaw + R.th); };
@@ -263,14 +426,12 @@ function helixDarkRooms(P, story, si, rt) {
     for (const x of [-1.6, 0, 1.6]) R.box([x - 0.08, 0, -9.6, x + 0.08, 1.0, -8.4], { mat: 'trim' }); // turnstiles
     R.box([2.4, 0, -12.6, 4.6, 1.1, -11.6], { mat: 'prop' });
     R.box([2.5, 1.1, -12.5, 4.5, 1.9, -11.7], { mat: 'glass', solid: false }); // the Site Zero print, in its case
-    R.npc({ id: 'lin', crew: 'researcher', pos: [4.2, 0, -5], yaw: -Math.PI * 0.75, lines: [
-      L('CREW', 'Don\'t go to the lift. The lift is dead. Everything below three is dead.'),
-      K('Rook said system failure.'),
-      L('CREW', 'Rook said it twice. Systems don\'t scream, Kai. Something screamed.'),
-      L('CREW', 'Power cells. Three of them, somewhere on this floor. The lift takes three. I am not going to look for them.'),
-    ], barks: AMBIENT.helix.barks });
+    R.text('THE SITE ZERO PRINT - c. 1077 BC', [3.5, 2.2, -11.55], 0, { size: 0.16, color: '#dfe8f0' });
+    // Dr. Lin, the researcher nobody remembers hiring (her conversation is this mission's talks.researcher)
+    R.npc({ id: 'lin', crew: 'researcher', pos: [4.2, 0, -5], yaw: -Math.PI * 0.75, prompt: 'TALK TO THE RESEARCHER', barks: ['Everything below three is dead. I said that already, didn\'t I.'] });
     R.scene('intercom', [-4, 1.5, -5.6], 'ANSWER THE INTERCOM', { color: 0xff6a48, once: true, scene: 'intercom' });
     R.trigger([-6, -1, -14, 6, 5, -10], { helix_entered: true });
+    R.prop('console', -4.4, -12.4);
     land(R, 'lobby', [0, 0, -7]);
     land(R, 'lobbyIntercom', [-4, 1.5, -5.6]);
     land(R, 'sitePrint', [3.5, 1.2, -12.1]);
@@ -287,7 +448,8 @@ function helixDarkRooms(P, story, si, rt) {
     R.item({ id: 'cell_1', kind: 'core', pos: [7.5, 2.75, -12], label: 'POWER CELL' });
     R.text('EMERGENCY LIGHTING - DO NOT RUN', [0, 4.6, -23.9], 0, { size: 0.42, color: '#ff6a48' });
     R.prop('desk', -6.2, -21);
-    R.challenge('helix:drone', 0, -24, HELIX_SENTINEL_HINTS);
+    R.text('DR. LIN', [-6.2, 1.5, -21.5], 0, { size: 0.16, color: '#dfe8f0' });
+    R.challenge('helix:drone', 0, -24, M02_HINTS.gallery);
     R.checkpoint(0, -2, -1.6);
     land(R, 'westGallery', [0, 0, -12]);
     land(R, 'linDesk', [-6.2, 0.8, -21]);
@@ -327,20 +489,18 @@ function helixDarkRooms(P, story, si, rt) {
     land(R, 'cellC', [6.3, 1.0, -10.2]);
     land(R, 'ivenPost', [4.6, 0, -7.4]);
   });
-  // r3 RECORDS: the staff lounge: three recorded conversations; one officer can be trusted
+  // r3 RECORDS: the staff lounge: three recorded statements, the roster, the door log; one officer can be trusted
   D.room({ id: 'records', name: 'STAFF LOUNGE', W: 12, L: 14, H: 6, exit: 'E', windows: { E: [[1, 8]] } }, (R) => {
     R.floor();
-    const recs = [
-      ['rec_pryce', -4, 'OFFICER PRYCE - 05:52', 'Pryce, night desk. Chamber door is logged shut all night. Nobody went in. Nobody. I checked the log myself and the log is clean, so there is nothing to discuss.'],
-      ['rec_haig', 0, 'OFFICER HAIG - 05:58', 'Haig. I was not on shift. I was home. If the roster says otherwise the roster is wrong, and I would like that noted before anyone asks me anything.'],
-      ['rec_dale', 4, 'OFFICER DALE - 06:01', 'Dale. I opened the chamber at 05:40 on the director\'s order. I logged it. The log has been edited since and I would like to say so while the recording still exists.'],
-    ];
-    for (const [id, x, title, text] of recs) {
+    for (const [id, x, crew] of [['rec_pryce', -4, 'guard'], ['rec_haig', 0, 'haig'], ['rec_dale', 4, 'dale']]) {
       R.prop('console', x, -5.4);
-      R.inter({ id, kind: 'terminal', pos: [x, 1.25, -5], yaw: 0, r: 2.4, prompt: 'PLAY RECORDING', log: { title, text }, kit: 'recorder' });
+      R.scene(id, [x, 1.25, -5], 'PLAY THE RECORDING', { kit: 'recorder' });
+      // the officer, as a hologram over the recorder while the statement plays
+      R.npc({ id: `holo_${id}`, crew, pos: [x, 0, -6.6], yaw: 0, hologram: true, silent: true, when: `holo_${id.slice(4)}` });
     }
     R.text('ROSTER 05:00 - PRYCE · HAIG · DALE', [-5.9, 3.0, -8], Math.PI / 2, { size: 0.34, color: '#dfe8f0' });
     R.text('CHAMBER DOOR LOG - EDITED 06:10', [5.9, 3.0, -4], -Math.PI / 2, { size: 0.34, color: '#ff6a48' });
+    R.scene('door_log', [5.7, 1.6, -4], 'READ THE DOOR LOG', { yaw: -Math.PI / 2, model: () => makePanel(0xff6a48) });
     R.prop('console', 0, -12.6);
     R.scene('whose_code', [0, 1.3, -12.2], 'ENTER AN OFFICER\'S CODE', { model: () => makePanel(0xff6a48) });
     R.box([R.W / 2, 0, -R.L + 0.6, R.W / 2 + T0, 4, -R.L + 3.6], { mat: 'door', when: '!officer_trusted', id: 'door_records' });
@@ -357,7 +517,7 @@ function helixDarkRooms(P, story, si, rt) {
     R.prop('console', -6.6, -21);
     R.scene('breaker', [-6.6, 1.3, -20.6], 'THROW THE BREAKER', { model: () => makePanel(0xff6a48), once: true });
     R.sentinel({ path: [[-2, -4], [5, -4], [5, -20], [-2, -20]], speed: 2.1, range: 9, fov: 0.85, conduit: [5.4, -15, 8, -9], conduitWhen: 'conduit_live', unit: true });
-    R.challenge('helix:unit', 0, -24, ['It puts itself back together. I watched it do it.', 'The damaged conduit on the east wall. If it were live, and the unit walked through it...', 'Throw the breaker at the far console, let the unit see me, and lead it along the east wall through the conduit.']);
+    R.challenge('helix:unit', 0, -24, M02_HINTS.unit);
     R.box([-1.5, 0, -24.4, 1.5, 4, -24], { mat: 'door', when: '!unit_down', id: 'door_conduit' });
     R.checkpoint(0, -2, -1.6);
     land(R, 'skybridge', [0, 0, -12]);
@@ -388,12 +548,17 @@ function helixDarkRooms(P, story, si, rt) {
     R.text('LIFT - LEVEL -3 - CHAMBER', [0, 4.2, -7.9], 0, { size: 0.36, color: '#ffb36b' });
     land(R, 'liftAtrium', [0, 0, -5.5]);
   });
-  // r7 THE CHRONOLITH CHAMBER, 11.5 m under the oculus; the lift lets you out at its south wall
+  // r7 THE CHRONOLITH CHAMBER, 11.5 m under the oculus; the lift lets you out at its south wall, where Rook stands in the way
   const ch = D.room({ id: 'chamber', name: 'CHRONOLITH CHAMBER', W: 24, L: 24, H: 12, at: [0, 12], rot: 0, y: -11.5, exit: 'E', corridor: { len: 26, rise: 11.5 }, roof: 'glass', closedS: true, kind: 'encounter', beat: 'custom' }, (R) => {
     R.floor(0, -R.L, 0, { mat: 'chamberFloor' });
     R.text('CHAMBER - AUTHORISED PERSONNEL - DIRECTOR\'S OFFICE', [0, 8.2, -23.9], 0, { size: 0.42, color: '#ff6a48' });
-    R.scene('chronolith', [0, 4.6, -12], 'APPROACH THE CHRONOLITH', { model: () => makeChronolith(1.15, 'helix'), r: 6, once: true });
+    // the ring itself (to look at, not to use), and the place to walk up to it once Rook lets Kai pass
+    R.inter({ id: 'chronolith', kind: 'scene', scene: 'ring', pos: [0, 4.6, -12], r: 0, prompt: '', model: () => makeChronolith(1.15, 'helix') });
+    R.scene('chronolith_walk', [0, 1.4, -7.4], 'WALK TO THE RING', { scene: 'chronolith', model: NONE_MODEL, when: 'rook_door', r: 3 });
     R.box([-3, -T0, -15, 3, 0.02, -9], { mat: 'glow', solid: false });
+    // Rook, in person, at the chamber door; a security line across the floor until he steps aside
+    R.npc({ id: 'rook_door', crew: 'rook', pos: [0.4, 0, -3.4], yaw: Math.PI, prompt: 'TALK TO ROOK' });
+    R.box([-11.8, 0, -4.4, 11.8, 1.1, -4.2], { mat: 'door', when: '!rook_door', id: 'door_rook' });
     R.checkpoint(0, -2, -1.6);
     land(R, 'chamberDoor', [0, 0, -0.8]);
     land(R, 'chamber', [0, 0, -12]);
@@ -404,52 +569,144 @@ function helixDarkRooms(P, story, si, rt) {
   return D.finish({ gated: true });
 }
 
+
 export const M02 = {
   key: 'm02', n: 2, chapter: 'prologue', name: 'HELIX GOES DARK', title: 'Helix Temporal Research Facility', subtitle: 'Lockdown. Emergency light. Rook calls it a system failure.',
+  logline: 'Helix in the storm, under emergency light.',
   place: 'helix', wing: 'west', rooms: helixDarkRooms, sectors: 1, states: ['PRESENT'], dark: 0.45,
-  ambience: 'hum',
-  intro: [
-    N('The facility is dark. Every third light is red. Somewhere below, a pump is running backwards.'),
-    R('Kai. Lockdown is procedure. The chamber is off limits. Work from the lab.'),
-    K('What happened in the chamber?'),
-    R('A system failure.'),
+  ambience: 'hum', minutes: { main: 27, optional: 7 }, autoExit: 0.6,
+  // the cold open, before the title: what the lobby kept of 05:38 (Kai is not there)
+  coldOpen: {
+    first: true, minutes: 2,
+    shots: [{ cam: 'lobbyIntercom', to: 'lobby', look: 'sitePrint', t: 9 }, { cam: 'lobby', look: 'linPeg', t: 8 }],
+    lines: [
+      { ...L('IVEN', 'Test\'s at 05:40 now? Who moved it?'), voice: { fx: 'echo' } }, { ...L('ROOK', 'My office.'), voice: { fx: 'echo' } },
+      { ...L('IVEN', 'Then your office can sign for it. I\'m not signing.'), voice: { fx: 'echo' } }, { ...L('ROOK', 'Nobody is asking you to sign, Iven.'), voice: { fx: 'echo' } },
+      { ...L('IVEN', 'Good. Nobody signs for it. Write that down.'), voice: { fx: 'echo' } },
+      N('05:40. Every light in the building goes out.'),
+    ],
+  },
+  quarters: [
+    {
+      name: 'SECURITY',
+      threads: [
+        { id: 'intercom', kind: 'scene', at: 'lobbyIntercom', goal: 'Answer the intercom.', because: 'Rook is calling the lobby from somewhere in the building.', done: 'intercom_heard', hints: M02_HINTS.intercom, minutes: 1 },
+        { id: 'print', kind: 'scene', scene: 'print', at: 'sitePrint', spot: { prompt: 'LOOK AT THE PRINT', offset: [0, 0.4, 0.2], r: 2.6, model: NONE_MODEL },
+          goal: 'Look at the Site Zero print in the lobby case.', because: 'Every visitor stops at it. Nobody looks at it.', done: 'ev_site_zero_print', hints: M02_HINTS.print, minutes: 1 },
+        { id: 'lin', kind: 'talk', npc: 'researcher', at: 'lobby', goal: 'Talk to the researcher by the turnstiles.', because: 'Someone else is still in the building.', done: 'lin_met', hints: M02_HINTS.lin, minutes: 2 },
+      ],
+      sides: [
+        { id: 'camera', name: 'THE CAMERA ROOM', done: 'ev_empty_corridor', minutes: 2,
+          threads: [{ id: 'camera', kind: 'scene', scene: 'camera_room', at: 'cameraRoom', spot: { prompt: 'WATCH THE 05:40 FEED', offset: [0, 1.6, -0.6], r: 2.6, model: () => makeScreen(0x9fd8ff) },
+            goal: 'Watch the chamber corridor\'s camera at 05:40.', because: 'My card opened that door.', done: 'ev_empty_corridor', hints: M02_HINTS.camera, minutes: 2 }] },
+      ],
+    },
+    {
+      name: 'THE DARK CORRIDOR',
+      threads: [
+        { id: 'gallery', kind: 'stealth', at: 'westGallery', goal: 'Get a power cell past the drone in the dark gallery.', because: 'The lift takes three cells. One is past the drone.', done: 'cells_1', hints: M02_HINTS.gallery, minutes: 3 },
+      ],
+      sides: [
+        { id: 'lin', name: 'DR. LIN\'S DESK', giver: 'researcher', done: 'ev_lin_badge && ev_lin_peg', minutes: 2,
+          threads: [
+            { id: 'peg', kind: 'scene', scene: 'peg', at: 'linPeg', spot: { prompt: 'THE COAT PEGS', offset: [0, 0, 0.1], r: 2.4, model: makeCoatPegs }, goal: 'Look at the coat pegs by the door.', because: 'One peg is dripping.', done: 'ev_lin_peg', hints: M02_HINTS.linDesk, minutes: 1 },
+            { id: 'linDesk', kind: 'scene', scene: 'lin_desk', at: 'linDesk', spot: { prompt: 'DR. LIN\'S DESK', offset: [0, 0.02, 0], r: 2.4, model: makeNotebook }, goal: 'Look at Dr. Lin\'s desk.', because: 'Six weeks here, and nobody remembers hiring her.', done: 'ev_lin_badge', hints: M02_HINTS.linDesk, minutes: 1 },
+          ] },
+      ],
+    },
+    {
+      name: 'POWER',
+      threads: [
+        { id: 'cells', kind: 'tasks', of: ['cells_1', 'cells_2', 'cells_3'], at: 'plantTerrace', goal: 'Restore the lift: three cells in the plant terrace sockets.', because: 'The lift is the only way down.', done: 'lift_powered', hints: M02_HINTS.cells, minutes: 5 },
+        { id: 'records', kind: 'deduce', at: 'staffLounge', goal: 'Find the officer who told the truth, and use their code.', because: 'The records door wants an officer\'s code.', done: 'officer_trusted', hints: M02_HINTS.records, minutes: 4 },
+      ],
+      sides: [
+        { id: 'iven', name: 'THE TECHNICIAN\'S KEY', giver: 'iven', start: 'quest_iven', done: 'ev_rook_log && quest_iven', minutes: 3,
+          threads: [
+            { id: 'ivenTalk', kind: 'talk', npc: 'iven', goal: 'Talk to Iven Marr on the plant terrace.', because: 'He was here at 05:40. He refused to sign.', done: 'quest_iven', hints: M02_HINTS.iven, minutes: 1 },
+            { id: 'notes', kind: 'scene', after: ['ivenTalk'], goal: 'Read Marr\'s shift notes.', because: 'He wrote it down. Nobody else did.', done: 'ev_rook_log', hints: M02_HINTS.iven, minutes: 2 },
+          ] },
+      ],
+    },
+    {
+      name: 'CONDUIT & ARCHIVE',
+      threads: [
+        { id: 'unit', kind: 'stealth', at: 'skybridge', goal: 'Get past the unit that rewinds its own damage.', because: 'It puts itself back together. I watched it.', done: 'unit_down', hints: M02_HINTS.unit, minutes: 3 },
+        { id: 'archive', kind: 'tasks', of: ['drawing_seen', 'ev_junior_pass'], at: 'readingRoom', goal: 'Search the reading room.', because: 'Mira\'s name is on a file in this building.', hints: M02_HINTS.archive, minutes: 2,
+          spots: [{ id: 'pass', scene: 'pass', at: 'passDrawer', prompt: 'OPEN THE DRAWER', offset: [0, 0.1, 0.4], r: 2.4, model: makePass }] },
+      ],
+    },
+    {
+      name: 'THE CHAMBER',
+      threads: [
+        { id: 'rookDoor', kind: 'talk', npc: 'rook', at: 'chamberDoor', goal: 'Rook is at the chamber door.', because: 'He came down himself. He never comes down.', done: 'rook_door', hints: M02_HINTS.rook, minutes: 2 },
+        { id: 'chamber', kind: 'scene', at: 'chamber', after: ['rookDoor'], goal: 'Go into the chamber. Touch nothing.', because: 'You were always going to.', done: 'chronolith_seen', hints: M02_HINTS.chamber, minutes: 1 },
+      ],
+    },
   ],
-  objectives: [
-    { when: 'true', text: 'Find a way down to the chamber.', because: 'Rook says it is off limits. Rook never says where things are.' },
-    { when: 'helix_entered', text: 'Find three power cells and restore the lift.', because: 'The lift takes three cells. The lift is the only way down.' },
-    { when: 'lift_powered', text: 'Get past security and reach the lift on level -3.', because: 'The lift has power. The doors between here and there do not know it yet.' },
-    { when: 'drawing_seen', text: 'Enter the Chronolith chamber.', because: 'Somebody drew me beside the machine, twenty-three years ago.' },
-  ],
-  hints: [
-    { when: '!cells_1 && !quest_iven', tiers: ['Three cells. One is past the drone.', 'The drone only watches what is in front of it. There is an alcove on the east side of the corridor.', 'In the corridor, wait behind a pillar until the drone passes, then take the cell from the east alcove and carry it to a socket in the power room.'] },
-    { when: '!lift_powered', tiers: ['Three sockets on the far wall of the power room. Three cells.', 'One cell is in the corridor alcove, one on the gantry up the stair, and one in Marr\'s locker. Marr talks if I do.', 'Talk to Iven Marr and the locker opens. Carry each cell to a socket.'] },
-    { when: 'lift_powered && !officer_trusted', tiers: ['Three recordings. One officer told the truth.', 'Compare each recording with the roster and the door log on the walls.', 'Dale\'s recording matches the edited log. Enter Dale\'s code.'] },
-    { when: 'officer_trusted && !unit_down', tiers: ['The unit rewinds its own damage. I cannot outlast it.', 'The breaker at the far console makes the damaged conduit live.', 'Throw the breaker, let the unit see me, then lead it along the east wall through the conduit.'] },
-    { when: 'unit_down && !drawing_seen', tiers: ['The archive is small. Look at the walls.', 'A child\'s drawing by the lift door.', 'Look at the drawing on the far wall of the archive.'] },
-    { when: 'drawing_seen', tiers: ['The lift.', 'Through the lift door at the end of the archive.', 'Walk through the lift door and into the chamber.'] },
-  ],
+  talks: {
+    // Dr. Lin: the researcher nobody remembers hiring
+    researcher: [
+      {
+        when: '!lin_met',
+        lines: [N('Under the emergency light she has no shadow. Nobody in the lobby would think to look.'),
+          CREW('Don\'t go to the lift. The lift is dead. Everything below three is dead.'), K('Rook said system failure.'),
+          CREW('Rook said it twice. Systems don\'t scream, Kai. Something screamed.'), K('Have we met?'),
+          CREW('Everybody asks me that this morning. I\'ve been here six weeks. Nobody remembers hiring me.'),
+          CREW('Power cells. Three of them on this floor. I am not going to look for them.')],
+        set: { lin_met: true }, log: 'Nobody remembers hiring Dr. Lin.',
+      },
+      { when: 'lin_met && raincoat && !lin_coat', lines: [CREW('That coat. Is it raining yellow out there now?'), K('Somebody left it at the staff gate.'), CREW('Then somebody will want it back.')], set: { lin_coat: true } },
+      { when: 'lin_met', lines: [CREW('Three cells, then the lift. Then I would like to go home.')] },
+    ],
+    // Rook, in person, blocking the chamber door
+    rook: [
+      {
+        when: '!rook_door',
+        lines: [L('ROOK', 'The chamber is off limits.'), K('You called me in.'), L('ROOK', 'Because you built the activation system, Kai. Did you think it was for clocks?')],
+        choices: [
+          intent('challenge', 'You moved the test to 05:40.', { when: 'jun_evidence || ev_door_log || ev_rook_log', consequence: true,
+            lines: [K('Your order was on Jun Park\'s terminal. Timestamped before any of this happened.', 'jun_evidence'), L('ROOK', 'I moved a test. I did not move a second. Something else did that.')], set: { trust_rook: -1, rook_door: true }, log: 'Rook moved a test, he says, not a second.' }),
+          intent('investigate', 'Who used my card?', { lines: [L('ROOK', 'Your card. Your access. Your machine. You tell me.')], set: { trust_rook: 0, rook_door: true }, log: 'Rook asked me who used my card.' }),
+          intent('comfort', 'Elias. What happened?', { lines: [L('ROOK', 'I don\'t know. That is the truth, and I hate it.')], set: { trust_rook: 1, rook_door: true }, log: 'Rook does not know what happened.' }),
+        ],
+        after: [L('ROOK', 'Go in, then. You were always going to.')],
+      },
+      { when: 'rook_door', lines: [L('ROOK', 'Go in. I will be on the radio. I am always on the radio.')] },
+    ],
+  },
   scenes: {
-    intercom: { lines: [R('Kai. The chamber is off limits.'), K('Then why did you call me in?'), R('Because you are the only one who can tell me the readings are wrong.'), K('Are they wrong?'), R('Come to the lab and tell me.')], log: 'Rook wants me to say the readings are wrong. He did not say what they read.' },
-    shift_notes: { lines: [N('Marr\'s shift notes, in pencil, taped to the panel: "Test moved to 05:40 by director\'s office. Not approved by maintenance. Not signed by me. - I.M."')], set: { ev_rook_log: true }, log: 'Iven Marr\'s shift notes: the test was moved to 05:40 by Rook\'s office, and Marr refused to sign.' },
+    intercom: { lines: [R('Kai. The chamber is off limits.'), K('Then why did you call me in?'), R('Because you are the only one who can tell me the readings are wrong.'), K('What do they read?'), R('Dates. Before Helix. There is nothing before Helix, Kai. Come to the lab.')], set: { intercom_heard: true }, log: 'Rook says there is nothing before Helix.' },
+    print: { lines: [N('A boot print in grey clay, under glass. The card reads: THE SITE ZERO PRINT. Circa 1077 BC. Its tread has never been explained.'), K('Helix\'s mascot. Every intern gets a mug.')], set: { ev_site_zero_print: true } },
+    peg: { lines: [N('Coat pegs with brass name tags. The peg marked LIN is empty, and dripping.'), K('Somebody came in out of the rain. Just now.')], set: { ev_lin_peg: true } },
+    lin_desk: { lines: [N('Dr. Lin\'s desk. Her badge has a grey square for a photo: PHOTO PENDING SINCE 2026.'), N('Her notebook: the song again: up, up, down. Someone at a window, waving.'), K('Since 2026. She said six weeks.')],
+      set: { ev_lin_badge: true } },
+    camera_room: { lines: [N('Chamber One\'s corridor camera, 05:40. Nobody there. The chamber door opens by itself, and closes.'), K('My card opened that door. Nobody walked through it.')], set: { ev_empty_corridor: true } },
+    shift_notes: { lines: [N('Marr\'s shift notes, in pencil, taped to the panel: "Test moved to 05:40 by director\'s office. Not approved by maintenance. Not signed by me. I.M."')], set: { ev_rook_log: true }, log: 'Rook\'s office moved the test to 05:40. Marr refused to sign.' },
+    rec_pryce: { lines: [REC.pryce], show: 'holo_pryce', set: { rec_pryce: true } },
+    rec_haig: { lines: [REC.haig], show: 'holo_haig', set: { rec_haig: true } },
+    rec_dale: { lines: [REC.dale], show: 'holo_dale', set: { rec_dale: true } },
+    door_log: { lines: [N('The door log, taped to the wall: 05:40, CHAMBER ONE, CARD VAREN, K. In red: EDITED 06:10, DIRECTOR\'S OFFICE.'), K('My card. Edited by Rook\'s office, half an hour later.')], set: { ev_door_log: true } },
     whose_code: {
       lines: [N('The panel wants an officer\'s code. Three names on the roster.')],
       choices: [
-        { intent: 'investigate', label: 'Dale', lines: [N('The door accepts Dale\'s code.'), K('He logged it. They edited the log, and he said so anyway.')], set: { officer_trusted: true, ev_dale: true } },
-        { intent: 'investigate', label: 'Pryce', lines: [N('ACCESS DENIED. ALERT.'), K('Pryce said the log was clean. The log was edited at 06:10.')], then: 'alarm' },
+        { intent: 'investigate', label: 'Dale', lines: [N('The door accepts Dale\'s code.'), K('He logged the door opening on an empty corridor. They edited it, and he said so anyway.')], set: { officer_trusted: true, ev_dale: true } },
+        { intent: 'investigate', label: 'Pryce', lines: [N('ACCESS DENIED. ALERT.'), K('Pryce said the log was clean. The log has my card on it at 05:40.')], then: 'alarm' },
         { intent: 'investigate', label: 'Haig', lines: [N('ACCESS DENIED. ALERT.'), K('Haig said she was home. The roster has her at 05:00.')], then: 'alarm' },
         { intent: 'withdraw', label: 'Listen again' },
       ],
     },
-    breaker: { lines: [N('The breaker goes over with a sound like a dropped tray. Along the east wall, the damaged conduit begins to spit light.'), K('Now it just has to see me.')], set: { conduit_live: true } },
+    breaker: { lines: [N('The breaker goes over. Along the east wall, the damaged conduit begins to spit light.'), K('Now it just has to see me.')], set: { conduit_live: true } },
     drawing: {
       lines: [N('A child\'s drawing, pinned to the wall of the archive: two figures holding hands beside a black circular machine. KAI + MIRA, in crayon.'), K('This drawing is twenty-three years old.'), R('Then someone has been using your credentials.'), K('I was twelve.')],
-      set: { drawing_seen: true, ev_drawing: true }, log: 'A drawing of me and Mira beside a black ring, twenty-three years old, in the archive of a facility that did not exist then.',
+      set: { drawing_seen: true, ev_drawing: true }, log: 'A drawing of me and Mira beside the ring, twenty-three years old.',
     },
-    chronolith: { lines: [N('A black ring, taller than the room should allow. It is not running. It is waiting.'), K('Mira drew this. Before any of it was built.')], set: { chronolith_seen: true } },
+    pass: { lines: [N('A laminated pass in the drawer: VAREN, K. JUNIOR PASS. CHAMBER ACCESS: NO. Stamped: OVERRIDE 14-03-2026 16:02.'), K('My junior pass. I was twelve. I never went near that chamber.')], set: { ev_junior_pass: true } },
+    chronolith: { lines: [N('Kai walks to the edge of the floor glow, and stops there.'), K('I\'m not touching it.')], set: { chronolith_seen: true } },
   },
   rules: [
     { id: 'cells', when: 'cells_3', set: { lift_powered: true }, say: [N('The lift wakes up three floors down. You feel it through the floor before you hear it.')] },
-    { id: 'unit', when: 'unit_down', say: [N('The unit walks into the live conduit and stops rewinding. It stands very still, and then it is only a shape.'), K('It couldn\'t put that back.')] },
+    { id: 'unit', when: 'unit_down', say: [N('The unit walks into the live conduit and stops rewinding. Then it is only a shape.'), K('It couldn\'t put that back.')] },
   ],
   fx: {
     alarm(rt) {
@@ -459,11 +716,14 @@ export const M02 = {
       g.after(0.6, () => g.deckSetback('caught'));
     },
   },
-  outro: [N('The chamber door closes behind you. The ring does not move. Everything else in the room has started to.')],
+  hook: { cue: 'reveal', minutes: 1, lines: [N('A black ring, taller than the room should allow. It is not running. It is waiting.'), K('Mira drew this. Before any of it was built.'), N('In the black stone his reflection arrives half a second late.')] },
   done: 'chronolith_seen',
 };
+M02.outro = M02.hook.lines;
 
-// --- Mission 3: THE FIRST SWITCH ------------------------------------------------------------
+// =============================================================================================================
+// Mission 3: THE FIRST SWITCH
+// =============================================================================================================
 const SWITCH_PALETTE = { ...HELIX_PALETTE, emergency: 0, fog: 0x1e2430, wall: '#58606c', floor: '#363c46', accent: 0x4f9fe8, accent2: 0xc08a3e, light: 0xcfe0ff, tint: 0x4a5a7a, night: 0.4, weather: null, grade: { shadowTint: 0x14243a, highlightTint: 0xe0ecff, toning: 0.18, contrast: 1.12, saturation: 0.96 } };
 
 // Iven Marr in the maintenance route (quest chain D)
@@ -482,17 +742,33 @@ const IVEN_ROUTE = [
   { when: 'ev_raw_log', lines: [L('IVEN', 'You have the log. Use it on him. That is the only way it was worth it.')] },
 ];
 
+const M03_HINTS = {
+  cycle: ['Let it happen.', 'The room is choosing a year.', 'Wait for 2049.'],
+  lab: ['The chamber door is open.', 'Up the corridor.', 'Walk up into the lab.'],
+  dig: ['The cable is in 2026.', 'In 2026 the lab\'s south wall is only a frame.', 'Switch to 2026 and walk out to the site hut by the dig.'],
+  office: ['Rook\'s site office.', 'The log, the thermos, the footprints, the photograph.', 'Read the log at the hut, and look around it.'],
+  cable: ['Connect in 2026, switch on in 2049.', 'The socket on the lab\'s east wall, in 2026.', 'Plug in the cable in 2026, then throw the power in 2049.'],
+  hall: ['The floor is gone in every year but one.', 'In 2196 a lift is parked across the gap.', 'Switch to 2196, cross on the lift, switch back.'],
+  plaque: ['A plaque, only in 2196.', 'On the machine hall\'s far wall.', 'Read the plaque in 2196.'],
+  control: ['The lock reads 2049. The card is in 2026.', 'Anchor what I carry, or it comes apart.', 'Take the card in 2026, anchor it, use the lock in 2049.'],
+  panel: ['The panel.', 'In 2049.', 'Use the control panel in 2049.'],
+  route: ['Iven Marr is in the service yard.', 'His team is behind a lock that resets.', 'Talk to Iven, open the 2026 panel, use the terminal in 2049.'],
+};
+
 // Mission 3's rooms: the same chamber under the oculus, then up the stair under the court into the
-// east wing (the temporal lab, glass to the court), the machine hall in the north-east corner, the
-// open service court, and the control room's panoramic window over the valley. In 2026 the wing is a
-// bare frame and the hall has no roof; in 2196 the roof has fallen in and the oculus is open.
+// east wing (the temporal lab, glass to the court, and in 2026 a bare frame Kai can walk out of, to the
+// dig), the machine hall in the north-east corner, the open service court, and the control room's
+// panoramic window over the valley. In 2026 the wing is a frame and the hall has no roof; in 2196 the
+// roof has fallen in and the oculus is open.
 function firstSwitchRooms(P, story, si, rt) {
   const D = new Deck({ id: 'm03', deckName: 'HELIX', palette: SWITCH_PALETTE, seed: 'lv', states: ['PRESENT', 'PAST', 'FUTURE'], unstable: true, estimateMin: 40, place: P, start: { at: [0, 12], rot: 0, y: -11.5 } });
   const land = (R, name, at, yaw = 0) => { const w = R.p(at); P.land(name, w[0], w[1], w[2], yaw + R.th); };
   // r0 the chamber: the Chronolith teaches the switch
   D.room({ id: 'chamber', name: 'CHRONOLITH CHAMBER', W: 24, L: 24, H: 12, exit: 'E', corridor: { len: 26, rise: 11.5 }, roof: { PRESENT: 'glass', PAST: 'open', FUTURE: 'open' }, kind: 'arrival', beat: 'custom' }, (R) => {
     R.floor(0, -R.L, 0, { mat: 'chamberFloor' });
-    R.scene('touch', [0, 4.6, -12], 'TOUCH THE CHRONOLITH', { model: () => makeChronolith(1.15, 'helix', { eras: { PRESENT: 'helix', PAST: 'helix', FUTURE: 'halo' } }), r: 6, once: true });
+    // the ring (to look at), and, should the cold open not have played, the place to touch it
+    R.inter({ id: 'ring_touch', kind: 'scene', scene: 'ring', pos: [0, 4.6, -12], r: 0, prompt: '', model: () => makeChronolith(1.15, 'helix', { eras: { PRESENT: 'helix', PAST: 'helix', FUTURE: 'halo' } }) });
+    R.scene('touch', [0, 1.6, -8.6], 'TOUCH THE CHRONOLITH', { model: NONE_MODEL, r: 4, when: '!has_chronolith' });
     // 2026: scaffolding around a half-built ring, a thermos; 2196: the ceiling gone, moss, a fallen beam
     for (const [x, z] of [[-7, -6], [7, -6], [-7, -18], [7, -18]]) R.box([x - 0.15, 0, z - 0.15, x + 0.15, 10, z + 0.15], { mat: 'trimDark', when: '@PAST' });
     // (two scaffold boards along the poles, so the open sky of 2026 shows over the ring)
@@ -507,23 +783,23 @@ function firstSwitchRooms(P, story, si, rt) {
     land(R, 'chamber', [0, 0, -12]);
     land(R, 'ringTouch', [0, 1, -8.2]);
   });
-  // r1 the temporal lab (the east wing's ground floor, glass to the court): connect the cable in 2026, throw the power in 2049
-  D.room({ id: 'cable', name: 'TEMPORAL LAB', W: 14, L: 18, H: 6.5, exit: 'W', windows: { S: 'full', E: [[2, 9, 1.0, 4.6]] } }, (R) => {
+  // r1 the temporal lab (the east wing's ground floor, glass to the court): the socket was put in in 2026, the switch
+  // works in 2049. In 2026 the wing is a bare frame: a gap in the lab's south wall lets Kai out to the court and the dig
+  D.room({ id: 'cable', name: 'TEMPORAL LAB', W: 14, L: 18, H: 6.5, exit: 'W', windows: { S: 'full', E: [[3.8, 9, 1.0, 4.6]] }, gaps: { E: [{ at: [0.8, 3.2], closed: '!@PAST' }] } }, (R) => {
     R.floor();
     R.prop('desk', -4, -5);
     R.prop('console', 4, -5);
-    // in 2026 the far third of the floor is open framing: a cable drum on the floor, the socket on the wall
+    // in 2026 the far third of the floor is open framing
     R.box([-7.4, -0.4, -18, 7.4, 0, -12], { mat: 'trimDark', when: '@PAST' });
-    R.item({ id: 'cable', kind: 'key', pos: [-4, 1.0, -9], echo: true, label: 'POWER CABLE' });
-    R.box([-4.6, 0, -9.6, -3.4, 0.5, -8.4], { mat: 'prop', when: '@PAST' });
     R.inter({ id: 'cable_socket', kind: 'socket', pos: [6.6, 1.3, -14], yaw: -Math.PI / 2, r: 2.4, prompt: 'CABLE SOCKET (2026)', needs: 'cable', only: 'PAST', no: 'The socket was put in in 2026. In this year it was never installed.' });
     R.text('MAIN FEED - NOT CONNECTED', [6.9, 2.6, -14], -Math.PI / 2, { size: 0.34, color: '#ffd9a0', when: '!cable_connected' });
     R.text('MAIN FEED - CONNECTED', [6.9, 2.6, -14], -Math.PI / 2, { size: 0.34, color: '#7fe0a8', when: 'cable_connected' });
+    R.text('TO THE DIG', [6.9, 3.4, -2], -Math.PI / 2, { size: 0.26, color: '#ffd9a0', when: '@PAST' });
     R.prop('console', 0, -16.6);
     R.scene('power', [0, 1.3, -16.2], 'ACTIVATE THE POWER (2049)', { model: () => makePanel(0x4f9fe8), when: '@PRESENT' });
     R.box([-R.W / 2 - T0, 0, -R.L + 0.6, -R.W / 2, 4, -R.L + 3.6], { mat: 'door', when: '!power_on', id: 'door_cable' });
     R.box([-7, 0, -18, 7, 0.25, -2], { mat: 'moss', solid: false, when: '@FUTURE' });
-    R.challenge('switch:cable', 0, -18, ['The cable only exists in 2026. The switch only works in 2049.', 'Switch the room to 2026. Take the cable to the socket on the east wall. Then switch back and throw the power.', 'Switch to 2026, take the cable, use the socket on the east wall, switch to 2049, use the panel at the far end.'], { answer: ['PAST', 'PRESENT'] });
+    R.challenge('switch:cable', 0, -18, M03_HINTS.cable, { answer: ['PAST', 'PRESENT'] });
     R.checkpoint(0, -2, -1.6);
     land(R, 'temporalLab', [0, 0, -9]);
     land(R, 'cableSocket', [6.6, 1.3, -14]);
@@ -542,9 +818,11 @@ function firstSwitchRooms(P, story, si, rt) {
     R.box([-1.6, -0.4, -16.4, 1.6, 0, -5.6], { mat: 'industrial', when: '@FUTURE' });
     R.box([-1.6, 0, -16.4, 1.6, 0.05, -5.6], { mat: 'moss', solid: false, when: '@FUTURE' });
     R.box([2.4, -5, -15, 6.6, -2.4, -8], { mat: 'industrial', when: '@FUTURE' });
-    R.text('LIFT PARKED - 2196', [0, 3.5, -21.9], 0, { size: 0.42, color: '#9fe8c8', when: '@FUTURE' });
+    R.text('LIFT PARKED - 2196', [0, 5.2, -21.9], 0, { size: 0.42, color: '#9fe8c8', when: '@FUTURE' });
     R.text('MACHINE HALL - FLOOR COLLAPSED', [0, 3.5, -21.9], 0, { size: 0.42, color: '#9fd8ff', when: '!@FUTURE' });
-    R.challenge('switch:lift', 0, -22, ['The floor is gone in every year but one.', 'In 2196 somebody parked a lift across the gap. Stability drains out there, so do not linger.', 'Switch to 2196, cross on the parked lift, switch back to 2049 on the far side.'], { answer: 'FUTURE' });
+    // the 2196 plaque on the far wall
+    R.scene('plaque', [0, 2.6, -21.7], 'READ THE PLAQUE (2196)', { model: makePlaque, when: '@FUTURE', r: 4.5 });
+    R.challenge('switch:lift', 0, -22, M03_HINTS.hall, { answer: 'FUTURE' });
     R.checkpoint(0, -2, -1.6);
     R.checkpoint(-16, -22, -18);
     land(R, 'machineHall', [0, 0, -11]);
@@ -579,7 +857,7 @@ function firstSwitchRooms(P, story, si, rt) {
     for (const [k, x, z] of [[0, 5.0, -12.6], [1, 6.4, -11.2], [2, 5.6, -9.4]]) R.npc({ id: `tech_${k}`, crew: `tech_${k}`, first: 'Technician', seed: 310 + k, ambient: true, pronoun: k === 1 ? { their: 'her', them: 'her' } : { their: 'his', them: 'him' }, pos: [x, 0, z], yaw: -Math.PI / 2, silent: true, when: 'iven_team_saved' });
     // the drone: 2049 only
     R.sentinel({ path: [[-6, -7], [1.6, -7], [1.6, -15.4], [-6, -15.4]], speed: 1.7, range: 7.5, fov: 0.8, when: '@PRESENT' });
-    R.challenge('helix:route', 0, -22, ['The drone only exists in 2049.', 'Cross in another year, or let Marr keep it busy. Stability drains out of 2049.', 'Switch to 2026 or 2196 and walk straight through to the far door, then switch back.'], { answer: ['PAST', 'FUTURE'] });
+    R.challenge('helix:route', 0, -22, M03_HINTS.route, { answer: ['PAST', 'FUTURE'] });
     R.checkpoint(0, -2, -1.6);
     land(R, 'serviceYard', [0, 0, -11]);
   });
@@ -595,63 +873,123 @@ function firstSwitchRooms(P, story, si, rt) {
     R.inter({ id: 'lock_control', kind: 'lock', pos: [2.2, 1.3, -9.6], r: 2.4, prompt: 'CARD LOCK (2049)', needs: 'keycard', opens: 'open_control' });
     R.prop('console', 0, -14.6);
     R.scene('panel', [0, 1.3, -14.2], 'THE CONTROL PANEL (2049)', { model: () => makePanel(0x4f9fe8), when: '@PRESENT && open_control' });
-    R.challenge('switch:anchor', 0, -16, ['The lock reads 2049. The card is on a desk in 2026.', 'Whatever I carry out of 2026 comes apart in 2049 - unless I anchor it.', 'Switch to 2026, take the keycard, anchor it, switch to 2049, use the lock, then the panel.'], { answer: ['PAST', 'PRESENT'] });
+    R.challenge('switch:anchor', 0, -16, M03_HINTS.control, { answer: ['PAST', 'PRESENT'] });
     R.checkpoint(0, -2, -1.6);
     land(R, 'controlRoom', [0, 0, -8]);
     land(R, 'keycard', [4, 1.1, -4]);
     land(R, 'controlPanel', [0, 1.3, -14.2]);
   });
-  return D.finish({ gated: true });
+  const lv = D.finish({ gated: true });
+  // the dig (2026): the cable for the lab's socket lies by the site hut, with the excavation office's things
+  P.items.push({ id: 'cable', kind: 'key', pos: [-5.6, 0.9, 31.4], echo: true, label: 'POWER CABLE (2026)', room: P.rid });
+  return lv;
 }
 
 const M03_SAY = {
   past: [N('2026. Scaffolding. The ring is half built, and someone has left a thermos on it.')],
   future: [N('2196. The ceiling is gone. Rain falls on the ring, and the ring is still here.')],
   present: [R('Kai? The chamber is reading three dates at once.'), K('Which one is real?'), R('All of them. That\'s why this is dangerous.'),
-    N('The room you stand in can be switched to any of its years, one at a time. Stability drains while you are out of 2049.')],
+    N('Stability drains while you are out of 2049.')],
+  // the fracture: Rook reads the chamber's number, and the year lets go of Kai
+  reading: [R('Kai, the chamber is reading a date. It\'s reading—'), K('Read it to me.'), R('That isn\'t a date. That\'s a number. Minus three thousand and—')],
 };
+
 
 export const M03 = {
   key: 'm03', spoken: M03_SAY, n: 3, chapter: 'prologue', name: 'THE FIRST SWITCH', title: 'Helix, three years at once', subtitle: '2049. 2026. 2196. The facility cannot decide.',
+  logline: 'Helix in three years at once.',
   place: 'helix', wing: 'east', rooms: firstSwitchRooms, sectors: 1, states: ['PRESENT', 'PAST', 'FUTURE'], unstable: true,
-  ambience: 'hum',
-  intro: [N('The ring is awake. The room has three dates and is trying all of them.')],
-  objectives: [
-    { when: 'true', text: 'Touch the Chronolith.', because: 'It is waiting. I think it is waiting for me.' },
-    { when: 'has_chronolith', text: 'Connect the cable in 2026, then activate the power in 2049.', because: 'The lab was never finished in one year.' },
-    { when: 'power_on', text: 'Cross the collapsed machine hall.', because: 'The floor fell in. In one year, something is parked across the gap.' },
-    { when: 'crossed', text: 'Reach the control panel in 2049.', because: 'The card lock reads this year. The card is in another.' },
-    { when: 'fractured', text: 'Hold on.', because: 'The facility is coming apart. So is the year.' },
-  ],
-  hints: [
-    { when: '!has_chronolith', tiers: ['The ring.', 'Walk up to it.', 'Approach the Chronolith and touch it.'] },
-    { when: 'has_chronolith && !cable_connected', tiers: ['Switch years. The room has three, and I can stand in any of them.', 'In 2026 there is a cable drum on the floor and a socket on the east wall.', 'Switch to 2026, take the cable, use the socket on the east wall of the lab.'] },
-    { when: 'cable_connected && !power_on', tiers: ['The feed is connected in 2026. The switch is in 2049.', 'Back to 2049 and the panel at the far end.', 'Switch to 2049 and use the panel at the far end of the lab.'] },
-    { when: 'power_on && !crossed', tiers: ['The floor is gone in every year but one.', 'In 2196 a lift is parked across the gap. Stability drains out there.', 'Switch to 2196, cross on the lift, switch back to 2049 on the far side.'] },
-    { when: 'crossed && !open_control', tiers: ['The lock reads 2049. The card is somewhere else.', 'The card is on the desk in 2026. Things from 2026 come apart in 2049 unless I anchor them.', 'Switch to 2026, take the keycard, anchor it, switch to 2049, use the lock.'] },
-    { when: 'open_control && !fractured', tiers: ['The panel.', 'In 2049.', 'Back to 2049 if I am not there, and use the control panel.'] },
+  // (the court and the dig are outside the facility: the Chronolith's stability holds there, in any year)
+  stableOutdoors: true,
+  carryOut: ['cable'], // (the year Kai walks out of the lab in is the court's: through 2026's frame, into 2026)
+  ambience: 'hum', minutes: { main: 22, optional: 6 }, autoExit: 1.6,
+  // the cold open, after the title: the touch, the wrist sealing; then the first cycle through the years
+  coldOpen: {
+    minutes: 1, cue: 'reveal',
+    shots: [{ cam: 'ringTouch', to: [2, -9.6, 1.6], look: 'chamber', t: 7 }],
+    lines: [N('It is cold, and then it is every temperature it has ever been.'), N('The cut on his wrist closes into a circle with a broken halo.'), K('It sealed it.')],
+    set: { has_chronolith: true, chronolith_touched: true, wrist_mark: true }, then: 'firstCycle',
+  },
+  quarters: [
+    {
+      name: 'THE CHAMBER',
+      threads: [
+        { id: 'cycle', kind: 'cinema', at: 'chamber', goal: 'Hold on to the ring.', because: 'The room has three dates and is trying all of them.', done: 'first_cycle', hints: M03_HINTS.cycle, minutes: 2 },
+      ],
+    },
+    {
+      name: 'TEMPORAL LAB',
+      threads: [
+        { id: 'lab', kind: 'go', at: 'temporalLab', r: 6, after: ['cycle'], goal: 'Up the corridor to the temporal lab.', because: 'The chamber door is open now. Everything else in this building is waiting on power.', hints: M03_HINTS.lab, minutes: 1 },
+      ],
+    },
+    {
+      name: 'THE DIG',
+      threads: [
+        { id: 'dig', kind: 'go', at: 'excavationHut', r: 7, after: ['lab'], goal: 'In 2026 the wing is only a frame. Walk out to the dig and find the cable.', because: 'The socket was put in in 2026. So was everything else.', hints: M03_HINTS.dig, minutes: 2 },
+        { id: 'office', kind: 'clue', need: 3, of: ['ev_site_zero', 'ev_thermos_er', 'ev_footprints', 'ev_polaroid'], after: ['dig'],
+          spots: [
+            { id: 'dig_log', scene: 'dig_log', at: 'excavationLog', prompt: 'THE EXCAVATION LOG', offset: [0, 0, -2.4], r: 2.6, model: makeLogbook, when: '@PAST' },
+            { id: 'dig_thermos', scene: 'dig_thermos', at: 'thermosER', prompt: 'THE THERMOS', offset: [0, 0, -0.6], r: 2.4, model: makeThermos, when: '@PAST' },
+            { id: 'dig_footprints', scene: 'dig_footprints', at: 'footprints', prompt: 'THE FOOTPRINTS', offset: [0, 1.1, 0], r: 9, model: makeFootprints, when: '@PAST' },
+            { id: 'dig_polaroid', scene: 'dig_polaroid', at: 'polaroid', prompt: 'THE POLAROID', offset: [0, 0.4, -0.2], r: 2.4, model: makePolaroid, when: '@PAST' },
+          ],
+          goal: 'Rook\'s excavation office: find out what he dug up.', because: 'His initials are on everything here.', ev: 'site_zero', hints: M03_HINTS.office, minutes: 4 },
+        { id: 'cable', kind: 'tasks', of: ['cable_connected', 'power_on'], after: ['dig'], goal: 'Connect the cable in 2026. Throw the power in 2049.', because: 'The feed was laid in one year and switched in another.', done: 'power_on', hints: M03_HINTS.cable, minutes: 3 },
+      ],
+    },
+    {
+      name: 'MACHINE HALL',
+      threads: [
+        { id: 'hall', kind: 'go', after: ['cable'], goal: 'Cross the machine hall. Its floor is gone.', because: 'The floor fell in. In one year, something is parked across the gap.', done: 'crossed', hints: M03_HINTS.hall, minutes: 2 },
+        { id: 'plaque', kind: 'scene', after: ['cable'], until: 'open_control', goal: 'Read the plaque on the far wall, in 2196.', because: 'Somebody put up a plaque in this building, later.', done: 'ev_plaque2196', hints: M03_HINTS.plaque, minutes: 1 },
+      ],
+      sides: [
+        { id: 'route', name: 'THE TECHNICIAN\'S KEY', giver: 'iven', start: 'quest_iven', done: 'quest_iven == "resolved"', minutes: 6,
+          threads: [
+            { id: 'ivenRoute', kind: 'talk', npc: 'iven', at: 'serviceYard', goal: 'Iven Marr is in the service yard.', because: 'His team is behind a lock that will not stay open.', done: 'quest_iven', hints: M03_HINTS.route, minutes: 2 },
+            { id: 'servicePanel', kind: 'scene', after: ['ivenRoute'], goal: 'Open the maintenance route from the 2026 panel.', because: 'The panel was installed before the drone was.', done: 'maint_open || quest_iven == "resolved"', hints: M03_HINTS.route, minutes: 2 },
+            { id: 'teamOrLog', kind: 'choice', after: ['servicePanel'], goal: 'In 2049: the team, or the raw log.', because: 'The terminal can open one of them before the building changes its mind.', done: 'quest_iven == "resolved"', hints: M03_HINTS.route, minutes: 2 },
+          ] },
+      ],
+    },
+    {
+      name: 'CONTROL',
+      threads: [
+        { id: 'control', kind: 'scene', after: ['hall'], goal: 'Open the control room: the lock reads 2049, the card is in 2026.', because: 'Whatever I carry out of 2026 comes apart in 2049, unless I anchor it.', done: 'open_control', hints: M03_HINTS.control, minutes: 3 },
+        { id: 'panel', kind: 'scene', after: ['control'], goal: 'Use the control panel in 2049.', because: 'Whatever happened in the chamber was started from here.', done: 'fractured', hints: M03_HINTS.panel, minutes: 2 },
+      ],
+    },
   ],
   scenes: {
-    touch: { lines: [N('You put your hand on the ring. It is cold, and then it is every temperature it has ever been.')], set: { has_chronolith: true }, then: 'firstCycle', log: 'The Chronolith let me in. The room has three dates: 2026, 2049, 2196. I can choose which one I stand in.' },
-    power: { when: 'cable_connected', lines: [N('The main feed comes up. Twenty-three years late, the lab has power.'), K('Connected in 2026. Switched on in 2049. That should not work.'), R('It works. That is the problem.')], set: { power_on: true }, log: 'A cable connected in 2026 carries power in 2049. The years are not separate.' },
+    touch: { lines: [N('It is cold, and then it is every temperature it has ever been.')], set: { has_chronolith: true, wrist_mark: true }, then: 'firstCycle', log: 'The ring let me in. I can choose the year.' },
+    power: { when: 'cable_connected', lines: [N('The main feed comes up. Twenty-three years late, the lab has power.'), K('Connected then. Switched on now.')], set: { power_on: true }, log: 'Connected in 2026, switched on in 2049.' },
     power_no: { lines: [N('The panel is dead. MAIN FEED - NOT CONNECTED.'), K('Not connected. Not connected when?')] },
-    service_panel: { lines: [N('A service panel from 2026, before the drone, before the lock had opinions. The release takes.'), K('Open. Until I change the year.')], set: { maint_open: true }, log: 'The 2026 service panel opens Marr\'s maintenance route. The lock resets the moment the year changes.' },
+    dig_log: { lines: [N('The site log, in a careful hand: SITE ZERO. E. ROOK. Found in a riverbed drained long before any record.'), K('Found. In a riverbed. Rook always said we built it.')],
+      set: { ev_site_zero: true }, log: 'Rook\'s 2026 log: the ring was found in a dry riverbed.' },
+    dig_thermos: { lines: [N('A steel thermos on the hut step, with two initials on a strip of tape: E.R.'), K('Elias Rook was here in 2026. With a shovel.')], set: { ev_thermos_er: true } },
+    dig_footprints: { lines: [N('Children\'s footprints in the plaster dust by the pit. The small ones have a star in the tread.'), K('Mira\'s boots had stars on the soles.')], set: { ev_footprints: true } },
+    dig_polaroid: { lines: [N('A Polaroid inside the hut window: the black ring, half dug out of the clay.'), K('Everything in that ground is old. It looks new.')], set: { ev_polaroid: true } },
+    plaque: { lines: [N('A bronze plaque gone green, on the machine hall\'s far wall: HELIX. WHERE THE FRACTURE BEGAN. WE REMEMBER.'), K('Remember what?')], set: { ev_plaque2196: true } },
+    service_panel: { lines: [N('A service panel from 2026, before the drone, before the lock had opinions. The release takes.'), K('Open. Until I change the year.')], set: { maint_open: true }, log: 'The 2026 panel opens Marr\'s route, until the year changes.' },
     release: { lines: [N('The manual release clunks. The route is open again, until the next switch.')], set: { maint_open: true } },
     iven_terminal: {
-      lines: [N('The maintenance terminal, in 2049. Three technicians are sealed in the lower conduit, and the raw experiment log is open on the same circuit. The building is about to change its mind about the year.')],
+      lines: [N('The maintenance terminal. Three technicians are sealed in the lower conduit, and the raw experiment log is on the same circuit. One of them, before the year changes.')],
       choices: [
-        intent('comfort', 'Get the team out first.', { consequence: true, npc: 'iven', lines: [N('The conduit hatch opens. Three technicians climb out into a building that cannot decide what year it is, which is still better than the room they were in.'), L('IVEN', 'That is the whole of my statement, when they ask. You got them out.')], set: { iven_team_saved: true, quest_iven: 'resolved' }, trust: 1, log: 'I opened the conduit for Marr\'s team. The raw log went with the circuit.' }),
-        intent('investigate', 'Keep the raw log.', { consequence: true, npc: 'iven', lines: [N('The log holds, unedited: the director\'s order, Marr\'s refusal, the test at 05:40, and a second entry at 05:40 that nobody wrote.'), L('IVEN', 'I would have chosen them. I understand why you did not.')], set: { ev_raw_log: true, ev_rook_log: true, quest_iven: 'resolved' }, trust: -1, log: 'I kept the raw experiment log: Rook\'s order, Marr\'s refusal, and an entry at 05:40 that nobody wrote. Marr\'s team waited.' }),
+        intent('comfort', 'Get the team out first.', { consequence: true, npc: 'iven', lines: [N('The hatch opens. Three technicians climb out into a building that cannot decide what year it is.'), L('IVEN', 'That is the whole of my statement, when they ask. You got them out.')], set: { iven_team_saved: true, quest_iven: 'resolved' }, trust: 1, log: 'I got Marr\'s team out.' }),
+        intent('investigate', 'Keep the raw log.', { consequence: true, npc: 'iven', lines: [N('The log holds: the director\'s order, Marr\'s refusal, and a second entry at 05:40 that nobody wrote.'), L('IVEN', 'I would have chosen them. I understand why you did not.')], set: { ev_raw_log: true, ev_rook_log: true, quest_iven: 'resolved' }, trust: -1, log: 'I kept the raw log. Marr\'s team waited.' }),
       ],
     },
     panel: {
-      lines: [K('Control. Finally.'), N('The panel shows three dates, and a fourth it cannot name. Then every date on it starts to count the wrong way.'), R('Kai, get out of there. The chamber is reading-'), N('The floor remembers being earth. The walls remember being nothing. The year lets go of you.')],
-      set: { fractured: true }, then: 'fracture', log: 'The facility fractured. I was pulled into the past.',
+      lines: [K('Control. Finally.'), N('The panel lights: MAIN FEED, 2026. SWITCHED, 2049.'), K('Connected in 2026. Switched on in 2049. That should not work.'), R('It works. That is the problem.'), N('Then every date on the panel starts to count the wrong way.')],
+      set: { fractured: true }, then: 'fracture', log: 'The facility fractured.',
     },
   },
   rules: [
     { id: 'crossed', when: 'crossed', say: [K('Across. In a year that has not happened yet.')] },
   ],
+  // the hook: Rook reads the chamber's number (fx fracture), the year lets go, and Act I opens older than the building
+  hook: { cue: 'cliff', minutes: 1, lines: [N('The floor remembers being earth. The walls remember being nothing.'), N('Kai Varen falls out of 2049 and lands somewhere older than the building.')] },
   // quest chain D: the maintenance lock resets every time the building changes its mind about the year
   onShift(rt) {
     const g = rt.g;
@@ -681,7 +1019,7 @@ export const M03 = {
         g.hud.say(M03_SAY.future, g.facts, () => {
           g.engine.setState(room, 'PRESENT', { force: true });
           g.audio.sweep(false);
-          g.hud.say(M03_SAY.present, g.facts);
+          g.hud.say(M03_SAY.present, g.facts, () => g.facts.set('first_cycle'));
           g.hud.toast(g.touch ? '<small>THE YEAR</small><br>The YEAR button switches it' : '<small>THE YEAR</small><br>Q switches it · 1 2 3 pick one', 5200);
           g.deckWorld.refresh();
         });
@@ -689,21 +1027,24 @@ export const M03 = {
     },
     fracture(rt) {
       const g = rt.g;
-      g.hud.flash('rgba(255,255,255,0.95)');
-      if (rt.score) rt.score.cue('fracture'); // a whiteout swell, a breath of silence, a fall, a landing
-      else g.audio.silence(0.8);
-      g.after(1.0, () => {
-        g.engine.setState(g.room, 'PAST', { force: true });
-        g.deckWorld.refresh();
+      g.hud.say(M03_SAY.reading, g.facts, () => {
+        g.hud.flash('rgba(255,255,255,0.95)');
+        if (rt.score) rt.score.cue('fracture'); // a whiteout swell, a breath of silence, a fall, a landing
+        else g.audio.silence(0.8);
+        g.after(1.0, () => {
+          g.engine.setState(g.room, 'PAST', { force: true });
+          g.deckWorld.refresh();
+          g.facts.set('fracture_done');
+        });
       });
     },
   },
-  step(rt, dt) {
+  step(rt) {
     const g = rt.g;
     if (g.room === 'collapse' && !g.facts.get('crossed') && g.player.pos.z < g.level.rooms.collapse.bounds[0][2] + 8 + 4 && g.player.grounded) g.facts.set('crossed');
   },
-  outro: [N('Kai Varen falls out of 2049 and lands somewhere older than the building.')],
-  done: 'fractured',
+  done: 'fracture_done',
 };
+M03.outro = M03.hook.lines;
 
 export const PROLOGUE = [M01, M02, M03];

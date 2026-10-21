@@ -61,7 +61,7 @@ export class Deck {
   }
 
   // Author one room. fn(R) places its contents; R.W, R.L, R.H are the room size.
-  room({ id, name, W = 12, L = 16, H = 6, kind = 'puzzle', beat, states, lights, tint, floatY, ox, exit = 'N', at, rot, y, corridor, roof = 'solid', windows = {}, closedS = false, interior = true, sky = null }, fn) {
+  room({ id, name, W = 12, L = 16, H = 6, kind = 'puzzle', beat, states, lights, tint, floatY, ox, exit = 'N', at, rot, y, corridor, roof = 'solid', windows = {}, gaps = {}, closedS = false, interior = true, sky = null }, fn) {
     const lv = this.level;
     if (ox !== undefined && !this.place) this.cur.x = ox; // (the old side offset)
     if (at) {
@@ -70,14 +70,23 @@ export class Deck {
     }
     if (rot !== undefined) this.cur.th = (rot * Math.PI) / 2;
     if (y !== undefined) this.cur.y = y;
-    const R = new Room(this, id, { W, L, H, x: this.cur.x, z: this.cur.z, th: this.cur.th, y0: this.cur.y, exit, roof, windows, corridor });
+    const R = new Room(this, id, { W, L, H, x: this.cur.x, z: this.cur.z, th: this.cur.th, y0: this.cur.y, exit, roof, windows, gaps, corridor });
     const first = !this.rooms.length;
     R.first = first || closedS;
     fn(R);
     R.shell();
     const [bx0, bz0, bx1, bz1] = R.rectXZ(-W / 2 - T, -L - T - (corridor?.len ?? CL) - 1, W / 2 + T, T, exit);
+    const yLo = this.place ? R.y0 + Math.min(0, corridor?.rise ?? 0) - 6 : -12;
+    let bounds = [[bx0, yLo, bz0, bx1, this.place ? R.y0 + Math.max(H, (corridor?.rise ?? 0) + DOOR_H) + 0.6 : 30, bz1]];
+    // a sunken room with a stair up to the next: the room and its stair as two boxes, so the open ground over the
+    // room and beside the stair is the place's (one box round both held the court over Helix's chamber)
+    if (this.place && corridor?.rise && R.corridorBox) {
+      const [rx0, rz0, rx1, rz1] = R.rectXZ(-W / 2 - T, -L - T, W / 2 + T, T);
+      const c = R.corridorBox;
+      bounds = [[rx0, yLo, rz0, rx1, R.y0 + H + 0.6, rz1], [c[0] - 0.5, yLo, c[2] - 0.5, c[3] + 0.5, c[4] + 0.6, c[5] + 0.5]];
+    }
     const room = {
-      name, kind, bounds: [[bx0, this.place ? R.y0 + Math.min(0, corridor?.rise ?? 0) - 6 : -12, bz0, bx1, this.place ? R.y0 + Math.max(H, (corridor?.rise ?? 0) + DOOR_H) + 0.6 : 30, bz1]],
+      name, kind, bounds,
       spawn: [...R.p([0, 0.86, -1.6]).map((v) => Math.round(v * 1000) / 1000), R.th],
       lights: lights || [[...R.p([0, H - 0.8, -L * 0.3]), lv.palette.light, 2.0, Math.max(14, L)], [...R.p([0, H - 0.8, -L * 0.75]), lv.palette.light, 1.8, Math.max(14, L)], [...R.p([W / 2 - 1, 2.2, -L / 2]), lv.palette.accent, 0.8, 10]],
       tint: tint ?? lv.palette.tint, killY: R.y0 - 3, floatY: floatY ?? R.y0 + 1.3, challenges: R.challenges, route: [], exitSide: exit, L, W, H,
@@ -134,7 +143,7 @@ export class Deck {
 }
 
 class Room {
-  constructor(deck, id, { W, L, H, x, z, th, y0, exit, roof, windows, corridor }) {
+  constructor(deck, id, { W, L, H, x, z, th, y0, exit, roof, windows, gaps = {}, corridor }) {
     this.deck = deck;
     this.lv = deck.level;
     this.P = deck.place;
@@ -151,6 +160,7 @@ class Room {
     this.exit = exit;
     this.roof = roof;
     this.windows = windows;
+    this.gaps = gaps; // { S: [{ at: [from, to], closed: '<condition>' }] }: a doorway in a wall, glazed while `closed` holds
     this.corridor = corridor;
     this.challenges = [];
     this.openings = { S: true, N: true };
@@ -347,7 +357,20 @@ class Room {
       else spans.push([0.6, len - 0.6, 0.15, H - 0.3]);
     }
     else if (Array.isArray(win)) for (const w of win) spans.push(w);
-    const openings = [...(door ? [[door[0], door[1], 0, DOOR_H]] : []), ...spans.map(([a, b, y0 = 0.9, y1 = H - 0.6]) => [a, b, y0, y1])].sort((a, b) => a[0] - b[0]);
+    // a gap: a doorway out of the room that only some years (or facts) leave open: glass fills it otherwise
+    const gaps = (this.gaps?.[which] || []).map((g) => [g.at[0], g.at[1], 0, DOOR_H, g]);
+    if (gaps.length && win === 'full') {
+      // (a full-glass wall: the glass runs either side of each gap)
+      const cuts = [...(door ? [door] : []), ...gaps.map((g) => [g[0], g[1]])].sort((a, b) => a[0] - b[0]);
+      spans.length = 0;
+      let u0 = 0.6;
+      for (const [a, b] of cuts) {
+        if (a - 0.3 > u0) spans.push([u0, a - 0.3, 0.15, H - 0.3]);
+        u0 = b + 0.3;
+      }
+      if (len - 0.6 > u0) spans.push([u0, len - 0.6, 0.15, H - 0.3]);
+    }
+    const openings = [...(door ? [[door[0], door[1], 0, DOOR_H]] : []), ...gaps, ...spans.map(([a, b, y0 = 0.9, y1 = H - 0.6]) => [a, b, y0, y1])].sort((a, b) => a[0] - b[0]);
     const ux = (x1 - x0) / len, uz = (z1 - z0) / len;
     const seg = (a, b, y0, y1, o = {}) => {
       const lx0 = x0 + ux * a, lz0 = z0 + uz * a, lx1 = x0 + ux * b, lz1 = z0 + uz * b;
@@ -356,12 +379,14 @@ class Room {
     };
     let u = 0;
     const lowY = -T; // inside a place the walls stop at the floor slab
-    for (const [a, b, y0, y1] of openings) {
+    for (const [a, b, y0, y1, gap] of openings) {
       if (a > u) seg(u, a, lowY, H);
       if (y0 > 0) seg(a, b, lowY, y0);
       if (y1 < H) seg(a, b, y1, H);
       const isDoor = door && a === door[0] && b === door[1];
-      if (!isDoor) {
+      if (gap) {
+        if (gap.closed) seg(a, b, 0, y1, { mat: 'glass', t: undefined, when: gap.closed });
+      } else if (!isDoor) {
         // glass, solid, with thin mullions every 1.5 m
         seg(a, b, y0, y1, { mat: 'glass', t: undefined });
         for (let m = a + 1.5; m < b - 0.2; m += 1.5) seg(m - 0.04, m + 0.04, y0, y1, { mat: 'trim', solid: false });
@@ -495,6 +520,7 @@ class Room {
     }
     const cw = this.b(along(0, -hw, lo, Math.max(0, rise) + DOOR_H + 0.9, len + T));
     occ.push({ rect: [cw[0], cw[2], cw[3], cw[5]], top: cw[4], open: false, corridor: true });
+    this.corridorBox = cw;
   }
 
   checkpointShell() {
@@ -745,4 +771,159 @@ export function makeChronolith(scale = 1, kind = 'helix', opts = {}) {
 // a station board: a dark plane carrying a line of text (texts are drawn by DeckWorld; this is its backing)
 export function makeBoard(w = 3.2, h = 0.7) {
   return new THREE.Mesh(new THREE.BoxGeometry(w, h, 0.08), std(0x161a20, { emissive: 0x0d1118 }));
+}
+
+// --- the Prologue's small things (OVERHAUL.md §5 M1-M3): each faces +z, its origin where it is looked at -----------
+const flat = (w, h, d, c, x = 0, y = 0, z = 0, o = {}) => {
+  const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), o.basic ? basic(c, o.basic === true ? {} : o.basic) : std(c, o.std || {}));
+  m.position.set(x, y, z);
+  if (o.rx) m.rotation.x = o.rx;
+  if (o.ry) m.rotation.y = o.ry;
+  if (o.rz) m.rotation.z = o.rz;
+  return m;
+};
+
+// a framed photograph on a wall: a girl in a yellow raincoat and yellow boots
+export function makePhoto() {
+  const g = new THREE.Group();
+  g.add(flat(0.34, 0.26, 0.03, 0x3a2a20));
+  g.add(flat(0.28, 0.2, 0.01, 0xd8d4c8, 0, 0, 0.02, { basic: true }));
+  g.add(flat(0.06, 0.09, 0.012, 0xf2c21a, 0.02, -0.01, 0.026, { basic: true })); // the raincoat
+  g.add(flat(0.05, 0.03, 0.012, 0xf2c21a, 0.02, -0.07, 0.026, { basic: true })); // the boots
+  g.add(flat(0.04, 0.04, 0.012, 0xc89a7a, 0.02, 0.055, 0.026, { basic: true }));
+  return g;
+}
+
+// a strip of three photographs from a booth, sepia, one child in each
+export function makePhotoStrip() {
+  const g = new THREE.Group();
+  g.add(flat(0.09, 0.32, 0.006, 0xf4ecd8, 0, 0, 0, { basic: true }));
+  for (let i = 0; i < 3; i++) {
+    g.add(flat(0.07, 0.08, 0.004, [0xb8a080, 0x9fb0c0, 0xa8c8a8][i], 0, 0.1 - i * 0.1, 0.005, { basic: true }));
+    g.add(flat(0.025, 0.04, 0.004, 0xd06a9a, 0, 0.09 - i * 0.1, 0.008, { basic: true }));
+  }
+  return g;
+}
+
+// a steel thermos with a red cup, initials taped on it
+export function makeThermos() {
+  const g = new THREE.Group();
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.28, 14), std(0x5a7088, { metalness: 0.6, roughness: 0.35 }));
+  body.position.y = -0.06;
+  const cup = new THREE.Mesh(new THREE.CylinderGeometry(0.065, 0.06, 0.07, 14), std(0xb83a2a));
+  cup.position.y = 0.12;
+  g.add(body, cup, flat(0.07, 0.04, 0.005, 0xf4ecd8, 0, -0.04, 0.061, { basic: true }));
+  return g;
+}
+
+// a Polaroid pinned to a board: a black ring half out of the clay
+export function makePolaroid() {
+  const g = new THREE.Group();
+  g.add(flat(0.11, 0.13, 0.004, 0xf6f4ee, 0, 0, 0, { basic: true }));
+  g.add(flat(0.09, 0.09, 0.004, 0x7a6a50, 0, 0.012, 0.003, { basic: true }));
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(0.03, 0.007, 6, 20, Math.PI), basic(0x101010));
+  ring.position.set(0, 0.005, 0.006);
+  g.add(ring);
+  return g;
+}
+
+// footprints in pale dust: a man's boots and a child's, one with a star tread
+export function makeFootprints() {
+  const g = new THREE.Group();
+  const dust = new THREE.Mesh(new THREE.CircleGeometry(0.9, 20), basic(0xe8e2d4, { transparent: true, opacity: 0.85 }));
+  dust.rotation.x = -Math.PI / 2;
+  dust.position.y = -1.08;
+  g.add(dust);
+  const print = (x, z, s, c, star) => {
+    const m = new THREE.Mesh(new THREE.CircleGeometry(0.07 * s, 10), basic(c));
+    m.rotation.x = -Math.PI / 2;
+    m.scale.set(0.55, 1.4, 1);
+    m.position.set(x, -1.07, z);
+    g.add(m);
+    if (star) {
+      const st = new THREE.Mesh(new THREE.CircleGeometry(0.025, 5), basic(0xd8b020));
+      st.rotation.x = -Math.PI / 2;
+      st.position.set(x, -1.065, z);
+      g.add(st);
+    }
+  };
+  for (let i = 0; i < 3; i++) {
+    print(-0.3 + (i % 2) * 0.14, -0.5 + i * 0.4, 1.3, 0x8a7a68);
+    print(0.25 + (i % 2) * 0.1, -0.4 + i * 0.34, 0.8, 0x9a8a70, true);
+  }
+  return g;
+}
+
+// a yellow raincoat, dropped on wet steps
+export function makeRaincoat() {
+  const g = new THREE.Group();
+  g.add(flat(0.6, 0.06, 0.42, 0xf2c21a, 0, -1.12, 0, { ry: 0.3 }));
+  g.add(flat(0.24, 0.08, 0.22, 0xe8b410, 0.22, -1.08, -0.1, { ry: -0.4 }));
+  g.add(flat(0.5, 0.03, 0.12, 0xd8a40a, -0.12, -1.06, 0.2, { ry: 0.9 }));
+  return g;
+}
+
+// a pigeon on a ledge
+export function makePigeon() {
+  const g = new THREE.Group();
+  const body = new THREE.Mesh(new THREE.SphereGeometry(0.11, 10, 8), std(0x7a8290));
+  body.scale.set(1, 0.8, 1.5);
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.055, 8, 6), std(0x6a7280));
+  head.position.set(0, 0.1, 0.13);
+  const neck = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 6), std(0x5a8a7a, { metalness: 0.3 }));
+  neck.position.set(0, 0.05, 0.1);
+  g.add(body, neck, head);
+  return g;
+}
+
+// a junior pass in an open drawer
+export function makePass() {
+  const g = new THREE.Group();
+  g.add(flat(0.5, 0.12, 0.36, 0x6a4a30, 0, -0.08, 0));
+  g.add(flat(0.09, 0.006, 0.055, 0xf4f4f0, 0, 0, 0, { basic: true }));
+  g.add(flat(0.09, 0.007, 0.012, 0xc83a2a, 0, 0.001, -0.018, { basic: true }));
+  return g;
+}
+
+// a row of coat pegs with brass name tags; one is empty, and the floor under it is wet
+export function makeCoatPegs() {
+  const g = new THREE.Group();
+  g.add(flat(1.2, 0.08, 0.04, 0xc8ccd2, 0, 0, 0, { std: { metalness: 0.7 } }));
+  for (let i = 0; i < 4; i++) {
+    g.add(flat(0.03, 0.03, 0.12, 0x9aa0a8, -0.45 + i * 0.3, -0.03, 0.06));
+    g.add(flat(0.12, 0.04, 0.005, 0xc89a4a, -0.45 + i * 0.3, 0.07, 0.022, { std: { metalness: 0.8 } }));
+    if (i !== 2) g.add(flat(0.32, 0.8, 0.12, [0x3a4048, 0x5a3a2a, 0, 0x2a3a5a][i], -0.45 + i * 0.3, -0.45, 0.08));
+  }
+  const pool = new THREE.Mesh(new THREE.CircleGeometry(0.22, 16), basic(0x9fb8c8, { transparent: true, opacity: 0.5 }));
+  pool.rotation.x = -Math.PI / 2;
+  pool.position.set(0.15, -1.58, 0.2);
+  g.add(pool);
+  return g;
+}
+
+// a notebook and a staff badge on a desk
+export function makeNotebook() {
+  const g = new THREE.Group();
+  g.add(flat(0.22, 0.02, 0.3, 0x2a3a5a, -0.12, 0, 0, { ry: 0.2 }));
+  g.add(flat(0.07, 0.005, 0.1, 0xeef0f2, 0.16, 0, 0.04, { basic: true }));
+  g.add(flat(0.05, 0.006, 0.04, 0x9aa0a8, 0.16, 0.002, 0.02, { basic: true }));
+  return g;
+}
+
+// an old excavation log on a trestle
+export function makeLogbook() {
+  const g = new THREE.Group();
+  g.add(flat(0.9, 0.05, 0.6, 0x8a6a48, 0, -0.08, 0));
+  for (const x of [-0.4, 0.4]) g.add(flat(0.05, 0.95, 0.5, 0x6a5038, x, -0.56, 0));
+  g.add(flat(0.36, 0.04, 0.26, 0x4a3020, 0, -0.03, 0, { ry: 0.15 }));
+  g.add(flat(0.32, 0.01, 0.22, 0xf0e6cc, 0, 0, 0, { ry: 0.15, basic: true }));
+  return g;
+}
+
+// a bronze plaque gone green, on a wall
+export function makePlaque() {
+  const g = new THREE.Group();
+  g.add(flat(1.0, 0.6, 0.05, 0x5f8a6a, 0, 0, 0, { std: { metalness: 0.6, roughness: 0.55 } }));
+  g.add(flat(0.86, 0.46, 0.01, 0x8ab89a, 0, 0, 0.03, { std: { metalness: 0.5, roughness: 0.6 } }));
+  return g;
 }

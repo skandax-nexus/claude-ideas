@@ -21,14 +21,16 @@ import { Score } from './score.js';
 import { Cinema } from './cinema.js';
 import { VoiceFx } from './voicefx.js';
 import { choiceLine, chapterCardLines, missionCardLines, endingLines, POSTCREDIT } from './voicelines.js';
+import { Threads, placeThreads, isRewritten, sidesOf, sideState } from './Threads.js';
+import { QUESTIONS, PREVIOUSLY, CHOSEN } from './ledger.js';
 
 // the edition's voice packs: common to every chapter, then one per chapter (OVERHAUL.md §8.3)
 export const voicePack = (group) => `assets/voice/lv/${group}/`;
 
 export const CHAPTERS = {
-  prologue: { name: 'PROLOGUE', sub: 'The Zero Second: Rain City, Helix, the first switch', question: 'What happened in the chamber, and why does the voice know Kai?', say: 'The Prologue. The Zero Second.' },
+  prologue: { name: 'PROLOGUE', sub: 'The Zero Second: Rain City, Helix, the first switch', question: 'What happened, and why does the voice know Kai?', say: 'The Prologue. The Zero Second.' },
   act1: { name: 'ACT I', sub: 'The World That Remembers', question: 'How can the machine predate its inventors?', say: 'Act One. The World That Remembers.' },
-  act2: { name: 'ACT II', sub: 'The Nine-Minute War', question: 'Is the Witness protecting Kai, or controlling him?', say: 'Act Two. The Nine-Minute War.' },
+  act2: { name: 'ACT II', sub: 'The Nine-Minute War', question: 'Is the Witness protecting Kai or controlling him?', say: 'Act Two. The Nine-Minute War.' },
   act3: { name: 'ACT III', sub: 'The Last Version of Earth', question: 'What did the previous attempts cost?', say: 'Act Three. The Last Version of Earth.' },
   act4: { name: 'ACT IV', sub: 'The Unwritten Second', question: 'Can Mira be saved without repeating the catastrophe?', say: 'Act Four. The Unwritten Second.' },
   finale: { name: 'FINALE', sub: 'Afterzero', question: 'What must be accepted rather than fixed?', say: 'The Finale. Afterzero.' },
@@ -45,8 +47,13 @@ function mechsFor(m, fits) {
   return list.length ? list : ['sentinel', 'time']; // never an empty list (the generator would fall back to gravity)
 }
 
+// the save format (campaign.lvFormat): 21 = three years and REVERSE (U1); 22 = missions as one map with soft quarters (U6)
+export const SAVE_FORMAT = 22;
+
 // v2.0 saves came from a four-state engine (INVERTED flipped gravity): the room states it no longer
-// has go back to the baseline, rooms lose a state they cannot have, and REVERSE gets its charge
+// has go back to the baseline, rooms lose a state they cannot have, and REVERSE gets its charge. A save
+// from before U6 that stands in the middle of a mission since rewritten (one map, soft quarters) restarts
+// that mission at its first quarter and keeps its facts (Runtime.resume marks the rules already fired)
 export function migrateSave(engine, campaign, def) {
   const ok = (s) => def.states.includes(s);
   for (const [rid, s] of Object.entries(engine.rooms)) if (!ok(s)) engine.rooms[rid] = engine.baseline;
@@ -57,7 +64,12 @@ export function migrateSave(engine, campaign, def) {
   engine.recompile();
   if (campaign) {
     campaign.inv = { cap: 8, charge: 8, ...(campaign.inv || {}) };
-    campaign.lvFormat = 21;
+    const deck = MISSIONS[campaign.chapter]?.[campaign.deck ?? 0];
+    if ((campaign.lvFormat ?? 20) < 22 && isRewritten(deck)) {
+      Object.assign(campaign, { sector: 0, quarter: 0, room: null, pos: null, flags: {}, visited: [], restarted: true });
+    }
+    campaign.quarter ??= 0;
+    campaign.lvFormat = SAVE_FORMAT;
   }
   return campaign;
 }
@@ -65,7 +77,8 @@ export function migrateSave(engine, campaign, def) {
 // facts a chapter started from the menu counts as already true ([fact, value] for a value)
 export const PRIMES = {
   prologue: [],
-  act1: ['has_chronolith', 'chronolith_seen', 'drawing_seen', 'fractured', 'mira_gone'],
+  // (the Prologue's cross-mission facts, as a player who walked its main threads would have them)
+  act1: ['has_chronolith', 'chronolith_seen', 'drawing_seen', 'fractured', 'mira_gone', 'wrist_cut', 'wrist_mark', 'raincoat', ['trust_rook', 0], 'ev_site_zero_print', 'ev_site_zero', 'lin_met'],
   act2: ['version_17', 'ev_witness_recording', 'found_not_built'], // Act II reaches REVERSE by playing Mission 11
   act3: ['echo_step', 'ev_prisoners', 'ev_stabilizer', 'has_inversion', ['inv_cap', 10]],
   act4: ['ev_memorial', 'ev_anja_lock', 'ev_version17', ['inv_cap', 12]],
@@ -141,6 +154,14 @@ const EV_LABELS = {
   stabilizer: 'The stabilizer: the district or the people', memorial: 'The memorial carries my name', anja_lock: 'Anja\'s lock holds a city at one day', dual_archive: 'Two archives, both true',
   mira_memory: 'Mira remembers more than one life', gate_resets: 'Jun\'s gate resets itself', water_gates: 'Three stone gates on the channel', iven_testimony: 'Iven refused to sign', raw_log: 'The raw experiment log',
   three_notes: 'The three-note song', three_photos: 'A child in three photographs', water_route: 'The water route through the ruins',
+  // the Prologue (U6)
+  mira_photo: 'Mira at nine, in yellow boots', minute_814: 'Everything odd runs backwards toward 8:14', card_0540: 'My card opened Chamber One at 05:40, while I slept',
+  florist: 'A receipt for 08:04: an older me, with a scar', puddle: 'A ripple before the drop', pigeon: 'A pigeon that landed backwards', helix_window: 'One window pulsing in Helix',
+  relay: 'Relay 41-B: dead now, live at 8:13', rook_terminal: 'Rook\'s order, timestamped before the Zero Second', site_zero_print: 'The Site Zero print: a boot print, c. 1077 BC',
+  lin_peg: 'Lin\'s peg: empty, and dripping', lin_badge: 'Lin\'s badge: PHOTO PENDING SINCE 2026', empty_corridor: 'At 05:40 the chamber door opened on an empty corridor',
+  door_log: 'The door log: my card at 05:40, edited at 06:10', junior_pass: 'My junior pass: OVERRIDE 14-03-2026 16:02', site_zero: 'Site Zero: the ring was found, not built',
+  thermos_er: 'A thermos marked E.R. at the 2026 dig', footprints: 'Two children\'s footprints at the dig, one with a star tread', polaroid: 'The ring, half dug out of the clay',
+  plaque2196: 'HELIX. WHERE THE FRACTURE BEGAN. WE REMEMBER.',
 };
 
 const _v = new THREE.Vector3();
@@ -195,6 +216,11 @@ export class LastVersion {
 
   engineOptions() {
     return this.def.engineOptions();
+  }
+
+  // a rewritten mission's threads: objective and because, hints, quarters, the chase, staged moments (Threads.js)
+  get threads() {
+    return (this._threads ||= new Threads(this));
   }
 
   // --- the title and the menus --------------------------------------------------------------
@@ -408,8 +434,9 @@ export class LastVersion {
     g.world.root.visible = false;
     g.observer.mesh.visible = false;
     g.npcs.juno.visible = false;
-    g.campaign = saved || { lv: true, chapter, deck: 0, sector: 0, flags: {}, visited: [], stability: 1, inv: { cap: 8, charge: 8 } };
+    g.campaign = saved || { lv: true, chapter, deck: 0, sector: 0, quarter: 0, flags: {}, visited: [], stability: 1, inv: { cap: 8, charge: 8 }, lvFormat: SAVE_FORMAT };
     g.campaign.lv = true;
+    g.campaign.quarter ??= 0;
     g.campaign.inv ||= { cap: 8, charge: 8 };
     this.stability = g.campaign.stability ?? 1;
     g.held = saved ? saved.held || null : null;
@@ -463,7 +490,14 @@ export class LastVersion {
   }
 
   resume(campaign) {
-    migrateSave(this.g.engine, campaign, this.def); // a v2.0 save may stand in an INVERTED room
+    migrateSave(this.g.engine, campaign, this.def); // a v2.0 save may stand in an INVERTED room; a pre-U6 one mid-mission restarts it
+    if (campaign.restarted) {
+      // (its facts stay: what already happened does not happen again)
+      const deck = MISSIONS[campaign.chapter]?.[campaign.deck ?? 0];
+      for (const r of deck?.rules || []) if (this.g.facts.test(r.when)) campaign.flags[`rule_${r.id}`] = true;
+      delete campaign.restarted;
+    }
+    this.resumed = true; // (the sector loads at the furthest quarter reached, after a PREVIOUSLY card)
     this.start(campaign.chapter, campaign);
   }
 
@@ -544,8 +578,11 @@ export class LastVersion {
     }
     // the records (said through the recording chain)
     this.recordTexts = new Set(level.interactables.filter((i) => i.kind === 'terminal' && i.log?.text).map((i) => i.log.text));
-    // REVERSE processes, scenes, doors and reversed wards at the mission's landmarks (§5)
+    // REVERSE processes, scenes, doors and reversed wards at the mission's landmarks (§5); a rewritten mission's
+    // threads: their triggers, scenes, records, deductions and the chase's path (Threads.js)
     placeAuthored(deck, level);
+    placeThreads(deck, level);
+    this.threads.attach(deck, level);
     for (const k of Object.keys(g.engine.overrides)) g.engine.setOverride(k, null);
     for (const rid of level.reversedRooms) g.engine.setOverride(rid, { timeReverse: true });
     this.level = level;
@@ -571,8 +608,24 @@ export class LastVersion {
     if (intro) {
       g.held = null;
       const kicker = `${chapter.name} · ${typeof deck.n === 'number' ? `MISSION ${deck.n}` : `CASE ${deck.n}`}${deck.sectors > 1 ? ` · ${c.sector + 1} OF ${deck.sectors}` : ''}`;
-      if (c.sector === 0) opening = kicker;
-      else g.hud.card(kicker, this.level.rooms[start].name, deck.subtitle || '', 2600);
+      if (c.sector === 0) {
+        opening = kicker;
+        c.mStart = g.playTime || 0; // (time_<mkey>: how long the mission took, stored when it ends)
+        c.quarter = 0;
+      } else g.hud.card(kicker, this.level.rooms[start].name, deck.subtitle || '', 2600);
+    }
+    c.mStart ??= g.playTime || 0;
+    // a save loads in a rewritten mission at the furthest quarter it reached (D2), after a PREVIOUSLY card
+    const resumed = !intro && this.resumed;
+    this.resumed = false;
+    if (resumed && this.threads.on) {
+      const q = this.level.quarters?.[c.quarter || 0];
+      if (q?.spawn) {
+        const sp = [q.spawn[0], q.spawn[1] + 0.86, q.spawn[2], q.spawn[3] || 0];
+        if (q.room && q.room !== g.room) g.enterRoom(q.room, true);
+        g.player.place(sp);
+        g.checkpoint = sp;
+      }
     }
     // an open place: its scenery, sky and horizon, in the room's year (instantly: no easing at a load)
     if (this.level.place) {
@@ -594,6 +647,37 @@ export class LastVersion {
     this.objective(true);
     this.quietPins = false;
     if (opening) this.openMission(deck, opening);
+    else if (resumed) this.previously();
+  }
+
+  // the PREVIOUSLY card (ledger.PREVIOUSLY): three lines when a chapter starts or a save loads
+  previouslySteps(chapter) {
+    const lines = PREVIOUSLY[chapter];
+    if (!lines) return [];
+    return [{ card: ['PREVIOUSLY', CHAPTERS[chapter]?.name || '', ''], lines: lines.map((text) => ({ who: 'NONE', text })) }];
+  }
+
+  previously() {
+    const g = this.g;
+    const [k] = this.previouslySteps(this.chapter);
+    if (!k) return;
+    const token = (this.opening = { deck: this.deck, previously: true });
+    g.hud.card(k.card[0], k.card[1], k.card[2], 600000);
+    this.whenVoices(() => {
+      if (this.opening !== token) return;
+      this.cinema.play({ shots: null, lines: k.lines }, () => {
+        if (this.opening !== token) return;
+        this.hideCard();
+        this.opening = null;
+      });
+    }, () => {});
+  }
+
+  // a tap on SKIP: the whole opening (or the staged moment) ends; what it sets is still set
+  skipOpening() {
+    if (this.opening) this.opening.skipped = true;
+    this.cinema.skipAll();
+    return true;
   }
 
   // --- the opening of a mission: the chapter's card (when the chapter begins), the mission's card, the cold open
@@ -606,25 +690,44 @@ export class LastVersion {
     const token = (this.opening = { deck });
     const alive = () => this.opening === token && this.deck === deck && g.campaign?.lv;
     const steps = [];
+    // a chapter's start: what came before (not for a new game), then the chapter's card
+    if (first && this.chapter !== 'prologue') steps.push(...this.previouslySteps(this.chapter));
     if (first) steps.push({ card: [ch.name, ch.sub.split(':')[0], ch.question], cue: 'chapter', lines: chapterCardLines(this.chapter) });
-    steps.push({ card: [kicker, deck.name, deck.title || deck.subtitle], cue: 'card', lines: missionCardLines(deck) });
     const co = deck.coldOpen;
     const cold = co?.lines || deck.intro || [];
+    const card = { card: [kicker, deck.name, deck.title || deck.subtitle], cue: 'card', lines: missionCardLines(deck) };
+    // a cold open may come before the title (co.first: it plays, then the mission's card, then what follows the title)
+    if (co?.first) {
+      if (cold.length) steps.push({ shots: co.shots || 'default', lines: cold, cue: co.cue || null });
+      steps.push(card);
+      if (co.title?.lines?.length) steps.push({ shots: co.title.shots || 'default', lines: co.title.lines, cue: co.title.cue || null });
+    } else {
+      steps.push(card);
+      if (cold.length) steps.push({ shots: co?.shots || 'default', lines: cold, cue: co?.cue || null });
+    }
+    // the opening is over (played or skipped): what the cold open sets is set, and what it starts starts
+    const finish = () => {
+      this.hideCard();
+      this.opening = null;
+      if (co?.set) for (const [k, v] of Object.entries(co.set)) g.facts.set(k, v);
+      if (co?.then) deck.fx?.[co.then]?.(this);
+    };
     const next = (i) => {
       if (!alive()) return;
-      if (i >= steps.length) {
-        this.hideCard();
-        if (!cold.length) return (this.opening = null);
-        this.cinema.play({ shots: co?.shots || 'default', lines: cold, cue: co?.cue || null }, () => alive() && (this.opening = null));
-        return;
-      }
+      if (i >= steps.length || token.skipped) return finish();
       const k = steps[i];
-      g.hud.card(k.card[0], k.card[1], k.card[2], 600000);
-      this.cinema.play({ shots: null, lines: k.lines, cue: k.cue }, () => next(i + 1));
+      if (k.card) {
+        g.hud.card(k.card[0], k.card[1], k.card[2], 600000);
+        this.cinema.play({ shots: null, lines: k.lines, cue: k.cue }, () => next(i + 1));
+      } else {
+        this.hideCard();
+        this.cinema.play({ shots: k.shots, lines: k.lines, cue: k.cue }, () => next(i + 1));
+      }
     };
     // the voices first: the card counts them in (LOADING VOICES nn%)
-    g.hud.card(steps[0].card[0], steps[0].card[1], steps[0].card[2], 600000);
-    this.whenVoices(() => next(0), (pct) => alive() && g.hud.card(steps[0].card[0], steps[0].card[1], `LOADING VOICES ${pct}%`, 600000));
+    const k0 = steps.find((x) => x.card) || card;
+    g.hud.card(k0.card[0], k0.card[1], k0.card[2], 600000);
+    this.whenVoices(() => next(0), (pct) => alive() && g.hud.card(k0.card[0], k0.card[1], `LOADING VOICES ${pct}%`, 600000));
   }
 
   // then() once the chapter's voices are here; progress(nn) meanwhile
@@ -651,30 +754,74 @@ export class LastVersion {
   }
 
   // --- objectives ------------------------------------------------------------------------------
-  objectiveText() {
+  // [what to do, why]: a rewritten mission's first main thread not yet done, with its because line (Threads.js);
+  // else the mission's objective layers, its own understanding, or its beat
+  objectiveParts() {
     const g = this.g;
     const deck = this.deck;
-    if (!deck) return '';
+    if (!deck) return ['', ''];
+    if (this.threads.on) {
+      if (g.deckWorld.flags.beat_done) return [deck.autoExit != null ? '' : LINES.next_open, ''];
+      const t = this.threads.current();
+      return t ? [t.goal || '', t.because || ''] : ['', ''];
+    }
     if (deck.objectives) {
-      let text = '';
-      for (const l of deck.objectives) if (g.facts.test(l.when)) text = l.text;
-      return text;
+      let o = null;
+      for (const l of deck.objectives) if (g.facts.test(l.when)) o = l;
+      return [o?.text || '', o?.because || ''];
     }
     const own = deck.objectiveFor?.(this); // a mission's own understanding, step by step
-    if (own) return own;
+    if (own) return [own, ''];
     const done = g.deckWorld.flags.beat_done;
     const beat = this.beat;
-    if (done) return 'The way on is open. Walk to the gate.';
-    return beat.goal || 'Look around. Someone left something here.';
+    if (done) return ['The way on is open. Walk to the gate.', ''];
+    return [beat.goal || 'Look around. Someone left something here.', ''];
+  }
+
+  objectiveText() {
+    return this.objectiveParts()[0];
   }
 
   objective(force = false) {
-    const text = this.objectiveText();
+    const [text, because] = this.objectiveParts();
     if (force || text !== this.lastObjective) {
       const animate = !force && !!this.lastObjective;
       this.lastObjective = text;
       this.g.hud.objective(text, animate);
       if (animate) this.g.audio.blip(330, 0.4, 'triangle', 0.15);
+    }
+    // the because line, and the tracked side story's next step, under the objective (shown, never spoken)
+    const tr = this.threads.tracked();
+    const side = tr ? `${tr.side.name}|${tr.thread.goal}` : '';
+    if (force || because !== this.lastBecause || side !== this.lastSide) {
+      this.lastBecause = because;
+      this.lastSide = side;
+      this.objectiveExtras(because, tr);
+    }
+  }
+
+  objectiveExtras(because, tr) {
+    if (typeof document === 'undefined') return;
+    const el = document.querySelector('#objective');
+    if (!el) return;
+    if (!document.querySelector('#lvObj')) {
+      const st = document.createElement('style');
+      st.id = 'lvObj';
+      st.textContent = `body.lastversion #objective .lvwhy { font-size: 12px; font-weight: 400; font-style: italic; opacity: 0.86; margin-top: 3px; }
+        body.lastversion #objective .lvside { font-size: 11.5px; font-weight: 500; margin-top: 7px; opacity: 0.92; }
+        body.lastversion #objective .lvside small { display: block; font-size: 9.5px; letter-spacing: 0.16em; }
+        body.lastversion #objective .lvwhy:empty, body.lastversion #objective .lvside:empty { display: none; }
+        body.lastversion.touch #objective .lvwhy { display: none; }`;
+      document.head.appendChild(st);
+    }
+    const part = (cls) => el.querySelector(`.${cls}`) || el.appendChild(Object.assign(document.createElement('div'), { className: cls }));
+    part('lvwhy').textContent = because || '';
+    const side = part('lvside');
+    side.innerHTML = '';
+    if (tr) {
+      const s = document.createElement('small');
+      s.textContent = `SIDE STORY · ${tr.side.name}`;
+      side.append(s, document.createTextNode(tr.thread.goal || ''));
     }
   }
 
@@ -692,7 +839,13 @@ export class LastVersion {
       if (r.say) g.hud.say(r.say, g.facts);
       if (r.then) deck.fx?.[r.then]?.(this);
     }
+    this.threads.update(); // (a thread that is now done sets its fact, once, with what it carries)
     if (deck.done && !flags.beat_done && g.facts.test(deck.done)) g.beatDone();
+    // a mission whose last thread is its end (Helix's chamber, the fracture) goes on without a walk to the gate
+    if (deck.autoExit != null && flags.beat_done && !flags.auto_exit && g.after) {
+      flags.auto_exit = true;
+      g.after(deck.autoExit, () => this.deck === deck && this.exitReached());
+    }
     g.deckWorld.refresh?.();
     this.mounted?.refresh(); // pieces of the place that wait on a fact (the braced wall, the drained basin)
     this.objective();
@@ -778,7 +931,7 @@ export class LastVersion {
       if (sc) this.playNode(sc, n, `npc_${n.n.id}`);
       return;
     }
-    const dialogue = n.n.dialogue || (n.n.lines?.length ? null : DIALOGUE[n.crew.id]);
+    const dialogue = this.deck?.talks?.[n.crew.id] || n.n.dialogue || (n.n.lines?.length ? null : DIALOGUE[n.crew.id]);
     if (dialogue) {
       const node = dialogue.find((d) => g.facts.test(d.when || 'true'));
       if (node) {
@@ -798,6 +951,14 @@ export class LastVersion {
     const g = this.g;
     const deck = this.deck;
     if (it.task !== undefined) return this.task(it);
+    const own = it.scene?.startsWith('deduce:') ? this.threads.deduction(it.scene.slice(7))
+      : it.scene?.startsWith('residue:') ? this.threads.residue(it.scene.slice(8), g.engine.state(g.room)) : null;
+    if (own) {
+      g.audio.terminal();
+      g.fx.burst(it.pos, it.color ?? 0xffc04a, 24, 1.4);
+      this.playNode(own, null, it.id);
+      return;
+    }
     const sc = deck.scenes?.[it.scene];
     if (!sc) return;
     if (sc.when && !g.facts.test(sc.when, g.engine.state(g.room))) {
@@ -857,7 +1018,9 @@ export class LastVersion {
   playNode(node, n = null, id = null) {
     const g = this.g;
     const lines = this.voiced(node.lines, n);
+    if (node.show) g.facts.set(node.show, true);
     const after = () => {
+      if (node.show) g.facts.set(node.show, false);
       if (node.choices) this.choose(node.choices, n, node, lines[lines.length - 1]);
       else {
         this.apply(node, n);
@@ -916,6 +1079,7 @@ export class LastVersion {
         // Kai says what you chose (OVERHAUL.md §8.9), then the choice plays; a choice with consequences is scored
         const said = choiceLine(c);
         if (c.consequence) this.score?.cue('consequence');
+        else if (c.cue) this.score?.cue(c.cue);
         const lines = [...(said ? [said] : []), ...this.voiced(c.lines, n)];
         if (lines.length) g.hud.say(lines, g.facts, done);
         else done();
@@ -931,7 +1095,17 @@ export class LastVersion {
     const deck = this.deck;
     let text;
     let key;
-    if (deck.thoughts) {
+    const th = this.threads.hint();
+    if (th) {
+      key = th.key;
+      if (this.hintKey !== key) {
+        this.hintKey = key;
+        this.hintTier = 0;
+      }
+      text = th.tiers[Math.min(this.hintTier, th.tiers.length - 1)];
+      this.hintTier++;
+    }
+    if (!text && deck.thoughts) {
       // a mission's own thoughts, some only in the room of their landmark
       const h = deck.thoughts.find((x) => (!x.at || this.level?.anchorsAt?.[x.at]?.room === g.room) && g.facts.test(x.when || 'true'));
       if (h) {
@@ -991,7 +1165,7 @@ export class LastVersion {
       this.gateWarned = true;
       return;
     }
-    if (g.transitioning) return;
+    if (g.transitioning) return; // (a mission that ends on its own, and Kai at its gate as well: once)
     g.transitioning = true;
     const deck = this.deck;
     const last = c.sector >= deck.sectors - 1;
@@ -1004,6 +1178,11 @@ export class LastVersion {
           c.sector++;
         } else {
           g.facts.set(`${deck.mkey}_done`);
+          // telemetry (§9.8): how long the mission took, shown in the ending's stats
+          if (c.mStart != null) g.facts.set(`time_${deck.mkey}`, Math.max(0, Math.round((g.playTime || 0) - c.mStart)));
+          c.mStart = null;
+          c.quarter = 0;
+          c.track = null;
           c.sector = 0;
           if (c.deck + 1 < g.story.decks.length) c.deck++;
           else {
@@ -1039,8 +1218,8 @@ export class LastVersion {
       }, 900);
     };
     if (last && deck.outro?.length) {
-      this.score.cue('cliff');
-      this.cinema.play({ shots: null, lines: deck.outro }, go);
+      this.score.cue(deck.hook?.cue || 'cliff');
+      this.cinema.play({ shots: deck.hook?.shots || null, lines: deck.outro }, go);
     } else go();
   }
 
@@ -1096,7 +1275,8 @@ export class LastVersion {
     // Chronolith stability: drains in unstable places outside the present, comes back in it
     const state = g.engine.state(g.room);
     const out = state !== g.engine.baseline;
-    const draining = out && this.unstable;
+    const outdoors = this.deck?.stableOutdoors && g.room === this.level.outdoorRoom;
+    const draining = out && this.unstable && !outdoors;
     if (draining) this.stability = Math.max(0, this.stability - dt * 0.045);
     else if (!out) this.stability = Math.min(1, this.stability + dt * 0.1);
     g.hud.setStability(this.stability, !!facts.get('has_chronolith') && (out || this.stability < 1), draining);
@@ -1126,6 +1306,7 @@ export class LastVersion {
       }
     }
     this.deck.step?.(this, dt);
+    this.threads.step(dt);
     this.inv?.step(dt);
     // the YEAR button wears the colour of the year it will switch to
     if (typeof document !== 'undefined') {
@@ -1332,42 +1513,89 @@ export class LastVersion {
   roomEntered() {}
 
   // --- the case board (the journal) ------------------------------------------------------------------------
+  // WHERE YOU ARE, THE QUESTIONS (each chapter's, with the evidence pinned under it, never the answer), ABILITIES,
+  // SIDE STORIES (with a TRACK button), EVIDENCE, PEOPLE, WHAT YOU CHOSE, the CASE LOG
   renderJournal(game, el) {
-    const { facts, story, campaign } = game;
+    const { facts, campaign } = game;
     const deck = this.deck;
     const chapter = CHAPTERS[this.chapter] || CHAPTERS.prologue;
-    const evs = Object.keys(facts.facts).filter((k) => k.startsWith('ev_') && facts.facts[k]).map((k) => `<li><span class="ev">◆</span> ${EV_LABELS[k.slice(3)] || k.slice(3).replace(/_/g, ' ')}</li>`).join('') || '<li class="dim">Nothing pinned yet.</li>';
+    const esc = (t) => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+    const label = (k) => EV_LABELS[k] || k.replace(/_/g, ' ');
+    const evs = Object.keys(facts.facts).filter((k) => k.startsWith('ev_') && facts.facts[k]).map((k) => `<li><span class="ev">◆</span> ${label(k.slice(3))}</li>`).join('') || '<li class="dim">Nothing pinned yet.</li>';
     const people = Object.values(NPCS).filter((n) => facts.get(`met_${n.id}`) && n.id !== 'kai').map((n) => {
-      const s = npcState(facts, n.id);
-      return `<li><span><b>${n.name}</b> <small>${n.role}</small></span><span class="st ${s.trust > 0 ? 'good' : s.trust < 0 ? 'bad' : ''}">${TRUST[s.trust].toUpperCase()} · ${KNOWLEDGE[s.knowledge].toUpperCase()}${s.quest ? ` · ${s.quest.toUpperCase()}` : ''}</span></li>`;
+      const st = npcState(facts, n.id);
+      return `<li><span><b>${n.name}</b> <small>${n.role}</small></span><span class="st ${st.trust > 0 ? 'good' : st.trust < 0 ? 'bad' : ''}">${TRUST[st.trust].toUpperCase()} · ${KNOWLEDGE[st.knowledge].toUpperCase()}${st.quest ? ` · ${st.quest.toUpperCase()}` : ''}</span></li>`;
     }).join('') || '<li class="dim">Nobody yet.</li>';
-    const choices = [['faction', 'Standing'], ['ending', 'Ending'], ['ally', 'Ally'], ['prisoners_freed', 'Prisoners freed'], ['city_freed', 'City freed'], ['city_stabilized', 'City stabilized'], ['stabilizer_destroyed', 'Stabilizer destroyed'], ['civilians_freed', 'Civilians freed']]
-      .filter(([k]) => facts.get(k)).map(([k, l]) => `<li>${l}: <b>${String(facts.get(k)).toUpperCase()}</b></li>`).join('');
-    // ▶: the question, read by the narrator; a log line Kai can say from the packs, by Kai
+    // ▶: a question, read by the narrator; a log line Kai can say from the packs, by Kai
     const can = (text, who) => !!game.voice?.plan?.(text, who);
+    const play = (attr, i) => ` <button class="lvplay" data-${attr}="${i}" aria-label="Hear it">▶</button>`;
+    // THE QUESTIONS: this chapter's and every earlier one's; the clues found under each; answered once its mission is done
+    const upTo = this.chapter === 'cases' ? ORDER.length : ORDER.indexOf(this.chapter) + 1;
+    const qs = QUESTIONS.filter((q) => ORDER.indexOf(q.chapter) >= 0 && ORDER.indexOf(q.chapter) < Math.max(1, upTo));
+    const qHtml = qs.map((q, i) => {
+      const answered = facts.get(`${q.answer}_done`);
+      const partly = !answered && (q.partly || []).some((m) => facts.get(`${m}_done`));
+      const found = q.clues.filter((k) => facts.get(`ev_${k}`)).map((k) => `<li><span class="ev">◆</span> ${label(k)}</li>`).join('');
+      return `<li><b>${esc(q.text)}</b>${can(q.text, 'NONE') ? play('q', i) : ''} <small class="dim">${answered ? 'ANSWERED' : partly ? 'PARTLY ANSWERED' : 'OPEN'}</small>${found ? `<ul class="board">${found}</ul>` : ''}</li>`;
+    }).join('');
+    // SIDE STORIES: the chapter's so far, and this mission's, with a track button
+    const missions = MISSIONS[this.chapter] || [];
+    const here = deck ? missions.indexOf(deck) : -1;
+    const sideRows = [];
+    missions.forEach((m, mi) => {
+      if (mi > here) return;
+      const mk = { ...m, mkey: m.key };
+      for (const sd of sidesOf(mk)) {
+        const st = sideState(facts, mk, sd);
+        if (mi < here && st === 'open') continue;
+        const key = `${m.key}:${sd.id}`;
+        const tracked = campaign?.track === key;
+        const btn = mi === here && st !== 'resolved' ? ` <button class="lvtrack" data-track="${key}">${tracked ? 'UNTRACK' : 'TRACK'}</button>` : '';
+        sideRows.push(`<li><span><b>${esc(sd.name)}</b>${sd.case ? ' <small>CASE FILE</small>' : ''}</span><span class="st ${st === 'resolved' ? 'good' : ''}">${{ open: 'NOT STARTED', active: tracked ? 'TRACKED' : 'ACTIVE', resolved: 'RESOLVED' }[st]}</span>${btn}</li>`);
+      }
+    });
+    // WHAT YOU CHOSE: the consequence ledger's facts, said plainly, then the other standings
+    const chose = [];
+    for (const [k, v] of Object.entries(CHOSEN)) {
+      const val = facts.get(k);
+      if (val === undefined || val === false || val === null || val === '') continue;
+      const t = typeof v === 'string' ? (val === true ? v : `${v} <b>${String(val).toUpperCase()}</b>`) : v[val];
+      if (t) chose.push(`<li>${t}</li>`);
+    }
+    for (const [k, l] of [['stabilizer_destroyed', 'Stabilizer destroyed'], ['civilians_freed', 'Civilians freed']]) if (facts.get(k)) chose.push(`<li>${l}: <b>${String(facts.get(k)).toUpperCase()}</b></li>`);
     const rev = game.log.slice().reverse();
-    const logs = rev.map((l, i) => `<li>${l}${!/[<>]/.test(l) && can(l, 'KAI') ? ` <button class="lvplay" data-log="${i}" aria-label="Hear it">▶</button>` : ''}</li>`).join('') || '<li class="dim">Nothing yet.</li>';
-    const ask = can(story.question, 'NONE') ? ' <button class="lvplay" data-q="1" aria-label="Hear it">▶</button>' : '';
+    const logs = rev.map((l, i) => `<li>${l}${!/[<>]/.test(l) && can(l, 'KAI') ? play('log', i) : ''}</li>`).join('') || '<li class="dim">Nothing yet.</li>';
+    const quarter = this.threads.on ? this.level?.quarters?.[this.threads.here ?? campaign.quarter ?? 0]?.name : null;
     el.innerHTML = `
-      <h3>WHERE YOU ARE</h3><p><b>${chapter.name} &middot; ${deck?.name || ''}</b><br><span class="dim">${deck?.title || ''}${deck?.sectors > 1 ? ` &middot; part ${campaign.sector + 1} of ${deck.sectors}` : ''} &middot; stability ${Math.round(this.stability * 100)}%</span></p>
-      <h3>THE QUESTION</h3><p class="dim">${story.question}${ask}</p>
+      <h3>WHERE YOU ARE</h3><p><b>${chapter.name} &middot; ${deck?.name || ''}</b><br><span class="dim">${deck?.title || ''}${quarter ? ` &middot; ${quarter}` : deck?.sectors > 1 ? ` &middot; part ${campaign.sector + 1} of ${deck.sectors}` : ''} &middot; stability ${Math.round(this.stability * 100)}%</span></p>
+      <h3>THE QUESTIONS</h3><ul class="board questions">${qHtml}</ul>
       ${this.inv?.abilitiesHtml() || ''}
+      <h3>SIDE STORIES</h3><ul class="board sides">${sideRows.join('') || '<li class="dim">None yet.</li>'}</ul>
       <h3>EVIDENCE</h3><ul class="board">${evs}</ul>
       <h3>PEOPLE</h3><ul class="board">${people}</ul>
-      ${choices ? `<h3>WHAT YOU CHOSE</h3><ul class="board">${choices}</ul>` : ''}
+      ${chose.length ? `<h3>WHAT YOU CHOSE</h3><ul class="board">${chose.join('')}</ul>` : ''}
       <h3>CASE LOG</h3><ul class="log">${logs}</ul>`;
     for (const b of el.querySelectorAll('.lvplay')) {
       b.onclick = (e) => {
         e.stopPropagation();
-        if (b.dataset.q) game.voice.speak(story.question, 'NONE');
+        if (b.dataset.q !== undefined) game.voice.speak(qs[+b.dataset.q].text, 'NONE');
         else game.voice.speak(rev[+b.dataset.log], 'KAI');
+      };
+    }
+    for (const b of el.querySelectorAll('.lvtrack')) {
+      b.onclick = (e) => {
+        e.stopPropagation();
+        campaign.track = campaign.track === b.dataset.track ? null : b.dataset.track;
+        this.objective(true);
+        this.renderJournal(game, el);
       };
     }
   }
 
   saveMeta() {
     const d = this.deck;
-    return { where: `THE LAST VERSION · ${d?.name || ''}`, chapter: `${typeof d?.n === 'number' ? `Mission ${d.n}` : `Case ${d?.n}`}${d?.sectors > 1 ? ` · ${this.g.campaign.sector + 1}/${d.sectors}` : ''}` };
+    const q = this.threads.on ? this.level?.quarters?.[this.g.campaign.quarter || 0]?.name : null;
+    return { where: `THE LAST VERSION · ${d?.name || ''}`, chapter: `${typeof d?.n === 'number' ? `Mission ${d.n}` : `Case ${d?.n}`}${q ? ` · ${q}` : d?.sectors > 1 ? ` · ${this.g.campaign.sector + 1}/${d.sectors}` : ''}` };
   }
 
   mapTitle() {
@@ -1383,12 +1611,17 @@ export class LastVersion {
     g.facts.set('ending', key);
     const mins = Math.round(g.playTime / 60);
     const evs = Object.keys(g.facts.facts).filter((k) => k.startsWith('ev_') && g.facts.facts[k]).length;
+    // each chapter's time, from the missions' own (time_<mkey>, stored as each one ended)
+    const hm = (sec) => (sec >= 3600 ? `${Math.floor(sec / 3600)} h ${Math.round((sec % 3600) / 60)} min` : `${Math.max(1, Math.round(sec / 60))} min`);
+    const times = ORDER.map((ch) => [ch, MISSIONS[ch].reduce((a, m) => a + (g.facts.get(`time_${m.key}`) || 0), 0)]).filter(([, t]) => t > 0)
+      .map(([ch, t]) => `<span>${CHAPTERS[ch].name} ${hm(t)}</span>`).join('');
     const show = () => {
       const $ = (s) => document.querySelector(s);
       $('#ending .body').innerHTML = `
         <h2>ENDING ${key} — ${e.title}</h2>${e.text.map((p, i) => `<p${i === e.text.length - 1 ? ' class="dim"' : ''}>${i === e.text.length - 1 ? `“${p}”` : p}</p>`).join('')}
         <p class="dim">A post-credit clock begins ticking. A voice confirms: “Version one hundred and eighteen.”</p>
         <div class="stats"><span>${Math.floor(mins / 60)} h ${mins % 60} min</span><span>${evs} pieces of evidence</span><span>standing: ${g.facts.get('faction') || 'neutral'}</span><span>ally: ${g.facts.get('ally') || 'none'}</span></div>
+        ${times ? `<div class="stats">${times}</div>` : ''}
         <button class="big" id="lvCases">THE CASES<small>Two optional quest chains: Tala's river, Mara's two records</small></button>
         <button id="lvTitle">BACK TO THE TITLE</button>`;
       $('#lvCases').onclick = () => g.begin('lv:cases', null, g.slot ?? null);

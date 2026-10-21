@@ -18,6 +18,12 @@ const STYLE = `
   body.lastversion.lvcine #lvBars::before, body.lastversion.lvcine #lvBars::after { height: 9vh; }
   body.lastversion.lvcine #dock, body.lastversion.lvcine #buttons, body.lastversion.lvcine #minimap, body.lastversion.lvcine #objective,
   body.lastversion.lvcine #prompt { opacity: 0; pointer-events: none; transition: opacity 0.4s; }
+  body.lastversion #lvSkip { position: fixed; right: max(16px, env(safe-area-inset-right)); bottom: calc(9vh + 12px); z-index: 41; display: none;
+    background: rgba(0,0,0,0.42); color: #f4f6f8; border: 1px solid rgba(255,255,255,0.35); border-radius: 999px; padding: 7px 16px;
+    font: 600 12px/1 system-ui, sans-serif; letter-spacing: 0.14em; cursor: pointer; }
+  body.lastversion.lvcine #lvSkip { display: block; }
+  body.lastversion #lvSkip small { opacity: 0.6; font-size: 10px; margin-left: 4px; }
+  body.lastversion.touch #lvSkip small { display: none; }
 `;
 
 const _a = new THREE.Vector3(), _b = new THREE.Vector3();
@@ -36,12 +42,29 @@ export class Cinema {
       const bars = document.createElement('div');
       bars.id = 'lvBars';
       document.body.appendChild(bars);
+      // SKIP: the whole moment (a mission's whole opening), not just the line being said
+      const skipBtn = document.createElement('button');
+      skipBtn.id = 'lvSkip';
+      skipBtn.innerHTML = 'SKIP › <small>ENTER</small>';
+      skipBtn.setAttribute('aria-label', 'Skip');
+      skipBtn.onclick = (e) => {
+        e.stopPropagation();
+        if (this.rt.skipOpening) this.rt.skipOpening();
+        else this.skipAll();
+      };
+      document.body.appendChild(skipBtn);
       // a tap, a click or a key skips a shot (and the line being said)
       const skip = (e) => {
         if (!this.active || this.g.menu) return;
         // (a key held down repeats: one press skips one line, not the whole moment)
         if (e.type === 'keydown' && (e.repeat || ['Escape', 'ShiftLeft', 'ShiftRight', 'F5', 'F9'].includes(e.code))) return;
         if (e.target?.closest?.('button, input, .overlay')) return;
+        // Enter is SKIP's key: with the pointer locked (a desktop at play) the button cannot be clicked
+        if (e.type === 'keydown' && (e.code === 'Enter' || e.code === 'NumpadEnter')) {
+          if (this.rt.skipOpening) this.rt.skipOpening();
+          else this.skipAll();
+          return;
+        }
         this.skip();
       };
       window.addEventListener('pointerdown', skip, true);
@@ -109,6 +132,15 @@ export class Cinema {
       if (lines?.length) g.hud.say(lines, g.facts, done);
       else g.after(len, done);
     });
+  }
+
+  // the whole moment ends now: every line still to come is dropped (what waits for it goes on)
+  skipAll() {
+    const a = this.active;
+    if (!a) return;
+    a.skipped = true;
+    if (this.g.hud.talking) this.g.hud.skipAll();
+    else this.end();
   }
 
   skip() {

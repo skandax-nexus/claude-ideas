@@ -248,11 +248,39 @@ scratchpad before a pack is committed. The same person shares a base voice:
 Kai, the Witness (and the VOICE, recorded as him) and young Kai on `am_eric`; Mira, Dr. Lin and the
 Child on `af_river`. Every tier-2 person and each crowd voice (by sex and age) has a voice of its own.
 
+### Threads and ledgers (v2.1, U6; OVERHAUL.md §3.3, §9)
+
+A rewritten mission is one map with soft quarters, not a chain of sectors behind gates. Each quarter holds
+main threads (the story's way through) and side stories; the objective on the HUD is the first main thread not
+yet done, with its *because* line under it, and THINK reads that thread's three hint tiers (a nudge, the place,
+the answer). Missions 1–3 are written this way; every other mission runs through a shim that makes each of its
+legacy beats one thread in quarter *i*, so the case board, hints and save format are the same everywhere.
+
+| Module | What it does |
+| --- | --- |
+| `Threads.js` | The twelve kinds (`go`, `talk`, `clue`, `residue`, `deduce`, `scene`, `choice`, `tasks`, `stealth`, `chase`, `cinema`, `invert`) and their default minutes (`MINUTES`); `quartersOf` (the mission's quarters or the shim's), `threadsOf`, `sidesOf`, `estimate` (the length model: cold open + main threads + hook = main; side stories = optional); `placeThreads` (what a kind needs at its landmark: triggers, spots, deduction and record scenes, the chase's path); and the runtime class: the objective and its because line, the tracked side story, completion (each thread's fact `t_<mkey>_<id>`; what the thread carries is paid out once, `_paid`, even when its kind sets the fact itself), the year carried out of a room into the open place (`carryOut`), THINK's tiers, the furthest quarter (a toast and an autosave at each new one), the chase (DeckWorld's own path walker, paced so she keeps 10 m ahead and waits beyond 14 m; it never fails), staged `cinema` moments, deductions (a wrong answer is said and the question stays open; a right one without its evidence is not yet provable) and residue records (what a record says now, and in the past what it said first). |
+| `ledger.js` | The campaign's ledgers in one place (§9.3–§9.7): `QUESTIONS` (each with the mission that opens it and the one that answers it; the case board shows the open ones as THE QUESTIONS), `CLUES` (C1–C12: plant, reinforce, payoff, each step a fact or a line of text in a named mission), `CONSEQUENCES` (every consequence fact, where it is set and where it is read), `CHOSEN` (what WHAT YOU CHOSE says for each), `PREVIOUSLY` (three lines per chapter, for a chapter's start and a loaded save), `EPILOGUE` (a line per consequence, read by the ending: Pryce, Dale and Iven's team since U6). Unit tests hold them to the missions: every clue planted before its payoff, every consequence read later or listed as an epilogue line. |
+| `Runtime.js` | A rewritten mission loads once (all its quarters), opens on its `coldOpen` (with `first` before the mission's card, the rest after), offers SKIP for the whole opening (the button, or Enter while the pointer is locked), and ends on its hook (`autoExit` where the story ends the mission rather than a gate). A load spawns at the furthest quarter after a PREVIOUSLY card. The case board has THE QUESTIONS, SIDE STORIES (a TRACK button puts that story's next thread under the objective), WHAT YOU CHOSE and ABILITIES. `time_<mkey>` stores each mission's play time (the ending sums them per chapter). Save format 22 (`campaign.lvFormat`): an older save inside a rewritten mission restarts it at its first quarter with its facts. Starting a chapter from the menu primes the facts a player would carry into it (`PRIMES`). |
+
+The Prologue as written (OVERHAUL.md §5, M1–M3): Mission 1 opens before its title on Helix at 05:40 (a card
+opens Chamber One while Kai sleeps; his phone lights once), then 08:02 at door 4B; the avenue's anomalies read
+together at the plaza clock ("Everything odd is running backwards toward the same minute: 8:14."); Officer Pryce at
+the checkpoint ("Says here you badged into Chamber One at 05:40."); the florist who served an older Kai with a scar
+ten minutes ago; the photo booth's three photographs; the Zero Second, the rescue in which the door glass cuts
+Kai's wrist (`wrist_cut`), the voice in every speaker; the pursuit of the woman with Mira's face to the staff gate,
+where she leaves a yellow raincoat (`raincoat`); chain A. Mission 2 opens on what the lobby kept of 05:38; Dr. Lin,
+whom nobody remembers hiring and who has no shadow; the Site Zero print; the camera room; Dale's recording; the
+junior pass (OVERRIDE 14-03-2026 16:02); chain D begins; Rook in person at the chamber door ("Did you think it was
+for clocks?", `trust_rook`). Mission 3: the ring takes Kai's hand and the cut seals into a circle with a broken halo
+(`wrist_mark`); the 2026 excavation office through a gap in the lab's wall that only 2026 has (`ev_site_zero`); the
+2196 plaque; chain D's route; the fracture, after which the mission ends on its own.
+
 ## Authored and generated
 
 **Written by hand**
 
-- The Prologue, all of it. Mission 1 is Rain City: a generated district (theme `rain`) with an
+- The Prologue, all of it, rewritten for U6 as threads in quarters (above). Mission 1 is Rain City South
+  (an open place since U2) with an
   authored overlay — Kai's door, the anomalies (the toy, the backward clock, tomorrow's camera
   feed), Rook's call, the checkpoint, the station, the Zero Second and the train, the rescue,
   the voice in every speaker, Mira in the crowd, Jun's booth and relay 41-B (quest chain A).
@@ -349,14 +377,23 @@ Child on `af_river`. Every tier-2 person and each crowd voice (by sex and age) h
   records a miss; the effect chains are the edition's (each `fx` through its own chain to the voice bus, the
   echo slower, beds under radio and records, wow on records) and Station Zero's voice plays every line dry;
   the cards, the choices Kai says and the ending sequence; every region of the score plays a minute in every
-  year and every cue plays, on a stand-in audio graph.
+  year and every cue plays, on a stand-in audio graph. Threads and ledgers (U6): the Prologue as threads (one
+  map each, its quarters, a cold open and a hook, every thread a known kind with a goal, a because line and three
+  tiers, at a landmark of its place), the length model (the Prologue 75–100 minutes, the main path ≥ 70%), the
+  clue ledger (every plant before its payoff), the consequence ledger, the bible's exchanges verbatim with their
+  speakers and no design-note words, the speech budget, PREVIOUSLY and THE QUESTIONS from the common pack, the
+  thread engine, a thread paid once, the year carried out of Mission 3's lab, the save-format migration, and
+  Mission 3's walk out through the lab's 2026 frame to the dig.
 - `tests/lastversion-perf.mjs` (browser, read-only): what a place costs on an emulated phone
   (915×412 at 2.625, medium quality) at quarter 0 of each mission and year: full-frame and
   scene-pass draw calls and triangles, the static draws split into scenery, sky, horizon and
   DeckWorld's own, and JS time per frame; checks §4.7 (static draws ≤ 70, sky 1, horizon ≤ 4,
   triangles ≤ 300k). `PLACES=m01,m04` by default (any of `m01` … `m23`).
 - `tests/lastversion.mjs` (browser bot): the title, NEW GAME into the Prologue, Missions 1–3
-  played through (both quest chains) into Act I, then Missions 5, 11 (REVERSE: R does nothing
+  played through (both quest chains) into Act I (since U6 Mission 1 is walked with real movement and every line
+  at its own length, its time logged; the cold opens, SKIP by Enter and by a tap, Pryce's 05:40 line, `wrist_cut`
+  and `wrist_mark`, the chase and the raincoat, an M1 save loading at its furthest quarter, Rook at the chamber
+  door, the excavation office, `time_<mkey>` and the case board's new sections; `LV_ONLY=prologue` stops there), then Missions 5, 11 (REVERSE: R does nothing
   before it is taught, the unlock in the records, R and the touch ⟲ button start and release a
   hold, a year switch releases it, the refusal, the file readable only while held, a jammed bolt,
   a settled bolt through a save and a load, the lock opening Ward 32), 13, 14 and 19 and the
