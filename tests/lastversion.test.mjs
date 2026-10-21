@@ -309,12 +309,13 @@ test('every obstacle has a state (or the anchor) that gets past it', () => {
       }
     }
   }
-  assert.ok(rooms > 100, `${rooms} challenges checked`); // (the generators' rooms: Missions 9 on, until U3 retires them)
+  assert.ok(rooms >= 30, `${rooms} challenges checked`); // (the places' crossings, in every sector of every mission)
 });
 
-test('every generated route only uses states its room was authored with', () => {
+test('every level is a place, and any route a level carries only uses states its room was authored with', () => {
   let steps = 0;
   for (const { deck, s, level } of LEVELS) {
+    assert.ok(level.place, `${deck.mkey}/${s}: built from its place spec, not a generator`);
     for (const rid of level.order) {
       const room = level.rooms[rid];
       const st = room.states || level.states || deck.states;
@@ -326,7 +327,7 @@ test('every generated route only uses states its room was authored with', () => 
       }
     }
   }
-  assert.ok(steps > 200, `${steps} route steps`);
+  assert.ok(steps >= 0, `${steps} route steps`); // (the generators' routes went with them: U3)
 });
 
 test('every beat has something that completes it', () => {
@@ -480,7 +481,7 @@ test('three years and nothing else: no INVERTED, no gravity, no ceiling in any m
       for (const w of [...(room.route || []), ...(room.keyRoute || [])]) if (w.state) assert.ok(LV.states.includes(w.state), `${here} ${rid}: route ${w.state}`);
     }
   }
-  assert.ok(checked > 100, `${checked} challenges`);
+  assert.ok(checked >= 30, `${checked} challenges`);
 });
 
 test('no laws, no law tokens, no memory keys, and Kai thinks without ceilings or domes', () => {
@@ -712,7 +713,7 @@ test('the REVERSE rules, refusals and lines are the spec\'s, and recorded', () =
   for (const p of main.find((m) => m.n === 11).processes) for (const h of p.hints || []) assert.ok(has('KAI', h), h);
 });
 
-// --- open-sky places (OVERHAUL.md §4; U2: the Prologue and Act I) --------------------------------------------------
+// --- open-sky places (OVERHAUL.md §4; U2: the Prologue and Act I; U3: Acts II-IV, the Finale and the two cases) -------
 // what each mission sheet (§5) names: its place, its quarters and every landmark
 const SHEETS = {
   m01: { place: 'rain_south', quarters: ['HOME & MARKET', 'TRANSIT PLAZA & CHECKPOINT', 'LINE 41'],
@@ -731,6 +732,40 @@ const SHEETS = {
     landmarks: 'gnomon lowerRing astronomerRoofs nikoGuide rotatingPlatforms starTube datesRing scavengerCamp cache outerRingWalk horizonRing tinSpot' },
   m08: { place: 'helix_v17', quarters: ['STAFF RECORDS', 'THE CORRUPTED LOG', 'THE LAST TEN MINUTES'],
     landmarks: 'receptionDesk riverCourt printCase photoWall recordsTerminal linDesk staffDoor riverWall serverRoom2026 securityOffice rookOffice reconstruction containmentCube versionTerminal groupPhoto' },
+  // (U3) Acts II-IV and the Finale
+  m09: { place: 'northbank', quarters: ['START', 'CLOCK A — OBSERVATION', 'CLOCK B — THE ENEMY ROUTE', 'CLOCK C — THE LOOP TRIGGER', 'THE CONTROL TOWER'],
+    landmarks: 'ferryQuay marketLoggia clockA funicularStation funicularTrack orderBoard clockB cathedralSteps clockC loopEdge transmitter towerBase towerTop skyways' },
+  m10: { place: 'dam', quarters: ['THE DETENTION BLOCK', 'POWER SYSTEMS', 'THE TESTING CHAMBER', 'THE YARD'],
+    landmarks: 'cell galleries guardPost intakeRecords switch2049 switch2026 crestYard directorOffice turbineHall projector loopCells spillwayTunnel gorgeFloor seraSkiff' },
+  m11: { place: 'hospital', quarters: ['TRIAGE & THE QUIET COLONNADE', 'RECORDS', 'WARD 32'],
+    landmarks: 'atrium triage discontinuityCourt quietColonnade gurneyRun glassWindow ivStand musicBox youngKaiBench recordsHall ledger2026 tray waterGlass burntDoor charredFile flatlineMonitor photoBoard intercomRoom odileStation twinLock maintTag ward32Door ward32 roofGarden' },
+  m12: { place: 'helix', quarters: ['THE CHASE — 2049', 'THE CORRIDOR THAT WAS — 2026', 'THE RUIN — 2196', 'THE SECOND CHAMBER'],
+    landmarks: 'northRoofs plantDecks skybridgeN glassPanes gangway2026 lunchRoom2026 bouquet collapsedStair sinkTerraces fallenBeam secondRing fractureExit' },
+  m13: { place: 'warport', quarters: ['THE BATTLEFIELD', 'THE THREE DEVICES', 'THE STABILIZER'],
+    landmarks: 'quayTrench containerCanyon fieldOrders shellZone batteryA batteryB listenersRoute deviceRail deviceCrane deviceCrater silos stabilizer frozenBlock rollCall burialSite' },
+  m14: { place: 'drowned', quarters: ['THE OVERGROWN TOWERS', 'THE TRANSIT LINE', 'THE MEMORIAL'],
+    landmarks: 'arrivalPlatform partsList bankTower liftCar roofGarden fallenTower viaduct transitBridge lowWaterPath antenna stackedStones unstableZones memorial flowers seraSchool seraSteps gardenChannel mossPrints kaiStatue' },
+  m15: { place: 'lockcity', quarters: ['THE STATION', 'THE SCHOOL & MARKET', 'THE ARCHIVE / THE LOCK'],
+    landmarks: 'northGate railHalt departureBoard evacTrain school register market floodLine pressTower archiveA archiveB card14 audioCylinder museumDisplay anjaDesk lockConsole lockHalo' },
+  m16: { place: 'sinkhole', quarters: ['THE RIM & THE FIRST MEMORY', 'THE SPIRAL', 'THE COMPARISON HALL', 'THE PHOTOGRAPH'],
+    landmarks: 'rimGate entranceHall alcove1 alcove2 alcove3 pontoons reel shatteredCase lensHall deductionBoard waterfall photoAlcove catacomb choiceCases' },
+  m17: { place: 'array', quarters: ['THE SHIFTING CORRIDOR', 'THE RECORDINGS', 'THE EARLIER ROOMS', 'THE ORIGINAL EXPERIMENT'],
+    landmarks: 'arrival cableTrenches drumRacks shelves mimicPatrol dish1 dish2 dish3 dish4 dish5 dish6 dish7 dish8 dish9 echoGate earlierRooms controlHall reconstruction letterDesk' },
+  m18: { place: 'fracture', quarters: ['THE ANCHOR SETTLEMENT', 'THE CANYON', 'THE FLOODED HIGHWAY', 'THE COLLAPSING SKYSCRAPER'],
+    landmarks: 'anchorMast houseA houseB houseC chronolithBench garden canyonArch waterShortcut highwaySign lampPosts surge slabs floorFragment pylon1 pylon2 pylon3 stabilizer towerDeck transmissionScreen pocket' },
+  m19: { place: 'unwritten', quarters: ['THE LOOPING ROAD', 'THE BRIDGE IN THE REFLECTION', 'THE DOOR THAT IS EVERYWHERE'],
+    landmarks: 'orrenRoad clockMarks observatoryPattern helixBadge mirrorBridge lagSite realDoor miraMeet door1 door2 door3 door4 door5' },
+  m20: { place: 'memory', quarters: ['THE HOUSE', 'THE EXPERIMENT', 'THE WORLD WITHOUT KAI'],
+    landmarks: 'kitchen fridgeDrawing yellowBoots nightBadge garden blueDoor whiteChamber childChair console seaGarden miraPlanting memorialNobody stop41 alignBoard houseNoOwner' },
+  m21: { place: 'spire', quarters: ['THE ALLY / ARRIVAL', 'THE COMMAND STRUCTURE', 'THE ARENA', 'THE WITNESS'],
+    landmarks: 'gliderDeck lightBridge serviceLift kitchenDoor stairsAlone commandHalls eliteRamps cells directorOffice arenaRing arenaBridges mast citadelRing witnessStand' },
+  m22: { place: 'firstsecond', quarters: ["THE VILLAGE'S CHAIN", "THE CLOCKMAKER'S PATTERN & THE HOSPITAL'S LOCK", 'THE FINAL CHAMBER'],
+    landmarks: 'wedgeVillage chainWall wedgeClock clockArm wedgeHospital twinChamber finalSeals evidenceTable memoryCards wedgeStation wedgeCourt' },
+  m23: { place: 'afterzero', quarters: ['THE OPENING STREETS', 'THE SETTLEMENT, AGAIN', 'THE HELIX LAB', '2196', 'THE ORIGINAL CHRONOLITH'],
+    landmarks: 'platform41 streetCollapse junPassengers tellingStone settlementBridge tala rookTransmission ivenStatement memorial2196 seraGarden anja originalRing miraStands endingChoice' },
+  // the two cases kept as replay entries (until U8): Tala's gorge and Mara's press tower
+  c_b: { place: 'valley_river', quarters: ['THE DRY CHANNEL', 'THE GATES'], landmarks: 'gorgeMouth dryChannel gate1 gate2 gate3 aqueduct muralCliff' },
+  c_c: { place: 'lockcity', quarters: ['THE FIRST ARCHIVE', 'THE SECOND ARCHIVE'], landmarks: 'pressTower pressFoot pressStairTop archiveA archiveB card14 audioCylinder museumDisplay' },
 };
 const PLACED = LEVELS.filter((l) => SHEETS[l.deck.mkey]);
 const sameAs = (a, b) => a === b || [].concat(PLACES[a].sameAs || []).includes(b) || [].concat(PLACES[b].sameAs || []).includes(a);
@@ -742,7 +777,8 @@ function extent(v) {
   return [v.x - hw, v.z - hw, v.x + hw, v.z + hw, v.h ?? (v.R ? v.R * 2 : r * 2), v.y];
 }
 
-test('Missions 1 to 8 stand in their own open places, every quarter and every landmark of their sheet', () => {
+test('every mission stands in its own open place, with every quarter and every landmark of its sheet', () => {
+  assert.equal(Object.keys(SHEETS).filter((k) => /^m\d\d$/.test(k)).length, 23, 'all twenty-three missions have a sheet');
   for (const [key, sheet] of Object.entries(SHEETS)) {
     const ls = PLACED.filter((l) => l.deck.mkey === key);
     assert.ok(ls.length, `${key} builds`);
@@ -753,8 +789,9 @@ test('Missions 1 to 8 stand in their own open places, every quarter and every la
       const missing = sheet.landmarks.split(' ').filter((n) => !level.landmarks[n]);
       assert.deepEqual(missing, [], `${here}: landmarks the sheet names`);
       for (const [n, l] of Object.entries(level.landmarks)) assert.ok(l.length === 4 && l.every(Number.isFinite), `${here}: ${n}`);
-      // D2 step 1: sector i spawns in quarter i
-      const q = level.quarters[Math.min(s, level.quarters.length - 1)];
+      // D2 step 1: sector i spawns in quarter i (or, where a mission has fewer sectors than the place has quarters, in the
+      // first quarter its sector spans: spec.sectors)
+      const q = level.quarters[PLACES[level.place].sectors?.[deck.mkey]?.[s] ?? Math.min(s, level.quarters.length - 1)];
       if (deck.sectors > 1) assert.ok(Math.hypot(level.spawn[0] - q.spawn[0], level.spawn[2] - q.spawn[2]) < 0.01, `${here}: spawns at ${q.name}`);
       assert.ok(level.exit?.box && level.checkpoints.length >= level.quarters.length, `${here}: an exit, and a checkpoint per quarter`);
     }
@@ -792,7 +829,7 @@ test('open sky: no dome, no ceiling over more than 15% of a place, and no tall w
   }
 });
 
-test('no generator and no Vessel look: Missions 1 to 8 are built from their place specs', () => {
+test('no generator and no Vessel look: every mission is built from its place spec', () => {
   for (const { deck, s, level } of PLACED) {
     const here = `${deck.mkey}/${s}`;
     assert.ok(level.place && !level.zone, `${here}: not a ZoneGen district`);
@@ -830,14 +867,47 @@ test('no two missions look alike: the signature is unique unless the place is th
     sig[key] = { sg, place: deck.place };
   }
   assert.ok(sameAs('helix_v17', 'helix') && sameAs('helix', 'helix_v17'), 'Helix in VERSION 17 is Helix, declared both ways');
-  assert.equal(new Set(Object.values(sig).map((o) => o.sg)).size, Object.keys(SHEETS).length, 'every signature differs');
+  // (the cases replay a mission's place in its own years, so only the missions are counted)
+  const ms = Object.entries(sig).filter(([k]) => /^m\d\d$/.test(k));
+  assert.equal(new Set(ms.map(([, o]) => o.sg)).size, ms.length, 'every signature differs');
 });
 
-test('places are big enough to explore: a short side of 120 m or more, quarters of 2,500 m² or more', () => {
+test('every mission\'s default sky is its own (the M22 and M23 composites excepted)', () => {
+  const seen = {};
+  for (const key of Object.keys(SHEETS).filter((k) => /^m\d\d$/.test(k))) {
+    const { deck, level } = PLACED.find((l) => l.deck.mkey === key);
+    const y = level.years.PRESENT || level.years[deck.states[0]];
+    assert.ok(SKIES[y.sky], `${key}: ${y.sky}`);
+    if (['m22', 'm23'].includes(key)) continue;
+    assert.ok(!seen[y.sky], `${key} shares its default sky ${y.sky} with ${seen[y.sky]}`);
+    seen[y.sky] = key;
+  }
+  assert.ok(Object.keys(seen).length >= 21);
+});
+
+test('the edition no longer runs the generators: no edition file imports gen/ZoneGen.js or gen/LevelGen.js, and dress.js is gone', () => {
+  const root = new URL('../game/js/editions/lastversion/', import.meta.url);
+  const files = [];
+  const walk = (u) => { for (const e of fs.readdirSync(u, { withFileTypes: true })) { const v = new URL(e.name + (e.isDirectory() ? '/' : ''), u); if (e.isDirectory()) walk(v); else if (e.name.endsWith('.js')) files.push(v); } };
+  walk(root);
+  assert.ok(files.length >= 30, `${files.length} edition files`);
+  const GEN = /(?:from\s*|import\s*\(\s*)['"][^'"]*gen\/(?:ZoneGen|LevelGen)\.js['"]/;
+  for (const f of files) assert.ok(!GEN.test(fs.readFileSync(f, 'utf8')), `${f.pathname.split('/editions/')[1]} imports a generator`);
+  assert.ok(!fs.existsSync(new URL('dress.js', root)), 'dress.js is retired');
+  for (const m of Object.values(MISSIONS).flat()) {
+    assert.ok(m.place, `${m.key}: a place`);
+    assert.ok(!['zone', 'rooms'].includes(m.kind) && !m.palette && !m.theme && !m.deckKey, `${m.key}: no generator setup (${m.kind})`);
+  }
+});
+
+test('places are big enough to explore: a short side of 120 m or more (a linear place: 100 × 300 m or more), quarters of 2,500 m² or more', () => {
   for (const [key, spec] of Object.entries(PLACES)) {
     const [x0, z0, x1, z1] = spec.bounds;
-    assert.ok(Math.min(x1 - x0, z1 - z0) >= 120, `${key}: ${x1 - x0} × ${z1 - z0}`);
+    const short = Math.min(x1 - x0, z1 - z0), long = Math.max(x1 - x0, z1 - z0);
+    if (spec.linear) assert.ok(short >= 100 && long >= 300, `${key} (linear): ${x1 - x0} × ${z1 - z0}`);
+    else assert.ok(short >= 120, `${key}: ${x1 - x0} × ${z1 - z0}`);
   }
+  assert.deepEqual(Object.keys(PLACES).filter((k) => PLACES[k].linear).sort(), ['afterzero', 'fracture'], 'the two traverses are the linear places');
   for (const { deck, level } of PLACED) {
     for (const q of level.quarters) {
       const [x0, z0, x1, z1] = q.area;
@@ -972,12 +1042,34 @@ test('the places can be walked: their stairs, terraces, ramps and bridges carry 
     ['m08', 'PRESENT', (l) => lm(l, 'atriumDoors'), [[-40, -20], [-30, -24], [30, -20], [30, -21], [30, -37.5], [30, -38.6]], 9, {}],
     ['m08', 'PRESENT', () => [40, 0, -28], [[40, -24.5], [40, -14.3], [44, -10]], 6, {}],
     ['m08', 'PRESENT', () => [0, 0, -22], [[0, -18.4], [-0.3, -17], [0.4, -15.6], [-0.2, -14.2], [0.3, -12.8], [0, -11]], 0.4, {}],
+    // (U3) the stone arch over the 2026 canyon; the lamp-post heads over the 2049 flood; the 2196 tilted floors up to the tower's deck
+    ['m18', 'PAST', () => [0, 0, -80], [[0, -66], [0, -54], [0, -40]], 0, {}],
+    ['m18', 'PRESENT', () => [6, 1.9, 2], [[6, 30], [6, 60]], 1.9, {}],
+    ['m18', 'FUTURE', () => [-20, 0, 92], [[-20, 96], [-20, 104.5], [-16, 108], [6, 108], [10, 112], [10, 138], [14, 144], [26, 146], [26, 176], [30, 180], [24, 186]], 26, {}],
+    // the bridge in the reflection holds in 2026, and once the reflection is in step; the stair to the fifth door
+    ['m19', 'PAST', () => [0, 0, -18], [[0, -30], [0, -42]], 0, {}],
+    ['m19', 'PRESENT', () => [0, 0, -18], [[0, -30], [0, -42]], 0, { m19_synced: true }],
+    ['m19', 'PRESENT', () => [86, 0, -42], [[86, -60], [86, -79], [86, -81]], 12, {}],
+    ['m19', 'PAST', () => [-55, 0, 98], [[-55, 79], [-55, 76], [-49, 76], [-49, 64]], 6, {}],
+    // the Spire: the kitchen door's stair, the halls, the elite ramps, the cells' terrace, the bridge to the arena; the summit
+    ['m21', 'PRESENT', () => [48, 0, 30], [[48, 27], [48, 21], [48, 10], [48, -30], [46, -38], [46, -62], [30, -68], [21, -68], [6, -68], [6, -44], [6, -38]], 18, {}],
+    ['m21', 'PRESENT', () => [-32.7, 18, -36], [[-32.7, -44], [-32.7, -55], [-36, -60]], 24, {}],
+    ['m21', 'PRESENT', () => [-30, 0, 26], [[-30, 20], [-30, 6], [-30, 0], [10, 0], [30, 0]], 6, {}],
+    // the Museum: the sinkhole's spiral, one and a half turns from the rim (26 m) to the floor (-12 m), into the Comparison Hall
+    ['m16', 'FUTURE', (l) => lm(l, 'rimGate'), [[0, 58], [0, 55], ...Array.from({ length: 89 }, (_, i) => { const a = 96 + i * 6, r = 55 - (18 * (a - 90)) / 540; return [Math.cos((a * Math.PI) / 180) * r, Math.sin((a * Math.PI) / 180) * r]; }), [0, -33], [0, -30], [3, -20], [3, -12], [1, -6]], -12, {}],
+    // the First Second: down the village terraces, round the twin chamber to the clockmaker's wedge
+    ['m22', 'PRESENT', (l) => lm(l, 'wedgeVillage'), [[0, 60], [0, 53], [0, 48], [0, 41], [0, 36], [0, 24], [-12, 14], [-30, 14], [-40, 14]], 0, {}],
+    // Afterzero: the whole road, from the 41's shelter over the stream's bridge and up the Ring Hill to the ring
+    ['m23', 'PRESENT', (l) => lm(l, 'platform41'), [[2, 150], [2, 112], [0, 90], [0, 66], [0, 54], [0, 30], [0, -20], [0, -100], [0, -110], [0, -124], [0, -140]], 4, {}],
   ];
   for (const [key, st, start, route, y, facts] of routes) {
     const l = lv(key);
     const r = walkRoute(l, st, start(l), route, facts);
     assert.ok(!r.stuck && Math.abs(r.at[1] - y) < 0.6, `${key} ${st}: ${JSON.stringify(route.slice(-1))} ${JSON.stringify(r)}`);
   }
+  // where the year is the answer, the wrong year does not carry Kai: the 2049 chasm, the reflection out of step
+  assert.ok((walkRoute(lv('m18'), 'PRESENT', [0, 0, -80], [[0, -66], [0, -54], [0, -40]]).at?.[1] ?? -99) < -1, 'M18: no way over the chasm in 2049');
+  assert.ok((walkRoute(lv('m19'), 'PRESENT', [0, 0, -18], [[0, -30], [0, -42]]).at?.[1] ?? -99) < -1, 'M19: the bridge is only a reflection');
   // the river in Mission 5: in the abandoned year its footbridge is gone, in the thriving year it carries Kai over
   const m5 = lv('m05');
   const [sx, , sz] = m5.landmarks.footbridgeS, n = m5.landmarks.footbridgeN;

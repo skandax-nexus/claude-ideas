@@ -377,7 +377,9 @@ export function viaduct(P, x0, z0, x1, z1, h, w, m, o = {}) {
   P.obox((x0 + x1) / 2, y + h - 1.2, (z0 + z1) / 2, w, 1.2, len + 1.6, ry, m);
   for (let i = 0; i < n; i++) {
     const f = (i + 0.5) / n;
-    P.torus(x0 + (x1 - x0) * f, y + h - 1.6 - (span - 1.6) / 2 * 0.0, z0 + (z1 - z0) * f, (span - 1.6) / 2, 0.35, m, { arc: PI, ry: ry + PI / 2, seg: 10 });
+    // (o.under: the arches hang under the deck between the piers)
+    if (o.under) P.torus(x0 + (x1 - x0) * f, y + h - 1.2, z0 + (z1 - z0) * f, (len / n - 1.6) / 2, 0.35, m, { arc: PI, ry: ry + PI / 2, rz: PI, seg: 10 });
+    else P.torus(x0 + (x1 - x0) * f, y + h - 1.6 - (span - 1.6) / 2 * 0.0, z0 + (z1 - z0) * f, (span - 1.6) / 2, 0.35, m, { arc: PI, ry: ry + PI / 2, seg: 10 });
   }
   if (o.walk) P.col([Math.min(x0, x1) - w / 2, y + h - 1.2, Math.min(z0, z1) - w / 2, Math.max(x0, x1) + w / 2, y + h, Math.max(z0, z1) + w / 2]);
 }
@@ -656,4 +658,107 @@ export function edges(P, spec) {
       P.plane(sx0, sz0, sx1, sz1, -0.05, P.style.ground || 'meadow', { noShadow: 1 });
     }
   }
+}
+
+// --- (U3) pieces for Acts II-IV and the Finale ----------------------------------------------------------------
+// a square stair spiralling up round a core (a tower, a lighthouse, a lattice mast): flights of `per` steps
+// along each side, a landing at each corner; half is the half width of the core's square, w the flight width
+export function spiralStair(P, cx, cz, y0, y1, half, w, m, o = {}) {
+  const per = o.per ?? 6, rise = (y1 - y0) / Math.max(1, Math.round((y1 - y0) / 0.33));
+  const r = half + w / 2;
+  // the corners, anticlockwise from the south-west (start), and the flights along the sides between them
+  const corners = [[cx - r, cz + r], [cx + r, cz + r], [cx + r, cz - r], [cx - r, cz - r]];
+  let y = y0, side = o.start ?? 0;
+  while (y < y1 - 0.01) {
+    const [ax, az] = corners[side % 4], [bx, bz] = corners[(side + 1) % 4];
+    // the landing at the corner
+    P.box([ax - w / 2, y - 0.3, az - w / 2, ax + w / 2, y, az + w / 2], m, { noShadow: 1 });
+    const n = Math.min(per, Math.round((y1 - y) / rise));
+    const dx = (bx - ax) / (per + 1), dz = (bz - az) / (per + 1);
+    for (let i = 1; i <= n; i++) {
+      const sx = ax + dx * i, sz = az + dz * i, top = y + rise * i;
+      const hx = Math.abs(dx) > 0.01 ? Math.abs(dx) / 2 + 0.02 : w / 2, hz = Math.abs(dz) > 0.01 ? Math.abs(dz) / 2 + 0.02 : w / 2;
+      P.box([sx - hx, top - 0.3, sz - hz, sx + hx, top, sz + hz], m, { noShadow: 1 });
+    }
+    y += rise * n;
+    side++;
+    if (n < per) {
+      const [ex, ez] = [ax + dx * (n + 1), az + dz * (n + 1)];
+      P.box([ex - w / 2 - 0.4, y - 0.3, ez - w / 2 - 0.4, ex + w / 2 + 0.4, y, ez + w / 2 + 0.4], m, { noShadow: 1 });
+      return [ex, y, ez];
+    }
+  }
+  const [lx, lz] = corners[side % 4];
+  P.box([lx - w / 2, y - 0.3, lz - w / 2, lx + w / 2, y, lz + w / 2], m, { noShadow: 1 });
+  return [lx, y, lz];
+}
+
+// a lattice mast tapering from `base` to `top` half widths over h: four legs, braces, platforms; solid legs
+export function lattice(P, x, z, y0, h, base, top, m, o = {}) {
+  const legs = [[-1, -1], [1, -1], [1, 1], [-1, 1]];
+  const at = (f, sx, sz) => { const w = base + (top - base) * f; return [x + sx * w, z + sz * w]; };
+  for (const [sx, sz] of legs) {
+    const [x0, z0] = at(0, sx, sz), [x1, z1] = at(1, sx, sz);
+    const len = Math.hypot(x1 - x0, h, z1 - z0);
+    P.obox((x0 + x1) / 2, y0, (z0 + z1) / 2, 0.36, len, 0.36, 0, m, { rx: -Math.atan2(z1 - z0, h), rz: Math.atan2(x1 - x0, h) });
+    if (o.solid !== false) P.col([x0 - 0.3, y0, z0 - 0.3, x0 + 0.3, y0 + Math.min(h, 4), z0 + 0.3]);
+  }
+  const n = o.bays ?? Math.max(3, Math.round(h / 6));
+  for (let i = 1; i <= n; i++) {
+    const f = i / n, y = y0 + h * f;
+    const w = base + (top - base) * f;
+    for (const [a, b] of [[[-1, -1], [1, -1]], [[1, -1], [1, 1]], [[1, 1], [-1, 1]], [[-1, 1], [-1, -1]]]) {
+      const [xa, za] = [x + a[0] * w, z + a[1] * w], [xb, zb] = [x + b[0] * w, z + b[1] * w];
+      P.obox((xa + xb) / 2, y - 0.12, (za + zb) / 2, Math.abs(xb - xa) + 0.2 || 0.2, 0.2, Math.abs(zb - za) + 0.2 || 0.2, 0, m, { noShadow: 1 });
+    }
+    // a cross brace on two faces
+    const wp = base + (top - base) * ((i - 0.5) / n), dy = h / n;
+    P.obox(x, y - dy, z - wp, 0.12, Math.hypot(wp * 2, dy), 0.12, 0, m, { rz: Math.atan2(wp * 2, dy), noShadow: 1 });
+    P.obox(x - wp, y - dy, z, 0.12, Math.hypot(wp * 2, dy), 0.12, 0, m, { rx: Math.atan2(wp * 2, dy), noShadow: 1 });
+  }
+  if (o.beacon) P.cyl(x, y0 + h, z, 0.3, 0.6, o.beacon, { seg: 8 });
+}
+
+// a shipping container (12 x 2.6 x 2.6), turned ry, standing on y; solid; a stack of n
+export function container(P, x, z, ry, m, o = {}) {
+  const y = o.y ?? P.heightAt(x, z);
+  const n = o.n ?? 1, L = o.len ?? 12, W = 2.5, H = 2.6;
+  for (let i = 0; i < n; i++) {
+    const mm = Array.isArray(m) ? m[i % m.length] : m;
+    P.obox(x, y + i * H, z, W, H - 0.04, L, ry + (i % 2 ? 0.03 : 0), mm, { solid: true, shrink: 0.98 });
+  }
+  P.blocks.push([x - L / 2, z - L / 2, x + L / 2, z + L / 2].map((v) => Math.round(v)));
+}
+
+// a dish antenna on a pedestal: a bowl of radius r opening toward the sky, its axis tilted by tilt toward
+// bearing az (degrees); the rim at the bowl's lip, the feed on the axis
+export function dish(P, x, z, r, o = {}) {
+  const y = o.y ?? P.heightAt(x, z);
+  const m = o.m || 'dishWhite';
+  P.cyl(x, y, z, 1.6, 1.4, o.base || 'hallConcrete', { seg: 10, solid: true });
+  P.obox(x, y + 1.4, z, 1.6, r * 0.75, 1.6, 0, o.yoke || 'steel', { solid: true });
+  const t = o.tilt ?? 0.7, a = ((o.az ?? 180) * Math.PI) / 180;
+  // (YXZ: turn to face the bearing, then tilt; the axis (sin t sin a, cos t, -sin t cos a))
+  const ax = [Math.sin(t) * Math.sin(a), Math.cos(t), -Math.sin(t) * Math.cos(a)];
+  const ry = Math.PI - a, hub = y + 1.4 + r * 0.75, d = r * 0.36;
+  P.cyl(x, hub, z, r * 0.16, d, m, { r2: r, seg: 20, rx: t, ry });
+  P.torus(x + ax[0] * d, hub + ax[1] * d, z + ax[2] * d, r, 0.18, m, { rx: Math.PI / 2 + t, ry, seg: 32 });
+  const f = r * 0.85;
+  P.cyl(x + ax[0] * f, hub + ax[1] * f - 0.6, z + ax[2] * f, 0.35, 1.2, o.feed || 'steel', { seg: 8 });
+  P.cyl(x, hub, z, 0.12, f, o.feed || 'steel', { seg: 5, rx: t, ry }); // (the feed's boom)
+  if (o.light) P.sphere(x + ax[0] * f, hub + ax[1] * f + 0.8, z + ax[2] * f, 0.22, o.light);
+}
+
+// a gantry crane over a quay: two legs on rails, a beam, a cab; `cab` a climbable stair to the cab platform
+export function gantry(P, x, z, span, h, ry, o = {}) {
+  const m = o.m || 'craneRed';
+  const c = Math.cos(ry), s = Math.sin(ry);
+  for (const k of [-1, 1]) {
+    const lx = x + c * k * span / 2, lz = z - s * k * span / 2;
+    P.obox(lx, 0, lz, 1.4, h, 1.4, ry, m, { solid: true });
+    P.obox(lx, 0, lz, 4, 1.2, 1.6, ry, m, { solid: true });
+  }
+  P.obox(x, h, z, span + 6, 2.2, 2.4, ry + Math.PI / 2, m);
+  P.obox(x + s * 18, h + 1.2, z + c * 18, 2.2, 1.6, 34, ry, m);
+  P.obox(x, h - 3, z, 3, 2.8, 3, ry, o.cabMat || 'steel');
 }

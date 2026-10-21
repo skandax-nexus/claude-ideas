@@ -20,8 +20,22 @@ import valley_upper from './specs/valley_upper.js';
 import valley_river from './specs/valley_river.js';
 import oldtown from './specs/oldtown.js';
 import observatory from './specs/observatory.js';
+import northbank from './specs/northbank.js';
+import dam from './specs/dam.js';
+import hospital from './specs/hospital.js';
+import warport from './specs/warport.js';
+import drowned from './specs/drowned.js';
+import lockcity from './specs/lockcity.js';
+import sinkhole from './specs/sinkhole.js';
+import array from './specs/array.js';
+import fracture from './specs/fracture.js';
+import unwritten from './specs/unwritten.js';
+import memory from './specs/memory.js';
+import spire from './specs/spire.js';
+import firstsecond from './specs/firstsecond.js';
+import afterzero from './specs/afterzero.js';
 
-export const PLACES = { rain_south, helix, helix_v17, valley_upper, valley_river, oldtown, observatory };
+export const PLACES = { rain_south, helix, helix_v17, valley_upper, valley_river, oldtown, observatory, northbank, dam, hospital, warport, drowned, lockcity, sinkhole, array, fracture, unwritten, memory, spire, firstsecond, afterzero };
 export { yearsFor, signature, quartersOf, SKIES };
 
 // the palette DeckWorld lights its own few pieces with (doors, the train): the style's, with this
@@ -73,7 +87,10 @@ export function buildPlace(key, story, si, rt, opts = {}) {
   // the way on: at this quarter's threshold, or for the last sector the mission's exit landmark
   if (!P.exit) {
     const last = si >= (deck.sectors || 1) - 1;
-    const exName = last ? spec.exits?.[deck.mkey] || deck.exitAt : quarters[si]?.threshold?.at;
+    // (spec.sectors[mkey]: a mission with fewer sectors than the place has quarters, each sector its first
+    // quarter; a sector's way on is the threshold of the last quarter it spans)
+    const qmap = spec.sectors?.[deck.mkey];
+    const exName = last ? spec.exits?.[deck.mkey] || deck.exitAt : quarters[qmap ? qmap[si + 1] - 1 : si]?.threshold?.at;
     if (exName && P.landmarks[exName]) {
       const [x, y, z] = P.landmarks[exName];
       const g = spec.gates?.[deck.mkey];

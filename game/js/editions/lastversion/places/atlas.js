@@ -12,6 +12,13 @@ export const ATLAS = {
   // [x, z] of each place's origin; a place's own north is the atlas north
   helix: [0, 0], helix_v17: [0, 0], valley_upper: [0, 0],
   rain_south: [0, 560], valley_river: [-170, 210], oldtown: [-300, 440], observatory: [1320, -60],
+  // (U3) Northbank across the river north of Helix; the dam closing the upper gorge; the hospital on the
+  // city's western slope; the delta port; downtown, drowned by 2196; the stadium in the eastern suburbs;
+  // the quarry on the eastern edge under the Ridge; the Fracture's traverse from the hills to the coast;
+  // the Spire on downtown's tallest tower; the First Second on the Ring Hill; Afterzero's road to it
+  northbank: [-40, -640], dam: [430, -720], hospital: [-560, 860], warport: [300, 1560], drowned: [80, 1040],
+  lockcity: [720, 1020], sinkhole: [1060, 700], fracture: [-620, 640], spire: [140, 1100], firstsecond: [0, 0], afterzero: [0, 300],
+  // (no valley geography: the desert array, the mirror plain, Mira's memory)
 };
 
 // the far features (all pure data)
@@ -39,10 +46,24 @@ export function horizonFor(key, era, opts = {}) {
   const at = ATLAS[key] || [0, 0];
   const out = [];
   const ancient = era === 'ancient';
+  // the places with no valley around them: the desert's mesas, the mirror plain's white, the cloud sea's tops
+  if (opts.kind === 'desert') {
+    for (const [b, w, h] of [[20, 14, 3.2], [62, 9, 2.4], [118, 18, 4.0], [170, 7, 1.8], [214, 22, 3.6], [268, 10, 2.8], [305, 16, 4.4], [342, 8, 2.0]]) out.push({ kind: 'mesa', b, w, h, haze: 0.45 });
+    return out;
+  }
+  if (opts.kind === 'void') return [{ kind: 'haze', b: 180, w: 180, h: 2.5, haze: 0.9 }];
+  if (opts.kind === 'memory') return opts.sea ? [{ kind: 'sea', b: opts.sea, w: 90, h: 0.6, haze: 0.4 }, { kind: 'haze', b: 0, w: 180, h: 3, haze: 0.95 }] : [{ kind: 'haze', b: 0, w: 180, h: 3, haze: 0.95 }];
+  if (opts.kind === 'clouds') {
+    const f = FEATURES.notch, d = dist(at, f.at);
+    out.push({ kind: 'cloudtop', b: 180, w: 180, h: -1.2, haze: 0.2 });
+    out.push({ kind: 'notch', b: bearing(at, f.at), w: deg(Math.atan2(f.w / 2, d)), h: elevOf(f.h, d, 300), haze: 0.4, snow: true });
+    return out;
+  }
   // the Notch: a split peak, far off to the north-east
   {
     const f = FEATURES.notch, d = dist(at, f.at);
-    out.push({ kind: 'notch', b: bearing(at, f.at), w: deg(Math.atan2(f.w / 2, d)), h: elevOf(f.h, d), haze: opts.notch === 'faint' ? 0.78 : 0.55, snow: true });
+    const near = opts.notch === 'near' ? 2.6 : 1; // the dam stands under it
+    out.push({ kind: 'notch', b: bearing(at, f.at), w: deg(Math.atan2(f.w / 2, d)) * near, h: elevOf(f.h, d) * near, haze: opts.notch === 'faint' ? 0.78 : opts.notch === 'near' ? 0.35 : 0.55, snow: true });
   }
   // the Ridge: a long line of hills to the east (or under the place itself, for the observatory)
   if (key !== 'observatory') {
@@ -63,7 +84,7 @@ export function horizonFor(key, era, opts = {}) {
     out.push({ kind: 'ridge', b: 120, w: 50, h: 3.5, haze: 0.45 });
   }
   // the Ring Hill (from anywhere but on it), crowned by whatever stands on it in this era
-  if (!['helix', 'helix_v17', 'valley_upper'].includes(key)) {
+  if (!['helix', 'helix_v17', 'valley_upper', 'firstsecond'].includes(key)) {
     const f = FEATURES.ringHill, d = dist(at, f.at);
     const b = bearing(at, f.at);
     out.push({ kind: 'hill', b, w: deg(Math.atan2(f.r, d)), h: elevOf(f.h, d), haze: 0.32 });
@@ -77,11 +98,19 @@ export function horizonFor(key, era, opts = {}) {
       for (const [b0, b1, h] of key === 'rain_south' ? [[60, 150, 7], [210, 300, 8], [150, 210, 5]] : [[90, 200, 5], [200, 260, 6], [300, 350, 3]]) {
         out.push({ kind: 'skyline', b: (b0 + b1) / 2, w: (b1 - b0) / 2, h: era === '2196' ? h * 0.6 : era === '2026' ? h * 0.7 : h, haze: 0.4, broken: era === '2196', lit: era !== '2196' });
       }
+    } else if (dist(at, f.at) < f.r * 0.95 || opts.around) {
+      // inside the city: its blocks go on all round, lower toward the sea
+      const sea = typeof opts.sea === 'number' ? opts.sea : 180;
+      for (let b0 = 0; b0 < 360; b0 += 45) {
+        const mid = b0 + 22.5, off = Math.abs(((mid - sea + 540) % 360) - 180);
+        if (off < 30) continue;
+        out.push({ kind: 'skyline', b: mid, w: 21, h: (era === '2026' ? 5 : 7.5) * (off < 70 ? 0.6 : 1) * (era === '2196' ? 0.6 : 1), haze: 0.45, broken: era === '2196', lit: era !== '2196' });
+      }
     } else {
       const d = dist(at, f.at), b = bearing(at, f.at);
       out.push({ kind: 'skyline', b, w: deg(Math.atan2(f.r, d)), h: elevOf(era === '2026' ? 60 : 110, d) * (era === '2196' ? 0.55 : 1), haze: 0.5, broken: era === '2196', lit: era !== '2196' });
     }
-    if (era !== '2196') {
+    if (era !== '2196' && dist(at, FEATURES.harbour.at) > 500) {
       const h = FEATURES.harbour, d = dist(at, h.at);
       out.push({ kind: 'cranes', b: bearing(at, h.at), w: deg(Math.atan2(h.w / 2, d)), h: elevOf(60, d), haze: 0.55 });
     }
@@ -93,7 +122,7 @@ export function horizonFor(key, era, opts = {}) {
   {
     const z = FEATURES.sea.z[era] ?? 1700;
     const d = Math.max(200, z - at[1]);
-    out.push({ kind: 'sea', b: 180, w: era === '2196' ? 70 : ancient ? 35 : 55, h: Math.max(0.15, elevOf(0, d, -2) + 0.4), haze: ancient ? 0.6 : 0.35 });
+    out.push({ kind: 'sea', b: typeof opts.sea === 'number' ? opts.sea : 180, w: era === '2196' ? 70 : ancient ? 35 : 55, h: Math.max(0.15, elevOf(0, d, -2) + 0.4), haze: ancient ? 0.6 : 0.35 });
   }
   return out;
 }

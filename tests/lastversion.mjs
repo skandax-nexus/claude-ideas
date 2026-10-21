@@ -12,7 +12,9 @@
 //     (three devices in three years, the faction choice), Mission 14 (2196: stability, the
 //     snap back to the present), Mission 19 (the place outside time, Echo Step), and the
 //     Finale to Ending C, where quest chain A's passengers have cleared the first street
-//   - a generated interior (Mission 16) walked room by room with real movement and switches
+//   - real walks through the open places: Mission 13's quay to the container canyons, Mission 14's viaduct,
+//     the Museum's spiral (Mission 16) from the rim to the Comparison Hall, Mission 19's bridge that is only a
+//     reflection (it holds in 2026) and its wrapping edge, and the Finale's road over the settlement's stream
 //   NODE_PATH=$(npm root -g) node tests/lastversion.mjs
 import { createRequire } from 'node:module';
 import http from 'node:http';
@@ -145,7 +147,16 @@ await az(() => {
   B.rev = () => { if (g.menu === 'pause') g.closeMenu(); g.edition.inv.press(); }; // REVERSE, as R does
   B.inv = () => { const v = g.edition.inv; return { active: v.active ? v.active.p.rec.id : null, charge: +v.state.charge.toFixed(2), cap: v.cap, why: v.lastRelease || null }; };
   B.goMission = (deck, sector = 0) => { g.campaign.deck = deck; g.campaign.sector = sector; g.campaign.flags = {}; g.campaign.visited = []; g.loadSector(true); g.simulate(0.3); B.skip(); };
-  B.exit = () => { const ex = g.level.exit.box; B.place((ex[0] + ex[3]) / 2, (ex[2] + ex[5]) / 2); g.simulate(0.3); B.skip(); };
+  B.exit = () => { const ex = g.level.exit.box; B.place((ex[0] + ex[3]) / 2, (ex[2] + ex[5]) / 2, ex[1] + 1 + 0.86); g.simulate(0.3); B.skip(); };
+  // walk a list of [x, z] waypoints with real movement, the watchers held still (they are another check's business)
+  B.route = (pts, secs = 20) => {
+    const held = g.deckWorld.sentinels.splice(0);
+    const start = B.setbacks;
+    let left = 0, n = 0;
+    for (const [x, z] of pts) { left = B.walkTo(x, z, secs); if (left > 0.6 || B.setbacks > start) break; n++; }
+    g.deckWorld.sentinels.push(...held);
+    return { n, of: pts.length, left: +left.toFixed(2), at: g.player.pos.toArray().map((v) => +v.toFixed(2)), setbacks: B.setbacks - start, why: B.setbacks > start ? B.lastSetback : null };
+  };
   B.f = (...ks) => Object.fromEntries(ks.map((k) => [k, g.deckWorld.flags[k] ?? g.facts.get(k)]));
   B.where = () => ({ chapter: g.campaign?.chapter, deck: g.campaign?.deck, sector: g.campaign?.sector, room: g.room, done: !!g.deckWorld.flags.beat_done });
   B.npc = (id) => g.deckWorld.npcs.find((n) => n.n.id === id);
@@ -616,6 +627,8 @@ check(rest.every((r) => r.out.length >= 2) && opened.done && opened.beat && open
 console.log('Act II, Mission 13: The Nine-Minute War');
 await az(() => { AZ.edition.start('act2'); AZ.simulate(0.2); LVB.skip(); LVB.goMission(4); });
 check((await az(() => AZ.edition.deck.name)) === 'THE NINE-MINUTE WAR', 'Mission 13');
+const quay = await az(() => { AZ.edition.shift('PRESENT'); LVB.place(0, 84); return LVB.route([[2.6, 80], [2.6, 68], [24, 60], [24, 14]]); });
+check(quay.n === quay.of && !quay.setbacks, 'Mission 13, walked: from the quay trench through the gap in the sandbags, past the container canyons to their gate', JSON.stringify(quay));
 const roof = await az(() => {
   const c = AZ.deckWorld.focusCandidates(AZ).find((x) => x.it?.kind === 'terminal');
   LVB.place(c.pos[0], c.pos[2] + 1.4, c.pos[1] - 0.35);
@@ -663,6 +676,8 @@ check(drain.b < drain.a, 'out of the present in an unstable place, the Chronolit
 await page.waitForTimeout(1200);
 const snap = await az(() => { AZ.simulate(0.2); const s = LVB.said.slice(-3).join(' '); return { state: AZ.engine.state(AZ.room), stability: AZ.edition.stability, said: s.includes('The Chronolith let go of me') }; });
 check(snap.state === 'PRESENT' && snap.said, 'at zero it snaps you back to the present at the last anchor', JSON.stringify(snap));
+const viaduct = await az(() => { AZ.edition.stability = 1; const l = LVB.lm('arrivalPlatform'); LVB.place(l[0], l[2], l[1] + 0.86); const r = LVB.route([[l[0], 70], [l[0], 40]]); r.y = +(AZ.player.pos.y - 0.86).toFixed(2); return r; });
+check(viaduct.n === viaduct.of && !viaduct.setbacks && Math.abs(viaduct.y - 8) < 0.6, 'Mission 14, walked: along the transit viaduct over the drowned avenues, 8 m up', JSON.stringify(viaduct));
 const recorder = await az(() => { const c = AZ.deckWorld.focusCandidates(AZ).find((x) => x.it?.kind === 'terminal'); LVB.place(c.pos[0], c.pos[2] + 1.4, c.pos[1] - 0.35); AZ.useDeck(c); LVB.skip(); return AZ.deckWorld.flags.beat_done; });
 check(recorder, 'the beacon\'s part list, on a roof of the overgrown towers');
 await onward();
@@ -683,51 +698,32 @@ await az(() => LVB.exit());
 await nextPlace();
 check(await az(() => AZ.edition.deck.name === 'THE CITY THAT FORGOT TOMORROW'), 'Mission 14 ends; Mission 15 begins');
 
-// --- a generated interior, walked: Mission 16, THE MUSEUM OF FAILED WORLDS -------------------------------------
-console.log('Act III, Mission 16: a generated interior, walked room by room');
-const walkRooms = await az(() => {
+// --- the Museum, walked: Mission 16, THE MUSEUM OF FAILED WORLDS ---------------------------------------------
+// the sinkhole's spiral ramp, one and a half turns from the south rim (26 m) to the quarry's floor (-12 m), in 2196
+// (in 2049 its lower turns are under the lake), with real movement, then across the floor into the Comparison Hall
+console.log('Act III, Mission 16: the Museum\'s spiral, walked from the rim to the Comparison Hall');
+const spiral = await az(() => {
   const g = AZ;
-  const out = [];
-  for (let s = 0; s < g.story.decks[2].sectors; s++) {
-    LVB.goMission(2, s);
-    g.transitioning = true; // keep the bot inside this sector
-    g.deckWorld.flags.beat_done = true; // the story room is the scene's business; here, the puzzles
-    g.deckWorld.refresh();
-    for (const rid of g.level.order) {
-      const room = g.level.rooms[rid];
-      if (!room.route?.length) continue;
-      g.engine.setState(rid, 'PRESENT', { force: true });
-      g.held = null;
-      g.enterRoom(rid, true);
-      g.simulate(0.3);
-      const start = LVB.setbacks;
-      let fail = null;
-      for (const w of room.route) {
-        if (w.state) g.engine.setState(rid, w.state, { force: true });
-        if (w.wait) g.simulate(w.wait);
-        const left = LVB.walkTo(w.pos[0], w.pos[2], 20, !!w.jump);
-        g.simulate(w.jump ? 1 : 0.15);
-        if (LVB.setbacks > start) { fail = `setback (${LVB.lastSetback})`; break; }
-        if (left > 0.6) { fail = `stuck ${left.toFixed(2)} m short (${w.act || (w.exit ? 'exit' : 'walk')}) at ${g.player.pos.toArray().map((v) => v.toFixed(1))}, ${g.engine.state(rid)}`; break; }
-        if (w.act === 'take') {
-          g.useDeck({ id: `ditem:${w.item}` });
-          if (g.level.items.find((i) => i.id === w.item)?.echo) g.edition.anchor(); // what comes out of the past has to be anchored
-        }
-        if (w.act === 'use') {
-          const it = g.level.interactables.find((i) => i.id === w.target);
-          g.useDeck({ id: `deck:${it.id}`, it });
-          if (!g.deckWorld.flags[`open_${rid}`]) { fail = `${w.target} did not open (held ${g.held})`; break; }
-        }
-      }
-      LVB.skip();
-      out.push({ s, rid, challenges: room.challenges.map((c) => c.key).join('+'), fail });
-    }
-  }
+  LVB.goMission(2, 0);
+  g.transitioning = true; // keep the bot inside this sector
+  g.edition.shift('FUTURE');
+  g.edition.stability = 1;
+  const pts = [[0, 58], [0, 55]];
+  for (let a = 96; a <= 624; a += 6) { const r = 55 - (18 * (a - 90)) / 540; pts.push([Math.cos((a * Math.PI) / 180) * r, Math.sin((a * Math.PI) / 180) * r]); }
+  pts.push([0, -33], [0, -30], [3, -20], [3, -12], [1, -6]);
+  const l = LVB.lm('rimGate');
+  LVB.place(l[0], l[2], l[1] + 0.86);
+  const drain = g.edition.unstable;
+  g.edition.unstable = false; // (the walk takes longer than 2196 lets you stay; stability is Mission 14's check)
+  const r = LVB.route(pts, 12);
+  g.edition.unstable = drain;
+  r.y = +(g.player.pos.y - 0.86).toFixed(2);
+  r.board = Math.hypot(g.player.pos.x - LVB.lm('deductionBoard')[0], g.player.pos.z - LVB.lm('deductionBoard')[2]).toFixed(1);
+  g.edition.shift('PRESENT');
   g.transitioning = false;
-  return out;
+  return r;
 });
-const walkedRooms = Array.isArray(walkRooms) ? walkRooms : [];
-check(walkedRooms.length >= 6 && walkedRooms.every((r) => !r.fail), `the Museum's ${walkedRooms.length} generated rooms are walked through with switches and the anchor`, JSON.stringify(walkedRooms.filter((r) => r.fail).length ? walkedRooms.filter((r) => r.fail) : walkRooms));
+check(spiral.n === spiral.of && !spiral.setbacks && Math.abs(spiral.y + 12) < 0.6 && +spiral.board < 3, `the Museum's spiral, ${spiral.of} waypoints from the rim at 26 m down to the Comparison Hall at -12 m`, JSON.stringify(spiral));
 
 // --- Act IV: Mission 19, THE PLACE OUTSIDE TIME --------------------------------------------------------------
 console.log('Act IV, Mission 19: The Place Outside Time');
@@ -752,6 +748,24 @@ check(outside.s0, 'the first symbol: the clockmaker\'s mark', JSON.stringify(out
 await onward();
 const bridge = await az(() => { const c = AZ.deckWorld.focusCandidates(AZ).find((x) => x.it?.kind === 'plaque'); LVB.place(c.pos[0], c.pos[2] + 1.5); AZ.edition.shift('PAST'); AZ.simulate(0.1); AZ.useDeck(c); LVB.skip(); AZ.edition.shift('PRESENT'); return AZ.deckWorld.flags.beat_done; });
 check(bridge, 'THERE IS NO BRIDGE / THERE IS A BRIDGE. YOU ARE STANDING ON IT');
+const mirror = await az(() => {
+  const g = AZ, out = {};
+  g.edition.stability = 1;
+  g.edition.shift('PAST'); g.simulate(0.1);
+  LVB.place(0, -18);
+  out.past = LVB.route([[0, -30], [0, -38]]);
+  out.past.y = +(g.player.pos.y - 0.86).toFixed(2);
+  g.edition.shift('PRESENT'); g.simulate(0.1);
+  LVB.place(0, -18);
+  out.present = LVB.route([[0, -30], [0, -38]], 6);
+  // the plain's edges wrap: off the east edge, back in from the west
+  LVB.place(106, 60);
+  LVB.walkTo(112, 60, 3);
+  out.wrapX = +g.player.pos.x.toFixed(1);
+  return out;
+});
+check(mirror.past.n === mirror.past.of && !mirror.past.setbacks && Math.abs(mirror.past.y) < 0.6 && mirror.present.setbacks > 0, 'the bridge in the reflection: walked over it in 2026; in 2049 there is only its reflection, and the water', JSON.stringify(mirror));
+check(mirror.wrapX < -95, 'the roads loop: off the plain\'s east edge, back in from the west', JSON.stringify(mirror));
 await onward();
 const forgive = await az(() => { const n = LVB.npc('npc_' + AZ.room); LVB.place(n.model.position.x, n.model.position.z + 2); LVB.use('npc_' + AZ.room); LVB.skip(); return [AZ.deckWorld.flags.beat_done, LVB.said.some((l) => l.includes('the version of me that would forgive you'))]; });
 check(forgive[0] && forgive[1], 'Mira: "You\'ve been trying to reach the version of me that would forgive you."', JSON.stringify(forgive));
@@ -764,9 +778,15 @@ console.log('The Finale: Afterzero');
 await az(() => { AZ.edition.start('finale'); AZ.simulate(0.2); LVB.skip(); });
 const street = await az(() => ({ name: AZ.edition.deck.name, drones: AZ.deckWorld.sentinels.length, jun: !!LVB.npc('jun_safe') }));
 check(street.name === 'AFTERZERO' && street.drones === 0 && street.jun, 'the passengers Kai got off the 41 have cleared the opening streets: no watchers, Jun waves you through', JSON.stringify(street));
+const road = await az(() => { AZ.edition.shift('PRESENT'); const l = LVB.lm('platform41'); LVB.place(l[0], l[2]); return LVB.route([[2, 150], [2, 116]]); });
+check(road.n === road.of && !road.setbacks, 'the Finale, walked: up the quoted South Square to the seam where the asphalt ends', JSON.stringify(road));
 for (let s = 0; s < 2; s++) {
   const r = await az(() => { const c = AZ.deckWorld.focusCandidates(AZ).find((x) => x.it?.kind === 'terminal'); LVB.place(c.pos[0], c.pos[2] + 1.4, c.pos[1] - 0.35); AZ.useDeck(c); LVB.skip(); return AZ.deckWorld.flags.beat_done; });
   check(r, s === 0 ? 'Rook\'s last transmission' : 'the Witness holds the route');
+  if (s === 1) {
+    const stream = await az(() => { LVB.place(0, 70); const r = LVB.route([[0, 60], [0, 50]]); r.y = +(AZ.player.pos.y - 0.86).toFixed(2); return r; });
+    check(stream.n === stream.of && !stream.setbacks && stream.y > -0.3, 'over the settlement\'s stream on the bridge Kai holds', JSON.stringify(stream));
+  }
   await onward();
 }
 const finale = await az(() => { const c = LVB.cand('choice_' + AZ.room); LVB.place(c.pos[0], c.pos[2] + 1.5); LVB.use('choice_' + AZ.room); LVB.skip(); return [AZ.menu, [...document.querySelectorAll('#choice button')].map((b) => b.className)]; });
@@ -776,7 +796,7 @@ const ending = await az(() => ({ menu: AZ.menu, text: document.querySelector('#e
 check(ending.menu === 'ending' && ending.ending === 'C' && /ENDING C/.test(ending.text) && /AFTERZERO/.test(ending.text), 'Ending C, Afterzero', JSON.stringify({ ...ending, text: ending.text.slice(0, 120) }));
 check(/a second that belongs to nobody/.test(ending.text) && /Version one hundred and eighteen/.test(ending.text), '"I finally found a second that belongs to nobody." A voice: "Version one hundred and eighteen."');
 
-// --- the open places: Missions 1-8, each under its own sky (OVERHAUL.md §4.8) -----------------------------------------
+// --- the open places: all twenty-three missions, each under its own sky (OVERHAUL.md §4.8) ----------------------------
 // At quarter 0's spawn, in every year the mission has: a frame rendered, a 16×16 average hash of it (written to this log),
 // and the top quarter of the frame, which must be sky (or a ceiling's lights), never flat fog. Two missions in different
 // places must differ by 18 bits or more in every pair of years; the same place in another year (sameAs) may look alike.
@@ -786,14 +806,18 @@ check(/a second that belongs to nobody/.test(ending.text) && /Version one hundre
 // SwiftShader page that keeps drawing grows by gigabytes (the pre-U2 build does the same), and the session's shared
 // memory limit then kills it; a page per mission starts each one from nothing. LV_ONLY=places runs the survey alone;
 // LV_PLACE_SHOTS=<folder> keeps a screenshot of every view; LV_SURVEY_W / LV_SURVEY_H set the page's size;
-// LV_SURVEY_ONLY=m01,m04 surveys only those missions (the pair check then covers only them).
+// LV_SURVEY_ONLY=m01,m04 surveys only those missions (the pair check then covers only them); LV_SURVEY_HASHES=<file>
+// writes every view's hash and sky numbers to a JSON file.
 async function survey() {
-  console.log('The places: Missions 1 to 8 under their own skies');
+  console.log('The places: Missions 1 to 23 under their own skies');
   const SHOTS = process.env.LV_PLACE_SHOTS || null;
   if (SHOTS) fs.mkdirSync(SHOTS, { recursive: true });
   const W = +(process.env.LV_SURVEY_W || 384), H = +(process.env.LV_SURVEY_H || 216);
   const ONLY = (process.env.LV_SURVEY_ONLY || '').split(',').filter(Boolean);
-  const VIEWS = [['prologue', 0, 'm01'], ['prologue', 1, 'm02'], ['prologue', 2, 'm03'], ['act1', 0, 'm04'], ['act1', 1, 'm05'], ['act1', 2, 'm06'], ['act1', 3, 'm07'], ['act1', 4, 'm08']].filter(([, , key]) => !ONLY.length || ONLY.includes(key));
+  const VIEWS = [['prologue', 0, 'm01'], ['prologue', 1, 'm02'], ['prologue', 2, 'm03'], ['act1', 0, 'm04'], ['act1', 1, 'm05'], ['act1', 2, 'm06'], ['act1', 3, 'm07'], ['act1', 4, 'm08'],
+    ['act2', 0, 'm09'], ['act2', 1, 'm10'], ['act2', 2, 'm11'], ['act2', 3, 'm12'], ['act2', 4, 'm13'],
+    ['act3', 0, 'm14'], ['act3', 1, 'm15'], ['act3', 2, 'm16'], ['act3', 3, 'm17'], ['act3', 4, 'm18'],
+    ['act4', 0, 'm19'], ['act4', 1, 'm20'], ['act4', 2, 'm21'], ['act4', 3, 'm22'], ['finale', 0, 'm23']].filter(([, , key]) => !ONLY.length || ONLY.includes(key));
   const views = [];
   let lost = 0;
   for (const [ch, d, key] of VIEWS) {
@@ -908,7 +932,8 @@ async function survey() {
   }
   pairs.sort((x, y) => x.d - y.d);
   console.log(`  closest pairs: ${pairs.slice(0, 5).map((p) => `${p.a} / ${p.b}: ${p.d}`).join(', ')}`);
-  const want = ONLY.length ? 1 : 18;
+  if (process.env.LV_SURVEY_HASHES) fs.writeFileSync(process.env.LV_SURVEY_HASHES, JSON.stringify({ views, closest: pairs.slice(0, 20) }, null, 1));
+  const want = ONLY.length ? 1 : 60;
   check(views.length >= want && (pairs.length || ONLY.length) && (pairs[0]?.d ?? 99) >= 18, `no two missions look alike: ${pairs.length} pairs of views in different places differ by 18 bits or more (closest ${pairs[0]?.d})`, JSON.stringify(pairs.slice(0, 5)));
 }
 

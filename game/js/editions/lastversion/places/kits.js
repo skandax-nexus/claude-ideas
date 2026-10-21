@@ -76,6 +76,72 @@ const KITS = {
   crate(g) { box(g, 0.9, 0.8, 0.7, 0x8a6440); },
   // the old hall's sweeping arm: a brass bar from the pivot, both ways
   brassArm(g, r = 7) { box(g, r * 2, 0.12, 0.16, 0xc89a4a, 0, -0.06, 0, { metal: 0.85, rough: 0.3 }); cyl(g, 0.2, 0.3, 0x8a6a3a, 0, -0.15, 0, { metal: 0.8 }); },
+  // --- Acts II-IV and the Finale (U3) -----------------------------------------------------------------
+  // Northbank: an iron-framed notice board, the evacuation order board, an enamel street sign, a clock on a post
+  noticeBoard(g) { box(g, 0.1, 1.9, 0.1, 0x2e3238, -0.7); box(g, 0.1, 1.9, 0.1, 0x2e3238, 0.7); box(g, 1.5, 1.0, 0.06, 0x3a4a44, 0, 0.9); box(g, 1.3, 0.8, 0.02, 0xf0e8d4, 0, 1.0, 0.04); },
+  orderBoard(g) { box(g, 1.8, 2.4, 0.15, 0x2e3a34); box(g, 1.6, 1.6, 0.02, 0xf4ecd8, 0, 0.6, 0.09); box(g, 1.6, 0.25, 0.03, 0xc83a2a, 0, 2.0, 0.09); },
+  enamelSign(g) { box(g, 0.08, 1.6, 0.08, 0x2e3238); box(g, 0.7, 0.3, 0.03, 0x1e3a6a, 0, 1.5, 0.05); },
+  clockPost(g) { cyl(g, 0.09, 3.2, 0x2e3238); cyl(g, 0.38, 0.12, 0xf4f0e4, 0, 3.0, 0.08, { rx: Math.PI / 2 }); ring(g, 0.4, 0.04, 0x2e3238, 0, 3.0, 0.1); },
+  // the dam: a logbook on a steel stand, the intake board, a tag on a rail, a switch panel
+  logbook(g) { box(g, 0.08, 1.0, 0.08, 0x7a8088); box(g, 0.5, 0.06, 0.36, 0x7a8088, 0, 1.0, 0, { rx: -0.3 }); box(g, 0.34, 0.04, 0.26, 0x2a3a5a, 0, 1.06, 0.02, { rx: -0.3 }); },
+  intakeBoard(g) { box(g, 1.6, 1.8, 0.1, 0x3a4048, 0, 0.6); for (let i = 0; i < 4; i++) box(g, 0.3, 0.4, 0.02, 0xd8dce4, -0.55 + i * 0.37, 1.6, 0.06); },
+  tagPlate(g) { box(g, 0.9, 0.9, 0.1, 0x4a5058); box(g, 0.3, 0.2, 0.02, 0xffc44a, 0, 0.7, 0.06); },
+  switchPanel(g) { box(g, 1.2, 1.8, 0.5, 0x5a6068, 0, 0, 0, { metal: 0.4 }); box(g, 0.2, 0.4, 0.1, 0xff6a48, -0.3, 1.1, 0.28); box(g, 0.2, 0.4, 0.1, 0x9fd8ff, 0.3, 1.1, 0.28); },
+  // the hospital: a chart board on wheels, a whiteboard, a wristband in a tray, a bedside cabinet
+  chartBoard(g) { box(g, 0.6, 0.06, 0.4, 0xd0d4d8, 0, 0.1); box(g, 0.06, 1.2, 0.06, 0xd0d4d8, 0, 0.1); box(g, 0.5, 0.65, 0.04, 0xf4f6f8, 0, 1.0, 0, { rx: -0.2 }); },
+  whiteboard(g) { box(g, 1.8, 1.1, 0.06, 0xf8f8f8, 0, 0.9); box(g, 1.9, 0.06, 0.12, 0x9aa0a6, 0, 0.85); box(g, 0.08, 0.9, 0.08, 0x9aa0a6, -0.8); box(g, 0.08, 0.9, 0.08, 0x9aa0a6, 0.8); },
+  wristband(g) { box(g, 0.5, 0.8, 0.4, 0xe8eef0); box(g, 0.2, 0.02, 0.06, 0x3f9cff, 0, 0.81); },
+  bedside(g) { box(g, 0.6, 0.8, 0.5, 0xe8eef0); box(g, 0.5, 0.04, 0.4, 0xc8d0d4, 0, 0.8); cyl(g, 0.05, 0.25, 0xe86a9c, 0.1, 0.82, 0); },
+  // the port: a field-order board on an easel among sandbags, a sign on sandbags, a helmet, a device case
+  fieldBoard(g) { box(g, 1.4, 0.5, 0.8, 0xa8986a); box(g, 0.08, 1.8, 0.08, 0x5a4a3a, -0.5, 0.3, -0.2, { rx: 0.15 }); box(g, 0.08, 1.8, 0.08, 0x5a4a3a, 0.5, 0.3, -0.2, { rx: 0.15 }); box(g, 1.1, 0.8, 0.03, 0xe8e0c8, 0, 1.1, -0.05, { rx: -0.15 }); },
+  sandbagSign(g) { box(g, 1.8, 0.9, 0.9, 0xa8986a); box(g, 1.4, 0.7, 0.04, 0xc8b08a, 0, 1.0, 0.1); },
+  helmet(g) { box(g, 0.7, 0.6, 0.7, 0x5a5048); const m = new THREE.Mesh(new THREE.SphereGeometry(0.17, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2), mat(0x4a5a64, { rough: 0.6 })); m.position.y = 0.6; g.add(m); },
+  deviceCase(g) { box(g, 0.9, 0.5, 0.6, 0x2a2e34, 0, 0, 0, { metal: 0.5 }); box(g, 0.5, 0.04, 0.3, 0xffc44a, 0, 0.5, 0, { emissive: 0x442200 }); },
+  // the lagoon city: a beacon case, a warden's sign, a stack of stones, the memorial's core plinth
+  beaconCase(g) { box(g, 0.8, 0.8, 0.5, 0x6a5a40); box(g, 0.6, 0.1, 0.3, 0x9fff7a, 0, 0.8, 0, { emissive: 0x204010 }); },
+  wardenSign(g) { box(g, 0.1, 2.0, 0.1, 0x7a4a2a); box(g, 1.4, 0.8, 0.05, 0xd8c8a8, 0, 1.5, 0.05, { rz: 0.05 }); box(g, 1.4, 0.12, 0.06, 0xb83a2a, 0, 1.85, 0.05, { rz: 0.05 }); },
+  stackedStones(g) { for (let i = 0; i < 4; i++) box(g, 0.5 - i * 0.08, 0.16, 0.4 - i * 0.06, 0x8a8a7a, (i % 2) * 0.04, i * 0.16, 0, { ry: i * 0.6 }); },
+  memorialCore(g) { box(g, 1.2, 1.0, 1.2, 0xb8b4a8); cyl(g, 0.2, 0.3, 0xc9b8ff, 0, 1.0, 0, { emissive: 0x302050 }); },
+  // the lock city: a timetable board, the archive's card cabinet, the register on a lectern, the lock console
+  timetable(g) { box(g, 0.12, 2.6, 0.12, 0x5a5a60, -1.0); box(g, 0.12, 2.6, 0.12, 0x5a5a60, 1.0); box(g, 2.2, 1.0, 0.12, 0x1a1c22, 0, 1.6); for (let i = 0; i < 4; i++) box(g, 1.9, 0.12, 0.02, 0xffc860, 0, 1.7 + i * 0.2, 0.07); },
+  cardCabinet(g) { box(g, 1.2, 1.3, 0.6, 0x7a5a3a); for (let i = 0; i < 6; i++) box(g, 0.32, 0.14, 0.02, 0xc8a870, -0.38 + (i % 3) * 0.38, 0.4 + Math.floor(i / 3) * 0.45, 0.31); },
+  registerBook(g) { box(g, 0.5, 1.0, 0.4, 0x8a7a68); box(g, 0.5, 0.05, 0.36, 0x3a5a8a, 0, 1.0, 0, { rx: -0.3 }); },
+  lockConsole(g) { box(g, 1.4, 1.0, 0.8, 0xd8d0e0); box(g, 1.0, 0.04, 0.5, 0xfff0c8, 0, 1.0, 0, { emissive: 0x403020 }); },
+  // the quarry museum: a display case with a lantern, a label plinth, a small curio box, a reel on a stand
+  museumCase(g) { box(g, 0.9, 0.9, 0.6, 0x5a4a3a); box(g, 0.86, 0.6, 0.56, 0xe0ecf4, 0, 0.9, 0, { basic: true, opacity: 0.22 }); box(g, 0.2, 0.2, 0.2, 0xffc27a, 0.3, 1.55, 0, { basic: true }); },
+  museumLabel(g) { box(g, 0.5, 1.0, 0.3, 0x6a5a48); box(g, 0.6, 0.04, 0.4, 0xd8c8a8, 0, 1.0, 0, { rx: -0.4 }); },
+  curioBox(g) { box(g, 0.6, 0.9, 0.6, 0x6a5a48); box(g, 0.3, 0.2, 0.25, 0x9a7a4a, 0, 0.9); },
+  reelStand(g) { box(g, 0.5, 1.0, 0.4, 0x3a3430); ring(g, 0.22, 0.05, 0x4a3a2a, -0.13, 1.25, 0); ring(g, 0.22, 0.05, 0x4a3a2a, 0.13, 1.25, 0); },
+  // the desert array: a rack of recording drums, a tag on a dish rail, an evidence tray, a reel player
+  drumRack(g) { box(g, 1.6, 2.0, 0.6, 0x3a3e44, 0, 0, 0, { metal: 0.5 }); for (let i = 0; i < 3; i++) cyl(g, 0.2, 0.5, 0xc89a4a, -0.5 + i * 0.5, 1.2, 0.2, { rz: Math.PI / 2, metal: 0.7 }); },
+  recordingTag(g) { box(g, 0.12, 1.4, 0.12, 0x8a9096); box(g, 0.6, 0.4, 0.03, 0xff3a2a, 0, 1.2, 0.07); },
+  evidenceTray(g) { box(g, 1.0, 0.85, 0.6, 0x5a5048); box(g, 0.9, 0.06, 0.5, 0x9aa0a6, 0, 0.85); },
+  reelPlayer(g) { box(g, 0.9, 1.0, 0.5, 0x4a3a2a); ring(g, 0.2, 0.04, 0x2a2420, -0.2, 1.25, 0.1); ring(g, 0.2, 0.04, 0x2a2420, 0.2, 1.25, 0.1); },
+  // the Fracture: Sera's manual on a crate, a road sign, the evacuation list, the anchor panel
+  manualStand(g) { box(g, 0.9, 0.8, 0.7, 0x6a5a40); box(g, 0.5, 0.04, 0.36, 0xf4ecd8, 0, 0.82, 0, { rx: -0.2 }); },
+  roadSignKit(g) { box(g, 0.1, 2.2, 0.1, 0x8a9096); box(g, 1.6, 0.8, 0.05, 0x1e5a3a, 0, 2.0, 0.05); },
+  evacList(g) { box(g, 0.1, 1.6, 0.1, 0x7a4a2a); box(g, 0.5, 0.7, 0.03, 0xf0e8d4, 0, 1.2, 0.06); },
+  anchorPanel(g) { box(g, 1.0, 1.6, 0.4, 0x5a5a60, 0, 0, 0, { metal: 0.4 }); box(g, 0.6, 0.2, 0.04, 0xff3a2a, 0, 1.3, 0.22, { emissive: 0x401010 }); },
+  // the Unwritten Second: a symbol stone, a mirror plate, a chalk mark, a door frame standing alone
+  symbolStone(g) { box(g, 0.9, 1.1, 0.4, 0xe4e0d8); ring(g, 0.25, 0.04, 0xd8b060, 0, 0.75, 0.21); },
+  mirrorPlate(g) { box(g, 1.6, 0.06, 1.0, 0xe8e4f8, 0, 0.02); box(g, 0.1, 1.0, 0.1, 0xd8b060, -0.75); },
+  chalkMark(g) { box(g, 0.6, 0.4, 0.6, 0xe4e0d8, 0, 0, 0, { ry: 0.4 }); },
+  doorFrame(g) { box(g, 0.12, 2.3, 0.15, 0xf4f4f0, -0.55); box(g, 0.12, 2.3, 0.15, 0xf4f4f0, 0.55); box(g, 1.22, 0.12, 0.15, 0xf4f4f0, 0, 2.3); },
+  // Mira's memory: a note on a fridge, the drawing in a frame, a keepsake box, a child's chair
+  fridgeNote(g) { box(g, 0.7, 1.8, 0.6, 0xf8f8f4); box(g, 0.25, 0.3, 0.01, 0xfff0a0, 0.1, 1.2, 0.305); },
+  drawingFrame(g) { box(g, 0.1, 1.2, 0.1, 0x8a6a4a); box(g, 0.9, 0.7, 0.04, 0xf4ecd8, 0, 1.2, 0.04); },
+  keepsake(g) { box(g, 0.5, 0.75, 0.4, 0xc8a888); box(g, 0.3, 0.12, 0.2, 0xffd040, 0, 0.75); },
+  memoryChair(g) { box(g, 0.45, 0.45, 0.45, 0xffd040); box(g, 0.45, 0.5, 0.06, 0xffd040, 0, 0.45, -0.2); },
+  // the Spire: a black lectern, an order screen, an elite's badge on a plinth, the citadel console
+  commandLectern(g) { box(g, 0.5, 1.0, 0.4, 0x2a2c32, 0, 0, 0, { metal: 0.4 }); box(g, 0.7, 0.05, 0.5, 0x1a3a6a, 0, 1.0, 0, { rx: -0.35, emissive: 0x0a1a30 }); },
+  orderScreen(g) { box(g, 0.12, 1.4, 0.12, 0x2a2c32); box(g, 1.6, 1.0, 0.06, 0x0a1a30, 0, 1.4, 0, { emissive: 0x0a2040 }); },
+  eliteBadge(g) { box(g, 0.6, 0.9, 0.6, 0x2a2c32); ring(g, 0.14, 0.03, 0xffc44a, 0, 1.05, 0, { metal: 0.8 }); },
+  citadelConsole(g) { box(g, 1.6, 1.0, 0.8, 0x2a2c32, 0, 0, 0, { metal: 0.5 }); box(g, 1.2, 0.04, 0.5, 0x9fd8ff, 0, 1.0, 0, { emissive: 0x103040 }); },
+  // the composites: the evidence table, the chain wall, a quote stone, a seal plinth
+  evidenceTable(g) { box(g, 2.0, 0.85, 0.9, 0x4a3a2a); for (let i = 0; i < 4; i++) box(g, 0.3, 0.02, 0.4, 0xf4ecd8, -0.7 + i * 0.47, 0.86, 0, { ry: (i - 1.5) * 0.15 }); },
+  chainWall(g) { box(g, 2.4, 2.0, 0.4, 0x9a9282); box(g, 2.0, 1.4, 0.02, 0xe8e0cc, 0, 0.4, 0.21); },
+  quoteStone(g) { box(g, 0.8, 0.6, 0.6, 0x8a8478, 0, 0, 0, { ry: 0.2 }); },
+  sealPlinth(g) { box(g, 1.0, 1.0, 1.0, 0x5a5a60); ring(g, 0.35, 0.06, 0x9a7a4a, 0, 1.05, 0, { rx: Math.PI / 2, metal: 0.8 }); },
 };
 
 export function makeKit(name, arg) {

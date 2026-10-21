@@ -204,6 +204,11 @@ export class Place {
     this.v({ k: 'plane', b: [R(Math.min(x0, x1)), R(y), R(Math.min(z0, z1)), R(Math.max(x0, x1)), R(y), R(Math.max(z0, z1))], m }, o);
   }
 
+  // a flat sector of a ring at y: radii r0 .. r, from bearing a0 to a1 (radians from +x toward +z)
+  fan(x, y, z, r0, r, a0, a1, m, o = {}) {
+    this.v({ k: 'fan', x: R(x), y: R(y), z: R(z), r0, r, a0: R(a0), a1: R(a1), seg: o.seg || 24, m }, o);
+  }
+
   disc(x, y, z, r, m, o = {}) {
     this.v({ k: 'disc', x: R(x), y: R(y), z: R(z), r, seg: o.seg || 32, m }, o);
   }
@@ -286,6 +291,27 @@ export class Place {
     (this.drowns ||= []).push({ box: [rect[0], -12, rect[1], rect[2], y, rect[3]], when: when || this.condOf({}) || null, room: this.rid });
   }
 
+  // an interior room inside the place (a ward, a hall, a cell block): its own bounds, spawn, lights and
+  // years, for what needs a room of its own: a ward that runs backwards (engine.setOverride), a hall
+  // REVERSE works in, a stair of floors. The walls, floors and roofs are the spec's own pieces.
+  //   rect [x0, z0, x1, z1]; y0 its floor; h its height; spawn [x, y, z, yaw] (yaw: where Kai faces);
+  //   open: true for a roofless court or colonnade (REVERSE reaches as far as outdoors)
+  room(id, rect, o = {}) {
+    const [x0, z0, x1, z1] = [Math.min(rect[0], rect[2]), Math.min(rect[1], rect[3]), Math.max(rect[0], rect[2]), Math.max(rect[1], rect[3])];
+    const y0 = o.y0 ?? 0, h = o.h ?? 5;
+    const cx = (x0 + x1) / 2, cz = (z0 + z1) / 2;
+    const room = {
+      name: o.name || id.toUpperCase(), kind: o.kind || 'room', bounds: [[R(x0), R(y0 - 0.6), R(z0), R(x1), R(y0 + h), R(z1)]],
+      spawn: (o.spawn || [cx, y0 + 0.86, cz, 0]).map(R), lights: o.lights || [[R(cx), R(y0 + h - 0.6), R(cz), o.light ?? 0xfff4e8, 1.6, Math.max(x1 - x0, z1 - z0)]],
+      tint: 0xffffff, killY: y0 - 3, floatY: y0 + 1.3, challenges: [], route: [], exitSide: 'N', L: z1 - z0, W: x1 - x0, H: h,
+      states: o.states || this.state.states, interior: !o.open, open: !!o.open, sky: o.sky ?? (o.open ? 'year' : null), rect: [x0, z0, x1, z1].map(R),
+    };
+    if (o.beat) room.beat = o.beat;
+    this.rooms[id] = room;
+    this.order.push(id);
+    return room;
+  }
+
   challenge(key, rect, answer, hints, o = {}) {
     this.challenges.push({ key, answer: [].concat(answer), hints, box: [rect[0], -12, rect[1], rect[2], 30, rect[3]], room: o.room || this.rid, optional: !!o.optional });
   }
@@ -343,7 +369,7 @@ export function assemble(P, { story, deck, si, beat, years, name, extraRooms = [
   const [bx0, bz0, bx1, bz1] = spec.bounds;
   const rid = P.rid;
   const quarters = quartersOf(spec, deck).map((q, i) => ({ name: q.name, area: q.area, spawn: P.quarterSpawns?.[i] || q.spawn, threshold: q.threshold || null }));
-  const qi = Math.min(si, Math.max(0, quarters.length - 1));
+  const qi = spec.sectors?.[deck.mkey]?.[si] ?? Math.min(si, Math.max(0, quarters.length - 1));
   const q = quarters[qi];
   const spawn = P.spawn || (q ? [q.spawn[0], q.spawn[1] + 0.86, q.spawn[2], q.spawn[3] || 0] : [0, 0.86, 0, 0]);
   const room = {
@@ -353,7 +379,16 @@ export function assemble(P, { story, deck, si, beat, years, name, extraRooms = [
     route: [], exitSide: 'N', L: bz1 - bz0, W: bx1 - bx0, H: 30, open: true, outdoor: true, states: deck.states,
   };
   const rooms = { ...P.rooms, [rid]: room };
-  const order = [...P.order, ...extraRooms, rid];
+  // a place whose interiors are rooms of its own (spec.outdoorFirst: the hospital's wards) starts in the place
+  // itself: the outdoor room comes first, its bounds the place's box with every interior cut out of it, so a
+  // point inside an interior is that room's whatever the order (and the sector's spawn is the quarter's)
+  let order;
+  if (spec.outdoorFirst && P.order.length) {
+    let boxes = [room.bounds[0]];
+    for (const id of P.order) for (const h of P.rooms[id].bounds) boxes = boxes.flatMap((b) => cut(b, h));
+    room.bounds = boxes.map((b) => b.map(R));
+    order = [rid, ...P.order, ...extraRooms];
+  } else order = [...P.order, ...extraRooms, rid];
   const level = {
     id: `${deck.mkey}_${P.key}_s${si}`, deck: story.decks.indexOf(deck), sector: si, seed: story.seed, deckName: deck.name,
     palette, rooms, order,
@@ -369,6 +404,20 @@ export function assemble(P, { story, deck, si, beat, years, name, extraRooms = [
     bounds: spec.bounds, outdoorRoom: rid, drowns: P.drowns || [],
   };
   return level;
+}
+
+// a box with another box cut out of it: up to six boxes around the hole
+function cut(B, H) {
+  if (H[0] >= B[3] || H[3] <= B[0] || H[1] >= B[4] || H[4] <= B[1] || H[2] >= B[5] || H[5] <= B[2]) return [B];
+  const out = [];
+  let [x0, y0, z0, x1, y1, z1] = B;
+  if (H[0] > x0) { out.push([x0, y0, z0, H[0], y1, z1]); x0 = H[0]; }
+  if (H[3] < x1) { out.push([H[3], y0, z0, x1, y1, z1]); x1 = H[3]; }
+  if (H[2] > z0) { out.push([x0, y0, z0, x1, y1, H[2]]); z0 = H[2]; }
+  if (H[5] < z1) { out.push([x0, y0, H[5], x1, y1, z1]); z1 = H[5]; }
+  if (H[1] > y0) out.push([x0, y0, z0, x1, H[1], z1]);
+  if (H[4] < y1) out.push([x0, H[4], z0, x1, y1, z1]);
+  return out;
 }
 
 // a place's quarters as a mission sees them (Helix: each wing's missions have their own)

@@ -269,13 +269,17 @@ export function placeAuthored(deck, level) {
     const rid = pickRoom(level, r.room);
     if (rid && !level.reversedRooms.includes(rid)) level.reversedRooms.push(rid);
   }
+  // (a piece with a `sector` is that quarter's only: the whole place loads for every sector, D2 step 1)
+  const here = (d) => d.sector === undefined || d.sector === level.sector;
   for (const d of deck.doors || []) {
+    if (!here(d)) continue;
     const a = at(d.at);
     if (!a) continue;
     const w = d.w ?? 1.5;
     level.elements.push({ box: boxWorld(a, [-w, 0, -0.4, w, d.h ?? 4, 0]), mat: d.mat || 'door', solid: true, when: d.when, id: d.id, room: a.room });
   }
   for (const s of deck.spots || []) {
+    if (!here(s)) continue;
     const a = at(s.at);
     if (!a) continue;
     const pos = toWorld(a, s.offset || [0, 1.3, 0.2]);
@@ -283,14 +287,17 @@ export function placeAuthored(deck, level) {
     for (const t of s.texts || []) level.texts.push({ text: t.text, pos: toWorld(a, t.at || [0, 2, 0.05]), rotY: a.yaw, size: t.size || 0.16, color: t.color || '#23303c', when: t.when, room: a.room });
   }
   for (const z of deck.zones || []) {
+    if (!here(z)) continue;
     const a = at(z.at);
     if (a) level.triggers.push({ box: boxWorld(a, z.box || [-2, -1, -2, 2, 3, 2]), set: z.set, when: z.when, once: z.once !== false, room: a.room });
   }
   for (const d of deck.displays || []) {
+    if (!here(d)) continue;
     const a = at(d.at);
     if (a) level.displays.push({ ...d, pos: a.pos, yaw: a.yaw, room: a.room });
   }
   for (let def of deck.processes || []) {
+    if (!here(def)) continue;
     let a;
     const site = level.sites?.[def.id];
     if (site) a = { pos: site.at.slice(0, 3), yaw: site.at[3] || 0, room: roomAtPoint(level, site.at) };

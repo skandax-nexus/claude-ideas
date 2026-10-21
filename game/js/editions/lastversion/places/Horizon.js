@@ -18,7 +18,7 @@ const mix = (a, b, k) => {
   return `#${ca.lerp(cb, k).getHexString()}`;
 };
 
-function paint(key, era, y) {
+function paint(key, era, y, backdrop = {}) {
   const c = document.createElement('canvas');
   c.width = W;
   c.height = H;
@@ -39,10 +39,12 @@ function paint(key, era, y) {
       fn(Math.min(x0, x1), Math.max(x0, x1));
     }
   };
-  // the land under the horizon line (a band of ground down to the bottom edge)
-  g.fillStyle = mix(base, haze, 0.55);
+  // the land under the horizon line (a band of ground down to the bottom edge): cloud tops above the cloud
+  // sea, white where the place dissolves into its own haze
+  const kind = backdrop.kind || 'valley';
+  g.fillStyle = kind === 'clouds' ? mix(0xf4f6fa, haze, 0.25) : kind === 'void' || kind === 'memory' ? mix(haze, 0xffffff, 0.3) : mix(base, haze, 0.55);
   g.fillRect(0, py(0) - 1, W, H - py(0) + 1);
-  const feats = horizonFor(key, era).sort((a, b) => b.haze - a.haze);
+  const feats = horizonFor(key, era, backdrop).sort((a, b) => b.haze - a.haze);
   for (const f of feats) {
     const col = mix(f.kind === 'sea' ? 0x5a7a8a : f.kind === 'skyline' || f.kind === 'cranes' ? 0x3a4048 : f.kind === 'crown' ? 0xd8dce0 : base, haze, Math.min(0.92, f.haze + (y.density > 1.5 ? 0.15 : 0)));
     g.fillStyle = col;
@@ -146,6 +148,37 @@ function paint(key, era, y) {
         g.fillStyle = f.era === 'ancient' ? '#ffd890' : mix(0xb8905a, haze, 0.4);
         g.fillRect(x0, py(f.h) - 2, 2, 3);
       });
+    } else if (f.kind === 'mesa') {
+      // a flat-topped butte with steep sides
+      span(f.b, f.w, (x0, x1) => {
+        const w = x1 - x0;
+        g.beginPath();
+        g.moveTo(x0, py(0));
+        g.lineTo(x0 + w * 0.16, py(f.h * 0.92));
+        g.lineTo(x0 + w * 0.22, py(f.h));
+        g.lineTo(x1 - w * 0.2, py(f.h));
+        g.lineTo(x1 - w * 0.12, py(f.h * 0.86));
+        g.lineTo(x1, py(0));
+        g.fill();
+        g.fillStyle = mix(0x6a3a28, haze, f.haze * 0.8);
+        g.fillRect(x0 + w * 0.22, py(f.h), w * 0.58, 2);
+      });
+    } else if (f.kind === 'haze') {
+      span(f.b, f.w, (x0, x1) => {
+        const grd = g.createLinearGradient(0, py(f.h), 0, py(0));
+        grd.addColorStop(0, 'rgba(255,255,255,0)');
+        grd.addColorStop(1, mix(haze, 0xffffff, 0.4));
+        g.fillStyle = grd;
+        g.fillRect(x0, py(f.h), x1 - x0, py(0) - py(f.h) + 2);
+      });
+    } else if (f.kind === 'cloudtop') {
+      // billows of cloud tops to the horizon
+      for (let x = 0; x < W; x += 6 + rnd() * 10) {
+        g.fillStyle = mix(0xffffff, haze, 0.15 + rnd() * 0.25);
+        g.beginPath();
+        g.ellipse(x, py(-0.4), 8 + rnd() * 22, 3 + rnd() * 6, 0, Math.PI, 0);
+        g.fill();
+      }
     } else if (f.kind === 'smoke') {
       span(f.b, f.w, (x0, x1) => {
         for (let k = 0; k < 3; k++) {
@@ -195,13 +228,14 @@ export class Horizon {
     this.skirt = new THREE.Mesh(new THREE.RingGeometry(rin, 900, 64, 1).rotateX(-Math.PI / 2), this.skirtMat);
     this.skirt.position.set(this.cx, level.backdrop?.skirtY ?? -1.2, this.cz);
     this.skirt.renderOrder = -8;
+    this.skirt.visible = level.backdrop?.skirt !== false; // (above the cloud sea there is no ground to the horizon)
     root.add(this.skirt);
   }
 
   setYear(state, y) {
     const era = y.era || '2049';
     const k = `${state}`;
-    this.cache[k] ||= paint(this.level.place, era, y);
+    this.cache[k] ||= paint(this.level.place, era, y, this.level.backdrop || {});
     this.mat.map = this.cache[k];
     this.mat.needsUpdate = true;
     const sky = SKIES[y.sky] || SKIES.clearMidday;

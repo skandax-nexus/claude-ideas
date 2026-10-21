@@ -83,6 +83,9 @@ export function pieceGeometry(v) {
       const [x0, y, z0, x1, , z1] = v.b;
       return new THREE.PlaneGeometry(x1 - x0, z1 - z0).rotateX(-Math.PI / 2).translate((x0 + x1) / 2, y, (z0 + z1) / 2);
     }
+    case 'fan':
+      // (a ring sector: RingGeometry's theta runs from +x toward +y, which lies flat toward -z)
+      return new THREE.RingGeometry(Math.max(0.01, v.r0 || 0), v.r, v.seg || 24, 1, -v.a1, v.a1 - v.a0).rotateX(-Math.PI / 2).translate(v.x, v.y, v.z);
     case 'disc':
       return new THREE.CircleGeometry(v.r, v.seg || 32).rotateX(-Math.PI / 2).translate(v.x, v.y, v.z);
     case 'sphere':
@@ -192,6 +195,12 @@ const VEG = {
   reeds: () => blades(8, 2.2, 0x6a8a4a, 0.3),
   fern: () => [blob(0.7, 0x3a6a2a, 0, 0.35, 0, 0.45), blob(0.5, 0x4a7a32, 0.4, 0.4, 0.2, 0.45)],
   palm: () => [trunk(6, 0.22, 0x8a7a5a), blob(1.6, 0x4a7a32, 0, 6.4, 0, 0.4)],
+  // (U3) the dam's gorge, the hospital's courts, the port's meadow, the desert, Mira's garden
+  pine: () => [trunk(2, 0.22, 0x4a3a2a), part(new THREE.ConeGeometry(1.8, 3.4, 8).translate(0, 3.4, 0), 0x2a4a34), part(new THREE.ConeGeometry(1.4, 3.0, 8).translate(0, 5.2, 0), 0x2e5038), part(new THREE.ConeGeometry(0.9, 2.4, 8).translate(0, 6.8, 0), 0x345a3e)],
+  magnolia: () => [trunk(2.2, 0.2, 0x5a4a40), blob(1.7, 0xf4e4ec, 0, 3.3, 0, 0.8), blob(1.2, 0xfaf0f4, 0.9, 3.8, 0.4), blob(1.1, 0xead0dc, -0.8, 3.6, -0.5), blob(0.9, 0x5a7a44, 0.2, 2.8, 0.9)],
+  wildflower: () => [...blades(6, 0.7, 0x7a9a4a, 0.25), blob(0.12, 0xe8c040, 0.2, 0.75, 0), blob(0.11, 0xd84a3a, -0.2, 0.7, 0.15), blob(0.1, 0xf4f0f0, 0, 0.8, -0.2), blob(0.11, 0x8a6ad8, 0.1, 0.65, 0.22)],
+  scrub: () => [blob(0.6, 0x8a8a5a, 0, 0.35, 0, 0.55), blob(0.45, 0x9a9462, 0.4, 0.3, 0.2, 0.55), blob(0.4, 0x7a7a50, -0.3, 0.28, -0.2, 0.55)],
+  flowers: () => [blob(0.45, 0x4a7a3a, 0, 0.3, 0, 0.6), blob(0.16, 0xf06a8a, 0.2, 0.55, 0.1), blob(0.15, 0xffd040, -0.2, 0.5, -0.1), blob(0.14, 0xf8f8f0, 0.05, 0.6, -0.25)],
 };
 let vegMat = null;
 function vegGeometry(kind) {
@@ -249,7 +258,7 @@ export class Scenery {
     }
     for (const [k, list] of kinds) {
       const inst = new THREE.InstancedMesh(vegGeometry(k), vegMat, list.length);
-      inst.castShadow = !['grass', 'barley', 'reeds', 'fern'].includes(k);
+      inst.castShadow = !['grass', 'barley', 'reeds', 'fern', 'wildflower', 'scrub', 'flowers'].includes(k);
       inst.receiveShadow = true;
       inst.frustumCulled = false;
       this.root.add(inst);

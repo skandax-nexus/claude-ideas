@@ -13,7 +13,7 @@ The Last Version is a separate game built from the same sources as the Station Z
 | Which game a page is | `game/js/core/Edition.js`: `window.AZ_EDITION = 'lastversion'` (set by the edition's build) or `?edition=lastversion` on the URL. Without either, the page is the Station Zero game, unchanged. |
 | Its own saves and settings | Every key under `afterzero.lv.` (`Edition.js` `NS`, used by `ui/Saves.js` and `ui/Settings.js`). The two games never see each other's saves. |
 | Its own app | `EDITION=lastversion bash android/build-apk.sh` builds "AFTERZERO: Last Version" (`com.afterzero.lastversion`, versionName 2.0.0, `AFTERZERO-LastVersion-v2.0.apk`) into `android/build-lastversion/`, with a preview `index.html` that sets `window.AZ_EDITION='lastversion'`. |
-| Everything the edition changes | `game/js/editions/lastversion/`: `index.js` (title, states, labels, looks, speakers, engine options), `Runtime.js` (chapters, missions, objectives, scenes, choices, stability, Echo Step, anchors, the case board, endings), `prologue.js` (Missions 1–3), `acts.js` (Acts I–IV, the Finale, the endings, the optional cases), `npcs.js` (the people), `Build.js` (hand-built interiors and props), `dress.js` (what each year of a place looks like), `inversion.js` (REVERSE: input, targeting, charge, the rules, its HUD and sounds), `processes.js` (the things REVERSE can hold, and the mission landmarks they stand at), `places/` (the open places under a real sky: the builder, the archetypes, the styles and materials, the years and skies, the horizon, the scenery, one spec per place). |
+| Everything the edition changes | `game/js/editions/lastversion/`: `index.js` (title, states, labels, looks, speakers, engine options), `Runtime.js` (chapters, missions, objectives, scenes, choices, stability, Echo Step, anchors, the case board, endings), `prologue.js` (Missions 1–3), `acts.js` (Acts I–IV, the Finale, the endings, the optional cases), `npcs.js` (the people), `Build.js` (hand-built interiors and props), `inversion.js` (REVERSE: input, targeting, charge, the rules, its HUD and sounds), `processes.js` (the things REVERSE can hold, and the mission landmarks they stand at), `places/` (the open places under a real sky: the builder, the archetypes, the styles and materials, the years and skies, the horizon, the scenery, one spec per place). |
 | Hooks in the shared code | `main.js` hands the game to the edition's runtime where the edition is on (`this.edition`), and nowhere else. `RealityEngine` takes a configurable state set. The generators take a few optional fields (`zone.themes`, `zone.names`, `zone.drones`, `zone.overlay`, `deck.mechs`, `story.mechDeck`, beat kinds `scene`, `choice`). Each hook is a no-op for the Station Zero game; `npm test` and the default suites prove it. The v2.1 overhaul's hooks so far: `main.js` settings text, comfort mode reads "Steadier camera, no flashes" when the edition is on (1 line, U1); `main.js` `updateTheme` takes the light from `edition.themeFor(state)` when it returns one (1 line, U2) and the sun's direction from `edition.sunDir()` (U2; since the 1.1.1 merge the sun's shadow frame is texel-snapped, so the hook re-aims that frame when the direction changes: 9 lines, none of which run without an edition). `entities/Player.js` is not changed: since 1.1.1 the engine itself climbs a ledge up to 0.35 m from the ground and follows the ground down a drop as deep, in both games, so the places are built to that rule (stair rises of 0.34 m, ramps in 0.25 m steps, kerbs of 0.15 m) and the edition's own `stepUp` hook is gone. REVERSE's moving colliders are edition-owned entries in `DeckWorld.temps` (`t: Infinity`, removed by the edition), so `DeckWorld.js` is not changed. |
 
 Its own look: the title reads AFTERZERO / THE LAST VERSION OF EARTH in front of rain, a city's
@@ -26,35 +26,37 @@ BOARD. From Mission 11 a REVERSE chip sits beside the year card, with a ⟲ butt
 
 ## Places under an open sky
 
-OVERHAUL.md §4. Every mission of the Prologue and Act I (and, from U3, every mission) stands in one
-open place with a real sky over it, its own horizon, its own light per year, and the quarters its
-beats happen in. Nothing in them comes from ZoneGen, LevelGen, `dress.js` or a Vessel look.
+OVERHAUL.md §4. Every mission, from Rain City to Afterzero, and the two cases stand in an open place
+with a real sky over it, its own horizon, its own light per year, and the quarters its beats happen
+in. Nothing in them comes from ZoneGen, LevelGen, `dress.js` or a Vessel look: since U3 the edition
+imports neither generator (a test greps for it), `dress.js` is gone and the `P` palettes with it.
 
 | Piece | What it does |
 | --- | --- |
-| `places/index.js` | `PLACES` (the registry) and `buildPlace(key, story, sector, rt, { deck })`: a level in the shared format (DeckWorld runs it unchanged) plus `place`, `landmarks` (`{ name: [x, y, z, yaw] }`), `quarters` (`[{ name, area, spawn, threshold }]`), `years`, `crowd`, `sites` and `scenery` (`(root, rt) =>` the mounted place). Sector *i* loads the whole map and activates quarter *i*: its spawn, its beat at a landmark, its fragments and watchers, its exit at the quarter's threshold (D2 step 1). Also `themeFor(level, state)` and `sunDir(level, state)`. |
-| `places/Place.js` | The builder a spec builds with: colliders (invisible boxes; one that exists only in some years or after some fact is a `ghost`, a DeckWorld conditional whose mesh the edition takes away), visual pieces (`level.vis`: box, turned box, cylinder, cone, gable, hip, dome, torus, plane, disc, sphere, vault; a material, a tint, the years, a fact condition), vegetation (`level.veg`), texts, landmarks, terrain heights, kept-clear rects, sites, deep water, traversal challenges (each names the years that answer it). `P.E(years, fn)` puts what `fn` builds into those years, `P.W(fact, fn)` behind a fact. `stageBeat` puts today's beats on their landmarks as things of the place (a telling-stone, a ledger on a lectern, a bronze plate, a phone booth, a glass case), never a Station Zero terminal. |
-| `places/archetypes.js` | Parametric pieces: ground (with holes), terraces with retaining walls, stairs (rises of 0.34 m, walked up by the engine's 0.35 m step), ramps (stepped colliders under a smooth slope), water (deep, or wadeable at 0.6 m), walls with openings, railings, blocks (floors, facade, roof: flat, gable, hip, mansard; shopfronts, awnings, cornices, rooftop units), towers, roundhouses, longhouses, granaries, tents, canopies, colonnades, arches, bridges (humped), viaducts, cranes, rings of standing stones, signs (letters) and glyph panels (carved, for the ancient years), props (benches, bollards, lamp posts, tram poles, bus shelters, stalls, kiosks, booths, barriers, cars, scooters, planters, crates, barrels, phone booths, ad screens, looms, racks, pots, carts, cairns, fish racks, boats, fire pits, torches, floodlights, site huts, tarps, chillers), the seeded fill and the edges (the city going on, cliffs, hills, water, hedges, meadow; never a tall wall) with the invisible ring. |
+| `places/index.js` | `PLACES` (the registry) and `buildPlace(key, story, sector, rt, { deck })`: a level in the shared format (DeckWorld runs it unchanged) plus `place`, `landmarks` (`{ name: [x, y, z, yaw] }`), `quarters` (`[{ name, area, spawn, threshold }]`), `years`, `crowd`, `sites` and `scenery` (`(root, rt) =>` the mounted place). Sector *i* loads the whole map and activates quarter *i*: its spawn, its beat at a landmark, its fragments and watchers, its exit at the quarter's threshold (D2 step 1). A mission with fewer sectors than the place has quarters maps each sector to its first quarter (`spec.sectors[mkey]`, e.g. Mission 18's `[0, 2, 3]`: the evacuation and the canyon are one sector) and leaves by the threshold of the last quarter it spans. A spec's `variants[mkey]` gives a mission its own quarters or years in a shared place (Helix's wings, the two cases). Also `themeFor(level, state)` and `sunDir(level, state)`. |
+| `places/Place.js` | The builder a spec builds with: colliders (invisible boxes; one that exists only in some years or after some fact is a `ghost`, a DeckWorld conditional whose mesh the edition takes away), visual pieces (`level.vis`: box, turned box, cylinder, cone, gable, hip, dome, torus, plane, disc, ring sector (`fan`), sphere, vault; a material, a tint, the years, a fact condition), vegetation (`level.veg`), texts, landmarks, terrain heights, kept-clear rects, sites, deep water, traversal challenges (each names the years that answer it), interior rooms of a place (`P.room`: a ward that runs backwards, with `spec.outdoorFirst` the outdoor room comes first with every interior cut out of its bounds). `P.E(years, fn)` puts what `fn` builds into those years, `P.W(fact, fn)` behind a fact. `stageBeat` puts today's beats on their landmarks as things of the place (a telling-stone, a ledger on a lectern, a bronze plate, a phone booth, a glass case), never a Station Zero terminal. |
+| `places/archetypes.js` | Parametric pieces: ground (with holes), terraces with retaining walls, stairs (rises of 0.34 m, walked up by the engine's 0.35 m step), ramps (stepped colliders under a smooth slope), water (deep, or wadeable at 0.6 m), walls with openings, railings, blocks (floors, facade, roof: flat, gable, hip, mansard; shopfronts, awnings, cornices, rooftop units), towers, roundhouses, longhouses, granaries, tents, canopies, colonnades, arches, bridges (humped), viaducts, cranes, rings of standing stones, square spiral stairs round a core, lattice masts, shipping containers, dish antennas, gantry cranes, signs (letters) and glyph panels (carved, for the ancient years), props (benches, bollards, lamp posts, tram poles, bus shelters, stalls, kiosks, booths, barriers, cars, scooters, planters, crates, barrels, phone booths, ad screens, looms, racks, pots, carts, cairns, fish racks, boats, fire pits, torches, floodlights, site huts, tarps, chillers), the seeded fill and the edges (the city going on, cliffs, hills, water, hedges, meadow; never a tall wall) with the invisible ring. |
 | `places/styles.js` | One style per place: its materials, facade tints, roof, at most six vegetation kinds, its record kits and the palette DeckWorld lights its own few pieces with. |
 | `places/materials.js` | Every material name a place uses, as data: a shared surface (painted into a canvas at first use, or one of the CC0 scans: asphalt, brick, concrete, pavement, rock, stone, water) and a tint, with tags (`modern`: lamps, neon, roads, kerbs, signs, never in an ancient year). Surfaces are shared by every place (one draw call per surface), tinted by vertex colour; a vertex's years are an attribute, so the vertex shader drops what is not of this year and small props beyond 90 m. Lit facades (brick, curtain glass, Helix panels, townhouses) carry a window mask that comes on with the year's `lit`. |
 | `places/years.js` | The sky presets (the zenith, horizon and ground colours, the city glow, the sun, the moon, the stars, two cloud layers, lightning) and what a year adds: the hour, the sun's elevation and bearing (or the Notch's), the fog and its density, the night, the weather, the colour grade, the light probe, the hemisphere and the sun's colour. |
 | `places/atlas.js` | The Valley of the Ring: each place's position, and the far features (the Ring Hill and what crowns it in each era, the Ridge and the observatory's glint, the Notch, the city's skylines, the harbour cranes, the sea, cooking smoke) at their true bearings from it. |
-| `places/Sky.js` | One inverted sphere (r 420) following the camera, one shader: the preset's gradient, sun, moon, stars, one bright star, two scrolling cloud layers from a tileable noise painted once, the lightning flash, and the features a mission's sky carries (Mission 1's black ring-shaped hole in the clouds over the station after the Zero Second). Every uniform eases over about 1.2 s on a year switch. One draw call. |
+| `places/Sky.js` | One inverted sphere (r 420) following the camera, one shader: the preset's gradient, sun, moon, stars, one bright star, two scrolling cloud layers from a tileable noise painted once, the lightning flash, and the features a mission's sky carries, each with an optional condition: Mission 1's black ring-shaped hole in the clouds after the Zero Second (`ringHole`), Mission 11's sky drifting backwards over the rising rain (`reverse`), Mission 15's lock halo (`halo`), Mission 18's storm of times (`storm`: a wall cloud with a ring-shaped eye, bands of other times sweeping round, lightning coloured by the year), Mission 19's unbuilt city hanging upside down in construction lines (`unbuilt`), Mission 21's cloud sea with the lagoon city far below through its gaps (`cloudSea`), Mission 22's sky cut into wedges like a clock face and its eclipsed black sun (`wedges`, `eclipse`), and Afterzero's light that changes along the road (`route`) and its three ending skies (`preset`). Every uniform eases over about 1.2 s on a year switch. One draw call (the halo, the unbuilt city and the cloud sea are a mesh each). |
 | `places/Horizon.js` | A band at r 380 painted per year from the atlas (hazed toward the year's horizon colour, lit windows where the year is lit, dark in 2196), and a ground skirt under the scene's fog. Two draw calls. |
 | `places/Scenery.js` | Turns `level.vis` into one merged mesh per surface (and per fact condition), with world-projected UVs, vertex tints and the year mask; the vegetation instanced per kind (plane trees, lindens, birches, cypresses, olives, willows, blossom, bare trees, shrubs, grass, barley, reeds, ferns), the other years' instances scaled to nothing. `setEra(state)`, `refresh()` (fact conditions), `stats()`. |
 | `places/kits.js`, `places/mount.js` | The kits records, fragments and set pieces wear (and the clockmaker's brass arm); mounting a place after DeckWorld has built it: the scenery, sky and horizon into the level's root, the `ghost` meshes taken away, doors and gates in place materials, deep water that walks Kai back to the last checkpoint, a hazard that is still in a year. |
 | `places/specs/<key>.js` | One data spec per place: bounds, edges, years, quarters, which landmark each beat of each mission stands at, fragments, watchers' paths, crowd paths (for U4: `level.crowd`, each with its wardrobe era, the years it walks in, its role, path and size, within §4.7's 24 people with the named cast), and `build(P)`. |
 
-**Runtime.** `buildLevel` calls `buildPlace` when a mission names a `place` (the mission's own
-rooms, Helix's, are built first by its `rooms(P, …)` and the place builds round them; the
-`dress.js` decoration is skipped). `onSectorLoaded` mounts the place; `theme()` (every frame)
+**Runtime.** `buildLevel` calls `buildPlace` for every mission (the mission's own rooms, Helix's,
+are built first by its `rooms(P, …)` and the place builds round them); a mission without a place is
+an error, not a generated district. `onSectorLoaded` mounts the place; `theme()` (every frame)
 sets the palette's fog, density and night from the year, and on a year switch the sky, the
 horizon, the scenery, the lit windows, the weather, the colour grade and the light probe;
 `themeFor` and `sunDir` give `main.js` the year's light and a sun that throws long shadows when it
 is low. `stateFog` is 0 in a place (the year's own fog colour, all of it). Kerbs, terrace steps and
 ramps are walked, not jumped: the engine climbs 0.35 m from the ground, and every rise is built to
 that. An authored trigger can carry Kai somewhere (`to: [x, y, z, yaw]`, a short fade): Helix's
-glass lift takes him down into the chamber under the oculus.
+glass lift takes him down into the chamber under the oculus. A trigger can also wrap (`wrap: [dx, dz]`):
+Mission 19's plain sends Kai off its east edge and back in from the west, seamlessly, so its roads loop.
 
 **`Build.js`** keeps the hand-built rooms for Helix. A room can be placed and turned (`at`, `rot` in
 quarter turns, `y` its floor), leave by a side wall (`exit: 'E' | 'W'`), climb to the next room on a
@@ -77,10 +79,31 @@ the black ring in Helix's chamber in Missions 2 and 3, and in Mission 3's 2196 i
 | 6 | `oldtown` | 120 × 140 m | SHOP FLOOR & CANAL STREET · THE GALLERIES · THE CLOCK ROOM / ROOF | 2049 autumn evening; 2026 spring morning (the hidden stair stands); 2196 winter, the canal iced, the arm rusted solid |
 | 7 | `observatory` | 180 × 180 m | THE LOWER RING · THE INSTRUMENT STAIR · THE OUTER RING | THE FIRST SKY sunrise in the Notch, polished bronze, torches; 2049 blue hour, a bright star, the survey; 2196 golden wind, fallen rings |
 | 8 | `helix_v17` (sameAs `helix`) | 140 × 160 m | STAFF RECORDS · THE CORRUPTED LOG · THE LAST TEN MINUTES | VERSION 17: a still grey-violet afternoon, the full ring, the river through the court, the containment cube; 2026: the young garden, the junior tour's marquee |
+| 9 | `northbank` | 200 × 200 m | START · CLOCK A — OBSERVATION · CLOCK B — THE ENEMY ROUTE · CLOCK C — THE LOOP TRIGGER · THE CONTROL TOWER | 2049 the loop's windy grey morning over the river terraces, the funicular, the cathedral, the transmitter; 2026 the lighthouse under scaffold, the market's timber loggia |
+| 10 | `dam` | 180 × 120 m | THE DETENTION BLOCK · POWER SYSTEMS · THE TESTING CHAMBER · THE YARD | 2049 dusk under the Notch (near and high), sodium light, cells cut into the face; 2026 the dam under construction, a scaffold stair |
+| 11 | `hospital` | 160 × 140 m | TRIAGE & THE QUIET COLONNADE · RECORDS · WARD 32 | the pavilions and the open colonnade, the records hall, the reversed annex and the twin ward (interior rooms; the processes at their landmarks); 2026 the admission afternoon |
+| 12 | `helix` (north wing) | 140 × 160 m | THE CHASE — 2049 · THE CORRIDOR THAT WAS — 2026 · THE RUIN — 2196 · THE SECOND CHAMBER | wind at sunset, violet work light in 2026, green-gold dusk in the ruin; the sunk terraces down to the second ring |
+| 13 | `warport` | 240 × 200 m | THE BATTLEFIELD · THE THREE DEVICES · THE STABILIZER | 2049 battle smoke over the delta port, the trench, the container canyons; 2026 the working port and the rail yard; 2196 a meadow over the port, the channel a reed marsh |
+| 14 | `drowned` | 220 × 220 m | THE OVERGROWN TOWERS · THE TRANSIT LINE · THE MEMORIAL | 2196 the lagoon over the avenues, forests on the towers, the transit viaduct; 2049 and 2026 the dry downtown |
+| 15 | `lockcity` (bowl helper) | 220 × 220 m | THE STATION · THE SCHOOL & MARKET · THE ARCHIVE / THE LOCK | 2196 houses on the stadium's tiers under the lock halo; 2049 the relief camp's tents; 2026 floodlit match night |
+| 16 | `sinkhole` (spiral helper) | 150 × 150 m | THE RIM & THE FIRST MEMORY · THE SPIRAL · THE COMPARISON HALL · THE PHOTOGRAPH | 2196 the museum at dusk, lanterns down the spiral, the lens hall; 2049 the flooded quarry lake and the Helix barge; 2026 the working quarry at dusty noon |
+| 17 | `array` | 260 × 260 m | THE SHIFTING CORRIDOR · THE RECORDINGS · THE EARLIER ROOMS · THE ORIGINAL EXPERIMENT | 2049 frost under the Milky Way, red aircraft lights; 2026 heat haze, the array being built; 2196 sand dawn, dishes tilted; the drum racks stand differently each year |
+| 18 | `fracture` (linear) | 120 × 420 m | THE ANCHOR SETTLEMENT · THE CANYON · THE FLOODED HIGHWAY · THE COLLAPSING SKYSCRAPER | the storm of times in every year; 2196 the scrap village on the interchange, the chasm, the buckled road, the tilted floors up to the tower; 2026 the river canyon and its stone arch; 2049 the flood, the lamp-post heads |
+| 19 | `unwritten` (mirror helper) | 220 × 220 m | THE LOOPING ROAD · THE BRIDGE IN THE REFLECTION · THE DOOR THAT IS EVERYWHERE | high-key white-violet, rose or mint per year, no sun disc; the unbuilt city upside down in the sky; floating fragments and their reflections; edges that wrap |
+| 20 | `memory` | 130 × 130 m | THE HOUSE · THE EXPERIMENT · THE WORLD WITHOUT KAI | 2026 the terrace and its gardens, a golden overexposed evening; the first experiment, a white void with the remembered things in colour; adult Mira's seaside garden in the morning |
+| 21 | `spire` | 160 × 160 m | THE ALLY / ARRIVAL · THE COMMAND STRUCTURE · THE ARENA · THE WITNESS | 2049 hard noon above the cloud sea; 2026 the tower's roof at the cloud line; 2196 the frosted ruin at a blue dusk |
+| 22 | `firstsecond` (wedges helper; sameAs M1, M4, M6, M11, M3) | 160 × 160 m | THE VILLAGE'S CHAIN · THE CLOCKMAKER'S PATTERN & THE HOSPITAL'S LOCK · THE FINAL CHAMBER | the twin chamber (2026 at 16:02, 2049 at 05:40) under an eclipsed sun; five wedges of earlier places in their own light, the sky cut to match; the years change which wedge is lit |
+| 23 | `afterzero` (linear; sameAs M1, M4, M2, M14) | 100 × 360 m | THE OPENING STREETS · THE SETTLEMENT, AGAIN · THE HELIX LAB · 2196 · THE ORIGINAL CHRONOLITH | night rain over the quoted South Square, dusk over the settlement, pre-dawn over Helix, the first sunrise in the Notch at the ring; the three ending skies |
+| B | `valley_river` (the gorge, variant `c_b`) | as Mission 5 | THE DRY CHANNEL · THE GATES | Mission 5's years |
+| C | `lockcity` (the press tower, variant `c_c`) | as Mission 15 | THE FIRST ARCHIVE · THE SECOND ARCHIVE | Mission 15's years |
 
-Documented deviation: the observatory's summit stands at 27.5 m, not the sheet's 30 m, because the
+Documented deviations: the observatory's summit stands at 27.5 m, not the sheet's 30 m, because the
 shared engine respawns anyone whose centre rises above y 30 (`main.js`), and a jump on the summit
-must stay under it.
+must stay under it; for the same reason the Spire's walkable terraces stop at 24 m (its mast and the
+citadel's ring rise above), and Mission 18's tower deck is at 26 m. Mission 20's plot is 130 m square
+(the sheet's 90 m plot in the middle, the white memory boundary round it), so the place keeps §4.7's
+short side. The two traverses (Missions 18 and 23) are `linear`: exempt from the 120 m short side,
+held to 100 × 300 m instead.
 
 ## The bible → the engine
 
@@ -91,7 +114,7 @@ must stay under it.
 | Temporal State Switching: authored states of one location, not free date selection | `RealityEngine` runs on `['PRESENT', 'PAST', 'FUTURE']`, baseline `PRESENT`, with no law slots (`slots: 0`, `laws: []`) and only the past's own effects. Each mission lists the years its region was authored with (`states:`); `setAvailable` gives each room those, cycling (`Q`) visits only them, and a year a place does not have is refused ("This place does not have that year"). `1 2 3` pick by position; `4` is REVERSE. |
 | Past: original structures, causes, objects that no longer exist | `PAST` is the residue state: echo geometry (the bridge that stood here, the stairs that were pulled down) is visible and holds weight (`stateEffects.PAST = { echoVisible, echoSolid }`); records show what they said first (contradiction beats). Items from the past are echo items. |
 | Present: investigation, machinery, grounded stealth, human conflict | `PRESENT`: the place as built; locks read it (a key from another year must be anchored). Watchers patrol it. |
-| Future: consequences, traversal through ruins, unstable zones | `FUTURE`: authored consequences (the parked lift across Helix's collapsed hall, the drained village, the third device), ivy, roof gardens, moss and fallen slabs on every place that has a 2196 (`dress.js`), and in unstable regions the Chronolith's stability drains. |
+| Future: consequences, traversal through ruins, unstable zones | `FUTURE`: authored consequences (the parked lift across Helix's collapsed hall, the drained village, the third device), ivy, roof gardens, moss and fallen slabs built into every place that has a 2196 (its spec's year pieces), and in unstable regions the Chronolith's stability drains. |
 | Inverted: "temporarily reverses selected processes, subject to energy and stability limits"; "Inversion: reverse selected motion or mechanism; local and readable; no universal rewind of all consequences. Mission 11" | Not a year: a verb, **REVERSE** (below), unlocked in Mission 11. Kai aims at one process he can see and holds it running backwards while the Chronolith's charge lasts. Places that run backwards on their own (Mission 11's reversed wards) are a room override (`engine.setOverride(room, { timeReverse: true })`), not a state: their sweepers and patrols turn the other way and the intercom speaks backwards. Gravity never changes (`engine.gravity()` is always −1). |
 | Each state looks and sounds different | `DeckWorld.setLook` tints the materials per state (warm stone then, cold steel now, moss and rust later) and puts the city's windows out in 2196 (nobody has power); in open districts `Runtime.stateFog` / `stateDensity` / `stateNight` give each year its own air and hour (2026 a warm sepia haze at dusk, 2196 a pale green mist), each year its own colour grade where the renderer grades, and `stateWeather` its weather (2196 pollen, 2026 dry); `audio/Synth.js` plays a different chord progression per state (The Need to Fix It, Living History, Beautiful Catastrophe) and an ambience bed per region. A mission can name its states for what they are there (Mission 5's village: THRIVING / ABANDONED / FLOODED; Mission 4: BEFORE THE FIRE / THE VILLAGE). |
 
@@ -196,21 +219,15 @@ encounter end in lethal combat".
   ending (outro); the Mission 13 faction choice; the Mission 10 Echo Step unlock; the ally call in
   Mission 21; the three endings and the post-credit "Version one hundred and eighteen."
 - The people: roster, wants and fears, temporal states, dialogue with intents, echoes, barks.
-- The open places of the Prologue and Act I (`places/specs/`): every building, terrace, bridge,
-  tree and year piece, and the sky, horizon and light of every year.
-- What each year of a generated place looks like (`dress.js` rules) and sounds like.
+- The open places of every mission (`places/specs/`): every building, terrace, bridge, tree and
+  year piece, and the sky, horizon and light of every year.
 
 **Generated**
 
-- The places of Acts II–IV, the Finale and the cases (until U3 gives them open places): open districts from `gen/ZoneGen.js`
-  (themes `settlement`, `tower`, `city`, `reactor`, `ruin`, `rain`, `liminal`) and interiors from
-  `gen/LevelGen.js` (Helix, the clockmaker's workshop, the detention block, the hospital, the
-  museum, the archive, the command structure), seeded per chapter (`lv-<chapter>`).
-- Their puzzles: the generators' pits, ledges, keys, cores, sweepers and watchers, restricted
-  to what the mission's years can do (residue bridges and stairs only where there is a PAST,
-  watchers and sweepers; never a gravity or ceiling puzzle), with routes the tests walk.
-- The per-state decoration of every place (ivy, gardens, moss, fallen slabs, scaffolding,
-  lanterns), merged into one mesh per kind and year, and never solid.
+- Only the seeded scatter inside the authored places (each place's own generator, `rng(key)`: the
+  same every time): debris, the order of facade tints, where the grass and flowers fall. Since U3
+  the edition runs neither `gen/ZoneGen.js` nor `gen/LevelGen.js` (the Station Zero game and World
+  Forge still do); `dress.js` and the `P` palettes are retired.
 
 ## The missions
 
@@ -224,23 +241,23 @@ encounter end in lethal combat".
 | 6 | The Clockmaker's House | I | Old Town and the light-well house (`oldtown`) | 2026 2049 2196 | Repeating arms, the clockmaker, the mechanism; the recording |
 | 7 | The Broken Observatory | I | The Ridge (`observatory`) | THE FIRST SKY, 2049, 2196 | Alignment, the dates, Mira's recording |
 | 8 | The First Death | I | Helix in VERSION 17 (`helix_v17`) | 2049 (V17), 2026 | Staff records, the corrupted log, containment; VERSION 17 |
-| 9 | Nine Minutes to Zero | II | Loop City | 2049 2026 | Loop (82 s), clocks, the cancelled order, the engineer |
-| 10 | Enemies Who Remember | II | Detention block | 2049 2026 | Intake log, Sera, the prisoners' choice; Echo Step |
-| 11 | The Inverted Hospital | II | Hospital interior | 2049 2026 (+ reversed wards) | REVERSE unlocks: the tutorial, the charred file, the reversing lock; Mira's file |
-| 12 | The Man Behind the Glass | II | Helix, three years deep | all three | The 2026 corridor, the route, the Witness and the second Chronolith |
-| 13 | The Nine-Minute War | II | War zone | all three | Field orders, three devices in three years, the stabilizer (faction) |
-| 14 | Welcome to 2196 | III | 2196 city | all three | The beacon's parts, Sera's safe path, the memorial |
-| 15 | The City That Forgot Tomorrow | III | Locked city | 2196 2026 2049 | Loop (120 s), the fabricated record, Anja's lock (stabilize / free) |
-| 16 | The Museum of Failed Worlds | III | Museum interior | 2196 2026 2049 | Three memories, comparison, the photograph |
-| 17 | The Witness's Archive | III | Archive interior | all three | Recording 17 of 117, body lost / pattern persists, "They became the price." |
-| 18 | The Fracture | III | Settlement / highway / tower | all three | Evacuate three houses, the canyon in the past, Mira's message |
-| 19 | The Place Outside Time | IV | Liminal | all three | Symbols not markers, the bridge in the reflection, Mira |
-| 20 | Mira's Memory | IV | Liminal memory | 2026 2049 2196 | The blue door, the first experiment, "I remember being your sister." |
-| 21 | The Last Battle of the Continuum | IV | Command structure | all three | Standing order, the ally you earned, the Witness |
-| 22 | The First Second | IV | Activation point | all three | The village's chain, evidence over memory, the final chamber |
-| 23 | Afterzero | Finale | Rain City / settlement / ruin | all three | The Witness holds the route; Mira; Endings A, B, C |
-| B | The Water That Remembers | Cases | Settlement | 2049 2026 2196 | The mural, three stone gates (optional) |
-| C | Two Records, One Disaster | Cases | 2196 city | 2196 2026 2049 | Two first operators, both true (optional) |
+| 9 | Nine Minutes to Zero | II | Northbank (`northbank`) | 2049 2026 | Loop (82 s), clocks, the cancelled order, the engineer |
+| 10 | Enemies Who Remember | II | The dam (`dam`) | 2049 2026 | Intake log, Sera, the prisoners' choice; Echo Step |
+| 11 | The Inverted Hospital | II | Rain City General (`hospital`) | 2049 2026 (+ reversed wards) | REVERSE unlocks: the tutorial, the charred file, the reversing lock; Mira's file |
+| 12 | The Man Behind the Glass | II | Helix, north wing (`helix`) | all three | The 2026 corridor, the route, the Witness and the second Chronolith |
+| 13 | The Nine-Minute War | II | The delta port (`warport`) | all three | Field orders, three devices in three years, the stabilizer (faction) |
+| 14 | Welcome to 2196 | III | Downtown (`drowned`) | all three | The beacon's parts, Sera's safe path, the memorial |
+| 15 | The City That Forgot Tomorrow | III | The lock city (`lockcity`) | 2196 2026 2049 | Loop (120 s), the fabricated record, Anja's lock (stabilize / free) |
+| 16 | The Museum of Failed Worlds | III | The sinkhole (`sinkhole`) | 2196 2026 2049 | Three memories, comparison, the photograph |
+| 17 | The Witness's Archive | III | The array (`array`) | all three | Recording 17 of 117, body lost / pattern persists, "They became the price." |
+| 18 | The Fracture | III | The traverse to the coast (`fracture`) | all three | Evacuate three houses, the canyon in the past, Mira's message |
+| 19 | The Place Outside Time | IV | The salt mirror (`unwritten`) | all three | Symbols not markers, the bridge in the reflection, Mira |
+| 20 | Mira's Memory | IV | One plot, three memories (`memory`) | 2026 2049 2196 | The blue door, the first experiment, "I remember being your sister." |
+| 21 | The Last Battle of the Continuum | IV | The Continuum Spire (`spire`) | all three | Standing order, the ally you earned, the Witness |
+| 22 | The First Second | IV | The Ring Hill's wedges (`firstsecond`) | all three | The village's chain, evidence over memory, the final chamber |
+| 23 | Afterzero | Finale | The road to the ring (`afterzero`) | all three | The Witness holds the route; Mira; Endings A, B, C |
+| B | The Water That Remembers | Cases | The gorge (`valley_river`, `c_b`) | 2049 2026 2196 | The mural, three stone gates (optional) |
+| C | Two Records, One Disaster | Cases | The press tower (`lockcity`, `c_c`) | 2196 2026 2049 | Two first operators, both true (optional) |
 
 ## Tests
 
@@ -254,40 +271,48 @@ encounter end in lethal combat".
   comes apart last-fitted first and remembers settled bolts, moving colliders that never expire, string conditions, the edition's namespace and build settings, the
   speakers and their distinct voices, the 23 missions in order with their quoted lines, the
   Mission 10/13/23 choices, intents and conditions, and solvability by construction for every
-  mission level (every obstacle has a state or the anchor that gets past it, every generated
-  route uses only its room's states, every beat has something that completes it, every place
+  mission level (every obstacle has a state or the anchor that gets past it, every level is a
+  place and any route it carries uses only its room's states, every beat has something that completes it, every place
   can snap back to PRESENT, every prologue condition is set by something), the NPC state model,
-  quest chains A and D, echoes. The places (Missions 1–8): every sheet landmark and quarter
-  exists, the sky stays open (roof cover at most 15%, no wall over 6 m along the bounds but rock,
+  quest chains A and D, echoes. The places (every mission and both cases): every sheet landmark and quarter
+  exists (and sector *i* spawns in its quarter), the edition imports neither generator and `dress.js` is gone (a grep
+  over every edition file), every mission's default sky is its own (the M22 and M23 composites excepted), the sky stays open (roof cover at most 15%, no wall over 6 m along the bounds but rock,
   an invisible ring at the edge), no generator, Vessel or engineered look, a sky preset, hour,
   fog, sun and era for every year, a unique signature unless `sameAs`, a short side of at least
-  120 m and quarters of at least 2,500 m², one layout per place with at least 20 big conditional
+  120 m (the two linear traverses: 100 × 300 m) and quarters of at least 2,500 m², one layout per place with at least 20 big conditional
   pieces per extra year, nothing modern (lamp, neon, road, Latin text) in an ancient year, every
   traversal challenge naming an answer in its room's years with two hints, the collider, text and
   NPC budgets, known materials and kits and no terminals; and Kai walks the places with the game's
   own physics (`Player.update`, the engine's 0.35 m step from the ground): the stairs, fire
-  escape, scissor stair, terraces, ramps, bridges and stepping stones carry him, and Mission 5's
-  footbridge holds only in the thriving year. THINK answers in every sector of the Prologue and
+  escape, scissor stair, terraces, ramps, bridges and stepping stones carry him, Mission 18's stone arch
+  (2026), lamp-post heads (2049) and tilted floors up to the tower's deck (2196), Mission 19's
+  reflection bridge (2026, or in step) and the stair to the fifth door, the Museum's whole spiral, the
+  Spire from the kitchen door to the arena and the summit, the First Second's terraces and Afterzero's
+  whole road; Mission 5's footbridge holds only in the thriving year, and the wrong year does not carry
+  him over Mission 18's chasm or Mission 19's channel. THINK answers in every sector of the Prologue and
   Act I and in Mission 11, and every year of a place gives `main.js` a full theme and a sun.
 - `tests/lastversion-perf.mjs` (browser, read-only): what a place costs on an emulated phone
   (915×412 at 2.625, medium quality) at quarter 0 of each mission and year: full-frame and
   scene-pass draw calls and triangles, the static draws split into scenery, sky, horizon and
   DeckWorld's own, and JS time per frame; checks §4.7 (static draws ≤ 70, sky 1, horizon ≤ 4,
-  triangles ≤ 300k). `PLACES=m01,m04` by default.
+  triangles ≤ 300k). `PLACES=m01,m04` by default (any of `m01` … `m23`).
 - `tests/lastversion.mjs` (browser bot): the title, NEW GAME into the Prologue, Missions 1–3
   played through (both quest chains) into Act I, then Missions 5, 11 (REVERSE: R does nothing
   before it is taught, the unlock in the records, R and the touch ⟲ button start and release a
   hold, a year switch releases it, the refusal, the file readable only while held, a jammed bolt,
   a settled bolt through a save and a load, the lock opening Ward 32), 13, 14 and 19 and the
-  Finale to an ending, a generated interior walked with real movement, the save namespace. The
+  Finale to an ending, real walks through the places (Mission 13's quay to the container canyons,
+  Mission 14's viaduct, the Museum's spiral from the rim to the Comparison Hall, Mission 19's
+  reflection bridge in 2026 and the water under it in 2049, its wrapping edge, the Finale's road and
+  the settlement's bridge), the save namespace. The
   Prologue's routes start at the places' landmarks, and Helix's glass lift carries Kai down into
-  the chamber. A survey renders quarter 0 of Missions 1–8 in every year: a 16×16 average hash per
+  the chamber. A survey renders quarter 0 of all 23 missions in every year (61 views): a 16×16 average hash per
   view (logged), at least 18 bits between missions that are not the same place, and a sky in the
   top quarter that is not one flat colour (or is fog). Each mission is surveyed in its own small
   page (384×216 by default), with the render loop stopped before the game begins and the year's
   shaders compiled ahead (`compileAsync`). `LV_ONLY=places` runs the survey alone; `LV_SURVEY_ONLY`
-  (mission keys), `LV_SURVEY_W` / `LV_SURVEY_H` and `LV_PLACE_SHOTS` (a folder for the pictures)
-  narrow or enlarge it. Each mission's quarter-0 spawn is composed to show what the place is: the
+  (mission keys), `LV_SURVEY_W` / `LV_SURVEY_H`, `LV_PLACE_SHOTS` (a folder for the pictures) and
+  `LV_SURVEY_HASHES` (a JSON file of every view's hash and sky numbers) narrow, enlarge or keep it. Each mission's quarter-0 spawn is composed to show what the place is: the
   door of 4B on the wet avenue, the dark lobby, the chamber under the oculus, the village lane
   down to the first fire, the river at the weir, the light well from the cellar stair, the dates
   ring against the Great Armillary, and the VERSION 17 atrium seen from its doors. On a loaded

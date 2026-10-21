@@ -40,7 +40,7 @@ function commuters(P, rng) {
 export const M01 = {
   key: 'm01', n: 1, chapter: 'prologue', name: 'THE LAST NORMAL DAY', title: 'Rain City, 2049', subtitle: 'Eight-fourteen on a Tuesday. The 41 is late.',
   // PAST here is not 2026: it is 8:13, the minute before the crash, which the station keeps falling back into (quest chain A)
-  place: 'rain_south', sectors: 1, states: ['PRESENT', 'PAST'], drones: [0], noDress: true, stateWeather: { PAST: 'rain' },
+  place: 'rain_south', sectors: 1, states: ['PRESENT', 'PAST'], drones: [0],
   ambience: 'rain',
   fragments: [[
     'A wet newspaper on a bench: HELIX DENIES "TIME TESTS" - DIRECTOR ROOK: "WE STUDY CLOCKS, NOT MIRACLES".',

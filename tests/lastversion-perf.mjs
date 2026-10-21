@@ -9,7 +9,7 @@
 //     PLACES_TINY of the pixel ratio so SwiftShader's rasterisation does not count (as tests/perf.mjs)
 // Budgets checked (§4.7): visible static draw calls ≤ 70, sky 1, horizon ≤ 4, triangles ≤ 300k.
 //   NODE_PATH=$(npm root -g) node tests/lastversion-perf.mjs
-//   env: PLACES=m01,m04 (missions)  PLACES_FRAMES=120  PLACES_TINY=0.1  PLACES_QUALITY=medium
+//   env: PLACES=m01,m04 (missions; any of m01 .. m23)  PLACES_FRAMES=120  PLACES_TINY=0.1  PLACES_QUALITY=medium
 import { createRequire } from 'node:module';
 import http from 'node:http';
 import fs from 'node:fs';
@@ -23,7 +23,11 @@ const WANT = (process.env.PLACES || 'm01,m04').split(',').filter(Boolean);
 const FRAMES = +(process.env.PLACES_FRAMES || 120);
 const TINY = +(process.env.PLACES_TINY || 0.1);
 const QUALITY = process.env.PLACES_QUALITY || 'medium';
-const MISSIONS = { m01: ['prologue', 0], m02: ['prologue', 1], m03: ['prologue', 2], m04: ['act1', 0], m05: ['act1', 1], m06: ['act1', 2], m07: ['act1', 3], m08: ['act1', 4] };
+const MISSIONS = {
+  m01: ['prologue', 0], m02: ['prologue', 1], m03: ['prologue', 2], m04: ['act1', 0], m05: ['act1', 1], m06: ['act1', 2], m07: ['act1', 3], m08: ['act1', 4],
+  m09: ['act2', 0], m10: ['act2', 1], m11: ['act2', 2], m12: ['act2', 3], m13: ['act2', 4], m14: ['act3', 0], m15: ['act3', 1], m16: ['act3', 2],
+  m17: ['act3', 3], m18: ['act3', 4], m19: ['act4', 0], m20: ['act4', 1], m21: ['act4', 2], m22: ['act4', 3], m23: ['finale', 0],
+};
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.webp': 'image/webp', '.jpg': 'image/jpeg', '.png': 'image/png', '.glb': 'model/gltf-binary', '.hdr': 'application/octet-stream' };
 const server = http.createServer((req, res) => {
   const p = path.join(root, decodeURIComponent(req.url.split('?')[0]).replace(/\/$/, '/index.html'));

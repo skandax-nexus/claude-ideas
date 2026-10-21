@@ -65,6 +65,46 @@ export const MATS = {
   // --- water ------------------------------------------------------------------------------------------------
   water: D('water', 0x5a8aa0), canalWater: D('water', 0x3a4a52), canalGreen: D('water', 0x4a6a5a), riverWater: D('water', 0x4a7a8a), poolWater: D('water', 0x5a7a6a),
   puddleWater: D('water', 0x3a4250), floodWater: D('water', 0x3a7a72),
+  // --- Acts II-IV and the Finale (U3) ---------------------------------------------------------------------
+  // Northbank: pale limestone, brick, copper roofs, the funicular, the transmitter
+  limestonePave: D('cobble', 0xd4ccbc, 'ground'), stairStone: D('stone', 0xc8c0b0, 'ground'), stoneFacade: D('stoneFacade', 0xffffff, 'lit'), copperRoof: D('slate', 0x6ab89a),
+  limestoneBlock: D('stone', 0xe4dccc), cathedralStone: D('sandstone', 0xece2d0), roseWindow: D('glow', 0xffd8a0), funicularRed: D('satin', 0x9a2a2a, 'modern'),
+  ironLoggia: D('metal', 0x3a4a44), mastRed: D('satin', 0xc83a2a, 'modern'), mastWhite: D('satin', 0xf0f0ec, 'modern'), harbourWater: D('water', 0x3a6a7a), quayTimber: D('wood', 0x6a5440),
+  // the dam: raw concrete, gratings, floodlights, the reservoir and the spillway
+  damConcrete: D('concrete', 0xb8b6b0), gratingSteel: D('metal', 0x7a8088, 'modern'), sodiumGlow: D('glow', 0xffc44a, 'modern lamp'), ledGlow: D('glow', 0xdce8ff, 'modern lamp'),
+  cellBars: D('metal', 0x4a5058, 'modern'), turbineGreen: D('satin', 0x3a6a5a, 'modern'), reservoirWater: D('water', 0x2a4a5a), spillwayFoam: D('smoke', 0xe8f0f4), snowRock: D('rock', 0xd8dce4),
+  // the hospital: white render, ribbon windows, tiles, the accents of the children's wing
+  renderFacade: D('renderFacade', 0xffffff, 'lit'), renderWhite: D('plaster', 0xfafaf6), hospitalPave: D('paving', 0xd4d0c8, 'modern ground'), hospitalTile: D('tile', 0xe8eef0, 'ground'),
+  accentBlue: D('satin', 0x3f9cff, 'modern'), accentPink: D('satin', 0xe86a9c, 'modern'), helipadMark: D('glow', 0xf4f4f0, 'modern ground'), fountainWater: D('water', 0x7ab0c0), ambulanceWhite: D('satin', 0xf0f0ee, 'modern'),
+  // the port: quay concrete, containers, sandbags, rails, the silos, craters
+  quayConcrete: D('concrete', 0x9e9a92), containerRed: D('corrugated', 0xa83a2a, 'modern'), containerOrange: D('corrugated', 0xd8782a, 'modern'), containerGreen: D('corrugated', 0x3a7a4a, 'modern'),
+  containerYellow: D('corrugated', 0xd8b02a, 'modern'), containerGrey: D('corrugated', 0x8a9096, 'modern'), sandbag: D('cloth', 0xa8986a), railSteel: D('metal', 0x6a6058, 'modern'),
+  wagonRust: D('metal', 0x7a4a2a, 'modern'), siloConcrete: D('concrete', 0xc8c0b0), craneRed: D('satin', 0xb03a2a, 'modern'), crater: D('soil', 0x3a3028, 'ground'), ashGround: D('soil', 0x4a4440, 'ground'),
+  frozenGlass: D('glass', 0xcfe8ff), rustRed: D('metal', 0x8a3a24),
+  // the lagoon city: mossy stone, the viaduct's deck, broken curtain walls, roof gardens, vines
+  mossStone: D('stone', 0x6a7a5a, 'ground'), viaductDeck: D('concrete', 0x9a9a8e), towerGlass: D('glassFacade', 0xa8c0b0, 'lit'), concreteStained: D('concrete', 0x8e8c80),
+  roofGarden: D('leaves', 0x6a9a4a), vineCurtain: D('leaves', 0x4a7a3a), lagoonWater: D('water', 0x4a8a88), statueStone: D('stone', 0xb8b4a8),
+  // the lock city: the stadium's concrete, its seats, the pitch, bunting, laundry, tents
+  pitchGrass: D('grass', 0x7aa850, 'ground'), stadiumConcrete: D('concrete', 0xc8c2b8), seatsRed: D('seats', 0xc84a3a), seatsBlue: D('seats', 0x3a5ab0), seatsFaded: D('seats', 0xb8a8b0),
+  bunting: D('stripe', 0xfff0d0), laundry: D('cloth', 0xf4f0e8), lilacTarp: D('cloth', 0xb8a8d0), tentWhite: D('cloth', 0xe8e8e0, 'modern'), floodlightGlow: D('glow', 0xf0f4ff, 'modern lamp'),
+  // the quarry museum: rock, cut blocks, the ramp, lanterns, the lake, cases
+  quarryRock: D('rock', 0xb4a48c), quarryCut: D('sandstone', 0xd4c8ac), quarryFloor: D('gravel', 0x9a907a, 'ground'), rampStone: D('flag', 0xa89c86, 'ground'), lanternGlow: D('glow', 0xffc27a),
+  pontoonWood: D('wood', 0x6a5a48), lakeWater: D('water', 0x3a5a68), lensGlass: D('glass', 0xc8e0f0), caseGlass: D('glass', 0xe0ecf4), waterfallWater: D('smoke', 0xe8f4f8),
+  // the desert array: sand, cable paths, the dishes, the drum racks, red aircraft lights, mesas
+  sand: D('sand', 0xd8b07a, 'ground'), cablePath: D('concrete', 0xb4a894, 'ground'), dishWhite: D('satin', 0xe8eaec, 'modern'), drumRack: D('metal', 0x3a3e44, 'modern'),
+  redBeacon: D('glow', 0xff3a2a, 'modern lamp'), mesaRock: D('rock', 0xb06a48), hallConcrete: D('concrete', 0xccc0aa), reelBrown: D('satin', 0x4a3a2a, 'modern'),
+  // the Fracture: the motorway, container houses, turbines, the canyon, the lattice tower
+  motorway: D('asphalt', 0x7a7e82, 'modern ground road'), containerHouse: D('corrugated', 0xb87a5a, 'modern'), turbineWhite: D('satin', 0xe8eaec, 'modern'), canyonRock: D('rock', 0xa8603a),
+  latticeSteel: D('metal', 0x8a9096, 'modern'), slabConcrete: D('concrete', 0xa09a92), highwayWater: D('water', 0x4a5a58), stormGlow: D('glow', 0xc9b8ff),
+  // the Unwritten Second: salt, the mirror, fragments, chalk, the blue door
+  salt: D('salt', 0xf4f2f0, 'ground'), mirrorWater: D('mirror', 0xeae4ff), mirrorRose: D('mirror', 0xffe8ee), mirrorMint: D('mirror', 0xe4fff4), reflectionGlass: D('satin', 0xa898e8), memoryFog: D('smoke', 0xffffff), fragmentStone: D('stone', 0xe4e0d8), chalkWhite: D('matte', 0xf4f4f0), blueDoor: D('satin', 0x2a5ab0), symbolGold: D('metal', 0xd8b060),
+  // Mira's memory: a garden, brick paths, watercolour walls, a kitchen, the sea
+  gardenLawn: D('grass', 0x8ab060, 'ground'), pathBrick: D('brick', 0xc08a6a, 'ground'), watercolourWall: D('plaster', 0xf0d8c8), woodWhite: D('satin', 0xf4f0ea), voidWhite: D('matte', 0xf4f4f6),
+  kitchenTile: D('tile', 0xf0e8d8, 'ground'), seaWater: D('water', 0x5a9ac0), fridgeWhite: D('satin', 0xf8f8f4, 'modern'), busStopGreen: D('satin', 0x2a6a4a, 'modern'),
+  // the Spire: basalt paving, black glass, windbreaks, the elites' graphite
+  basaltPave: D('flag', 0x4e4e54, 'ground'), blackGlass: D('glass', 0x2a3040), windbreakGlass: D('glass', 0xc8d8e8), eliteGraphite: D('satin', 0x3a3c40, 'modern'), helipadPaint: D('glow', 0xe8e8e0, 'modern ground'),
+  // the composites: the twin chamber, half construction concrete and half machined black
+  twinConcrete: D('concrete', 0xb0aca4), sealBronze: D('metal', 0x9a7a4a), wedgeGlass: D('glass', 0xd8d0ff),
 };
 
 // the shared surfaces: a finish, and a painter (or a scan) for the textured ones
@@ -73,6 +113,7 @@ export const SURFACES = {
   matte: { rough: 0.92 }, satin: { rough: 0.5, metal: 0.08 }, metal: { rough: 0.36, metal: 0.72 }, cloth: { rough: 0.95, side: 2 },
   glow: { basic: true, cast: false }, glass: { rough: 0.06, metal: 0.25, opacity: 0.32, cast: false }, smoke: { rough: 1, opacity: 0.22, cast: false },
   water: { rough: 0.06, metal: 0.15, opacity: 0.86, water: true, cast: false },
+  mirror: { rough: 0.03, metal: 0.25, opacity: 0.5, cast: false }, // (M19's salt mirror: what stands below it shows through as its reflection)
   asphalt: { scan: 'asphalt', tile: 6, rough: 1, cast: false }, paving: { scan: 'pavement', tile: 3, cast: false }, concrete: { scan: 'concrete', tile: 4 },
   brick: { scan: 'brick', tile: 3 }, stone: { scan: 'stone', tile: 4 }, rock: { scan: 'rock', tile: 8 }, flag: { paint: 'flag', tile: 4, cast: false },
   tile: { paint: 'tile', tile: 2.4, cast: false }, terrazzo: { paint: 'terrazzo', tile: 3, cast: false }, cobble: { paint: 'cobble', tile: 3, cast: false },
@@ -85,6 +126,8 @@ export const SURFACES = {
   corrugated: { paint: 'corrugated', tile: 2, metal: 0.4, rough: 0.5 }, stripe: { paint: 'stripe', tile: 1 },
   glyph: { paint: 'glyph', tile: 1.6 }, pictoFire: { paint: 'pictoFire', tile: 1.8, fit: true }, pictoWater: { paint: 'pictoWater', tile: 1.8, fit: true },
   pictoRing: { paint: 'pictoRing', tile: 1.8, fit: true }, picto: { paint: 'skyFloor', tile: 4, fit: true, cast: false }, mural: { paint: 'mural', tile: 6 }, tally: { paint: 'tally', tile: 1.2 },
+  stoneFacade: { paint: 'stoneFacade', tile: [3.4, 3.8], lit: 0xffd8a0 }, renderFacade: { paint: 'renderFacade', tile: [6, 3.6], lit: 0xe8f4ff, rough: 0.6 },
+  sand: { paint: 'sand', tile: 8, cast: false }, salt: { paint: 'salt', tile: 5, rough: 0.5, cast: false }, seats: { paint: 'seats', tile: [2, 1.6] },
 };
 
 export function surfaceOf(name) {
@@ -238,6 +281,45 @@ const PAINT = {
     for (let i = 0; i < 6; i++) { g.strokeStyle = col[i % 4]; g.lineWidth = 6; g.beginPath(); g.arc(s * (0.15 + i * 0.14), s * 0.6, 14, 0, Math.PI * 2); g.moveTo(s * (0.15 + i * 0.14), s * 0.66); g.lineTo(s * (0.15 + i * 0.14), s * 0.86); g.stroke(); }
     g.strokeStyle = '#2a5a7a'; g.lineWidth = 8; g.beginPath(); for (let i = 0; i <= 10; i++) g.lineTo((i * s) / 10, s * 0.3 + Math.sin(i) * 10); g.stroke();
     g.fillStyle = 'rgba(232,224,204,0.45)'; for (let i = 0; i < 12; i++) g.fillRect(r() * s, r() * s, 40 + r() * 80, 20 + r() * 50);
+  },
+  // Northbank: pale limestone ashlar, a tall window with shutters each bay
+  stoneFacade(g, w, h, r, m) {
+    g.fillStyle = '#e2dccc'; g.fillRect(0, 0, w, h);
+    g.strokeStyle = 'rgba(120,110,90,0.3)'; g.lineWidth = 1;
+    for (let y = 0; y < h; y += 14) { g.beginPath(); g.moveTo(0, y); g.lineTo(w, y); g.stroke(); for (let x = ((y / 14) % 2) * 20; x < w; x += 40) { g.beginPath(); g.moveTo(x, y); g.lineTo(x, y + 14); g.stroke(); } }
+    speckle(g, w, h, 900, r, 0.07, false);
+    windows(g, w, h, { cols: 1, rows: 1, x0: w * 0.32, y0: h * 0.14, ww: w * 0.36, wh: h * 0.64, frame: '#f4f0e8', glass: '#28303a', mask: m, lit: 0.5, r });
+    g.fillStyle = '#5a7a8a'; g.fillRect(w * 0.18, h * 0.14, w * 0.12, h * 0.64); g.fillRect(w * 0.7, h * 0.14, w * 0.12, h * 0.64);
+    g.fillStyle = '#cfc6b2'; g.fillRect(w * 0.26, h * 0.8, w * 0.48, 7); g.fillRect(0, h - 8, w, 8);
+  },
+  // the hospital: white render with a long ribbon window each storey
+  renderFacade(g, w, h, r, m) {
+    g.fillStyle = '#f6f6f2'; g.fillRect(0, 0, w, h);
+    speckle(g, w, h, 500, r, 0.04, false);
+    g.fillStyle = '#26303a'; g.fillRect(0, h * 0.3, w, h * 0.4);
+    g.fillStyle = 'rgba(180,210,230,0.22)'; g.fillRect(0, h * 0.3, w, h * 0.12);
+    for (let i = 0; i < 6; i++) if (r() < 0.55) { m.fillStyle = `rgba(255,255,255,${0.35 + r() * 0.4})`; m.fillRect((i * w) / 6 + 2, h * 0.3, w / 6 - 4, h * 0.4); }
+    g.fillStyle = '#c8ccd0'; for (let i = 0; i <= 6; i++) g.fillRect((i * w) / 6 - 1.5, h * 0.3, 3, h * 0.4);
+    g.fillStyle = '#e4e6e4'; g.fillRect(0, h * 0.7, w, 5);
+  },
+  // the desert: wind ripples in ochre sand
+  sand(g, s, r) {
+    g.fillStyle = '#c8a070'; g.fillRect(0, 0, s, s);
+    for (let i = 0; i < 26; i++) { g.strokeStyle = `rgba(${r() < 0.5 ? '255,236,200' : '120,86,50'},${0.12 + r() * 0.12})`; g.lineWidth = 2 + r() * 3; g.beginPath(); const y = r() * s; g.moveTo(0, y); for (let x = 0; x <= s; x += 16) g.lineTo(x, y + Math.sin(x * 0.05 + i) * 5); g.stroke(); }
+    speckle(g, s, s, 2200, r, 0.1, false); speckle(g, s, s, 1200, r, 0.1);
+  },
+  // the salt plain: a white crust broken into polygons, with a faint wet sheen
+  salt(g, s, r) {
+    g.fillStyle = '#f2f0ee'; g.fillRect(0, 0, s, s);
+    g.strokeStyle = 'rgba(190,184,200,0.55)'; g.lineWidth = 2;
+    const pts = []; for (let i = 0; i < 26; i++) pts.push([r() * s, r() * s]);
+    for (const [x, y] of pts) { g.beginPath(); const n = 6, rr = 14 + r() * 18; for (let k = 0; k <= n; k++) { const a = (k / n) * Math.PI * 2 + r() * 0.3; k ? g.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr) : g.moveTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr); } g.stroke(); }
+    speckle(g, s, s, 900, r, 0.05, false);
+  },
+  // stadium seats: rows of moulded seats
+  seats(g, w, h, r) {
+    g.fillStyle = '#8a8488'; g.fillRect(0, 0, w, h);
+    for (let y = 0; y < h; y += h / 4) for (let x = 0; x < w; x += w / 8) { g.fillStyle = `rgba(255,255,255,${0.75 + r() * 0.25})`; g.fillRect(x + 3, y + 6, w / 8 - 6, h / 4 - 14); g.fillStyle = 'rgba(0,0,0,0.25)'; g.fillRect(x + 3, y + h / 4 - 10, w / 8 - 6, 4); }
   },
   tally(g, s, r) { g.fillStyle = '#e8e0d0'; g.fillRect(0, 0, s, s); g.strokeStyle = 'rgba(50,40,30,0.85)'; g.lineWidth = 4; for (let k = 0; k < 3; k++) { const x0 = 20 + k * 74; for (let i = 0; i < 4; i++) { g.beginPath(); g.moveTo(x0 + i * 12, 70 + r() * 6); g.lineTo(x0 + i * 12 + 2, 150); g.stroke(); } g.beginPath(); g.moveTo(x0 - 6, 140); g.lineTo(x0 + 46, 82); g.stroke(); } },
 };

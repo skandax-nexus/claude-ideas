@@ -6,14 +6,11 @@
 // Kai's verbs are. Three years switch (Q, 1 2 3); nothing flips gravity, and
 // there are no laws.
 import * as THREE from '../../../vendor/three.module.min.js';
-import { generateZone } from '../../gen/ZoneGen.js';
-import { generateSector } from '../../gen/LevelGen.js';
 import { setChapters, latestFor, describeSave, listSaves } from '../../ui/Saves.js';
 import { makeCastModel } from '../../world/People.js';
 import { PROLOGUE } from './prologue.js';
 import { ACTS, ENDINGS } from './acts.js';
 import { CAST, DIALOGUE, NPCS, TRUST, KNOWLEDGE, npcState } from './npcs.js';
-import { dressStates, stateWeather } from './dress.js';
 import { Inversion } from './inversion.js';
 import { placeAuthored } from './processes.js';
 import { buildPlace, themeFor as placeTheme, sunDir as placeSun } from './places/index.js';
@@ -218,8 +215,8 @@ export class LastVersion {
     // (no gravity, ceilings or zero-g: those were Station Zero's laws)
     const fits = (m) => (k) => MECHS.includes(k) && (k !== 'echo' || m.states.includes('PAST'));
     const decks = ms.map((m, i) => ({
-      ...m, index: i, mkey: m.key, mechs: mechsFor(m, fits(m)), key: m.kind === 'rooms' ? m.deckKey : m.key, rooms: m.roomsNames || m.rooms, names: m.kind === 'zone' ? m.rooms : undefined, crew: m.crew ?? 0,
-      hints: { roof: HINTS.roof, canal: HINTS.canal, drones: HINTS.drones, gate: HINTS.gate }, // (ZoneGen's challenge hints)
+      ...m, index: i, mkey: m.key, mechs: mechsFor(m, fits(m)), key: m.key, crew: m.crew ?? 0,
+      hints: { roof: HINTS.roof, canal: HINTS.canal, drones: HINTS.drones, gate: HINTS.gate }, // (the places' challenge hints)
       thoughts: Array.isArray(m.hints) ? m.hints : null, // the mission's own thoughts (THINK)
     }));
     return {
@@ -285,17 +282,13 @@ export class LastVersion {
     const deck = story.decks[c.deck];
     story.after.dark = deck.dark || 0;
     let level;
-    // a mission in an open place (OVERHAUL.md §4): sector i loads the whole map and activates quarter i
+    // every mission stands in an open place (OVERHAUL.md §4): sector i loads the whole map and activates quarter i
+    // (the edition no longer runs gen/ZoneGen.js or gen/LevelGen.js)
     if (deck.place) level = buildPlace(deck.place, story, c.sector, this, { deck });
     else if (deck.build) level = deck.build(story, c.sector, this);
-    else if (deck.kind === 'rooms') level = generateSector(story, c.deck, c.sector, story.seed);
-    else level = generateZone(story, c.deck, c.sector);
+    else throw new Error(`mission ${deck.mkey} has no place`);
     level.deckName = deck.name;
-    if (!level.place) level.palette = deck.palette;
     const states = level.states || deck.states || ['PRESENT'];
-    // the generator's routes speak Station Zero's states: PHYSICAL is this edition's present, ECHO its past
-    const RENAME = { PHYSICAL: 'PRESENT', ECHO: 'PAST' };
-    for (const id of level.order) for (const w of [...(level.rooms[id].route || []), ...(level.rooms[id].keyRoute || [])]) if (RENAME[w.state]) w.state = RENAME[w.state];
     for (const id of level.order) {
       const room = level.rooms[id];
       g.engine.setAvailable(id, (room.states || states).filter((s) => this.def.states.includes(s)));
@@ -303,19 +296,9 @@ export class LastVersion {
       // a room keeps the baseline until the player switches it (saves restore the rest)
       if (!c.flags || !Object.keys(c.flags).length || !this.def.states.includes(g.engine.state(id))) g.engine.setState(id, g.engine.baseline, { force: true });
     }
-    // what the generators still leave of Station Zero: no law tokens, no gravity effects, no memory keys
+    // nothing of Station Zero: no law tokens, no gravity effects
     level.tokens = [];
     level.effects = (level.effects || []).filter((e) => EFFECTS.includes(e));
-    const pastName = deck.labels?.PAST || this.def.labels.PAST; // the key is from the past: 'KEY (2026)'
-    for (const it of level.items) if (it.label === 'MEMORY KEY') it.label = `KEY (${pastName})`;
-    // a mission can name its rooms per sector (until its place is an open map)
-    const names = deck.roomNames?.[c.sector];
-    if (names) level.order.forEach((id, i) => {
-      if (!names[i]) return;
-      level.rooms[id].name = names[i];
-      const mr = level.map.rooms.find((r) => r.id === id);
-      if (mr) mr.name = names[i];
-    });
     // a 'tasks' beat: things to do along the avenue, each perhaps in its own state; the last one opens the gate
     const beat = deck.beats?.[c.sector];
     if (beat?.kind === 'tasks') {
@@ -346,7 +329,6 @@ export class LastVersion {
     placeAuthored(deck, level);
     for (const k of Object.keys(g.engine.overrides)) g.engine.setOverride(k, null);
     for (const rid of level.reversedRooms) g.engine.setOverride(rid, { timeReverse: true });
-    if (!deck.noDress && !level.place) dressStates(level, states);
     this.level = level;
     this.unstable = !!(level.unstable || deck.unstable);
     return level;
@@ -783,6 +765,16 @@ export class LastVersion {
       if (t.when && !facts.test(t.when)) return;
       const b = t.box;
       if (p.x >= b[0] && p.x < b[3] && p.y >= b[1] && p.y < b[4] && p.z >= b[2] && p.z < b[5]) {
+        // an edge that wraps (M19's plain: walk off one side and come back from the other), seamlessly
+        if (t.wrap) {
+          const [dx, dz] = t.wrap;
+          p.x += dx;
+          p.z += dz;
+          g.player.camPos?.add?.({ x: dx, y: 0, z: dz });
+          g.camera.position.x += dx;
+          g.camera.position.z += dz;
+          return;
+        }
         flags[`trig_${i}`] = true;
         for (const [k, v] of Object.entries(t.set)) facts.set(k, v);
         // a trigger that carries Kai somewhere (Helix's glass lift down into the chamber): a short fade, then there
@@ -979,25 +971,18 @@ export class LastVersion {
     return ys[state] ? state : Object.keys(ys)[0];
   }
 
-  // each year of an open district has its own hour: 2026 at dusk, 2196 in a pale dawn
+  // each year of a place sets its own hour, air and density (its year, through themeFor); these hooks hand
+  // main.js the place's own values
   stateNight(state, night) {
-    if (this.level?.place) return night; // a place's year sets its own night (theme)
-    if (!this.level?.zone || this.deck?.noDress) return night;
-    return night * ({ PAST: 0.55, FUTURE: 0.4 }[state] ?? 1);
+    return night;
   }
 
-  // ...and its own air: how much of the year's fog colour (warm 2026, pale green 2196) fills the district
-  stateFog(state) {
-    if (this.level?.place) return 0; // the year's own fog colour, all of it
-    if (!this.level?.zone || this.deck?.noDress) return undefined;
-    return { PRESENT: 0.1, PAST: 0.8, FUTURE: 0.85 }[state];
+  stateFog() {
+    return this.level?.place ? 0 : undefined; // the year's own fog colour, all of it
   }
 
-  // ...and how thick that air is: 2026's warm haze, 2196's pale mist
-  stateDensity(state) {
-    if (this.level?.place) return 1; // (the year's density comes through themeFor)
-    if (!this.level?.zone || this.deck?.noDress) return 1;
-    return { PAST: 2.4, FUTURE: 2.8 }[state] ?? 1;
+  stateDensity() {
+    return 1;
   }
 
   // each state tints the place
@@ -1006,16 +991,6 @@ export class LastVersion {
     if (g.mode !== 'deck') return;
     if (this.level?.place) return this.placeTheme(dt, state);
     g.deckWorld.setLook(state, Math.min(1, dt * 2));
-    // an open district's weather follows its year
-    if (this.level?.zone && state !== this.weatherState) {
-      this.weatherState = state;
-      // a colour grade per year (where the renderer grades at all): sepia then, green-gold later
-      const base = { shadowTint: 0x2a4a66, highlightTint: 0xfff0dc, toning: 0.08, contrast: 1.14, saturation: 1.02, ...(this.level.palette.grade || {}) };
-      const tone = this.deck?.noDress ? null : { PAST: { shadowTint: 0x3a2814, highlightTint: 0xffdcaa, toning: 0.3, saturation: 0.86 }, FUTURE: { shadowTint: 0x14382a, highlightTint: 0xeaffd8, toning: 0.3, saturation: 1.1 } }[state];
-      g.postfx.setGrade({ ...base, ...(tone || {}) });
-      const w = this.deck?.stateWeather?.[state] ?? stateWeather(state, this.level.palette);
-      if (w !== g.weather.kind) g.weather.set(w);
-    }
   }
 
   // an open place: the year drives the fog, the night, the weather, the grade, the light probe, the sky,
