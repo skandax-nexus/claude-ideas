@@ -41,7 +41,7 @@ import { LOOKS, HAIR, TOPS, LOOK_DEFAULT, lookOf, crewModelKey } from './world/P
 import { EDITION, NS } from './core/Edition.js';
 import { LV } from './editions/lastversion/index.js';
 
-const VERSION = '1.1.0'; // written into saves and the playtest report (nothing reads it back yet)
+const VERSION = '1.1.1'; // written into saves and the playtest report (nothing reads it back yet)
 const BOOT_KEY = 'afterzero.boot';
 // the film grade for Station Zero and the vessel: clean, cool shadows, warm light
 const STATION_GRADE = { shadowTint: 0x2a4a66, highlightTint: 0xfff0dc, toning: 0.08, contrast: 1.14, saturation: 1.02 };
