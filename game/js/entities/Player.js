@@ -85,8 +85,11 @@ export class Player {
     this.camPos = null;
     this.cramped = false;
     // a teleport or respawn starts the camera fresh, never blending from a stale conversation
-    this.lastTalk = null;
-    this.talkK = 0;
+    // (one still running keeps its framing: Echo Step mid-conversation lands on the framed shot)
+    if (!this.talkTarget) {
+      this.lastTalk = null;
+      this.talkK = 0;
+    }
   }
 
   get upTarget() {
@@ -159,7 +162,11 @@ export class Player {
     input.jump = false;
 
     // --- integrate with collision, in substeps ----------------------------
-    const wasGrounded = this.grounded;
+    // last frame's ground counts only under the same gravity: the frame it flips, the body falls
+    // the new way instead of snapping to (or stepping onto) a surface within STEP of the head
+    const flipped = this.gravity !== (this._lastG ?? this.gravity);
+    this._lastG = this.gravity;
+    const wasGrounded = this.grounded && !flipped;
     this._canStep = wasGrounded && this.gravity !== 0; // steps are climbed from the ground, never weightless
     this.grounded = false;
     const steps = Math.max(1, Math.ceil((this.vel.length() * dt) / 0.25));
@@ -295,8 +302,9 @@ export class Player {
       const altLen = alt.length();
       alt.divideScalar(altLen);
       const altDist = Math.max(0.35, this.rayDistance(head, alt, altLen) - 0.15);
-      // enter only when clearly better; leave only once the normal shot reaches as far out,
-      // so the camera swoops back instead of cutting (the wall guard below can't fire on the way out).
+      // enter only when clearly better; leave only once the normal shot reaches as far out, so the
+      // camera swoops back instead of cutting (a camera still trailing, as when walking away from
+      // a wall, is pulled in along its own line by the wall guard below, not cut).
       // A zoomed-in shot with nothing behind it (shorter than the high angle even in the open)
       // leaves at the old 1.8 m line, so it never sticks to the high angle in open space.
       const open = hit >= len && dist >= 1.8;
@@ -330,8 +338,18 @@ export class Player {
     } else if (!this.talkTarget) this.lastTalk = null;
     if (!this.camPos || this.camPos.distanceTo(target) > 6) this.camPos = target.clone();
     else this.camPos.lerp(target, 1 - Math.exp(-dt * (this.comfort ? 8 : 14)));
-    // never let smoothing drag the camera behind a wall
-    if (this.camPos.distanceTo(head) > Math.max(dist, target.distanceTo(head)) + 0.05) this.camPos.copy(target);
+    // never let smoothing drag the camera behind a wall: a camera farther out than the shot allows
+    // is pulled in along its own line of sight, to the shot's distance or short of whatever is in
+    // the way, instead of cut to the target. (Walking away from a wall, the camera trails the
+    // moving shot by more than this margin when it leaves the high angle: a cut there dropped it
+    // a metre in one frame.)
+    const lim = Math.max(dist, target.distanceTo(head)) + 0.05;
+    const cd = this.camPos.clone().sub(head), cl = cd.length();
+    if (cl > lim) {
+      cd.divideScalar(cl);
+      const hitC = this.rayDistance(head, cd, lim);
+      this.camPos.copy(head).addScaledVector(cd, hitC < lim ? Math.max(0.35, hitC - 0.15) : lim);
+    }
     // look slightly past the character's head, so the view stays centred on what's ahead
     _m.lookAt(this.camPos, aim, up);
     this.camera.quaternion.setFromRotationMatrix(_m);
