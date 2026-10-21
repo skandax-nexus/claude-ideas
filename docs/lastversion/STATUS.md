@@ -105,15 +105,18 @@ story beats. How it works: [`DESIGN.md`](DESIGN.md).
   `tools/voice-pack.mjs` collects the edition's lines (808 lines, 1,165 unique recordings, about
   44 minutes). **The recordings are not rendered yet**: until they are, the game speaks the
   edition's lines with the device's speech synthesis where it has one, and shows subtitles always.
-- **Tests**: `tests/lastversion.test.mjs` (unit, in `npm test`: 42 tests, 14 of them for the open
-  places) and `tests/lastversion.mjs` (browser bot, 121 checks: the Prologue from NEW GAME through
-  both quest chains into Act I, Missions 5, 11 (REVERSE: 15 checks), 13, 14 and 19 and the Finale
-  to Ending C, the Museum's generated rooms walked with real movement, the save namespace, and the
-  survey of Missions 1–8's places: 19 views, their hashes in the log, the closest two missions
-  29 bits apart). Both pass; `npm test` passes (70). The Station Zero suites pass too:
-  `tests/cradle.mjs` (167), `tests/smoke.mjs` and `tests/qa.mjs` (26). (Measured 2026-10-21 for
-  the overhaul's U2.) `tests/forge.mjs` was not rerun for U2 (earlier in this container a click's
-  navigation wait timed out after the save slot on the main branch's own code as well).
+- **Tests**: `tests/lastversion.test.mjs` (unit, in `npm test`: 44 tests; the place tests now cover
+  every mission and both cases: every sheet's quarters and landmarks, the generators gone (a grep over
+  the edition's files), a default sky of its own per mission (M22 and M23 excepted), the linear
+  exemption, the budgets, and walked routes through the new places with the game's physics) and
+  `tests/lastversion.mjs` (browser bot, 184 checks: the Prologue from NEW GAME through both quest
+  chains into Act I, Missions 5, 11 (REVERSE: 15 checks), 13, 14 and 19 and the Finale to Ending C,
+  with real walks through Mission 13's quay, Mission 14's viaduct, the Museum's spiral, Mission 19's
+  reflection bridge and wrapping edge and the Finale's road, the save namespace, and the survey of all
+  23 missions' places: 61 views, their hashes in the log, every top quarter a sky, the closest two
+  views of different places 22 bits apart). Both pass, and `npm test` passes (72). (Measured
+  2026-10-21 for the overhaul's U3.) U3 changed no shared file (only `game/js/editions/lastversion/`,
+  its tests and docs), so the Station Zero suites were not rerun for it; they passed for U2.
 
 ## Generated (playable, solvable by construction, not hand-tuned)
 

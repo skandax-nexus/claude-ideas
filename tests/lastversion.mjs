@@ -760,11 +760,16 @@ const mirror = await az(() => {
   g.edition.shift('PRESENT'); g.simulate(0.1);
   LVB.place(0, -18);
   out.present = LVB.route([[0, -30], [0, -38]], 6);
+  return out;
+});
+// (the water's setback fades on the page's timers: let it finish before walking on)
+await page.waitForTimeout(1200);
+await page.waitForFunction(() => !AZ.catching, null, { timeout: 90000 }).catch(() => {});
+mirror.wrapX = await az(() => {
   // the plain's edges wrap: off the east edge, back in from the west
   LVB.place(106, 60);
   LVB.walkTo(112, 60, 3);
-  out.wrapX = +g.player.pos.x.toFixed(1);
-  return out;
+  return +AZ.player.pos.x.toFixed(1);
 });
 check(mirror.past.n === mirror.past.of && !mirror.past.setbacks && Math.abs(mirror.past.y) < 0.6 && mirror.present.setbacks > 0, 'the bridge in the reflection: walked over it in 2026; in 2049 there is only its reflection, and the water', JSON.stringify(mirror));
 check(mirror.wrapX < -95, 'the roads loop: off the plain\'s east edge, back in from the west', JSON.stringify(mirror));
