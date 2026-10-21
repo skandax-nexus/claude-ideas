@@ -28,7 +28,7 @@ import { makeZoneStory, makeCradleStory } from './gen/ZoneStory.js';
 import { generateZone } from './gen/ZoneGen.js';
 import { forgeGame, makeForgeStory, tuneLevel, rulesOverride, forgeEnding, describeRules, gearTick, GEAR, GEAR_KEYS, GENRES, GENRE_KEYS, LENGTHS, THEMES as FORGE_THEMES, THEME_KEYS, RULE_OPTIONS, RULE_KEYS, ROLES, ROLE_KEYS } from './gen/Forge.js';
 import { Weather } from './world/Weather.js';
-import { WATER_NORMALS } from './world/materials.js';
+import { WATER_NORMALS, texturesOf } from './world/materials.js';
 import { SmartRenderer } from './core/SmartRenderer.js';
 import { loadSettings, saveSettings, CAMERA_PRESETS, QUALITY } from './ui/Settings.js';
 import { writeSave, readSave, listSaves, latestSave, describeSave, deleteSave, latestFor, CHAPTERS, SLOTS, rememberEnding, lastEnding, ENDING_TITLES } from './ui/Saves.js';
@@ -58,15 +58,6 @@ const THEMES = {
 
 const _c = new THREE.Color(), _c2 = new THREE.Color(), _fog = new THREE.Color(), _tint = new THREE.Color(); // per-frame scratch colours
 const _sv = new THREE.Vector3(); // per-frame scratch vector (the sun's snapped centre)
-const TEX_SLOTS = ['map', 'normalMap', 'roughnessMap', 'metalnessMap', 'alphaMap', 'emissiveMap', 'aoMap', 'bumpMap'];
-// every texture the materials under root use (into out)
-function texturesOf(root, out = new Set()) {
-  root.traverse((o) => {
-    const ms = Array.isArray(o.material) ? o.material : o.material ? [o.material] : [];
-    for (const m of ms) for (const k of TEX_SLOTS) if (m[k]?.isTexture) out.add(m[k]);
-  });
-  return out;
-}
 
 // Every token the prologue can teach; the vessel starts with all of them.
 const BASE_TOKENS = ['GRAVITY', 'INVERTS', 'INVERTED', 'PHYSICAL', 'ECHO', 'HELD', 'PERSISTS', 'OBSERVER', 'FREEZES', 'ALL', 'ECHOES', 'SOLIDIFIES'];
@@ -213,6 +204,8 @@ class Game {
     const idle = (f) => (window.requestIdleCallback ? window.requestIdleCallback(f, { timeout: 1000 }) : setTimeout(f, 50));
     const tick = () => {
       if (this.started) return;
+      // not under the character screen: it draws the 3D view, where an upload is a visible stall
+      if (this.menu === 'hero') return void setTimeout(() => idle(tick), 1000);
       if (!queue.length) {
         // textures still loading in the background join on a later pass
         if (scans++ >= 6) return;
@@ -1018,6 +1011,7 @@ class Game {
     // under the lift's fade, after the sky is gone: a new preset must not fetch the old one
     this.smart.flush();
     this.deckWorld.dispose();
+    this.deckWorld.freeLeft();
     this.level = this.stationLevel;
     this.minimap.stationMode = false; // redraw Station Zero's map
     this.mode = 'station';
@@ -1308,6 +1302,7 @@ class Game {
     // everyone in the sector, hidden or not, uploads their textures now, behind the fade,
     // not on the frame they first appear
     for (const n of this.deckWorld.npcs) for (const m of [n.model, n.echo]) if (m) for (const t of texturesOf(m)) this.renderer.initTexture(t);
+    this.deckWorld.freeLeft(); // the last place's people who are not in this one free their textures
     this.weather.set(lv.palette.weather);
     this.postfx.setGrade(lv.palette.grade || STATION_GRADE);
     this.postfx.setEnvironment(lv.palette.sky || null);

@@ -3,6 +3,16 @@
 // tiny and the look consistent on low-end Android GPUs.
 import * as THREE from '../../vendor/three.module.min.js';
 
+const TEX_SLOTS = ['map', 'normalMap', 'roughnessMap', 'metalnessMap', 'alphaMap', 'emissiveMap', 'aoMap', 'bumpMap'];
+// every texture the materials under root use (into out)
+export function texturesOf(root, out = new Set()) {
+  root.traverse((o) => {
+    const ms = Array.isArray(o.material) ? o.material : o.material ? [o.material] : [];
+    for (const m of ms) for (const k of TEX_SLOTS) if (m[k]?.isTexture) out.add(m[k]);
+  });
+  return out;
+}
+
 export function canvasTex(size, draw, repeat = true, height = size) {
   const c = document.createElement('canvas');
   c.width = size;

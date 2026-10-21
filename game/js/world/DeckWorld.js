@@ -3,7 +3,7 @@
 // the sector's flags and the rooms' reality states, and runs the moving parts
 // (time sweepers, sentinels, crew).
 import * as THREE from '../../vendor/three.module.min.js';
-import { deckMaterials, boxGeometry, mergeGeometries, textTexture } from './materials.js';
+import { deckMaterials, boxGeometry, mergeGeometries, textTexture, texturesOf } from './materials.js';
 import * as M from './models.js';
 import { makeCrewModel, makeCastModel } from './People.js';
 import { TOKENS } from '../core/Laws.js';
@@ -285,12 +285,14 @@ export class DeckWorld {
     // Free what this sector made. Characters are clones that share the loaded models' buffers
     // and textures (and the contact-shadow blob texture), and anything marked keep comes from a
     // shared cache: those stay on the GPU for the next sector instead of being re-uploaded. Only
-    // a character's own contact-shadow plane is freed with it. (Every sprite shares three's one
-    // sprite quad, also used outside the sector.)
+    // a character's own contact-shadow plane is freed with it, and its textures are noted for
+    // freeLeft(). (Every sprite shares three's one sprite quad, also used outside the sector.)
     const own = new Set(Object.values(this.mats || {}));
+    const left = (this.leftTex ||= new Set());
     const walk = (o) => {
       if (o.userData.actor) {
         for (const c of o.children) if (c.userData.ownGeometry) c.geometry.dispose();
+        texturesOf(o, left);
         return;
       }
       if (o.geometry && !o.isSprite && !o.geometry.userData.keep) o.geometry.dispose();
@@ -303,6 +305,18 @@ export class DeckWorld {
     this.level = null;
     this.decor = null;
     this.glows = [];
+  }
+
+  // Call once the next place is built (or the station is back): the GPU copies of the textures
+  // of the characters that dispose() let go are freed unless something in the scene still uses
+  // them. Whoever stays (and the player, and Station Zero's cast) keeps theirs; whoever left frees
+  // theirs, so only the people in play hold GPU memory (a Rocketbox colour map with its mips is
+  // 11-17 MB). Someone who comes back uploads again, behind that sector's fade.
+  freeLeft() {
+    if (!this.leftTex) return;
+    const used = texturesOf(this.scene);
+    for (const t of this.leftTex) if (!used.has(t)) t.dispose();
+    this.leftTex = null;
   }
 
   echoVisible(state) {
