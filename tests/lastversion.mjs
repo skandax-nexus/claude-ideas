@@ -480,6 +480,7 @@ const scene = async (label, sid, wrong, right, extra = () => true) => {
   check(ok(r) && r.done && r.gate === false && (!wrong || r.refused) && extra(r), label, JSON.stringify(r));
 };
 await az(() => LVB.goMission(1));
+await opening(); // (its card and cold open hold Kai still: let them play out)
 check((await az(() => AZ.edition.deck.name)) === 'THE VILLAGE THAT NEVER EXISTED', 'Mission 5');
 const niko = await az(() => { AZ.edition.shift('FUTURE'); AZ.simulate(0.1); const n = LVB.npc('npc_' + AZ.room); const e = !!n?.isEcho; AZ.edition.shift('PRESENT'); AZ.simulate(0.1); return [e, !!LVB.npc('npc_' + AZ.room)?.isEcho]; });
 check(niko[0] && !niko[1], 'Niko is himself in the present, an echo in the flooded future', JSON.stringify(niko));
@@ -534,6 +535,7 @@ const m10 = await az(() => {
 check(m10.mkey === 'm10' && m10.models.length >= 1 && m10.models.every((m) => m === 'rb_trooper') && m10.variant === 'continuum', 'Mission 10\'s watchers are Continuum troopers (rb_trooper, slate)', JSON.stringify(m10));
 check(m10.seen >= 1 && m10.mode === 'chase' && m10.eye === 'ff8a70' && m10.cone > 0.1, 'a trooper\'s cone sees Kai in front of it: suspicion, then the chase', JSON.stringify(m10));
 await az(() => { LVB.goMission(2); });
+await opening();
 const hosp = await az(() => {
   const g = AZ, inv = g.edition.inv;
   const rev = g.level.order.filter((r) => g.engine.hasIn('timeReverse', r));
@@ -714,6 +716,7 @@ check(rest.every((r) => r.out.length >= 2) && opened.done && opened.beat && open
 console.log('Act II, Mission 13: The Nine-Minute War');
 await startChapter('act2');
 await az(() => { LVB.goMission(4); });
+await opening(); // (Kai walks once the mission's card and cold open have played)
 check((await az(() => AZ.edition.deck.name)) === 'THE NINE-MINUTE WAR', 'Mission 13');
 const quay = await az(() => { AZ.edition.shift('PRESENT'); LVB.place(0, 84); return LVB.route([[2.6, 80], [2.6, 68], [24, 60], [24, 14]]); });
 check(quay.n === quay.of && !quay.setbacks, 'Mission 13, walked: from the quay trench through the gap in the sandbags, past the container canyons to their gate', JSON.stringify(quay));

@@ -39,7 +39,8 @@ export class Cinema {
       // a tap, a click or a key skips a shot (and the line being said)
       const skip = (e) => {
         if (!this.active || this.g.menu) return;
-        if (e.type === 'keydown' && ['Escape', 'ShiftLeft', 'ShiftRight', 'F5', 'F9'].includes(e.code)) return;
+        // (a key held down repeats: one press skips one line, not the whole moment)
+        if (e.type === 'keydown' && (e.repeat || ['Escape', 'ShiftLeft', 'ShiftRight', 'F5', 'F9'].includes(e.code))) return;
         if (e.target?.closest?.('button, input, .overlay')) return;
         this.skip();
       };

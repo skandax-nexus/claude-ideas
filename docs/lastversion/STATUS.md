@@ -144,13 +144,43 @@ story beats. How it works: [`DESIGN.md`](DESIGN.md).
   year, the cues, beds per place and year); each mission opens on its card (and a new chapter on its own),
   said and scored, then a staged cold open; Kai says what he chooses; the PA, the records, Rook's calls and
   the echoes each have their sound; the endings are scored and said to the post-credit voice. The mix
-  (Dialogue, Music, Effects, Ambience, Sound captions) is in the settings. An ear check of new clips could
-  not be done in this container (no audio output, no speech recogniser): 40 new clips (half of them years,
-  times, Jun and the Acts) were checked automatically instead (length for their text, level, gaps, and
-  the phonemes Kokoro read them as; `tools/voice-audition.py`), which caught "KAI + MIRA" spelled out as
-  letters and "-3" read without its minus (both fixed and re-rendered); one clip peaks at full scale after
-  encoding. The audition page for a human listen stays in the session's scratchpad (not shipped).
-- **Tests** (U4, 2026-10-21): `tests/lastversion.test.mjs` has 56 tests (`npm test`: 84, all pass), the
+  (Dialogue, Music, Effects, Ambience, Sound captions) is in the settings; the first tap also applies the
+  player's volume and SOUND OFF, so the title theme obeys them. Recording is one command per chapter group
+  (`VOICE_WORK=<dir> bash tools/voice-lv.sh act1`; `check` names stale packs; DESIGN.md "Voice and score"):
+  every pack was checked byte for byte against the current scripts (all eight up to date). The edition's
+  APK (`EDITION=lastversion bash android/build-apk.sh`, 2026-10-21) carries `voice/lv/**` and no other
+  voice: 39,995,471 bytes (U4's was 45,712,284 with Station Zero's 14 MB pack in it), its preview 47.6 MB
+  with no file over 14 MB; Station Zero's APK carries its own `voice.json` and `voice.ogg` (sha256
+  unchanged) and no edition pack. The ear check
+  (2026-10-21) was a machine's, not a person's (this container has no audio output): the audition page
+  (`tools/voice-audition.py`) took 40 of the 1,026 clips rendered for U5, half of them years, times, Jun
+  and the Acts, and checked each one's length for its text, level, gaps, the phonemes Kokoro read it as,
+  and what a speech recogniser (pocketsphinx, US English) heard in it. 31 passed outright; the 9 flagged
+  were all read right by Kokoro's phonemes and misheard by the recogniser on short clips ("Act Two"), the
+  British narrator, the low Clockmaker ("Wednesday" heard as "one story") or "seventeen" as "seventy"; one
+  peaks at full scale once decoded (23 of the 1,026 do; the game's float mix does not clip them). Every
+  year, time, "41-B" and percentage the recogniser caught was the lexicon's reading ("twenty twenty six",
+  "twenty one ninety six", "forty one b", "eleven percent", "oh five forty"). Over all 1,026 clips the
+  recogniser found a median 80% of the words; the 159 under 50% (mostly the British narrator and one- or
+  two-word clips) all have phonemes that read as written and a speaking pace (5 to 24 characters a second,
+  but one crowd child's line at 25). An earlier automatic pass caught "KAI + MIRA" spelled out as letters and "-3"
+  read without its minus (both fixed and re-rendered). The audition page for a human listen stays in the
+  session's scratchpad (not shipped).
+- **Tests** (U5, 2026-10-21): `tests/lastversion.test.mjs` has 64 tests (`npm test`: 92, all pass), the
+  eight new ones for voice and score: every `spokenLines()` entry plans fully from `common` and its own
+  group's pack (2,248 lines, no CREW voice), the spoken-text lint, the pack budgets and Station Zero's
+  pinned sha256, a distinct voice per speaker with the same person on one base voice, no device speech
+  in the edition (a loading pack waited for, a miss recorded), the effect chains (the edition's only;
+  Station Zero plays dry), the cards, choices and ending sequence, and the score on a stand-in audio
+  graph. The browser bot, now run with Chromium's `--autoplay-policy=user-gesture-required`, passes 199
+  checks, the new ones: the AudioContext runs after the first tap; a new game opens on the Prologue's
+  card and Mission 1's, said and scored, with the common and Prologue packs; the Zero Second ducks the
+  music while the voice bus stays at 1; Ending C is scored and said through the post-credit voice; over
+  the run 254 lines were said, every one from the packs, `__voiceMiss` stayed empty, `speechSynthesis`
+  was never asked for anything, and the cues card, chapter, zero and ending:C all played (it waits for
+  each mission's card and cold open before walking Kai, as a player would). Station Zero after U5's
+  shared changes: `tests/smoke.mjs` passes, `tests/qa.mjs` 26/0, `tests/cradle.mjs` 167/0.
+- **Tests** (U4, 2026-10-21): `tests/lastversion.test.mjs` had 56 tests (`npm test`: 84, all pass), the
   twelve new ones for casting: every person's model file and variant, pronouns that match the body,
   no named face in a crowd, crowd eras that never share a face (but `rb_child_m2`), Pryce on
   `rb_security_f`, Lin and Mira on one mesh, children on children's bodies, the settlement's women on
@@ -215,7 +245,8 @@ story beats. How it works: [`DESIGN.md`](DESIGN.md).
 - **Faction support** changes who answers in Mission 21 and what people say; it does not change
   patrol responses or open safe routes elsewhere (Jun's line in the Finale is the one safe route).
 - **A human ear check** of the U5 voices (the audition page above), and of the score's regions and cues,
-  has not been done: nothing in this container can play sound to a listener.
+  has not been done: nothing in this container can play sound to a listener. The machine check above
+  stands in for it.
 - **The score** is procedural (Synth's oscillators and noise, 0 bytes of assets): the bible's cues are
   there by name and shape, not as composed music; the crowd walla is the crowds' own barks far off.
 - **Cold opens** are today's intros staged with a default camera (behind and over Kai's shoulder);

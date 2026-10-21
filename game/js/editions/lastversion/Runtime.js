@@ -19,6 +19,7 @@ import { castLevel } from './crowds.js';
 import { Watchers } from './watchers.js';
 import { Score } from './score.js';
 import { Cinema } from './cinema.js';
+import { VoiceFx } from './voicefx.js';
 import { choiceLine, chapterCardLines, missionCardLines, endingLines, POSTCREDIT } from './voicelines.js';
 
 // the edition's voice packs: common to every chapter, then one per chapter (OVERHAUL.md §8.3)
@@ -176,6 +177,7 @@ export class LastVersion {
     });
     // a device that cannot decode the recorded voices (an older WebKit without Opus): say so once
     if (game.voice) {
+      game.voice.effects = new VoiceFx(game.voice); // what a line sounds like through: pa, radio, recording, echo
       game.voice.onDecodeFail = () => {
         if (this.decodeSaid) return;
         this.decodeSaid = true;
@@ -250,6 +252,7 @@ export class LastVersion {
       if (a.ctx?.state === 'running') return this.soundOn();
       if (document.hidden) return;
       const now = a.unlock();
+      this.levels();
       if (now) return this.soundOn();
       a.ctx?.resume?.().then(() => (a.ctx.state === 'running' ? this.soundOn() : this.score.setBanner(true))).catch(() => this.score.setBanner(true));
       setTimeout(() => {
@@ -281,9 +284,21 @@ export class LastVersion {
     };
   }
 
+  // the player's volume and SOUND OFF hold from the first tap on, the title theme included (begin() applies
+  // them again; before the first tap there was no context for main.js to apply them to)
+  levels() {
+    const g = this.g, a = g.audio;
+    if (!a.ctx || this.levelsSet) return;
+    this.levelsSet = true;
+    a.setVolume?.(g.settings.volume);
+    if (g.settings.muted && !a.muted) a.toggleMute();
+    g.muteLabel?.();
+  }
+
   // the sound is running: the banner goes, the title theme plays (until a chapter starts)
   soundOn() {
     this.score.setBanner(false);
+    this.levels();
     if (this.soundStarted) return;
     this.soundStarted = true;
     this.score.applyMix(this.g.settings);

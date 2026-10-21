@@ -1473,6 +1473,54 @@ test('in the edition the voice never touches the device\'s speech, waits for a l
   }
 });
 
+test('the effect chains are the edition\'s (voicefx.js): pa, radio, recording and echo in the edition; Station Zero\'s voice plays a line dry', async () => {
+  const { Voice } = await import('../game/js/audio/Voice.js');
+  const { VoiceFx } = await import('../game/js/editions/lastversion/voicefx.js');
+  const param = (v = 0) => ({ value: v, setValueAtTime() {}, setTargetAtTime() {}, linearRampToValueAtTime() {}, cancelScheduledValues() {} });
+  const made = [];
+  const node = (kind) => () => {
+    const n = { kind, to: [], gain: param(1), frequency: param(), Q: param(), delayTime: param(), playbackRate: param(1), curve: null, type: '', buffer: null,
+      connect(x) { n.to.push(x); return x; }, start() {}, stop() {} };
+    made.push(n);
+    return n;
+  };
+  const ctx = { currentTime: 0, sampleRate: 8000, createGain: node('gain'), createBiquadFilter: node('filter'), createDelay: node('delay'), createWaveShaper: node('shaper'),
+    createOscillator: node('osc'), createBufferSource: node('src'), createBuffer: (c, len) => ({ getChannelData: () => new Float32Array(len), duration: len / 8000 }) };
+  const audio = { ctx, master: node('master')(), voiceBus: node('voiceBus')(), reverb: node('reverb')() };
+  const buf = { duration: 1 };
+  const plan = [{ key: 'KAI|x', ref: [0, 1, 1], pack: { base: 'p/' } }];
+  // the edition: each fx has its own chain, built once, ending in the voice's output on the voice bus
+  const v = new Voice(audio, { edition: 'lastversion' });
+  v.effects = new VoiceFx(v);
+  v.clip = async () => buf;
+  const reaches = (from, to, seen = new Set()) => from === to || (!seen.has(from) && (seen.add(from), from.to.some((x) => reaches(x, to, seen))));
+  for (const fx of ['pa', 'radio', 'recording', 'echo']) {
+    const before = made.length;
+    await v.playPlan(plan, { fx });
+    const src = v.playing.find((x) => x.kind === 'src' && x.buffer === buf && made.indexOf(x) >= before);
+    assert.ok(src && src.to[0] !== v.output() && reaches(src.to[0], audio.voiceBus), `${fx}: the line goes through its chain to the voice bus`);
+    assert.equal(v.effects.input(fx, v.output()), src.to[0], `${fx}: one chain, built once`);
+    if (fx === 'echo') assert.equal(src.playbackRate.value, 0.97, 'an echo is a little slower');
+    if (fx === 'radio' || fx === 'recording') assert.ok(v.playing.some((x) => x.kind === 'src' && x.buffer !== buf && made.indexOf(x) >= before), `${fx}: a bed under the line`);
+    if (fx === 'recording') assert.ok(made.slice(before).some((x) => x.kind === 'osc'), 'a record wanders (wow)');
+  }
+  await v.playPlan(plan, {});
+  assert.equal(v.playing[v.playing.length - 1].to[0], v.output(), 'a line with no fx is dry');
+  // Station Zero: no effects, whatever a line carries; it plays straight into the voice's output
+  const warn = console.warn;
+  console.warn = () => {};
+  try {
+    const sz = new Voice(audio, { edition: null });
+    sz.effects = new VoiceFx(sz); // (even given chains, it never uses them)
+    sz.clip = async () => buf;
+    await sz.playPlan(plan, { fx: 'pa' });
+    assert.equal(sz.playing[0].to[0], sz.output(), 'Station Zero plays dry');
+    assert.equal(sz.playing.length, 1);
+  } finally {
+    console.warn = warn;
+  }
+});
+
 test('the cinematic lines: chapter and mission cards, the choices Kai says, the ending sequence', () => {
   assert.deepEqual(chapterCardLines('act2').map((l) => l.text), ['Act Two. The Nine-Minute War.', CHAPTERS.act2.question]);
   const m4 = main.find((m) => m.n === 4);

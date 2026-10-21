@@ -220,7 +220,8 @@ An NPC entry (`npcs.js`) is:
   (`beds: { PRESENT: [...], ... }`); a choice may carry `say` (what Kai says instead of its label), `mute`, and
   `consequence: true` (the stinger). The station speakers are the `PA` speaker. `cinema.play({ shots, lines, cue,
   letterbox }, then)` calls `then` synchronously when the moment ends. Every new line is recorded by the unit that adds
-  it: `node tools/voice-pack.mjs <dir> --edition lastversion`, then `tools/voice-pack.py` per group (§8.10).
+  it, one command per group: `VOICE_WORK=$S bash tools/voice-lv.sh <group>` (§8.10). The effect chains are the edition's
+  (`voicefx.js`, given to `Voice` as `voice.effects`); `Voice.js` only routes a line with an `fx` through them.
 
 ### 3.6 Facts the browser bot already relies on (keep the IDs)
 
@@ -3060,7 +3061,7 @@ The lexicon is applied to `say` for edition items only. Keys are unchanged, so s
   - if a pack is still loading, the line waits (`pending`) and plays when the pack arrives, if that is within 2 s;
   - otherwise it records a miss (`window.__voiceMiss.push({ who, text })`, `console.warn`) and the subtitle carries the line.
 - **Clip cache:** an LRU of at most 150 decoded clips (25–40 MB of PCM, worst case).
-- **Effect chains**, chosen by `extra.fx`, built once, and ending in `this.out` → `audio.voiceBus`:
+- **Effect chains**, chosen by `extra.fx`, built once, and ending in `this.out` → `audio.voiceBus` (*as built in U5:* the chains live in the edition, `editions/lastversion/voicefx.js`, handed to `Voice` as `voice.effects`; `Voice.js` only routes a line with an `fx` through them, and only in the edition):
   - `pa`: HP 300 Hz, LP 3.5 kHz, a +5 dB peak at 1.8 kHz, a 0.11 s slapback with feedback 0.3, and a reverb send. For station speakers, the announcer, the VOICE and the post-credit voice.
   - `radio`: HP 450 Hz, LP 3.2 kHz, a soft-clip waveshaper, and a −38 dB band-noise bed. For phones and comms, Rhea, Mira's transmission, the unseen Director.
   - `recording`: HP 200 Hz, LP 5.5 kHz, crackle, ±0.3% wow on `playbackRate`. For terminals, files, cylinders, the Witness's recordings, the archive and the voicemail.
@@ -3207,15 +3208,24 @@ It is used for cold opens, hooks, the Zero Second and the endings.
 | Each group file | < 12 MB |
 | Edition total | < 22 MB |
 
-**Render step**, per chapter, as soon as its lines freeze:
+**Render step**, per chapter, as soon as its lines freeze: one command per group (*as built in U5*, `tools/voice-lv.sh`):
 
 ```
 cd /home/user/v2-overhaul; S=/tmp/claude-0/-home-user-claude-ideas/172dbda8-49ff-56a9-a901-22c181c25683/scratchpad
-node tools/voice-pack.mjs $S/overhaul/lv-script --edition lastversion     # writes <dir>/<group>/script.json + groups.json
-nice -n 19 python3 tools/voice-pack.py $S/overhaul/lv-script/<group>/script.json game/assets/voice/lv/<group> $S/tts /usr/bin/ffmpeg $S/vcache
+VOICE_WORK=$S bash tools/voice-lv.sh act1     # or prologue, act2 ... finale, cases, common; several at once; all
+VOICE_WORK=$S bash tools/voice-lv.sh check    # render nothing: name every pack that is out of date
 node --test tests/lastversion.test.mjs
 ```
 
+- Each run writes the scripts again (`node tools/voice-pack.mjs $S/lv-script --edition lastversion`: `<group>/script.json` and
+  `groups.json`), renders the named groups under `nice -n 19` (`tools/voice-pack.py <script> game/assets/voice/lv/<group> $S/tts
+  ffmpeg $S/vcache`: only what the cache lacks is rendered), then checks every pack byte for byte against its script
+  (`tools/voice-pack.py --check`) and names any that is still stale. A piece that two groups now share moves to `common`, so a
+  story unit usually records its chapter and `common`.
+- `$S/tts` holds Kokoro (`kokoro-v1.0.int8.onnx`, `voices-v1.0.bin`, from github.com/thewh1teagle/kokoro-onnx releases);
+  `$S/vcache` is the recordings cache (keyed by voice, speed, pitch and the text said, so unchanged lines are never rendered twice).
+- Before committing a pack: `python3 tools/voice-audition.py . $S/lv-script $S/vcache <since: epoch seconds> $S/audition.html 40`
+  writes the audition page of the new clips (with pocketsphinx installed, each clip is also heard back by a speech recogniser).
 - Kokoro int8 renders at about 0.19–0.27× real time on this shared box, so one minute of speech costs 4–5 minutes of CPU.
 - Run the render in the background, cached and resumable, while you wire code. The unit's final commit waits for it, because the coverage test (§8.11) must pass.
 
@@ -3491,12 +3501,12 @@ Rules:
 | `game/js/main.js` | character screen: filter LOOKS by `this.edition?.looks` | 2 | U4 | **yes** |
 | `game/js/entities/Player.js` | `moveAxis` edge-climb ≤ `this.stepUp` (default 0; the edition sets 0.35). *Superseded:* 1.1.1's engine climbs 0.35 m itself, so U2 ships no `Player.js` change | 0 | U2 | **yes** |
 | `game/js/world/People.js` | `crewModelKey` uses `crew.model` first if loaded; `setCrewDresser(fn)` hook in `makeCrewModel`; drop the edition rows from `BY_NAME` | ≈ 8 | U4 | no |
-| `game/js/audio/Voice.js` | edition packs per chapter, `extra.id`, fx chains, no device speech in the edition, pending-on-load, LRU, `voiceBus` | ≈ 80 | U5 | no |
-| `game/js/audio/Synth.js` | `unlock()`, `composer` hook, skip-ahead, `amb` and `voiceBus` buses, `silence()` fix | ≈ 45 | U5 | no |
+| `game/js/audio/Voice.js` | edition packs per chapter, `extra.id`, fx chains, no device speech in the edition, pending-on-load, LRU, `voiceBus`. *As built:* 161 code lines added, 45 removed: per-base packs with streamed progress, `usePacks`/`ready`/`loading`, the lookup across packs, `extra.id`, the edition's pending-and-miss path, `output()` on the voice bus, and a hook that routes a line with `extra.fx` through the edition's chains (`voice.effects`, built in `editions/lastversion/voicefx.js`, so no chain code is shared); the 64-clip LRU of 1.1.1 is kept (within the ≤ 150 budget) | ≈ 80 | U5 | no |
+| `game/js/audio/Synth.js` | `unlock()`, `composer` hook, skip-ahead, `amb` and `voiceBus` buses, `silence()` fix. *As built:* 65 code lines added, 9 removed (with the mix levels behind the edition's Dialogue, Music, Effects and Ambience rows) | ≈ 45 | U5 | no |
 | `game/js/audio/voiceKey.js` | empty-vocab guard | 2 | U5 | no |
 | `game/js/ui/Settings.js` | edition-gated mix defaults | 1 | U5 | no |
 | `tools/rocketbox-to-glb.mjs`, `tools/rocketbox-textures.py` | prefixes, colour-map variants, Bip0N rename, `RB_DROP`, edition `AVATARS` | — | U4 | no |
-| `tools/voice-pack.mjs`, `tools/voice-pack.py` | `--edition` mode, per-group scripts, VOICES and blends | — | U5 | no |
+| `tools/voice-pack.mjs`, `tools/voice-pack.py` | `--edition` mode, per-group scripts, VOICES and blends. *As built:* also `voice-pack.py --check`, and new `tools/voice-lv.sh` (one command per group) and `tools/voice-audition.py` | — | U5 | no |
 | `android/build-apk.sh` | edition branch: model manifest (U4), `voice/lv/**` only (U5), for the APK and the preview | — | U4, U5 | no |
 | *fallback only* `game/js/world/DeckWorld.js` | `extraColliders` hook in `refresh` (if `temps` changes) | 2 | U1 | **yes** |
 | *fallback only* `game/js/world/DeckWorld.js` | `story.makeWatcher` hook (if the in-place mesh swap fails) | 1–2 | U4 | **yes** |

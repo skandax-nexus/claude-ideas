@@ -7,6 +7,7 @@ Ogg Opus and packs everything into game/assets/voice/voice.ogg (chained clips) +
 ({speaker: {key: [byteOffset, byteLength, seconds]}}).
 
     python3 tools/voice-pack.py <script.json> <game/assets/voice> <kokoro_dir> <ffmpeg> [cache_dir]
+    python3 tools/voice-pack.py --check <script.json> <game/assets/voice> [cache_dir]   (is the pack up to date?)
 
 Each recording is cached (cache_dir, default <out>/.cache), so a long render can
 be stopped and resumed, and re-running after a script change only renders what's new.
@@ -119,7 +120,49 @@ def trim(s, thr=0.012, pad=0.03):
     return s
 
 
+def cache_id(it):
+    voice, speed, pf = VOICES.get(it['voice'], VOICES['NONE'])
+    text = it['say'] + ('.' if it.get('word') else '')
+    return hashlib.md5(f"{voice}|{speed}|{pf}|{text}".encode()).hexdigest()
+
+
+def check(script, outdir, cache):
+    """--check: is the pack in outdir exactly what a render of script.json would write (every recording there, from
+    the cache, byte for byte)? Prints what is stale and exits 1 if anything is, without rendering anything."""
+    items = json.load(open(script))
+    try:
+        index = json.load(open(os.path.join(outdir, 'voice.json')))
+        blob = open(os.path.join(outdir, 'voice.ogg'), 'rb').read()
+    except OSError:
+        print(f'{outdir}: no pack yet ({len(items)} recordings to render)')
+        sys.exit(1)
+    unrendered, differ, missing = [], [], []
+    for it in items:
+        cpath = os.path.join(cache, cache_id(it) + '.ogg')
+        ref = index.get(it['voice'], {}).get(it['key'])
+        if not os.path.exists(cpath):
+            unrendered.append(it)
+        elif not ref:
+            missing.append(it)
+        elif blob[ref[0]:ref[0] + ref[1]] != open(cpath, 'rb').read():
+            differ.append(it)
+    want = {(it['voice'], it['key']) for it in items}
+    extra = sum(1 for v, lib in index.items() for k in lib if (v, k) not in want)
+    for label, lst in (('not rendered yet', unrendered), ('not in the pack', missing), ('in the pack, from older text', differ)):
+        for it in lst[:8]:
+            print(f'  {label}: {it["voice"]}: {it["say"][:80]}')
+        if len(lst) > 8:
+            print(f'  ... and {len(lst) - 8} more {label}')
+    stale = bool(unrendered or missing or differ or extra)
+    print(f'{outdir}: {"STALE" if stale else "up to date"} ({len(items)} recordings; {len(unrendered)} not rendered, {len(missing)} not in the pack, '
+          f'{len(differ)} from older text, {extra} no longer said)')
+    sys.exit(1 if stale else 0)
+
+
 def main():
+    if sys.argv[1] == '--check':
+        out = sys.argv[3]
+        return check(sys.argv[2], out, sys.argv[4] if len(sys.argv) > 4 else os.path.join(out, '.cache'))
     script, outdir, kdir, ffmpeg = sys.argv[1:5]
     cache = sys.argv[5] if len(sys.argv) > 5 else os.path.join(outdir, '.cache')
     items = json.load(open(script))
@@ -133,7 +176,7 @@ def main():
         text = it['say']
         if it.get('word'):
             text = text + '.'  # names alone get a clean, complete reading
-        cid = hashlib.md5(f"{voice}|{speed}|{pf}|{text}".encode()).hexdigest()
+        cid = cache_id(it)
         cpath = os.path.join(cache, cid + '.ogg')
         if os.path.exists(cpath):
             data = open(cpath, 'rb').read()

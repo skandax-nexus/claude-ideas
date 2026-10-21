@@ -14,6 +14,7 @@
 //   voicelines.js every line the edition can speak (the voice packs), the lexicon, the cards' lines
 //   score.js    the score: the motif, region music, cues, per-year beds, the mix
 //   cinema.js   staged moments: shots, letterbox, lines, tap to skip
+//   voicefx.js  what a line sounds like through: the PA, a radio, a recording, an echo
 //   prologue.js Missions 1-3, fully authored
 //   acts.js     Acts I-IV, the Finale, the endings and the four optional cases
 import { LastVersion, CHAPTERS, MISSIONS, ORDER, HINTS, HINTS_REVERSE } from './Runtime.js';

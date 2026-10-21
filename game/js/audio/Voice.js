@@ -10,7 +10,8 @@
 // (assets/voice/lv/<group>/: whole sentences, nothing spliced), and never uses device speech: a line its
 // packs cannot say waits for a pack still loading (up to 2 s), else it is a miss (window.__voiceMiss) and
 // its subtitle carries it. Its lines may name their recorded voice (extra.id) and an effect chain
-// (extra.fx: 'pa' station speakers, 'radio' comms, 'recording' records, 'echo' echoes and memories).
+// (extra.fx: 'pa' station speakers, 'radio' comms, 'recording' records, 'echo' echoes and memories), whose
+// chains the edition provides (voice.effects: editions/lastversion/voicefx.js).
 import { voicePieces } from './voiceKey.js';
 import { VOCAB } from '../gen/StoryGen.js';
 import { EDITION } from '../core/Edition.js';
@@ -98,7 +99,7 @@ export class Voice {
     this.playing = [];
     this.packOk = true;
     this.loading = 1; // 0..1 while the edition's packs come in
-    this.chains = {};
+    this.effects = null; // THE LAST VERSION's effect chains (extra.fx), set by the edition
     this.enabled = true;
     if (this.edn) {
       // never the device's voice (the edition's Runtime chooses the packs: usePacks)
@@ -225,93 +226,14 @@ export class Voice {
     return c;
   }
 
-  // where a line's sources connect: the voice's own output, or (THE LAST VERSION) the effect chain its
-  // extra names, built once and ending in that output
-  chain(fx) {
-    const ctx = this.audio.ctx;
+  // the voice's own output, on the voice bus
+  output() {
     if (!this.out) {
-      this.out = ctx.createGain();
+      this.out = this.audio.ctx.createGain();
       this.out.gain.value = 1.15;
       this.out.connect(this.audio.voiceBus || this.audio.master);
     }
-    if (!fx || !this.edn) return this.out;
-    if (this.chains[fx]) return this.chains[fx];
-    const f = (type, freq, q = 0.7, gain = 0) => {
-      const n = ctx.createBiquadFilter();
-      n.type = type;
-      n.frequency.value = freq;
-      n.Q.value = q;
-      n.gain.value = gain;
-      return n;
-    };
-    const send = (from, amount) => {
-      if (!this.audio.reverb) return;
-      const g = ctx.createGain();
-      g.gain.value = amount;
-      from.connect(g).connect(this.audio.reverb);
-    };
-    const delay = (from, sec, fb, wet) => {
-      const d = ctx.createDelay(1);
-      d.delayTime.value = sec;
-      const g = ctx.createGain();
-      g.gain.value = fb;
-      const w = ctx.createGain();
-      w.gain.value = wet;
-      from.connect(d);
-      d.connect(g).connect(d);
-      d.connect(w).connect(this.out);
-    };
-    let input;
-    if (fx === 'pa') {
-      // a station speaker: band-limited, a presence peak, a slapback off the far wall, the hall
-      input = f('highpass', 300);
-      const pk = f('peaking', 1800, 1, 5);
-      input.connect(f('lowpass', 3500)).connect(pk).connect(this.out);
-      delay(pk, 0.11, 0.3, 0.35);
-      send(pk, 0.3);
-    } else if (fx === 'radio') {
-      // a phone, a comm: narrower, a little driven (and a hiss under it: bed())
-      input = f('highpass', 450);
-      const sh = ctx.createWaveShaper();
-      const k = new Float32Array(1024);
-      for (let i = 0; i < k.length; i++) k[i] = Math.tanh(2.2 * (i / 511.5 - 1)) / Math.tanh(2.2);
-      sh.curve = k;
-      input.connect(f('lowpass', 3200)).connect(sh).connect(this.out);
-    } else if (fx === 'recording') {
-      // a record: a little dull, its speed wandering (playPlan), a crackle under it (bed())
-      input = f('highpass', 200);
-      input.connect(f('lowpass', 5500)).connect(this.out);
-    } else if (fx === 'echo') {
-      // an echo, a memory: far off, in a large room
-      input = f('lowpass', 2400);
-      input.connect(this.out);
-      delay(input, 0.32, 0.25, 0.4);
-      send(input, 0.7);
-    } else return this.out;
-    this.chains[fx] = input;
-    return input;
-  }
-
-  // a quiet bed under a line as long as the line: the radio's band noise (-38 dB), a record's crackle
-  bed(fx, t, dur) {
-    const ctx = this.audio.ctx;
-    const len = Math.max(1, Math.floor(ctx.sampleRate * Math.min(dur, 30)));
-    const b = ctx.createBuffer(1, len, ctx.sampleRate);
-    const d = b.getChannelData(0);
-    let s = 12345;
-    const rnd = () => ((s = (s * 16807) % 2147483647) / 2147483647) * 2 - 1;
-    if (fx === 'radio') for (let i = 0; i < len; i++) d[i] = rnd();
-    else for (let i = 0; i < len; i++) d[i] = Math.abs(rnd()) > 0.9993 ? rnd() : rnd() * 0.04;
-    const src = ctx.createBufferSource();
-    src.buffer = b;
-    const bp = ctx.createBiquadFilter();
-    bp.type = 'bandpass';
-    bp.frequency.value = fx === 'radio' ? 1800 : 3000;
-    const g = ctx.createGain();
-    g.gain.value = fx === 'radio' ? 0.0126 : 0.05;
-    src.connect(bp).connect(g).connect(this.out);
-    src.start(t);
-    this.playing.push(src);
+    return this.out;
   }
 
   async playPlan(plan, extra) {
@@ -321,9 +243,11 @@ export class Voice {
     if (token !== this.token) return; // a newer line (or a skip) took over
     // crew voices vary a little around their recorded voice
     let rate = extra.pitch && extra.gender ? Math.min(1.08, Math.max(0.93, 1 + (extra.pitch - { f: 1.14, m: 0.84, n: 1 }[extra.gender]) * 0.9)) : 1;
-    const fx = this.edn ? extra.fx || null : null;
-    if (fx === 'echo') rate *= 0.97;
-    const dest = this.chain(fx);
+    // THE LAST VERSION: the effect chain the line names (extra.fx), from the edition (editions/lastversion/voicefx.js)
+    const ef = this.edn && extra.fx ? this.effects : null;
+    const out = this.output();
+    const dest = (ef && ef.input(extra.fx, out)) || out;
+    if (ef) rate *= ef.rate(extra.fx);
     let t = ctx.currentTime + 0.06;
     const t0 = t;
     for (let i = 0; i < plan.length; i++) {
@@ -334,22 +258,14 @@ export class Voice {
       const src = ctx.createBufferSource();
       src.buffer = bufs[i];
       src.playbackRate.value = rate;
-      if (fx === 'recording') {
-        // wow: the record's speed wanders by ±0.3%
-        const lfo = ctx.createOscillator();
-        lfo.frequency.value = 0.7;
-        const depth = ctx.createGain();
-        depth.gain.value = rate * 0.003;
-        lfo.connect(depth).connect(src.playbackRate);
-        lfo.start(t);
-        lfo.stop(t + bufs[i].duration / rate + 0.1);
-      }
+      ef?.source(src, extra.fx, t, bufs[i].duration / rate);
       src.connect(dest);
       src.start(t);
       this.playing.push(src);
       t += bufs[i].duration / rate + GAP;
     }
-    if (fx === 'radio' || fx === 'recording') this.bed(fx, t0, t - t0);
+    const bed = ef?.bed(extra.fx, t0, t - t0, out);
+    if (bed) this.playing.push(bed);
   }
 
   // who: speaker key; extra: { pitch, gender } for generated crew (THE LAST VERSION: { id, fx, cue })
