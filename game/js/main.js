@@ -1995,8 +1995,8 @@ class Game {
   // The real-time loop. t is the rAF timestamp: the frame's vsync-aligned start, so motion steps
   // by whole refresh intervals whatever ran before the callback (input, timers, GC). All pacing
   // lives here; frame() can still be called on its own (tests, tools) and just steps.
-  //  - a phone with a 90/120 Hz panel renders a frame every 1/60 s at most, on whole refreshes
-  //    (45 fps at 90 Hz, 60 at 120, both even), and the GPU rests in between; 60 Hz renders all
+  //  - a phone with a 90/120/144 Hz panel renders every second refresh (45 fps at 90 Hz, 60 at
+  //    120, 72 at 144, all even), and the GPU rests in between; 60 Hz renders all
   //  - a phone behind a menu (not the character screen, which shows the 3D view) or on the title
   //    renders about 30 fps; the canvas keeps its last frame, queued input waits a callback
   loop(t) {
@@ -2036,14 +2036,16 @@ class Game {
     this.setRefresh(iv);
   }
 
-  // A panel faster than ~77 Hz (under 13 ms) gets the 60 fps cap. The smart renderer judges the
-  // frame rate the screen then allows: the smallest whole number of refreshes the cap lets through
-  // (2 at 90 and 120 Hz). Anything slower keeps 1/60 s: a gap measured on a phone that cannot keep
-  // up is its frame time, not its panel's.
+  // A panel faster than ~77 Hz (under 13 ms) renders every second refresh: 45 fps at 90 Hz, 60 at
+  // 120, 72 at 144, 82 at 165, all even. The shortest gap the cap allows is two refreshes but
+  // never more than 1/60 s (at 90 Hz both let the same refreshes through), so a panel that drops
+  // back to 60 Hz still renders every refresh. The smart renderer judges the frame rate the screen
+  // then allows: the smallest whole number of refreshes the cap lets through (2). Anything slower
+  // keeps 1/60 s: a gap measured on a phone that cannot keep up is its frame time, not its panel's.
   setRefresh(iv) {
     this.refresh = iv;
     const fast = iv < 13;
-    this.minFrame = fast ? 1000 / 60 : 0;
+    this.minFrame = fast ? Math.min(2 * iv, 1000 / 60) : 0;
     this.smart.panel = fast ? iv / 1000 : 1 / 60;
     this.smart.vsync = fast ? (iv * Math.ceil((this.minFrame - 2) / iv)) / 1000 : 1 / 60;
     this.smart.restart();
