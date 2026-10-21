@@ -10,7 +10,9 @@
 import * as THREE from '../../../vendor/three.module.min.js';
 import { makeActor } from '../../world/Actors.js';
 import { heroLook } from '../../world/People.js';
-import { dress, attach } from './wardrobe.js';
+import { dress, attach, WARDROBE } from './wardrobe.js';
+
+const WARDROBE_PROPS = (model, variant) => WARDROBE[model]?.[variant]?.props || [];
 
 // mission -> watcher kind, or per year (the fragments of M18; M22 and M23 quote other places)
 const FRAGMENTS = { PRESENT: 'drone', PAST: 'drone', FUTURE: 'scav' };
@@ -101,7 +103,9 @@ function makeHuman(kind, seed, renderer, hero) {
   } else {
     const [model, variant] = HUMAN[kind];
     actor = makeActor({ model, height: 1.8 + ((seed % 5) - 2) * 0.015 });
-    dress(actor, { model, variant, seed, props: [] }, { renderer });
+    // a scavenger watches by lantern light: the lantern is its eye (the variant may carry one already)
+    const lantern = model === 'rb_scav' && !WARDROBE_PROPS(model, variant).includes('lantern') ? ['lantern'] : [];
+    dress(actor, { model, variant, seed, props: lantern }, { renderer });
   }
   actor.rotation.y = Math.PI; // the sentinel looks along -Z; a person faces +Z
   // the eye: a helmet torch, or the lantern's flame

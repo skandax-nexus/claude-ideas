@@ -71,6 +71,7 @@ export const ACT1 = [
   place({
     key: 'm05', n: 5, chapter: 'act1', name: 'THE VILLAGE THAT NEVER EXISTED', title: 'The settlement, thriving, abandoned, flooded', subtitle: 'Niko follows you through the years.',
     place: 'valley_river', states: ['PAST', 'PRESENT', 'FUTURE'], drones: [0, 0, 0], unstable: true, ambience: 'water', ambient: 'settlement',
+    named: ['tala'], // (met in this mission's cold open: the settlement's women here wear the Elder's mesh, never Tala's face)
     labels: { PAST: 'THRIVING', PRESENT: 'ABANDONED', FUTURE: 'FLOODED' },
     motto: 'THE RIVER WAS TAUGHT TO STAY', gate: 'THE BURIED MACHINE',
     crew: C('niko'),
@@ -142,6 +143,7 @@ export const ACT1 = [
     key: 'm08', n: 8, chapter: 'act1', name: 'THE FIRST DEATH', title: 'Helix, altered', subtitle: 'The facility you return to is not the one you left.',
     place: 'helix_v17', states: ['PRESENT', 'PAST'], drones: [0, 1, 1], unstable: true, motto: 'VERSION 17',
     ambience: 'hum', ambient: 'helix',
+    named: ['receptionist', 'rook', 'guard', 'dale'], // (the altered staff never wear their faces: OVERHAUL.md §5 M8)
     beats: [
       { kind: 'arrival', goal: 'Investigate the altered facility: the staff records.', log: { title: 'STAFF RECORDS - REVISED', text: 'VARGA, I. - no record. ROOK, E. - Director. VAREN, K. - Temporal systems engineer, deceased 2026. A researcher named Lin has not come in since the Zero Second. Nobody remembers hiring her.' } },
       { kind: 'contradiction', goal: 'Recover the corrupted security log and read it twice.', official: 'SECURITY LOG 05:40 - CHAMBER CLOSED - NO ENTRY', echo: 'SECURITY LOG 05:40 - DALE OPENS CHAMBER - K. VAREN INSIDE - K. VAREN DOES NOT COME OUT', clue: 'guilty', crew: C('rook'), toast: 'LOG RECONSTRUCTED', log: 'The corrupted log, reconstructed: at 05:40 Dale opened the chamber on Rook\'s order. I was inside. I did not come out. I was also at home, asleep.' },
@@ -571,6 +573,7 @@ export const ACT4 = [
   place({
     key: 'm22', n: 22, chapter: 'act4', name: 'THE FIRST SECOND', title: 'The original activation point', subtitle: 'Previous locations appear around you.',
     place: 'firstsecond', states: ['PAST', 'PRESENT', 'FUTURE'], drones: [0, 1, 1], unstable: true, ambience: null, ambient: 'liminal',
+    named: ['elder', 'clockmaker', 'odile'], // (their echoes are quoted here: no crowd wears their faces)
     motto: 'YOU WERE TRYING TO STOP ME FROM BECOMING YOU', gate: 'THE FINAL CHAMBER',
     crew: C('witness'),
     intro: [N('Kai and the Witness enter the activation point together. The village, the workshop, the hospital and the museum appear around them like evidence laid on a table.')],
@@ -597,6 +600,7 @@ export const FINALE = [
   place({
     key: 'm23', n: 23, chapter: 'finale', name: 'AFTERZERO', title: 'Past, present and future collide', subtitle: 'Fragments of the opening streets, the settlement, the laboratory and the future city.',
     place: 'afterzero', states: ['PAST', 'PRESENT', 'FUTURE'], drones: [1, 1, 2], unstable: true, ambience: 'rain', ambient: 'rain',
+    named: ['tala', 'jun', 'sera', 'anja', 'iven', 'mara'], // (who may stand on the road: the settlement's women wear the Elder's mesh)
     motto: 'A SECOND THAT BELONGS TO NOBODY', gate: 'THE ORIGINAL CHRONOLITH',
     crew: C('mira'),
     intro: [N('Rain City, the first fire, the lab and 2196, all at once, held open by two men with the same scar.'), L('WITNESS', 'I will hold the route. Go to her.'), K('Why now?'), L('WITNESS', 'Because this is the version where I ask.')],

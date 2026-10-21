@@ -266,7 +266,7 @@ export function castLevel(level, deck, { facts = null } = {}) {
       const first = pool.roles?.[c.role] || pool.names?.[k % pool.names.length] || 'Someone';
       levelCast.push({
         id, first, name: first.toUpperCase(), color: c.echo ? ECHO_GLOW[c.era] : '#4f6170', seed: 300 + k, pronoun: PRONOUN[sex] || PRONOUN.m, model, variant, height, walk,
-        hairTint: HAIR_TINTS[k % HAIR_TINTS.length], dark: rainy ? RAIN_DARK : null, props, crowd: true, era: c.era,
+        hairTint: HAIR_TINTS[k % HAIR_TINTS.length], dark: rainy ? RAIN_DARK : null, props, crowd: true, era: c.era, crowdRole: c.role,
       });
       level.npcs.push({
         id, crew: id, first, ambient: true, crowd: true, seed: 300 + k, pronoun: PRONOUN[sex] || PRONOUN.m, pos: [x, y, z], yaw: r() * 6.28, height,

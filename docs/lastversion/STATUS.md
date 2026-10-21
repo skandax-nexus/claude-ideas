@@ -96,6 +96,30 @@ story beats. How it works: [`DESIGN.md`](DESIGN.md).
   Echo Step unlock; the Mission 13 faction choice (destroy the stabilizer / free the people); the
   Mission 15 city choice; the Mission 21 ally (Sera, Anja, Iven, or nobody); the three endings
   (A The Fixed World, B The Infinite War, C Afterzero) and "Version one hundred and eighteen."
+- **Casting, crowds and watchers** (v2.1, U4; DESIGN.md "Casting, crowds and watchers"): every
+  person is cast by role, gender, age and era. Mission 1's checkpoint officer is Officer Pryce, a
+  security officer in Helix black (`rb_security_f`), no longer a doctor; Dr. Lin and Mira share one face
+  in two wardrobes; the Witness wears Kai's; the Child, young Kai, Tomas and every crowd child have
+  children's bodies; Ward 32's bed holds a silent, flickering figure of Mira and Nurse Odile speaks
+  for the ward. 31 Microsoft Rocketbox avatars (MIT, `game/assets/characters/CREDITS.md`) were
+  converted for it: 18.3 MB (16 named at 1024 px, 11.2 MB; 15 crowd bodies at 512 px, 7.1 MB).
+  Wardrobes are GPU recolours cached per model, variant and map, with the person's own skin kept.
+  Crowds walk every mission's place (24 people at most with the named), by era (2026/2049, the
+  settlement, 2196) and role, never wearing a named face or another era's; Rain City's carry
+  umbrellas and stop with the clocks. Watchers are Helix drones, Continuum troopers, scavengers with
+  lanterns, the Unwritten, the Spire's elites or Mission 17's red mimics; the Observer robot is gone
+  from the edition. The edition's APK and preview carry only its 40 character files (27.3 MB; the
+  23.9 MB of Station Zero's own looks and crew stay out), and Station Zero's build carries exactly
+  the 28 files it shipped in 1.1.1. Measured 2026-10-21 in this container:
+  `EDITION=lastversion bash android/build-apk.sh` built `AFTERZERO-LastVersion-v2.0.apk` at
+  45,712,284 bytes (budget 50 MB), and its preview at 53.3 MB with no file over 15 MB (the largest is
+  the 14 MB voice pack); a chapter's people loading behind its card (`CAST_LOAD`, the game running in
+  Mission 1) took 3.7 s for Act I's 17 models, 3.4 s for Act II's, 2.1 s for Act III's, with at most
+  84, 96 and 80 ms of main-thread work in any one frame (budget 150 ms; Acts IV, the Finale and the
+  cases then found everything loaded); with its crowds Mission 1 costs 27 static draw calls and
+  180k triangles in the scene pass (262 draw calls and 343–350k triangles for the whole frame,
+  11.4–11.5 ms of JavaScript on average, 15.0–16.4 ms p95), Mission 4's THE VILLAGE 25 and 86k
+  (8.0 ms) and BEFORE THE FIRE 20 and 22k (4.1 ms): all within §4.7.
 - **Optional quest chains B and C** (Tala and Niko's river; Mara's two records) as the Cases
   chapter.
 - **Stealth and evasion stand in for combat** (watchers, cones, the lure, Echo Step decoys);
@@ -105,7 +129,17 @@ story beats. How it works: [`DESIGN.md`](DESIGN.md).
   `tools/voice-pack.mjs` collects the edition's lines (808 lines, 1,165 unique recordings, about
   44 minutes). **The recordings are not rendered yet**: until they are, the game speaks the
   edition's lines with the device's speech synthesis where it has one, and shows subtitles always.
-- **Tests**: `tests/lastversion.test.mjs` (unit, in `npm test`: 44 tests; the place tests now cover
+- **Tests** (U4, 2026-10-21): `tests/lastversion.test.mjs` has 56 tests (`npm test`: 84, all pass), the
+  twelve new ones for casting: every person's model file and variant, pronouns that match the body,
+  no named face in a crowd, crowd eras that never share a face (but `rb_child_m2`), Pryce on
+  `rb_security_f`, Lin and Mira on one mesh, children on children's bodies, the settlement's women on
+  whichever named woman's mesh is absent, crowds in every mission within 24 people, the watchers'
+  kinds, every chapter's models, `LV.looks`, a manifest of only the edition's models each worn by
+  someone with a CREDITS row and a converter entry, and every wardrobe rule in range. The browser bot
+  passes 191 checks, the new ones: Mission 1's officer on `rb_security_f`, the toy child and the Child
+  on children's bodies, Rain City's crowd walking with umbrellas, the settlement's people in Mission 4,
+  Mission 10's troopers whose cones see Kai, and Mission 14's crowd in its year's faces; the survey's
+  closest two views of different places are 21 bits apart. Before U4: `tests/lastversion.test.mjs` (unit, in `npm test`: 44 tests; the place tests now cover
   every mission and both cases: every sheet's quarters and landmarks, the generators gone (a grep over
   the edition's files), a default sky of its own per mission (M22 and M23 excepted), the linear
   exemption, the budgets, and walked routes through the new places with the game's physics) and
@@ -148,6 +182,15 @@ story beats. How it works: [`DESIGN.md`](DESIGN.md).
   That Arrives Yesterday, …) are not built; the Child in the Station appears in Mission 1 only.
 - **Rook as a person after Mission 2.** He speaks on the radio and in recordings; the
   supplement's exposure / persuasion confrontation is only in his dialogue lines.
+- **People cast but not yet placed** (U4 gave them a face; U6–U8 put them in their missions): Rook in
+  person (M2, M8), Officers Dale and Haig and Pryce's M2 recording, the receptionist, the District
+  Warden and the Gardener (M14, M15), young Kai (M11, M17, M20), Tomas (M15), the Director of
+  Continuity (M10, M21). Missions 22 and 23 still carry watchers from their v2.0 beats (the fragment's
+  drone or scavenger), where the spec has none.
+- **The settlement's wardrobe** (Rocketbox's robe, kurta and head-cloth avatars recoloured in ochre,
+  indigo, madder and undyed linen) waits for a human review of its render sheet.
+- **Models stay loaded.** Each chapter loads its people behind its card, but Actors has no release, so
+  a long session keeps the models of every chapter it has visited (at most the edition's 40).
 - **Faction support** changes who answers in Mission 21 and what people say; it does not change
   patrol responses or open safe routes elsewhere (Jun's line in the Finale is the one safe route).
 - **Music** is the engine's procedural score (a chord progression per state, ambience beds per

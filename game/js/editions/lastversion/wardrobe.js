@@ -10,7 +10,8 @@
 //     light | lset | lrange    lightness multiplied | set | lmin..lmax mapped onto [a, b]
 //     skin: false              also recolour texels that look like this person's skin }
 // Skin is protected with the avatar's own skin colour, sampled from the middle of its head map (a
-// fixed skin mask takes ochre and red cloth for skin). Each model and variant is recoloured once, on
+// fixed skin mask takes ochre and red cloth for skin), and anything skin-hued in the map's corners,
+// where every Rocketbox layout puts the hands. Each model and variant is recoloured once, on
 // the GPU (a render to a texture, mipmapped), and cached; never on the CPU in the middle of play.
 // The recoloured map leaves with the people who wear it (DeckWorld.freeLeft disposes it) and is made
 // again the next time someone needs it.
@@ -292,6 +293,7 @@ const FRAG = `
 precision highp float;
 uniform sampler2D map;
 uniform vec3 skin;
+uniform vec2 corners;        // the body map's corners that hold the hands (or bare shins): top, bottom
 uniform int count;
 uniform vec4 band[${MAXR}];
 uniform vec4 sel[${MAXR}];   // hue centre (-1: any), hue width, smin, skin (1 protect)
@@ -329,6 +331,13 @@ void main() {
   float br = sum / ssum;
   float skinW = (1.0 - smoothstep(0.022, 0.05, distance(ch, sh))) * smoothstep(0.3, 0.45, br) * (1.0 - smoothstep(1.6, 2.0, br)) * step(0.0, skin.r);
   vec3 h = hsl(c);
+  // the hands (and bare shins) lie in the body map's top or bottom corners in every Rocketbox layout, often
+  // warmer than the face: anything skin-hued in those corners is skin too
+  float corner = step(min(vUv.x, 1.0 - vUv.x), 0.25) * (step(vUv.y, 0.17) * corners.x + step(0.83, vUv.y) * corners.y);
+  float warm = 1.0 - smoothstep(0.065, 0.095, abs(fract(h.x - 0.05 + 0.5) - 0.5));
+  skinW = max(skinW, corner * warm * smoothstep(0.12, 0.2, h.y) * (1.0 - smoothstep(0.78, 0.88, h.y)) * smoothstep(0.14, 0.24, h.z) * (1.0 - smoothstep(0.86, 0.94, h.z)));
+  // (each rule's result is blended in RGB by its weight: blending hues would run a reddish texel that is
+  // only partly selected, skin at a band's edge, through every hue on the way: rainbow hands)
   for (int i = 0; i < ${MAXR}; i++) {
     if (i >= count) break;
     vec4 b = band[i];
@@ -346,9 +355,10 @@ void main() {
     if (act2[i].x >= 0.0) n.z = act2[i].x;
     else if (act2[i].y >= 0.0) n.z = mix(act2[i].y, act2[i].z, clamp((h.z - win[i].x) / max(1e-3, win[i].y - win[i].x), 0.0, 1.0));
     else n.z = clamp(h.z * act[i].w, 0.0, 1.0);
-    h = mix(h, n, w);
+    c = mix(c, rgb(n), clamp(w, 0.0, 1.0));
+    h = hsl(c);
   }
-  gl_FragColor = vec4(toL(rgb(h)), t.a);
+  gl_FragColor = vec4(toL(c), t.a);
 }`;
 const VERT = 'varying vec2 vUv; void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }';
 
@@ -356,7 +366,7 @@ let quad = null;
 function quadScene() {
   if (quad) return quad;
   const uniforms = {
-    map: { value: null }, skin: { value: new THREE.Vector3(-1, -1, -1) }, count: { value: 0 },
+    map: { value: null }, skin: { value: new THREE.Vector3(-1, -1, -1) }, corners: { value: new THREE.Vector2() }, count: { value: 0 },
     band: { value: Array.from({ length: MAXR }, () => new THREE.Vector4()) }, sel: { value: Array.from({ length: MAXR }, () => new THREE.Vector4()) },
     win: { value: Array.from({ length: MAXR }, () => new THREE.Vector4()) }, act: { value: Array.from({ length: MAXR }, () => new THREE.Vector4()) },
     act2: { value: Array.from({ length: MAXR }, () => new THREE.Vector4()) },
@@ -385,27 +395,52 @@ export function packRules(rules) {
   return rows;
 }
 
-// the avatar's own skin colour (sRGB 0..1), from the middle of its face on the head map
+// The avatar's own skin: its colour (sRGB 0..1) from the middle of its face on the head map, and which
+// corners of its body map hold skin (the hands at the top or the bottom, bare shins): { rgb, corners }.
+// Read once per model from 64 px copies of the two maps.
 const skinCache = new Map();
-export function skinOf(model, headMap) {
+function pixels(img, n = 64) {
+  const c = document.createElement('canvas');
+  c.width = c.height = n;
+  const g = c.getContext('2d', { willReadFrequently: true });
+  g.drawImage(img, 0, 0, n, n);
+  return g.getImageData(0, 0, n, n).data;
+}
+export function skinOf(model, headMap, bodyMap) {
   if (skinCache.has(model)) return skinCache.get(model);
-  let out = null;
+  const out = { rgb: null, corners: [0, 0] };
   try {
-    const img = headMap?.image;
-    if (img && typeof document !== 'undefined') {
-      const c = document.createElement('canvas');
-      c.width = c.height = 64;
-      const g = c.getContext('2d', { willReadFrequently: true });
-      g.drawImage(img, 0, 0, 64, 64);
+    if (headMap?.image && typeof document !== 'undefined') {
+      const d = pixels(headMap.image);
       // cheeks and forehead, between the eyes and the mouth
-      const d = g.getImageData(22, 14, 20, 16).data;
       const px = [];
-      for (let i = 0; i < d.length; i += 4) if (d[i] > d[i + 1] && d[i + 1] >= d[i + 2] && d[i] > 40) px.push([d[i], d[i + 1], d[i + 2]]);
+      for (let y = 14; y < 30; y++) for (let x = 22; x < 42; x++) {
+        const i = (y * 64 + x) * 4;
+        if (d[i] > d[i + 1] && d[i + 1] >= d[i + 2] && d[i] > 40) px.push([d[i], d[i + 1], d[i + 2]]);
+      }
       if (px.length > 20) {
         px.sort((a, b) => a[0] + a[1] + a[2] - b[0] - b[1] - b[2]);
-        const m = px[px.length >> 1];
-        out = m.map((v) => v / 255);
+        out.rgb = px[px.length >> 1].map((v) => v / 255);
       }
+    }
+    if (out.rgb && bodyMap?.image) {
+      // a corner band holds skin when over a third of it is near the face's colour; skin-brown trouser legs
+      // and shoes (Tala's) fall outside that, and stay theirs to recolour
+      const d = pixels(bodyMap.image);
+      const [sr, sg, sb] = out.rgb;
+      const ss = sr + sg + sb;
+      const share = (y0, y1) => {
+        let n = 0, k = 0;
+        for (let y = y0; y < y1; y++) for (const x of [...Array(16).keys(), ...Array.from({ length: 16 }, (_, i) => 48 + i)]) {
+          const i = (y * 64 + x) * 4;
+          const r = d[i] / 255, g = d[i + 1] / 255, b = d[i + 2] / 255, t = r + g + b;
+          if (t < 0.15) continue; // (the black between the islands)
+          n++;
+          if (Math.hypot(r / t - sr / ss, g / t - sg / ss) < 0.04 && t / ss > 0.35 && t / ss < 2) k++;
+        }
+        return n ? k / n : 0;
+      };
+      out.corners = [share(0, 11) > 0.35 ? 1 : 0, share(53, 64) > 0.35 ? 1 : 0];
     }
   } catch { /* a tainted or missing image: no protection beyond the rules' bands */ }
   skinCache.set(model, out);
@@ -414,7 +449,7 @@ export function skinOf(model, headMap) {
 
 const cache = new Map(); // `${model}|${variant}|${part}` -> texture
 export const stats = { made: 0, ms: 0 };
-export function recoloured(renderer, src, key, rules, skin, px = 512) {
+export function recoloured(renderer, src, key, rules, skin, px = 512, corners = [0, 0]) {
   if (cache.has(key)) return cache.get(key);
   if (!renderer || !src?.image || !rules?.length) return src;
   const t0 = performance.now();
@@ -427,6 +462,7 @@ export function recoloured(renderer, src, key, rules, skin, px = 512) {
   const q = quadScene();
   q.uniforms.map.value = src;
   q.uniforms.skin.value.set(...(skin || [-1, -1, -1]));
+  q.uniforms.corners.value.set(...corners);
   const rows = packRules(rules);
   q.uniforms.count.value = rows.length;
   rows.forEach((r, i) => {
@@ -485,7 +521,8 @@ export function prewarm(renderer, pairs, { make, px = () => 512 } = {}) {
     for (const [part, rules] of Object.entries(v)) {
       if (!Array.isArray(rules) || !rules.length || !m[part]) continue;
       if (!cache.has(`${model}|${variant}|${part}`)) n++;
-      recoloured(renderer, m[part], `${model}|${variant}|${part}`, rules, skinOf(model, m.head), px(model));
+      const sk = skinOf(model, m.head, m.body);
+      recoloured(renderer, m[part], `${model}|${variant}|${part}`, rules, sk.rgb, px(model), part === 'body' ? sk.corners : [0, 0]);
     }
   }
   return n;
@@ -510,7 +547,8 @@ export function dress(actor, crew, opts = {}) {
     if (holo) continue;
     const rules = v[part];
     if (Array.isArray(rules) && rules.length && src[part] && opts.renderer) {
-      m.map = recoloured(opts.renderer, src[part], `${model}|${variant}|${part}`, rules, skinOf(model, src.head), opts.px?.(model) || 512);
+      const sk = skinOf(model, src.head, src.body);
+      m.map = recoloured(opts.renderer, src[part], `${model}|${variant}|${part}`, rules, sk.rgb, opts.px?.(model) || 512, part === 'body' ? sk.corners : [0, 0]);
     }
     // crowds: tinted hair; Rain City's wet clothes read darker
     if (crew.hairTint && (part === 'hair') && m.color) m.color.multiply(new THREE.Color(crew.hairTint));

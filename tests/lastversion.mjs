@@ -220,7 +220,8 @@ check(JSON.stringify(cards) === JSON.stringify(['PROLOGUE', 'ACT I', 'ACT II', '
 await page.click('#chapters [data-newch="prologue"]');
 await page.waitForFunction(() => AZ.menu === 'saves', null, { timeout: 30000 });
 await page.click('#saves [data-slot="0"]');
-await page.waitForFunction(() => AZ.started && AZ.room, null, { timeout: 120000 });
+// (the Prologue's people may still be loading behind its card: the chapter starts once they are in)
+await page.waitForFunction(() => AZ.started && AZ.room && AZ.mode === 'deck' && AZ.level?.place, null, { timeout: 300000 });
 await az(() => { AZ.renderer.setAnimationLoop(null); }); // the bot drives time itself from here
 const m1 = await az(() => ({ ...LVB.where(), card: document.querySelector('#card small')?.textContent, name: document.querySelector('#card h2, #card .t')?.textContent, state: AZ.engine.state(AZ.room) }));
 check(m1.chapter === 'prologue' && m1.deck === 0 && m1.state === 'PRESENT', 'NEW GAME > PROLOGUE > slot 1 starts Mission 1 in the present', JSON.stringify(m1));

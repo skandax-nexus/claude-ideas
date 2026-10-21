@@ -175,7 +175,7 @@ export class LastVersion {
     const ctl = $('#title .controls.desktop-only');
     if (ctl) ctl.innerHTML = '<span><b>WASD</b> move</span><span><b>MOUSE</b> look</span><span><b>SPACE</b> jump</span><span><b>Z</b> walk / run</span><span><b>E</b> / click use</span><span><b>Q</b> switch year</span><span><b>1 2 3</b> choose a year</span><span><b>R</b> reverse</span><span><b>C</b> anchor what you carry</span><span><b>X</b> Echo Step</span><span><b>H</b> think</span><span><b>J</b> / <b>L</b> case board</span><span><b>M</b> map</span><span><b>F5</b> quick save</span><span><b>ESC</b> pause</span>';
     const hero = $('#hero .herohint');
-    if (hero) hero.textContent = 'You are Kai Varen, temporal systems engineer. Choose how you look.';
+    if (hero) hero.textContent = 'You are Kai Varen, temporal systems engineer.';
     // no law device, no TICK, no SHIFT: the dock and the touch buttons say what they do here
     for (const [sel, text] of [['#dock .hint span', 'THINK'], ['#dock .combo span', 'ECHO STEP'], ['#buttons .combo span', 'ECHO'], ['#dock .journal span', 'CASE'], ['#buttons .shift span', 'YEAR'], ['#journal header h2', 'CASE BOARD']]) {
       const el = $(sel);
@@ -240,12 +240,13 @@ export class LastVersion {
     };
   }
 
-  start(chapter, saved = null) {
+  start(chapter, saved = null, waited = false) {
     const g = this.g;
     if (!CHAPTERS[chapter]) chapter = 'prologue';
     this.ownLook();
-    // the chapter's people load behind its card first (one model at a time); then the chapter starts
-    if (!castReady(chapter)) return this.waitForCast(chapter, () => this.start(chapter, saved));
+    // the chapter's people load behind its card first (one model at a time); then the chapter starts.
+    // (Once waited for, it starts whatever arrived: a model that could not load has a stand-in.)
+    if (!waited && !castReady(chapter)) return this.waitForCast(chapter, () => this.start(chapter, saved, true));
     g.mode = 'deck';
     g.run = chapter;
     this.chapter = chapter;
@@ -292,11 +293,20 @@ export class LastVersion {
     const hold = () => { g.paused = true; };
     hold();
     queueMicrotask(hold);
+    // only the card while they come: no map, dock or buttons over an empty scene
+    if (!document.querySelector('#lvCast')) {
+      const st = document.createElement('style');
+      st.id = 'lvCast';
+      st.textContent = 'body.lastversion.lvwait #minimap, body.lastversion.lvwait #dock, body.lastversion.lvwait #buttons { visibility: hidden; }';
+      document.head.appendChild(st);
+    }
+    document.body.classList.add('lvwait');
     g.hud.card(c.name, c.sub, 'The people of this chapter are on their way.', 600000);
     const token = (this.castWaitFor = chapter);
     loadCast(chapter).then(() => {
       if (this.castWaitFor !== token) return;
       this.castWaitFor = null;
+      document.body.classList.remove('lvwait');
       g.paused = false;
       then();
     });

@@ -202,6 +202,10 @@ An NPC entry (`npcs.js`) is:
 
 - `voice` is the speaker key. `vid` is the recorded voice id (§8.4).
 - `model` and `variant` come from §6. Pronouns never change, so recorded voices keep matching.
+- *As built in U4:* an entry is `{ id, first, name, role, pronoun, era, voice, vid, model, variant, height, walk, … }`; things carried are the variant's `props` (`wardrobe.js` `WARDROBE[model][variant]`), and `hologram` / `silent` / `flicker` mark Ward 32's figure, Tomas and Orren. `director` has no model of its own: `resolve: [{ when, as, variant, vid } | { when, chair }]` picks Rook (older), Pryce or an empty chair by `rook_fate` when a level is built. `NPCS.pryce` is a non-enumerable alias of `guard` (`ALIASES`, `npcOf`), so `CAST` has one Pryce.
+- A level NPC may set `variant` (the mission's wardrobe for that person: M1's `mira` is `raincoat`). A mission may list `named: [ids]`: people who belong to it though no level of it places them yet (cold opens, echoes, an ally who may stand there), whose faces its crowds then never wear; and `crowdFreeze: '<condition>'` stops its crowds (M1: the clocks). `castLevel()` (`crowds.js`) gives the level `story.cast = level.cast` (copies of `CAST`, indices unchanged, then the hand-placed passers-by and the crowd, each with `model`, `variant`, `height`, `walk`, `era`, `crowdRole`).
+- `AMBIENT[region]` carries `roles` (what a crowd role is called there) and `voices` (`{ f, m, old_f, old_m, child }`: §8.4's crowd voice ids, picked per person by sex and age into `voiceExtra.id`).
+- A chapter's models are `casting.js` `CHAPTER_CAST[chapter]` (plus Kai and the motion library); a story unit that places a new person in a chapter adds their model there (a unit test checks every level's people against it).
 
 ### 3.5 Spoken lines (U5 provides)
 

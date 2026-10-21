@@ -2755,8 +2755,8 @@ window.addEventListener('DOMContentLoaded', async () => {
   } catch {
     /* no storage */
   }
-  if (!saved && EDITION === 'lastversion') saved = { id: 'real_m' }; // Kai
-  const first = [...new Set(EDITION === 'lastversion' ? ['rb_ren_m', lookOf(saved).model, 'rb_doctor_f'] : ['rb_ren_f', 'rb_juno', lookOf(saved).model])];
+  if (EDITION === 'lastversion') saved = { id: 'real_m' }; // Kai (the edition offers his look only)
+  const first = [...new Set(EDITION === 'lastversion' ? ['rb_ren_m'] : ['rb_ren_f', 'rb_juno', lookOf(saved).model])];
   // wait for them (slow connections included) and say what's happening
   const ver = document.querySelector('#title .ver');
   const verText = ver?.textContent;
@@ -2769,7 +2769,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   // retries), and the stylised crew load only as the fallback if the realistic crew
   // could not load.
   const rest = Object.keys(MODELS).filter((k) => !first.includes(k));
-  loadActors(rest.filter((k) => k.startsWith('rb_'))).then((ok) => ok || loadActors(rest.filter((k) => /^[wm]_/.test(k))));
+  if (EDITION !== 'lastversion') loadActors(rest.filter((k) => k.startsWith('rb_'))).then((ok) => ok || loadActors(rest.filter((k) => /^[wm]_/.test(k)))); // (THE LAST VERSION loads its people per chapter)
   try {
     window.AZ = new Game();
     window.AZSynth = Synth;

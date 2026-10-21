@@ -1197,14 +1197,35 @@ test('every child is a child: the named children, the crowds\' children, the toy
   for (const id of ['child', 'kai12', 'tomas']) assert.ok(isChild(NPCS[id].model), id);
   assert.ok(isChild(AMBIENT_CAST.amb_child.model), 'M1\'s toy child');
   for (const era of Object.keys(ERAS)) for (const [m] of ERAS[era].child || []) assert.ok(isChild(m), `${era} children: ${m}`);
+  let kids = 0;
   for (const { deck, s, level } of LEVELS) {
     for (const n of level.npcs.filter((x) => x.crowd)) {
       const c = level.cast.find((x) => x.id === n.crew);
-      const role = level.crowd.find((cr) => n.first && true) && c;
-      void role;
-      if (/child/i.test(n.first)) assert.ok(isChild(c.model), `${deck.mkey}/${s}: ${n.id} (${n.first}) on ${c.model}`);
+      // a crowd's child role wears a child's body, and a child's body is only ever a child
+      if (c.crowdRole === 'child' || /child/i.test(n.first)) assert.ok(isChild(c.model), `${deck.mkey}/${s}: ${n.id} (${c.crowdRole}) on ${c.model}`);
+      if (isChild(c.model)) {
+        kids++;
+        assert.ok(c.height < 1.45, `${deck.mkey}/${s}: ${n.id} is a child of ${c.height} m`);
+      }
     }
   }
+  assert.ok(kids > 0, 'children walk somewhere');
+});
+
+test('the settlement\'s women wear the mesh of whichever named woman is absent from the mission (Tala in M4, the Elder in M5)', () => {
+  const women = (mkey) => {
+    const out = new Set();
+    for (const { level } of LEVELS.filter((l) => l.deck.mkey === mkey)) for (const n of level.npcs.filter((x) => x.crowd)) {
+      const c = level.cast.find((x) => x.id === n.crew);
+      if (ANCIENT_WOMEN.includes(c.model)) out.add(c.model);
+    }
+    return [...out].sort();
+  };
+  assert.deepEqual(women('m04'), ['rb_tala'], 'M4: the Elder is here, so the women are on Tala\'s mesh');
+  assert.deepEqual(women('m05'), ['rb_elder'], 'M5: Tala is met here, so the women are on the Elder\'s mesh');
+  assert.ok(women('m07').length && women('m07').every((m) => ANCIENT_WOMEN.includes(m)), 'M7: neither is here, so either mesh');
+  assert.ok(!women('m23').includes('rb_tala'), 'Afterzero: Tala may stand on the road');
+  assert.ok(!women('c_b').includes('rb_tala'), 'the gorge: Tala leads the case');
 });
 
 test('named faces stay out of crowds (but for the listed exceptions), and crowd faces never cross eras', () => {
@@ -1290,6 +1311,8 @@ test('the manifest carries only the edition\'s models, each with a credit and a 
   const used = new Set([...allNamed().map((n) => n.model), ...Object.values(AMBIENT_CAST).map((a) => a.model), ...Object.values(HUMAN).map(([m]) => m)]);
   for (const era of Object.keys(ERAS)) for (const m of eraModels(era)) used.add(m);
   for (const m of used) assert.ok(MANIFEST.includes(MODEL_OF(m).file), `${m} is in the manifest`);
+  // and nothing ships that nobody wears (Kai and the motion library aside)
+  for (const f of MANIFEST) assert.ok(['Xbot.glb', 'rb_ren_m.glb'].includes(f) || [...used].some((m) => MODEL_OF(m).file === f), `${f} ships but nobody wears it`);
   const credits = fs.readFileSync('game/assets/characters/CREDITS.md', 'utf8');
   const conv = fs.readFileSync('tools/rocketbox-to-glb.mjs', 'utf8');
   for (const k of Object.keys(LV_MODELS)) {
