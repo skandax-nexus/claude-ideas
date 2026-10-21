@@ -71,8 +71,12 @@ export class World {
       if (mat.transparent) mesh.renderOrder = 2;
       const matName = k.split('|')[1];
       mesh.castShadow = !(matName === 'ceil' || matName === 'glass' || matName.startsWith('strip'));
-      // ceilings face down, away from the sun: no shadow-map lookups for light that never lands
-      mesh.receiveShadow = matName !== 'ceil';
+      // Station Zero's ceilings keep their shadows: a corridor's ceiling slab runs into the room
+      // walls (maps.js corridor()), and where a doorway is taller than the corridor its end face
+      // shows above the door, facing the sun (the lintel over the lab's OBSERVATION door). Without
+      // shadows it caught sunlight through the walls. The decks' ceilings do skip them (DeckWorld):
+      // their corridor slabs end flush behind the room walls.
+      mesh.receiveShadow = true;
       this.root.add(mesh);
       geos.forEach((g) => g.dispose());
     }
