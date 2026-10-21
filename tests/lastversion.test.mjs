@@ -203,7 +203,7 @@ function texts(o, out = [], seen = new Set()) {
   return out;
 }
 // (and the lines the missions' scripted moments speak from code)
-const SRC = ['prologue.js', 'acts.js'].map((f) => fs.readFileSync(new URL(`../game/js/editions/lastversion/${f}`, import.meta.url), 'utf8').replace(/\\'/g, "'")).join('\n');
+const SRC = ['prologue.js', 'acts.js', 'act1.js', 'act2.js'].map((f) => fs.readFileSync(new URL(`../game/js/editions/lastversion/${f}`, import.meta.url), 'utf8').replace(/\\'/g, "'")).join('\n');
 const ALL = [...texts(MISSIONS), ...texts(DIALOGUE), ...texts(NPCS), ...texts(AMBIENT), ...texts(ENDINGS), SRC].join('\n');
 
 test('the bible\'s quoted lines are spoken verbatim', () => {

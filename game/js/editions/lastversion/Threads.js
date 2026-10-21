@@ -26,6 +26,11 @@
 //   cinema   a staged moment: `lines` (and `shots`, `cue`) play once the thread is up (a mission's scripted moment
 //            has no lines here: its own code plays it, and `done` names what it sets)
 //   invert   REVERSE the process `target` (done: inv_<target>_done)
+//   loop     the place resets (deck.loop: { period, variants }): done once `loops` resets (1) have happened while it
+//            is the current thread; each reset moves the patrols to the next variant (Runtime.loopReset)
+//   playback echoes re-enact what a place kept (`echoes`: people placed as holograms that show only while it plays,
+//            `lines`): at `at`, a scene `playback:<id>`; with `entries` the recovered pieces are put in order first,
+//            one a use (a wrong one is said and stays out), then the re-enactment plays and the thread is done
 // A thread's fact is t_<mkey>_<id>; it is set the first time the thread counts as done, with its `set`, `ev`
 // and `log`, and its `say` lines are said (once: t_<mkey>_<id>_paid marks it, as kinds that complete themselves
 // set the thread's fact directly). A thread whose `until` holds before it is done was walked past (a
@@ -33,9 +38,9 @@
 import { compileCondition } from '../../core/conditions.js';
 import { resolveAnchor, toWorld, spotModel } from './processes.js';
 
-export const KINDS = ['go', 'talk', 'clue', 'residue', 'deduce', 'scene', 'choice', 'tasks', 'stealth', 'chase', 'cinema', 'invert'];
+export const KINDS = ['go', 'talk', 'clue', 'residue', 'deduce', 'scene', 'choice', 'tasks', 'stealth', 'chase', 'cinema', 'invert', 'loop', 'playback'];
 // the length model's minutes when a thread does not give its own (§9.8)
-export const MINUTES = { go: 2, talk: 2, clue: 1, residue: 3, deduce: 3, scene: 1, choice: 2, tasks: 3, stealth: 5, chase: 5, cinema: 2, invert: 5, side: 8, coldOpen: 2, hook: 1 };
+export const MINUTES = { go: 2, talk: 2, clue: 1, residue: 3, deduce: 3, scene: 1, choice: 2, tasks: 3, stealth: 5, chase: 5, cinema: 2, invert: 5, loop: 4, playback: 5, side: 8, coldOpen: 2, hook: 1 };
 // a legacy beat's kind as a thread
 const SHIM_KIND = { arrival: 'scene', log: 'scene', contradiction: 'residue', encounter: 'talk', scene: 'scene', choice: 'choice', tasks: 'tasks', custom: 'scene' };
 const SHIM_MIN = { arrival: 3, log: 3, contradiction: 4, encounter: 4, scene: 4, choice: 4, tasks: 6, custom: 8 };
@@ -43,6 +48,9 @@ const SHIM_MIN = { arrival: 3, log: 3, contradiction: 4, encounter: 4, scene: 4,
 export const isRewritten = (m) => Array.isArray(m?.quarters) && m.quarters.length > 0;
 export const factOf = (m, t) => `t_${m.mkey || m.key}_${t.id}`;
 export const sideFact = (m, s) => `side_${m.mkey || m.key}_${s.id}`;
+// a playback's echoes show while this holds; its recovered pieces put in order so far
+export const playFact = (m, t) => `pb_${m.mkey || m.key}_${t.id}`;
+export const placedFact = (m, t) => `pb_${m.mkey || m.key}_${t.id}_n`;
 
 // a mission's quarters: its own, or the shim's (each legacy beat a thread in quarter i)
 export function quartersOf(m) {
@@ -126,6 +134,17 @@ export function placeThreads(deck, level) {
     if (t.kind === 'deduce' && t.at && deck.deductions?.[t.deduction]) spot({ id: `deduce_${t.id}`, scene: `deduce:${t.deduction || t.id}`, prompt: t.prompt || 'PIECE IT TOGETHER', ...(t.spotOpts || {}) }, t);
     if (t.kind === 'residue' && t.at && t.record) {
       spot({ id: `residue_${t.id}`, scene: `residue:${t.id}`, prompt: t.record.prompt || 'READ IT', kit: t.record.kit, offset: t.record.offset }, t);
+    }
+    if (t.kind === 'playback' && t.at) {
+      spot({ id: `playback_${t.id}`, scene: `playback:${t.id}`, prompt: t.prompt || 'WATCH WHAT IT KEPT', model: t.model, kit: t.kit, offset: t.offset, r: t.r }, t);
+      // the echoes: holograms that stand (and walk) only while it plays (the fact pb_<mkey>_<id>)
+      const a = anchor(t.at);
+      for (const [k, e] of (t.echoes || []).entries()) {
+        const p = e.at ? (Array.isArray(e.at) ? e.at.slice(0, 3) : (level.landmarks?.[e.at] || a?.pos || [0, 0, 0]).slice(0, 3)) : a ? toWorld(a, e.offset || [k * 1.2 - 1, 0, 2]) : [0, 0, 0];
+        const path = (e.path || []).map((q) => (typeof q === 'string' ? (level.landmarks?.[q] || [0, 0, 0]).slice(0, 3) : q)).map((q) => [q[0], q[2] ?? q[1]]);
+        level.npcs.push({ id: `pb_${t.id}_${k}`, crew: e.crew, first: e.first, ambient: !!e.ambient, pronoun: e.pronoun, variant: e.variant, height: e.height, pos: [p[0], e.y ?? p[1], p[2]], yaw: e.yaw ?? (a?.yaw || 0),
+          hologram: true, silent: true, when: playFact(deck, t), ...(path.length > 1 ? { path, speed: e.speed ?? 0.9 } : {}), room: a?.room || roomAt(level, p) || level.outdoorRoom });
+      }
     }
     if (t.kind === 'chase' && t.npc) {
       const n = level.npcs.find((x) => x.id === t.npc);
@@ -349,6 +368,45 @@ export class Threads {
       return { intent: a.intent || 'investigate', label: a.label, say: a.say, lines, ...(proven ? { set: { ...(d.set || {}), [k]: true }, log: d.log, consequence: !!d.reveal } : {}) };
     });
     return { lines: d.question || [], choices };
+  }
+
+  // --- loops: the place resets (Runtime.loopReset); the current thread, if it watches loops, counts the reset ------
+  onLoop() {
+    if (!this.on) return;
+    const t = this.current();
+    if (t?.kind !== 'loop') return;
+    const f = this.g.facts, k = `${factOf(this.deck, t)}_n`;
+    f.inc(k);
+    if ((f.get(k) || 0) >= (t.loops || 1)) {
+      f.set(factOf(this.deck, t));
+      this.update();
+    }
+  }
+
+  // --- playback: the recovered pieces in order (one a use), then the echoes re-enact it -------------------------------
+  playback(id) {
+    const t = this.byId[id];
+    if (!t || t.kind !== 'playback') return null;
+    const f = this.g.facts, entries = t.entries || [];
+    const n = f.get(placedFact(this.deck, t)) || 0;
+    if (n >= entries.length) return this.reenact(t);
+    // every piece not yet placed is offered, in a fixed shuffle; the next one in order goes in, any other stays out
+    const rest = entries.map((e, i) => ({ e, i })).filter(({ i }) => i >= n).sort((a, b) => ((a.i * 5 + 2) % 7) - ((b.i * 5 + 2) % 7));
+    return {
+      lines: n ? t.next || [] : t.question || [],
+      choices: rest.map(({ e, i }) => (i === n
+        ? { intent: 'investigate', label: e.label, mute: true, lines: e.lines || [], set: { [placedFact(this.deck, t)]: n + 1 }, ...(n + 1 === entries.length ? { playback: id } : {}) }
+        : { intent: 'investigate', label: e.label, mute: true, lines: t.wrong || [] })),
+    };
+  }
+
+  reenact(t) {
+    return { lines: t.lines || [], show: playFact(this.deck, t), set: { [factOf(this.deck, t)]: true, ...(t.set || {}) }, log: t.log };
+  }
+
+  play(id) {
+    const t = this.byId[id];
+    if (t?.kind === 'playback') this.rt.playNode(this.reenact(t), null, `playback_${id}`);
   }
 
   // a record: what it says now; in the past, what it said first (the residue), and the thread is done

@@ -600,7 +600,8 @@ export class LastVersion {
     this.cinema.end(true);
     g.hud.states = this.def.states.map((key) => ({ key, label: this.label(key) }));
     this.weatherState = null;
-    this.loopT = deck.loop || 0;
+    this.loopT = this.loopPeriod();
+    this.loopVariant(); // (a loop's patrols walk where its current reset put them)
     this.hintKey = null;
     this.anchored = null;
     g.engine.setGlobal('heldPersists', false);
@@ -952,7 +953,8 @@ export class LastVersion {
     const deck = this.deck;
     if (it.task !== undefined) return this.task(it);
     const own = it.scene?.startsWith('deduce:') ? this.threads.deduction(it.scene.slice(7))
-      : it.scene?.startsWith('residue:') ? this.threads.residue(it.scene.slice(8), g.engine.state(g.room)) : null;
+      : it.scene?.startsWith('residue:') ? this.threads.residue(it.scene.slice(8), g.engine.state(g.room))
+        : it.scene?.startsWith('playback:') ? this.threads.playback(it.scene.slice(9)) : null;
     if (own) {
       g.audio.terminal();
       g.fx.burst(it.pos, it.color ?? 0xffc04a, 24, 1.4);
@@ -1040,6 +1042,7 @@ export class LastVersion {
       else this.g.beatDone();
     }
     if (node.ending) this.ending(node.ending);
+    if (node.playback) this.threads.play(node.playback); // (the last piece is in: the echoes re-enact it)
   }
 
   apply(node, n) {
@@ -1291,19 +1294,9 @@ export class LastVersion {
       g.engine.setGlobal('heldPersists', false);
     }
     // local loops: the city resets every so often; the watchers go back to their rounds
-    if (this.loopT > 0) {
+    if (this.loopT > 0 && !this.opening && !this.cinema.active) {
       this.loopT -= dt;
-      if (this.loopT <= 0) {
-        this.loopT = this.deck.loop;
-        for (const s of g.deckWorld.sentinels) {
-          s.pos.copy(s.home);
-          s.reset();
-        }
-        g.audio.sweep(false);
-        this.score.cue('loopReset');
-        g.hud.toast('<small>LOCAL LOOP</small><br>The street resets. You do not.', 2600);
-        facts.inc('loops_seen');
-      }
+      if (this.loopT <= 0) this.loopReset();
     }
     this.deck.step?.(this, dt);
     this.threads.step(dt);
@@ -1316,6 +1309,60 @@ export class LastVersion {
         this.nextYear = next;
         document.body.style.setProperty('--lv-next', `var(--${String(next).toLowerCase()})`);
       }
+    }
+  }
+
+  // --- loops (M9's nine minutes, M15's one day) ------------------------------------------------------------------
+  // deck.loop: seconds, or { period, variants: [{ watch: { 'q0s0': path, ... } }], upward } (each reset moves the
+  // patrols to the next variant; with upward, the rain falls upward for a second as the place jumps back)
+  loopPeriod() {
+    const l = this.deck?.loop;
+    return (typeof l === 'object' && l ? l.period : l) || 0;
+  }
+
+  loopReset() {
+    const g = this.g, deck = this.deck, L = deck.loop;
+    this.loopT = this.loopPeriod();
+    g.facts.inc('loops_seen');
+    g.facts.inc(`loops_${deck.mkey}`);
+    this.loopVariant();
+    for (const s of g.deckWorld.sentinels) {
+      s.pos.copy(s.home);
+      s.reset();
+    }
+    g.audio.sweep(false);
+    this.score.cue('loopReset');
+    g.hud.toast('<small>LOCAL LOOP</small><br>The street resets. You do not.', 2600);
+    if (L?.upward && g.weather) {
+      // the rain falls upward for a second (Weather's own particles, run the other way)
+      const w = g.weather, was = w.kind;
+      w.set('rain');
+      w.k = { ...w.k, fall: -14, H: 8 };
+      this.upward = true;
+      g.after(1.1, () => {
+        this.upward = false;
+        if (this.deck === deck) w.set(was);
+      });
+    }
+    this.threads.onLoop();
+    deck.onLoop?.(this, g.facts.get(`loops_${deck.mkey}`));
+    g.deckWorld.refresh?.();
+    this.mounted?.refresh();
+  }
+
+  // the patrols of the loop the place is in now
+  loopVariant() {
+    const L = this.deck?.loop, g = this.g;
+    if (!L?.variants?.length || !g.deckWorld?.sentinels) return;
+    const v = L.variants[(g.facts.get(`loops_${this.deck.mkey}`) || 0) % L.variants.length];
+    for (const s of g.deckWorld.sentinels) {
+      const key = Object.keys(v.watch || {}).find((k) => s.def.id?.endsWith(`_${k}`));
+      const p = key && v.watch[key];
+      if (!p?.length) continue;
+      s.def.path = p;
+      s.home.set(p[0][0], 0, p[0][1]);
+      s.pos.copy(s.home);
+      s.wp = 1 % p.length;
     }
   }
 
