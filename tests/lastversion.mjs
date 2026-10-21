@@ -673,9 +673,11 @@ const drain = await az(() => {
   return { a, b, after: AZ.edition.stability, catching: !!AZ.catching, cls: document.querySelector('#state').className };
 });
 check(drain.b < drain.a, 'out of the present in an unstable place, the Chronolith\'s stability drains', JSON.stringify(drain));
+// the snap back's fade runs on the page's own timers: wait for it (a page that has run for long may have its timers slowed)
 await page.waitForTimeout(1200);
-const snap = await az(() => { AZ.simulate(0.2); const s = LVB.said.slice(-3).join(' '); return { state: AZ.engine.state(AZ.room), stability: AZ.edition.stability, said: s.includes('The Chronolith let go of me') }; });
-check(snap.state === 'PRESENT' && snap.said, 'at zero it snaps you back to the present at the last anchor', JSON.stringify(snap));
+await page.waitForFunction(() => !AZ.catching, null, { timeout: 90000 }).catch(() => {});
+const snap = await az(() => { AZ.simulate(0.2); const s = LVB.said.slice(-3).join(' '); return { state: AZ.engine.state(AZ.room), stability: AZ.edition.stability, said: s.includes('The Chronolith let go of me'), catching: !!AZ.catching }; });
+check(snap.state === 'PRESENT' && snap.said, 'at zero it snaps you back to the present at the last anchor', JSON.stringify({ snap, drain }));
 const viaduct = await az(() => { AZ.edition.stability = 1; const l = LVB.lm('arrivalPlatform'); LVB.place(l[0], l[2], l[1] + 0.86); const r = LVB.route([[l[0], 70], [l[0], 40]]); r.y = +(AZ.player.pos.y - 0.86).toFixed(2); return r; });
 check(viaduct.n === viaduct.of && !viaduct.setbacks && Math.abs(viaduct.y - 8) < 0.6, 'Mission 14, walked: along the transit viaduct over the drowned avenues, 8 m up', JSON.stringify(viaduct));
 const recorder = await az(() => { const c = AZ.deckWorld.focusCandidates(AZ).find((x) => x.it?.kind === 'terminal'); LVB.place(c.pos[0], c.pos[2] + 1.4, c.pos[1] - 0.35); AZ.useDeck(c); LVB.skip(); return AZ.deckWorld.flags.beat_done; });

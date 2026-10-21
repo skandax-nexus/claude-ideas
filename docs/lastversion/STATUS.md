@@ -31,7 +31,7 @@ story beats. How it works: [`DESIGN.md`](DESIGN.md).
   every later mission's processes, come with the story rewrite (U6–U8).
 - **Open places under a real sky** (v2.1, U2; DESIGN.md "Places under an open sky"): Missions 1–8
   stand in seven authored places (`places/specs/`): Rain City South, Helix (three wings round the
-  court; the north wing waits for Mission 12), Helix in VERSION 17, the Ring Hill 3,000 years ago,
+  court; the north wing is Mission 12's since U3), Helix in VERSION 17, the Ring Hill 3,000 years ago,
   the river bend with its upstream gorge, Old Town with Ezra Moll's light-well house, and the
   Ridge's observatory. Each has its own sky per year (a shader dome with sun, moon, stars, two
   cloud layers, lightning and Mission 1's ring-shaped hole), a horizon painted from one valley
@@ -50,6 +50,34 @@ story beats. How it works: [`DESIGN.md`](DESIGN.md).
   p95). Both are within §4.7 (≤ 70 static draw calls, a sky of 1, a horizon of ≤ 4, ≤ 300k
   triangles). The JavaScript times are SwiftShader's, at a tenth of the pixel ratio, for
   comparison between places rather than a phone's frame time.
+- **Open places for Acts II–IV, the Finale and the cases** (v2.1, U3; DESIGN.md "Places under an
+  open sky"): Missions 9–23 stand in fourteen more authored places and Helix's north wing:
+  Northbank (the loop's river terraces, funicular and transmitter), the dam (cells cut into its face
+  under the Notch), Rain City General (pavilions, the open colonnade, the reversed wards as interior
+  rooms of the place, U1's Mission 11 processes at its landmarks), Helix's north wing (Mission 12's
+  rooftop chase, the 2026 corridor, the 2196 sinkhole and the second ring), the delta port (trench,
+  container canyons, rail yard, gantry crane, crater field), drowned downtown (the 2196 lagoon, the
+  transit viaduct, the memorial), the lock city in a stadium bowl (tiers of houses under the lock
+  halo), the sinkhole museum (a spiral ramp one and a half turns down), the radio-telescope array
+  (racks that stand differently each year), the Fracture (a 420 m traverse under the storm of times),
+  the salt mirror outside time (wrapping edges, a bridge seen only in its reflection, the unbuilt
+  city upside down in the sky), Mira's memory (one plot three ways), the Continuum Spire above the
+  cloud sea, the First Second (five wedges of earlier places round the twin chamber under an
+  eclipse, the sky cut to match) and Afterzero's road (the light changing along it from night rain
+  to the first sunrise in the Notch, the three ending skies). Case B uses Mission 5's gorge and Case
+  C Mission 15's press tower. The edition no longer runs ZoneGen or LevelGen; `dress.js` and the `P`
+  palettes are gone. The survey of all 23 missions' quarter-0 views (61 views) puts every pair of
+  different places at least 21 bits apart (merged survey runs after the fixes in the second U3
+  commit; the full bot's own survey is below). What the largest places cost, measured with
+  `tests/lastversion-perf.mjs` (the same emulated phone, medium quality, SwiftShader; 2026-10-21) at
+  quarter 0 of each year: **Mission 13** (the delta port, 240 × 200 m) 14–18 visible static draw calls
+  (11–15 merged scenery surfaces, the sky, two for the horizon), 58–63k triangles in the scene pass
+  (75–83 draw calls and 84–90k triangles for the whole frame), 3.7–4.5 ms of JavaScript a frame on
+  average (6.1–8.1 ms p95); **Mission 14** (drowned downtown) 19–21 static draw calls, 29–30k
+  triangles (51–52k for the whole frame), 3.2–3.8 ms (5.2–6.0 ms p95); **Mission 18** (the Fracture,
+  120 × 420 m) 15–18 static draw calls, 19k triangles (30–31k for the whole frame), 3.4–3.9 ms
+  (5.1–6.8 ms p95). All within §4.7 (≤ 70 static draw calls, a sky of 1, a horizon of ≤ 4, ≤ 300k
+  triangles).
 - **The NPC system** of the supplement: trust, knowledge, quest state, temporal state, faction
   standing and evidence flags in the save; dialogue choices by intent (challenge / comfort /
   investigate / withdraw); barks; echoes standing in for people absent from a state; the case
@@ -104,7 +132,7 @@ story beats. How it works: [`DESIGN.md`](DESIGN.md).
 ## Planned / not done
 
 - **Scale.** The bible's campaign is 25–30 hours. A first playthrough of this edition is a few
-  hours: the Prologue is roughly 40–60 minutes, each generated mission 10–20 minutes. Not measured
+  hours: the Prologue is roughly 40–60 minutes, each later mission 10–20 minutes. Not measured
   with players.
 - **Bespoke set pieces for Acts I–IV.** The Mission 9 "reach the tower before the reset" is a
   watcher reset, not a fail state; Mission 12's chase is a route with the Witness at its end, not

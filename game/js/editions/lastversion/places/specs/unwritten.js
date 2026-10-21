@@ -76,7 +76,7 @@ export default {
   ],
   beatAt: { m19: ['clockMarks', 'mirrorBridge', 'miraMeet'] },
   exits: { m19: 'realDoor' },
-  frags: { m19: [['clockGallery', 'stonePattern', 'helixBadge'], ['mirrorBridge', 'door2', 'miraMeet']] },
+  frags: { m19: [['clockGallery', 'stonePattern', 'helixBadge'], ['lagSite', 'door2', 'miraMeet']] },
   watch: { m19: [[], [], []] },
   crowd: [
     { era: 'present', years: ['PRESENT', 'PAST', 'FUTURE'], region: 'unwritten', role: 'echo', path: [[-30, 60], [30, 60]], n: 3, echo: true },
@@ -166,7 +166,7 @@ export default {
     });
     // the bridge in the reflection: nothing above the channel; in its water a suspension bridge, upside down.
     // It holds in 2026 (when it was there), or when the reflection is brought back in step (m19_synced)
-    P.land('mirrorBridge', 0, 0, -21, Math.PI);
+    P.land('mirrorBridge', -5, 0, -20.4, 0); // (beside the bridge's head: the plaque, not in the way)
     P.land('lagSite', 8, 0, -20, Math.PI);
     P.land('bridgeFar', 0, 0, -42, Math.PI);
     mirror(P, CHY, (M) => {
