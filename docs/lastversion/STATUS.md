@@ -100,7 +100,7 @@ story beats. How it works: [`DESIGN.md`](DESIGN.md).
   The length model (§9.8): Mission 1 25 + 10 minutes (main + side), Mission 2 27 + 7, Mission 3 22 + 6; the
   Prologue 97 minutes, 76% of it main. **Mission 1 walked by the bot** (`tests/lastversion.mjs`, real movement,
   every line at its own length, with the florist and Last Train Home, 2026-10-21): **10.4 minutes** of game
-  time against the model's 35: the bot knows every coordinate, reads nothing twice, never looks around or
+  time against the model's 35 (9.7 in the whole bot's run): the bot knows every coordinate, reads nothing twice, never looks around or
   gets lost, and skips no line but asks for no hint. The packs were re-recorded for it: `prologue` 604
   recordings (2.39 MB, 4,142 words of the 4,200 budget), `common` 668 (2.55 MB, 2,236 words), `finale` 62
   (0.33 MB), and `act1`, `act2`, `act4` and `cases` re-packed from the cache for lines that moved between
@@ -208,7 +208,9 @@ story beats. How it works: [`DESIGN.md`](DESIGN.md).
   whole opening, Mission 2's cold open, Lin with no shadow, Dale's statement in his voice with his hologram, the
   junior pass, Rook at the chamber door setting `trust_rook`, `wrist_mark`, the lab's 2026 frame and the
   excavation office (`ev_site_zero`), the 2196 plaque, `time_<mkey>` stored as each mission ends, Act I's
-  PREVIOUSLY card, and the case board's new sections. U6 changed no shared file.
+  PREVIOUSLY card, and the case board's new sections. The whole bot (`node tests/lastversion.mjs`: the Prologue,
+  Missions 5, 11, 13, 14, 16 and 19, the Finale to Ending C, and the survey of all 23 places) passes 226 checks
+  with no page error (U5's run: 199); in it Mission 1 took the bot 9.7 minutes. U6 changed no shared file.
 - **Tests** (U5, 2026-10-21): `tests/lastversion.test.mjs` has 64 tests (`npm test`: 92, all pass), the
   eight new ones for voice and score: every `spokenLines()` entry plans fully from `common` and its own
   group's pack (2,248 lines, no CREW voice), the spoken-text lint, the pack budgets and Station Zero's
