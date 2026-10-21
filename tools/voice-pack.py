@@ -10,6 +10,10 @@ Ogg Opus and packs everything into game/assets/voice/voice.ogg (chained clips) +
 
 Each recording is cached (cache_dir, default <out>/.cache), so a long render can
 be stopped and resumed, and re-running after a script change only renders what's new.
+
+A voice may be a blend of Kokoro voices, 'a*w+b*w' (the weighted sum of their styles): THE LAST
+VERSION OF EARTH builds the same person's voices on one base (OVERHAUL.md §8.4). An item may carry
+its Opus bitrate in kbps ('br'; the edition's speech is 16, its barks and hints 12; default 18).
 """
 import json
 import hashlib
@@ -42,7 +46,7 @@ VOICES = {
     # AFTERZERO: THE LAST VERSION OF EARTH (v2.0): one distinct voice per speaker
     'KAI': ('am_eric', 0.98, 0.98),
     'MIRA': ('af_river', 0.96, 1.02),
-    'WITNESS': ('am_fenrir', 0.88, 0.9),
+    'WITNESS': ('am_eric*0.6+am_fenrir*0.4', 0.88, 0.9),
     'ROOK': ('bm_lewis', 0.94, 0.95),
     'NIKO': ('am_echo', 1.0, 1.02),
     'SERA': ('af_jessica', 1.02, 0.98),
@@ -52,8 +56,47 @@ VOICES = {
     'TALA': ('af_aoede', 0.95, 1.0),
     'MARA': ('bf_lily', 0.92, 0.98),
     'ORREN': ('am_adam', 0.86, 0.88),
-    'CHILD': ('af_nicole', 1.02, 1.18),
+    'CHILD': ('af_river', 1.02, 1.2),
+    # v2.1 (OVERHAUL.md §8.4): the same person shares a base voice. The Witness is Kai after years without
+    # sleep (the VOICE in every speaker is his, recorded as WITNESS); Lin and the Child are built on Mira's
+    'KAI12': ('am_eric*0.5+am_puck*0.5', 1.05, 1.25),
+    'LIN': ('af_river*0.7+af_heart*0.3', 1.0, 0.97),
+    # tier 2: named people with a voice of their own
+    'PRYCE': ('af_sarah', 0.97, 0.96),
+    'DALE': ('am_liam', 0.97, 0.96),
+    'HAIG': ('af_sky*0.6+af_alloy*0.4', 1.06, 1.02),
+    'ELDER': ('bf_alice*0.6+bf_emma*0.4', 0.86, 0.9),
+    'CLOCKMAKER': ('bm_george', 0.88, 0.9),
+    'RHEA': ('af_nova', 1.02, 0.98),
+    'SERGEANT': ('am_onyx', 0.95, 0.94),
+    'ODILE': ('af_sarah*0.4+bf_lily*0.6', 0.93, 0.95),
+    'WARDEN': ('am_michael*0.5+am_onyx*0.5', 0.95, 0.95),
+    'GARDENER': ('af_kore', 0.96, 1.02),
+    'FLORIST': ('af_bella*0.5+bf_alice*0.5', 0.98, 1.0),
+    'RECEPTIONIST': ('af_kore*0.5+af_nova*0.5', 1.02, 1.0),
+    'DIRECTOR': ('bm_lewis*0.5+am_onyx*0.5', 0.9, 0.9),
+    'PA': ('bf_alice', 0.98, 1.0),
+    # the crowds: a voice by casting's sex and age (npcs.js AMBIENT voices)
+    'CROWD_F': ('af_bella', 1.0, 1.0),
+    'CROWD_F2': ('af_kore*0.5+af_sarah*0.5', 1.0, 0.98),
+    'CROWD_M': ('am_michael', 0.97, 1.0),
+    'CROWD_M2': ('am_puck', 0.98, 0.9),
+    'CROWD_OLD_F': ('bf_lily*0.5+bf_alice*0.5', 0.9, 0.92),
+    'CROWD_OLD_M': ('am_santa', 0.9, 0.95),
+    'CROWD_CHILD': ('af_nicole*0.6+am_puck*0.4', 1.05, 1.2),
 }
+
+
+def style(k, spec):
+    """A Kokoro voice name, or a blend 'a*w+b*w': the weighted sum of the voices' styles."""
+    if '*' not in spec:
+        return spec
+    out = None
+    for part in spec.split('+'):
+        name, w = part.split('*')
+        v = k.get_voice_style(name) * float(w)
+        out = v if out is None else out + v
+    return out.astype(np.float32)
 
 
 def pitch(s, factor):
@@ -101,13 +144,13 @@ def main():
             continue
         if k is None:
             k = Kokoro(os.path.join(kdir, 'kokoro-v1.0.int8.onnx'), os.path.join(kdir, 'voices-v1.0.bin'))
-        s, _ = k.create(text, voice=voice, speed=speed, lang='en-gb' if voice.startswith('b') else 'en-us')
+        s, _ = k.create(text, voice=style(k, voice), speed=speed, lang='en-gb' if voice.startswith('b') else 'en-us')
         s = trim(pitch(np.asarray(s, dtype=np.float32), pf))
         peak = np.max(np.abs(s)) or 1
         s = s * (0.89 / peak)
         wav, ogg = os.path.join(tmp, 'a.wav'), os.path.join(tmp, 'a.ogg')
         sf.write(wav, s, SR)
-        subprocess.run([ffmpeg, '-loglevel', 'error', '-y', '-i', wav, '-c:a', 'libopus', '-b:a', '18k', '-application', 'voip',
+        subprocess.run([ffmpeg, '-loglevel', 'error', '-y', '-i', wav, '-c:a', 'libopus', '-b:a', f"{it.get('br', 18)}k", '-application', 'voip',
                         '-ac', '1', '-map_metadata', '-1', '-fflags', '+bitexact', ogg], check=True)
         data = open(ogg, 'rb').read()
         dur = round(len(s) / SR, 3)

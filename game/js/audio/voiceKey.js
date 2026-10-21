@@ -38,7 +38,8 @@ export function voicePieces(text, vocab) {
     }
   };
   let last = 0;
-  for (const m of t.matchAll(matcher(vocab))) {
+  // an empty vocab (THE LAST VERSION's packs: whole sentences, nothing spliced) matches nothing
+  for (const m of vocab?.length ? t.matchAll(matcher(vocab)) : []) {
     if (m.index > last) lit(t.slice(last, m.index));
     out.push({ say: m[0], key: pieceKey(m[0]), word: true });
     last = m.index + m[0].length;

@@ -11,12 +11,15 @@
 //   wardrobe.js what each person wears: recolours on the GPU, hidden parts, things carried
 //   crowds.js   the crowds that walk each place's paths, by era and region
 //   watchers.js the watchers: Helix drones, Continuum troopers, scavengers, the red mimics
+//   voicelines.js every line the edition can speak (the voice packs), the lexicon, the cards' lines
+//   score.js    the score: the motif, region music, cues, per-year beds, the mix
+//   cinema.js   staged moments: shots, letterbox, lines, tap to skip
 //   prologue.js Missions 1-3, fully authored
 //   acts.js     Acts I-IV, the Finale, the endings and the four optional cases
 import { LastVersion, CHAPTERS, MISSIONS, ORDER, HINTS, HINTS_REVERSE } from './Runtime.js';
 import { NPCS, CAST, DIALOGUE, AMBIENT } from './npcs.js';
 import { ENDINGS } from './acts.js';
-import { INV_LINES, INV_SPEAKERS, RULES } from './inversion.js';
+import { spokenLines } from './voicelines.js';
 
 export const LV = {
   key: 'lastversion',
@@ -50,6 +53,7 @@ export const LV = {
     MARA: { name: 'MARA QUILL', color: '#8a6a9a' },
     ORREN: { name: 'ORREN', color: '#7a5fd0' },
     CHILD: { name: 'THE CHILD', color: '#d06a9a' },
+    PA: { name: 'ANNOUNCEMENT', color: '#5a6a78' }, // the station speakers, the ward intercom (fx 'pa')
   },
   chapters: CHAPTERS,
   order: ORDER,
@@ -75,38 +79,8 @@ export const LV = {
   },
 };
 
-// every line the edition can speak: [speaker, text] (tools/voice-pack.mjs records them)
+// every line the edition can speak: [speaker, text] (a thin wrapper over voicelines.js spokenLines(), which
+// tools/voice-pack.mjs --edition lastversion records, with the voice and the pack of each)
 export function allLines() {
-  const out = [];
-  const add = (who, text) => text && who && out.push([who === 'CREW' ? 'CREW_n' : who, text]);
-  const walk = (o, seen = new Set()) => {
-    if (!o || typeof o !== 'object' || seen.has(o)) return;
-    seen.add(o);
-    if (Array.isArray(o)) return o.forEach((x) => walk(x, seen));
-    if (typeof o.text === 'string' && typeof o.who === 'string') add(o.who, o.text);
-    if (Array.isArray(o.tiers)) o.tiers.forEach((t) => add('KAI', t));
-    if (Array.isArray(o.barks)) o.barks.forEach((t) => add(o.voice || 'CREW', t));
-    if (o.log && typeof o.log === 'object' && o.log.text) add(o.log.who || 'NONE', o.log.text);
-    if (typeof o.log === 'string' && o.kind === 'contradiction') add('KAI', o.log);
-    if (o.kind === 'contradiction') { add('NONE', o.official); add('NONE', o.echo); }
-    if (typeof o.log === 'string' && !o.kind) add('KAI', o.log);
-    for (const v of Object.values(o)) if (typeof v === 'object') walk(v, seen);
-  };
-  for (const ms of Object.values(MISSIONS)) walk(ms);
-  // REVERSE: each process's three hints and its refusal line
-  for (const ms of Object.values(MISSIONS)) for (const m of ms) for (const p of m.processes || []) {
-    (p.hints || []).forEach((t) => add('KAI', t));
-    if (p.line) add('KAI', p.line);
-  }
-  walk(DIALOGUE);
-  for (const n of Object.values(NPCS)) (n.barks || []).forEach((t) => add(n.voice, t));
-  for (const a of Object.values(AMBIENT)) a.barks.forEach((t) => add('CREW_n', t));
-  for (const e of Object.values(ENDINGS)) e.text.forEach((t) => add('NONE', t));
-  for (const tiers of [...Object.values(HINTS), ...Object.values(HINTS_REVERSE)]) tiers.forEach((t) => add('KAI', t));
-  for (const [k, t] of Object.entries(INV_LINES)) add(INV_SPEAKERS[k] || 'KAI', t);
-  for (const [, t] of RULES) add('NONE', t);
-  for (const t of ['The Chronolith let go of me. Back to the present, back to the last anchor.', 'Nothing in my hands to hold on to.', 'Not like this. Not now.', 'Not yet. Something here is unfinished.', 'The gate waits for the scene. Finish it first.', 'The next door is open. Keep going.', 'Read the record on the wall. Then read it again in the past.', 'Look around. Someone left something for me.', 'The lock reads the present. The room is somewhere else right now.', 'It wants a key. I saw one in another year.', 'An empty socket. There is a cell for it somewhere near.', 'It came apart when the year changed. Next time, anchor it first. C.', 'It walked me back to the last anchor. It only watches the floor in front of it.', 'Records have a residue. Read it in the past.', 'I can\'t change the year. Not yet.', 'There are things to do along the avenue. Some of them only answer in their own year.']) add('KAI', t);
-  add('NONE', 'A post-credit clock begins ticking.');
-  add('VOICE', 'Version one hundred and eighteen.');
-  return out;
+  return spokenLines().map((e) => [e.who === 'YOU' ? 'KAI' : e.who, e.text]);
 }

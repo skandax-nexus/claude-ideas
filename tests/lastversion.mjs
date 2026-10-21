@@ -18,6 +18,10 @@
 //   - real walks through the open places: Mission 13's quay to the container canyons, Mission 14's viaduct,
 //     the Museum's spiral (Mission 16) from the rim to the Comparison Hall, Mission 19's bridge that is only a
 //     reflection (it holds in 2026) and its wrapping edge, and the Finale's road over the settlement's stream
+//   - voice and score (OVERHAUL.md §8.11), with Chromium's autoplay policy on (a user gesture is needed for
+//     sound): the AudioContext runs after the first tap; every line said plans from the packs and nothing
+//     misses (__voiceMiss); speechSynthesis is never asked to speak; the cues card, chapter, zero and ending:C
+//     play; the Zero Second ducks the music while the voices stay at full level
 //   NODE_PATH=$(npm root -g) node tests/lastversion.mjs
 import { createRequire } from 'node:module';
 import http from 'node:http';
@@ -37,7 +41,7 @@ const server = http.createServer((req, res) => {
 });
 await new Promise((r) => server.listen(0, r));
 const url = `http://localhost:${server.address().port}/index.html?edition=lastversion`;
-const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
+const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--autoplay-policy=user-gesture-required'] });
 
 let passed = 0;
 const failures = [];
@@ -81,6 +85,14 @@ if (process.env.LV_ONLY === 'places') {
   process.exit(failures.length ? 1 : 0);
 }
 
+// the device's speech is never asked for anything (the edition speaks from its packs)
+await page.addInitScript(() => {
+  window.__synthCalls = 0;
+  try {
+    const s = window.speechSynthesis;
+    if (s) for (const k of ['speak', 'getVoices', 'cancel']) { const f = s[k].bind(s); s[k] = (...a) => { window.__synthCalls++; return f(...a); }; }
+  } catch { /* no speech here */ }
+});
 await page.goto(url);
 await page.evaluate(() => { try { localStorage.clear(); } catch { /* */ } });
 await page.reload();
@@ -93,7 +105,18 @@ await az(() => {
   const B = (window.LVB = {});
   B.said = [];
   const say = g.hud.say.bind(g.hud);
-  g.hud.say = (lines, facts, done) => { B.said.push(...lines.filter((l) => !l.when || facts.test(l.when)).map((l) => `${l.who}: ${l.text}`)); return say(lines, facts, done); };
+  B.planMiss = [];
+  B.pending = 0;
+  g.hud.say = (lines, facts, done) => {
+    const ls = lines.filter((l) => !l.when || facts.test(l.when));
+    B.said.push(...ls.map((l) => `${l.who}: ${l.text}`));
+    // every line said has a plan in the packs (while a chapter's pack is still coming, it is counted, not judged)
+    for (const l of ls) {
+      if (g.voice.loading < 1) B.pending++;
+      else if (!g.voice.plan(l.text, l.who, l.voice || {})) B.planMiss.push(`${l.who}${l.voice?.id ? `/${l.voice.id}` : ''}: ${l.text}`);
+    }
+    return say(lines, facts, done);
+  };
   B.setbacks = 0;
   const setback = g.deckSetback.bind(g);
   g.deckSetback = (k) => { B.setbacks++; B.lastSetback = k; return setback(k); };
@@ -192,17 +215,25 @@ const onward = async () => {
   await az(() => { AZ.simulate(0.3); LVB.skip(); });
   await page.waitForFunction((f) => !AZ.transitioning && JSON.stringify([AZ.campaign.chapter, AZ.campaign.deck, AZ.campaign.sector]) !== f, from, { timeout: 20000 }).catch(() => {});
   await az(() => { AZ.simulate(0.3); LVB.skip(); });
+  await opening();
 };
 // after a mission's last gate: the outro plays, the fade's timer moves on to the next place
 const nextPlace = async () => {
   await page.waitForTimeout(1600);
   await page.waitForFunction(() => !AZ.transitioning, null, { timeout: 300000 }).catch(() => {}); // (a new chapter's people load behind its card)
   await az(() => { LVB.step(0.3); LVB.skip(); });
+  await opening();
 };
 // a chapter started out of order: its people first (casting.js loads them one at a time), then the chapter
 const startChapter = async (ch) => {
   await page.evaluate((c) => AZ.edition.loadCast(c), ch);
   await az((c) => { AZ.edition.start(c); AZ.simulate(0.2); LVB.skip(); }, ch);
+  await opening();
+};
+// a mission's opening (the chapter's card, the mission's card, the cold open) waits for its voices: let it play out
+const opening = async () => {
+  await page.waitForFunction(() => { LVB.step(0.2); LVB.skip(); return !AZ.edition.opening && !AZ.edition.cinema.active && AZ.voice.loading >= 1; }, null, { timeout: 120000, polling: 250 }).catch(() => {});
+  await az(() => { LVB.step(0.2); LVB.skip(); });
 };
 
 // --- the title -----------------------------------------------------------------------------
@@ -213,6 +244,12 @@ const title = await az(() => ({
 }));
 check(title.h1 === 'AFTERZERO' && title.sub === 'THE LAST VERSION OF EARTH', 'the title reads AFTERZERO / THE LAST VERSION OF EARTH', JSON.stringify(title));
 check(/v2\.0/.test(title.ver) && title.edition && title.hero === 'real_m', 'v2.0, the edition is on, and you are Kai (a realistic man)', JSON.stringify(title));
+// --- sound: the first tap (Chromium's autoplay policy: no sound before a user gesture) -----------------------
+const before = await az(() => AZ.audio.ctx?.state || 'none');
+await page.mouse.click(480, 120);
+await page.waitForFunction(() => AZ.audio.ctx?.state === 'running', null, { timeout: 20000 }).catch(() => {});
+const tapped = await az(() => ({ state: AZ.audio.ctx?.state, banner: document.querySelector('#lvSound')?.classList.contains('on'), composer: AZ.audio.composer === AZ.edition.score, packs: AZ.voice.packs.map((p) => p.base) }));
+check(before !== 'running' && tapped.state === 'running' && !tapped.banner && tapped.composer, 'the AudioContext is running after the first tap (the score writes the music; no TAP FOR SOUND)', JSON.stringify({ before, ...tapped }));
 await page.click('#begin');
 await page.waitForFunction(() => AZ.menu === 'chapters', null, { timeout: 30000 });
 const cards = await az(() => [...document.querySelectorAll('#chapters .chapcard h3')].map((h) => h.textContent));
@@ -223,6 +260,11 @@ await page.click('#saves [data-slot="0"]');
 // (the Prologue's people may still be loading behind its card: the chapter starts once they are in)
 await page.waitForFunction(() => AZ.started && AZ.room && AZ.mode === 'deck' && AZ.level?.place, null, { timeout: 300000 });
 await az(() => { AZ.renderer.setAnimationLoop(null); }); // the bot drives time itself from here
+await opening();
+const cardsSeen = await az(() => ({ heard: AZ.edition.score.heard.slice(), packs: AZ.voice.packs.map((p) => p.base), said: LVB.said.slice(0, 6) }));
+check(['chapter', 'card'].every((c) => cardsSeen.heard.includes(c)) && cardsSeen.said.includes('NONE: The Prologue. The Zero Second.') && cardsSeen.said.includes('NONE: Mission one. The Last Normal Day.'),
+  'a new game opens on the Prologue\'s card, then Mission 1\'s, both said and scored (cues chapter and card)', JSON.stringify(cardsSeen));
+check(cardsSeen.packs.join() === 'assets/voice/lv/common/,assets/voice/lv/prologue/', 'the voices: the common pack and the Prologue\'s', JSON.stringify(cardsSeen.packs));
 const m1 = await az(() => ({ ...LVB.where(), card: document.querySelector('#card small')?.textContent, name: document.querySelector('#card h2, #card .t')?.textContent, state: AZ.engine.state(AZ.room) }));
 check(m1.chapter === 'prologue' && m1.deck === 0 && m1.state === 'PRESENT', 'NEW GAME > PROLOGUE > slot 1 starts Mission 1 in the present', JSON.stringify(m1));
 
@@ -252,7 +294,11 @@ const guard = await az(() => [AZ.menu, [...document.querySelectorAll('#choice [d
 check(guard[0] === 'choice' && ['INVESTIGATE', 'CHALLENGE', 'COMFORT', 'WITHDRAW'].every((k) => guard[1].includes(k)), 'talking to the officer offers four intents', JSON.stringify(guard));
 await page.click('#choice button.comfort');
 check(await az(() => { LVB.skip(); return AZ.facts.get('checkpoint_passed') && AZ.facts.get('trust_guard') === 1; }), 'comfort gets you through and the officer trusts you more');
-const zero = await az(() => { const l = LVB.lm('platform'); LVB.place(l[0], l[2], l[1] + 0.86); LVB.step(0.2); LVB.step(5); LVB.skip(); return { ...LVB.f('zero_second', 'after_zero'), said: LVB.said.includes('NONE: All the clocks stop.'), train: AZ.deckWorld.dynamic.some((d) => d.el.mat === 'car' && d.mesh.visible) }; });
+await az(() => { const l = LVB.lm('platform'); LVB.place(l[0], l[2], l[1] + 0.86); LVB.step(0.2); });
+await page.waitForTimeout(300); // (the duck is in the sound's own time)
+const duck = await az(() => ({ voice: +AZ.audio.voiceBus.gain.value.toFixed(3), music: +AZ.audio.music.gain.value.toFixed(4), amb: +AZ.audio.amb.gain.value.toFixed(4), heard: AZ.edition.score.heard.includes('zero') }));
+check(duck.heard && duck.voice === 1 && duck.music < 0.05, 'the Zero Second\'s cue: the music ducks for a second while the voices stay at full level', JSON.stringify(duck));
+const zero = await az(() => { LVB.step(5); LVB.skip(); return { ...LVB.f('zero_second', 'after_zero'), said: LVB.said.includes('NONE: All the clocks stop.'), train: AZ.deckWorld.dynamic.some((d) => d.el.mat === 'car' && d.mesh.visible) }; });
 check(zero.zero_second && zero.after_zero && zero.said && zero.train, 'the Zero Second: the clocks stop and the 41 comes in', JSON.stringify(zero));
 // quest chain A: Last Train Home
 const jun = await az(() => { const n = LVB.npc('jun').model.position; LVB.place(n.x + 2, n.z, n.y + 0.86); const u = LVB.use('jun'); LVB.skip(); return [u, AZ.menu, LVB.said.slice(-3)]; });
@@ -844,7 +890,11 @@ for (let s = 0; s < 2; s++) {
 const finale = await az(() => { const c = LVB.cand('choice_' + AZ.room); LVB.place(c.pos[0], c.pos[2] + 1.5); LVB.use('choice_' + AZ.room); LVB.skip(); return [AZ.menu, [...document.querySelectorAll('#choice button')].map((b) => b.className)]; });
 check(finale[0] === 'choice' && finale[1].length === 3, 'at the original Chronolith: what to preserve, what to release (three endings)', JSON.stringify(finale));
 await az(() => { LVB.choose('comfort'); LVB.skip(); AZ.simulate(1.5); LVB.skip(); AZ.simulate(0.5); });
+for (let i = 0; i < 40 && !(await az(() => AZ.menu === 'ending')); i++) await az(() => { LVB.skip(); AZ.simulate(0.5); });
 const ending = await az(() => ({ menu: AZ.menu, text: document.querySelector('#ending .body')?.textContent || '', ending: AZ.facts.get('ending') }));
+const endSaid = await az(() => ({ heard: AZ.edition.score.heard.filter((c) => /ending|postcredit/.test(c)), said: LVB.said.slice(-12) }));
+check(endSaid.heard.includes('ending:C') && endSaid.heard.includes('postcredit') && endSaid.said.includes('KAI: I finally found a second that belongs to nobody.') && endSaid.said.includes('VOICE: Version one hundred and eighteen.') && !endSaid.said.some((l) => /post-credit/i.test(l)),
+  'Ending C is scored and said: the bible\'s text, "Live.", Kai\'s quote, the ticks, the voice (no stage direction read aloud)', JSON.stringify(endSaid));
 check(ending.menu === 'ending' && ending.ending === 'C' && /ENDING C/.test(ending.text) && /AFTERZERO/.test(ending.text), 'Ending C, Afterzero', JSON.stringify({ ...ending, text: ending.text.slice(0, 120) }));
 check(/a second that belongs to nobody/.test(ending.text) && /Version one hundred and eighteen/.test(ending.text), '"I finally found a second that belongs to nobody." A voice: "Version one hundred and eighteen."');
 
@@ -989,6 +1039,12 @@ async function survey() {
   const want = ONLY.length ? 1 : 60;
   check(views.length >= want && (pairs.length || ONLY.length) && (pairs[0]?.d ?? 99) >= 18, `no two missions look alike: ${pairs.length} pairs of views in different places differ by 18 bits or more (closest ${pairs[0]?.d})`, JSON.stringify(pairs.slice(0, 5)));
 }
+
+// --- the voices, over the whole run ------------------------------------------------------------------------------
+const heardAll = await az(() => ({ miss: (window.__voiceMiss || []).slice(0, 12), misses: (window.__voiceMiss || []).length, planMiss: LVB.planMiss.slice(0, 12), plans: LVB.planMiss.length, pending: LVB.pending, synth: window.__synthCalls, said: LVB.said.length, cues: [...new Set(AZ.edition.score.heard)] }));
+check(heardAll.misses === 0 && heardAll.plans === 0 && heardAll.said > 200, `every line said (${heardAll.said}) is in the packs: no voice misses`, JSON.stringify(heardAll));
+check(heardAll.synth === 0, 'speechSynthesis is never asked for anything', JSON.stringify(heardAll.synth));
+check(['card', 'chapter', 'zero', 'ending:C'].every((c) => heardAll.cues.includes(c)), 'the cues card, chapter, zero and ending:C all played', JSON.stringify(heardAll.cues));
 
 // --- saves --------------------------------------------------------------------------------------------------------
 const keys = await az(() => { AZ.saveTo(0); return Object.keys(localStorage); });

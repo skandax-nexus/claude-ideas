@@ -4,6 +4,15 @@
 // <out>/script.json for tools/voice-pack.py, which renders the recordings.
 //
 //   node tools/voice-pack.mjs <outdir> [seeds=400]
+//
+// THE LAST VERSION OF EARTH has packs of its own, one per chapter group (OVERHAUL.md §8.3):
+//
+//   node tools/voice-pack.mjs <outdir> --edition lastversion
+//
+// writes <outdir>/<group>/script.json (whole sentences, nothing spliced: an empty vocab; what each recording
+// says has been through the edition's pronunciation lexicon, its key is the subtitle's) and <outdir>/groups.json
+// (the projected size of each group). It fails if a group projects over 12 MB. Render each group with
+//   python3 tools/voice-pack.py <outdir>/<group>/script.json game/assets/voice/lv/<group> <kokoro> <ffmpeg> [cache]
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -11,7 +20,59 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'game', 'js');
 const imp = (p) => import(pathToFileURL(path.join(root, p)).href);
 const out = process.argv[2];
-const SEEDS = +(process.argv[3] || 400);
+const ARGS = process.argv.slice(3);
+const SEEDS = +(ARGS.find((a) => /^\d+$/.test(a)) || 400);
+
+if (ARGS.includes('--edition')) {
+  const ed = ARGS[ARGS.indexOf('--edition') + 1];
+  const { voicePieces } = await imp('audio/voiceKey.js');
+  const { spokenLines, voiceOf, lexicon, GROUPS } = await imp(`editions/${ed}/voicelines.js`);
+  const entries = spokenLines();
+  // barks, hints and challenge thoughts may go to 12 kbps; everything else is 16 (OVERHAUL.md §8.10)
+  const light = (e) => /\.bark\d|\.hint\d|^HINTS|\.challenge:|\.thread:.*\.hint/.test(e.path);
+  const sentence = (s) => (/[a-z]/.test(s) || s.replace(/[^A-Z]/g, '').length < 4 ? s : s.toLowerCase().replace(/(^|[.!?]\s+)([a-z])/g, (m, a, b) => a + b.toUpperCase()));
+  const pieces = new Map();
+  for (const e of entries) {
+    const voice = voiceOf(e.who, e.extra);
+    if (/^CREW/.test(voice) || voice === 'CREW') throw new Error(`${e.path}: a CREW line with no recorded voice: ${e.text}`);
+    for (const p of voicePieces(e.text, [])) {
+      if (!p.key) continue;
+      const k = `${voice}|${p.key}`;
+      let it = pieces.get(k);
+      if (!it) pieces.set(k, (it = { voice, key: p.key, say: lexicon(sentence(p.say)), groups: new Set(), br: 12 }));
+      it.groups.add(e.group);
+      if (!light(e)) it.br = 16;
+    }
+  }
+  // a piece more than one group needs is in common (loaded with every chapter)
+  const byGroup = Object.fromEntries(GROUPS.map((g) => [g, []]));
+  for (const it of pieces.values()) {
+    const g = it.groups.size > 1 ? 'common' : [...it.groups][0];
+    byGroup[g].push({ voice: it.voice, key: it.key, say: it.say, br: it.br });
+  }
+  const groups = {};
+  let fail = false;
+  for (const [g, list] of Object.entries(byGroup)) {
+    list.sort((a, b) => (a.voice + a.key).localeCompare(b.voice + b.key));
+    fs.mkdirSync(path.join(out, g), { recursive: true });
+    fs.writeFileSync(path.join(out, g, 'script.json'), JSON.stringify(list, null, 0));
+    const chars = list.reduce((a, p) => a + p.say.length, 0);
+    const sec = chars / 14.5;
+    // measured on the packs: about 1.15 x the bitrate, plus an Ogg header per clip
+    const mb = list.reduce((a, p) => a + (p.say.length / 14.5) * p.br * 1000 / 8 * 1.15 + 700, 0) / 1e6;
+    groups[g] = { recordings: list.length, chars, minutes: +(sec / 60).toFixed(1), projectedMB: +mb.toFixed(2), voices: [...new Set(list.map((p) => p.voice))].sort() };
+    if (mb > 12) fail = true;
+  }
+  fs.writeFileSync(path.join(out, 'groups.json'), JSON.stringify(groups, null, 1));
+  const total = Object.values(groups).reduce((a, g) => a + g.projectedMB, 0);
+  for (const [g, x] of Object.entries(groups)) console.log(`${g.padEnd(9)} ${String(x.recordings).padStart(5)} recordings  ${String(x.minutes).padStart(5)} min  ~${x.projectedMB} MB`);
+  console.log(`${entries.length} lines, ${pieces.size} recordings, ~${total.toFixed(2)} MB projected`);
+  if (fail || total > 22) {
+    console.error('a group projects over 12 MB, or the edition over 22 MB');
+    process.exit(1);
+  }
+  process.exit(0);
+}
 
 const story = await imp('world/story.js');
 const { makeStory, verdictEnding, VOCAB } = await imp('gen/StoryGen.js');
@@ -120,22 +181,6 @@ for (const ending of ['SEVER', 'SUSTAIN', 'MIRROR', null]) {
 const { FORGE_LINES } = await imp('gen/Forge.js');
 for (const [voice, text] of FORGE_LINES()) for (const v of voice === 'CREW' ? ['CREW_n', 'CREW_f', 'CREW_m'] : [voice]) add(v, text);
 
-// AFTERZERO: THE LAST VERSION OF EARTH (v2.0): every line the edition can speak (game/js/editions/lastversion),
-// in its own speakers' voices: KAI, MIRA, WITNESS (also the voice in every speaker), ROOK, NIKO, SERA, ANJA,
-// IVEN, JUN, TALA, MARA, ORREN, CHILD, the narrator (NONE) and the neutral crew voice for the people in passing
-const { allLines: lastVersionLines } = await imp('editions/lastversion/index.js');
-const lvFrom = lines.length;
-for (const [voice, text] of lastVersionLines()) add(voice === 'YOU' ? 'KAI' : voice === 'VOICE' ? 'WITNESS' : voice, text);
-// (and the lines its scripted moments speak from code: L('WHO', '...'), N('...') the narrator, K('...') Kai)
-for (const f of ['prologue.js', 'acts.js']) {
-  const code = src(`editions/lastversion/${f}`);
-  const q = String.raw`'((?:[^'\\]|\\.)*)'`;
-  for (const m of code.matchAll(new RegExp(String.raw`\bL\('(\w+)', ${q}`, 'g'))) add(m[1] === 'CREW' ? 'CREW_n' : m[1] === 'VOICE' ? 'WITNESS' : m[1], unq(m[2]));
-  for (const m of code.matchAll(new RegExp(String.raw`\bN\(${q}`, 'g'))) add('NONE', unq(m[1]));
-  for (const m of code.matchAll(new RegExp(String.raw`\bK\(${q}`, 'g'))) add('KAI', unq(m[1]));
-}
-const lvLines = lines.slice(lvFrom);
-
 // you sound like your look: everything Ren says is also recorded in a male voice
 for (const [voice, text] of [...lines]) if (voice === 'YOU' || voice === 'OTHER') add(`${voice}_m`, text);
 
@@ -157,9 +202,3 @@ const byVoice = {};
 for (const p of list) byVoice[p.voice] = (byVoice[p.voice] || 0) + 1;
 const chars = list.reduce((a, p) => a + p.say.length, 0);
 console.log(`${lines.length} lines, ${n} pieces, ${list.length} unique recordings (${chars} chars, ~${Math.round(chars / 14.5 / 60)} min)`, byVoice);
-{
-  const lv = new Set();
-  for (const [voice, text] of lvLines) for (const p of voicePieces(text, vocab)) if (p.key) lv.add(voice + '|' + p.key);
-  const lvChars = [...lv].reduce((a, k) => a + pieces.get(k).say.length, 0);
-  console.log(`THE LAST VERSION OF EARTH: ${lvLines.length} lines, ${lv.size} unique recordings (${lvChars} chars, ~${Math.round(lvChars / 14.5 / 60)} min) in ${new Set(lvLines.map(([v]) => v)).size} voices`);
-}

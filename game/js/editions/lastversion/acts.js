@@ -13,8 +13,11 @@ import { makeChronolith } from './Build.js';
 const L = (who, text, when) => (when ? { who, text, when } : { who, text });
 const N = (text) => L('NONE', text);
 const K = (text) => L('KAI', text);
+// a line that turns the story over carries the reveal cue (score.js)
+const REV = (l) => ({ ...l, voice: { ...(l.voice || {}), cue: 'reveal' } });
 const C = (id) => CAST.findIndex((c) => c.id === id);
-const says = (id, texts) => texts.map((text) => ({ who: CAST[C(id)].voice, name: CAST[C(id)].name.toUpperCase(), color: CAST[C(id)].color, text }));
+// (a person without a speaker of their own (CREW) carries their recorded voice, OVERHAUL.md §8.4)
+const says = (id, texts) => texts.map((text) => ({ who: CAST[C(id)].voice, name: CAST[C(id)].name.toUpperCase(), color: CAST[C(id)].color, text, ...(CAST[C(id)].voice === 'CREW' ? { voice: { id: CAST[C(id)].vid } } : {}) }));
 
 // a mission in one of the open places (places/specs/<key>.js): sector i activates quarter i
 const place = (o) => ({ kind: 'place', sectors: o.beats.length, ...o });
@@ -64,9 +67,9 @@ export const ACT1 = [
         intent('challenge', 'I\'ve never been here.', { lines: says('elder', ['That is what the others said.']), know: 1 }),
         intent('investigate', 'How many others?', { lines: says('elder', ['Enough that we stopped counting and started building. Under the ring there is a chamber. It has your name in it. I have never been able to read it.']), ev: 'others_before' }),
         intent('comfort', 'Thank you for keeping it.', { lines: says('elder', ['We kept it because you asked. Go under. It is yours to read.']), trust: 1 }),
-      ], { goal: 'Find the elder by the ring.', after: [N('Under the ring: a chamber, and on its floor a Helix access card bearing the name KAI VAREN, dated three thousand years before Helix.'), K('My card. My name. Nobody has had a card like this for three thousand years.')], gate: 'THE UNDER-CHAMBER' }),
+      ], { goal: 'Find the elder by the ring.', after: [REV(N('Under the ring: a chamber, and on its floor a Helix access card bearing the name KAI VAREN, dated three thousand years before Helix.')), K('My card. My name. Nobody has had a card like this for three thousand years.')], gate: 'THE UNDER-CHAMBER' }),
     ],
-    outro: [N('Mission 4 ends with a card that cannot exist in a chamber that should not.')],
+    outro: [K('A card that cannot exist, in a chamber that should not. And my name is on it.')],
   }),
   place({
     key: 'm05', n: 5, chapter: 'act1', name: 'THE VILLAGE THAT NEVER EXISTED', title: 'The settlement, thriving, abandoned, flooded', subtitle: 'Niko follows you through the years.',
@@ -87,7 +90,7 @@ export const ACT1 = [
     beats: [
       { kind: 'scene', goal: 'Divert the river at its head, in the earliest state.', scene: 'divert', prompt: 'LIFT THE HEAD-STONE', npc: 'niko', lines: WATER_HOOK, hologram: false },
       { kind: 'scene', goal: 'Reinforce the retaining wall in the middle state.', scene: 'wall', prompt: 'BRACE THE WALL' },
-      { kind: 'scene', goal: 'Release the pressure gate in the latest state, then find what is buried.', scene: 'gate', prompt: 'RELEASE THE GATE', after: [N('Under the drained mud: a machine, clean and humming, far more advanced than any year the village has seen.'), ...says('niko', ['Helix did not invent the machine. It found it. So did we. So did everyone.'])] },
+      { kind: 'scene', goal: 'Release the pressure gate in the latest state, then find what is buried.', scene: 'gate', prompt: 'RELEASE THE GATE', after: [REV(N('Under the drained mud: a machine, clean and humming, far more advanced than any year the village has seen.')), ...says('niko', ['Helix did not invent the machine. It found it. So did we. So did everyone.'])] },
     ],
     scenes: {
       divert: { when: '@PAST', lines: [N('The head-stone lifts. The river takes the channel you offer it, and in the next state the houses on the low bank are still standing.')], set: { river_diverted: true, water_route: true }, beatDone: true, log: 'I diverted the river in the earliest state. The ruins downstream changed shape.' },
@@ -97,7 +100,7 @@ export const ACT1 = [
       gate: { when: '@FUTURE && wall_braced', lines: [N('The gate releases. The water goes out through a channel somebody taught it long ago.')], set: { gate_released: true }, beatDone: true, log: 'The flood drained through the released gate. Under it: the machine.' },
       gate_no: { lines: [K('The gate only answers in the last state, once the wall can hold.')] },
     },
-    outro: [N('Niko reveals that Helix did not invent the machine; it found it.')],
+    outro: [L('NIKO', 'Now you know what the village knew. Be careful who you tell.'), K('Helix found it. Then who left it here?')],
   }),
   place({
     key: 'm06', n: 6, chapter: 'act1', name: 'THE CLOCKMAKER\'S HOUSE', title: 'A workshop that repeats itself', subtitle: 'The clockmaker says you visited decades ago.',
@@ -115,7 +118,7 @@ export const ACT1 = [
     scenes: {
       escapement: { lines: [N('Past, present, future: three positions, one mechanism. It only runs when all three agree.')], set: { clock_set: true, ev_witness_recording: true }, beatDone: true, log: 'A recording of my own older voice: "When the child returns, do not let him see the ninth minute."' },
     },
-    outro: [N('A recording warns: when the child returns, do not let him see the ninth minute.')],
+    outro: [K('My voice, older. Warning somebody about a child, and a ninth minute.'), N('Somewhere in the workshop, a clock that will not be built for forty years begins to tick.')],
   }),
   place({
     key: 'm07', n: 7, chapter: 'act1', name: 'THE BROKEN OBSERVATORY', title: 'Bronze rings under an open sky', subtitle: 'An ancient observatory, tracking alignments that include your birth.',
@@ -137,7 +140,7 @@ export const ACT1 = [
       { kind: 'contradiction', goal: 'Read the dates on the ring. Then read what was carved first.', official: 'ALIGNMENTS: 1077 BC · 2026 · 2049 · 2196', echo: 'KAI VAREN - BORN 14 MARCH 2017 - THE ONE WITH NO DUST', clue: 'cleared', crew: C('mira'), toast: 'RESIDUE READ', log: 'The dates span three thousand years, and one of them is my birthday. They did not know when. They knew who.' },
       E('mira', ['How could they know when you would be born? They didn\'t know when. They knew who.', 'The Chronolith has been anticipating you, Kai. Not recording you. Anticipating.'], { goal: 'Find the hidden recording in the outer ring.', hologram: true, after: [K('Mira\'s voice. A recording. She was nine.')] }),
     ],
-    outro: [N('Mira\'s hidden recording implies the Chronolith has been anticipating Kai, not merely recording him.')],
+    outro: [K('It was not recording me. It was waiting for me.')],
   }),
   place({
     key: 'm08', n: 8, chapter: 'act1', name: 'THE FIRST DEATH', title: 'Helix, altered', subtitle: 'The facility you return to is not the one you left.',
@@ -147,12 +150,12 @@ export const ACT1 = [
     beats: [
       { kind: 'arrival', goal: 'Investigate the altered facility: the staff records.', log: { title: 'STAFF RECORDS - REVISED', text: 'VARGA, I. - no record. ROOK, E. - Director. VAREN, K. - Temporal systems engineer, deceased 2026. A researcher named Lin has not come in since the Zero Second. Nobody remembers hiring her.' } },
       { kind: 'contradiction', goal: 'Recover the corrupted security log and read it twice.', official: 'SECURITY LOG 05:40 - CHAMBER CLOSED - NO ENTRY', echo: 'SECURITY LOG 05:40 - DALE OPENS CHAMBER - K. VAREN INSIDE - K. VAREN DOES NOT COME OUT', clue: 'guilty', crew: C('rook'), toast: 'LOG RECONSTRUCTED', log: 'The corrupted log, reconstructed: at 05:40 Dale opened the chamber on Rook\'s order. I was inside. I did not come out. I was also at home, asleep.' },
-      { kind: 'scene', goal: 'Reconstruct the last ten minutes before the Zero Second, and escape containment.', scene: 'containment', prompt: 'OPEN THE CONTAINMENT RECORD', npc: 'researcher', lines: [L('CREW', 'Don\'t save me.'), K('Why?'), L('CREW', 'Because I am not the one who died.')], npcWhen: '@PAST', hologram: true, after: [N('The system identifies the current timeline as VERSION 17. No surviving record exists for the previous sixteen.')] },
+      { kind: 'scene', goal: 'Reconstruct the last ten minutes before the Zero Second, and escape containment.', scene: 'containment', prompt: 'OPEN THE CONTAINMENT RECORD', npc: 'researcher', lines: [L('CREW', 'Don\'t save me.'), K('Why?'), L('CREW', 'Because I am not the one who died.')], npcWhen: '@PAST', hologram: true, after: [REV(N('The system identifies the current timeline as VERSION 17. No surviving record exists for the previous sixteen.'))] },
     ],
     scenes: {
       containment: { lines: [N('The last ten minutes, from the chamber\'s own memory: a man at the console who looks like you. A woman beside him who looks like Lin. At the ninth minute he turns the ring. At the tenth there is one second missing.')], set: { version_17: true, ev_version17: true }, beatDone: true, log: 'The timeline is VERSION 17. The sixteen before it have no surviving record.' },
     },
-    outro: [N('VERSION 17. No surviving record exists for the previous sixteen.')],
+    outro: [N('VERSION 17.'), K('Seventeen. Then where are the other sixteen?')],
   }),
 ];
 
@@ -244,7 +247,7 @@ export const ACT2 = [
       { kind: 'contradiction', goal: 'Find the second clock on the enemy route. Read what the loop erased.', official: 'EVACUATION ORDER - ALL CIVILIANS TO THE TOWER', echo: 'EVACUATION ORDER CANCELLED - TOWER COMPROMISED - DO NOT GO UP', clue: 'cleared', crew: C('engineer'), toast: 'RESIDUE READ', log: 'The order on the board sends everyone to the tower. The residue says the order was cancelled. The loop keeps the lie.' },
       E('engineer', ['You again. You get here earlier every time.', 'The transmitter is above us. Cut it and the street stops forgetting. I would do it myself but my leg is in two loops at once.', 'Go up before the reset. If you make it, you keep what you know. I think that is how it works. Nobody has made it.'], { goal: 'Rescue the engineer and reach the tower before the reset.', after: [N('The city resets. Kai does not. The knowledge stays.'), K('I remember. I remember all of it.')] }),
     ],
-    outro: [N('The city resets, but Kai retains his knowledge and no longer resets with it.')],
+    outro: [K('The street forgot. I didn\'t. Nine minutes, and every one of them is still mine.')],
   }),
   place({
     key: 'm10', n: 10, chapter: 'act2', name: 'ENEMIES WHO REMEMBER', title: 'The Continuum\'s detention block', subtitle: 'They believe time must be controlled. Sera helps you out.',
@@ -263,12 +266,12 @@ export const ACT2 = [
       prisoners: {
         lines: [N('Twelve people in unstable loops, repeating the same four seconds. Releasing them ends the loops. It also ends the four seconds they are safe in.')],
         choices: [
-          intent('comfort', 'Release them.', { lines: [N('The cells open. Eleven walk out. One does not get up. You will be told later that she was already dead in nine of the twelve.')], set: { prisoners_freed: true, echo_step: true }, ev: 'prisoners', beatDone: true }),
-          intent('withdraw', 'Leave them stable.', { lines: [N('The loops hold. Twelve people stay safe, four seconds at a time, until somebody else decides.')], set: { prisoners_held: true, echo_step: true }, ev: 'prisoners', beatDone: true }),
+          intent('comfort', 'Release them.', { consequence: true, lines: [N('The cells open. Eleven walk out. One does not get up. You will be told later that she was already dead in nine of the twelve.')], set: { prisoners_freed: true, echo_step: true }, ev: 'prisoners', beatDone: true }),
+          intent('withdraw', 'Leave them stable.', { consequence: true, lines: [N('The loops hold. Twelve people stay safe, four seconds at a time, until somebody else decides.')], set: { prisoners_held: true, echo_step: true }, ev: 'prisoners', beatDone: true }),
         ],
       },
     },
-    outro: [N('Kai unlocks Echo Step, a limited-use temporal afterimage.')],
+    outro: [K('A step ahead of myself. It costs me every time.'), L('SERA', 'Then spend it on somebody else.')],
   }),
   place({
     key: 'm11', n: 11, chapter: 'act2', name: 'THE INVERTED HOSPITAL', title: 'A hospital in localized inversion', subtitle: 'Some wards move forward. Others reverse. Kai learns to hold one thing back.',
@@ -338,7 +341,7 @@ export const ACT2 = [
       if (s === 2 && !f('inv_m11lock_done')) return f('ev_lock_order') ? 'Reverse only the last-fitted bolt each time. The order is on the tag, in the twin lock, in the chime.' : 'Learn the order the lock went together: the 2026 tag, the twin lock next door, the intercom chime.';
       return null;
     },
-    outro: [N('Mira\'s file lists an age of 32, though the record predates the present by 23 years; her death date is blank.')],
+    outro: [K('Thirty-two. In a file twenty-three years old. And nobody wrote down when she died.')],
   }),
   place({
     key: 'm12', n: 12, chapter: 'act2', name: 'THE MAN BEHIND THE GLASS', title: 'Helix, three years deep', subtitle: 'A figure changes states to escape you.',
@@ -347,9 +350,9 @@ export const ACT2 = [
     beats: [
       { kind: 'arrival', goal: 'Chase the figure through Helix in 2049, then through the corridor that only existed in 2026.', log: { title: 'DOOR LOG - CORRIDOR B', text: 'Corridor B was walled off in 2031. In 2026 it ran straight to the lower chamber. He is using it. He knows the building the way you know it.' } },
       { kind: 'contradiction', goal: 'Reconstruct his route from the repeated fragments.', official: 'MAINTENANCE: NO ACCESS BELOW -3', echo: 'HE GOES DOWN EVERY TIME. HE STOPS AT THE GLASS EVERY TIME. - K.V.', clue: 'cleared', crew: C('witness'), toast: 'ROUTE RECONSTRUCTED', log: 'His route repeats. He always goes down, and he always stops at the glass.' },
-      E('witness', ['The person you become when you refuse to let go.'], { goal: 'Enter the chamber containing the second Chronolith.', hologram: false, after: [N('Behind the glass: a second Chronolith, and a man with your face and your wrist scar, older by years he has not told you about. He steps into a fracture and is gone.'), K('That scar. That\'s my scar.')] }),
+      E('witness', ['The person you become when you refuse to let go.'], { goal: 'Enter the chamber containing the second Chronolith.', hologram: false, after: [REV(N('Behind the glass: a second Chronolith, and a man with your face and your wrist scar, older by years he has not told you about. He steps into a fracture and is gone.')), K('That scar. That\'s my scar.')] }),
     ],
-    outro: [N('The Witness bears the same wrist scar as Kai and escapes through a fracture.')],
+    outro: [K('My scar. He has my scar.'), N('The fracture closes behind him like water.')],
   }),
   place({
     key: 'm13', n: 13, chapter: 'act2', name: 'THE NINE-MINUTE WAR', title: 'The war zone', subtitle: 'Two factions fight over a stabilizer. Both are reacting to their own past attacks.',
@@ -371,9 +374,9 @@ export const ACT2 = [
         kind: 'tasks', goal: 'Disable the three devices, each in its own temporal state.', npc: 'soldier', npcAt: 'canyonGate',
         lines: says('soldier', ['You did that already. No - you\'re about to do it. I hate that I know the difference.', 'Three devices. Three years. Nobody on either side can reach all three. You can.']),
         tasks: [
-          { state: 'PAST', prompt: 'DEVICE ONE (2026)', at: 'deviceRail', kit: 'deviceCase', lines: [N('The first device, half buried in 2026 soil. It was planted before the war it starts. You pull its core.')] },
-          { state: 'PRESENT', prompt: 'DEVICE TWO (2049)', at: 'deviceCrane', kit: 'deviceCase', lines: [N('The second device, humming in 2049 at a pitch your teeth remember. You cut it.')] },
-          { state: 'FUTURE', prompt: 'DEVICE THREE (2196)', at: 'deviceCrater', kit: 'deviceCase', lines: [N('The third device is a ruin in 2196, and still running. You switch off something that has been on for a hundred and forty years.')] },
+          { state: 'PAST', prompt: 'DEVICE ONE (2026)', at: 'deviceRail', kit: 'deviceCase', no: 'This one was buried in 2026. It only answers there.', lines: [N('The first device, half buried in 2026 soil. It was planted before the war it starts. You pull its core.')] },
+          { state: 'PRESENT', prompt: 'DEVICE TWO (2049)', at: 'deviceCrane', kit: 'deviceCase', no: 'Not this year. This one hums in 2049.', lines: [N('The second device, humming in 2049 at a pitch your teeth remember. You cut it.')] },
+          { state: 'FUTURE', prompt: 'DEVICE THREE (2196)', at: 'deviceCrater', kit: 'deviceCase', no: 'In this year it is not a ruin yet. It answers in 2196.', lines: [N('The third device is a ruin in 2196, and still running. You switch off something that has been on for a hundred and forty years.')] },
         ],
         after: [K('Both sides are shooting at their own last attack.'), ...says('soldier', ['Then who fired first?']), K('Nobody. That\'s the point.')],
       },
@@ -383,12 +386,12 @@ export const ACT2 = [
       stabilizer: {
         lines: [N('The stabilizer can freeze the district - the war with it - or spend itself freeing the two hundred and twelve people locked in the frozen block.')],
         choices: [
-          intent('challenge', 'Destroy it. End the loop.', { lines: [N('The stabilizer goes. The district stops repeating. The war does not, but it is only a war now.'), ...says('sera', ['The Continuum will call that a victory. So will we. Go.'])], set: { faction: 'unwritten', stabilizer_destroyed: true }, ev: 'stabilizer', beatDone: true }),
-          intent('comfort', 'Redirect it. Free the people.', { lines: [N('The block thaws. Two hundred and twelve people walk out into a war that is still repeating. The Continuum holds the district now, and it is quiet.'), ...says('sera', ['You chose them over the district. I would have chosen the district. I am glad it was you.'])], set: { faction: 'continuum', civilians_freed: true }, ev: 'stabilizer', beatDone: true }),
+          intent('challenge', 'Destroy it. End the loop.', { consequence: true, lines: [N('The stabilizer goes. The district stops repeating. The war does not, but it is only a war now.'), ...says('sera', ['The Continuum will call that a victory. So will we. Go.'])], set: { faction: 'unwritten', stabilizer_destroyed: true }, ev: 'stabilizer', beatDone: true }),
+          intent('comfort', 'Redirect it. Free the people.', { consequence: true, lines: [N('The block thaws. Two hundred and twelve people walk out into a war that is still repeating. The Continuum holds the district now, and it is quiet.'), ...says('sera', ['You chose them over the district. I would have chosen the district. I am glad it was you.'])], set: { faction: 'continuum', civilians_freed: true }, ev: 'stabilizer', beatDone: true }),
         ],
       },
     },
-    outro: [N('The choice changes the district and later support options, but does not block the campaign.')],
+    outro: [K('The district will remember what I chose. So will the people who were in it.')],
   }),
 ];
 
@@ -418,7 +421,7 @@ export const ACT3 = [
         intent('comfort', 'Then let me help this one.', { lines: says('sera', ['Help the settlement first. The beacon can wait. The Chronolith cannot, but you can rest here.']), trust: 1 }),
       ], { goal: 'Find Sera at the memorial.' }),
     ],
-    outro: [N('Sera reveals that every version of Kai denies responsibility.')],
+    outro: [L('SERA', 'Every version of you says it was not you. Every one of them uses the same words.')],
   }),
   place({
     key: 'm15', n: 15, chapter: 'act3', name: 'THE CITY THAT FORGOT TOMORROW', title: 'The locked city', subtitle: 'Residents repeat daily routines. Nobody remembers beyond today.',
@@ -443,12 +446,12 @@ export const ACT3 = [
       lock: {
         lines: [N('The lock holds the city at one day. Stabilize it and nobody here ever has to grieve. Free it and tomorrow arrives, with everything that was lost.')],
         choices: [
-          intent('comfort', 'Stabilize it. Let them rest.', { lines: says('anja', ['Then they rest. I will keep checking the lock at noon. Someone has to remember that it is a lock.']), set: { city_stabilized: true }, ev: 'anja_lock', beatDone: true }),
-          intent('challenge', 'Free it. Let tomorrow come.', { lines: says('anja', ['Then it comes. They will hate us for a week and then they will plant things. I would like to see that.']), set: { city_freed: true }, ev: 'anja_lock', beatDone: true }),
+          intent('comfort', 'Stabilize it. Let them rest.', { consequence: true, lines: says('anja', ['Then they rest. I will keep checking the lock at noon. Someone has to remember that it is a lock.']), set: { city_stabilized: true }, ev: 'anja_lock', beatDone: true }),
+          intent('challenge', 'Free it. Let tomorrow come.', { consequence: true, lines: says('anja', ['Then it comes. They will hate us for a week and then they will plant things. I would like to see that.']), set: { city_freed: true }, ev: 'anja_lock', beatDone: true }),
         ],
       },
     },
-    outro: [N('The player stabilizes the city or frees it from the loop; later allies and dialogue change.')],
+    outro: [K('One day, kept forever, or every day after it. I chose for a whole city.')],
   }),
   place({
     key: 'm16', n: 16, chapter: 'act3', name: 'THE MUSEUM OF FAILED WORLDS', title: 'An underground museum', subtitle: 'Objects from worlds that no longer exist.',
@@ -459,7 +462,7 @@ export const ACT3 = [
       { kind: 'contradiction', goal: 'Play the second and third memories. Compare the artifacts with the current world.', official: 'MEMORY TWO - VERSION 9 - MIRA AT THE CONSOLE, KAI IN THE CHAIR', echo: 'MEMORY THREE - VERSION 16 - NOBODY AT THE CONSOLE. THE RING TURNS BY ITSELF', clue: 'cleared', crew: C('mara'), toast: 'VERSIONS COMPARED', log: 'Three memories of one event: Kai at the console, Mira at the console, nobody at the console. The ring turns in all three.' },
       E('mara', ['We had a thousand chances. We only needed one that was ours.', 'The photograph is in the last room. I did not hang it. I do not know who did.'], { goal: 'Determine which version explains the museum, and find the photograph.', after: [N('A photograph of older Kai and Mira, together, in a world the museum has no case for.'), K('He kept coming back. He kept bringing her back.')] }),
     ],
-    outro: [N('The museum proves the Witness has repeated the experiment many times.')],
+    outro: [K('He has done this before. Many times. Every case in this museum is one of his.')],
   }),
   place({
     key: 'm17', n: 17, chapter: 'act3', name: 'THE WITNESS\'S ARCHIVE', title: 'Shifting corridors', subtitle: 'Recordings from multiple versions of your life.',
@@ -468,9 +471,9 @@ export const ACT3 = [
     beats: [
       { kind: 'arrival', goal: 'Navigate the shifting corridors to the recordings.', log: { title: 'RECORDING 17 OF 117', text: 'Version one hundred and seventeen. She woke. She asked where you were. I did not have an answer she would accept. Beginning again.' } },
       { kind: 'contradiction', goal: 'Match the recordings to the physical evidence. Avoid the security that mimics you.', official: 'EXPERIMENT 1 - SUBJECT: M. VAREN - OUTCOME: SUCCESS', echo: 'EXPERIMENT 1 - SUBJECT: M. VAREN - BODY LOST - NEURAL PATTERN PERSISTS IN THE RING - INCOMPLETE', clue: 'guilty', crew: C('witness'), toast: 'EVIDENCE MATCHED', log: 'Mira\'s original body died. An incomplete neural pattern persisted in the Chronolith. The Witness has been rebuilding her from it, every version.' },
-      E('witness', ['You kept bringing her back.'], { goal: 'Use temporal echoes to reach the earlier rooms and reconstruct the original experiment.', hologram: true, after: [K('You kept bringing her back.'), L('WITNESS', 'I kept finding a world where she could exist.'), K('And what happened to those worlds?'), L('WITNESS', 'They became the price.')] }),
+      E('witness', ['You kept bringing her back.'], { goal: 'Use temporal echoes to reach the earlier rooms and reconstruct the original experiment.', hologram: true, after: [K('You kept bringing her back.'), L('WITNESS', 'I kept finding a world where she could exist.'), K('And what happened to those worlds?'), REV(L('WITNESS', 'They became the price.'))] }),
     ],
-    outro: [N('Mira\'s original body died, but an incomplete neural pattern persisted in the Chronolith.')],
+    outro: [K('She died. What stayed was a pattern in the ring, and he kept building her back out of it.')],
   }),
   place({
     key: 'm18', n: 18, chapter: 'act3', name: 'THE FRACTURE', title: 'The planet, in three states', subtitle: 'Temporal storms. The landscape changes across the years.',
@@ -490,7 +493,7 @@ export const ACT3 = [
       {
         kind: 'tasks', goal: 'Evacuate the settlement before its anchor fails: three houses. Then cross the canyon that exists only in the past.',
         tasks: [
-          { prompt: 'KNOCK: THE WATER KEEPERS', at: 'houseA', kit: 'doorFrame', lines: [N('A family of four, already packed, as if they had been told yesterday.'), L('CREW', 'The canyon. In the old year. We know.')] },
+          { prompt: 'KNOCK: THE WATER KEEPERS', at: 'houseA', kit: 'doorFrame', lines: [N('A family of four, already packed, as if they had been told yesterday.'), { who: 'CREW', name: 'WATER KEEPER', text: 'The canyon. In the old year. We know.', voice: { id: 'CROWD_F' } }] },
           { prompt: 'KNOCK: THE POTTER', at: 'houseB', kit: 'doorFrame', lines: [N('An old man who will not leave his kiln until you carry the last pot for him.')] },
           { prompt: 'KNOCK: THE SCHOOLHOUSE', at: 'houseC', kit: 'doorFrame', lines: [N('Eleven children and a teacher counting them twice. The anchor light over the door is red.')] },
         ],
@@ -499,7 +502,7 @@ export const ACT3 = [
       { kind: 'log', goal: 'Navigate the flooded highway in the present.', log: { title: 'SERA - ON THE RADIO', text: 'Highway\'s under water in your year. The lamp posts are above it. Walk the lamp posts if you have to, Kai, I am not coming to get you.' } },
       E('mira', ['I remember the first world.'], { goal: 'Traverse the collapsing skyscraper to the transmission tower.', hologram: true, after: [K('Which one?'), L('MIRA', 'The one before you tried to save me.'), N('Her message points toward the Unwritten Second.')] }),
     ],
-    outro: [N('Mira\'s message points Kai toward the Unwritten Second.')],
+    outro: [L('MIRA', 'Find the second nobody has written yet. I will be there.'), K('The Unwritten Second.')],
   }),
 ];
 
@@ -525,7 +528,7 @@ export const ACT4 = [
       { kind: 'contradiction', goal: 'Cross the bridge that is visible only in reflections.', official: 'THERE IS NO BRIDGE', echo: 'THERE IS A BRIDGE. YOU ARE STANDING ON IT', clue: 'cleared', crew: C('orren'), toast: 'REFLECTION READ', log: 'The bridge exists in the reflection. In the past it was there. In the past it holds.' },
       E('mira', ['You\'ve been trying to reach the version of me that would forgive you.', 'Saving me is not the same as understanding me, Kai. You keep solving the wrong puzzle.'], { goal: 'Reach the door that appears in several places.', hologram: true }),
     ],
-    outro: [N('Mira challenges Kai\'s assumption that saving her is the same as understanding her.')],
+    outro: [K('Understanding her. Not saving her. I don\'t know how to do the first one.')],
   }),
   place({
     key: 'm20', n: 20, chapter: 'act4', name: 'MIRA\'S MEMORY', title: 'Subjective memories that contradict each other', subtitle: 'Childhood. The original experiment. A timeline where she survives and you do not.',
@@ -544,9 +547,9 @@ export const ACT4 = [
     beats: [
       { kind: 'log', goal: 'Explore Mira\'s childhood with Kai.', log: { title: 'MEMORY - THE BLUE DOOR', text: 'Kai is twelve. He says the song goes up and then up and then it stops. Mira says it goes up, up, and then down. They are both right. It is her memory and she lets him be right.' } },
       { kind: 'contradiction', goal: 'Replay the original experiment.', official: 'EXPERIMENT 1 - SUBJECT CONSENTED', echo: 'EXPERIMENT 1 - SHE WAS NINE. SHE WANTED TO SEE THE RING TURN. HE LET HER', clue: 'guilty', crew: C('witness'), toast: 'MEMORY REPLAYED', log: 'The first experiment: Mira was nine. She wanted to see the ring turn. Older Kai let her. That is the first death.' },
-      E('mira', ['I remember being your sister.'], { goal: 'Experience the timeline where Mira survives and Kai disappears. Align three memories without forcing them into one.', hologram: true, after: [K('That\'s not the same thing.'), L('MIRA', 'Would it be enough if I said it was?'), N('Mira is a reconstructed consciousness carrying memories from multiple possible lives. None of them is false.')] }),
+      E('mira', ['I remember being your sister.'], { goal: 'Experience the timeline where Mira survives and Kai disappears. Align three memories without forcing them into one.', hologram: true, after: [K('That\'s not the same thing.'), L('MIRA', 'Would it be enough if I said it was?'), REV(N('Mira is a reconstructed consciousness carrying memories from multiple possible lives. None of them is false.'))] }),
     ],
-    outro: [N('Kai learns that Mira is a reconstructed consciousness carrying memories from multiple possible lives.')],
+    outro: [K('Every life she remembers was real. Even the ones that never happened.')],
   }),
   place({
     key: 'm21', n: 21, chapter: 'act4', name: 'THE LAST BATTLE OF THE CONTINUUM', title: 'The command structure', subtitle: 'The Continuum wants one timeline. The Witness wants Mira. The Unwritten want the network gone.',
@@ -568,7 +571,7 @@ export const ACT4 = [
         ],
       },
     },
-    outro: [N('The Witness begins the final experiment.')],
+    outro: [L('WITNESS', 'It has already started, Kai. It started three thousand years ago.')],
   }),
   place({
     key: 'm22', n: 22, chapter: 'act4', name: 'THE FIRST SECOND', title: 'The original activation point', subtitle: 'Previous locations appear around you.',
@@ -590,7 +593,7 @@ export const ACT4 = [
       { kind: 'contradiction', goal: 'Read the repeating pattern from the clockmaker\'s house, and the inversion from the hospital. Distinguish evidence from memory.', official: 'MEMORY: KAI ACTIVATED THE CHRONOLITH TO SAVE MIRA', echo: 'EVIDENCE: THE WITNESS TRIED TO PREVENT THE ZERO SECOND 117 TIMES. EACH ATTEMPT WAS THE ZERO SECOND', clue: 'guilty', crew: C('witness'), toast: 'EVIDENCE OVER MEMORY', log: 'The Witness\'s attempts to prevent the Zero Second helped cause it. Every one of them.' },
       E('witness', ['You were trying to stop me from becoming you.'], { goal: 'Open the Chronolith\'s final chamber.', after: [K('I was trying to find a version of me that didn\'t have to.')] }),
     ],
-    outro: [N('The Witness\'s attempts to prevent the Zero Second helped cause it.')],
+    outro: [K('Every time he tried to stop it, he started it.'), L('WITNESS', 'Yes. Now you know why I need you.')],
   }),
 ];
 
@@ -627,7 +630,7 @@ export const FINALE = [
         ],
       },
     },
-    outro: [N('A post-credit clock begins ticking.'), L('VOICE', 'Version one hundred and eighteen.')],
+    outro: [{ who: 'VOICE', text: 'Version one hundred and eighteen.', voice: { fx: 'pa' } }],
     // quest chain A's consequence: the passengers Kai got off the 41 clear the opening streets
     adjust(level, rt) {
       if (level.sector !== 0 || !rt.g.facts.get('jun_line')) return;
@@ -641,10 +644,28 @@ export const FINALE = [
 ];
 
 export const ENDINGS = {
-  A: { title: 'THE FIXED WORLD', text: ['Kai destroys the Chronolith. Temporal fractures close and history stabilizes, but Mira\'s reconstructed existence cannot survive.', 'For the first time, tomorrow belonged to tomorrow.'] },
-  B: { title: 'THE INFINITE WAR', text: ['Kai separates temporal states into independent branches. Mira survives, but civilizations begin fighting over the boundaries between timelines.', 'We had saved every possible tomorrow. None of them agreed on the future.'] },
-  C: { title: 'AFTERZERO', text: ['Kai becomes the anchor that absorbs contradictions. Mira wakes in a world where Kai was never born, with only a faint memory of a voice urging her to live.', 'I finally found a second that belongs to nobody.'] },
+  A: {
+    title: 'THE FIXED WORLD', text: ['Kai destroys the Chronolith. Temporal fractures close and history stabilizes, but Mira\'s reconstructed existence cannot survive.', 'For the first time, tomorrow belonged to tomorrow.'],
+    after: [N('Rain City. The 41 is late.'), N('Kai Varen looks up at the board, and smiles at it.')],
+  },
+  B: {
+    title: 'THE INFINITE WAR', text: ['Kai separates temporal states into independent branches. Mira survives, but civilizations begin fighting over the boundaries between timelines.', 'We had saved every possible tomorrow. None of them agreed on the future.'],
+    after: [N('At the line where one world ends and the next begins, Sera Voss stands guard. On the other side, someone stands guard back.')],
+  },
+  C: {
+    title: 'AFTERZERO', text: ['Kai becomes the anchor that absorbs contradictions. Mira wakes in a world where Kai was never born, with only a faint memory of a voice urging her to live.', 'I finally found a second that belongs to nobody.'],
+    after: [N('Rain City, a Tuesday. The 41 is late.'), N('A woman plants something in a window box and hums three notes: up, up, and then down.'), { who: 'KAI', text: 'Live.', voice: { fx: 'echo' } }],
+  },
 };
+
+// the epilogue: one line for each consequence the player set (U8's ledger replaces this short list)
+export const EPILOGUE = [
+  { when: 'jun_line', who: 'JUN', text: 'They all got off. I stopped apologizing.' },
+  { when: 'water_route', who: 'CREW', name: 'THE GARDENER', color: '#4f6170', voice: { id: 'GARDENER' }, text: 'The channel is running again. Nobody alive remembers who opened it.' },
+  { when: 'clock_set', who: 'CREW', name: 'EZRA MOLL', color: '#8a6a3a', voice: { id: 'CLOCKMAKER' }, text: 'Wednesday. Imagine that.' },
+  { when: 'city_freed', who: 'ANJA', text: 'We planted things.' },
+  { when: 'ev_raw_log', who: 'IVEN', text: 'Elias Rook testified for nine days. The log said I refused to sign, forty-one times.' },
+];
 
 // =============================================================================================
 // OPTIONAL CASES: quest chains B and C (A, Jun Park, and D, Iven Marr, are part of the Prologue)
@@ -663,7 +684,7 @@ export const CASES = [
       gates: { when: '@PAST', lines: [N('Left, right, centre. The water takes the channel and leaves the houses. In 2196 the ruins now have a way through.')], set: { water_route: true, quest_tala: 'resolved' }, beatDone: true, log: 'The water route through the settlement is open in every year, including the ruins.' },
       gates_no: { lines: [K('The gates only move in the year the river was alive.')] },
     },
-    outro: [N('Access shortcut, Niko\'s additional observatory clue, and a changed future garden.')],
+    outro: [L('TALA', 'The river knows the way now. So do you.'), L('NIKO', 'The observatory was built by people who watched water. Remember that, when you go up there.')],
   }),
   place({
     key: 'c_c', n: 'C', chapter: 'cases', name: 'TWO RECORDS, ONE DISASTER', title: 'Mara Quill, the 2196 city', subtitle: 'Two archives name different first Chronolith operators.',
@@ -678,7 +699,7 @@ export const CASES = [
         intent('comfort', 'I\'m not calling anyone a liar.', { lines: says('mara', ['Good. That is the whole job. Go and look at the display in another year.']), set: { quest_mara: 'resolved', ev_dual_archive: true }, trust: 1, beatDone: true }),
       ], { goal: 'Inspect the museum display in another era.' }),
     ],
-    outro: [N('The archive is exposed as incomplete without declaring every survivor a liar.')],
+    outro: [L('MARA', 'Incomplete is not the same as false. Write that over the door, and nobody has to be a liar.')],
   }),
 ];
 

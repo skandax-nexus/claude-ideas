@@ -32,11 +32,13 @@ export const NPCS = {
     id: 'sera', first: 'Sera', name: 'Sera Voss', role: 'Resistance leader, 2196', pronoun: HER, color: '#c0762a', voice: 'SERA', era: 'future', seed: 4, model: 'rb_juno', variant: 'resistance', height: 1.7, vid: 'SERA', walk: 1,
     temporal: ['FUTURE'], faction: 'unwritten', want: 'To protect a fragile district.', fear: 'Another timeline disaster.',
     barks: ['Stay off the glass. It remembers weight.', 'If you are who they say, keep walking.', 'We teach children your name before they learn the names of the dead.'],
+    echo: [{ who: 'NONE', text: 'Sera Voss belongs to 2196. In this year she is an echo, walking a perimeter that has not been built yet.' }, { who: 'SERA', text: 'Stay off the glass. It remembers weight.' }],
   },
   rook: {
     id: 'rook', first: 'Rook', name: 'Dr. Elias Rook', role: 'Director, Helix', pronoun: HIS, color: '#6c5bc4', voice: 'ROOK', era: 'present', seed: 5, model: 'rb_rook', variant: 'rook', height: 1.8, vid: 'ROOK', walk: 1,
     temporal: ['PRESENT'], faction: 'continuum', want: 'Control of the Chronolith project.', fear: 'Public exposure.',
     barks: ['The chamber is off limits, Kai.', 'Lockdown is procedure. Nothing more.'],
+    echo: [{ who: 'NONE', text: 'Elias Rook is not here in this year. His echo stands at a window, practising a statement.' }, { who: 'ROOK', text: 'Lockdown is procedure. Nothing more.' }],
   },
   niko: {
     id: 'niko', first: 'Niko', name: 'Niko', role: 'Keeper of the settlement', pronoun: HIS, color: '#2f8a5a', voice: 'NIKO', era: 'past', seed: 6, model: 'rb_niko', variant: 'niko', height: 1.76, vid: 'NIKO', walk: 1,
@@ -48,6 +50,7 @@ export const NPCS = {
     id: 'anja', first: 'Anja', name: 'Dr. Anja Vale', role: 'Temporal scientist, 2196', pronoun: HER, color: '#1f9a90', voice: 'ANJA', era: 'future', seed: 7, model: 'rb_doctor_f', variant: 'anja', height: 1.68, vid: 'ANJA', walk: 1,
     temporal: ['FUTURE'], want: 'To stabilize the city\'s temporal lock.', fear: 'Preserving a lie.',
     barks: ['The lock holds. I have stopped asking what it holds out.', 'Every morning here is the same morning. It is very restful. I hate it.'],
+    echo: [{ who: 'NONE', text: 'Anja Vale lives in 2196. Here she is an echo, checking a lock at noon.' }, { who: 'ANJA', text: 'The lock holds. I have stopped asking what it holds out.' }],
   },
   iven: {
     id: 'iven', first: 'Iven', name: 'Iven Marr', role: 'Helix technician', pronoun: HIS, color: '#a8862a', voice: 'IVEN', era: 'present', seed: 8, model: 'rb_engineer_m', variant: 'default', height: 1.8, vid: 'IVEN', walk: 1,
@@ -71,6 +74,7 @@ export const NPCS = {
     id: 'mara', first: 'Mara', name: 'Mara Quill', role: 'Archivist, 2196', pronoun: HER, color: '#8a6a9a', voice: 'MARA', era: 'future', seed: 11, model: 'rb_office_f', variant: 'faded', height: 1.68, vid: 'MARA', walk: 1,
     temporal: ['FUTURE'], want: 'To preserve conflicting records.', fear: 'One official history.',
     barks: ['Two records. Both true. Start there.', 'A clean history is usually a history someone has cleaned.'],
+    echo: [{ who: 'NONE', text: 'Mara Quill keeps her archive in 2196. Her echo files the same two records, side by side, again.' }, { who: 'MARA', text: 'Two records. Both true. Start there.' }],
   },
   orren: {
     id: 'orren', first: 'Orren', name: 'Orren', role: 'A guide, or a pattern', pronoun: HIS, color: '#7a5fd0', voice: 'ORREN', era: 'outside', seed: 12, model: 'xbot', variant: 'hologram', height: 1.8, vid: 'ORREN', walk: 1, hologram: true, glow: 0x7a5fd0,
@@ -82,7 +86,8 @@ export const NPCS = {
     temporal: ['echo'], height: 1.24, want: 'A familiar tune and a way home.', fear: 'Nothing. She does not understand the timeline.',
     barks: ['Do you know the song? It goes up and then it goes up again and then it stops.', 'The train is late. The train is early. Which one is mine?'],
   },
-  // Tier 2: named people with a face of their own (voice stays the generic crew voice until U5 records their vid)
+  // Tier 2: named people with a face and a recorded voice of their own (vid, OVERHAUL.md §8.4); their lines are
+  // CREW lines, said in that voice (Runtime.voiced, voicelines.js)
   guard: { id: 'guard', first: 'Pryce', name: 'Officer Pryce', role: 'Helix security, the checkpoint', pronoun: HER, color: '#4f6170', voice: 'CREW', era: 'present', seed: 21, model: 'rb_security_f', variant: 'helix', height: 1.7, vid: 'PRYCE', walk: 1 },
   dale: { id: 'dale', first: 'Dale', name: 'Officer Dale', role: 'Helix security', pronoun: HIS, color: '#4f6170', voice: 'CREW', era: 'present', seed: 22, model: 'rb_security_m', variant: 'grey', height: 1.8, vid: 'DALE', walk: 1 },
   haig: { id: 'haig', first: 'Haig', name: 'Officer Haig', role: 'Helix security, off shift', pronoun: HER, color: '#4f6170', voice: 'CREW', era: 'present', seed: 24, model: 'rb_civ_f2', variant: 'home', height: 1.67, vid: 'HAIG', walk: 1, recording: true },

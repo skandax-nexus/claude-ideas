@@ -79,8 +79,18 @@ for f in $CHARS; do cp "../game/assets/characters/$f" "$OUT/assets/assets/charac
 echo "characters: $(echo $CHARS | wc -w) models ($(du -ch $(for f in $CHARS; do echo ../game/assets/characters/$f; done) | tail -1 | cut -f1))"
 mkdir -p "$OUT/assets/assets/looks" && cp ../game/assets/looks/*.webp "$OUT/assets/assets/looks/"
 mkdir -p "$OUT/assets/assets/textures" && cp ../game/assets/textures/*.jpg ../game/assets/textures/*.hdr "$OUT/assets/assets/textures/"
-if [ -f ../game/assets/voice/voice.ogg ]; then cp ../game/assets/voice/voice.json ../game/assets/voice/voice.ogg "$OUT/assets/assets/voice/"
-else echo "warning: no voice pack (tools/voice-pack.*); dialogue will use device speech"; fi
+# the voices: Station Zero's pack, or THE LAST VERSION's own packs (assets/voice/lv/<group>/, one per chapter
+# group, OVERHAUL.md §8.3) and nothing else
+copy_voice() {
+  if [ "$EDITION" = "lastversion" ]; then
+    for d in ../game/assets/voice/lv/*/; do
+      g=$(basename "$d"); mkdir -p "$1/lv/$g"; cp "$d/voice.json" "$d/voice.ogg" "$1/lv/$g/"
+    done
+    echo "voices: $(ls -d ../game/assets/voice/lv/*/ | wc -l) packs ($(du -ch ../game/assets/voice/lv/*/voice.ogg | tail -1 | cut -f1))"
+  elif [ -f ../game/assets/voice/voice.ogg ]; then cp ../game/assets/voice/voice.json ../game/assets/voice/voice.ogg "$1/"
+  else echo "warning: no voice pack (tools/voice-pack.*); dialogue will use device speech"; fi
+}
+copy_voice "$OUT/assets/assets/voice"
 
 # 2. Compile the Java host and convert to dex.
 javac --release 8 -classpath "$ANDROID_JAR" -d "$OUT/classes" src/com/afterzero/preview/MainActivity.java 2>&1 | grep -v JAVA_TOOL_OPTIONS || true
@@ -103,9 +113,13 @@ cp ../game/assets/textures/*.jpg "$P/assets/textures/"
 python3 -I ../tools/gltf-json.py ../game/assets/characters "$P/assets/characters" $CHARS >/dev/null
 # (the first <script> is the edition flag when there is one; the preview flags go in front of it)
 sed '0,/<script>/s#<script>#<script>window.AZ_MODEL_EXT=".json";window.AZ_NO_HDR=1;</script><script>#' "$OUT/assets/index.html" > "$P/index.html"
-[ -f ../game/assets/voice/voice.ogg ] && cp ../game/assets/voice/voice.json ../game/assets/voice/voice.ogg "$P/assets/voice/"
-# a claude.ai preview takes binary files up to 15 MB: say so before the voice pack outgrows it
-VOICE_MB=$(( $(stat -c %s ../game/assets/voice/voice.ogg 2>/dev/null || echo 0) / 1000000 )) # decimal MB, to be safe
-if [ "$VOICE_MB" -ge 15 ]; then echo "error: voice.ogg is $VOICE_MB MB; the web preview cannot be published (15 MB per file). Split the pack per edition." >&2; exit 1
-elif [ "$VOICE_MB" -ge 14 ]; then echo "warning: voice.ogg is $VOICE_MB MB, close to the preview's 15 MB per-file limit" >&2; fi
+copy_voice "$P/assets/voice"
+# a claude.ai preview takes binary files up to 15 MB: say so before a voice pack outgrows it
+if [ "$EDITION" = "lastversion" ]; then PACKS=$(ls ../game/assets/voice/lv/*/voice.ogg); else PACKS=../game/assets/voice/voice.ogg; fi
+for f in $PACKS; do
+  [ -f "$f" ] || continue
+  VOICE_MB=$(( $(stat -c %s "$f") / 1000000 )) # decimal MB, to be safe
+  if [ "$VOICE_MB" -ge 15 ]; then echo "error: $f is $VOICE_MB MB; the web preview cannot be published (15 MB per file). Split the pack." >&2; exit 1
+  elif [ "$VOICE_MB" -ge 14 ]; then echo "warning: $f is $VOICE_MB MB, close to the preview's 15 MB per-file limit" >&2; fi
+done
 echo "Preview in $(pwd)/$P"

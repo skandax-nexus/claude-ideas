@@ -41,7 +41,7 @@ export const INV_LINES = {
   intercom: 'Temporal discontinuity.', // (bible) the ward intercom; inside a reversed ward it plays backwards
 };
 // who says each of them (Kai, unless named here)
-export const INV_SPEAKERS = { watch: 'NONE', intercom: 'NONE' };
+export const INV_SPEAKERS = { watch: 'NONE', intercom: 'PA' }; // (the ward intercom is a station speaker)
 
 const DEG = Math.PI / 180;
 const _f = new THREE.Vector3(), _eye = new THREE.Vector3(), _to = new THREE.Vector3(), _p = new THREE.Vector3();
@@ -301,6 +301,7 @@ export class Inversion {
     this.idleT = 0;
     g.facts.set('inv_used');
     this.snd.start(rec.grain);
+    this.rt.score?.cue('reverse'); // (the score's held layer: its envelopes run backwards while this holds)
     this.fxs?.started(t.pos);
     if (rec.kind === 'lock') {
       p.tryPart(t.part);
@@ -391,6 +392,7 @@ export class Inversion {
     }
     this.endActive();
     this.snd.release(rec.grain, rec.creak);
+    this.rt.score?.cue('reverse', { release: true });
     this.lastRelease = why;
   }
 
@@ -455,6 +457,7 @@ export class Inversion {
       if (this.wardT <= 0) {
         this.wardT = 14;
         this.snd.intercom();
+        this.rt.score?.capText('the intercom, backwards');
         g.hud.toast('<small>INTERCOM, BACKWARDS</small><br>…ytiunitnocsid laropmeT', 2400);
       }
     }
@@ -503,7 +506,10 @@ export class Inversion {
 
   // Mission 11's intercom chime: the four bolts' tones, low to high, in the order they were fitted
   chime() {
-    ['RING', 'BAR', 'STAR', 'CRESCENT'].forEach((n, i) => setTimeout(() => this.snd.tone(n, 0.7), 300 + i * 520));
+    ['RING', 'BAR', 'STAR', 'CRESCENT'].forEach((n, i) => setTimeout(() => {
+      this.snd.tone(n, 0.7);
+      this.rt.score?.capText(`a tone, ${['the lowest', 'higher', 'higher again', 'the highest'][i]}`); // (Sound captions: the pulse)
+    }, 300 + i * 520));
   }
 
   // Mission 11: the Chronolith catches the ward's rhythm
@@ -943,7 +949,7 @@ class ReverseSound {
   }
 
   musicLevel() {
-    return (this.a.ducked ? 0.3 : 0.55) * (this.ducking ? 0.35 : 1);
+    return (this.a.level ? this.a.level('music') : (this.a.ducked ? 0.3 : 0.55)) * (this.ducking ? 0.35 : 1); // (the player's mix too)
   }
 
   // the music drops out for a moment (an inverted watcher comes into view)
@@ -1023,9 +1029,9 @@ class ReverseSound {
     if (!this.ready()) return;
     const v = this.g.voice;
     try {
-      const plan = (v?.plan?.(INV_LINES.intercom, 'NONE') || []).filter((p) => p.ref);
+      const plan = (v?.plan?.(INV_LINES.intercom, 'PA') || []).filter((p) => p.ref);
       if (!plan.length) return;
-      const bufs = await Promise.all(plan.map((p) => v.clip(p.key, p.ref)));
+      const bufs = await Promise.all(plan.map((p) => v.clip(p.key, p.ref, p.pack)));
       const c = this.a.ctx;
       const src = c.createBufferSource();
       src.buffer = reverseBuffer(c, joinBuffers(c, bufs));

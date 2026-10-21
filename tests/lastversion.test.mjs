@@ -34,6 +34,8 @@ import { LV_MODELS, SHARED_MODELS, MANIFEST, CHAPTER_CAST, COMMON, sexOf, isChil
 import { WARDROBE, hasVariant, packRules } from '../game/js/editions/lastversion/wardrobe.js';
 import { ERAS, EXCEPTIONS, ANCIENT_WOMEN, AMBIENT_CAST, eraModels, MAX_PEOPLE } from '../game/js/editions/lastversion/crowds.js';
 import { WATCHERS, HUMAN, watcherModels, kindsOf } from '../game/js/editions/lastversion/watchers.js';
+import { spokenLines, voiceOf, lexicon, GROUPS, chapterCardLines, missionCardLines, endingLines, POSTCREDIT, choiceLine, numberWords } from '../game/js/editions/lastversion/voicelines.js';
+import { voicePieces } from '../game/js/audio/voiceKey.js';
 
 const INTENTS = ['challenge', 'comfort', 'investigate', 'withdraw'];
 const engine = () => new RealityEngine(LV.engineOptions());
@@ -146,20 +148,27 @@ test('the edition keeps its own saves and settings, and the default edition is u
   for (const s of ['com.afterzero.lastversion', 'versionName="2.0.0"', 'AFTERZERO-LastVersion-v$VER.apk', 'AFTERZERO: Last Version', "window.AZ_EDITION='lastversion'"]) assert.ok(build.includes(s), `build-apk.sh: ${s}`);
 });
 
+// tools/voice-pack.py's VOICES: { speaker: [spec, speed, pitch] } (a spec may blend voices: 'a*w+b*w')
+const VOICES = () => {
+  const py = fs.readFileSync(new URL('../tools/voice-pack.py', import.meta.url), 'utf8');
+  const out = {};
+  for (const m of py.matchAll(/'(\w+)': \('([\w*.+]+)', ([\d.]+), ([\d.]+)\)/g)) out[m[1]] = [m[2], +m[3], +m[4]];
+  return out;
+};
+const baseOf = (spec) => spec.split('+').map((p) => p.split('*')).sort((a, b) => (+b[1] || 1) - (+a[1] || 1))[0][0];
+
 test('every speaker has a name, a colour and its own voice', () => {
   const need = ['KAI', 'MIRA', 'WITNESS', 'ROOK', 'NIKO', 'SERA', 'ANJA', 'IVEN', 'JUN', 'TALA', 'MARA', 'ORREN', 'CHILD'];
   for (const k of need) assert.ok(LV.speakers[k]?.name && LV.speakers[k]?.color, k);
-  const py = fs.readFileSync(new URL('../tools/voice-pack.py', import.meta.url), 'utf8');
-  const voice = {};
-  for (const m of py.matchAll(/'(\w+)': \('(\w+)', ([\d.]+), ([\d.]+)\)/g)) voice[m[1]] = m[2];
-  for (const k of [...need, 'NONE']) assert.ok(voice[k], `tools/voice-pack.py VOICES has ${k}`);
-  const ids = need.map((k) => voice[k]);
-  assert.equal(new Set(ids).size, ids.length, `each speaker a distinct Kokoro voice: ${ids}`);
-  assert.equal(voice.KAI[1], 'm', 'Kai is a male voice');
+  const voice = VOICES();
+  for (const k of [...need, 'NONE', 'PA']) assert.ok(voice[k], `tools/voice-pack.py VOICES has ${k}`);
+  const ids = need.map((k) => voice[k].join('|'));
+  assert.equal(new Set(ids).size, ids.length, `each speaker a distinct voice: ${ids}`);
+  assert.ok(/^[ab]m_/.test(baseOf(voice.KAI[0])), 'Kai is a male voice');
   const lines = allLines();
   assert.ok(lines.length > 500, `${lines.length} lines`);
   const who = new Set(lines.map(([w]) => w));
-  for (const w of who) assert.ok(LV.speakers[w] || ['NONE', 'CREW_n', 'CREW_f', 'CREW_m', 'VOICE', 'YOU'].includes(w), `unknown speaker ${w}`);
+  for (const w of who) assert.ok(LV.speakers[w] || ['NONE', 'CREW', 'VOICE', 'YOU'].includes(w), `unknown speaker ${w}`);
 });
 
 // --- the missions --------------------------------------------------------------------------------
@@ -712,7 +721,7 @@ test('the REVERSE rules, refusals and lines are the spec\'s, and recorded', () =
   assert.equal(INV_LINES.intercom, 'Temporal discontinuity.');
   const lines = allLines();
   const has = (who, text) => lines.some(([w, t]) => w === who && t === text);
-  assert.ok(has('KAI', INV_LINES.unlock) && has('KAI', INV_LINES.refuse) && has('NONE', INV_LINES.intercom) && has('NONE', INV_LINES.watch));
+  assert.ok(has('KAI', INV_LINES.unlock) && has('KAI', INV_LINES.refuse) && has('PA', INV_LINES.intercom) && has('NONE', INV_LINES.watch));
   for (const [, t] of RULES) assert.ok(has('NONE', t), t);
   for (const p of main.find((m) => m.n === 11).processes) for (const h of p.hints || []) assert.ok(has('KAI', h), h);
 });
@@ -1341,4 +1350,184 @@ test('every wardrobe variant is a valid recolour: at most 8 rules, numbers in ra
       for (const p of v.props || []) assert.ok(['umbrella', 'lantern', 'staff', 'trowel', 'clipboard', 'loupe', 'lanyard', 'beret', 'visor', 'badge'].includes(p), `${model}/${name}: prop ${p}`);
     }
   }
+});
+
+// --- voice and score (OVERHAUL.md §8; U5) -------------------------------------------------------------------
+const SPOKEN = spokenLines();
+const PACKS = Object.fromEntries(GROUPS.map((g) => {
+  const f = `game/assets/voice/lv/${g}/voice.json`;
+  return [g, fs.existsSync(f) ? JSON.parse(fs.readFileSync(f, 'utf8')) : null];
+}));
+
+test('every spoken line plans fully from the common pack and its own group\'s: no misses, never a CREW voice', () => {
+  for (const g of GROUPS) assert.ok(PACKS[g], `game/assets/voice/lv/${g}/voice.json exists`);
+  const miss = [];
+  for (const e of SPOKEN) {
+    const v = voiceOf(e.who, e.extra);
+    assert.ok(!/^CREW/.test(v), `${e.path}: a CREW voice (${v}) for "${e.text}"`);
+    for (const p of voicePieces(e.text, [])) {
+      if (!p.key) continue;
+      if (!PACKS.common?.[v]?.[p.key] && !PACKS[e.group]?.[v]?.[p.key]) miss.push(`${e.group} ${e.path} ${v}: ${p.key}`);
+    }
+  }
+  assert.equal(miss.length, 0, `${miss.length} pieces not in the packs:\n${miss.slice(0, 20).join('\n')}`);
+  // and every clip is inside its pack's file
+  for (const g of GROUPS) {
+    const size = fs.statSync(`game/assets/voice/lv/${g}/voice.ogg`).size;
+    for (const lib of Object.values(PACKS[g])) for (const [off, len, dur] of Object.values(lib)) assert.ok(off >= 0 && off + len <= size && dur > 0, `${g}: a clip outside voice.ogg`);
+  }
+});
+
+test('the spoken text is clean: no tags, key names, design notes or digits the voice would guess at; no templates in say calls', () => {
+  const seen = new Set();
+  for (const e of SPOKEN) {
+    if (seen.has(e.text)) continue;
+    seen.add(e.text);
+    const t = e.text;
+    assert.ok(!/\[[^\]]*\]/.test(t), `a [tag] in "${t}"`);
+    assert.ok(!/\bpress(es|ed)?\b|\sQ\s|(?<!Case)\sC\./i.test(t), `a key name in "${t}" (${e.path})`);
+    assert.ok(!/post-credit|the player|Mission \d+ ends|does not block|Access shortcut/i.test(t), `a design note in "${t}" (${e.path})`);
+    assert.ok(!/\d/.test(lexicon(t)), `digits the lexicon does not read: "${t}" -> "${lexicon(t)}"`);
+    assert.ok(!/\$\{/.test(t), `a template in "${t}"`);
+  }
+  // no say / hud.say call in the edition's code is built from a template string
+  const dir = 'game/js/editions/lastversion';
+  for (const f of fs.readdirSync(dir).filter((n) => n.endsWith('.js'))) {
+    const src = fs.readFileSync(`${dir}/${f}`, 'utf8');
+    for (const m of src.matchAll(/\b(?:hud\.)?say\(([^;]*?)\)\s*;/g)) assert.ok(!/`[^`]*\$\{/.test(m[1]), `${f}: a template in ${m[0].slice(0, 120)}`);
+  }
+  // the lexicon (§8.5): years, times, acts, names, the relay
+  assert.equal(lexicon('Rain City, 2049.'), 'Rain City, twenty forty-nine.');
+  assert.equal(lexicon('Test moved to 05:40.'), 'Test moved to oh five forty.');
+  assert.equal(lexicon('8:14 and 16:02'), 'eight fourteen and sixteen oh two');
+  assert.equal(lexicon('Act II'), 'Act Two');
+  assert.equal(lexicon('Jun Park'), 'Joon Park');
+  assert.equal(lexicon('Dr. Lin'), 'Doctor Lin');
+  assert.equal(lexicon('Relay 41-B'), 'Relay forty-one B');
+  assert.equal(lexicon('2196'), 'twenty-one ninety-six');
+  assert.equal(numberWords(117), 'one hundred and seventeen');
+});
+
+test('each voice pack is under 12 MB and the edition under 22 MB; Station Zero\'s pack is unchanged', async () => {
+  let total = 0;
+  for (const g of GROUPS) {
+    const s = fs.statSync(`game/assets/voice/lv/${g}/voice.ogg`).size + fs.statSync(`game/assets/voice/lv/${g}/voice.json`).size;
+    assert.ok(s < 12e6, `${g}: ${(s / 1e6).toFixed(2)} MB`);
+    total += s;
+  }
+  assert.ok(total < 22e6, `the edition's voices: ${(total / 1e6).toFixed(2)} MB`);
+  const { createHash } = await import('node:crypto');
+  const sha = (f) => createHash('sha256').update(fs.readFileSync(f)).digest('hex');
+  assert.equal(sha('game/assets/voice/voice.json'), '4654fc0b03d7d19eef14ee870550a6112137ff3cdc87217a56987ad07917685e', 'Station Zero voice.json');
+  assert.equal(sha('game/assets/voice/voice.ogg'), '297c32d68b3c100c33ee8332db32fdf4084895f54830ef98fdf9f88788873f41', 'Station Zero voice.ogg');
+});
+
+test('every speaker has a voice of their own, and the same person shares a base voice', () => {
+  const V = VOICES();
+  const used = new Set(SPOKEN.map((e) => voiceOf(e.who, e.extra)));
+  for (const v of used) assert.ok(V[v], `tools/voice-pack.py VOICES has ${v}`);
+  const ed = [...new Set([...used, 'KAI', 'MIRA', 'WITNESS', 'CHILD', 'LIN', 'KAI12', 'PRYCE', 'DALE', 'HAIG', 'ELDER', 'CLOCKMAKER', 'RHEA', 'SERGEANT', 'ODILE', 'WARDEN', 'GARDENER', 'FLORIST', 'RECEPTIONIST', 'DIRECTOR', 'PA'])];
+  const specs = ed.map((k) => V[k].join('|'));
+  assert.equal(new Set(specs).size, specs.length, 'a distinct (spec, speed, pitch) per speaker');
+  assert.ok(/^am_/.test(baseOf(V.KAI[0])), 'Kai is a man');
+  for (const k of ['KAI', 'WITNESS', 'KAI12']) assert.equal(baseOf(V[k][0]), 'am_eric', `${k} is Kai's voice`);
+  for (const k of ['MIRA', 'LIN', 'CHILD']) assert.equal(baseOf(V[k][0]), 'af_river', `${k} is Mira's voice`);
+  assert.equal(voiceOf('VOICE', {}), 'WITNESS', 'the voice in every speaker is the Witness voice');
+  // a person who speaks has a recorded voice of their own
+  const speaking = new Set();
+  for (const e of SPOKEN) if (e.who === 'CREW') speaking.add(e.extra.id);
+  for (const n of Object.values(NPCS)) if (n.barks?.length || DIALOGUE[n.id]) assert.ok(n.vid, `${n.id} has a vid`);
+  for (const id of speaking) assert.ok(id && V[id], `a CREW line in ${id}`);
+});
+
+test('in the edition the voice never touches the device\'s speech, waits for a loading pack, and records a miss', async () => {
+  const touched = [];
+  const win = new Proxy({ location: { search: '' } }, {
+    get(t, k) { if (k === 'speechSynthesis' || k === 'AndroidTTS') touched.push(k); return t[k]; },
+    has(t, k) { if (k === 'speechSynthesis' || k === 'AndroidTTS') touched.push(k); return k in t; },
+  });
+  globalThis.window = win;
+  try {
+    const { Voice } = await import('../game/js/audio/Voice.js?edition-test');
+    const fakeAudio = { ctx: { currentTime: 0, decodeAudioData: () => Promise.reject(new Error('no')) }, master: {} };
+    const v = new Voice(fakeAudio, { edition: 'lastversion' });
+    assert.equal(v.available, true);
+    v.speak('A line no pack has.', 'KAI', {});
+    v.speak('Another.', 'CREW', { id: 'PRYCE', fx: 'pa' });
+    v.speakDevice('Never.', 'KAI', {});
+    v.stop();
+    assert.deepEqual(touched, [], 'speechSynthesis and AndroidTTS are never read');
+    assert.equal(win.__voiceMiss?.length, 2, 'each line it could not say is a miss');
+    // a pack still loading: the line waits for it
+    v.loading = 0.5;
+    let release;
+    v.whenReady = new Promise((r) => (release = r));
+    v.speak('Wait for me.', 'KAI', {});
+    assert.equal(win.__voiceMiss.length, 2, 'not yet a miss');
+    release([]);
+    v.loading = 1;
+    await new Promise((r) => setTimeout(r, 20));
+    assert.equal(win.__voiceMiss.length, 3, 'a miss once the pack came without it');
+  } finally {
+    delete globalThis.window;
+  }
+});
+
+test('the cinematic lines: chapter and mission cards, the choices Kai says, the ending sequence', () => {
+  assert.deepEqual(chapterCardLines('act2').map((l) => l.text), ['Act Two. The Nine-Minute War.', CHAPTERS.act2.question]);
+  const m4 = main.find((m) => m.n === 4);
+  assert.equal(missionCardLines(m4)[0].text, 'Mission four. The Man from the Last Day.');
+  assert.equal(missionCardLines(main.find((m) => m.n === 23))[0].text, 'Mission twenty-three. Afterzero.');
+  assert.deepEqual(choiceLine({ intent: 'comfort', label: 'Run the line. Get them home.' }), { who: 'KAI', text: 'Run the line. Get them home.' });
+  assert.equal(choiceLine({ label: 'x', mute: true }), null);
+  for (const k of ['A', 'B', 'C']) {
+    const L = endingLines(k);
+    assert.equal(L[0].who, 'NONE');
+    assert.equal(L[0].text, ENDINGS[k].text[0], `Ending ${k}: the bible's text first`);
+    const q = L.find((l) => l.text === ENDINGS[k].text[1]);
+    assert.equal(q?.who, 'KAI', `Ending ${k}: Kai says the quote`);
+    if (k === 'C') assert.equal(q.voice?.fx, 'echo');
+    assert.ok(!L.some((l) => /post-credit/i.test(l.text)), 'no stage direction is read');
+  }
+  assert.deepEqual(POSTCREDIT, [{ who: 'VOICE', text: 'Version one hundred and eighteen.', voice: { fx: 'pa' } }]);
+  // everything spoken is recorded: the cards and the choices are in the walk
+  const has = (who, text) => SPOKEN.some((e) => e.who === who && e.text === text);
+  assert.ok(has('NONE', 'Mission four. The Man from the Last Day.') && has('NONE', 'Act Two. The Nine-Minute War.'));
+  assert.ok(has('KAI', 'Run the line. Get them home.') && has('PA', 'The 8:14 service to Helix North is now arriving. Yesterday.'));
+  // the groups: every line belongs to a pack group; the tables are common
+  for (const e of SPOKEN) assert.ok(GROUPS.includes(e.group), `${e.path}: ${e.group}`);
+  assert.ok(SPOKEN.filter((e) => e.path.startsWith('DIALOGUE.')).every((e) => e.group === 'common'));
+});
+
+test('the score: every region plays a minute in every year, and every cue plays, on a stand-in audio graph', async () => {
+  const { Score, REGIONS, MISSION_REGION, BEDS } = await import('../game/js/editions/lastversion/score.js');
+  const param = () => ({ value: 0, setValueAtTime() {}, linearRampToValueAtTime() {}, exponentialRampToValueAtTime() {}, setTargetAtTime() {}, cancelScheduledValues() {} });
+  let nodes = 0;
+  const node = () => { nodes++; const n = { gain: param(), frequency: param(), detune: param(), Q: param(), playbackRate: param(), connect: (x) => x || n, disconnect() {}, start() {}, stop() {}, type: '', buffer: null, loop: false, curve: null }; return n; };
+  const ctx = { currentTime: 1, sampleRate: 8000, createOscillator: node, createGain: node, createBiquadFilter: node, createBufferSource: node, createDelay: node, createWaveShaper: node,
+    createBuffer: (ch, len) => ({ getChannelData: () => new Float32Array(len), duration: len / 8000 }) };
+  const synth = { ctx, music: node(), sfx: node(), amb: node(), master: node(), reverb: node(), threat: 0.4, mix: {},
+    osc() {}, noise() {}, pad() {}, pluck() {}, bell() {}, silence() {}, setMix() {}, level: () => 1 };
+  const facts = new FactStore();
+  const rt = { g: { audio: synth, facts, voice: null }, inv: null, wallaLines: () => [] };
+  const score = new Score(rt);
+  for (const m of main) assert.ok(REGIONS[m.music || MISSION_REGION[m.key]], `${m.key} has a region`);
+  for (const k of Object.keys(BEDS)) assert.ok(REGIONS[k], `beds for a known region: ${k}`);
+  for (const [key, R] of Object.entries(REGIONS)) {
+    for (const year of ['PRESENT', 'PAST', 'FUTURE']) {
+      score.setRegion(key);
+      score.setYear(year);
+      let t = 1, n = 0;
+      while (t < 61) {
+        const len = score.step(synth, n++, t);
+        assert.ok(len > 0.04 && len < 2, `${key}/${year}: a step of ${len}`);
+        t += len;
+      }
+      assert.ok(R.tempo > 0 && R.layers.PRESENT, key);
+    }
+  }
+  for (const c of ['title', 'chapter', 'card', 'reveal', 'consequence', 'cliff', 'zero', 'fracture', 'pin', 'echoStep', 'reverse', 'loopReset', 'pa', 'ending:A', 'ending:B', 'ending:C', 'postcredit']) score.cue(c);
+  score.cut();
+  assert.equal(score.heard.length, 17);
+  assert.ok(nodes > 1000, `${nodes} nodes made`);
 });

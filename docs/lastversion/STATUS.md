@@ -124,11 +124,32 @@ story beats. How it works: [`DESIGN.md`](DESIGN.md).
   chapter.
 - **Stealth and evasion stand in for combat** (watchers, cones, the lure, Echo Step decoys);
   see DESIGN.md.
-- **Voices**: KAI (male), MIRA, WITNESS, ROOK, NIKO, SERA, ANJA, IVEN, JUN, TALA, MARA, ORREN,
-  CHILD and the narrator each have a distinct Kokoro voice in `tools/voice-pack.py`;
-  `tools/voice-pack.mjs` collects the edition's lines (808 lines, 1,165 unique recordings, about
-  44 minutes). **The recordings are not rendered yet**: until they are, the game speaks the
-  edition's lines with the device's speech synthesis where it has one, and shows subtitles always.
+- **Voices and score** (v2.1, U5; DESIGN.md "Voice and score"): every line the edition says is heard
+  from the edition's own recorded packs, in the claude.ai preview and the APK alike, and nothing goes to
+  `speechSynthesis` or AndroidTTS any more. `voicelines.js` walks every speaking path (2,248 lines said
+  from 1,875 recordings in 29 voices: the narrator, the thirteen principal speakers (the Witness on Kai's
+  voice, the Child on Mira's), seven tier-2 people and Dr. Lin (on Mira's voice), the station PA, and six
+  crowd voices by sex and age; young Kai, Dale, Haig, the Warden, the Florist, the receptionist and the
+  Director have voices ready for the lines U6–U8 give them); templates are gone (the default echo, the socket, the tasks' refusals are authored), spoken hints
+  name no keys, outros are character lines, the pronunciation lexicon reads years, times, dates, the Acts,
+  Jun, Dr., 41-B and every number in words, and capitals as words. The packs (measured 2026-10-21, Opus
+  16 kbps for speech, 12 for barks and thoughts; voice.ogg + voice.json): `common` 2.54 MB (670
+  recordings, 19.4 min), `prologue` 1.88 MB (391, 13.9 min), `act1` 0.97 MB (189, 7.1 min), `act2`
+  1.16 MB (251, 8.7 min), `act3` 0.79 MB (160, 5.8 min), `act4` 0.56 MB (125, 4.1 min), `finale` 0.31 MB
+  (56, 2.3 min), `cases` 0.16 MB (33, 1.1 min): 8.37 MB and 62 minutes in all (budgets: 12 MB a pack,
+  22 MB in all). 1,026 of the recordings were rendered for U5 (Kokoro int8, about 70 minutes of CPU on
+  this box); the rest came from the cache unchanged. Station Zero's `voice.json` and `voice.ogg` are
+  byte-identical (their sha256 is pinned in a test). The sound wakes on the first tap (TAP FOR SOUND if it
+  cannot); the score is the edition's own (the three-note motif, a region per mission with a layer per
+  year, the cues, beds per place and year); each mission opens on its card (and a new chapter on its own),
+  said and scored, then a staged cold open; Kai says what he chooses; the PA, the records, Rook's calls and
+  the echoes each have their sound; the endings are scored and said to the post-credit voice. The mix
+  (Dialogue, Music, Effects, Ambience, Sound captions) is in the settings. An ear check of new clips could
+  not be done in this container (no audio output, no speech recogniser): 40 new clips (half of them years,
+  times, Jun and the Acts) were checked automatically instead (length for their text, level, gaps, and
+  the phonemes Kokoro read them as; `tools/voice-audition.py`), which caught "KAI + MIRA" spelled out as
+  letters and "-3" read without its minus (both fixed and re-rendered); one clip peaks at full scale after
+  encoding. The audition page for a human listen stays in the session's scratchpad (not shipped).
 - **Tests** (U4, 2026-10-21): `tests/lastversion.test.mjs` has 56 tests (`npm test`: 84, all pass), the
   twelve new ones for casting: every person's model file and variant, pronouns that match the body,
   no named face in a crowd, crowd eras that never share a face (but `rb_child_m2`), Pryce on
@@ -193,7 +214,10 @@ story beats. How it works: [`DESIGN.md`](DESIGN.md).
   a long session keeps the models of every chapter it has visited (at most the edition's 40).
 - **Faction support** changes who answers in Mission 21 and what people say; it does not change
   patrol responses or open safe routes elsewhere (Jun's line in the Finale is the one safe route).
-- **Music** is the engine's procedural score (a chord progression per state, ambience beds per
-  region), not the bible's cues.
-- **Voice recordings** not rendered (see above).
+- **A human ear check** of the U5 voices (the audition page above), and of the score's regions and cues,
+  has not been done: nothing in this container can play sound to a listener.
+- **The score** is procedural (Synth's oscillators and noise, 0 bytes of assets): the bible's cues are
+  there by name and shape, not as composed music; the crowd walla is the crowds' own barks far off.
+- **Cold opens** are today's intros staged with a default camera (behind and over Kai's shoulder);
+  authored shots, hooks and the story's cold opens come with U6–U8, which record their own lines.
 - **Device testing** of the Android build on phones has not been done in this session.

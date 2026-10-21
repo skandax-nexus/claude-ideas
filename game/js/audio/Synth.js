@@ -36,6 +36,9 @@ export class Synth {
     this.duck = 1;
     this.step = 0;
     this.seed = 1;
+    // THE LAST VERSION's mix rows (Dialogue, Music, Effects, Ambience): 1 is the game's own balance
+    this.mix = { voice: 1, music: 1, sfx: 1, amb: 1 };
+    this.composer = null; // a score that writes the music instead of the built-in loop (step(synth, n, t) -> seconds)
     if (ctx) this.build();
   }
 
@@ -80,7 +83,7 @@ export class Synth {
     this.reverb.connect(wet).connect(this.master);
 
     this.music = c.createGain();
-    this.music.gain.value = 0.55;
+    this.music.gain.value = this.level('music');
     this.musicFilter = c.createBiquadFilter();
     this.musicFilter.type = 'lowpass';
     this.musicFilter.frequency.value = 2200;
@@ -89,13 +92,76 @@ export class Synth {
     this.musicFilter.connect(this.reverb);
 
     this.sfx = c.createGain();
-    this.sfx.gain.value = 0.8;
+    this.sfx.gain.value = this.level('sfx');
     this.sfx.connect(this.master);
     this.sfx.connect(this.reverb);
+
+    // the ambience beds and the voices have buses of their own (at 1: the same sound as straight to the master)
+    this.amb = c.createGain();
+    this.amb.gain.value = this.level('amb');
+    this.amb.connect(this.master);
+    this.voiceBus = c.createGain();
+    this.voiceBus.gain.value = this.level('voice');
+    this.voiceBus.connect(this.master);
+  }
+
+  // each bus's level in the mix (the duck, the Zero Second's silence and the player's mix rows meet here)
+  level(bus) {
+    const m = this.mix;
+    return bus === 'music' ? (this.ducked ? 0.3 : 0.55) * m.music : bus === 'sfx' ? 0.8 * m.sfx : bus === 'amb' ? m.amb : m.voice;
+  }
+
+  setMix(mix) {
+    Object.assign(this.mix, mix);
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+    for (const [b, node] of [['music', this.music], ['sfx', this.sfx], ['amb', this.amb], ['voice', this.voiceBus]]) node.gain.setTargetAtTime(this.level(b), t, 0.05);
+  }
+
+  // Sound on the first tap (THE LAST VERSION calls this from its title, on every early pointerup, touchend,
+  // mousedown, keydown and click until the context runs): create the context, resume it, play one silent
+  // sample (iOS), ask for playback audio (the iOS silent switch). -> true once it is running.
+  unlock() {
+    if (typeof window === 'undefined') return false;
+    if (!this.ctx) this.start();
+    const c = this.ctx;
+    if (!c) return false;
+    try {
+      if (navigator.audioSession && navigator.audioSession.type !== 'playback') navigator.audioSession.type = 'playback';
+    } catch {
+      /* not offered */
+    }
+    if (c.state !== 'running') {
+      c.resume?.().catch(() => {});
+      const b = c.createBuffer(1, 1, c.sampleRate);
+      const s = c.createBufferSource();
+      s.buffer = b;
+      s.connect(c.destination);
+      s.start(0);
+    }
+    if (!this.lifecycle) {
+      // a hidden page goes quiet and comes back when shown (a tap brings it back if the system refused)
+      this.lifecycle = () => {
+        if (!this.ctx) return;
+        if (document.hidden) this.ctx.suspend?.().catch(() => {});
+        else this.ctx.resume?.().catch(() => {});
+      };
+      document.addEventListener('visibilitychange', this.lifecycle);
+    }
+    return c.state === 'running';
   }
 
   // --- music -----------------------------------------------------------------
   schedule(until) {
+    if (this.composer) {
+      // a score of its own: after a stall it starts again from now, never in a burst
+      if (this.nextTime < this.ctx.currentTime - 0.3) this.nextTime = this.ctx.currentTime + 0.05;
+      while (this.nextTime < until) {
+        this.nextTime += Math.max(0.05, this.composer.step(this, this.step, this.nextTime) || STEP);
+        this.step++;
+      }
+      return;
+    }
     // after a stall or a paused app, skip the notes that were missed instead of playing them all at once
     const late = this.ctx.currentTime - this.nextTime;
     if (late > 0.1) {
@@ -210,19 +276,23 @@ export class Synth {
     const gain = c.createGain();
     gain.gain.value = 0;
     gain.gain.setTargetAtTime(a.vol, t, 0.8);
-    src.connect(f).connect(gain).connect(this.master);
+    src.connect(f).connect(gain).connect(this.amb || this.master);
     src.start();
     this.beds[kind] = { src, gain, lfo };
   }
 
-  // the Zero Second: rain, crowd and score stop for one second, then a low metallic resonance
+  // the Zero Second: rain, crowd and score stop for one second, then a low metallic resonance. The voices
+  // go on (the narration is the moment), and each bus comes back to its own level in the mix.
   silence(sec = 1.0) {
     if (!this.ctx) return;
     const t = this.ctx.currentTime;
-    const g = this.master.gain;
-    g.cancelScheduledValues(t);
-    g.setTargetAtTime(0.0001, t, 0.015);
-    g.setTargetAtTime(this.muted ? 0 : 0.7 * (this.volume ?? 1), t + sec, 0.12); // back to the player's level (and mute)
+    for (const [b, node] of [['music', this.music], ['sfx', this.sfx], ['amb', this.amb]]) {
+      const g = node.gain;
+      g.cancelScheduledValues(t);
+      g.setTargetAtTime(0.0001, t, 0.015);
+      g.setTargetAtTime(this.level(b), t + sec, 0.12);
+    }
+    this.silentUntil = t + sec;
     this.osc('sine', 55, t + sec, 2.4, 0.22, 0.01, 1.8, this.sfx);
     this.osc('triangle', 110.5, t + sec + 0.05, 1.6, 0.06, 0.01, 1.2, this.sfx);
   }
@@ -235,7 +305,8 @@ export class Synth {
   setDuck(on) {
     if (!this.ctx || this.ducked === on) return;
     this.ducked = on;
-    this.music.gain.setTargetAtTime(on ? 0.3 : 0.55, this.ctx.currentTime, 0.3);
+    // (during a silence, the music comes back to its new level when the silence ends)
+    this.music.gain.setTargetAtTime(this.level('music'), Math.max(this.ctx.currentTime, this.silentUntil || 0), 0.3);
   }
 
   // --- sound effects ---------------------------------------------------------

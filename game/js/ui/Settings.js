@@ -32,7 +32,7 @@ export function defaultSettings(touch) {
     textSize: 1,
     smart: true, // smart renderer: adapts resolution and effects to stay smooth
     // THE LAST VERSION: you are Kai Varen, a realistic man in shirtsleeves, until you choose otherwise
-    ...(EDITION === 'lastversion' ? { hero: { id: 'real_m' } } : {}),
+    ...(EDITION === 'lastversion' ? { hero: { id: 'real_m' }, mix: { voice: 1, music: 0.8, sfx: 1, amb: 0.85 }, captions: false } : {}),
   };
 }
 

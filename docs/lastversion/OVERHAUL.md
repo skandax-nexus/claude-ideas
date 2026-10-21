@@ -212,6 +212,15 @@ An NPC entry (`npcs.js`) is:
 - Every spoken line lives in data that `voicelines.spokenLines()` walks.
 - No `say` / `hud.say` call in edition code may use a template string (lint test).
 - A line may carry `voice: { id, fx, cue }`. `fx` is one of `pa`, `radio`, `recording` or `echo`.
+- *As built in U5:* `spokenLines({ levels = true })` returns `[{ who, text, extra: { id, fx, cue }, group, path }]`;
+  `voiceOf(who, extra)` is the recorded voice (`extra.id`, else `YOU` → `KAI`, `VOICE` → `WITNESS`, `MIRA9` → `CHILD`, else `who`).
+  A CREW line with no `voice.id` takes the `vid` of the person saying it (the NPC, the beat's crew, the scene's `npc`); a line
+  no person says carries its own `voice: { id }`. Lines a mission's code says live in its data as `spoken: { key: [lines] }`.
+  A mission may give its card a `logline` (else `subtitle`), and override its music (`music: '<region>'`) and beds
+  (`beds: { PRESENT: [...], ... }`); a choice may carry `say` (what Kai says instead of its label), `mute`, and
+  `consequence: true` (the stinger). The station speakers are the `PA` speaker. `cinema.play({ shots, lines, cue,
+  letterbox }, then)` calls `then` synchronously when the moment ends. Every new line is recorded by the unit that adds
+  it: `node tools/voice-pack.mjs <dir> --edition lastversion`, then `tools/voice-pack.py` per group (§8.10).
 
 ### 3.6 Facts the browser bot already relies on (keep the IDs)
 
