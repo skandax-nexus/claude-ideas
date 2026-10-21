@@ -497,7 +497,8 @@ function firstSwitchRooms(P, story, si, rt) {
     R.scene('touch', [0, 4.6, -12], 'TOUCH THE CHRONOLITH', { model: () => makeChronolith(1.15, 'helix', { eras: { PRESENT: 'helix', PAST: 'helix', FUTURE: 'halo' } }), r: 6, once: true });
     // 2026: scaffolding around a half-built ring, a thermos; 2196: the ceiling gone, moss, a fallen beam
     for (const [x, z] of [[-7, -6], [7, -6], [-7, -18], [7, -18]]) R.box([x - 0.15, 0, z - 0.15, x + 0.15, 10, z + 0.15], { mat: 'trimDark', when: '@PAST' });
-    R.box([-7, 5.0, -18, 7, 5.2, -6], { mat: 'crate', solid: false, when: '@PAST' });
+    // (two scaffold boards along the poles, so the open sky of 2026 shows over the ring)
+    for (const x of [-7, 7]) R.box([x - 0.8, 5.0, -18, x + 0.8, 5.2, -6], { mat: 'crate', solid: false, when: '@PAST' });
     R.text('HELIX - CHAMBER 1 - UNDER CONSTRUCTION - 2026', [0, 8.2, -23.9], 0, { size: 0.42, color: '#ffd9a0', when: '@PAST' });
     R.text('CHAMBER - AUTHORISED PERSONNEL - DIRECTOR\'S OFFICE', [0, 8.2, -23.9], 0, { size: 0.42, color: '#9fd8ff', when: '@PRESENT' });
     R.box([-12, 0, -24, 12, 0.3, 0], { mat: 'moss', solid: false, when: '@FUTURE' });

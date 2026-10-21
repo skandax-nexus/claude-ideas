@@ -927,7 +927,7 @@ test('a place keeps to its budgets: colliders, texts, people, vegetation kinds, 
   for (const st of Object.values(STYLES)) assert.ok(st.veg.length <= 6 && st.palette.look === undefined);
 });
 
-// Kai walks a route through a place with the game's own physics (entities/Player.js, stepUp 0.35):
+// Kai walks a route through a place with the game's own physics (entities/Player.js: a 0.35 m step from the ground):
 // [x, z] waypoints, steering only; it fails where a stair, ramp or bridge does not carry him
 function walkRoute(level, state, start, route, facts = {}) {
   const cols = [];
@@ -935,7 +935,7 @@ function walkRoute(level, state, start, route, facts = {}) {
     if (!e.solid || (e.when && !compileCondition(e.when)({ fact: (k) => facts[k], state }))) continue;
     cols.push({ min: e.box.slice(0, 3), max: e.box.slice(3) });
   }
-  const p = Object.assign(Object.create(Player.prototype), { pos: new THREE.Vector3(start[0], start[1] + 0.86, start[2]), vel: new THREE.Vector3(), H: new THREE.Vector3(0, 0, -1), U: new THREE.Vector3(0, 1, 0), gravity: -1, grounded: false, half: new THREE.Vector3(0.3, 0.85, 0.3), stepUp: 0.35, comfort: true, pitch: 0, facing: new THREE.Vector3(0, 0, -1), colliders: [] });
+  const p = Object.assign(Object.create(Player.prototype), { pos: new THREE.Vector3(start[0], start[1] + 0.86, start[2]), vel: new THREE.Vector3(), H: new THREE.Vector3(0, 0, -1), U: new THREE.Vector3(0, 1, 0), gravity: -1, grounded: false, half: new THREE.Vector3(0.3, 0.85, 0.3), topSpeed: null, stepOff: 0, airT: 0, _canStep: false, comfort: true, pitch: 0, facing: new THREE.Vector3(0, 0, -1), colliders: [] });
   for (const [x, z, jump] of route) {
     let best = 1e9, stuck = 0;
     for (let t = 0; t < 40; t += 1 / 30) {
@@ -951,7 +951,7 @@ function walkRoute(level, state, start, route, facts = {}) {
   return { at: [+p.pos.x.toFixed(2), +(p.pos.y - 0.85).toFixed(2), +p.pos.z.toFixed(2)] };
 }
 
-test('the places can be walked: their stairs, terraces, ramps and bridges carry Kai (Player physics, stepUp 0.35)', () => {
+test('the places can be walked: their stairs, terraces, ramps and bridges carry Kai (Player physics: the engine\'s 0.35 m step)', () => {
   const lv = (key, s = 0) => PLACED.find((l) => l.deck.mkey === key && l.s === s).level;
   const lm = (l, n) => l.landmarks[n];
   const routes = [
@@ -983,6 +983,47 @@ test('the places can be walked: their stairs, terraces, ramps and bridges carry 
   const [sx, , sz] = m5.landmarks.footbridgeS, n = m5.landmarks.footbridgeN;
   assert.ok(walkRoute(m5, 'PAST', [sx, 0, sz], [[n[0], n[2]]]).at?.[1] > 0, 'THRIVING: over the footbridge');
   assert.ok(walkRoute(m5, 'PRESENT', [sx, 0, sz], [[n[0], n[2]]]).at?.[1] === undefined || walkRoute(m5, 'PRESENT', [sx, 0, sz], [[n[0], n[2]]]).at[1] < -1, 'ABANDONED: into the river');
+});
+
+// what main.js takes from a place's year: the light (edition.themeFor) and where the sun shines from (edition.sunDir)
+test('every year of a place lights main.js: a full theme and a sun direction, the same objects every frame', async () => {
+  const { themeFor, sunDir } = await import('../game/js/editions/lastversion/places/index.js');
+  for (const { deck, s, level } of PLACED) {
+    for (const st of deck.states) {
+      const th = themeFor(level, st), sd = sunDir(level, st);
+      for (const k of ['fog', 'sky', 'ground', 'hemi', 'sun', 'sunColor', 'density', 'device']) assert.ok(Number.isFinite(th[k]), `${deck.mkey}/${s} ${st}: theme.${k}`);
+      assert.ok(sd.length === 3 && Math.abs(Math.hypot(...sd) - 26) < 1e-6 && sd[1] > 0, `${deck.mkey}/${s} ${st}: the sun above the horizon for the shadows`);
+      assert.ok(themeFor(level, st) === th && sunDir(level, st) === sd, `${deck.mkey} ${st}: no new object per frame`);
+    }
+    assert.equal(themeFor(level, 'NOPE'), null);
+  }
+  assert.equal(themeFor({}, 'PRESENT'), null, 'outside a place, main.js keeps its own themes');
+});
+
+// THINK (H): Kai answers from the mission's own thoughts, never ZoneGen's challenge-hint table
+test('THINK answers in every mission of the Prologue and Act I, and in Mission 11 before and after REVERSE', () => {
+  for (const ch of ['prologue', 'act1', 'act2']) {
+    const game = { engine: engine(), facts: new FactStore(), story: null, campaign: { lv: true, chapter: ch, deck: 0, sector: 0, flags: {} } };
+    const rt = Object.assign(Object.create(LastVersion.prototype), { g: game, def: LV });
+    game.story = rt.makeStory(ch);
+    const said = [];
+    Object.assign(game, { audio: { blip() {} }, hud: { say: (lines) => said.push(...lines.map((l) => l.text)) }, deckWorld: { flags: {} }, player: { pos: new THREE.Vector3() } });
+    game.story.decks.forEach((deck, d) => {
+      if (ch === 'act2' && deck.n !== 11) return;
+      for (let s = 0; s < deck.sectors; s++) {
+        Object.assign(game.campaign, { deck: d, sector: s });
+        rt.level = rt.buildLevel(game.campaign);
+        game.room = rt.level.outdoorRoom || rt.level.order[0];
+        for (const inv of [false, true]) {
+          game.facts.set('has_inversion', inv);
+          const n = said.length;
+          assert.doesNotThrow(() => rt.hint(), `${deck.mkey}/${s}`);
+          assert.ok(said.length === n + 1 && said[n], `${deck.mkey}/${s}: a thought`);
+        }
+      }
+      if (Array.isArray(MISSIONS[ch][d].hints)) assert.equal(game.story.decks[d].thoughts, MISSIONS[ch][d].hints, `${deck.mkey}: its own thoughts`);
+    });
+  }
 });
 
 test('the Chronolith has the edition\'s three forms and stands in them: stone (the village), the black ring (Helix), the broken halo (2196)', async () => {

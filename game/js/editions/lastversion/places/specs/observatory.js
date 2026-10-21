@@ -78,7 +78,9 @@ export default {
       hemi: { sky: 0xf2d49a, ground: 0x8a7a50, k: 0.9 }, sunColor: 0xffd890, sunK: 1.2, grade: { shadowTint: 0x3a2a14, highlightTint: 0xfff0c8, toning: 0.16, contrast: 1.08, saturation: 1.08 } },
   },
   quarters: [
-    { name: 'THE LOWER RING', area: [-90, 20, 90, 90], spawnAt: 'nikoGuide', threshold: { at: 'rotatingPlatforms', kind: 'roof' } },
+    // Kai arrives at the foot of the instrument stair with Niko: the dates ring framed against the Great Armillary,
+    // the Star Tube to the right, the turntables to the left; the gnomon and the lower ring behind him
+    { name: 'THE LOWER RING', area: [-90, 20, 90, 90], spawn: [-4, 0, 22, 0.3], threshold: { at: 'rotatingPlatforms', kind: 'roof' } },
     { name: 'THE INSTRUMENT STAIR', area: [-90, -30, 90, 20], spawnAt: 'instrumentFoot', threshold: { at: 'ringFoot', kind: 'stair' } },
     { name: 'THE OUTER RING', area: [-90, -90, 90, -30], spawnAt: 'ringFoot', threshold: { at: 'horizonRing', kind: 'summit' } },
   ],
@@ -105,7 +107,7 @@ export default {
     P.col([67, 16, -81, 81, SUMMIT, -67]);
     P.setTerrain(66, -82, 82, -66, SUMMIT);
     P.disc(74, SUMMIT + 0.02, -74, 8, 'sandstoneDark', { seg: 24, noShadow: 1 });
-    stair(P, 44, -74, 16, 66.2, -74, SUMMIT, 3.2, 'sandstone');
+    stair(P, 44, -74, 16, 67.1, -74, SUMMIT, 3.2, 'sandstone'); // (its top step runs onto the drum's collider)
     P.land('summitStair', 46, 16, -74, -Math.PI / 2);
     for (const [x0, z0, x1, z1] of [[66.4, -81.6, 81.6, -81.6], [81.6, -81.6, 81.6, -66.4], [66.4, -66.4, 81.6, -66.4]]) railing(P, x0, z0, x1, z1, 1.0, 'sandstone', { y: SUMMIT });
     P.land('horizonRing', 74, SUMMIT, -78, Math.PI);
@@ -200,7 +202,7 @@ export default {
       prop(P, 'firePit', 50, -6, 0, { fire: true });
     });
     // --- Q0: the lower ring, the gnomon, the astronomers' houses ----------------------------------------------
-    P.land('nikoGuide', -46, 0, 72, Math.PI);
+    P.land('nikoGuide', -1.2, 0, 20.6, 0.6); // (beside where Kai arrives, facing him)
     P.land('gnomon', -22, 0, 34, Math.PI);
     P.land('gnomonFoot', -20, 0, 36.4, 0);
     P.cyl(-22, 0, 30, 1.6, 0.8, 'basalt', { seg: 8, solid: true });

@@ -59,7 +59,7 @@ export function terrace(P, rect, y, m, o = {}) {
   }
 }
 
-// a straight stair from (x0, y0, z0) to (x1, y1, z1), w wide; rises of at most 0.35 m (stepUp)
+// a straight stair from (x0, y0, z0) to (x1, y1, z1), w wide; rises of at most 0.34 m (the engine walks up 0.35 m from the ground)
 export function stair(P, x0, z0, y0, x1, z1, y1, w, m, o = {}) {
   const rise = Math.abs(y1 - y0);
   const n = Math.max(1, Math.ceil(rise / (o.rise || 0.34)));
@@ -86,7 +86,7 @@ export function stair(P, x0, z0, y0, x1, z1, y1, w, m, o = {}) {
 }
 
 // a ramp over a rect rising y0 → y1 toward dir ('N' -z, 'S' +z, 'E' +x, 'W' -x): a smooth visual slope
-// over stepped invisible colliders (0.25 m a step, walkable with stepUp)
+// over stepped invisible colliders (0.25 m a step, walked up by the engine's 0.35 m step)
 export function ramp(P, rect, y0, y1, dir, m, o = {}) {
   const [x0, z0, x1, z1] = norm(rect);
   const alongX = dir === 'E' || dir === 'W';
@@ -213,6 +213,19 @@ export function block(P, o) {
       if (side === 'E') P.vbox([x1 + g, y + 0.3, z0 + inset, x1 + g + 0.04, y + 3.2, z1 - inset], sm);
       if (side === 'N') P.vbox([x0 + inset, y + 0.3, z0 - g - 0.04, x1 - inset, y + 3.2, z0 - g], sm);
       if (side === 'S') P.vbox([x0 + inset, y + 0.3, z1 + g, x1 - inset, y + 3.2, z1 + g + 0.04], sm);
+      // the shopfront's frame: mullions every 2.4 m or so and a transom, so it reads as windows and a door
+      {
+        const alongZ = side === 'W' || side === 'E';
+        const a0 = (alongZ ? z0 : x0) + inset, a1 = (alongZ ? z1 : x1) - inset, n = Math.max(1, Math.round((a1 - a0) / 2.4));
+        const f = side === 'W' ? x0 - g - 0.1 : side === 'E' ? x1 + g + 0.1 : side === 'N' ? z0 - g - 0.1 : z1 + g + 0.1;
+        const bar = (u0, u1, v0, v1) => P.vbox(alongZ ? [f - 0.05, v0, u0, f + 0.05, v1, u1] : [u0, v0, f - 0.05, u1, v1, f + 0.05], o.shop.frame || 'ironDark', { prop: 1, noShadow: 1 });
+        for (let i = 0; i <= n; i++) {
+          const u = a0 + ((a1 - a0) * i) / n;
+          bar(u - 0.07, u + 0.07, y + 0.3, y + 3.2);
+        }
+        bar(a0, a1, y + 2.45, y + 2.55);
+        bar(a0, a1, y + 0.25, y + 0.45);
+      }
       if (o.shop.awning) {
         const am = o.shop.awning;
         if (side === 'W') P.vbox([x0 - 1.6, y + 3.3, z0 + inset, x0, y + 3.45, z1 - inset], am, { prop: 1 });

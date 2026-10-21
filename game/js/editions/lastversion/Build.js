@@ -300,7 +300,7 @@ class Room {
     this.box([x0, -T, z1, x1, h, z0], { mat: 'prop', ...o });
   }
 
-  // plain stairs along -z from (x0..x1, zFace) up to height h (rises of 0.35 m inside a place, for stepUp)
+  // plain stairs along -z from (x0..x1, zFace) up to height h (rises of 0.34 m inside a place: the engine walks up 0.35 m)
   stairs(x0, x1, zFace, h, o = {}) {
     const RISE = this.P ? 0.34 : 0.5, TREAD = this.P ? 0.6 : 0.8;
     const n = Math.ceil(h / RISE);

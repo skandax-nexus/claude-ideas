@@ -95,15 +95,19 @@ export function buildPlace(key, story, si, rt, opts = {}) {
 // what main.js's lights take from the current year of a place (edition.themeFor)
 export function themeFor(level, state) {
   const y = level?.years?.[state];
-  return y ? themeOf(y) : null;
+  if (!y) return null;
+  const c = (level._themes ||= {}); // (asked every frame: one object per year)
+  return (c[state] ||= themeOf(y));
 }
 
 // where the sun shines from, as an offset from the player for the shadow camera (edition.sunDir)
 export function sunDir(level, state) {
   const y = level?.years?.[state];
   if (!y) return null;
+  const c = (level._suns ||= {}); // (asked every frame: one array per year, so main.js sees the same numbers)
+  if (c[state]) return c[state];
   const [x, yy, z] = sunVector(y.sun);
   const up = Math.max(0.28, yy); // a sun under 16° would stretch the shadows beyond the shadow map
   const k = 26 / Math.hypot(x, up, z);
-  return [x * k, up * k, z * k];
+  return (c[state] = [x * k, up * k, z * k]);
 }

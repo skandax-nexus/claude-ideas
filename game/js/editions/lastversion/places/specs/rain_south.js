@@ -42,7 +42,7 @@ export default {
   ],
 
   build(P, { mission }) {
-    // --- ground: the street, the sidewalks (kerbs walk up with stepUp), the plaza ------------------------
+    // --- ground: the street, the sidewalks (0.15 m kerbs: walked up), the plaza ----------------------------
     ground(P, [-90, -110, 90, 12], 0, 'asphalt');
     ground(P, [-90, -230, 90, -126], 0, 'asphalt');
     for (const [x0, x1] of [[-14, -8], [8, 14]]) terrace(P, [x0, -70, x1, 12], 0.15, 'pavement', { wall: 'kerb', sides: x0 < 0 ? 'E' : 'W' });
@@ -148,7 +148,7 @@ export default {
     for (let f = 0; f < 4; f++) {
       const y0 = f * 3, y1 = y0 + 3, lx = f % 2 ? 45.6 : 46.9;
       const [za, zb] = f % 2 ? [-80, -98] : [-98, -80];
-      stair(P, lx, za, y0 + (f ? 0 : 0.15), lx, zb, y1, 1.2, 'fireEscape');
+      stair(P, lx, za, y0, lx, zb, y1, 1.2, 'fireEscape'); // (the first flight from the street, on the ground at 0)
       const ze = f % 2 ? -99.2 : -78.8;
       P.vbox([45.0, y1 - 0.12, ze - 1.2, 47.5, y1, ze + 1.2], 'fireEscape');
       P.col([45.0, y1 - 0.3, ze - 1.2, 47.5, y1, ze + 1.2]);

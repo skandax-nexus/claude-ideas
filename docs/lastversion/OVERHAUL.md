@@ -309,6 +309,7 @@ export default {
 - A place's `years` drive fog colour, density and night through `Runtime.theme` (called first each frame). It sets `level.palette.fog`, `density` and `night` from `years[state]` and returns `stateFog` 0, with no shared change.
 - Sun colour, sun intensity and hemisphere come through `edition.themeFor(state)`. Low-sun shadows come through `edition.sunDir()`. These are the two small `main.js` hooks in §10.
 - The edition sets `player.stepUp = 0.35` (the `Player.js` hook in §10), so kerbs, terraces and ramps are walkable.
+  *As built (U2, after the 1.1.1 merge):* the shared engine now climbs a ledge up to 0.35 m from the ground and follows the ground down as far, for both games, so there is no edition hook; every place is built to that rule.
 - Walkable water is ≤ 0.6 m deep. Deeper water has an invisible blocker, or sends Kai back to the last checkpoint with a visible route nearby.
 
 ### 4.6 Interiors made open
@@ -3473,9 +3474,9 @@ Rules:
 | --- | --- | --- | --- | --- |
 | `game/js/main.js` | comfort-setting text edition-aware (`this.edition ? 'Steadier camera, no flashes' : …`) | 1 | U1 | **yes** |
 | `game/js/main.js` | `updateTheme`: `const th = this.edition?.themeFor?.(s) ?? (THEMES[s] \|\| THEMES.PHYSICAL);` | 1 | U2 | **yes** |
-| `game/js/main.js` | sun: `const sd = this.edition?.sunDir?.() ?? [6,24,9]; this.sun.position.set(p.x+sd[0], p.y+sd[1], p.z+sd[2]);` | 2 | U2 | **yes** |
+| `game/js/main.js` | sun: `const sd = this.edition?.sunDir?.() ?? [6,24,9]; this.sun.position.set(p.x+sd[0], p.y+sd[1], p.z+sd[2]);` *As merged with 1.1.1's texel-snapped sun:* the hook re-aims the snapped shadow frame when `sunDir()` changes | 9 | U2 | **yes** |
 | `game/js/main.js` | character screen: filter LOOKS by `this.edition?.looks` | 2 | U4 | **yes** |
-| `game/js/entities/Player.js` | `moveAxis` edge-climb ≤ `this.stepUp` (default 0; the edition sets 0.35) | ≤ 8 | U2 | **yes** |
+| `game/js/entities/Player.js` | `moveAxis` edge-climb ≤ `this.stepUp` (default 0; the edition sets 0.35). *Superseded:* 1.1.1's engine climbs 0.35 m itself, so U2 ships no `Player.js` change | 0 | U2 | **yes** |
 | `game/js/world/People.js` | `crewModelKey` uses `crew.model` first if loaded; `setCrewDresser(fn)` hook in `makeCrewModel`; drop the edition rows from `BY_NAME` | ≈ 8 | U4 | no |
 | `game/js/audio/Voice.js` | edition packs per chapter, `extra.id`, fx chains, no device speech in the edition, pending-on-load, LRU, `voiceBus` | ≈ 80 | U5 | no |
 | `game/js/audio/Synth.js` | `unlock()`, `composer` hook, skip-ahead, `amb` and `voiceBus` buses, `silence()` fix | ≈ 45 | U5 | no |

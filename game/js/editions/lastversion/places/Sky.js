@@ -115,6 +115,7 @@ void main() {
   #include <colorspace_fragment>
 }`;
 
+const _c = new THREE.Color(), _v = new THREE.Vector3();
 const COLORS = ['uZenith', 'uHorizon', 'uGround', 'uGlow', 'uSun', 'uC1', 'uC1s', 'uC2', 'uC2s'];
 const DIRS = ['uSunDir', 'uMoonDir', 'uStarDir'];
 const SCALARS = ['uGlowK', 'uSunSize', 'uSunGlow', 'uStars', 'uMoon', 'uStar'];
@@ -161,9 +162,9 @@ export class Sky {
   ease(k) {
     const g = this.goal, u = this.u;
     if (!g) return;
-    const c = new THREE.Color();
+    const c = _c, v = _v; // (no allocation: this runs every frame)
     for (const key of COLORS) u[key].value.lerp(c.setHex(g[key]), k);
-    for (const key of DIRS) u[key].value.lerp(new THREE.Vector3(...g[key]), k).normalize();
+    for (const key of DIRS) u[key].value.lerp(v.set(g[key][0], g[key][1], g[key][2]), k).normalize();
     for (const key of SCALARS) u[key].value += (g[key] - u[key].value) * k;
     for (const [key, v] of [['uCl1', g.cl1], ['uCl2', g.cl2]]) {
       const w = u[key].value;

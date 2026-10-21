@@ -184,7 +184,14 @@ export default {
     ground(P, [10, -60, 100, -40], 0, 'gorgeFloor');
     terrace(P, [22, -90, 90, -60], 3, 'gorgeFloor', { wall: 'riverStone', sides: 'S' });
     terrace(P, [22, -150, 90, -90], 6, 'gorgeFloor', { wall: 'riverStone', sides: 'S' });
-    for (const [x0, x1, h] of [[10, 22, 20], [90, 100, 22]]) P.box([x0, 0, -150, x1, h, -40], 'cliffRock');
+    // the gorge's walls: rock in 10 m buttresses of uneven height, each capped by a tilted slab (a broken skyline)
+    for (const [x0, x1, h] of [[10, 22, 20], [90, 100, 22]]) {
+      for (let z = -150; z < -40; z += 10) {
+        const hh = h + P.rng.float(-7, 3);
+        P.box([x0, 0, z, x1, hh, z + 10], 'cliffRock');
+        P.obox((x0 + x1) / 2 + P.rng.float(-1, 1), hh - 1.6, z + 5, x1 - x0 + 1.5, P.rng.float(2.4, 4.4), 11, P.rng.float(-0.2, 0.2), 'cliffRock', { rx: P.rng.float(-0.22, 0.22), rz: P.rng.float(-0.25, 0.25) });
+      }
+    }
     for (let i = 0; i < 6; i++) P.obox(P.rng.float(14, 20), 0, -48 - i * 18, 8, P.rng.float(16, 24), 14, P.rng.float(-0.2, 0.2), 'cliffRock');
     P.land('dryChannel', 55, 0, -46, Math.PI);
     for (const [z0, z1, y] of [[-60, -40, 0], [-90, -60, 3], [-150, -90, 6]]) P.vbox([51, y - 0.4, z0, 59, y + 0.02, z1], 'riverBed', { noShadow: 1 });

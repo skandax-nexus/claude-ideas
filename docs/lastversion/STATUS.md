@@ -39,7 +39,17 @@ story beats. How it works: [`DESIGN.md`](DESIGN.md).
   fog, weather and grade per year, years that differ by big pieces on one layout, and quarters
   the beats happen in (sector *i* is quarter *i*). Records and fragments are things of their place
   (telling-stones, ledgers, bronze plates, glass cases), never terminals or crystals. No ZoneGen,
-  LevelGen, `dress.js` or Vessel look in Missions 1–8. PERF_PLACEHOLDER
+  LevelGen, `dress.js` or Vessel look in Missions 1–8. What a place costs, measured with
+  `tests/lastversion-perf.mjs` (an emulated phone: 915×412 at 2.625, medium quality, SwiftShader in
+  this container; 2026-10-21) at quarter 0 of each year: **Mission 1** (2049 and "8:13") 27 visible
+  static draw calls (24 merged scenery surfaces, the sky, two for the horizon), 193k triangles in
+  the scene pass (the whole frame with its shadow passes: 274 draw calls, 366–374k triangles; the
+  people, props and signs are the other draw calls), 11.8–11.9 ms of JavaScript a frame on
+  average (17.8–19.3 ms p95); **Mission 4** (THE VILLAGE and BEFORE THE FIRE) 20–25 static draw
+  calls, 22–24k triangles (37–41k for the whole frame), 3.2–3.3 ms of JavaScript (5.4–5.7 ms
+  p95). Both are within §4.7 (≤ 70 static draw calls, a sky of 1, a horizon of ≤ 4, ≤ 300k
+  triangles). The JavaScript times are SwiftShader's, at a tenth of the pixel ratio, for
+  comparison between places rather than a phone's frame time.
 - **The NPC system** of the supplement: trust, knowledge, quest state, temporal state, faction
   standing and evidence flags in the save; dialogue choices by intent (challenge / comfort /
   investigate / withdraw); barks; echoes standing in for people absent from a state; the case
@@ -67,15 +77,15 @@ story beats. How it works: [`DESIGN.md`](DESIGN.md).
   `tools/voice-pack.mjs` collects the edition's lines (808 lines, 1,165 unique recordings, about
   44 minutes). **The recordings are not rendered yet**: until they are, the game speaks the
   edition's lines with the device's speech synthesis where it has one, and shows subtitles always.
-- **Tests**: `tests/lastversion.test.mjs` (unit, in `npm test`: 28 tests) and `tests/lastversion.mjs`
-  (browser bot, 91 checks: the Prologue from NEW GAME through both quest chains into Act I,
-  Missions 5, 11 (REVERSE: 15 checks), 13, 14 and 19 and the Finale to Ending C, the Museum's
-  generated rooms walked with real movement, the save namespace). Both pass; `npm test` passes
-  (56), and the Station Zero suite `tests/cradle.mjs` passes (167). (Measured 2026-10-19 for
-  the overhaul's U1.) In this container `tests/qa.mjs` (23 of its checks pass,
-  then its last click times out) and `tests/forge.mjs` (a click's navigation wait times out
-  after the save slot) also time out on the main branch's own code, side by side, so they are
-  timing in this environment rather than this edition; they need a rerun on a quieter machine.
+- **Tests**: `tests/lastversion.test.mjs` (unit, in `npm test`: 42 tests, 14 of them for the open
+  places) and `tests/lastversion.mjs` (browser bot, 121 checks: the Prologue from NEW GAME through
+  both quest chains into Act I, Missions 5, 11 (REVERSE: 15 checks), 13, 14 and 19 and the Finale
+  to Ending C, the Museum's generated rooms walked with real movement, the save namespace, and the
+  survey of Missions 1–8's places: 19 views, their hashes in the log, the closest two missions
+  29 bits apart). Both pass; `npm test` passes (70). The Station Zero suites pass too:
+  `tests/cradle.mjs` (167), `tests/smoke.mjs` and `tests/qa.mjs` (26). (Measured 2026-10-21 for
+  the overhaul's U2.) `tests/forge.mjs` was not rerun for U2 (earlier in this container a click's
+  navigation wait timed out after the save slot on the main branch's own code as well).
 
 ## Generated (playable, solvable by construction, not hand-tuned)
 

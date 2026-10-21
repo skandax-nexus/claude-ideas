@@ -170,6 +170,15 @@ await az(() => {
   };
   return 'ok';
 });
+// through the gate to the next place: the exit, then wait (up to 20 s) until the campaign has moved on and the
+// transition's 900 ms fade is over, rather than for a fixed time a busy page can overrun
+const onward = async () => {
+  const from = await az(() => JSON.stringify([AZ.campaign.chapter, AZ.campaign.deck, AZ.campaign.sector]));
+  await az(() => LVB.exit());
+  await az(() => { AZ.simulate(0.3); LVB.skip(); });
+  await page.waitForFunction((f) => !AZ.transitioning && JSON.stringify([AZ.campaign.chapter, AZ.campaign.deck, AZ.campaign.sector]) !== f, from, { timeout: 20000 }).catch(() => {});
+  await az(() => { AZ.simulate(0.3); LVB.skip(); });
+};
 // after a mission's last gate: the outro plays, the fade's timer moves on to the next place
 const nextPlace = async () => {
   await page.waitForTimeout(1600);
@@ -411,16 +420,11 @@ const canal = await az(() => {
 });
 canal.presentFell = fell;
 check(canal.presentFell && canal.pastCrossed, 'the river cuts the village in two; in the thriving year the footbridge still stands', JSON.stringify(canal));
-await az(() => LVB.exit());
-await az(() => { AZ.simulate(0.3); LVB.skip(); });
-await page.waitForTimeout(1300);
-await az(() => { AZ.simulate(0.3); LVB.skip(); });
+await onward();
 const s1 = await az(() => LVB.where());
 check(s1.deck === 1 && s1.sector === 1, 'the gate leads on to the abandoned village', JSON.stringify(s1));
 await scene('the retaining wall is braced in the middle state, after the river moved', 'scene_' + s1.room, 'FUTURE', 'PRESENT');
-await az(() => LVB.exit());
-await page.waitForTimeout(1300);
-await az(() => { AZ.simulate(0.3); LVB.skip(); });
+await onward();
 const s2 = await az(() => LVB.where());
 await scene('the pressure gate is released in the latest state: the buried machine', 'scene_' + s2.room, 'PAST', 'FUTURE', () => true);
 check(await az(() => LVB.said.some((l) => l.includes('Helix did not invent the machine. It found it.'))), 'Niko: Helix did not invent the machine; it found it');
@@ -619,9 +623,7 @@ const roof = await az(() => {
   return { done: AZ.deckWorld.flags.beat_done, gate: LVB.gate() };
 });
 check(roof.done && roof.gate === false, 'the field order on the roof: both sides answer each other\'s fire', JSON.stringify(roof));
-await az(() => LVB.exit());
-await page.waitForTimeout(1300);
-await az(() => { AZ.simulate(0.3); LVB.skip(); });
+await onward();
 const devices = await az(() => {
   const out = [];
   for (const [i, st, wrong] of [[0, 'PAST', 'PRESENT'], [1, 'PRESENT', 'FUTURE'], [2, 'FUTURE', 'PAST']]) {
@@ -637,9 +639,7 @@ const devices = await az(() => {
   return { out, done: AZ.deckWorld.flags.beat_done, gate: LVB.gate() };
 });
 check(devices.done && devices.out.every((d) => d.refused && d.done), 'three devices disabled, each only in its own year (2026, 2049, 2196)', JSON.stringify(devices));
-await az(() => LVB.exit());
-await page.waitForTimeout(1300);
-await az(() => { AZ.simulate(0.3); LVB.skip(); });
+await onward();
 const stab = await az(() => { const c = LVB.cand('choice_' + AZ.room); LVB.place(c.pos[0], c.pos[2] + 1.5); LVB.use('choice_' + AZ.room); LVB.skip(); return [AZ.menu, [...document.querySelectorAll('#choice button')].map((b) => b.textContent)]; });
 check(stab[0] === 'choice' && stab[1].length === 2, 'the stabilizer: destroy it, or redirect it to free the trapped people', JSON.stringify(stab));
 await az(() => { LVB.choose('challenge'); LVB.skip(); });
@@ -665,9 +665,7 @@ const snap = await az(() => { AZ.simulate(0.2); const s = LVB.said.slice(-3).joi
 check(snap.state === 'PRESENT' && snap.said, 'at zero it snaps you back to the present at the last anchor', JSON.stringify(snap));
 const recorder = await az(() => { const c = AZ.deckWorld.focusCandidates(AZ).find((x) => x.it?.kind === 'terminal'); LVB.place(c.pos[0], c.pos[2] + 1.4, c.pos[1] - 0.35); AZ.useDeck(c); LVB.skip(); return AZ.deckWorld.flags.beat_done; });
 check(recorder, 'the beacon\'s part list, on a roof of the overgrown towers');
-await az(() => LVB.exit());
-await page.waitForTimeout(1300);
-await az(() => { AZ.simulate(0.3); LVB.skip(); });
+await onward();
 const residue = await az(() => {
   const c = AZ.deckWorld.focusCandidates(AZ).find((x) => x.it?.kind === 'plaque');
   LVB.place(c.pos[0], c.pos[2] + 1.5);
@@ -678,9 +676,7 @@ const residue = await az(() => {
   return { before: !!before, after: AZ.deckWorld.flags.beat_done, said: LVB.said.some((l) => l.includes('SAFE PATH WHEN THE WATER IS LOW')) };
 });
 check(!residue.before && residue.after && residue.said, 'the warning reads DO NOT CROSS; its residue in the past: a safe path, signed Sera', JSON.stringify(residue));
-await az(() => LVB.exit());
-await page.waitForTimeout(1300);
-await az(() => { AZ.simulate(0.3); LVB.skip(); });
+await onward();
 const sera = await az(() => { const n = LVB.npc('npc_' + AZ.room); LVB.place(n.model.position.x, n.model.position.z + 2); LVB.use('npc_' + AZ.room); LVB.skip(); const c = LVB.choose('investigate'); LVB.skip(); return [c, AZ.facts.get('ev_memorial'), AZ.deckWorld.flags.beat_done, LVB.said.some((l) => l.includes('We teach children your name'))]; });
 check(sera[1] && sera[2] && sera[3], 'Sera at the memorial: "We teach children your name before they learn the names of the dead."', JSON.stringify(sera));
 await az(() => LVB.exit());
@@ -753,14 +749,10 @@ const outside = await az(() => {
   return r;
 });
 check(outside.s0, 'the first symbol: the clockmaker\'s mark', JSON.stringify(outside));
-await az(() => LVB.exit());
-await page.waitForTimeout(1300);
-await az(() => { AZ.simulate(0.3); LVB.skip(); });
+await onward();
 const bridge = await az(() => { const c = AZ.deckWorld.focusCandidates(AZ).find((x) => x.it?.kind === 'plaque'); LVB.place(c.pos[0], c.pos[2] + 1.5); AZ.edition.shift('PAST'); AZ.simulate(0.1); AZ.useDeck(c); LVB.skip(); AZ.edition.shift('PRESENT'); return AZ.deckWorld.flags.beat_done; });
 check(bridge, 'THERE IS NO BRIDGE / THERE IS A BRIDGE. YOU ARE STANDING ON IT');
-await az(() => LVB.exit());
-await page.waitForTimeout(1300);
-await az(() => { AZ.simulate(0.3); LVB.skip(); });
+await onward();
 const forgive = await az(() => { const n = LVB.npc('npc_' + AZ.room); LVB.place(n.model.position.x, n.model.position.z + 2); LVB.use('npc_' + AZ.room); LVB.skip(); return [AZ.deckWorld.flags.beat_done, LVB.said.some((l) => l.includes('the version of me that would forgive you'))]; });
 check(forgive[0] && forgive[1], 'Mira: "You\'ve been trying to reach the version of me that would forgive you."', JSON.stringify(forgive));
 await az(() => LVB.exit());
@@ -775,9 +767,7 @@ check(street.name === 'AFTERZERO' && street.drones === 0 && street.jun, 'the pas
 for (let s = 0; s < 2; s++) {
   const r = await az(() => { const c = AZ.deckWorld.focusCandidates(AZ).find((x) => x.it?.kind === 'terminal'); LVB.place(c.pos[0], c.pos[2] + 1.4, c.pos[1] - 0.35); AZ.useDeck(c); LVB.skip(); return AZ.deckWorld.flags.beat_done; });
   check(r, s === 0 ? 'Rook\'s last transmission' : 'the Witness holds the route');
-  await az(() => LVB.exit());
-  await page.waitForTimeout(1300);
-  await az(() => { AZ.simulate(0.3); LVB.skip(); });
+  await onward();
 }
 const finale = await az(() => { const c = LVB.cand('choice_' + AZ.room); LVB.place(c.pos[0], c.pos[2] + 1.5); LVB.use('choice_' + AZ.room); LVB.skip(); return [AZ.menu, [...document.querySelectorAll('#choice button')].map((b) => b.className)]; });
 check(finale[0] === 'choice' && finale[1].length === 3, 'at the original Chronolith: what to preserve, what to release (three endings)', JSON.stringify(finale));

@@ -27,8 +27,9 @@ export default {
       hemi: { sky: 0x5a6a8a, ground: 0x2a3446, k: 0.7 }, sunColor: 0xa8b8e0, sunK: 0.35, grade: { shadowTint: 0x1a2440, highlightTint: 0xd8e4ff, toning: 0.2, contrast: 1.06, saturation: 0.9 } },
   },
   quarters: [
-    // Kai wakes at the blanket house's door and looks up the terraces to the ring (the camera clear of the house behind him)
-    { name: 'THE FIRST FIRE', area: [-100, 62, 100, 100], spawn: [-24, 0, 78.4, 0], threshold: { at: 'stairT1', kind: 'stair' } },
+    // Kai steps out of the blanket house and looks down the lane: the first fire, the elder's house with the
+    // telling-stone on its roof, the granaries, and the Ridge beyond (in BEFORE THE FIRE: hide tents in the grass)
+    { name: 'THE FIRST FIRE', area: [-100, 62, 100, 100], spawn: [-18, 0, 80, -1.27], threshold: { at: 'stairT1', kind: 'stair' } },
     { name: 'THE WATER STEPS', area: [-80, 6, 80, 62], spawnAt: 'stairT1Top', threshold: { at: 'stairT3', kind: 'stair' } },
     { name: 'THE RING', area: [-60, -60, 60, 6], spawnAt: 'stairT3Top', threshold: { at: 'underChamber', kind: 'stair' } },
   ],

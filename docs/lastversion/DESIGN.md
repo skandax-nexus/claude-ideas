@@ -14,7 +14,7 @@ The Last Version is a separate game built from the same sources as the Station Z
 | Its own saves and settings | Every key under `afterzero.lv.` (`Edition.js` `NS`, used by `ui/Saves.js` and `ui/Settings.js`). The two games never see each other's saves. |
 | Its own app | `EDITION=lastversion bash android/build-apk.sh` builds "AFTERZERO: Last Version" (`com.afterzero.lastversion`, versionName 2.0.0, `AFTERZERO-LastVersion-v2.0.apk`) into `android/build-lastversion/`, with a preview `index.html` that sets `window.AZ_EDITION='lastversion'`. |
 | Everything the edition changes | `game/js/editions/lastversion/`: `index.js` (title, states, labels, looks, speakers, engine options), `Runtime.js` (chapters, missions, objectives, scenes, choices, stability, Echo Step, anchors, the case board, endings), `prologue.js` (Missions 1–3), `acts.js` (Acts I–IV, the Finale, the endings, the optional cases), `npcs.js` (the people), `Build.js` (hand-built interiors and props), `dress.js` (what each year of a place looks like), `inversion.js` (REVERSE: input, targeting, charge, the rules, its HUD and sounds), `processes.js` (the things REVERSE can hold, and the mission landmarks they stand at), `places/` (the open places under a real sky: the builder, the archetypes, the styles and materials, the years and skies, the horizon, the scenery, one spec per place). |
-| Hooks in the shared code | `main.js` hands the game to the edition's runtime where the edition is on (`this.edition`), and nowhere else. `RealityEngine` takes a configurable state set. The generators take a few optional fields (`zone.themes`, `zone.names`, `zone.drones`, `zone.overlay`, `deck.mechs`, `story.mechDeck`, beat kinds `scene`, `choice`). Each hook is a no-op for the Station Zero game; `npm test` and the default suites prove it. The v2.1 overhaul's hooks so far: `main.js` settings text, comfort mode reads "Steadier camera, no flashes" when the edition is on (1 line, U1); `main.js` `updateTheme` takes the light from `edition.themeFor(state)` when it returns one (1 line, U2) and the sun's direction from `edition.sunDir()` (2 lines, U2); `entities/Player.js` steps up onto an edge no higher than `player.stepUp` (default 0, so Station Zero is unchanged; the edition sets 0.35) (7 lines, U2). REVERSE's moving colliders are edition-owned entries in `DeckWorld.temps` (`t: Infinity`, removed by the edition), so `DeckWorld.js` is not changed. |
+| Hooks in the shared code | `main.js` hands the game to the edition's runtime where the edition is on (`this.edition`), and nowhere else. `RealityEngine` takes a configurable state set. The generators take a few optional fields (`zone.themes`, `zone.names`, `zone.drones`, `zone.overlay`, `deck.mechs`, `story.mechDeck`, beat kinds `scene`, `choice`). Each hook is a no-op for the Station Zero game; `npm test` and the default suites prove it. The v2.1 overhaul's hooks so far: `main.js` settings text, comfort mode reads "Steadier camera, no flashes" when the edition is on (1 line, U1); `main.js` `updateTheme` takes the light from `edition.themeFor(state)` when it returns one (1 line, U2) and the sun's direction from `edition.sunDir()` (U2; since the 1.1.1 merge the sun's shadow frame is texel-snapped, so the hook re-aims that frame when the direction changes: 9 lines, none of which run without an edition). `entities/Player.js` is not changed: since 1.1.1 the engine itself climbs a ledge up to 0.35 m from the ground and follows the ground down a drop as deep, in both games, so the places are built to that rule (stair rises of 0.34 m, ramps in 0.25 m steps, kerbs of 0.15 m) and the edition's own `stepUp` hook is gone. REVERSE's moving colliders are edition-owned entries in `DeckWorld.temps` (`t: Infinity`, removed by the edition), so `DeckWorld.js` is not changed. |
 
 Its own look: the title reads AFTERZERO / THE LAST VERSION OF EARTH in front of rain, a city's
 glow and the black ring; the chapter list is PROLOGUE, ACT I–IV, FINALE, CASES; you are Kai
@@ -34,7 +34,7 @@ beats happen in. Nothing in them comes from ZoneGen, LevelGen, `dress.js` or a V
 | --- | --- |
 | `places/index.js` | `PLACES` (the registry) and `buildPlace(key, story, sector, rt, { deck })`: a level in the shared format (DeckWorld runs it unchanged) plus `place`, `landmarks` (`{ name: [x, y, z, yaw] }`), `quarters` (`[{ name, area, spawn, threshold }]`), `years`, `crowd`, `sites` and `scenery` (`(root, rt) =>` the mounted place). Sector *i* loads the whole map and activates quarter *i*: its spawn, its beat at a landmark, its fragments and watchers, its exit at the quarter's threshold (D2 step 1). Also `themeFor(level, state)` and `sunDir(level, state)`. |
 | `places/Place.js` | The builder a spec builds with: colliders (invisible boxes; one that exists only in some years or after some fact is a `ghost`, a DeckWorld conditional whose mesh the edition takes away), visual pieces (`level.vis`: box, turned box, cylinder, cone, gable, hip, dome, torus, plane, disc, sphere, vault; a material, a tint, the years, a fact condition), vegetation (`level.veg`), texts, landmarks, terrain heights, kept-clear rects, sites, deep water, traversal challenges (each names the years that answer it). `P.E(years, fn)` puts what `fn` builds into those years, `P.W(fact, fn)` behind a fact. `stageBeat` puts today's beats on their landmarks as things of the place (a telling-stone, a ledger on a lectern, a bronze plate, a phone booth, a glass case), never a Station Zero terminal. |
-| `places/archetypes.js` | Parametric pieces: ground (with holes), terraces with retaining walls, stairs (rises of 0.34 m, walked up with `stepUp`), ramps (stepped colliders under a smooth slope), water (deep, or wadeable at 0.6 m), walls with openings, railings, blocks (floors, facade, roof: flat, gable, hip, mansard; shopfronts, awnings, cornices, rooftop units), towers, roundhouses, longhouses, granaries, tents, canopies, colonnades, arches, bridges (humped), viaducts, cranes, rings of standing stones, signs (letters) and glyph panels (carved, for the ancient years), props (benches, bollards, lamp posts, tram poles, bus shelters, stalls, kiosks, booths, barriers, cars, scooters, planters, crates, barrels, phone booths, ad screens, looms, racks, pots, carts, cairns, fish racks, boats, fire pits, torches, floodlights, site huts, tarps, chillers), the seeded fill and the edges (the city going on, cliffs, hills, water, hedges, meadow; never a tall wall) with the invisible ring. |
+| `places/archetypes.js` | Parametric pieces: ground (with holes), terraces with retaining walls, stairs (rises of 0.34 m, walked up by the engine's 0.35 m step), ramps (stepped colliders under a smooth slope), water (deep, or wadeable at 0.6 m), walls with openings, railings, blocks (floors, facade, roof: flat, gable, hip, mansard; shopfronts, awnings, cornices, rooftop units), towers, roundhouses, longhouses, granaries, tents, canopies, colonnades, arches, bridges (humped), viaducts, cranes, rings of standing stones, signs (letters) and glyph panels (carved, for the ancient years), props (benches, bollards, lamp posts, tram poles, bus shelters, stalls, kiosks, booths, barriers, cars, scooters, planters, crates, barrels, phone booths, ad screens, looms, racks, pots, carts, cairns, fish racks, boats, fire pits, torches, floodlights, site huts, tarps, chillers), the seeded fill and the edges (the city going on, cliffs, hills, water, hedges, meadow; never a tall wall) with the invisible ring. |
 | `places/styles.js` | One style per place: its materials, facade tints, roof, at most six vegetation kinds, its record kits and the palette DeckWorld lights its own few pieces with. |
 | `places/materials.js` | Every material name a place uses, as data: a shared surface (painted into a canvas at first use, or one of the CC0 scans: asphalt, brick, concrete, pavement, rock, stone, water) and a tint, with tags (`modern`: lamps, neon, roads, kerbs, signs, never in an ancient year). Surfaces are shared by every place (one draw call per surface), tinted by vertex colour; a vertex's years are an attribute, so the vertex shader drops what is not of this year and small props beyond 90 m. Lit facades (brick, curtain glass, Helix panels, townhouses) carry a window mask that comes on with the year's `lit`. |
 | `places/years.js` | The sky presets (the zenith, horizon and ground colours, the city glow, the sun, the moon, the stars, two cloud layers, lightning) and what a year adds: the hour, the sun's elevation and bearing (or the Notch's), the fog and its density, the night, the weather, the colour grade, the light probe, the hemisphere and the sun's colour. |
@@ -51,10 +51,10 @@ rooms, Helix's, are built first by its `rooms(P, …)` and the place builds roun
 sets the palette's fog, density and night from the year, and on a year switch the sky, the
 horizon, the scenery, the lit windows, the weather, the colour grade and the light probe;
 `themeFor` and `sunDir` give `main.js` the year's light and a sun that throws long shadows when it
-is low. `stateFog` is 0 in a place (the year's own fog colour, all of it). The edition sets
-`player.stepUp = 0.35`, so kerbs, terrace steps and ramps are walked, not jumped. An authored
-trigger can carry Kai somewhere (`to: [x, y, z, yaw]`, a short fade): Helix's glass lift takes him
-down into the chamber under the oculus.
+is low. `stateFog` is 0 in a place (the year's own fog colour, all of it). Kerbs, terrace steps and
+ramps are walked, not jumped: the engine climbs 0.35 m from the ground, and every rise is built to
+that. An authored trigger can carry Kai somewhere (`to: [x, y, z, yaw]`, a short fade): Helix's
+glass lift takes him down into the chamber under the oculus.
 
 **`Build.js`** keeps the hand-built rooms for Helix. A room can be placed and turned (`at`, `rot` in
 quarter turns, `y` its floor), leave by a side wall (`exit: 'E' | 'W'`), climb to the next room on a
@@ -265,9 +265,10 @@ encounter end in lethal combat".
   pieces per extra year, nothing modern (lamp, neon, road, Latin text) in an ancient year, every
   traversal challenge naming an answer in its room's years with two hints, the collider, text and
   NPC budgets, known materials and kits and no terminals; and Kai walks the places with the game's
-  own physics (`Player.update`, stepUp 0.35): the stairs, fire escape, scissor stair, terraces,
-  ramps, bridges and stepping stones carry him, and Mission 5's footbridge holds only in the
-  thriving year.
+  own physics (`Player.update`, the engine's 0.35 m step from the ground): the stairs, fire
+  escape, scissor stair, terraces, ramps, bridges and stepping stones carry him, and Mission 5's
+  footbridge holds only in the thriving year. THINK answers in every sector of the Prologue and
+  Act I and in Mission 11, and every year of a place gives `main.js` a full theme and a sun.
 - `tests/lastversion-perf.mjs` (browser, read-only): what a place costs on an emulated phone
   (915×412 at 2.625, medium quality) at quarter 0 of each mission and year: full-frame and
   scene-pass draw calls and triangles, the static draws split into scenery, sky, horizon and
@@ -284,9 +285,12 @@ encounter end in lethal combat".
   view (logged), at least 18 bits between missions that are not the same place, and a sky in the
   top quarter that is not one flat colour (or is fog). Each mission is surveyed in its own small
   page (384×216 by default), with the render loop stopped before the game begins and the year's
-  shaders compiled ahead (`compileAsync`). On this shared machine, run as the rules say under
-  `nice -n 19`, Chromium raises its own browser, GPU and renderer processes back to nice −8 while
-  the Playwright client stays at 19; under load the page's first frame of a place then takes
-  minutes and the browser and renderer grow by gigabytes until the session's shared memory limit
-  kills the page (the pre-U2 build does exactly the same). Holding every process of the test at
-  nice 19 (a watcher that renices the tree) keeps both near 1.5 GB.
+  shaders compiled ahead (`compileAsync`). `LV_ONLY=places` runs the survey alone; `LV_SURVEY_ONLY`
+  (mission keys), `LV_SURVEY_W` / `LV_SURVEY_H` and `LV_PLACE_SHOTS` (a folder for the pictures)
+  narrow or enlarge it. Each mission's quarter-0 spawn is composed to show what the place is: the
+  door of 4B on the wet avenue, the dark lobby, the chamber under the oculus, the village lane
+  down to the first fire, the river at the weir, the light well from the cellar stair, the dates
+  ring against the Great Armillary, and the VERSION 17 atrium seen from its doors. On a loaded
+  shared machine Chromium raises its own browser, GPU and renderer processes back to nice −8
+  while the Playwright client stays at 19, and the first frame of a place can take minutes;
+  holding every process of the test at nice 19 (a watcher that renices the tree) helps.

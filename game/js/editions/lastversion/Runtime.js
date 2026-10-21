@@ -136,7 +136,6 @@ export class LastVersion {
     hud.stabilityBar = true;
     this.inv = new Inversion(this); // REVERSE (Mission 11 on)
     this.mounted = null; // the open place in the browser: scenery, sky, horizon (places/mount.js)
-    if (game.player) game.player.stepUp = 0.35; // kerbs, terrace steps and ramps are walked up, not jumped
     game.facts.onChange(() => this.onFact());
     // a watcher that rewinds its own damage, lured into a live conduit, stays down
     game.deckWorld.onSentinelDown = (s) => {
@@ -220,7 +219,8 @@ export class LastVersion {
     const fits = (m) => (k) => MECHS.includes(k) && (k !== 'echo' || m.states.includes('PAST'));
     const decks = ms.map((m, i) => ({
       ...m, index: i, mkey: m.key, mechs: mechsFor(m, fits(m)), key: m.kind === 'rooms' ? m.deckKey : m.key, rooms: m.roomsNames || m.rooms, names: m.kind === 'zone' ? m.rooms : undefined, crew: m.crew ?? 0,
-      hints: { roof: HINTS.roof, canal: HINTS.canal, drones: HINTS.drones, gate: HINTS.gate },
+      hints: { roof: HINTS.roof, canal: HINTS.canal, drones: HINTS.drones, gate: HINTS.gate }, // (ZoneGen's challenge hints)
+      thoughts: Array.isArray(m.hints) ? m.hints : null, // the mission's own thoughts (THINK)
     }));
     return {
       zones: true, lv: true, chapter, seed: `lv-${chapter}`, residue: 'PAST', label: 'THE LAST VERSION', // each chapter its own places
@@ -656,9 +656,9 @@ export class LastVersion {
     const deck = this.deck;
     let text;
     let key;
-    if (deck.hints) {
+    if (deck.thoughts) {
       // a mission's own thoughts, some only in the room of their landmark
-      const h = deck.hints.find((x) => (!x.at || this.level?.anchorsAt?.[x.at]?.room === g.room) && g.facts.test(x.when || 'true'));
+      const h = deck.thoughts.find((x) => (!x.at || this.level?.anchorsAt?.[x.at]?.room === g.room) && g.facts.test(x.when || 'true'));
       if (h) {
         key = h.when;
         if (this.hintKey !== key) {

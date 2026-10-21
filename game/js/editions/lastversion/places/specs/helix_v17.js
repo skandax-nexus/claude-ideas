@@ -144,7 +144,7 @@ export default {
     P.box([-6, 5.2, 48, 6, WING_H, 62], 'helixPanel', { t: 0xf4f2f8 });
     stair(P, 0, 62.4, 0, 0, 69.6, -2.4, 10, 'terrazzo');
     // west: the old wing is gone; the riverside atrium stands where the river comes in
-    P.land('atriumDoors', -64, 0, -16, -Math.PI / 2);
+    P.land('atriumDoors', -64, 0, -16, Math.PI / 2); // (the doors face in: Kai walks into the atrium)
     canopy(P, { rect: [-62, -30, -40, -10], h: 7.5, roof: 'glassRoof', span: 5.5, post: 0.22, postMat: 'steel' });
     for (const z of [-30, -10]) P.vbox([-62, 0, z - 0.04, -40, 7.5, z + 0.04], 'helixGlass', { noShadow: 1 });
     P.vbox([-62.04, 0, -30, -61.96, 7.5, -19], 'helixGlass', { noShadow: 1 });
