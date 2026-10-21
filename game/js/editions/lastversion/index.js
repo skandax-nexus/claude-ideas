@@ -7,6 +7,10 @@
 //   processes.js the things REVERSE can hold, and the mission landmarks they stand at
 //   Build.js    hand-authored interiors (Helix) and small props
 //   npcs.js     the people: roster, state model, barks, quest chains, dialogue
+//   casting.js  which model each person is built from; the chapter's models, loaded behind its card
+//   wardrobe.js what each person wears: recolours on the GPU, hidden parts, things carried
+//   crowds.js   the crowds that walk each place's paths, by era and region
+//   watchers.js the watchers: Helix drones, Continuum troopers, scavengers, the red mimics
 //   prologue.js Missions 1-3, fully authored
 //   acts.js     Acts I-IV, the Finale, the endings and the four optional cases
 import { LastVersion, CHAPTERS, MISSIONS, ORDER, HINTS, HINTS_REVERSE } from './Runtime.js';
@@ -22,6 +26,8 @@ export const LV = {
   // the three years of one world, in the order the number keys pick them (REVERSE is a verb, not a year)
   states: ['PRESENT', 'PAST', 'FUTURE'],
   labels: { PRESENT: '2049', PAST: '2026', FUTURE: '2196' },
+  // the character screen offers Kai's own realistic look only (Kai is a man in the bible, voiced male)
+  looks: ['real_m'],
   // the light of each state: cold steel now, warm stone and wood then, overgrown ruin later
   themes: {
     PRESENT: { fog: 0xd8e2ec, sky: 0xf4f8ff, ground: 0xc8d0d8, hemi: 0.7, sun: 2.1, sunColor: 0xeef4ff, density: 0.012, device: 0x4f9fe8 },

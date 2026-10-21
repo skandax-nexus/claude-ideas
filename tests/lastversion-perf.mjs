@@ -10,6 +10,10 @@
 // Budgets checked (§4.7): visible static draw calls ≤ 70, sky 1, horizon ≤ 4, triangles ≤ 300k.
 //   NODE_PATH=$(npm root -g) node tests/lastversion-perf.mjs
 //   env: PLACES=m01,m04 (missions; any of m01 .. m23)  PLACES_FRAMES=120  PLACES_TINY=0.1  PLACES_QUALITY=medium
+// CAST_LOAD=act3 (any chapter, or a comma list): before the places, with the game running in real time in Mission 1
+//   (at the tiny render scale), that chapter's people load as they do behind its card (casting.js, one model at a
+//   time); the main thread's work in each frame (the long tasks between two frames) may not exceed 150 ms
+//   (OVERHAUL.md §11 U4). The frame gaps are printed too: SwiftShader's compositing alone makes them ~0.5 s here.
 import { createRequire } from 'node:module';
 import http from 'node:http';
 import fs from 'node:fs';
@@ -65,9 +69,57 @@ await az(() => {
   window.__drain = () => { const gl = r.getContext(); const px = new Uint8Array(4); gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px); };
 });
 const results = [];
+let castFail = 0;
+for (const ch of (process.env.CAST_LOAD || '').split(',').filter(Boolean)) {
+  // the real-time loop runs again while the chapter's people load; every frame's length is measured
+  const r = await page.evaluate(async ([ch, TINY]) => {
+    const g = AZ;
+    // (rendered at a tiny scale, as the JS frame times below: SwiftShader's rasterisation is not the main thread's)
+    window.__setScale(TINY);
+    g.renderer.setAnimationLoop((t) => g.loop(t));
+    const before = (await import('/js/world/Actors.js')).MODELS;
+    const keys = (await import('/js/editions/lastversion/casting.js')).castOf(ch).filter((k) => before[k]);
+    const frames = [];
+    const long = [];
+    const stamps = [], tasks = [];
+    let last = performance.now(), on = true;
+    const tick = () => { const t = performance.now(); frames.push(t - last); stamps.push(t); last = t; if (on) requestAnimationFrame(tick); };
+    requestAnimationFrame(tick);
+    const obs = new PerformanceObserver((l) => { for (const e of l.getEntries()) { long.push(Math.round(e.duration)); tasks.push([e.startTime, e.duration]); } });
+    obs.observe({ type: 'longtask' });
+    // the same loop with nothing loading, first: what a frame costs here anyway
+    await new Promise((res) => setTimeout(res, 1500));
+    const base = frames.splice(0).sort((a, b) => b - a);
+    const baseLong = long.splice(0).sort((a, b) => b - a);
+    stamps.splice(0);
+    tasks.splice(0);
+    const t0 = performance.now();
+    const ok = await g.edition.loadCast(ch);
+    const ms = performance.now() - t0;
+    await new Promise((res) => setTimeout(res, 300));
+    on = false;
+    obs.disconnect();
+    g.renderer.setAnimationLoop(null);
+    window.__setScale(1);
+    frames.sort((a, b) => b - a);
+    // the main thread's own work in each frame: the long tasks (over 50 ms) that ran between two frames, plus 16 ms
+    // for the shorter ones; SwiftShader's rasterisation and compositing (a frame here takes ~0.5 s idle) is not in it
+    let mainWorst = 0;
+    for (let i = 0; i < stamps.length; i++) {
+      const a = i ? stamps[i - 1] : t0, b = stamps[i];
+      mainWorst = Math.max(mainWorst, 16 + tasks.filter(([st]) => st >= a && st < b).reduce((x, [, d]) => x + d, 0));
+    }
+    return { ch, ok, mainWorst: Math.round(mainWorst), models: keys.length, ms: Math.round(ms), frames: frames.length, worst: frames.slice(0, 5).map((f) => Math.round(f)), longTasks: long.sort((a, b) => b - a).slice(0, 5),
+      base: { frames: base.length, worst: base.slice(0, 3).map((f) => Math.round(f)), longTasks: baseLong.slice(0, 3) } };
+  }, [ch, TINY]);
+  console.log(`cast load ${ch}: ${r.models} models in ${r.ms} ms, ${r.frames} frames: main thread at most ${r.mainWorst} ms in one frame; frame gaps ${r.worst.join(', ')} ms, longest tasks ${r.longTasks.join(', ')} ms | idle before: ${r.base.frames} frames in 1.5 s, worst ${r.base.worst.join(', ')} ms, longest tasks ${r.base.longTasks.join(', ') || '-'} ms`);
+  if (!r.ok || r.mainWorst > 150) { castFail++; console.log(`FAIL cast load ${ch}: ${r.ok ? `${r.mainWorst} ms of main-thread work in one frame` : 'a model did not load'}`); }
+  results.push({ key: `cast:${ch}`, cast: r });
+}
 for (const key of WANT) {
   const [ch, d] = MISSIONS[key] || [];
   if (!ch) continue;
+  await page.evaluate((c) => AZ.edition.loadCast(c), ch); // (the chapter's people first, as its card does)
   const states = await az(([ch, d]) => {
     const g = AZ;
     if (g.campaign.chapter !== ch) g.edition.start(ch);
@@ -126,8 +178,8 @@ for (const key of WANT) {
     console.log(`${key} ${st.padEnd(7)} full frame ${m.full.calls} draws ${m.full.triangles} tris | scene pass ${m.scene.calls} draws ${m.scene.triangles} tris | static ${m.staticDraws} (scenery ${m.scenery.calls}, sky ${m.skyDraws}, horizon ${m.horizonDraws}, deck ${m.deckWorldStatic}) | JS frame ${m.frameMs.avg} ms avg, ${m.frameMs.p95} p95`);
   }
 }
-let fail = 0;
-for (const r of results) {
+let fail = castFail;
+for (const r of results.filter((x) => !x.cast)) {
   const bad = [];
   if (r.staticDraws > 70) bad.push(`${r.staticDraws} static draws`);
   if (r.skyDraws !== 1) bad.push(`sky ${r.skyDraws}`);

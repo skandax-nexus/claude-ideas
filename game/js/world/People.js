@@ -92,12 +92,10 @@ const BY_ROLE = {
   'child of the city': { f: ['rb_ren_f'], m: ['rb_ren_m'] },
   'watcher in disguise': { f: ['rb_office_f', 'rb_doctor_f'], m: ['rb_captain_m', 'rb_doctor_m'] },
 };
-const BY_NAME = {
-  kade: 'rb_engineer_m', osei: 'rb_pilot_f', theo: 'rb_gardener_m', varga: 'rb_office_f',
-  // THE LAST VERSION OF EARTH
-  kai: 'rb_ren_m', witness: 'rb_ren_m', mira: 'rb_doctor_f', rook: 'rb_doctor_m', niko: 'rb_gardener_m', sera: 'rb_pilot_f',
-  anja: 'rb_doctor_f', iven: 'rb_engineer_m', jun: 'rb_captain_m', tala: 'rb_ren_f', mara: 'rb_office_f', orren: 'rb_captain_m', child: 'rb_juno',
-};
+const BY_NAME = { kade: 'rb_engineer_m', osei: 'rb_pilot_f', theo: 'rb_gardener_m', varga: 'rb_office_f' };
+// THE LAST VERSION OF EARTH casts its own people (crew.model) and dresses them (setCrewDresser)
+let dresser = null;
+export const setCrewDresser = (fn) => { dresser = fn; };
 export const CREW_REAL = {
   f: ['rb_pilot_f', 'rb_doctor_f', 'rb_office_f', 'rb_ren_f'],
   m: ['rb_captain_m', 'rb_doctor_m', 'rb_engineer_m', 'rb_gardener_m', 'rb_ren_m'],
@@ -111,6 +109,7 @@ export function crewModelKey(crew) {
   const seed = crew.seed || 0;
   const sex = crew.pronoun?.their === 'her' ? 'f' : crew.pronoun?.their === 'his' ? 'm' : null;
   const ok = (k) => actorLoaded(k) && k !== wearing;
+  if (crew.model && actorLoaded(crew.model)) return crew.model;
   // the Witness is an older Kai: he wears your face even when you do
   if (BY_NAME[crew.id] && (ok(BY_NAME[crew.id]) || (crew.id === 'witness' && actorLoaded(BY_NAME[crew.id])))) return BY_NAME[crew.id];
   const role = BY_ROLE[(crew.role || '').toLowerCase()];
@@ -126,7 +125,7 @@ export function makeCrewModel(crew, { hologram = false, glow, height: wantH } = 
   if (!actorsReady()) return makeHuman({ ...randomCrewSpec(mulberry32(crew.seed)), hologram, glow });
   const model = crewModelKey(crew) || 'xbot';
   const woman = /_f$|^w_/.test(model) || (model === 'xbot' && crew.pronoun?.their === 'her');
-  const height = wantH || (woman ? 1.64 : 1.76) + ((crew.seed || 0) % 9) / 100;
-  if (hologram) return makeActor({ model, hologram: true, glow: glow || 0x8fe0ff, height });
-  return makeActor({ model, height });
+  const height = wantH || crew.height || (woman ? 1.64 : 1.76) + ((crew.seed || 0) % 9) / 100;
+  const a = hologram ? makeActor({ model, hologram: true, glow: glow || 0x8fe0ff, height }) : makeActor({ model, height });
+  return dresser ? dresser(a, crew, { hologram }) || a : a;
 }

@@ -106,6 +106,7 @@ export function buildPlace(key, story, si, rt, opts = {}) {
   // mounted by the runtime in the browser, once DeckWorld has built the level (mount.js: the scenery,
   // the sky and the horizon into the level's root): { setEra, setYear, refresh, update, dispose }
   level.scenery = (root, rt) => mountPlace(rt);
+  level.heightAt = (x, z) => P.heightAt(x, z); // the ground under a point (the crowds stand on it: crowds.js)
   return level;
 }
 

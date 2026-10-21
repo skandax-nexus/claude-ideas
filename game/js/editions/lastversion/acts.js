@@ -275,6 +275,13 @@ export const ACT2 = [
     // the wards that run backwards on their own (not a year: engine.setOverride timeReverse), rooms of the hospital
     reversed: [{ sector: 0, room: 'h_colonnade' }, { sector: 1, room: 'h_annex' }, { sector: 2, room: 'h_twin' }],
     processes: M11_PROCESSES,
+    // Ward 32's figure stands by the nurse at the lock: silent, a hologram that flickers (npcs.js 'patient')
+    adjust(level) {
+      const nurse = level.npcs.find((n) => n.crew === 'odile');
+      if (!nurse) return;
+      const [x, y, z] = nurse.pos;
+      level.npcs.push({ id: 'ward32_figure', crew: 'patient', pos: [x + Math.cos(nurse.yaw) * 1.6, y, z - Math.sin(nurse.yaw) * 1.6], yaw: nurse.yaw + 0.3, silent: true, hologram: true, room: nurse.room });
+    },
     spots: [
       { id: 'maintTag', at: 'ward32Door', sector: 2, scene: 'maintTag', prompt: 'THE MAINTENANCE TAG', model: 'tag', offset: [2.05, 1.5, 0.02], r: 2.2,
         texts: [{ text: 'WARD 32 LOCK', at: [2.05, 1.92, 0.03], size: 0.09, color: '#7a828a', when: '!@PAST' }, { text: 'WARD 32 LOCK · REFITTED 14-03-2026', at: [2.05, 1.92, 0.03], size: 0.07, color: '#3a3020', when: '@PAST' }, { text: 'RING · BAR · STAR · CRESCENT', at: [2.05, 1.8, 0.03], size: 0.07, color: '#3a3020', when: '@PAST' }] },
@@ -292,7 +299,9 @@ export const ACT2 = [
     beats: [
       { kind: 'arrival', goal: 'Follow the sound that gets quieter as you approach.', log: { title: 'WARD INTERCOM', text: 'Temporal discontinuity. Temporal discontinuity. Temporal discontinuity.' } },
       { kind: 'contradiction', goal: 'Compare the medical records to find the missing patient.', official: 'PATIENT 32 - VAREN, M. - AGE 32 - DISCHARGED', echo: 'PATIENT 32 - VAREN, M. - AGE 9 - DATE OF DEATH: ', clue: 'cleared', crew: C('mira'), toast: 'RECORD COMPARED', log: 'Mira\'s file lists an age of 32, though the record predates the present by 23 years. Her death date is blank.' },
-      { kind: 'scene', goal: 'Dismantle the reversing lock in the correct order.', scene: 'lock', prompt: 'WARD 32: THE REVERSING LOCK', npc: 'patient', lines: [L('CREW', 'They put me back together every morning. I would like, once, to stay apart.')] },
+      // Nurse Odile, caught in the inverted ward since 2026, speaks for it; the bed holds a silent, flickering
+      // figure of adult Mira in a gown (adjust, below)
+      { kind: 'scene', goal: 'Dismantle the reversing lock in the correct order.', scene: 'lock', prompt: 'WARD 32: THE REVERSING LOCK', npc: 'odile', lines: [L('CREW', 'They put me back together every morning. I would like, once, to stay apart.')] },
     ],
     scenes: {
       lock: { when: 'inv_m11lock_done', lines: [N('The last bolt backs out and stays out. Nothing pushes it back in. The door to Ward 32 slides up.')], set: { lock_open: true }, beatDone: true, log: 'The reversing lock came apart the way it went together, last bolt first. Nothing pushes a bolt back in.' },

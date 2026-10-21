@@ -3,7 +3,15 @@
 // into a plain glTF binary for the game: game/assets/characters/rb_*.glb.
 //
 //   NODE_PATH=<dir with three@0.169 in node_modules> node tools/rocketbox-to-glb.mjs \
-//     <Assets/Avatars/.../Name_01 dir> <out.glb> [colour px (1024)] [normal px (512)]
+//     <Assets/Avatars/.../Name_01 dir> <out.glb> [colour px (1024)] [normal px (512)] [drop parts]
+//   ... --all <Rocketbox checkout> <out dir>                         (Station Zero's set, AVATARS)
+//   ... --edition lastversion <Rocketbox checkout> <out dir> [keys]  (THE LAST VERSION's people,
+//       LV_AVATARS: named characters at 1024 px, crowds at 512 px)
+//
+// - Any Rocketbox avatar: texture and material prefixes are letters then digits (f004_, the
+//   children's cf001_ / cm012_, the soldiers' sm024_); children are rigged as Bip02 and their bones
+//   are renamed Bip01_ (the game's rig, and the eye bones); RB_DROP lists parts whose triangles are
+//   left out (the pistols).
 //
 // - Geometry: the FBX's single skinned mesh, centimetres -> metres, vertex colours
 //   dropped, UVs flipped to glTF's top-left origin, triangles sorted so each
@@ -43,24 +51,74 @@ export const AVATARS = {
   rb_gardener_m: 'Professions/Gardener_Male_01', // botanist, Theo
 };
 
+// THE LAST VERSION OF EARTH's people (docs/lastversion/OVERHAUL.md §6): output name ->
+// { src: Rocketbox avatar, px: colour texture size (normal and roughness maps at half) }.
+// Named characters own their face at 1024 px; crowd people are small on screen, at 512 px.
+export const LV_AVATARS = {
+  // named (16)
+  rb_child_m: { src: 'Children/Male_Child_01', px: 1024 }, // young Kai
+  rb_mira: { src: 'Professions/Medical_Female_01', px: 1024 }, // Mira; Dr. Lin (same face)
+  rb_child_f: { src: 'Children/Female_Child_01', px: 1024 }, // the Child in the Station
+  rb_rook: { src: 'Professions/Business_Male_04', px: 1024 }, // Dr. Elias Rook
+  rb_niko: { src: 'Adults/Male_Adult_15', px: 1024 }, // Niko
+  rb_jun: { src: 'Professions/Business_Male_02', px: 1024 }, // Jun Park
+  rb_tala: { src: 'Adults/Female_Adult_06', px: 1024 }, // Tala
+  rb_security_f: { src: 'Professions/Security_Female_01', px: 1024 }, // Officer Pryce
+  rb_security_m: { src: 'Professions/Security_Male_01', px: 1024 }, // Officer Dale
+  rb_elder: { src: 'Adults/Female_Adult_10', px: 1024 }, // the Elder
+  rb_ezra: { src: 'Adults/Male_Adult_03', px: 1024 }, // Ezra Moll, the Clockmaker
+  rb_engineer_f: { src: 'Professions/Construction_Female_01', px: 1024 }, // Rhea Odum
+  rb_soldier_m: { src: 'Professions/Military_Male_02', px: 1024 }, // Sergeant Brask
+  rb_odile: { src: 'Adults/Female_Adult_02', px: 1024 }, // Nurse Odile
+  rb_florist: { src: 'Adults/Female_Adult_14', px: 1024 }, // the Florist
+  rb_warden: { src: 'Professions/Police_Male_04', px: 1024 }, // the District Warden
+  // crowd (15)
+  rb_civ_f1: { src: 'Adults/Female_Adult_15', px: 512 }, // commuter: blouse, skirt, boots
+  rb_civ_f2: { src: 'Adults/Female_Adult_08', px: 512 }, // commuter: tee, jeans
+  rb_civ_f3: { src: 'Adults/Female_Adult_12', px: 512 }, // 2196: hoodie
+  rb_civ_m1: { src: 'Adults/Male_Adult_04', px: 512 }, // commuter: leather jacket over a hoodie
+  rb_civ_m2: { src: 'Adults/Male_Adult_13', px: 512 }, // shopkeeper, older: argyle vest
+  rb_courier: { src: 'Professions/Delivery_Male_01', px: 512 }, // courier: flannel, beanie
+  rb_contractor: { src: 'Professions/Construction_Male_07', px: 512 }, // contractor: hi-vis, hard hat
+  rb_medic_f: { src: 'Professions/Medical_Female_03', px: 512 }, // paramedic
+  rb_child_m2: { src: 'Children/Male_Child_02', px: 512 }, // children (2049 and 2196)
+  rb_child_f2: { src: 'Children/Female_Child_02', px: 512 }, // the settlement's children
+  rb_trooper: { src: 'Professions/Military_Male_04', px: 512 }, // Continuum troops: helmet, plate carrier
+  rb_robe_m: { src: 'Adults/Male_Adult_19', px: 512 }, // the settlement's men (recoloured homespun)
+  rb_scav: { src: 'Adults/Male_Adult_18', px: 512 }, // 2196 scavengers, hood up
+  rb_trader: { src: 'Professions/Wood_Male_01', px: 512 }, // 2196 traders and engineers
+  rb_villager_f: { src: 'Adults/Female_Adult_09', px: 512 }, // 2196 gardeners, medics, archivists
+};
+// parts left out of a conversion: nobody in the game carries a gun
+export const RB_DROP = { rb_security_f: ['pistol'], rb_warden: ['pistol'] };
+
 const args = process.argv.slice(2);
 if (args[0] === '--all' && args.length === 3) {
   // node tools/rocketbox-to-glb.mjs --all <Microsoft-Rocketbox checkout> <game/assets/characters>
   for (const [key, rel] of Object.entries(AVATARS)) await convert(path.join(args[1], 'Assets', 'Avatars', rel), path.join(args[2], `${key}.glb`));
-} else if (args.length >= 2 && args[0] !== '--all') {
+} else if (args[0] === '--edition' && args[1] === 'lastversion' && args.length >= 4) {
+  // node tools/rocketbox-to-glb.mjs --edition lastversion <checkout> <game/assets/characters> [keys]
+  const keys = args.length > 4 ? args.slice(4) : Object.keys(LV_AVATARS);
+  for (const key of keys) {
+    const a = LV_AVATARS[key];
+    if (!a) throw new Error(`${key} is not in LV_AVATARS`);
+    await convert(path.join(args[2], 'Assets', 'Avatars', a.src), path.join(args[3], `${key}.glb`), String(a.px), String(a.px / 2), (RB_DROP[key] || []).join(','));
+  }
+} else if (args.length >= 2 && !args[0].startsWith('--')) {
   await convert(...args);
 } else {
-  console.error('usage: node tools/rocketbox-to-glb.mjs <avatar dir> <out.glb> [colour px] [normal px]\n       node tools/rocketbox-to-glb.mjs --all <Rocketbox checkout> <out dir>');
+  console.error('usage: node tools/rocketbox-to-glb.mjs <avatar dir> <out.glb> [colour px] [normal px] [drop parts]\n       node tools/rocketbox-to-glb.mjs --all <Rocketbox checkout> <out dir>\n       node tools/rocketbox-to-glb.mjs --edition lastversion <Rocketbox checkout> <out dir> [keys]');
   process.exit(1);
 }
 
-async function convert(dir, out, colorPx = '1024', normalPx = '512') {
+async function convert(dir, out, colorPx = '1024', normalPx = '512', dropParts = '') {
+  const drop = new Set(dropParts.split(',').filter(Boolean));
   const name = path.basename(path.resolve(dir));
   const fbx = path.join(dir, 'Export', `${name}.fbx`);
 
   // 1. textures (python + PIL)
   const tex = fs.mkdtempSync(path.join(os.tmpdir(), 'rb-tex-'));
-  const py = spawnSync('python3', ['-I', path.join(path.dirname(fileURLToPath(import.meta.url)), 'rocketbox-textures.py'), path.join(dir, 'Textures'), tex, colorPx, normalPx], { encoding: 'utf8' });
+  const py = spawnSync('python3', ['-I', path.join(path.dirname(fileURLToPath(import.meta.url)), 'rocketbox-textures.py'), path.join(dir, 'Textures'), tex, colorPx, normalPx, [...drop].join(',')], { encoding: 'utf8' });
   if (py.status !== 0) throw new Error(py.stderr);
   const parts = JSON.parse(py.stdout.trim().split('\n').pop());
 
@@ -75,9 +133,11 @@ async function convert(dir, out, colorPx = '1024', normalPx = '512') {
   const root = new FBXLoader().parse(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength), '');
   console.warn = warn;
   root.animations = [];
-  const drop = [];
-  root.traverse((o) => { if (o.isLight || o.isCamera) drop.push(o); });
-  for (const o of drop) o.removeFromParent();
+  const gone = [];
+  root.traverse((o) => { if (o.isLight || o.isCamera) gone.push(o); });
+  for (const o of gone) o.removeFromParent();
+  // children are rigged as Bip02: the game's rig (and its eye and face bones) is Bip01
+  root.traverse((o) => { o.name = o.name.replace(/^Bip0\d(?=_|$)/, 'Bip01'); });
   const meshes = [];
   root.traverse((o) => o.isSkinnedMesh && meshes.push(o));
   if (meshes.length !== 1) throw new Error(`${fbx}: expected one skinned mesh, found ${meshes.length}`);
@@ -86,13 +146,20 @@ async function convert(dir, out, colorPx = '1024', normalPx = '512') {
   if (!root.matrixWorld.equals(new THREE.Matrix4())) throw new Error('unexpected root transform');
 
   // 3. materials: one per part, plus the eyes
-  const partOf = (m) => m.name.replace(/^[a-z]\d+_/, '');
+  const partOf = (m) => m.name.replace(/^[a-z]+\d+_/, '');
   const srcMats = [].concat(mesh.material);
-  const mats = srcMats.map((m) => {
+  // a dropped part's triangles are left out, and its material with them
+  const keep = srcMats.map((m) => !drop.has(partOf(m)));
+  if (drop.size && keep.every(Boolean)) throw new Error(`${fbx}: none of the parts ${[...drop]} found`);
+  const remap = [];
+  const mats = [];
+  srcMats.forEach((m, i) => {
+    if (!keep[i]) return;
+    remap[i] = mats.length;
     const part = partOf(m);
-    return new THREE.MeshStandardMaterial({ name: part === 'opacity' ? 'hair' : part, roughness: 0.8, metalness: 0 });
+    mats.push(new THREE.MeshStandardMaterial({ name: part === 'opacity' ? 'hair' : part, roughness: 0.8, metalness: 0 }));
   });
-  const headIdx = srcMats.findIndex((m) => partOf(m) === 'head');
+  const headIdx = remap[srcMats.findIndex((m) => partOf(m) === 'head')];
   const eyeIdx = mats.length;
   mats.push(new THREE.MeshStandardMaterial({ name: 'eye', roughness: 0.15, metalness: 0 }));
 
@@ -102,7 +169,7 @@ async function convert(dir, out, colorPx = '1024', normalPx = '512') {
   const nTri = g0.attributes.position.count / 3;
   if (g0.index || !Number.isInteger(nTri)) throw new Error('expected non-indexed triangles');
   const triMat = new Int32Array(nTri);
-  for (const gr of g0.groups) for (let t = gr.start / 3; t < (gr.start + gr.count) / 3; t++) triMat[t] = gr.materialIndex;
+  for (const gr of g0.groups) for (let t = gr.start / 3; t < (gr.start + gr.count) / 3; t++) triMat[t] = keep[gr.materialIndex] ? remap[gr.materialIndex] : -1;
   const bones = mesh.skeleton.bones;
   if (bones.length > 255) throw new Error('too many bones for uint8 joints');
   const eyeBones = new Set(['Bip01_LEye', 'Bip01_REye'].map((n) => bones.findIndex((b) => b.name === n)).filter((i) => i >= 0));
@@ -120,16 +187,17 @@ async function convert(dir, out, colorPx = '1024', normalPx = '512') {
     }
   }
   // sort triangles by material: one contiguous group (one draw call) per material
-  const order = [...Array(nTri).keys()].sort((a, b) => triMat[a] - triMat[b] || a - b);
+  const order = [...Array(nTri).keys()].filter((t) => triMat[t] >= 0).sort((a, b) => triMat[a] - triMat[b] || a - b);
+  const nKept = order.length;
   const g1 = new THREE.BufferGeometry();
   for (const [key, a] of Object.entries(g0.attributes)) {
-    const arr = new a.array.constructor(a.array.length);
+    const arr = new a.array.constructor(nKept * 3 * a.itemSize);
     order.forEach((t, i) => arr.set(a.array.subarray(t * 3 * a.itemSize, (t + 1) * 3 * a.itemSize), i * 3 * a.itemSize));
     g1.setAttribute(key, new THREE.BufferAttribute(arr, a.itemSize, a.normalized));
   }
   let start = 0;
-  for (let i = 1; i <= nTri; i++) {
-    if (i === nTri || triMat[order[i]] !== triMat[order[start]]) {
+  for (let i = 1; i <= nKept; i++) {
+    if (i === nKept || triMat[order[i]] !== triMat[order[start]]) {
       g1.addGroup(start * 3, (i - start) * 3, triMat[order[start]]);
       start = i;
     }

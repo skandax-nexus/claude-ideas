@@ -791,11 +791,12 @@ class Game {
     if (actorsReady()) {
       // one character (Ren), several looks
       const cur = { ...LOOK_DEFAULT, ...(this.settings.hero || {}) };
-      if (!LOOKS[cur.id]) cur.id = LOOK_DEFAULT.id;
+      const looks = Object.entries(LOOKS).filter(([id]) => !this.editionDef?.looks || this.editionDef.looks.includes(id)); // THE LAST VERSION: Kai's own look only
+      if (!looks.some(([id]) => id === cur.id)) cur.id = looks.some(([id]) => id === LOOK_DEFAULT.id) ? LOOK_DEFAULT.id : looks[0][0];
       const look = lookOf(cur);
       $('#hero h2').textContent = 'YOUR LOOK';
       $('#hero .herohint').textContent = 'The station calls you Ren. Choose how you remember yourself.';
-      $('#hero .heroes').innerHTML = Object.entries(LOOKS).map(([id, h]) => `<button data-hero="${id}" class="look ${id === cur.id ? 'sel' : ''}"><img src="assets/looks/${id}.webp" alt=""><span>${h.name}</span></button>`).join('');
+      $('#hero .heroes').innerHTML = looks.map(([id, h]) => `<button data-hero="${id}" class="look ${id === cur.id ? 'sel' : ''}"><img src="assets/looks/${id}.webp" alt=""><span>${h.name}</span></button>`).join('');
       $('#hero .heroes').classList.add('looks');
       const sw = (k, list, label) => `<div class="row2"><span>${label}</span><span class="sw">${list.map((v) => `<button style="background:${hex(v)}" class="${cur[k] === v ? 'sel' : ''}" data-k="${k}" data-v="${v}" aria-label="${label} ${hex(v)}"></button>`).join('')}</span></div>`;
       $('#hero .custom').innerHTML = `<p class="heroblurb">${look.blurb}</p>` + (look.colours ? sw('hair', HAIR, 'HAIR') + sw('top', TOPS, 'OUTFIT') : '');

@@ -67,8 +67,16 @@ html = html.replace(/<link rel="manifest"[^>]*>\n?/, '').replace(/<link rel="ico
 fs.writeFileSync(out + '/assets/index.html', html);
 JS
 # character models and the voice pack, served by MainActivity from https://afterzero.app/assets/...
+# Each game carries its own people: THE LAST VERSION the models of its manifest (casting.js MANIFEST: its
+# 31 people and the 9 shared models it uses), Station Zero every model but the edition's own people.
+CHARS=$(node --input-type=module -e "
+  const m = await import('$(pwd)/../game/js/editions/lastversion/casting.js');
+  const all = (await import('node:fs')).readdirSync('../game/assets/characters').filter((f) => f.endsWith('.glb')).sort();
+  const own = new Set(Object.values(m.LV_MODELS).map((x) => x.file));
+  console.log((process.argv[1] === 'lastversion' ? m.MANIFEST : all.filter((f) => !own.has(f))).join(' '));" "${EDITION:-stationzero}")
 mkdir -p "$OUT/assets/assets/characters" "$OUT/assets/assets/voice"
-cp ../game/assets/characters/*.glb "$OUT/assets/assets/characters/"
+for f in $CHARS; do cp "../game/assets/characters/$f" "$OUT/assets/assets/characters/"; done
+echo "characters: $(echo $CHARS | wc -w) models ($(du -ch $(for f in $CHARS; do echo ../game/assets/characters/$f; done) | tail -1 | cut -f1))"
 mkdir -p "$OUT/assets/assets/looks" && cp ../game/assets/looks/*.webp "$OUT/assets/assets/looks/"
 mkdir -p "$OUT/assets/assets/textures" && cp ../game/assets/textures/*.jpg ../game/assets/textures/*.hdr "$OUT/assets/assets/textures/"
 if [ -f ../game/assets/voice/voice.ogg ]; then cp ../game/assets/voice/voice.json ../game/assets/voice/voice.ogg "$OUT/assets/assets/voice/"
@@ -92,7 +100,7 @@ P="$OUT/preview"
 mkdir -p "$P/assets/voice" "$P/assets/looks" "$P/assets/textures"
 cp ../game/assets/looks/*.webp "$P/assets/looks/"
 cp ../game/assets/textures/*.jpg "$P/assets/textures/"
-python3 -I ../tools/gltf-json.py ../game/assets/characters "$P/assets/characters" >/dev/null
+python3 -I ../tools/gltf-json.py ../game/assets/characters "$P/assets/characters" $CHARS >/dev/null
 # (the first <script> is the edition flag when there is one; the preview flags go in front of it)
 sed '0,/<script>/s#<script>#<script>window.AZ_MODEL_EXT=".json";window.AZ_NO_HDR=1;</script><script>#' "$OUT/assets/index.html" > "$P/index.html"
 [ -f ../game/assets/voice/voice.ogg ] && cp ../game/assets/voice/voice.json ../game/assets/voice/voice.ogg "$P/assets/voice/"

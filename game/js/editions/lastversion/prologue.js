@@ -14,34 +14,12 @@ const L = (who, text, when) => (when ? { who, text, when } : { who, text });
 const N = (text, when) => L('NONE', text, when);
 const K = (text, when) => L('KAI', text, when);
 
-// Rain City's people: commuters on the sidewalks, a queue at the checkpoint, waiters on the platform
-function commuters(P, rng) {
-  const A = AMBIENT.rain;
-  let k = 0;
-  const add = (pos, o = {}) => P.npcs.push({
-    crew: `amb_${k}`, first: A.names[k % A.names.length], seed: 100 + k, ambient: true,
-    pronoun: k % 2 ? { their: 'his', them: 'him' } : { their: 'her', them: 'her' },
-    pos, yaw: o.yaw ?? rng.float(0, 6.28), barks: o.barks || A.barks, barkEvery: 22, freezeWhen: 'zero_second && !after_zero', silent: !o.talk, ...o, id: `amb_${k++}`, room: P.rid,
-  });
-  // walkers along the avenue's sidewalks (each a loop between two points)
-  for (let i = 0; i < 7; i++) {
-    const x = i % 2 ? 11 : -11;
-    const z0 = -4 - i * 7, z1 = z0 - rng.float(12, 22);
-    add([x, 0.15, z0], { path: [[x, z0], [x, z1]], speed: rng.float(0.9, 1.3) });
-  }
-  // the queue before the checkpoint bridge
-  const [qx, qy, qz] = P.at('checkpointQueue');
-  for (let i = 0; i < 6; i++) add([qx + (i % 2 ? 0.6 : -0.6), qy, qz - 4 + i * 1.5], { yaw: Math.PI, barks: [A.barks[0], A.barks[1], A.barks[3]] });
-  // waiting on the platform
-  const [px, py, pz] = P.at('platform');
-  for (let i = 0; i < 3; i++) add([px - 18 + i * 12, py, pz + (i % 2 ? -4 : 2)], { yaw: i % 2 ? -Math.PI / 2 : Math.PI / 2 });
-}
-
 export const M01 = {
   key: 'm01', n: 1, chapter: 'prologue', name: 'THE LAST NORMAL DAY', title: 'Rain City, 2049', subtitle: 'Eight-fourteen on a Tuesday. The 41 is late.',
   // PAST here is not 2026: it is 8:13, the minute before the crash, which the station keeps falling back into (quest chain A)
   place: 'rain_south', sectors: 1, states: ['PRESENT', 'PAST'], drones: [0],
-  ambience: 'rain',
+  ambience: 'rain', ambient: 'rain',
+  crowdFreeze: 'zero_second && !after_zero', // Rain City's crowds stop with the clocks
   fragments: [[
     'A wet newspaper on a bench: HELIX DENIES "TIME TESTS" - DIRECTOR ROOK: "WE STUDY CLOCKS, NOT MIRACLES".',
     'A pharmacy receipt dated tomorrow. The total is right. The date is not.',
@@ -56,11 +34,16 @@ export const M01 = {
     // Kai's door
     const [dx, dy, dz] = L('door4B');
     P.texts.push({ text: 'VAREN - 4B', pos: [dx + 1.66, dy + 2.4, dz - 2.6], rotY: -Math.PI / 2, size: 0.3, color: '#ffe0b0', room: rid });
-    commuters(P, P.rng);
+    // (Rain City's commuters, the queue at the checkpoint and the platform staff are the place's crowds:
+    // rain_south's paths, cast by crowds.js. They stop with the clocks at the Zero Second.)
     // --- the optional anomalies -----------------------------------------------------
     const [tx, ty, tz] = L('toyChild');
     A.prop(P, 'bench', tx, tz, 0.4, { y: ty });
-    P.npcs.push({ id: 'amb_child', crew: 'amb_child', first: 'Child', seed: 77, ambient: true, pronoun: { their: 'her', them: 'her' }, pos: [tx - 0.6, ty, tz - 1.7], yaw: 0.4, silent: true, height: 1.25, freezeWhen: 'zero_second && !after_zero', room: rid });
+    // the toy child: a boy in a red raincoat (yellow is Mira's), silent (crowds.js casts him)
+    P.npcs.push({ id: 'amb_child', crew: 'amb_child', first: 'Child', seed: 77, ambient: true, pronoun: { their: 'his', them: 'him' }, pos: [tx - 0.6, ty, tz - 1.7], yaw: 0.4, silent: true, height: 1.26, freezeWhen: 'zero_second && !after_zero', room: rid });
+    // the Florist at her stall (her side story comes with the Prologue's rewrite)
+    const [fx, fy, fz, fyaw] = L('floristStall');
+    P.npcs.push({ id: 'florist', crew: 'florist', pos: [fx + 0.4, fy, fz + 1.4], yaw: fyaw, silent: true, freezeWhen: 'zero_second && !after_zero', room: rid });
     P.inter.push({ id: 'toy', kind: 'scene', scene: 'toy', pos: [tx + 0.4, ty + 0.25, tz - 1.1], r: 2.4, prompt: 'LOOK', model: () => makeToy(), once: true, room: rid });
     const [cx, cy, cz] = L('plazaClock');
     P.inter.push({ id: 'clock', kind: 'scene', scene: 'clock', pos: [cx, cy + 6.15, cz + 0.95], yaw: 0, r: 7, prompt: 'LOOK AT THE CLOCK', model: () => { const m = makeClock({ mode: 'backwards' }); m.scale.setScalar(2.4); return m; }, once: true, room: rid });
@@ -115,7 +98,7 @@ export const M01 = {
     // the Child in the Station (optional, recurring): only after the clocks stop
     P.npcs.push({ id: 'child', crew: 'child', pos: [px - 31, py, pz - 7], yaw: 0.6, hologram: true, height: 1.22, dialogue: DIALOGUE.child, when: 'zero_second', barks: ['Do you know the song? It goes up and then it goes up again and then it stops.'], room: rid });
     // Mira, for one second, at the far end: on the north platform by the stair down to the staff gate
-    P.npcs.push({ id: 'mira', crew: 'mira', pos: [px + 3, py, pz - 30], yaw: 0, silent: true, when: 'voice_heard && !mira_gone', room: rid });
+    P.npcs.push({ id: 'mira', crew: 'mira', variant: 'raincoat', pos: [px + 3, py, pz - 30], yaw: 0, silent: true, when: 'voice_heard && !mira_gone', room: rid });
     P.triggers.push({ box: [px - 35, py - 1, pz - 14, px + 35, py + 6, pz + 8], set: { zero_second: true }, once: true, when: 'checkpoint_passed && rook_message', room: rid });
   },
   intro: [

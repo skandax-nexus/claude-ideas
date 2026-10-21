@@ -12,6 +12,9 @@
 //     (three devices in three years, the faction choice), Mission 14 (2196: stability, the
 //     snap back to the present), Mission 19 (the place outside time, Echo Step), and the
 //     Finale to Ending C, where quest chain A's passengers have cleared the first street
+//   - casting (OVERHAUL.md §6): Mission 1's checkpoint officer is a security officer (rb_security_f), the toy
+//     child and the Child have children's bodies, Mission 10's watchers are Continuum troopers whose cones see,
+//     crowds walk Missions 1, 4 and 14
 //   - real walks through the open places: Mission 13's quay to the container canyons, Mission 14's viaduct,
 //     the Museum's spiral (Mission 16) from the rim to the Comparison Hall, Mission 19's bridge that is only a
 //     reflection (it holds in 2026) and its wrapping edge, and the Finale's road over the settlement's stream
@@ -193,7 +196,13 @@ const onward = async () => {
 // after a mission's last gate: the outro plays, the fade's timer moves on to the next place
 const nextPlace = async () => {
   await page.waitForTimeout(1600);
+  await page.waitForFunction(() => !AZ.transitioning, null, { timeout: 300000 }).catch(() => {}); // (a new chapter's people load behind its card)
   await az(() => { LVB.step(0.3); LVB.skip(); });
+};
+// a chapter started out of order: its people first (casting.js loads them one at a time), then the chapter
+const startChapter = async (ch) => {
+  await page.evaluate((c) => AZ.edition.loadCast(c), ch);
+  await az((c) => { AZ.edition.start(c); AZ.simulate(0.2); LVB.skip(); }, ch);
 };
 
 // --- the title -----------------------------------------------------------------------------
@@ -220,6 +229,15 @@ check(m1.chapter === 'prologue' && m1.deck === 0 && m1.state === 'PRESENT', 'NEW
 console.log('Mission 1: The Last Normal Day');
 const walked = await az(() => { LVB.step(3); LVB.skip(); const z0 = AZ.player.pos.z; LVB.walkTo(11, -14, 4); return [z0, AZ.player.pos.z, AZ.level.place, AZ.room]; });
 check(walked[1] < walked[0] - 6 && walked[2] === 'rain_south', 'you walk up the avenue of Rain City South (an open place under the sky)', JSON.stringify(walked));
+const cast1 = await az(() => {
+  const m = (id) => LVB.npc(id)?.model.userData.spec?.model;
+  const crowd = AZ.deckWorld.npcs.filter((n) => n.n.crowd);
+  return { guard: m('guard'), guardVariant: LVB.npc('guard')?.model.userData.lvVariant, toy: m('amb_child'), child: m('child'), mira: LVB.npc('mira')?.model.userData.lvVariant,
+    crowd: crowd.length, visible: crowd.filter((n) => n.model.visible).length, walking: crowd.filter((n) => n.n.path).length, umbrellas: crowd.filter((n) => n.model.userData.umbrella).length, people: AZ.deckWorld.npcs.length };
+});
+check(cast1.guard === 'rb_security_f' && cast1.guardVariant === 'helix', 'Mission 1\'s checkpoint officer is a security officer in Helix black (rb_security_f), not a doctor', JSON.stringify(cast1));
+check(cast1.toy === 'rb_child_m2' && cast1.child === 'rb_child_f', 'the toy child and the Child in the Station have children\'s bodies', JSON.stringify(cast1));
+check(cast1.visible >= 10 && cast1.walking >= 8 && cast1.umbrellas >= 3 && cast1.people <= 24, 'Rain City\'s crowds walk Mission 1, umbrellas up (within 24 people)', JSON.stringify(cast1));
 const toy = await az(() => { const u = LVB.go('toy'); LVB.use('toy'); LVB.skip(); return [u, LVB.f('ev_toy')]; });
 check(toy[1].ev_toy, 'an optional anomaly: the toy that un-falls goes on the case board', JSON.stringify(toy));
 const rook = await az(() => { const l = LVB.lm('rookCall'); LVB.place(l[0], l[2], l[1] + 0.86); LVB.step(0.3); const s = LVB.said.join('\n'); LVB.skip(); return [AZ.facts.get('rook_message'), s.includes('ROOK: Kai. Where are you.')]; });
@@ -392,6 +410,8 @@ await az(() => LVB.exit());
 await nextPlace();
 const act1 = await az(() => ({ ...LVB.where(), name: AZ.edition.deck.name }));
 check(act1.chapter === 'act1' && act1.deck === 0 && act1.name === 'THE MAN FROM THE LAST DAY', 'the Prologue ends; Act I begins with Mission 4', JSON.stringify(act1));
+const crowd4 = await az(() => { const c = AZ.deckWorld.npcs.filter((n) => n.n.crowd && n.model.visible); return { n: c.length, models: [...new Set(c.map((n) => n.model.userData.spec?.model))] }; });
+check(crowd4.n >= 5 && crowd4.models.every((m) => ['rb_robe_m', 'rb_tala', 'rb_child_f2'].includes(m)), 'the settlement\'s people walk Mission 4, in homespun (not the Elder\'s face: she is in this mission)', JSON.stringify(crowd4));
 check(await az(() => AZ.facts.get('m01_done') && AZ.facts.get('m02_done') && AZ.facts.get('m03_done')), 'the three prologue missions are recorded as done');
 
 // --- Act I: Mission 5, THE VILLAGE THAT NEVER EXISTED -------------------------------------------------------
@@ -446,7 +466,27 @@ check(await az(() => AZ.facts.get('m05_done') && AZ.edition.deck.name === 'THE C
 // --- Act II: Mission 11, THE INVERTED HOSPITAL: REVERSE -------------------------------------------------
 console.log('Act II, Mission 11: The Inverted Hospital (REVERSE)');
 const SHOT = process.env.LV_SHOT || null; // where to save the REVERSE screenshot (optional)
-await az(() => { AZ.edition.start('act2'); AZ.simulate(0.2); LVB.skip(); LVB.goMission(2); });
+await startChapter('act2');
+// Mission 10's watchers are Continuum troopers (the Observer inside each sentinel swapped for a person), and their cones see
+const m10 = await az(() => {
+  LVB.goMission(1);
+  const ws = AZ.edition.watchers.list;
+  const models = ws.map((w) => w.current?.actor?.userData.spec?.model || 'drone');
+  const w = ws[0];
+  const s = w.s;
+  s.mode = 'patrol'; s.suspicion = 0;
+  // stand in its cone, four metres ahead of it, and let it look
+  LVB.place(s.pos.x + s.dir.x * 4, s.pos.z + s.dir.z * 4);
+  const t0 = AZ.time;
+  let seen = 0;
+  for (let i = 0; i < 40 && s.mode !== 'chase'; i++) { AZ.simulate(0.05); seen = Math.max(seen, s.suspicion); }
+  const out = { mkey: AZ.edition.deck.mkey, models, variant: w.current?.actor?.userData.lvVariant, observer: !!w.g.getObjectByProperty?.('name', 'observer'), seen: +seen.toFixed(2), mode: s.mode, eye: w.g.userData.eyeMat.color.getHexString(), cone: w.g.userData.coneMat.opacity, secs: +(AZ.time - t0).toFixed(2) };
+  AZ.deckWorld.sentinels.forEach((x) => x.reset());
+  return out;
+});
+check(m10.mkey === 'm10' && m10.models.length >= 1 && m10.models.every((m) => m === 'rb_trooper') && m10.variant === 'continuum', 'Mission 10\'s watchers are Continuum troopers (rb_trooper, slate)', JSON.stringify(m10));
+check(m10.seen >= 1 && m10.mode === 'chase' && m10.eye === 'ff8a70' && m10.cone > 0.1, 'a trooper\'s cone sees Kai in front of it: suspicion, then the chase', JSON.stringify(m10));
+await az(() => { LVB.goMission(2); });
 const hosp = await az(() => {
   const g = AZ, inv = g.edition.inv;
   const rev = g.level.order.filter((r) => g.engine.hasIn('timeReverse', r));
@@ -625,7 +665,8 @@ check(rest.every((r) => r.out.length >= 2) && opened.done && opened.beat && open
 
 // --- Act II: Mission 13, THE NINE-MINUTE WAR --------------------------------------------------------------
 console.log('Act II, Mission 13: The Nine-Minute War');
-await az(() => { AZ.edition.start('act2'); AZ.simulate(0.2); LVB.skip(); LVB.goMission(4); });
+await startChapter('act2');
+await az(() => { LVB.goMission(4); });
 check((await az(() => AZ.edition.deck.name)) === 'THE NINE-MINUTE WAR', 'Mission 13');
 const quay = await az(() => { AZ.edition.shift('PRESENT'); LVB.place(0, 84); return LVB.route([[2.6, 80], [2.6, 68], [24, 60], [24, 14]]); });
 check(quay.n === quay.of && !quay.setbacks, 'Mission 13, walked: from the quay trench through the gap in the sandbags, past the container canyons to their gate', JSON.stringify(quay));
@@ -664,6 +705,9 @@ check(act3.chapter === 'act3' && act3.name === 'WELCOME TO 2196', 'Act II ends; 
 
 // --- Act III: Mission 14, WELCOME TO 2196 ---------------------------------------------------------------
 console.log('Act III, Mission 14: Welcome to 2196');
+const crowd14 = await az(() => { const c = AZ.deckWorld.npcs.filter((n) => n.n.crowd && n.model.visible); return { year: AZ.engine.state(AZ.room), n: c.length, models: [...new Set(c.map((n) => n.model.userData.spec?.model))] }; });
+const faces14 = crowd14.year === 'FUTURE' ? ['rb_trader', 'rb_villager_f', 'rb_civ_f3', 'rb_scav', 'rb_child_m2'] : ['rb_civ_f1', 'rb_civ_f2', 'rb_civ_m1', 'rb_civ_m2', 'rb_courier', 'rb_contractor'];
+check(crowd14.n >= 3 && crowd14.models.every((m) => faces14.includes(m)), 'a crowd walks Mission 14, in its year\'s own faces (2196\'s survivors; 2049\'s commuters)', JSON.stringify(crowd14));
 const drain = await az(() => {
   AZ.edition.shift('FUTURE');
   const a = AZ.edition.stability;
@@ -729,7 +773,7 @@ check(spiral.n === spiral.of && !spiral.setbacks && Math.abs(spiral.y + 12) < 0.
 
 // --- Act IV: Mission 19, THE PLACE OUTSIDE TIME --------------------------------------------------------------
 console.log('Act IV, Mission 19: The Place Outside Time');
-await az(() => { AZ.edition.start('act4'); AZ.simulate(0.2); LVB.skip(); });
+await startChapter('act4');
 check((await az(() => AZ.edition.deck.name)) === 'THE PLACE OUTSIDE TIME', 'Mission 19');
 const echoStep = await az(() => {
   LVB.place(0, -10); AZ.edition.stability = 1;
@@ -782,7 +826,7 @@ check(await az(() => AZ.facts.get('m19_done') && AZ.edition.deck.name === 'MIRA\
 
 // --- the Finale: AFTERZERO ------------------------------------------------------------------------------------
 console.log('The Finale: Afterzero');
-await az(() => { AZ.edition.start('finale'); AZ.simulate(0.2); LVB.skip(); });
+await startChapter('finale');
 const street = await az(() => ({ name: AZ.edition.deck.name, drones: AZ.deckWorld.sentinels.length, jun: !!LVB.npc('jun_safe') }));
 check(street.name === 'AFTERZERO' && street.drones === 0 && street.jun, 'the passengers Kai got off the 41 have cleared the opening streets: no watchers, Jun waves you through', JSON.stringify(street));
 const road = await az(() => { AZ.edition.shift('PRESENT'); const l = LVB.lm('platform41'); LVB.place(l[0], l[2]); return LVB.route([[2, 150], [2, 116]]); });
@@ -854,6 +898,7 @@ async function survey() {
       return 'ok';
     });
     await sp.waitForFunction(() => AZ.started && AZ.room && AZ.level?.place, null, { timeout: 300000 }).catch((e) => { crashed = crashed || /closed|crash/i.test(e.message); });
+    if (!crashed && ch !== 'prologue') await sp.evaluate((c) => AZ.edition.loadCast(c), ch).catch(() => {}); // (the chapter's people first)
     const m = await run(([ch, d]) => {
       const g = AZ;
       g.renderer.setAnimationLoop(null);

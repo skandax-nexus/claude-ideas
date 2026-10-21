@@ -30,6 +30,10 @@ import { MATS, SURFACES } from '../game/js/editions/lastversion/places/materials
 import { KIT_NAMES } from '../game/js/editions/lastversion/places/kits.js';
 import { STYLES } from '../game/js/editions/lastversion/places/styles.js';
 import { Player } from '../game/js/entities/Player.js';
+import { LV_MODELS, SHARED_MODELS, MANIFEST, CHAPTER_CAST, COMMON, sexOf, isChild, castOf } from '../game/js/editions/lastversion/casting.js';
+import { WARDROBE, hasVariant, packRules } from '../game/js/editions/lastversion/wardrobe.js';
+import { ERAS, EXCEPTIONS, ANCIENT_WOMEN, AMBIENT_CAST, eraModels, MAX_PEOPLE } from '../game/js/editions/lastversion/crowds.js';
+import { WATCHERS, HUMAN, watcherModels, kindsOf } from '../game/js/editions/lastversion/watchers.js';
 
 const INTENTS = ['challenge', 'comfort', 'investigate', 'withdraw'];
 const engine = () => new RealityEngine(LV.engineOptions());
@@ -977,11 +981,11 @@ test('a place keeps to its budgets: colliders, texts, people, vegetation kinds, 
     const here = `${deck.mkey}/${s}`;
     assert.ok(level.elements.length <= 1500, `${here}: ${level.elements.length} colliders`);
     assert.ok(level.texts.length <= 60, `${here}: ${level.texts.length} texts`);
-    // people: today's level, and the named and tier-2 people plus the crowd U4 walks along level.crowd (it replaces
-    // today's numbered commuters, amb_<n>), each within §4.7's 24
+    // people: the named and tier-2 people plus the crowds cast along level.crowd (crowds.js), within §4.7's 24
     const crowdN = level.crowd.reduce((a, c) => a + c.n, 0);
-    const named = level.npcs.filter((n) => !/^amb_\d+$/.test(n.id)).length;
-    assert.ok(level.npcs.length <= 24 && named + crowdN <= 24, `${here}: ${level.npcs.length} people today, ${named} named + ${crowdN} in the crowd`);
+    const named = level.npcs.filter((n) => !n.crowd).length;
+    const crowd = level.npcs.filter((n) => n.crowd).length;
+    assert.ok(level.npcs.length <= 24 && crowd === Math.min(crowdN, 24 - named), `${here}: ${level.npcs.length} people, ${named} named + ${crowd} of ${crowdN} in the crowd`);
     const [bx0, bz0, bx1, bz1] = level.bounds;
     assert.ok(level.crowd.length, `${here}: crowd paths for U4`);
     for (const c of level.crowd) {
@@ -1129,4 +1133,189 @@ test('the Chronolith has the edition\'s three forms and stands in them: stone (t
   assert.deepEqual(['PRESENT', 'PAST', 'FUTURE'].map(shown), ['helix', 'helix', 'halo'], 'Mission 3: broken into a halo by 2196');
   assert.equal(model('m04', 'chronolith_m04')?.userData.kind, 'stone', 'Mission 4: the ring as the village keeps it');
   for (const f of fs.readdirSync('game/js/editions/lastversion').filter((n) => n.endsWith('.js'))) assert.ok(!/makeMachineRing/.test(fs.readFileSync(`game/js/editions/lastversion/${f}`, 'utf8')), `${f}: no Station Zero lab ring`);
+});
+
+// --- casting, crowds and watchers (OVERHAUL.md §6) -------------------------------------------------------
+const MODEL_OF = (key) => LV_MODELS[key] || SHARED_MODELS[key];
+const SEX = { her: 'f', his: 'm' };
+const allNamed = () => Object.values(NPCS).filter((n) => !n.resolve);
+
+test('every NPC is cast: a model whose file exists, a defined variant, a height, a recorded-voice id and a walk', () => {
+  for (const n of Object.values(NPCS)) {
+    if (n.resolve) {
+      // the Director of Continuity: whoever rook_fate made them, or an empty chair with a recorder
+      for (const r of n.resolve) assert.ok(r.as ? NPCS[r.as] && hasVariant(NPCS[r.as].model, r.variant) : r.chair, `director: ${JSON.stringify(r)}`);
+      continue;
+    }
+    const m = MODEL_OF(n.model);
+    assert.ok(m, `${n.id}: model ${n.model}`);
+    assert.ok(fs.existsSync(`game/assets/characters/${m.file}`), `${n.id}: ${m.file} exists`);
+    assert.ok(hasVariant(n.model, n.variant), `${n.id}: ${n.model} has a variant ${n.variant}`);
+    assert.ok(n.height >= 1.2 && n.height <= 1.9 && n.walk > 0.5 && n.walk < 1.2, `${n.id}: height ${n.height}, walk ${n.walk}`);
+    assert.ok(n.vid === null || /^[A-Z0-9]+$/.test(n.vid), `${n.id}: vid ${n.vid}`);
+  }
+  for (const id of ['kai', 'mira', 'witness', 'sera', 'rook', 'niko', 'anja', 'iven', 'jun', 'tala', 'mara', 'orren', 'child', 'guard', 'odile', 'florist']) assert.ok(NPCS[id].vid, `${id} speaks with a recorded voice of their own`);
+});
+
+test('pronouns match the body: every NPC, every hand-placed passer-by, every person a level casts', () => {
+  for (const n of allNamed()) if (sexOf(n.model) !== 'n') assert.equal(SEX[n.pronoun?.their], sexOf(n.model), `${n.id} (${n.pronoun?.their}) on ${n.model}`);
+  for (const [id, a] of Object.entries(AMBIENT_CAST)) assert.equal(a.pronoun, sexOf(a.model), id);
+  for (const { deck, s, level } of LEVELS) {
+    for (const n of level.npcs) {
+      const c = level.cast.find((x) => x.id === n.crew);
+      assert.ok(c, `${deck.mkey}/${s}: ${n.id} is cast`);
+      if (!c.model || sexOf(c.model) === 'n') continue;
+      assert.equal(SEX[(n.pronoun || c.pronoun)?.their], sexOf(c.model), `${deck.mkey}/${s}: ${n.id} on ${c.model}`);
+    }
+  }
+});
+
+test('the checkpoint officer is Officer Pryce on rb_security_f; the renames and the new people', () => {
+  assert.equal(NPCS.guard.model, 'rb_security_f', 'the gatekeeper is a security officer, not a doctor');
+  assert.equal(NPCS.guard.name, 'Officer Pryce');
+  assert.equal(NPCS.pryce, NPCS.guard, 'pryce is kept as an alias of the same person');
+  assert.match(NPCS.clockmaker.name, /Ezra Moll/);
+  assert.equal(NPCS.clockmaker.model, 'rb_ezra');
+  assert.equal(NPCS.soldier.name, 'Sergeant Brask');
+  for (const id of ['odile', 'florist', 'receptionist', 'director', 'kai12', 'tomas']) assert.ok(NPCS[id], id);
+  assert.ok(NPCS.patient.silent && NPCS.patient.hologram && NPCS.patient.model === 'rb_mira' && NPCS.patient.variant === 'gown', 'Ward 32: a silent figure of Mira in a gown');
+  const m1 = LEVELS.find((l) => l.deck.mkey === 'm01').level;
+  assert.equal(m1.cast.find((c) => c.id === 'guard').model, 'rb_security_f');
+  assert.equal(m1.cast.find((c) => c.id === 'mira').variant, 'raincoat', 'M1: the woman in the rain');
+  const m11 = LEVELS.find((l) => l.deck.mkey === 'm11' && l.level.npcs.some((n) => n.crew === 'patient')).level;
+  assert.ok(m11.npcs.find((n) => n.crew === 'patient').silent && m11.npcs.some((n) => n.crew === 'odile' && n.lines?.length), 'M11: Odile speaks for Ward 32; its figure is silent');
+});
+
+test('Lin and Mira share one mesh, in different wardrobes; the Witness wears Kai\'s', () => {
+  assert.equal(NPCS.researcher.model, NPCS.mira.model);
+  assert.notEqual(NPCS.researcher.variant, NPCS.mira.variant);
+  assert.equal(NPCS.witness.model, NPCS.kai.model);
+  assert.notEqual(NPCS.witness.variant, NPCS.kai.variant);
+});
+
+test('every child is a child: the named children, the crowds\' children, the toy child', () => {
+  for (const id of ['child', 'kai12', 'tomas']) assert.ok(isChild(NPCS[id].model), id);
+  assert.ok(isChild(AMBIENT_CAST.amb_child.model), 'M1\'s toy child');
+  for (const era of Object.keys(ERAS)) for (const [m] of ERAS[era].child || []) assert.ok(isChild(m), `${era} children: ${m}`);
+  for (const { deck, s, level } of LEVELS) {
+    for (const n of level.npcs.filter((x) => x.crowd)) {
+      const c = level.cast.find((x) => x.id === n.crew);
+      const role = level.crowd.find((cr) => n.first && true) && c;
+      void role;
+      if (/child/i.test(n.first)) assert.ok(isChild(c.model), `${deck.mkey}/${s}: ${n.id} (${n.first}) on ${c.model}`);
+    }
+  }
+});
+
+test('named faces stay out of crowds (but for the listed exceptions), and crowd faces never cross eras', () => {
+  const named = new Set(allNamed().map((n) => n.model));
+  for (const era of Object.keys(ERAS)) for (const m of eraModels(era)) assert.ok(!named.has(m) || EXCEPTIONS.includes(m), `${era}: ${m} is a named face`);
+  const [pr, an, fu] = ['present', 'ancient', 'future'].map(eraModels);
+  for (const m of pr) assert.ok(!an.has(m) && (!fu.has(m) || m === 'rb_child_m2'), `present and other eras share ${m}`);
+  for (const m of an) assert.ok(!fu.has(m), `ancient and 2196 share ${m}`);
+  // the settlement's women: whichever named woman is not in the mission
+  for (const { deck, s, level } of LEVELS) {
+    const here = new Set(level.npcs.filter((n) => !n.crowd && NPCS[n.crew]).map((n) => level.cast.find((c) => c.id === n.crew)?.model));
+    for (const n of level.npcs.filter((x) => x.crowd)) {
+      const c = level.cast.find((x) => x.id === n.crew);
+      assert.ok(!here.has(c.model) || c.model === 'rb_child_m2' && c.era !== 'ancient', `${deck.mkey}/${s}: ${c.model} is in the crowd and among the named`);
+      assert.ok(eraModels(c.era).has(c.model), `${deck.mkey}/${s}: ${c.model} is not of the ${c.era} era`);
+    }
+  }
+});
+
+test('crowds walk every mission\'s place: neighbours differ, heights and paces vary a little, within the budget', () => {
+  const byMission = {};
+  for (const { deck, s, level } of LEVELS) {
+    const crowd = level.npcs.filter((n) => n.crowd);
+    byMission[deck.mkey] = (byMission[deck.mkey] || 0) + crowd.length;
+    assert.ok(level.npcs.length <= MAX_PEOPLE, `${deck.mkey}/${s}: ${level.npcs.length} people`);
+    for (let i = 1; i < crowd.length; i++) {
+      const a = level.cast.find((c) => c.id === crowd[i - 1].crew), b = level.cast.find((c) => c.id === crowd[i].crew);
+      if (crowd[i - 1].when === crowd[i].when) assert.ok(a.model !== b.model || a.variant !== b.variant, `${deck.mkey}/${s}: neighbours ${a.id} and ${b.id} are both ${a.model}/${a.variant}`);
+    }
+    for (const n of crowd) {
+      const c = level.cast.find((x) => x.id === n.crew);
+      const base = MODEL_OF(c.model).height || 1.75;
+      assert.ok(Math.abs(c.height / base - 1) <= 0.041 && c.walk > 0.7 && c.walk < 1.1, `${deck.mkey}/${s}: ${n.id} height ${c.height} (${base}), walk ${c.walk}`);
+      assert.ok(hasVariant(c.model, c.variant), `${deck.mkey}/${s}: ${c.model}/${c.variant}`);
+      if (n.path) assert.ok(n.path.length >= 2 && n.speed > 0, `${deck.mkey}/${s}: ${n.id} walks`);
+    }
+  }
+  for (const [k, n] of Object.entries(byMission)) assert.ok(n > 0, `${k}: a crowd somewhere in the mission`);
+  // Rain City in the rain: umbrellas, darker wet clothes
+  const m1 = LEVELS.find((l) => l.deck.mkey === 'm01').level;
+  const wet = m1.cast.filter((c) => c.crowd && c.dark);
+  assert.ok(wet.length && wet.some((c) => c.props.includes('umbrella')), 'M1: umbrellas and wet clothes');
+  assert.ok(m1.npcs.filter((n) => n.crowd).every((n) => n.freezeWhen === 'zero_second && !after_zero'), 'M1: the crowds stop with the clocks');
+});
+
+test('the watchers: each mission\'s kind, people built from the edition\'s models, never the Observer', () => {
+  for (const { deck, level } of LEVELS) {
+    if (!level.sentinels.length) continue;
+    assert.ok(WATCHERS[deck.mkey] || level.sentinels.every((s) => s.conduit), `${deck.mkey}: its watchers are cast`);
+    for (const m of watcherModels(deck.mkey)) assert.ok(castOf(deck.chapter).includes(m), `${deck.mkey}: ${m} is loaded with ${deck.chapter}`);
+  }
+  assert.deepEqual(kindsOf('m10'), ['trooper']);
+  assert.equal(HUMAN.trooper[0], 'rb_trooper');
+  assert.deepEqual(kindsOf('m13'), ['trooper', 'unwritten'], 'M13: both factions');
+  assert.equal(kindsOf('m17')[0], 'mimic');
+  assert.equal(HUMAN.elite.join('/'), 'rb_trooper/elite');
+  for (const [k, [m, v]] of Object.entries(HUMAN)) assert.ok(hasVariant(m, v), `${k}: ${m}/${v}`);
+});
+
+test('each chapter loads the people it casts; the edition offers Kai\'s look only', () => {
+  for (const { ch, deck, s, level } of LEVELS) {
+    const need = castOf(ch);
+    for (const n of level.npcs) {
+      const c = level.cast.find((x) => x.id === n.crew);
+      if (c?.model) assert.ok(need.includes(c.model), `${ch} ${deck.mkey}/${s}: ${n.id} on ${c.model} is not in CHAPTER_CAST.${ch}`);
+    }
+  }
+  for (const k of Object.keys(CHAPTER_CAST)) for (const m of CHAPTER_CAST[k]) assert.ok(MODEL_OF(m), `${k}: ${m}`);
+  assert.ok(COMMON.includes('rb_ren_m') && COMMON.includes('xbot'));
+  assert.deepEqual(LV.looks, ['real_m']);
+});
+
+test('the manifest carries only the edition\'s models, each with a credit and a conversion entry', () => {
+  const lvFiles = Object.values(LV_MODELS).map((m) => m.file);
+  assert.equal(Object.keys(LV_MODELS).length, 31, '31 new people');
+  assert.equal(Object.values(LV_MODELS).filter((m) => m.px === 1024).length, 16, '16 named at 1024 px');
+  assert.equal(Object.values(LV_MODELS).filter((m) => m.px === 512).length, 15, '15 crowd at 512 px');
+  assert.deepEqual([...MANIFEST].sort(), [...new Set([...Object.values(SHARED_MODELS).map((m) => m.file), ...lvFiles])].sort());
+  for (const f of MANIFEST) assert.ok(fs.existsSync(`game/assets/characters/${f}`), f);
+  for (const f of ['Michelle.glb', 'Nova.glb', 'rb_pilot_f.glb', 'rb_gardener_m.glb']) assert.ok(!MANIFEST.includes(f), `${f} is Station Zero's`);
+  assert.ok(!MANIFEST.some((f) => /^(men|women)_/.test(f)), 'no stylised looks');
+  // every model a person, a crowd or a watcher can wear is in it
+  const used = new Set([...allNamed().map((n) => n.model), ...Object.values(AMBIENT_CAST).map((a) => a.model), ...Object.values(HUMAN).map(([m]) => m)]);
+  for (const era of Object.keys(ERAS)) for (const m of eraModels(era)) used.add(m);
+  for (const m of used) assert.ok(MANIFEST.includes(MODEL_OF(m).file), `${m} is in the manifest`);
+  const credits = fs.readFileSync('game/assets/characters/CREDITS.md', 'utf8');
+  const conv = fs.readFileSync('tools/rocketbox-to-glb.mjs', 'utf8');
+  for (const k of Object.keys(LV_MODELS)) {
+    assert.ok(credits.includes(`| \`${k}.glb\` |`), `CREDITS.md: ${k}`);
+    assert.ok(new RegExp(`\\b${k}: \\{ src: '`).test(conv), `tools/rocketbox-to-glb.mjs LV_AVATARS: ${k}`);
+  }
+  const apk = fs.readFileSync('android/build-apk.sh', 'utf8');
+  assert.ok(/m\.MANIFEST/.test(apk) && /gltf-json\.py [^\n]*\$CHARS/.test(apk), 'build-apk.sh copies the manifest (the APK and the preview)');
+});
+
+test('every wardrobe variant is a valid recolour: at most 8 rules, numbers in range, real parts and props', () => {
+  const PARTS = ['body', 'head', 'hair', 'hat', 'helmet', 'equipment', 'keffiyeh', 'stetoskop', 'tools', 'glasses'];
+  for (const [model, vs] of Object.entries(WARDROBE)) {
+    assert.ok(MODEL_OF(model), model);
+    for (const [name, v] of Object.entries(vs)) {
+      for (const [k, rules] of Object.entries(v)) {
+        if (k === 'hide' || k === 'props') { assert.ok(Array.isArray(rules), `${model}/${name}.${k}`); continue; }
+        assert.ok(PARTS.includes(k), `${model}/${name}: part ${k}`);
+        assert.ok(rules.length <= 8, `${model}/${name}.${k}: ${rules.length} rules`);
+        for (const r of packRules(rules)) {
+          const nums = [...r.band, ...r.sel, ...r.win, ...r.act, ...r.act2];
+          assert.ok(nums.every((x) => Number.isFinite(x) && x >= -1 && x <= 2), `${model}/${name}.${k}: ${JSON.stringify(r)}`);
+          assert.ok(r.band[0] < r.band[2] && r.band[1] < r.band[3] && r.win[0] < r.win[1], `${model}/${name}.${k}: band and window`);
+        }
+      }
+      for (const p of v.props || []) assert.ok(['umbrella', 'lantern', 'staff', 'trowel', 'clipboard', 'loupe', 'lanyard', 'beret', 'visor', 'badge'].includes(p), `${model}/${name}: prop ${p}`);
+    }
+  }
 });

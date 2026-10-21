@@ -7,13 +7,16 @@
 // there are no laws.
 import * as THREE from '../../../vendor/three.module.min.js';
 import { setChapters, latestFor, describeSave, listSaves } from '../../ui/Saves.js';
-import { makeCastModel } from '../../world/People.js';
+import { makeCastModel, setCrewDresser } from '../../world/People.js';
 import { PROLOGUE } from './prologue.js';
 import { ACTS, ENDINGS } from './acts.js';
 import { CAST, DIALOGUE, NPCS, TRUST, KNOWLEDGE, npcState } from './npcs.js';
 import { Inversion } from './inversion.js';
 import { placeAuthored } from './processes.js';
 import { buildPlace, themeFor as placeTheme, sunDir as placeSun } from './places/index.js';
+import { registerModels, makeDresser, loadCast, castReady, lodUpdate } from './casting.js';
+import { castLevel } from './crowds.js';
+import { Watchers } from './watchers.js';
 
 export const CHAPTERS = {
   prologue: { name: 'PROLOGUE', sub: 'The Zero Second: Rain City, Helix, the first switch', question: 'What happened in the chamber, and why does the voice know Kai?' },
@@ -132,6 +135,11 @@ export class LastVersion {
     hud.speakers = def.speakers;
     hud.stabilityBar = true;
     this.inv = new Inversion(this); // REVERSE (Mission 11 on)
+    // the edition's people (casting.js): their models are registered now and load per chapter, behind its
+    // card; everyone the edition builds is dressed (wardrobe.js) and posed within the animation budget
+    registerModels();
+    setCrewDresser(makeDresser(() => game.renderer));
+    this.watchers = new Watchers(this); // Helix drones, Continuum troopers, scavengers (watchers.js)
     this.mounted = null; // the open place in the browser: scenery, sky, horizon (places/mount.js)
     game.facts.onChange(() => this.onFact());
     // a watcher that rewinds its own damage, lured into a live conduit, stays down
@@ -180,6 +188,9 @@ export class LastVersion {
     if (mapLegend) mapLegend.textContent = 'People';
     const vt = $('#verdict .dim');
     if (vt) vt.textContent = '';
+    // the people of the chapter most likely to be played next start loading on the title screen
+    const latest = listSaves().filter((x) => x.data?.campaign?.lv).sort((a, b) => (b.data.meta?.savedAt || 0) - (a.data.meta?.savedAt || 0))[0];
+    loadCast(CHAPTERS[latest?.data.campaign.chapter] ? latest.data.campaign.chapter : 'prologue');
   }
 
   openChapters(from) {
@@ -232,6 +243,9 @@ export class LastVersion {
   start(chapter, saved = null) {
     const g = this.g;
     if (!CHAPTERS[chapter]) chapter = 'prologue';
+    this.ownLook();
+    // the chapter's people load behind its card first (one model at a time); then the chapter starts
+    if (!castReady(chapter)) return this.waitForCast(chapter, () => this.start(chapter, saved));
     g.mode = 'deck';
     g.run = chapter;
     this.chapter = chapter;
@@ -256,6 +270,41 @@ export class LastVersion {
     this.anchored = null;
     g.engine.setGlobal('heldPersists', false);
     g.loadSector(!saved, saved?.room, saved?.pos);
+  }
+
+  // the edition offers Kai's own look only (LV.looks): an older save's look is put back to his
+  ownLook() {
+    const g = this.g;
+    if (!g.settings || this.def.looks.includes(g.settings.hero?.id)) return;
+    g.changeSetting('hero', { id: this.def.looks[0] });
+    g.player.setModel(g.settings.hero);
+    if (g.voice) g.voice.youMale = true;
+  }
+
+  // Load a chapter's cast (casting.js) behind its card, the game held still meanwhile (begin() unpauses
+  // after start() returns: held again once it has). Without its models the chapter would start with
+  // stand-ins that change face when the real ones arrive.
+  waitForCast(chapter, then) {
+    const g = this.g;
+    const c = CHAPTERS[chapter];
+    if (g.mode !== 'deck') g.mode = 'lvwait'; // (neither a deck nor Station Zero: nothing steps or draws a place)
+    g.world.root.visible = false;
+    const hold = () => { g.paused = true; };
+    hold();
+    queueMicrotask(hold);
+    g.hud.card(c.name, c.sub, 'The people of this chapter are on their way.', 600000);
+    const token = (this.castWaitFor = chapter);
+    loadCast(chapter).then(() => {
+      if (this.castWaitFor !== token) return;
+      this.castWaitFor = null;
+      g.paused = false;
+      then();
+    });
+  }
+
+  // the chapter's models, for a caller that wants them before it starts the chapter (the bots, a preload)
+  loadCast(chapter) {
+    return loadCast(chapter);
   }
 
   resume(campaign) {
@@ -325,6 +374,9 @@ export class LastVersion {
       if (real.length && here.some((s) => real.includes(s)) && here.some((s) => !real.includes(s))) n.temporal = real;
     }
     deck.adjust?.(level, this); // a consequence of an earlier choice can change the place
+    // the people: the named cast in this mission's wardrobe, the hand-placed passers-by cast by role, and
+    // the crowds that walk the place's paths (crowds.js; story.cast = CAST's copies, then the level's own)
+    story.cast = level.cast = castLevel(level, deck, { facts: g.facts });
     // REVERSE processes, scenes, doors and reversed wards at the mission's landmarks (§5)
     placeAuthored(deck, level);
     for (const k of Object.keys(g.engine.overrides)) g.engine.setOverride(k, null);
@@ -362,6 +414,11 @@ export class LastVersion {
       this.weatherState = null;
     }
     this.inv?.load(this.level);
+    // the next chapter's people start loading in this chapter's last mission, so its card does not wait
+    const next = ORDER[ORDER.indexOf(this.chapter) + 1];
+    if (next && c.deck === g.story.decks.length - 1) loadCast(next);
+    // the watchers: the Observer inside each sentinel becomes this mission's (watchers.js)
+    this.watchers.mount(g.deckWorld, deck.mkey, { renderer: g.renderer, hero: g.settings.hero, stateOf: (rid) => g.engine.state(rid) });
     this.objective(true);
   }
 
@@ -732,9 +789,14 @@ export class LastVersion {
         c.flags = {};
         c.visited = [];
         this.gateWarned = false;
-        g.loadSector(true);
-        g.hud.fade(false);
-        g.transitioning = false;
+        const arrive = () => {
+          g.loadSector(true);
+          g.hud.fade(false);
+          g.transitioning = false;
+        };
+        // a new chapter's people may still be on their way (they started loading in its last mission)
+        if (!castReady(this.chapter)) return this.waitForCast(this.chapter, arrive);
+        arrive();
       }, 900);
     };
     if (last && deck.outro?.length) g.hud.say(deck.outro, g.facts, go);
@@ -758,6 +820,10 @@ export class LastVersion {
     const facts = g.facts;
     const flags = g.deckWorld.flags;
     const p = g.player.pos;
+    // the people: the watchers' bodies and walks, the animation budget, Ward 32's flickering figure
+    this.watchers.update(dt);
+    lodUpdate([...g.deckWorld.npcs, ...this.watchers.list.map((w) => ({ model: w.current?.actor }))], g.camera.position);
+    for (const n of g.deckWorld.npcs) if (n.n.flicker && n.model.visible) n.model.userData.setOpacity?.(0.45 + 0.55 * Math.abs(Math.sin(g.time * 7.3) * Math.sin(g.time * 2.9 + n.n.seed)));
     // authored triggers
     (this.level.triggers || []).forEach((t, i) => {
       if (t.once && flags[`trig_${i}`]) return;

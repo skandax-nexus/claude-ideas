@@ -9,90 +9,109 @@
 // Temporal state: the states an NPC exists in (others get an echo or a recording in their place).
 // Dialogue choices express intent (challenge / comfort / investigate / withdraw) and set facts.
 // Barks are short lines said in passing, never over a conversation.
+// Casting (OVERHAUL.md §3.4, §6.2): every entry carries the model it is built from, the wardrobe
+// variant it wears (wardrobe.js), its height, the recorded voice id (vid, §8.4) and a walk multiplier.
+// Pronouns never change (the recorded voices keep matching), and match the model's body.
 
 const HER = { their: 'her', them: 'her' }, HIS = { their: 'his', them: 'him' };
 
 export const NPCS = {
-  kai: { id: 'kai', first: 'Kai', name: 'Kai Varen', role: 'Temporal systems engineer', pronoun: HIS, color: '#25313d', voice: 'KAI', era: 'present', seed: 1 },
+  kai: { id: 'kai', first: 'Kai', name: 'Kai Varen', role: 'Temporal systems engineer', pronoun: HIS, color: '#25313d', voice: 'KAI', era: 'present', seed: 1, model: 'rb_ren_m', variant: 'kai', height: 1.8, vid: 'KAI', walk: 1 },
   mira: {
-    id: 'mira', first: 'Mira', name: 'Mira Varen', role: 'The impossible sister', pronoun: HER, color: '#c4566a', voice: 'MIRA', era: 'temporal', seed: 2,
+    id: 'mira', first: 'Mira', name: 'Mira Varen', role: 'The impossible sister', pronoun: HER, color: '#c4566a', voice: 'MIRA', era: 'temporal', seed: 2, model: 'rb_mira', variant: 'mira', height: 1.68, vid: 'MIRA', walk: 1,
     temporal: ['echo'], want: 'To be treated as a person, not a restoration project.', fear: 'Being overwritten.',
     barks: ['You keep looking for me where I was.', 'Don\'t fix it, Kai. Look at it.'],
   },
   witness: {
-    id: 'witness', first: 'The Witness', name: 'The Witness', role: 'Older Kai', pronoun: HIS, color: '#4a5a7a', voice: 'WITNESS', era: 'future', seed: 3,
+    id: 'witness', first: 'The Witness', name: 'The Witness', role: 'Older Kai', pronoun: HIS, color: '#4a5a7a', voice: 'WITNESS', era: 'future', seed: 3, model: 'rb_ren_m', variant: 'witness', height: 1.77, vid: 'WITNESS', walk: 0.9,
     temporal: ['PRESENT', 'PAST', 'FUTURE'], want: 'To force a survivable path.', fear: 'Uncertainty and loss.',
     barks: ['You are early. You are always early.', 'Do not build the machine.'],
     echo: [{ who: 'NONE', text: 'The Witness does not exist in this state. What stands here is the shape he left behind on his way through.' }, { who: 'WITNESS', text: 'You are early. You are always early.' }],
   },
   sera: {
-    id: 'sera', first: 'Sera', name: 'Sera Voss', role: 'Resistance leader, 2196', pronoun: HER, color: '#c0762a', voice: 'SERA', era: 'future', seed: 4,
+    id: 'sera', first: 'Sera', name: 'Sera Voss', role: 'Resistance leader, 2196', pronoun: HER, color: '#c0762a', voice: 'SERA', era: 'future', seed: 4, model: 'rb_juno', variant: 'resistance', height: 1.7, vid: 'SERA', walk: 1,
     temporal: ['FUTURE'], faction: 'unwritten', want: 'To protect a fragile district.', fear: 'Another timeline disaster.',
     barks: ['Stay off the glass. It remembers weight.', 'If you are who they say, keep walking.', 'We teach children your name before they learn the names of the dead.'],
   },
   rook: {
-    id: 'rook', first: 'Rook', name: 'Dr. Elias Rook', role: 'Director, Helix', pronoun: HIS, color: '#6c5bc4', voice: 'ROOK', era: 'present', seed: 5,
+    id: 'rook', first: 'Rook', name: 'Dr. Elias Rook', role: 'Director, Helix', pronoun: HIS, color: '#6c5bc4', voice: 'ROOK', era: 'present', seed: 5, model: 'rb_rook', variant: 'rook', height: 1.8, vid: 'ROOK', walk: 1,
     temporal: ['PRESENT'], faction: 'continuum', want: 'Control of the Chronolith project.', fear: 'Public exposure.',
     barks: ['The chamber is off limits, Kai.', 'Lockdown is procedure. Nothing more.'],
   },
   niko: {
-    id: 'niko', first: 'Niko', name: 'Niko', role: 'Keeper of the settlement', pronoun: HIS, color: '#2f8a5a', voice: 'NIKO', era: 'past', seed: 6,
+    id: 'niko', first: 'Niko', name: 'Niko', role: 'Keeper of the settlement', pronoun: HIS, color: '#2f8a5a', voice: 'NIKO', era: 'past', seed: 6, model: 'rb_niko', variant: 'niko', height: 1.76, vid: 'NIKO', walk: 1,
     temporal: ['PAST', 'PRESENT'], want: 'To protect communal memory.', fear: 'Outsiders turning sacred knowledge into a weapon.',
     barks: ['You wear no dust, but the old story knows your face.', 'The river was taught to stay. Who taught you?'],
     echo: [{ who: 'NONE', text: 'Niko has not been born in this year, or has been dead in it a long time. His echo kneels by the water, listening.' }, { who: 'NIKO', text: 'Then you have not listened long enough.' }],
   },
   anja: {
-    id: 'anja', first: 'Anja', name: 'Dr. Anja Vale', role: 'Temporal scientist, 2196', pronoun: HER, color: '#1f9a90', voice: 'ANJA', era: 'future', seed: 7,
+    id: 'anja', first: 'Anja', name: 'Dr. Anja Vale', role: 'Temporal scientist, 2196', pronoun: HER, color: '#1f9a90', voice: 'ANJA', era: 'future', seed: 7, model: 'rb_doctor_f', variant: 'anja', height: 1.68, vid: 'ANJA', walk: 1,
     temporal: ['FUTURE'], want: 'To stabilize the city\'s temporal lock.', fear: 'Preserving a lie.',
     barks: ['The lock holds. I have stopped asking what it holds out.', 'Every morning here is the same morning. It is very restful. I hate it.'],
   },
   iven: {
-    id: 'iven', first: 'Iven', name: 'Iven Marr', role: 'Helix technician', pronoun: HIS, color: '#a8862a', voice: 'IVEN', era: 'present', seed: 8,
+    id: 'iven', first: 'Iven', name: 'Iven Marr', role: 'Helix technician', pronoun: HIS, color: '#a8862a', voice: 'IVEN', era: 'present', seed: 8, model: 'rb_engineer_m', variant: 'default', height: 1.8, vid: 'IVEN', walk: 1,
     temporal: ['PRESENT'], want: 'To get his team out safely.', fear: 'Being blamed for a test he did not approve.',
     barks: ['I signed nothing. Remember that when they ask.', 'Maintenance route runs behind the conduit. Nobody uses it. Nobody is supposed to.'],
     echo: [{ who: 'NONE', text: 'Iven Marr is not here in this year. His echo is: a man at a panel, writing NOT SIGNED BY ME on a sheet, again and again.' }, { who: 'IVEN', text: 'Panel was installed before the drone was. Remember that.' }],
   },
   jun: {
-    id: 'jun', first: 'Jun', name: 'Jun Park', role: 'Transit operator, Rain City', pronoun: HIS, color: '#3b7fb8', voice: 'JUN', era: 'present', seed: 9,
+    id: 'jun', first: 'Jun', name: 'Jun Park', role: 'Transit operator, Rain City', pronoun: HIS, color: '#3b7fb8', voice: 'JUN', era: 'present', seed: 9, model: 'rb_jun', variant: 'transit', height: 1.74, vid: 'JUN', walk: 1,
     temporal: ['PRESENT'], want: 'To keep the station running.', fear: 'Leaving passengers behind.',
     barks: ['Mind the yellow line. The board is wrong but the line is right.', 'Forty-one seconds. I\'ve timed it. Forty-one.'],
     echo: [{ who: 'NONE', text: 'For a few seconds it is a minute before the crash. The Jun in the booth is an echo, calling the 41 in.' }, { who: 'JUN', text: 'Line 41, platform two, on time. On time. On time.' }],
   },
   tala: {
-    id: 'tala', first: 'Tala', name: 'Tala', role: 'Water keeper', pronoun: HER, color: '#2b8f7a', voice: 'TALA', era: 'past', seed: 10,
+    id: 'tala', first: 'Tala', name: 'Tala', role: 'Water keeper', pronoun: HER, color: '#2b8f7a', voice: 'TALA', era: 'past', seed: 10, model: 'rb_tala', variant: 'tala', height: 1.66, vid: 'TALA', walk: 1,
     temporal: ['PAST'], want: 'The water system restored.', fear: 'The observatory being weaponized.',
     barks: ['The dry channel remembers being a river.', 'Three gates. Stone does not argue, it only waits.'],
     echo: [{ who: 'NONE', text: 'Tala belongs to the year the river was alive. Here she is an echo, lifting a stone gate that is not there.' }, { who: 'TALA', text: 'Left, right, centre. Stone does not argue.' }],
   },
   mara: {
-    id: 'mara', first: 'Mara', name: 'Mara Quill', role: 'Archivist, 2196', pronoun: HER, color: '#8a6a9a', voice: 'MARA', era: 'future', seed: 11,
+    id: 'mara', first: 'Mara', name: 'Mara Quill', role: 'Archivist, 2196', pronoun: HER, color: '#8a6a9a', voice: 'MARA', era: 'future', seed: 11, model: 'rb_office_f', variant: 'faded', height: 1.68, vid: 'MARA', walk: 1,
     temporal: ['FUTURE'], want: 'To preserve conflicting records.', fear: 'One official history.',
     barks: ['Two records. Both true. Start there.', 'A clean history is usually a history someone has cleaned.'],
   },
   orren: {
-    id: 'orren', first: 'Orren', name: 'Orren', role: 'A guide, or a pattern', pronoun: HIS, color: '#7a5fd0', voice: 'ORREN', era: 'outside', seed: 12,
+    id: 'orren', first: 'Orren', name: 'Orren', role: 'A guide, or a pattern', pronoun: HIS, color: '#7a5fd0', voice: 'ORREN', era: 'outside', seed: 12, model: 'xbot', variant: 'hologram', height: 1.8, vid: 'ORREN', walk: 1, hologram: true, glow: 0x7a5fd0,
     temporal: ['echo'], want: 'Kai to stop treating the impossible realm as a machine.', fear: 'Being erased by a final choice.',
     barks: ['Don\'t follow the footsteps. Follow what they refuse to step on.', 'You are asking the room what time it is. Wrong question.'],
   },
   child: {
-    id: 'child', first: 'The Child', name: 'The Child in the Station', role: 'A recurring anomaly', pronoun: HER, color: '#d06a9a', voice: 'CHILD', era: 'temporal', seed: 13,
-    temporal: ['echo'], height: 1.22, want: 'A familiar tune and a way home.', fear: 'Nothing. She does not understand the timeline.',
+    id: 'child', first: 'The Child', name: 'The Child in the Station', role: 'A recurring anomaly', pronoun: HER, color: '#d06a9a', voice: 'CHILD', era: 'temporal', seed: 13, model: 'rb_child_f', variant: 'child', vid: 'CHILD', walk: 1,
+    temporal: ['echo'], height: 1.24, want: 'A familiar tune and a way home.', fear: 'Nothing. She does not understand the timeline.',
     barks: ['Do you know the song? It goes up and then it goes up again and then it stops.', 'The train is late. The train is early. Which one is mine?'],
   },
-  // Tier 2 and ambient voices with a name
-  guard: { id: 'guard', first: 'Officer', name: 'Checkpoint Officer', role: 'Security', pronoun: HER, color: '#4f6170', voice: 'CREW', era: 'present', seed: 21 },
-  dale: { id: 'dale', first: 'Dale', name: 'Officer Dale', role: 'Helix security', pronoun: HIS, color: '#4f6170', voice: 'CREW', era: 'present', seed: 22 },
-  pryce: { id: 'pryce', first: 'Pryce', name: 'Officer Pryce', role: 'Helix security', pronoun: HER, color: '#4f6170', voice: 'CREW', era: 'present', seed: 23 },
-  haig: { id: 'haig', first: 'Haig', name: 'Officer Haig', role: 'Helix security', pronoun: HER, color: '#4f6170', voice: 'CREW', era: 'present', seed: 24 },
-  researcher: { id: 'researcher', first: 'Lin', name: 'Dr. Lin', role: 'Helix researcher', pronoun: HER, color: '#4f6170', voice: 'CREW', era: 'present', seed: 25 },
-  elder: { id: 'elder', first: 'The Elder', name: 'The Elder', role: 'Leader of the settlement', pronoun: HER, color: '#8a6a3a', voice: 'CREW', era: 'past', seed: 26 },
-  clockmaker: { id: 'clockmaker', first: 'The Clockmaker', name: 'The Clockmaker', role: 'Keeper of loops', pronoun: HIS, color: '#8a6a3a', voice: 'CREW', era: 'past', seed: 27 },
-  engineer: { id: 'engineer', first: 'Rhea', name: 'Rhea Odum', role: 'Trapped engineer', pronoun: HER, color: '#4f6170', voice: 'CREW', era: 'present', seed: 28 },
-  soldier: { id: 'soldier', first: 'Sergeant', name: 'Loop-aware sergeant', role: 'Continuum soldier', pronoun: HIS, color: '#4f6170', voice: 'CREW', era: 'present', seed: 29 },
-  patient: { id: 'patient', first: 'The Patient', name: 'Patient 32', role: 'Rain City General, Ward 32', pronoun: HER, color: '#4f6170', voice: 'CREW', era: 'present', seed: 30 },
-  warden: { id: 'warden', first: 'Warden', name: 'District Warden', role: 'Warden, 2196', pronoun: HIS, color: '#4f6170', voice: 'CREW', era: 'future', seed: 31 },
-  gardener: { id: 'gardener', first: 'Gardener', name: 'The Gardener', role: 'Gardener, 2196', pronoun: HER, color: '#4f6170', voice: 'CREW', era: 'future', seed: 32 },
+  // Tier 2: named people with a face of their own (voice stays the generic crew voice until U5 records their vid)
+  guard: { id: 'guard', first: 'Pryce', name: 'Officer Pryce', role: 'Helix security, the checkpoint', pronoun: HER, color: '#4f6170', voice: 'CREW', era: 'present', seed: 21, model: 'rb_security_f', variant: 'helix', height: 1.7, vid: 'PRYCE', walk: 1 },
+  dale: { id: 'dale', first: 'Dale', name: 'Officer Dale', role: 'Helix security', pronoun: HIS, color: '#4f6170', voice: 'CREW', era: 'present', seed: 22, model: 'rb_security_m', variant: 'grey', height: 1.8, vid: 'DALE', walk: 1 },
+  haig: { id: 'haig', first: 'Haig', name: 'Officer Haig', role: 'Helix security, off shift', pronoun: HER, color: '#4f6170', voice: 'CREW', era: 'present', seed: 24, model: 'rb_civ_f2', variant: 'home', height: 1.67, vid: 'HAIG', walk: 1, recording: true },
+  researcher: { id: 'researcher', first: 'Lin', name: 'Dr. Lin', role: 'Helix researcher', pronoun: HER, color: '#4f6170', voice: 'CREW', era: 'present', seed: 25, model: 'rb_mira', variant: 'lin', height: 1.66, vid: 'LIN', walk: 1 },
+  elder: { id: 'elder', first: 'The Elder', name: 'The Elder', role: 'Leader of the settlement', pronoun: HER, color: '#8a6a3a', voice: 'CREW', era: 'past', seed: 26, model: 'rb_elder', variant: 'elder', height: 1.6, vid: 'ELDER', walk: 0.8 },
+  clockmaker: { id: 'clockmaker', first: 'Ezra Moll', name: 'Ezra Moll, the Clockmaker', role: 'Keeper of loops', pronoun: HIS, color: '#8a6a3a', voice: 'CREW', era: 'past', seed: 27, model: 'rb_ezra', variant: 'ezra', height: 1.74, vid: 'CLOCKMAKER', walk: 0.9 },
+  engineer: { id: 'engineer', first: 'Rhea', name: 'Rhea Odum', role: 'Trapped engineer', pronoun: HER, color: '#4f6170', voice: 'CREW', era: 'present', seed: 28, model: 'rb_engineer_f', variant: 'rain-dark', height: 1.7, vid: 'RHEA', walk: 1 },
+  soldier: { id: 'soldier', first: 'Sergeant Brask', name: 'Sergeant Brask', role: 'Continuum sergeant, loop-aware', pronoun: HIS, color: '#4f6170', voice: 'CREW', era: 'present', seed: 29, model: 'rb_soldier_m', variant: 'continuum', height: 1.8, vid: 'SERGEANT', walk: 1 },
+  // Ward 32's bed (M11): a silent, flickering figure of adult Mira in a gown (Nurse Odile speaks for the ward)
+  patient: { id: 'patient', first: 'The Patient', name: 'Ward 32', role: 'Rain City General, Ward 32', pronoun: HER, color: '#9fc8e8', voice: 'CREW', era: 'present', seed: 30, model: 'rb_mira', variant: 'gown', height: 1.68, vid: null, walk: 1, silent: true, hologram: true, flicker: true },
+  warden: { id: 'warden', first: 'Warden', name: 'District Warden', role: 'Warden, 2196', pronoun: HIS, color: '#4f6170', voice: 'CREW', era: 'future', seed: 31, model: 'rb_warden', variant: 'warden', height: 1.8, vid: 'WARDEN', walk: 1 },
+  gardener: { id: 'gardener', first: 'Gardener', name: 'The Gardener', role: 'Gardener, 2196', pronoun: HER, color: '#4f6170', voice: 'CREW', era: 'future', seed: 32, model: 'rb_ren_f', variant: 'moss', height: 1.68, vid: 'GARDENER', walk: 1 },
+  // new in v2.1 (no lines yet beyond today's)
+  odile: { id: 'odile', first: 'Odile', name: 'Nurse Odile', role: 'Night nurse, Ward 32, since 2026', pronoun: HER, color: '#7aa6c8', voice: 'CREW', era: 'present', seed: 33, model: 'rb_odile', variant: 'ward', height: 1.66, vid: 'ODILE', walk: 0.95 },
+  florist: { id: 'florist', first: 'Florist', name: 'The Florist', role: 'Florist, Rain City South', pronoun: HER, color: '#5f8a5a', voice: 'CREW', era: 'present', seed: 34, model: 'rb_florist', variant: 'florist', height: 1.64, vid: 'FLORIST', walk: 1 },
+  receptionist: { id: 'receptionist', first: 'Reception', name: 'Helix reception', role: 'Helix front desk', pronoun: HER, color: '#4f6170', voice: 'CREW', era: 'present', seed: 35, model: 'rb_civ_f1', variant: 'helix desk', height: 1.66, vid: 'RECEPTIONIST', walk: 1 },
+  // the Director of Continuity (M10, M21) is whoever rook_fate made them: Rook, older; Pryce; or an empty chair
+  director: {
+    id: 'director', first: 'The Director', name: 'The Director of Continuity', role: 'Director of Continuity', pronoun: null, color: '#4f6170', voice: 'CREW', era: 'present', seed: 36, model: null, variant: null, vid: 'DIRECTOR',
+    resolve: [{ when: 'rook_fate == "persuade"', as: 'rook', variant: 'old', vid: 'ROOK' }, { when: 'rook_fate == "expose"', as: 'guard', variant: 'helix', vid: 'PRYCE' }, { when: 'true', as: null, chair: 'recorder', vid: 'DIRECTOR' }],
+  },
+  kai12: { id: 'kai12', first: 'Kai', name: 'Kai, twelve', role: 'Young Kai', pronoun: HIS, color: '#25313d', voice: 'KAI12', era: 'past', seed: 37, model: 'rb_child_m', variant: 'kai12', height: 1.42, vid: 'KAI12', walk: 1.05, silent: true },
+  tomas: { id: 'tomas', first: 'Tomas', name: 'Tomas Vale', role: 'Anja\'s son, an echo', pronoun: HIS, color: '#1f9a90', voice: 'CREW', era: 'future', seed: 38, model: 'rb_child_m2', variant: 'patched', height: 1.3, vid: null, walk: 1.05, silent: true, hologram: true },
 };
+
+// Officer Pryce answers to both names: the checkpoint's 'guard' and her own (one face, one entry in the cast)
+export const ALIASES = { pryce: 'guard' };
+export const npcOf = (id) => NPCS[ALIASES[id] || id];
+Object.defineProperty(NPCS, 'pryce', { value: NPCS.guard, enumerable: false });
 
 export const CAST = Object.values(NPCS).map((n) => ({ ...n, alive: true }));
 
@@ -105,9 +124,13 @@ export const npcState = (facts, id) => ({
   quest: facts.get(`quest_${id}`) || '',
 });
 
-// Ambient populations by region: who walks here and what they say in passing.
+// Ambient populations by region: who walks here and what they say in passing. roles: what a crowd
+// role (places' level.crowd) is called here; voices: the region's crowd voice pool (OVERHAUL.md §8.4),
+// picked by each person's sex and age (crowds.js).
 export const AMBIENT = {
   rain: {
+    roles: { commuter: 'Commuter', courier: 'Courier', shopkeeper: 'Shopkeeper', contractor: 'Contractor', staff: 'Platform staff', ems: 'Paramedic', civilian: 'Passer-by', builder: 'Builder', child: 'Child' },
+    voices: { f: ['CROWD_F', 'CROWD_F2'], m: ['CROWD_M', 'CROWD_M2'], old_f: ['CROWD_OLD_F'], old_m: ['CROWD_OLD_M'], child: ['CROWD_CHILD'] },
     names: ['Commuter', 'Commuter', 'Courier', 'Shopkeeper', 'Contractor', 'Nurse', 'Student', 'Commuter'],
     barks: [
       'My phone says 8:14. The station board says tomorrow.',
@@ -119,22 +142,32 @@ export const AMBIENT = {
     ],
   },
   helix: {
+    roles: { researcher: 'Researcher', technician: 'Technician', cleaner: 'Cleaner', builder: 'Builder', surveyor: 'Surveyor', guard: 'Guard' },
+    voices: { f: ['CROWD_F2'], m: ['CROWD_M'], old_f: ['CROWD_OLD_F'], old_m: ['CROWD_OLD_M'], child: ['CROWD_CHILD'] },
     names: ['Researcher', 'Technician', 'Guard', 'Cleaner', 'Contractor'],
     barks: ['Lockdown. Stay where the lights are.', 'The chamber readings were fine at six. At six-oh-one there were no readings.', 'Rook said system failure. Twice. People only say it twice when it isn\'t.', 'Did you hear it? Everyone heard it. Nobody heard the same thing.'],
   },
   settlement: {
+    roles: { villager: 'Villager', waterKeeper: 'Water keeper', fisher: 'Fisher', skywatcher: 'Sky-watcher', child: 'Child', elder: 'Elder', craftsperson: 'Craftsperson', storyteller: 'Storyteller' },
+    voices: { f: ['CROWD_F', 'CROWD_F2'], m: ['CROWD_M', 'CROWD_M2'], old_f: ['CROWD_OLD_F'], old_m: ['CROWD_OLD_M'], child: ['CROWD_CHILD'] },
     names: ['Water keeper', 'Craftsperson', 'Child', 'Elder', 'Sentry', 'Storyteller'],
     barks: ['You wear no dust, but the old story knows your face.', 'The water goes where it is told. We only ask politely.', 'The sky changed last night. The elders will not say how.', 'We cook at the first fire. Everyone. Nobody eats alone here.'],
   },
   loop: {
+    roles: { evacuee: 'Evacuee', responder: 'Responder', shopper: 'Shopper', prisoner: 'Prisoner', builder: 'Builder', staffEcho: 'Staff', visitor: 'Visitor', trapped: 'Civilian', docker: 'Docker', officer: 'Officer', unwritten: 'Irregular', fan: 'Fan' },
+    voices: { f: ['CROWD_F', 'CROWD_F2'], m: ['CROWD_M', 'CROWD_M2'], old_f: ['CROWD_OLD_F'], old_m: ['CROWD_OLD_M'], child: ['CROWD_CHILD'] },
     names: ['Evacuee', 'Responder', 'Soldier', 'Civilian', 'Medic'],
     barks: ['You did that already. No - you\'re about to do it. I hate that I know the difference.', 'Nine minutes. Then the sirens again. I have counted eleven times.', 'Go left at the clock. Last time you went right and it did not help.', 'If the city resets, do I?'],
   },
   future: {
+    roles: { survivor: 'Survivor', resident: 'Resident', child: 'Child', evacuee: 'Evacuee', walker: 'Walker', visitor: 'Visitor', gardener: 'Gardener', scavenger: 'Scavenger', trader: 'Trader', warden: 'Warden' },
+    voices: { f: ['CROWD_F', 'CROWD_F2'], m: ['CROWD_M', 'CROWD_M2'], old_f: ['CROWD_OLD_F'], old_m: ['CROWD_OLD_M'], child: ['CROWD_CHILD'] },
     names: ['Scavenger', 'Warden', 'Gardener', 'Medic', 'Trader', 'Archivist', 'Engineer'],
     barks: ['The channel is running again. Nobody alive remembers who opened it.', 'Don\'t stand under the tower. It falls on Tuesdays.', 'We trade for batteries. We give water away. That was decided before I was born.', 'The memorial has your face. Please don\'t make me say it twice.'],
   },
   liminal: {
+    roles: { echo: 'Echo', recording: 'A recording', neighbour: 'A memory' },
+    voices: { f: ['CROWD_F2'], m: ['CROWD_M2'], old_f: ['CROWD_OLD_F'], old_m: ['CROWD_OLD_M'], child: ['CROWD_CHILD'] },
     names: ['Echo', 'A memory', 'A pattern'],
     barks: ['Don\'t follow the footsteps. Follow what they refuse to step on.', 'This door was in the observatory. It is here now. It is still there.', 'Which version of the question are you asking?'],
   },
