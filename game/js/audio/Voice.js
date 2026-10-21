@@ -90,32 +90,41 @@ export class Voice {
     if (who === 'OTHER' && this.youMale && this.pack.index.OTHER_m) id = 'OTHER_m'; // and the Other's: it wears your face
     // the Other speaks with your voice when it has no recording of its own
     const you = this.youMale && this.pack.index.YOU_m ? 'YOU_m' : 'YOU';
-    // a crew voice falls back on the neutral crew recordings (WORLD FORGE's cast lines are recorded once)
-    const libs = [[id, this.pack.index[id]], ...(who === 'OTHER' ? [[you, this.pack.index[you]]] : []), ...(who === 'CREW' && id !== 'CREW_n' ? [['CREW_n', this.pack.index.CREW_n]] : [])].filter(([, l]) => l);
-    if (!libs.length) return null;
-    const out = [];
-    for (const p of voicePieces(text, this.pack.vocab)) {
-      if (p.pause) {
-        out.push(p);
-        continue;
+    const pieces = voicePieces(text, this.pack.vocab);
+    const say = (names) => {
+      const libs = names.map((n) => [n, this.pack.index[n]]).filter(([, l]) => l);
+      if (!libs.length) return null;
+      const out = [];
+      for (const p of pieces) {
+        if (p.pause) {
+          out.push(p);
+          continue;
+        }
+        const hit = libs.find(([, l]) => l[p.key]);
+        if (!hit) return null;
+        out.push({ key: hit[0] + '|' + p.key, ref: hit[1][p.key] });
       }
-      const hit = libs.find(([, l]) => l[p.key]);
-      if (!hit) return null;
-      out.push({ key: hit[0] + '|' + p.key, ref: hit[1][p.key] });
-    }
-    return out.length ? out : null;
+      return out.length ? out : null;
+    };
+    // a crew line is said whole in one voice: the person's own, else the neutral crew voice (a line the
+    // pack has not recorded in every crew voice yet); splicing the two is the last resort
+    if (who === 'CREW' && id !== 'CREW_n') return say([id]) || say(['CREW_n']) || say([id, 'CREW_n']);
+    return say([id, ...(who === 'OTHER' ? [you] : [])]);
   }
 
   clip(key, ref) {
     let c = this.clips.get(key);
-    if (!c) {
+    if (c) this.clips.delete(key); // set again below: the most recently used is last
+    else {
       const [off, len] = ref;
       c = this.audio.ctx.decodeAudioData(this.pack.bin.slice(off, off + len)).catch((e) => {
         this.packOk = false; // e.g. no Opus decoder: use device speech from now on
         throw e;
       });
-      this.clips.set(key, c);
     }
+    this.clips.set(key, c);
+    // a small LRU: decoded speech is ~190 KB a second and few lines repeat (the line playing keeps its own buffers)
+    while (this.clips.size > 64) this.clips.delete(this.clips.keys().next().value);
     return c;
   }
 
@@ -160,6 +169,8 @@ export class Voice {
   }
 
   speakDevice(text, who, extra) {
+    const vol = this.audio ? (this.audio.muted ? 0 : this.audio.volume ?? 1) : 1;
+    if (vol <= 0) return; // SOUND OFF and volume 0 silence the device voice too
     const plain = text.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
     const spoken = plain === plain.toUpperCase() ? plain.toLowerCase() : plain; // TICK and records shout in caps
     const p = { ...(PROFILES[(who === 'YOU' || who === 'OTHER') && this.youMale ? `${who}_m` : who] || PROFILES.NONE), ...extra };
@@ -173,7 +184,7 @@ export class Voice {
       const u = new SpeechSynthesisUtterance(spoken);
       u.pitch = Math.min(2, p.pitch);
       u.rate = p.rate;
-      u.volume = 0.95;
+      u.volume = Math.min(1, 0.95 * vol);
       const v = this.pickVoice(p.gender);
       if (v) u.voice = v;
       this.synth.speak(u);

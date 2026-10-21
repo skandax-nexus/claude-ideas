@@ -165,7 +165,13 @@ export class Observer {
   }
 
   goTo(x, z) {
+    this._goalCell = this.cellKey(x, z);
     this.path = this.findPath(x, z);
+  }
+
+  cellKey(x, z) {
+    const [i, k] = this.cell(x, z);
+    return i * NZ + k;
   }
 
   randomPoint() {
@@ -275,7 +281,8 @@ export class Observer {
         if (sees) this.lostTime = 0;
         else this.lostTime += dt;
         if (this.repath <= 0 && this.lastSeen) {
-          this.goTo(this.lastSeen.x, this.lastSeen.z);
+          // repath only when you have moved to another cell (or the path ran out)
+          if (!this.path.length || this.cellKey(this.lastSeen.x, this.lastSeen.z) !== this._goalCell) this.goTo(this.lastSeen.x, this.lastSeen.z);
           this.repath = 0.35;
         }
         if (this.lostTime > 2.5) {
@@ -333,7 +340,7 @@ export class Observer {
         const step = Math.min(d, speed * dt);
         this.pos.x += (vx / d) * step;
         this.pos.z += (vz / d) * step;
-        moved = step / dt;
+        moved = dt > 0 ? step / dt : 0; // a frame with no time (a coarse clock) must not make the walk cycle NaN for good
         this.faceToward(wp.x, wp.z, dt, 6);
       }
     }

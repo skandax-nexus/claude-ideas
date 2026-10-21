@@ -24,6 +24,13 @@ export const ZONE_HINTS = {
   canal: ['THE WATER CUTS THE DISTRICT IN TWO.', 'A BRIDGE USED TO BE HERE. ECHO REMEMBERS IT. THE DOME DOES NOT CARE ABOUT WATER.', 'ECHOES SOLIDIFY IN ECHO, SHIFT TO ECHO, CROSS. OR SHIFT TO INVERTED AND WALK OVER IT ON THE GLASS.'],
   drones: ['THE DRONES WATCH THE STREET. ONLY THE STREET.', 'STAY BEHIND BUILDINGS. OR GO WHERE THEY DO NOT LOOK: UP.', 'SHIFT TO INVERTED AND CROSS ON THE DOME. OR WRITE  OBSERVER  FREEZES IN  (THIS STATE).'],
   gate: ['THE WAY ON IS LOCKED.', 'IT OPENS WHEN YOU HAVE SEEN WHAT THIS DISTRICT IS FOR.', 'FINISH THE SCENE HERE. THEN WALK NORTH TO THE GATE.'],
+  // WORLD FORGE acts with INVERTED gravity (PHYSICAL is the upside-down state there) or ZERO gravity
+  // (no state flips you: you drift at street height)
+  'inv:roof': ['THE SCENE IS ON A ROOF.', 'HERE PHYSICAL PUTS YOU ON THE CEILING. OR THE OLD STAIRS ARE A MEMORY.', 'SHIFT TO PHYSICAL, WALK THE CEILING UNTIL YOU ARE ABOVE THE ROOF, SHIFT TO INVERTED. OR: ECHOES SOLIDIFY IN ECHO, SHIFT TO ECHO, CLIMB.'],
+  'inv:canal': ['THE WATER CUTS THE DISTRICT IN TWO.', 'A BRIDGE USED TO BE HERE. ECHO REMEMBERS IT. THE CEILING DOES NOT CARE ABOUT WATER.', 'ECHOES SOLIDIFY IN ECHO, SHIFT TO ECHO, CROSS. OR SHIFT TO PHYSICAL AND WALK OVER IT ON THE CEILING.'],
+  'inv:drones': ['THE DRONES WATCH THE STREET. ONLY THE STREET.', 'STAY BEHIND BUILDINGS. OR GO WHERE THEY DO NOT LOOK: UP. HERE PHYSICAL TAKES YOU THERE.', 'SHIFT TO PHYSICAL AND CROSS ON THE CEILING. OR WRITE  OBSERVER  FREEZES IN  (THIS STATE).'],
+  'zero:canal': ['THE WATER CUTS THE DISTRICT IN TWO.', 'NOTHING WEIGHS ANYTHING HERE. THE WATER CANNOT PULL YOU IN.', 'DRIFT ACROSS THE WATER.'],
+  'zero:drones': ['THE DRONES WATCH THE STREET. AND EVERYTHING THAT FLOATS IN IT.', 'STAY BEHIND BUILDINGS. OR FREEZE THEM.', 'WRITE  OBSERVER  FREEZES IN  (THIS STATE). OR KEEP A BUILDING BETWEEN YOU AND THEM.'],
 };
 
 class District {
@@ -67,6 +74,9 @@ export function generateZone(story, zi, si) {
   // THE LAST VERSION's themes: 'rain' (a present-day city in the rain), 'ruin' (the same city in
   // 2196, overgrown), 'settlement' (stone houses, water and trees), 'liminal' (floating fragments)
   const rules = zone.rules || null; // WORLD FORGE: the act's local rules shape the district
+  // ...and TICK's answers: the state that really puts you on the ceiling (INVERTED), or none at all (ZERO)
+  const gk = rules && !rules.nullField && (rules.gravity === 'INVERTED' ? 'inv' : rules.gravity === 'ZERO' ? 'zero' : null);
+  const zh = (k) => (gk && ZONE_HINTS[`${gk}:${k}`]) || zone.hints?.[k] || ZONE_HINTS[k];
   const canal = zone.canal ?? (si >= 1 || theme === 'reactor'); // water splits the district from the second sector on
   const canalZ = [-50, -57];
 
@@ -118,8 +128,10 @@ export function generateZone(story, zi, si) {
   const scene = { x: sceneSide * rng.float(14, 22), z: far(rng.float(-62, -84)) };
   if (beat.kind === 'custom') {
     // the edition places its own scene (zone.overlay below): nothing here
-  } else if (beat.kind === 'arrival' && rules?.nullField) {
-    // a null field: no law reaches a roof, so the recorder waits on a plinth in the street
+  } else if (beat.kind === 'arrival' && (rules?.nullField || rules?.gravity === 'ZERO')) {
+    // a null field: no law reaches a roof, so the recorder waits on a plinth in the street. So it does under
+    // ZERO gravity: you drift at street height (under the gate), and only a long run of jumps would lift you
+    // to a roof
     const rx = sceneSide * 16, rz = canal ? -76 : -38;
     M.box([rx - 2.5, 0, rz - 2.5, rx + 2.5, 0.6, rz + 2.5], { mat: 'trim' });
     M.box([rx - 0.5, 0.6, rz - 0.4, rx + 0.5, 1.6, rz + 0.4], { mat: 'prop' });
@@ -134,7 +146,8 @@ export function generateZone(story, zi, si) {
     // a landmark roof: a tower block, a pump house, a giant tree's platform, a relay hut
     M.box([rx - 6, 0, rz - 6, rx + 6, rh, rz + 6], { mat: theme === 'forest' || theme === 'settlement' ? 'bark' : theme === 'reactor' || theme === 'ruin' ? 'industrial' : theme === 'cradle' ? 'pods' : theme === 'liminal' ? 'glassWall' : 'facade' });
     if (theme === 'forest' || theme === 'settlement') {
-      for (const [dx, dz] of [[-7, -7], [7, -7], [-7, 7], [7, 7]]) {
+      for (const [dx0, dz] of [[-7, -7], [7, -7], [-7, 7], [7, 7]]) {
+        const dx = dz > 0 && dx0 === -sceneSide * 7 ? dx0 * 1.25 : dx0; // keep the memory stairs' approach clear
         M.trees.push([rx + dx, rz + dz, rh + 6, 0.9, 3.4, dx + dz]);
         M.box([rx + dx - 0.7, 0, rz + dz - 0.7, rx + dx + 0.7, rh + 6, rz + dz + 0.7], { mat: 'bark', invisible: true });
       }
@@ -149,7 +162,7 @@ export function generateZone(story, zi, si) {
     }
     M.box([rx - sceneSide * 6.1 - 1, rh, rz - 6.2, rx - sceneSide * 6.1 + 1, rh + 0.4, rz - 4.6], { mat: 'wall', echo: true });
     M.clear(rx - 9, rz - 9, rx + 9, rz + 9);
-    M.challenges.push({ key: 'roof', z0: 4, z1: ZN, hints: zone.hints?.roof || ZONE_HINTS.roof });
+    M.challenges.push({ key: 'roof', z0: 4, z1: ZN, hints: zh('roof') });
     M.texts.push({ text: zone.key === 'neon' ? 'FOLLOW THE PINK LIGHTS' : zone.motto, pos: [rx - sceneSide * 6.05, 4.5, rz], rotY: sceneSide > 0 ? -Math.PI / 2 : Math.PI / 2, size: 0.55, color: hex(zone.palette.accent) });
     scene.x = rx;
     scene.z = rz;
@@ -213,7 +226,7 @@ export function generateZone(story, zi, si) {
   } else if (canal) {
     // the old bridge is a memory: solid with ECHOES SOLIDIFY IN ECHO
     M.box([-3, -0.4, canalZ[1], 3, 0, canalZ[0]], { mat: 'wall', echo: true });
-    M.challenges.push({ key: 'canal', z0: canalZ[0] + 8, z1: canalZ[1] - 2, hints: zone.hints?.canal || ZONE_HINTS.canal });
+    M.challenges.push({ key: 'canal', z0: canalZ[0] + 8, z1: canalZ[1] - 2, hints: zh('canal') });
     M.texts.push({ text: zone.canalSign || 'BRIDGE CLOSED', pos: [0, 2.6, canalZ[0] + 1.2], rotY: 0, size: 0.5, color: hex(zone.palette.accent) });
   }
 
@@ -225,7 +238,7 @@ export function generateZone(story, zi, si) {
     const x0 = -XW + 6, x1 = XW - 6;
     M.sentinels.push({ path: k % 2 ? [[x1, z], [x0, z]] : [[x0, z], [x1, z]], speed: 2.2 + si * 0.3, range: 9, fov: 0.75 });
   }
-  if (nDrones) M.challenges.push({ key: 'drones', z0: (canal ? canalZ[1] : -30), z1: ZN, hints: HINTS[`sentinel:${story.after?.sentinels}`] || zone.hints?.drones || ZONE_HINTS.drones });
+  if (nDrones) M.challenges.push({ key: 'drones', z0: (canal ? canalZ[1] : -30), z1: ZN, hints: (gk && ZONE_HINTS[`${gk}:drones`]) || HINTS[`sentinel:${story.after?.sentinels}`] || zone.hints?.drones || ZONE_HINTS.drones });
   M.challenges.push({ key: 'gate', z0: ZN + 14, z1: ZN, hints: ZONE_HINTS.gate });
   // WORLD FORGE, time SWEEPERS: beams turn across the avenue; the sidewalks stay clear of them
   if (rules?.time === 'SWEEPERS') {
@@ -284,7 +297,8 @@ export function generateZone(story, zi, si) {
     name, kind: 'district', beat: beat.kind,
     bounds: [[-XW, -12, ZN - 4, XW, H + 2, 4]],
     spawn: [0, 0.86, -2, 0],
-    lights, tint: pal.tint, killY: -2, floatY: 8.4,
+    // a ZERO act has no state to come down in: drift at street height (jump to rise to the roofs)
+    lights, tint: pal.tint, killY: -2, floatY: rules?.gravity === 'ZERO' && !rules.nullField ? 1.3 : 8.4,
     challenges: M.challenges.map((c) => ({ ...c, box: [-XW, -12, Math.min(c.z0, c.z1), XW, H + 2, Math.max(c.z0, c.z1)] })),
     route: [], exitSide: 'N', L: -ZN, W: XW * 2, H,
   };

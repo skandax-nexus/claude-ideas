@@ -3,6 +3,16 @@
 // tiny and the look consistent on low-end Android GPUs.
 import * as THREE from '../../vendor/three.module.min.js';
 
+const TEX_SLOTS = ['map', 'normalMap', 'roughnessMap', 'metalnessMap', 'alphaMap', 'emissiveMap', 'aoMap', 'bumpMap'];
+// every texture the materials under root use (into out)
+export function texturesOf(root, out = new Set()) {
+  root.traverse((o) => {
+    const ms = Array.isArray(o.material) ? o.material : o.material ? [o.material] : [];
+    for (const m of ms) for (const k of TEX_SLOTS) if (m[k]?.isTexture) out.add(m[k]);
+  });
+  return out;
+}
+
 export function canvasTex(size, draw, repeat = true, height = size) {
   const c = document.createElement('canvas');
   c.width = size;
@@ -21,14 +31,31 @@ export function canvasTex(size, draw, repeat = true, height = size) {
 // repeats per UV unit (boxGeometry gives 1 UV unit per 2 m).
 const _texLoader = new THREE.TextureLoader();
 const _texCache = new Map();
+// a neutral stand-in while a photo loads, or if it never does (three.js would bind black, so a floor
+// or a pillar would vanish): white colour and roughness (the material's own colour shows), flat normals
+function flatImage(role) {
+  const c = document.createElement('canvas');
+  c.width = c.height = 1;
+  const g = c.getContext('2d');
+  g.fillStyle = role === 'normal' ? '#8080ff' : '#ffffff';
+  g.fillRect(0, 0, 1, 1);
+  return c;
+}
 export function pbrTex(name, role, repeat = 1) {
   const key = `${name}_${role}_${repeat}`;
   if (_texCache.has(key)) return _texCache.get(key);
-  const t = _texLoader.load(`assets/textures/${name}_${role}.jpg`);
+  // r169 keeps a texture's GPU storage at the size of its first upload: when the photo arrives, drop the
+  // stand-in's GPU copy so the photo is allocated at its own size (never a stand-in without this)
+  const t = _texLoader.load(`assets/textures/${name}_${role}.jpg`, (tex) => tex.dispose());
+  if (!t.image) {
+    t.image = flatImage(role);
+    t.needsUpdate = true;
+  }
   t.wrapS = t.wrapT = THREE.RepeatWrapping;
   t.repeat.set(repeat, repeat);
   t.anisotropy = 8;
   if (role === 'color') t.colorSpace = THREE.SRGBColorSpace;
+  t.userData.keep = true; // cached and shared: DeckWorld.dispose leaves it alone
   _texCache.set(key, t);
   return t;
 }
@@ -289,7 +316,9 @@ function zoneMaterials(pal, std, basic) {
     rock: pbr('rock', 0.5),
     // THE CRADLE (theme 'cradle'): stone floor, the forest's roots for a ceiling, amber pod lights
     stone: pbr('stone', 0.5, { color: 0x8a8494, roughness: 0.7 }),
-    roots: pbr('bark', 0.25, { color: 0x4a3c48, emissive: new THREE.Color(pal.accent), emissiveIntensity: 0.05, side: THREE.DoubleSide }),
+    // the roots and the dome are slabs overhead, only ever seen from below: their underside alone is drawn
+    // (two-sided, the top face was shaded first and then painted over by the bottom one)
+    roots: pbr('bark', 0.25, { color: 0x4a3c48, emissive: new THREE.Color(pal.accent), emissiveIntensity: 0.05, side: THREE.FrontSide }),
     root: pbr('bark', 0.6, { color: 0x6a5866, emissive: new THREE.Color(pal.accent), emissiveIntensity: 0.06 }), // one hanging root
     podLight: basic(new THREE.Color(pal.accent2).multiplyScalar(1.4)),
     pods: podStack(pal, std),
@@ -297,7 +326,7 @@ function zoneMaterials(pal, std, basic) {
     neon: basic(new THREE.Color(pal.accent).multiplyScalar(1.6)),
     screen: basic(new THREE.Color(pal.accent).lerp(new THREE.Color(0x101828), 0.55)),
     water: new THREE.MeshStandardMaterial({ color: new THREE.Color(pal.accent2).lerp(new THREE.Color(0x05101a), 0.8), normalMap: waterNormal, normalScale: new THREE.Vector2(0.6, 0.6), roughness: 0.06, metalness: 0.8, envMapIntensity: 1.6, transparent: true, opacity: 0.92 }),
-    dome: std({ color: new THREE.Color(pal.fog).lerp(new THREE.Color(0x000000), 0.35), emissive: 0xffffff, emissiveMap: skyTex, emissiveIntensity: 0.9, roughness: 0.3, metalness: 0.4, side: THREE.DoubleSide }),
+    dome: std({ color: new THREE.Color(pal.fog).lerp(new THREE.Color(0x000000), 0.35), emissive: 0xffffff, emissiveMap: skyTex, emissiveIntensity: 0.9, roughness: 0.3, metalness: 0.4, side: THREE.FrontSide }),
     glassWall: new THREE.MeshStandardMaterial({ color: new THREE.Color(pal.fog).lerp(new THREE.Color(0xffffff), 0.15), roughness: 0.15, metalness: 0.3, transparent: true, opacity: 0.55 }),
     trim: std({ color: new THREE.Color(wall).lerp(new THREE.Color(0xffffff), 0.25), roughness: 0.4, metalness: 0.3 }),
     trimDark: std({ color: new THREE.Color(wall).lerp(new THREE.Color(0x000000), 0.35), roughness: 0.5, metalness: 0.4 }),

@@ -259,7 +259,7 @@ The screen reads **RECORD CORRECTED: Dr. Ilse Varga**. (Who rewrote it was the f
 **District 2: The Sump.** Past the water, a note is fixed to a pump:
 
 > VARGA: "I opened the flood valves myself. It was the only way to slow the core down. Osei, I am sorry. Ren, if you read this: the water bought us eighteen years. Do not waste them."
-> JUNO: "Eighteen years. That number again. Recording 0 was eighteen years before you were born."
+> JUNO: "Eighteen years. That number again. Recording 0 was eighteen years before you were born." (the last sentence only if you heard Recording 0, which is optional)
 
 **District 3: Control Deck.** One drone patrols here. In the control deck you find Abena Osei, now only a glowing echo still running her last shift:
 
@@ -319,6 +319,7 @@ The memorial reads **RECORD CORRECTED: Dr. Ilse Varga**. "Safe" means the fold i
 
 - *"A seed packet labelled for Ren, in Varga's handwriting. Inside: one seed, already sprouting."*;
 - Theo's watering schedule, *"Every day for eighteen years. Not one day missed."*;
+- *"A sleeping pod's status light, buried in moss. It pulses slowly. Someone is still dreaming in there."* (The Still Pond: the Cradle's first sign);
 - *"A drawing of the machine, in a child's hand. The child has drawn a heart inside it."*;
 - a trail marker to the cabin with *"HURRY"* added.
 
@@ -447,7 +448,7 @@ If you choose to **face the Observer** in the doorway:
 
 #### 11. The final choice
 
-You use the Machine once more:
+You use the Machine once more. (Until Varga's trail has been followed up the tower, it only waits: "The machine is waiting." Seeing the brain early does not open the choice.)
 
 > **THE MACHINE.** "The machine keeps one occupant alive. The occupant keeps the field alive. The field keeps something else shut."
 
@@ -642,7 +643,7 @@ The Bridge is the same in every run. Its motto reads **"WHOEVER SITS HERE DECIDE
 
 - **Sector 1.** *CAPTAIN'S LOG - FINAL:* "The crew is asleep, or gone, or both. Someone on this ship {method}. I know who. I will not say it - the ship has to hear it from someone who earned it." TICK: *"LAST DECK. I AM NOT CRYING. I DO NOT HAVE THE HARDWARE."*
 - **Sector 2.** *VARGA - NOTE TO SUBJECT ZERO* (in her own voice: her dream reaching a terminal): "Ren. If you made it here you have seen every deck and every lie. The chair asks one question. Answer it with what you know, not with what you fear." Juno: *"Varga wrote that to you. Not to me. Interesting."*
-- **Sector 3.** *ZERO EVENT - RECONSTRUCTION:* "03:12. The first law takes a key and a pair of hands. The key never changes. The hands do: one person at the core, every cycle. Everyone else has an echo that says where they were. Check your board." Juno: *"Look at who doesn't have one."*
+- **Sector 3.** *ZERO EVENT - RECONSTRUCTION:* "03:12. The first law takes a key and a pair of hands. The key never changes. The hands do: one person at the core, every cycle. Everyone else has an echo that says where they were. Check your board." Juno: *"Your log has every echo you found. Look for what doesn't match."*
 - **Sector 4, the verdict.** After three last puzzle rooms, all seven crew stand as silent holograms in a ring around a chair. Juno: *"This is it. The chair. Check your log before you sit."* Try the gate first, and she says: *"The gate won't open for a guess. Sit in the chair first."*
 
 #### The chair
@@ -750,7 +751,7 @@ There is one rule: **a wish replaces only what it names.** Everything else stays
 - **Mood.** This changes every crew member's personality, and so their greeting to you. Thriller makes the crew dry, nervous or formal. Horror makes them mostly nervous. Mystery makes them formal, dry or dreamy. Hopeful makes them mostly warm. Horror and Thriller also darken the decks.
 - **Why the time loop exists.** Choose the motive: keep someone alive, hide where the ship arrived, undo a terrible mistake, or because the dreamers promised a way home.
 - **The final twist.** This is the title of your winning ending: You helped start it / The watcher is a lost crew member / Juno remembers everything / The stars outside are fake.
-- **Crew names.** Up to eight first names, given deck by deck. The eighth goes to the Captain. Your device's own voice speaks the names you type.
+- **Crew names.** Up to eight first names, given deck by deck. The eighth goes to the Captain. Your device's own voice speaks the lines that carry a name you type, whole.
 - **Story number.** *"The same number and wishes always tell the same story."*
 
 You can't wish for who the culprit is, who the victim is, the method, the red herring, or who survives. Those come from the story number. The eight decks themselves never change. A studio story plays in the world of the last prologue ending reached on the device, like THE VESSEL from the menu.
@@ -765,7 +766,7 @@ You choose a **genre** and the genre chooses the kind of story: a THRILLER about
 
 You choose **the world**: three, five or eight locations from the places the engine already renders (Neon Meridian, the Drowned Reactor, the Glass Forest, the Signal Tower, the Cradle; the Garden deck, the Cryo bay, the Observatory, Engineering, the Medbay, the Crew quarters, the Archive core, the Bridge), each with a name and **local rules**: which way gravity points, whether memories show or hold, whether beams sweep the floor, whether anyone watches and how hard, how dark it is, and whether it is a null field where nothing the device says is true and the way through is movement. On arrival the HUD shows the act's LOCAL RULES, and TICK says what matters most.
 
-You choose **the cast**: up to eight names (spoken by the device's own voice) and roles - a guide, a rival, a witness, a keeper, an engineer, a medic, a child of the city, a watcher in disguise. Each gets a mood from the genre, a secret, and three to six lines in every act they appear in. One of them is the antagonist; the genre decides who, and never the first person you meet. In the twist act, and in the complications of a longer game, an encounter ends with a question that has two answers, and the answer sets a fact: later lines change with it, and so does the ending's last word from Juno.
+You choose **the cast**: up to eight names (lines that carry them are spoken whole by the device's own voice) and roles - a guide, a rival, a witness, a keeper, an engineer, a medic, a child of the city, a watcher in disguise. Each gets a mood from the genre, a secret, and three to six lines in every act they appear in. One of them is the antagonist; the genre decides who, and never the first person you meet. In the twist act, and in the complications of a longer game, an encounter ends with a question that has two answers, and the answer sets a fact: later lines change with it, and so does the ending's last word from Juno.
 
 You choose **the kit**: four reality tools (there is no combat in AFTERZERO): a stasis pulse that holds a watcher or a beam still, a grapple line and a light rig made of hard light that last a few seconds, an echo lens, a signal flare that lights the dark and draws the watchers, and a key forge that makes one memory key real. The rules of each location decide which of them work there, and the rules card says so.
 
@@ -806,12 +807,12 @@ Being caught by the Observer is never an ending. It just sends you back to the h
 - **A wrong name is not an ending.** Each of the six innocents has their own version of this: *"You name {name}. The ship plays back {first}'s echo, calm and complete: {first} was in {place} all night."* / *"The lights soften. Somewhere below, a hatch unseals. The cycle notes your answer and gives you another chance."* (After SEVERED: *"The lights soften. Nothing folds back. The chair simply waits for you to try again."*) The gate stays shut, and you can sit again as often as you like. Every guess is counted.
 - **The right name** plays the last scene on the Bridge for your prologue ending (see "The Vessel after each ending"), then opens an ending screen. It is titled by the twist and carries the motive and the twist text. There are four twists:
   - **YOU HELPED:** "The loop has two signatures. The hands are {culprit}'s. The key is yours, written at 03:04 on a badge that read VARGA-ZERO. Cycle one, you agreed to all of this - and asked to forget..."
-  - **THE WATCHER'S NAME:** "The watchers on these decks are not only machines. The one that followed you deck to deck is {victim}, uploaded on the night of the Zero Event... It learned you because it missed you." (After SEVERED it is told in the past tense and ends *"When the field went dark, it finally closed its eye."* The victim is always met as an echo when this twist is drawn.)
+  - **THE WATCHER'S NAME:** "The watchers on these decks are not only machines. The one that followed you deck to deck is {victim}, uploaded on the night of the Zero Event... It learned you because it missed you." (After SEVERED it is told in the past tense, the watcher is the one that *"stood watch on these decks"*, and it ends *"When the field went dark, it finally closed its eye."* The victim is always met as an echo when this twist is drawn.)
   - **SHE REMEMBERS:** "Juno has never once been reset. She has lived every cycle, end to end..."
-  - **THE WINDOWS:** "The stars in the windows were never outside. The vessel stopped moving long ago..."
+  - **THE WINDOWS:** "The stars in the windows were never outside. The vessel stopped moving long ago..." (After SEVERED it is told in the past tense and ends *"...until the field let go and the glass went black."*)
 
   The motive paragraph is one of four:
-  - *to keep {victim} alive*: inside the fold the night never reaches morning, and neither does dying (the victim is always met alive with this motive);
+  - *to keep {victim} alive*: inside the fold the night never reaches morning, and neither does dying (the victim is met alive with this motive, unless the twist is THE WATCHER'S NAME: then *"{victim} was dying. {culprit} could not keep the body, so {culprit} kept the night: inside the fold, what was uploaded of {victim} never has to end."*);
   - *to hide where we had arrived*;
   - *to undo a mistake*, one navigation error;
   - *because the dreamers promised a way home*: a million dreaming people want to go home, and their dream told the culprit that every cycle brings the vessel one step closer.

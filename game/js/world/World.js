@@ -71,6 +71,11 @@ export class World {
       if (mat.transparent) mesh.renderOrder = 2;
       const matName = k.split('|')[1];
       mesh.castShadow = !(matName === 'ceil' || matName === 'glass' || matName.startsWith('strip'));
+      // Station Zero's ceilings keep their shadows: a corridor's ceiling slab runs into the room
+      // walls (maps.js corridor()), and where a doorway is taller than the corridor its end face
+      // shows above the door, facing the sun (the lintel over the lab's OBSERVATION door). Without
+      // shadows it caught sunlight through the walls. The decks' ceilings do skip them (DeckWorld):
+      // their corridor slabs end flush behind the room walls.
       mesh.receiveShadow = true;
       this.root.add(mesh);
       geos.forEach((g) => g.dispose());
@@ -224,8 +229,9 @@ export class World {
     for (const id of ['r0', 'r1', 'r2']) P[id].userData.screen.material.opacity = 0.7 + Math.sin(t * 9 + id.length) * 0.08;
     P.custodian.userData.setOpacity?.(0.62 + Math.sin(t * 13) * 0.05 + (Math.random() < 0.03 ? -0.25 : 0));
     P.other.userData.setOpacity?.(0.6 + Math.sin(t * 3) * 0.12);
-    P.custodian.userData.animate(1 / 60, 0, t);
-    P.other.userData.animate(1 / 60, 0, t);
+    // the holograms only move while they can be seen
+    if (P.custodian.visible && this.root.visible) P.custodian.userData.animate(dt, 0, t);
+    if (P.other.visible && this.root.visible) P.other.userData.animate(dt, 0, t);
 
     for (const tm of this.tokenMeshes) {
       tm.mesh.visible = !this.facts.get(`token_${tm.tk.token}`);

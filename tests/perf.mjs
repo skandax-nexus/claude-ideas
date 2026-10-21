@@ -180,13 +180,19 @@ const HELPERS = () => {
     const g = window.AZ;
     if (g.frame.__orig) return;
     const orig = g.frame;
-    const f = function () {
+    // frame(t) steps by the gap since the last frame's timestamp (the real loop passes rAF's):
+    // with P.fixedDt, a timeline that starts at 0 makes that gap exactly fixedDt
+    const f = function (t) {
       if (P.turn) g.input.look.dx += P.turn; // the walk turns slowly: new things come into view
-      if (P.bare) return orig.call(this); // allocation profiling: no records, no timers
+      if (P.fixedDt != null) {
+        g.lastT = 0;
+        t = P.fixedDt * 1000;
+      }
+      if (P.bare) return orig.call(this, t); // allocation profiling: no records, no timers
       P.cur = {};
       const t0 = now();
       try {
-        return orig.call(this);
+        return orig.call(this, t);
       } finally {
         const c = P.cur;
         c.frame = now() - t0;
@@ -200,12 +206,6 @@ const HELPERS = () => {
     };
     f.__orig = orig;
     g.frame = f;
-    const clock = g.clock, getDelta = clock.getDelta.__orig || clock.getDelta;
-    clock.getDelta = function () {
-      const d = getDelta.call(this);
-      return P.fixedDt ?? d;
-    };
-    clock.getDelta.__orig = getDelta;
   };
   P.stats = (arr) => {
     const a = arr.filter((v) => Number.isFinite(v)).sort((x, y) => x - y);
@@ -709,7 +709,7 @@ async function walk(scene, sec) {
     P.lo.observe({ type: 'longtask' });
     P.mut0 = P.mutations;
     P.prog0 = g.renderer.info.programs.length;
-    g.renderer.setAnimationLoop(() => g.frame());
+    g.renderer.setAnimationLoop((t) => g.loop(t)); // the game's own loop: rAF timestamps and its pacing
   });
   const m0 = await metrics();
   await browser.startTracing(page, { categories: ['devtools.timeline', 'disabled-by-default-v8.gc'] });
@@ -995,6 +995,7 @@ if (!process.env.PERF_SKIP_SMART) {
       g.settings.smart = true;
       g.settings.quality = 'high';
       s.reset();
+      s.vsync = s.panel = 1 / 60; // a 60 Hz screen, whatever the page measured
       s.acc = 0; s.frames = 0;
       g.applyQuality();
       const count = { applyQuality: 0, setPixelRatio: 0, setSize: 0, composerRebuild: 0, toast: 0 };

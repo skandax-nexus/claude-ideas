@@ -226,13 +226,14 @@ for (const e of ENDINGS) {
       intro: AZ.story.decks[0].intro.map((l) => l.text), after: AZ.story.after.key, sentinels: AZ.story.after.sentinels,
       windows: AZ.level.elements.filter((x) => /^window/.test(x.mat)).map((x) => x.mat),
       dark: AZ.story.after.dark || 0,
+      light: AZ.emergency(), // the light the player sees on Deck 1 (Hydroponics), not only the story's flag
       other: AZ.level.npcs.filter((n) => n.crew === 'other').length,
     }));
     const want = e ? AFTER[e].intro[0].text : null;
     check(v.mode === 'deck' && !v.zones && v.run === 'vessel' && v.ending === e && v.after === tag, `${tag}: NIGHT WATCH - FORWARD DECKS starts the vessel after ${tag}`, JSON.stringify({ ...v, intro: undefined }));
     check(e ? v.intro[0] === want && v.kicker === `DECK 1 OF 8 · AFTER ${AFTER[e].title}` : v.kicker === 'DECK 1 OF 8' && !Object.values(AFTER).some((a) => a.intro?.[0].text === v.intro[0]), `${tag}: Deck 1 opens with that ending's lines ("${v.intro[0].slice(0, 50)}...")`);
     check(v.windows.length > 0 && v.windows.every((m) => m === (e === 'SEVER' ? 'windowDark' : 'windowStars')), `${tag}: the window band is ${e === 'SEVER' ? 'black glass' : 'stars'}`, JSON.stringify(v.windows));
-    check((e === 'SEVER') === (v.dark > 0) && (e === 'SUSTAIN') === (v.other > 0), `${tag}: ${e === 'SEVER' ? 'emergency light' : e === 'SUSTAIN' ? 'the Other hangs from the ceiling of the first room' : 'normal light, nobody extra aboard'}`, JSON.stringify({ dark: v.dark, other: v.other }));
+    check((e === 'SEVER') === (v.dark > 0) && (e === 'SEVER') === (v.light > 0) && (e === 'SUSTAIN') === (v.other > 0), `${tag}: ${e === 'SEVER' ? 'emergency light' : e === 'SUSTAIN' ? 'the Other hangs from the ceiling of the first room' : 'normal light, nobody extra aboard'}`, JSON.stringify({ dark: v.dark, light: v.light, other: v.other }));
     if (e === 'SEVER' || e === 'SUSTAIN') {
       await az(() => { document.querySelector('#card')?.classList.remove('on'); AZ.hud.subs = []; AZ.hud.subT = 0; AZ.hud.nextSub(); AZ.player.place([AZ.level.spawn[0], 0.86, AZ.level.spawn[2], AZ.level.spawn[3]]); AZ.simulate(0.3); });
       await page.waitForTimeout(1500);

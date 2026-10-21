@@ -8,13 +8,25 @@ import { makePlayerModel } from '../world/People.js';
 const HALF = new THREE.Vector3(0.3, 0.85, 0.3);
 const EYE = 0.68;
 const G = 22;
+// a ledge up to this high is walked onto (district kerbs are 0.16 m), and the ground is
+// followed down over a drop up to this deep instead of leaving it for a few frames
+const STEP = 0.35;
+// stride cycles per second the player's legs may reach (5.2 steps/s, a sprint cadence; NPCs keep
+// 2.2), so the 3.9 m/s walk is carried by the legs instead of sliding
+const MAX_CADENCE = 2.6;
 const _v = new THREE.Vector3();
 const _m = new THREE.Matrix4();
+// does the box centred at p with half-size h overlap the collider c?
+const overlaps = (p, h, c) => {
+  for (let a = 0; a < 3; a++) if (p[a] + h[a] <= c.min[a] || p[a] - h[a] >= c.max[a]) return false;
+  return true;
+};
 
 export class Player {
   constructor(camera, scene) {
     this.camera = camera;
     this.model = makePlayerModel(null);
+    this.model.userData.maxCadence = MAX_CADENCE;
     if (scene) scene.add(this.model);
     this.facing = new THREE.Vector3(0, 0, -1);
     this.colliders = [];
@@ -23,7 +35,9 @@ export class Player {
     this.distNow = 3.6;
     this.comfort = false; // instant gravity flips, steadier camera
     this.talkTarget = null; // [x, y, z] of whoever you're talking to: the camera frames you both
+    this.lastTalk = null; // the last talkTarget, so the framing eases out after the conversation ends
     this.talkK = 0;
+    this.cramped = false; // the camera is using the higher over-the-shoulder angle near a wall
     this.camPos = null;
     this.cinema = null; // { pos: Vector3, target: Vector3 } overrides the camera (trailers)
     this.pos = new THREE.Vector3();
@@ -35,16 +49,20 @@ export class Player {
     this.grounded = false;
     this.running = false;
     this.speed = 0;
+    this.topSpeed = null; // the gait's top speed, eased between walk (3.9) and run (7.6)
+    this.stepOff = 0; // how far the model lags a step up (+) or down (-) along U, eased away
+    this.airT = 0; // seconds since the feet last touched the ground
+    this._canStep = false; // set during update(): walking into a low ledge climbs it
     this.bob = 0;
     this.half = HALF;
     this.floatY = 1.25;
-    this.stepUp = 0; // an edge this high is stepped up onto, not walked into (THE LAST VERSION sets 0.35)
   }
 
   // Swap the character model (character select: settings.hero); returns the new model.
   setModel(choice) {
     const old = this.model;
     this.model = makePlayerModel(choice);
+    this.model.userData.maxCadence = MAX_CADENCE;
     this.model.position.copy(old.position);
     this.model.quaternion.copy(old.quaternion);
     if (old && old.parent) {
@@ -58,11 +76,20 @@ export class Player {
   place([x, y, z, yaw = 0]) {
     this.pos.set(x, y, z);
     this.vel.set(0, 0, 0);
+    this.stepOff = 0;
+    this.airT = 0;
     this.H.set(-Math.sin(yaw), 0, -Math.cos(yaw));
     this.U.set(0, this.gravity === 1 ? -1 : 1, 0);
     this.pitch = -0.12;
     this.facing.copy(this.H);
     this.camPos = null;
+    this.cramped = false;
+    // a teleport or respawn starts the camera fresh, never blending from a stale conversation
+    // (one still running keeps its framing: Echo Step mid-conversation lands on the framed shot)
+    if (!this.talkTarget) {
+      this.lastTalk = null;
+      this.talkK = 0;
+    }
   }
 
   get upTarget() {
@@ -110,26 +137,37 @@ export class Player {
     wish.y = 0;
     const mag = Math.min(1, wish.length());
     if (mag > 0) wish.normalize();
-    this.running = input.run && mag > 0.3;
-    const speed = (this.running ? 7.6 : 3.9) * Math.max(mag, this.running ? 0.85 : 0) * (input.slow ? 0.7 : 1);
+    // one continuous speed curve: the gait sets a top speed that eases over ~0.3 s when it
+    // changes, and the stick scales it, so neither a gait switch nor a trembling thumb lurches
+    const top = input.run ? 7.6 : 3.9;
+    this.topSpeed = this.topSpeed === null ? top : this.topSpeed + (top - this.topSpeed) * (1 - Math.exp(-dt * 5));
+    const speed = this.topSpeed * mag * (input.slow ? 0.7 : 1);
+    this.running = input.run && speed > 4.5; // 'running' (noise, stealth, footsteps) means actually fast
     const accel = this.gravity === 0 ? 1.5 : this.grounded ? 14 : 5;
     const k = Math.min(1, accel * dt);
     this.vel.x += (wish.x * speed - this.vel.x) * k;
     this.vel.z += (wish.z * speed - this.vel.z) * k;
 
+    const jump = input.jump;
     if (this.gravity === 0) {
       // weightless: drift, with a gentle pull back to mid-air so nobody gets stranded
       this.vel.y += (this.floatY - this.pos.y) * 0.9 * dt;
       this.vel.y *= Math.pow(0.6, dt);
-      if (input.jump) this.vel.y += 2.2;
+      if (jump) this.vel.y += 2.2;
     } else {
       this.vel.y += this.gravity * G * dt;
       this.vel.y = THREE.MathUtils.clamp(this.vel.y, -24, 24);
-      if (input.jump && this.grounded) this.vel.y = -this.gravity * 7.2;
+      if (jump && this.grounded) this.vel.y = -this.gravity * 7.2;
     }
     input.jump = false;
 
     // --- integrate with collision, in substeps ----------------------------
+    // last frame's ground counts only under the same gravity: the frame it flips, the body falls
+    // the new way instead of snapping to (or stepping onto) a surface within STEP of the head
+    const flipped = this.gravity !== (this._lastG ?? this.gravity);
+    this._lastG = this.gravity;
+    const wasGrounded = this.grounded && !flipped;
+    this._canStep = wasGrounded && this.gravity !== 0; // steps are climbed from the ground, never weightless
     this.grounded = false;
     const steps = Math.max(1, Math.ceil((this.vel.length() * dt) / 0.25));
     const sdt = dt / steps;
@@ -139,6 +177,21 @@ export class Player {
       this.moveAxis(2, this.vel.z * sdt, near);
       this.moveAxis(1, this.vel.y * sdt, near);
     }
+    this._canStep = false;
+    // walking off a kerb or a low ledge follows the ground down instead of leaving it for a few
+    // frames (no jump, not weightless, not moving against gravity): probe up to STEP below
+    if (wasGrounded && !this.grounded && !jump && this.gravity !== 0 && this.vel.y * this.gravity >= 0) {
+      const y0 = this.pos.y, vy0 = this.vel.y;
+      this.moveAxis(1, this.gravity * STEP, near);
+      const drop = (this.pos.y - y0) * this.gravity; // how far it moved along gravity
+      if (this.grounded && drop >= 0) this.stepOff -= drop;
+      else {
+        this.pos.y = y0;
+        this.vel.y = vy0;
+        this.grounded = false;
+      }
+    }
+    this.airT = this.grounded ? 0 : this.airT + dt;
     this.speed = Math.hypot(this.vel.x, this.vel.z);
     if (this.grounded) this.bob += this.speed * dt * 1.8;
   }
@@ -162,19 +215,21 @@ export class Player {
     const h = [HALF.x, HALF.y, HALF.z];
     const p = [this.pos.x, this.pos.y, this.pos.z];
     for (const c of cols) {
-      let overlap = true;
-      for (let a = 0; a < 3; a++) {
-        if (p[a] + h[a] <= c.min[a] || p[a] - h[a] >= c.max[a]) {
-          overlap = false;
-          break;
+      if (!overlaps(p, h, c)) continue;
+      if (axis !== 1 && this._canStep) {
+        // a ledge no higher than STEP above the feet (feet toward gravity) is climbed, if
+        // there is headroom above it; the model eases up (stepOff) instead of popping
+        const rise = this.gravity < 0 ? c.max[1] - (p[1] - h[1]) : (p[1] + h[1]) - c.min[1];
+        if (rise > 0 && rise <= STEP) {
+          const y = p[1];
+          p[1] = y - this.gravity * (rise + 1e-4);
+          if (!cols.some((o) => overlaps(p, h, o))) {
+            this.pos.y = p[1];
+            this.stepOff += rise;
+            continue;
+          }
+          p[1] = y;
         }
-      }
-      if (!overlap) continue;
-      const lift = axis !== 1 && this.stepUp && this.gravity === -1 ? c.max[1] - (p[1] - h[1]) + 1e-3 : 0;
-      if (lift > 0 && lift <= this.stepUp && !cols.some((o) => o !== c && [0, 1, 2].every((a) => p[a] + h[a] + (a === 1 ? lift : 0) > o.min[a] && p[a] - h[a] + (a === 1 ? lift : 0) < o.max[a]))) {
-        this.pos.y += lift;
-        p[1] += lift;
-        continue;
       }
       if (d > 0) p[axis] = c.min[axis] - h[axis] - 1e-4;
       else p[axis] = c.max[axis] + h[axis] + 1e-4;
@@ -230,7 +285,7 @@ export class Player {
     const F = this.forward(new THREE.Vector3());
     const up = new THREE.Vector3().copy(this.U).multiplyScalar(Math.cos(this.pitch)).addScaledVector(this.H, -Math.sin(this.pitch));
     const right = new THREE.Vector3().crossVectors(F, up).normalize();
-    const head = new THREE.Vector3().copy(this.pos).addScaledVector(this.U, 0.6);
+    const head = new THREE.Vector3().copy(this.pos).addScaledVector(this.U, 0.6 - this.stepOff); // eases over steps
     const wantDist = THREE.MathUtils.clamp(this.cam.dist * this.zoom, 1.4, 12);
     this.distNow += (wantDist - this.distNow) * (1 - Math.exp(-dt * 8));
     const k = this.distNow / Math.max(0.1, this.cam.dist);
@@ -238,21 +293,34 @@ export class Player {
     const dir = desired.clone().sub(head);
     const len = dir.length();
     dir.divideScalar(len);
-    let dist = Math.max(0.35, this.rayDistance(head, dir, len) - 0.15);
+    const hit = this.rayDistance(head, dir, len);
+    let dist = Math.max(0.35, hit - 0.15);
     let target = head.clone().addScaledVector(dir, dist);
-    if (dist < 1.8) {
+    if (dist < 1.8 || this.cramped) {
       // cramped: try a higher, closer angle looking down over the shoulder
       const alt = head.clone().addScaledVector(F, -2.0).addScaledVector(up, 1.3).addScaledVector(right, 0.3).sub(head);
       const altLen = alt.length();
       alt.divideScalar(altLen);
       const altDist = Math.max(0.35, this.rayDistance(head, alt, altLen) - 0.15);
-      if (altDist > dist + 0.3) { dist = altDist; target = head.clone().addScaledVector(alt, altDist); }
+      // enter only when clearly better; leave only once the normal shot reaches as far out, so the
+      // camera swoops back instead of cutting (a camera still trailing, as when walking away from
+      // a wall, is pulled in along its own line by the wall guard below, not cut).
+      // A zoomed-in shot with nothing behind it (shorter than the high angle even in the open)
+      // leaves at the old 1.8 m line, so it never sticks to the high angle in open space.
+      const open = hit >= len && dist >= 1.8;
+      const useAlt = this.cramped ? dist < altDist - 0.05 && !open : dist < 1.8 && altDist > dist + 0.3;
+      this.cramped = useAlt;
+      if (useAlt) { dist = altDist; target = head.clone().addScaledVector(alt, altDist); }
     }
     // conversation framing: over your shoulder, looking at whoever is talking
     this.talkK += ((this.talkTarget ? 1 : 0) - this.talkK) * (1 - Math.exp(-dt * 3));
     let aim = head.clone().addScaledVector(F, 6);
-    if (this.talkK > 0.01 && this.talkTarget) {
-      const who = new THREE.Vector3(...this.talkTarget);
+    // after the conversation ends, keep framing the last speaker while talkK fades,
+    // so the view eases back over about a second instead of whipping round in one frame
+    if (this.talkTarget) this.lastTalk = this.talkTarget;
+    const tt = this.talkTarget || this.lastTalk;
+    if (this.talkK > 0.01 && tt) {
+      const who = new THREE.Vector3(...tt);
       const flat = who.clone().sub(head);
       flat.y = 0;
       if (flat.lengthSq() > 0.04) {
@@ -267,11 +335,21 @@ export class Player {
         aim.lerp(who.clone().lerp(head, 0.3), this.talkK);
         dist = Math.min(dist, free);
       }
-    }
+    } else if (!this.talkTarget) this.lastTalk = null;
     if (!this.camPos || this.camPos.distanceTo(target) > 6) this.camPos = target.clone();
     else this.camPos.lerp(target, 1 - Math.exp(-dt * (this.comfort ? 8 : 14)));
-    // never let smoothing drag the camera behind a wall
-    if (this.camPos.distanceTo(head) > Math.max(dist, target.distanceTo(head)) + 0.05) this.camPos.copy(target);
+    // never let smoothing drag the camera behind a wall: a camera farther out than the shot allows
+    // is pulled in along its own line of sight, to the shot's distance or short of whatever is in
+    // the way, instead of cut to the target. (Walking away from a wall, the camera trails the
+    // moving shot by more than this margin when it leaves the high angle: a cut there dropped it
+    // a metre in one frame.)
+    const lim = Math.max(dist, target.distanceTo(head)) + 0.05;
+    const cd = this.camPos.clone().sub(head), cl = cd.length();
+    if (cl > lim) {
+      cd.divideScalar(cl);
+      const hitC = this.rayDistance(head, cd, lim);
+      this.camPos.copy(head).addScaledVector(cd, hitC < lim ? Math.max(0.35, hitC - 0.15) : lim);
+    }
     // look slightly past the character's head, so the view stays centred on what's ahead
     _m.lookAt(this.camPos, aim, up);
     this.camera.quaternion.setFromRotationMatrix(_m);
@@ -288,8 +366,14 @@ export class Player {
     const x = new THREE.Vector3().crossVectors(this.U, z).normalize();
     _m.makeBasis(x, this.U, z);
     m.quaternion.setFromRotationMatrix(_m);
-    m.position.copy(this.pos).addScaledVector(this.U, -0.85);
-    m.userData.animate(dt, this.speed, performance.now() / 1000, !this.grounded && this.gravity !== 0);
+    // a step up or down moved the body at once: the model follows it smoothly
+    this.stepOff = THREE.MathUtils.clamp(this.stepOff * Math.exp(-dt * 12), -STEP, STEP);
+    if (Math.abs(this.stepOff) < 1e-4) this.stepOff = 0;
+    m.position.copy(this.pos).addScaledVector(this.U, -0.85 - this.stepOff);
+    // in the air only after a moment off the ground, or when really rising or falling: a blip
+    // (the edge of a ledge) keeps the stride instead of flashing the leap
+    const airborne = this.gravity !== 0 && !this.grounded && (this.airT > 0.15 || Math.abs(this.vel.y) > 3);
+    m.userData.animate(dt, this.speed, performance.now() / 1000, airborne);
   }
 
   // Is the player standing on (or near) the ceiling?

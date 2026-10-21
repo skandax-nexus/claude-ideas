@@ -96,6 +96,13 @@ export class Synth {
 
   // --- music -----------------------------------------------------------------
   schedule(until) {
+    // after a stall or a paused app, skip the notes that were missed instead of playing them all at once
+    const late = this.ctx.currentTime - this.nextTime;
+    if (late > 0.1) {
+      const k = Math.ceil(late / STEP);
+      this.nextTime += k * STEP;
+      this.step += k;
+    }
     while (this.nextTime < until) {
       this.playStep(this.step, this.nextTime);
       this.nextTime += STEP;
@@ -215,14 +222,14 @@ export class Synth {
     const g = this.master.gain;
     g.cancelScheduledValues(t);
     g.setTargetAtTime(0.0001, t, 0.015);
-    g.setTargetAtTime(this.volume ?? 0.7, t + sec, 0.12);
+    g.setTargetAtTime(this.muted ? 0 : 0.7 * (this.volume ?? 1), t + sec, 0.12); // back to the player's level (and mute)
     this.osc('sine', 55, t + sec, 2.4, 0.22, 0.01, 1.8, this.sfx);
     this.osc('triangle', 110.5, t + sec + 0.05, 1.6, 0.06, 0.01, 1.2, this.sfx);
   }
 
   /** 0..1: how exciting things are right now (adds energy, never dread). */
-  setThreat(v) {
-    this.threat += (v - this.threat) * 0.05;
+  setThreat(v, dt = 1 / 60) {
+    this.threat += (v - this.threat) * (1 - Math.exp(-3.1 * dt)); // the same pace at any frame rate
   }
 
   setDuck(on) {

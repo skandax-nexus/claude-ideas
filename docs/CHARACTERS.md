@@ -1,5 +1,7 @@
 # AFTERZERO — Characters
 
+> **Pre-v1.0 design notes.** This describes the first vertical slice. The canon is [STORY.md](STORY.md): the brain in the machine is the first Ren, Dr. Ilse Varga's son (not a future copy of you), and the Observer is his mind looking out; the field holds the fold (there is no "Undertow"); Varga is met in HALCYON and THE CRADLE; Juno and TICK are part of the cast. Where this file disagrees, STORY.md is right.
+
 Five characters. Each one is a different way of *knowing* things, which is the theme of the game.
 
 | Character | Knows… | Role in the systems |

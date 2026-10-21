@@ -19,7 +19,7 @@ v1.0 keeps every district and makes the clues agree (see [STORY.md](STORY.md), "
 
 ## Districts (gen/ZoneGen.js)
 
-- Each district is one open map, 72 m wide and 108 m deep, under a glass dome 22 m up.
+- Each district is one open map, 68 m wide and 108 m deep, under a glass dome 22 m up.
 - Spawn is at the south end. The **north gate** stays locked until the district's scene is done.
 - From the second district of each chapter (and throughout the reactor), **water** cuts the map in two.
 - **Drones** (the Observer's sentinels) patrol the far side. They watch floors, never the dome.

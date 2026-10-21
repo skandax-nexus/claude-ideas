@@ -28,7 +28,7 @@ import { makeZoneStory, makeCradleStory } from './gen/ZoneStory.js';
 import { generateZone } from './gen/ZoneGen.js';
 import { forgeGame, makeForgeStory, tuneLevel, rulesOverride, forgeEnding, describeRules, gearTick, GEAR, GEAR_KEYS, GENRES, GENRE_KEYS, LENGTHS, THEMES as FORGE_THEMES, THEME_KEYS, RULE_OPTIONS, RULE_KEYS, ROLES, ROLE_KEYS } from './gen/Forge.js';
 import { Weather } from './world/Weather.js';
-import { WATER_NORMALS } from './world/materials.js';
+import { WATER_NORMALS, texturesOf } from './world/materials.js';
 import { SmartRenderer } from './core/SmartRenderer.js';
 import { loadSettings, saveSettings, CAMERA_PRESETS, QUALITY } from './ui/Settings.js';
 import { writeSave, readSave, listSaves, latestSave, describeSave, deleteSave, latestFor, CHAPTERS, SLOTS, rememberEnding, lastEnding, ENDING_TITLES } from './ui/Saves.js';
@@ -37,11 +37,11 @@ import { Voice } from './audio/Voice.js';
 import { Fx } from './world/Fx.js';
 import { HEROES, OPTIONS, heroSpec, hex } from './ui/Heroes.js';
 import { loadActors, actorsReady, actorLoaded, MODELS, loadErrors, setActorQuality } from './world/Actors.js';
-import { LOOKS, HAIR, TOPS, LOOK_DEFAULT, lookOf } from './world/People.js';
+import { LOOKS, HAIR, TOPS, LOOK_DEFAULT, lookOf, crewModelKey } from './world/People.js';
 import { EDITION, NS } from './core/Edition.js';
 import { LV } from './editions/lastversion/index.js';
 
-const VERSION = '0.3.0';
+const VERSION = '1.1.0'; // written into saves and the playtest report (nothing reads it back yet)
 const BOOT_KEY = 'afterzero.boot';
 // the film grade for Station Zero and the vessel: clean, cool shadows, warm light
 const STATION_GRADE = { shadowTint: 0x2a4a66, highlightTint: 0xfff0dc, toning: 0.08, contrast: 1.14, saturation: 1.02 };
@@ -57,6 +57,7 @@ const THEMES = {
 };
 
 const _c = new THREE.Color(), _c2 = new THREE.Color(), _fog = new THREE.Color(), _tint = new THREE.Color(); // per-frame scratch colours
+const _sv = new THREE.Vector3(); // per-frame scratch vector (the sun's snapped centre)
 
 // Every token the prologue can teach; the vessel starts with all of them.
 const BASE_TOKENS = ['GRAVITY', 'INVERTS', 'INVERTED', 'PHYSICAL', 'ECHO', 'HELD', 'PERSISTS', 'OBSERVER', 'FREEZES', 'ALL', 'ECHOES', 'SOLIDIFIES'];
@@ -91,11 +92,17 @@ function session(fn, fallback = null) {
 }
 
 // Generated crew get a voice that fits them, varied a little per person.
-function crewVoice(c) {
+// worn: the model the person was built with (their body's userData.spec.model)
+function crewVoice(c, worn) {
   const v = ((c.seed || 0) % 7) - 3;
   if (c.pronoun?.their === 'her') return { pitch: 1.14 + v * 0.03, gender: 'f', rate: 1.0 };
   if (c.pronoun?.their === 'his') return { pitch: 0.84 + v * 0.03, gender: 'm', rate: 0.97 };
-  return { pitch: 1.0 + v * 0.03, gender: 'n', rate: 0.99 };
+  // they/them crew speak with the voice of the body they wear (HALCYON's Theo is the gardener): the body
+  // already built, since the pick changes as more models load or when you change your own look
+  const k = worn || crewModelKey(c);
+  const g = k ? (/_f$|^w_/.test(k) ? 'f' : 'm') : 'n';
+  // ...at that voice's own pitch: the pack plays a crew voice faster or slower by its pitch offset
+  return { pitch: { f: 1.14, m: 0.84, n: 1.0 }[g] + v * 0.03, gender: g, rate: 0.99 };
 }
 
 class Game {
@@ -109,6 +116,9 @@ class Game {
     this.renderer.toneMappingExposure = 1.0;
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    // the shadow map is drawn once per frame: PostFX.render asks for it, so the extra scene
+    // renders in a frame (ambient occlusion's normal pass, sky PMREM bakes) reuse it
+    this.renderer.shadowMap.autoUpdate = false;
     this.scene = new THREE.Scene();
     this.scene.fog = new THREE.FogExp2(0xe4edf5, 0.012);
     this.scene.background = new THREE.Color(0xe4edf5);
@@ -130,6 +140,13 @@ class Game {
     this.sun.shadow.bias = -0.0008;
     this.sun.shadow.normalBias = 0.03;
     this.scene.add(this.sun, this.sun.target);
+    // The sun sits at a fixed offset from the player. Its shadow camera looks along that offset
+    // with up = +Y, so this is the camera's own basis (as Matrix4.lookAt builds it): the shadow
+    // box is snapped to whole shadow-map texels in it, and static shadow edges stop crawling.
+    this._sunOff = new THREE.Vector3(6, 24, 9);
+    this._LZ = this._sunOff.clone().normalize();
+    this._LX = new THREE.Vector3(0, 1, 0).cross(this._LZ).normalize();
+    this._LY = this._LZ.clone().cross(this._LX);
     this.lights = Array.from({ length: 4 }, () => {
       const l = new THREE.PointLight(0xffffff, 0, 20, 1);
       this.scene.add(l);
@@ -175,10 +192,51 @@ class Game {
     this.timers = []; // game-time timers: deterministic in captures and simulations
 
     window.addEventListener('resize', () => this.resize());
+    // a lost GPU context (memory pressure, a GPU reset): pause, and on restore rebuild the image-based light,
+    // whose render-target textures do not come back by themselves
+    this.canvas.addEventListener('webglcontextlost', () => {
+      if (this.started && !this.menu) this.openMenu('pause');
+    });
+    this.canvas.addEventListener('webglcontextrestored', () => {
+      this.postfx.envTex = null;
+      this.postfx.skies = {};
+      this.appliedQ = null;
+      this.applyQuality();
+    });
     this.applySettings();
     this.setupMenus();
-    this.clock = new THREE.Clock();
-    this.renderer.setAnimationLoop(() => this.frame());
+    // the real-time loop: three.js passes the rAF timestamp (see loop)
+    this.minFrame = 0; // ms: the shortest gap between rendered frames (0: every refresh)
+    this.pace = { prev: undefined, gaps: [], again: false, from: undefined }; // the refresh measurement
+    this.renderer.setAnimationLoop((t) => this.loop(t));
+    this.warmStation();
+  }
+
+  // On the title, Station Zero's textures upload one at a time while the page is idle, so the
+  // first look into each room does not stall on them. Stops as soon as the game starts.
+  warmStation() {
+    if (this.editionDef) return; // THE LAST VERSION never goes into Station Zero
+    const done = new Set();
+    let queue = [], scans = 0;
+    const idle = (f) => (window.requestIdleCallback ? window.requestIdleCallback(f, { timeout: 1000 }) : setTimeout(f, 50));
+    const tick = () => {
+      if (this.started) return;
+      // not under the character screen: it draws the 3D view, where an upload is a visible stall
+      if (this.menu === 'hero') return void setTimeout(() => idle(tick), 1000);
+      if (!queue.length) {
+        // textures still loading in the background join on a later pass
+        if (scans++ >= 6) return;
+        const all = new Set();
+        for (const r of [this.world.root, this.npcs.juno, this.player.model, this.observer.mesh]) if (r) texturesOf(r, all);
+        queue = [...all].filter((t) => t.version > 0 && !done.has(t));
+        if (!queue.length) return void setTimeout(() => idle(tick), 2000);
+      }
+      const t = queue.pop();
+      done.add(t);
+      this.renderer.initTexture(t);
+      idle(tick);
+    };
+    setTimeout(() => idle(tick), 1500); // after the title's first frames
   }
 
   newState() {
@@ -289,30 +347,46 @@ class Game {
     this.input.touchSensitivity = 0.0065 * s.sensitivity;
     this.input.invertY = s.invertY;
     this.audio.setVolume?.(s.volume);
-    if (this.voice) this.voice.enabled = s.voice !== false;
+    if (this.voice) {
+      this.voice.enabled = s.voice !== false;
+      if (!this.voice.enabled) this.voice.stop(); // switching voices off silences the line being spoken
+    }
     document.body.classList.toggle('minimap', s.minimap);
     document.body.classList.toggle('text-lg', s.textSize > 1);
     this.resize();
   }
 
   // the quality preset in use: the one chosen, or lower while the smart renderer eases off
+  // Every settings change comes through here (volume, FOV and sensitivity sliders, looks,
+  // camera presets), so the lights, shadow map and post-processing are rebuilt only when
+  // the preset itself changes. (QUALITY entries are fixed objects; clear appliedQ to force it.)
   applyQuality() {
     const q = this.smart.quality();
-    // street lamps that really light whoever walks under them (more of them on better quality)
-    this.lampLights = this.lampLights || [];
-    while (this.lampLights.length > (q.lamps || 0)) this.scene.remove(this.lampLights.pop());
-    while (this.lampLights.length < (q.lamps || 0)) {
-      const l = new THREE.PointLight(0xffd2a0, 0, 10, 2);
-      l.userData.want = 0;
-      this.lampLights.push(l);
-      this.scene.add(l);
+    if (q !== this.appliedQ) {
+      this.appliedQ = q;
+      // street lamps that really light whoever walks under them (more of them on better quality)
+      this.lampLights = this.lampLights || [];
+      while (this.lampLights.length > (q.lamps || 0)) this.scene.remove(this.lampLights.pop());
+      while (this.lampLights.length < (q.lamps || 0)) {
+        const l = new THREE.PointLight(0xffd2a0, 0, 10, 2);
+        l.userData.want = 0;
+        this.lampLights.push(l);
+        this.scene.add(l);
+      }
+      if (this.sun.shadow.mapSize.x !== q.shadowMap) {
+        this.sun.shadow.mapSize.set(q.shadowMap, q.shadowMap);
+        this.sun.shadow.map?.dispose();
+        this.sun.shadow.map = null;
+      }
+      this.postfx.apply(q);
+      setActorQuality(q); // skin, eye and hair shading follow the preset
     }
-    this.sun.shadow.mapSize.set(q.shadowMap, q.shadowMap);
-    this.sun.shadow.map?.dispose();
-    this.sun.shadow.map = null;
-    this.postfx.apply(q);
-    setActorQuality(q); // skin, eye and hair shading follow the preset
     this.smart.apply();
+  }
+
+  muteLabel() {
+    const b = document.querySelector('#mute');
+    if (b) b.textContent = (this.audio.ctx ? this.audio.muted : this.settings.muted) ? 'SOUND: OFF' : 'SOUND: ON';
   }
 
   changeSetting(k, v) {
@@ -330,6 +404,8 @@ class Game {
     this.camera.fov = w < h ? Math.min(96, Math.max(this.settings.fov, hfov)) : this.settings.fov;
     this.camera.updateProjectionMatrix();
     this.postfx.resize();
+    // the big map's bitmap follows its new box (a rotation or a window resize while it is open)
+    if (this.menu === 'map') requestAnimationFrame(() => this.menu === 'map' && this.minimap.drawBig(this.player, this.room, this.mapMarkers()));
   }
 
   // --- menus ------------------------------------------------------------
@@ -349,11 +425,34 @@ class Game {
     $('#loadBtn2').onclick = () => this.openSaves('load', 'pause');
     $('#mapBtn').onclick = () => this.openMenu('map');
     $('#settingsBtn2').onclick = () => this.openSettings('pause');
-    $('#quit').onclick = () => {
-      this.saveTo('auto');
+    $('#quit').onclick = (e) => {
+      // a save the browser refused asks first: quitting now would lose the progress
+      const b = e.currentTarget;
+      if (Date.now() - (+b.dataset.sureAt || 0) > 8000) delete b.dataset.sureAt; // a warning from an earlier visit asks again
+      if (this.saveTo('auto') === false && !this.confirmTap(b)) {
+        b.classList.add('sure');
+        b.textContent = 'NOT SAVED: STORAGE IS BLOCKED · TAP AGAIN TO QUIT';
+        return;
+      }
       location.reload();
     };
-    $('#mute').onclick = () => this.audio.toggleMute();
+    $('#mute').onclick = () => {
+      this.audio.toggleMute();
+      if (this.audio.muted) this.voice.stop(); // a line the device is already saying stops too
+      this.settings.muted = !!this.audio.muted; // remembered across loads and new games
+      saveSettings(this.settings);
+      this.muteLabel();
+    };
+    this.muteLabel();
+    // a hidden tab or an app in the background: pause, and let the sound sleep with it
+    document.addEventListener('visibilitychange', () => {
+      const ctx = this.audio.ctx;
+      if (document.hidden) {
+        this.voice.stop();
+        ctx?.suspend?.().catch(() => {});
+        if (this.started && !this.menu && !this.paused) this.openMenu('pause');
+      } else if (ctx && ctx.state !== 'running') ctx.resume?.().catch(() => {});
+    });
     document.addEventListener('pointerlockchange', () => {
       if (!document.pointerLockElement && !this.paused && !this.menu && !this.touch) this.openMenu('pause');
     });
@@ -361,6 +460,8 @@ class Game {
     $('#heroBtn2').onclick = () => this.openHero('pause');
     // menus answer with a soft tick
     document.addEventListener('pointerdown', (e) => {
+      // the system can suspend or interrupt the sound (a call, another app): any touch brings it back
+      if (this.started && this.audio.ctx && this.audio.ctx.state !== 'running' && !document.hidden) this.audio.ctx.resume?.().catch(() => {});
       if (e.target.closest?.('.overlay button, #dock button')) this.audio.ui('press');
     });
     this.refreshTitle();
@@ -375,6 +476,7 @@ class Game {
       this.openForge('title', boot.opts?.choices || null);
     } else if (boot) {
       session((s) => s.removeItem(BOOT_KEY));
+      this.pendingBoot = boot; // CONTINUE enters what was asked for before the reload
       $('#continue').style.display = '';
       $('#continueInfo').textContent = 'Tap to enter';
       $('#continue').onclick = () => this.begin(boot.action, boot.slot, boot.saveSlot, boot.opts);
@@ -382,6 +484,7 @@ class Game {
   }
 
   refreshTitle() {
+    if (this.pendingBoot) return; // keep 'Tap to enter': its button runs the start asked for before the reload, not the latest save
     const $ = (s) => document.querySelector(s);
     const l = latestSave();
     $('#continue').style.display = l ? '' : 'none';
@@ -413,13 +516,15 @@ class Game {
     this.player.cinema = null;
     this.audio.start();
     this.audio.setVolume?.(this.settings.volume);
+    if (this.settings.muted && !this.audio.muted) this.audio.toggleMute(); // SOUND OFF stays off
+    this.muteLabel();
     let ok = false;
     if (action === 'load') ok = this.load(slot);
     else if (['cradle', 'vessel', 'studio'].includes(action)) this.adoptLastEnding();
     if (ok) this.hud.toast('Memory restored.');
     else if (action.startsWith('lv:')) this.edition.start(action.slice(3));
     else if (action === 'vessel') this.startVessel(undefined, null, null, opts?.ending);
-    else if (action === 'studio') this.startVessel(opts?.seed, null, opts?.wish);
+    else if (action === 'studio') this.startVessel(opts?.seed, null, opts?.wish, opts?.ending);
     else if (action === 'cradle') this.beginCradle();
     else if (action === 'forge') this.startForge(opts?.seed, null, opts?.choices);
     else if (action === 'halcyon') {
@@ -441,14 +546,14 @@ class Game {
       this.hud.objective(this.objectives.text, false);
     }
     if (this.touch) {
-      document.documentElement.requestFullscreen?.().catch(() => {});
-      screen.orientation?.lock?.('landscape').catch(() => {});
+      document.documentElement.requestFullscreen?.().catch(() => {}); // fullscreen, held upright or sideways
     } else this.canvas.requestPointerLock?.();
   }
 
   openMenu(id) {
     if (id === 'laws' && !this.facts.get('has_device')) return;
     this.menu = id;
+    this.voice.stop(); // the subtitle waits under the menu; the line is said again when it closes
     this.input.release();
     this.hud.rulesHide?.(); // the local rules card steps aside for any panel
     if (id === 'laws') this.hud.renderLaws(this); // the draft is kept between visits
@@ -467,6 +572,7 @@ class Game {
   closeMenu() {
     this.menu = null;
     this.hud.show(null);
+    this.hud.replay();
     if (!this.touch && this.started) this.canvas.requestPointerLock?.();
     if (!this.started) this.hud.show('title');
   }
@@ -479,13 +585,19 @@ class Game {
       this.menu = null;
       this.refreshTitle();
       this.hud.show('title');
-    } else this.openMenu(to);
+    } else if (to === 'chapters') this.openChapters('title'); // rebuilt: a save may have been deleted meanwhile
+    else {
+      this.openMenu(to);
+      // back from the slot list: the Studio and the Forge still go back where they were opened from
+      if (to === 'studio') this.menuBack = this.studioBack;
+      else if (to === 'forge') this.menuBack = this.forgeBack;
+    }
   }
 
   // STORY STUDIO: a vessel story made from the player's wishes (offline: the
   // story generator composes it; see gen/StoryGen.js WISH_OPTIONS).
   openStudio(from) {
-    this.menuBack = from;
+    this.menuBack = this.studioBack = from;
     this.menu = 'studio';
     this.input.release();
     const $ = (q) => document.querySelector(q);
@@ -495,7 +607,7 @@ class Game {
       <label>Mood${opt('mood')}</label>
       <label>Why the time loop exists${opt('motive')}</label>
       <label>The final twist${opt('twist')}</label>
-      <label>Crew names <small>up to 8, separated by commas</small><input id="st_names" maxlength="160" placeholder="e.g. Aria, Dev, Mina, Rohan"></label>
+      <label>Crew names <small>up to 8, separated by commas; lines with them are spoken by your device's own voice</small><input id="st_names" maxlength="160" placeholder="e.g. Aria, Dev, Mina, Rohan"></label>
       <label>Story number <small>the same number and wishes always tell the same story</small><input id="st_seed" inputmode="numeric" maxlength="9" placeholder="random"></label>
       <p class="dim">Names you type are spoken by your device's own voice; everything else uses the recorded voices.</p>
       <button class="big" id="st_go">CREATE STORY<small>Then choose a save slot</small></button>`;
@@ -517,7 +629,7 @@ class Game {
   // WORLD FORGE: build your own game. Everything is optional except the Forge number, which can
   // be random; the Forge decides whatever is left blank (gen/Forge.js).
   openForge(from, preset = null) {
-    this.menuBack = from;
+    this.menuBack = this.forgeBack = from;
     this.menu = 'forge';
     this.input.release();
     const $ = (q) => document.querySelector(q);
@@ -548,7 +660,7 @@ class Game {
       </div>
       <h3>THE WORLD <small>one location per act, with its local rules; leave anything to the Forge</small></h3>
       <div id="fg_acts">${actsHtml(LENGTHS[len].acts, pre.acts)}</div>
-      <h3>THE CAST <small>up to 8 names and roles; one of them will be the ${'antagonist'}. Typed names are spoken by your device's own voice</small></h3>
+      <h3>THE CAST <small>up to 8 names and roles; one of them will be the ${'antagonist'}. Lines with a typed name are spoken by your device's own voice</small></h3>
       ${castHtml}
       <h3>THE KIT <small>four reality tools, not weapons: AFTERZERO has no combat. Each location's rules decide which work there</small></h3>
       <div class="grow">${gearHtml}</div>
@@ -630,14 +742,13 @@ class Game {
     $('#saves .body').innerHTML = rows;
     for (const b of document.querySelectorAll('#saves [data-del]')) {
       b.onclick = () => {
-        if (!b.classList.contains('sure')) {
+        if (!this.confirmTap(b)) {
           b.classList.add('sure');
           b.textContent = 'SURE?';
           return;
         }
         deleteSave(b.dataset.del === 'auto' ? 'auto' : +b.dataset.del);
-        this.hud.toast('Save deleted.');
-        this.openSaves(mode, from, pending);
+        this.openSaves(mode, from, pending); // the row turning EMPTY says it (a toast would wait, hidden, for the next game)
       };
     }
     for (const b of document.querySelectorAll('#saves [data-slot]')) {
@@ -645,7 +756,7 @@ class Game {
         const slot = b.dataset.slot === 'auto' ? 'auto' : +b.dataset.slot;
         if (mode === 'new') {
           // a used slot needs a second tap: it will be overwritten
-          if (!b.classList.contains('empty') && !b.classList.contains('sure')) {
+          if (!b.classList.contains('empty') && !this.confirmTap(b)) {
             b.classList.add('sure');
             b.querySelector('small').textContent = 'Tap again to replace this save with a new game';
             return;
@@ -653,9 +764,11 @@ class Game {
           this.menu = null;
           this.begin(pending.action, null, slot, pending.opts || null);
         } else if (mode === 'save') {
-          this.saveTo(slot);
-          this.hud.toast(`Saved to slot ${slot + 1}.`);
+          // confirmed in the panel: toasts are hidden (and frozen) while a menu is open
+          const ok = this.saveTo(slot);
           this.openSaves('save', from);
+          const note = document.querySelector(`#saves [data-slot="${slot}"] small`);
+          if (note) note.textContent = ok ? 'Saved just now' : 'Could not save: storage is blocked or full';
         } else if (from === 'title') {
           this.menu = null;
           this.begin('load', slot);
@@ -666,10 +779,12 @@ class Game {
   }
 
   // --- character select -----------------------------------------------------
-  openHero(from, then = null) {
+  openHero(from, then = null, again = false) {
     this.menuBack = from;
     this.menu = 'hero';
     this.heroThen = then;
+    // a look still loading from an earlier visit is not put on behind this one
+    if (!again) this.heroWant = this.heroLoad = null;
     this.input.release();
     if (!this.room) this.enterRoom('antechamber', true);
     const $ = (q) => document.querySelector(q);
@@ -703,29 +818,60 @@ class Game {
       };
     }
     $('#heroGo').textContent = then ? 'START' : 'DONE';
-    $('#heroGo').onclick = () => {
+    const go = () => {
       if (!this.settings.hero) this.changeSetting('hero', actorsReady() ? { ...LOOK_DEFAULT } : { id: 'ren' });
       this.player.cinema = null;
       this.menu = null;
       if (then) then();
       else this.back();
     };
+    $('#heroGo').onclick = () => {
+      if (!this.heroLoad) return go();
+      // the picked look is still on its way: go once it is on (or could not load), unless the
+      // screen is left or another look is picked meanwhile
+      const want = this.heroWant;
+      $('#heroGo').textContent = 'LOADING…';
+      const wait = () => {
+        if (this.menu !== 'hero' || this.heroWant !== want) return;
+        if (this.heroLoad) return void this.heroLoad.then(wait);
+        go();
+      };
+      this.heroLoad.then(wait);
+    };
     this.hud.show('hero');
   }
 
-  pickHero(choice, from, then) {
+  pickHero(choice, from, then, quiet = false) {
+    this.heroWant = choice; // the latest pick wins
     if (actorsReady() && !actorLoaded(lookOf(choice).model)) {
-      // a look that hasn't arrived yet: fetch it, then try again
-      loadActors([lookOf(choice).model]).then((ok) => ok && this.menu === 'hero' && this.pickHero(choice, from, then));
+      // a look that hasn't arrived yet (the stylised looks load when first picked): shown as
+      // picked at once, fetched, and put on when it arrives if it is still the one wanted
+      for (const b of document.querySelectorAll('#hero [data-hero]')) {
+        b.classList.toggle('sel', b.dataset.hero === choice.id);
+        b.classList.toggle('loading', b.dataset.hero === choice.id);
+      }
+      document.querySelector('#heroGo').textContent = then ? 'START' : 'DONE'; // a waiting START is off
+      this.audio.ui('press');
+      const p = (this.heroLoad = loadActors([lookOf(choice).model]).then((ok) => {
+        if (this.heroLoad === p) this.heroLoad = null;
+        if (this.heroWant !== choice || this.menu !== 'hero') return;
+        if (ok) this.pickHero(choice, from, then, true);
+        else {
+          this.openHero(from, then, true); // could not load: show the look still on
+          const label = document.querySelector(`#hero [data-hero="${choice.id}"] span`);
+          if (label) label.textContent = 'COULD NOT LOAD · TAP AGAIN'; // the next tap retries
+        }
+      }));
       return;
     }
+    this.heroLoad = null;
     this.changeSetting('hero', choice);
     this.player.setModel(choice);
     this.voice.youMale = actorsReady() && lookOf(choice).voice === 'm';
     this.buildViewModels();
     this.world.refreshCast(choice);
-    this.audio.ui('press');
-    this.openHero(from, then);
+    if (!quiet) this.audio.ui('press'); // (a look that just arrived was acknowledged when tapped)
+    this.openHero(from, then, true);
   }
 
   openSettings(from) {
@@ -739,8 +885,8 @@ class Game {
     if (s.voice === undefined) s.voice = true;
     document.querySelector('#settings .body').innerHTML = `
       <h3>CAMERA</h3>
-      <div class="setting"><span>View<small>V cycles views in game</small></span>${seg('camera', Object.entries(CAMERA_PRESETS).map(([k, p]) => [k, p.label]))}</div>
-      <div class="setting"><span>Zoom<small>Pinch with two fingers or use the mouse wheel; double-tap to reset</small></span>${range('zoom', 0.5, 2.5, 0.05)}</div>
+      <div class="setting"><span>View<small>${this.touch ? 'How close the camera follows you' : 'V cycles views in game'}</small></span>${seg('camera', Object.entries(CAMERA_PRESETS).map(([k, p]) => [k, p.label]))}</div>
+      <div class="setting"><span>Zoom<small>${this.touch ? 'Pinch with two fingers; double-tap to reset' : 'Mouse wheel or + / -'}</small></span>${range('zoom', 0.5, 2.5, 0.05)}</div>
       <div class="setting"><span>Field of view</span>${range('fov', 50, 90, 1)}</div>
       <div class="setting"><span>Look sensitivity</span>${range('sensitivity', 0.3, 2.5, 0.05)}</div>
       <div class="setting"><span>Invert look up/down</span>${toggle('invertY')}</div>
@@ -756,13 +902,13 @@ class Game {
       <h3>DATA</h3>
       <div class="setting"><span>Start fresh<small>Clears saves, settings and your look on this device, then reloads</small></span><span class="seg"><button id="resetData">CLEAR</button></span></div>`;
     document.querySelector('#resetData').onclick = (e) => {
-      if (e.currentTarget.dataset.sure !== '1') {
-        e.currentTarget.dataset.sure = '1';
+      if (!this.confirmTap(e.currentTarget)) {
         e.currentTarget.textContent = 'TAP AGAIN TO CLEAR';
         return;
       }
       try {
-        for (const k of Object.keys(localStorage)) if (k.startsWith('afterzero.')) localStorage.removeItem(k);
+        // this edition's keys only: on a shared origin the other edition keeps its saves and settings
+        for (const k of Object.keys(localStorage)) if (k.startsWith(NS) && (EDITION || !k.startsWith('afterzero.lv.'))) localStorage.removeItem(k);
         sessionStorage.clear();
       } catch {
         /* no storage */
@@ -857,11 +1003,14 @@ class Game {
       navigator.clipboard?.writeText(txt).then(() => this.hud.toast('Report copied.'), () => {});
       $('#copyReport').textContent = 'COPIED';
     };
-    $('#again').onclick = () => this.begin('new');
+    $('#again').onclick = () => this.begin('new', null, this.freeSlot()); // a slot of its own, not the hidden old autosave
     $('#toCradle').onclick = () => {
       this.closeMenu();
+      const free = this.freeSlot();
+      if (free !== null) this.slot = free; // the finished prologue stays in its slot (as SKIP TO THE VESSEL)
       this.run = 'cradle';
       this.startZones(null, 'cradle', key);
+      if (free !== null) this.hud.toast(`<small>THE CRADLE</small><br>Saving in slot ${free + 1}.`, 2400);
     };
     $('#toVessel').onclick = () => {
       this.closeMenu();
@@ -928,9 +1077,13 @@ class Game {
 
   returnToStation() {
     this.weather.set(null);
+    this.audio.setAmbience(null);
     this.postfx.setGrade(STATION_GRADE);
     this.postfx.setEnvironment(null);
+    // under the lift's fade, after the sky is gone: a new preset must not fetch the old one
+    this.smart.flush();
     this.deckWorld.dispose();
+    this.deckWorld.freeLeft();
     this.level = this.stationLevel;
     this.minimap.stationMode = false; // redraw Station Zero's map
     this.mode = 'station';
@@ -1015,7 +1168,7 @@ class Game {
   }
 
   showRules(ms = 7000) {
-    if (!this.campaign?.forge) return;
+    if (!this.campaign?.forge || this.menu) return; // an arrival timer that fires behind a menu would print over it (K shows it again)
     const act = this.forgeAct();
     const R = this.rulesHtml(act);
     this.hud.rules(`ACT ${act.index + 1} · ${act.name}`, R.rows, R.gear, ms);
@@ -1108,7 +1261,7 @@ class Game {
       for (const s of this.deckWorld.sentinels) if (s.def.room === room) s.lure = { x: p.x, z: p.z, t: rule.dur };
       this.fx.burst(this.flareAt, 0xffb060, 40, 2.6);
     } else if (key === 'KEYFORGE') {
-      if (flags[`gear_KEYFORGE_${act.index}`]) {
+      if (this.facts.get(`gear_KEYFORGE_${act.index}`)) { // once per location: kept in the facts, which outlive the sector's flags
         this.audio.deny();
         say(gearTick(key, 'spent'));
         return 'spent';
@@ -1121,7 +1274,7 @@ class Game {
       }
       it.echo = false;
       flags[`forged_${it.id}`] = true;
-      flags[`gear_KEYFORGE_${act.index}`] = true;
+      this.facts.set(`gear_KEYFORGE_${act.index}`, true);
       this.campaign.flags = { ...flags };
       this.fx.burst([p.x, p.y + 0.6, p.z], 0xffd27a, 30, 1.6);
     }
@@ -1153,7 +1306,7 @@ class Game {
     this.log.push(`<b>${ch.prompt}</b> You chose: ${o.label}.`);
     this.closeMenu();
     const reply = ch.reply[o.tag];
-    const voice = npc ? crewVoice(npc.crew) : undefined;
+    const voice = npc ? crewVoice(npc.crew, npc.model?.userData?.spec?.model) : undefined;
     this.hud.say([{ ...reply, voice }, { who: 'TICK', text: ch.tick }], this.facts);
     if (beat.junoAfter) this.hud.say([{ who: 'JUNO', text: beat.junoAfter }], this.facts);
     this.audio.chime();
@@ -1176,27 +1329,30 @@ class Game {
     this.facts.set('verdict_right');
     this.facts.set('forge_ending', key);
     this.beatDone();
+    const show = () => this.showForgeEnding(end);
+    this.closeMenu();
+    this.hud.say(end.coda, this.facts, show);
+  }
+
+  // the Forge's ending card: after the coda, and again at the last gate (also after a reload)
+  showForgeEnding(end = forgeEnding(this.forge, this.facts.get('forge_ending'), this.facts)) {
     const $ = (q) => document.querySelector(q);
     const mins = Math.round(this.playTime / 60);
     const g = this.forge;
-    const show = () => {
-      $('#ending .body').innerHTML = `
+    $('#ending .body').innerHTML = `
       <h2>${end.title}</h2>${end.text.map((t) => `<p>${t}</p>`).join('')}
       <p class="dim">${end.coda[0].text}</p>
       <div class="stats"><span>${g.title.toUpperCase()} · ${GENRES[g.genre].label}</span><span>${Math.floor(mins / 60)} h ${mins % 60} min</span><span>${g.cast.filter((c) => this.facts.get(`met_${c.id}`)).length}/${g.cast.length} met</span><span>trusted ${end.trust} · doubted ${end.doubt}</span><span>Forge ${g.seed}</span></div>
       <button class="big" id="forgeAgain">BACK TO THE FORGE<small>Build another game, or the same one with a new number</small></button>
       <button id="keepPlaying">STAY HERE</button>`;
-      $('#forgeAgain').onclick = () => {
-        this.saveTo('auto');
-        session((s) => s.setItem(BOOT_KEY, JSON.stringify({ action: 'forgePanel', opts: { choices: { ...(this.campaign.choices || {}), seed: '' } } })));
-        location.reload();
-      };
-      $('#keepPlaying').onclick = () => this.closeMenu();
+    $('#forgeAgain').onclick = () => {
       this.saveTo('auto');
-      this.openMenu('ending');
+      session((s) => s.setItem(BOOT_KEY, JSON.stringify({ action: 'forgePanel', opts: { choices: { ...(this.campaign.choices || {}), seed: '' } } })));
+      location.reload();
     };
-    this.closeMenu();
-    this.hud.say(end.coda, this.facts, show);
+    $('#keepPlaying').onclick = () => { this.stayAtGate = true; this.closeMenu(); }; // the gate waits until you step out of it
+    this.saveTo('auto');
+    this.openMenu('ending');
   }
 
   loadSector(intro, roomId, pos) {
@@ -1208,13 +1364,24 @@ class Game {
       // the act's local rules, applied to every room (RealityEngine overrides)
       for (const k of Object.keys(this.engine.overrides)) if (/^(d\d+s\d+r\d+|f\d+s\d+)$/.test(k)) delete this.engine.overrides[k];
       const o = rulesOverride(act.rules);
+      this.hud.lawsSelf = true; // the act's rules are not a change of laws: keep the player's unsent draft
       for (const rid of lv.order) this.engine.setOverride(rid, o);
+      this.hud.lawsSelf = false;
       this.flareT = 0;
     }
     this.level = lv;
     this.deckWorld.hero = this.settings.hero; // the Other wears your face
+    // a queued preset change lands here, so the new place compiles once. The new preset's chain
+    // takes the new place's sky (not the one being left, which it would otherwise fetch and bake)
+    this.postfx.envName = lv.palette.sky || null;
+    this.smart.flush();
     this.deckWorld.build(lv, this.story, c.flags);
+    // everyone in the sector, hidden or not, uploads their textures now, behind the fade,
+    // not on the frame they first appear
+    for (const n of this.deckWorld.npcs) for (const m of [n.model, n.echo]) if (m) for (const t of texturesOf(m)) this.renderer.initTexture(t);
+    this.deckWorld.freeLeft(); // the last place's people who are not in this one free their textures
     this.weather.set(lv.palette.weather);
+    if (!c.lv) this.audio.setAmbience(['rain', 'storm'].includes(lv.palette.weather) ? 'rain' : null); // you hear the rain you see (the second edition sets its own beds)
     this.postfx.setGrade(lv.palette.grade || STATION_GRADE);
     this.postfx.setEnvironment(lv.palette.sky || null);
     this.minimap.setMap(lv.map, c.visited);
@@ -1239,7 +1406,7 @@ class Game {
         if (deck.ruleTick) this.after(5.4, () => this.hud.say([{ who: 'TICK', text: deck.ruleTick }], this.facts));
       } else {
         this.hud.card(`${deck.name} · ${deck.open ? 'DISTRICT' : 'SECTOR'} ${c.sector + 1} OF ${deck.sectors}`, this.level.rooms[lv.order[0]].name, '', 2600);
-        this.after(1.2, () => this.showRules(5000));
+        this.after(3.0, () => this.showRules(5000)); // after the sector card, not over it
       }
     } else if (intro) {
       this.held = null;
@@ -1292,8 +1459,11 @@ class Game {
       return;
     }
     if (c.deck === lastDeck && c.sector === per - 1) {
-      // the last gate: the vessel is done; offer the next cycle
-      if (this.menu !== 'ending') this.openMenu('ending');
+      // the last gate: the vessel is done; offer the next cycle. The card is rebuilt from the
+      // facts (a reload starts with an empty one); a closing coda still talking opens it itself.
+      if (this.menu === 'ending' || this.stayAtGate || this.hud.talking) return;
+      if (c.forge) this.showForgeEnding();
+      else this.showVesselEnding();
       return;
     }
     this.transitioning = true;
@@ -1356,6 +1526,7 @@ class Game {
     const flags = this.deckWorld.flags;
     const beat = this.deckBeat();
     const say = (lines, done) => this.hud.say(lines, this.facts, done);
+    const juno = (x) => [].concat(x).map((l) => (typeof l === 'string' ? { who: 'JUNO', text: l } : { who: 'JUNO', ...l })); // a line may carry a 'when'
     const sys = (key, tick) => (this.edition ? [{ who: 'KAI', text: this.edition.line(key) }] : [{ who: 'TICK', text: tick }]);
     if (f.id.startsWith('ditem:')) {
       this.held = f.id.slice(6);
@@ -1370,13 +1541,16 @@ class Game {
       n.model.userData.wave?.();
       this.facts.set(`met_${n.crew.id}`);
       const lines = n.n.lines || [{ who: 'CREW', name: n.crew.name.toUpperCase(), color: n.crew.color, text: '...' }];
-      const voice = crewVoice(n.crew);
+      const voice = crewVoice(n.crew, n.model?.userData?.spec?.model);
       this.audio.greet('CREW');
       const p = n.model.position;
       this.talkWith = [p.x, p.y + 1.55, p.z];
       const choosing = beat.choice && !flags[`chosen_${beat.choice.fact}`] && n.n.id === `npc_${this.level.order.find((rid) => this.level.rooms[rid].beat)}`;
       say(lines.map((l) => (l.who === 'CREW' ? { ...l, voice } : l)), choosing ? () => this.openForgeChoice(beat, n) : undefined);
-      if (n.n.junoAfter && !choosing) say([].concat(n.n.junoAfter).map((text) => ({ who: 'JUNO', text })));
+      if (n.n.junoAfter && !choosing && !flags[`juno_${n.n.id}`]) { // Juno reacts once, not on every talk
+        flags[`juno_${n.n.id}`] = true;
+        say(juno(n.n.junoAfter));
+      }
       if (beat.kind === 'encounter' && !this.facts.get(`met_logged_${n.crew.id}`)) {
         this.facts.set(`met_logged_${n.crew.id}`);
         this.log.push(`Met ${n.crew.name} (${n.crew.role})${n.n.hologram ? ' - only an echo' : ' - alive'}.`);
@@ -1393,7 +1567,7 @@ class Game {
       if (!flags[`done_${it.id}`]) {
         flags[`done_${it.id}`] = true;
         this.log.push(`<b>${it.log.title}</b> ${it.log.text}`);
-        if (beat.junoAfter) say([].concat(beat.junoAfter).map((text) => ({ who: 'JUNO', text })));
+        if (beat.junoAfter) say(juno(beat.junoAfter));
         if (beat.kind === 'arrival' && beat.tick) say([{ who: 'TICK', text: beat.tick }]);
         if (beat.kind === 'arrival' || beat.kind === 'log') this.beatDone();
       }
@@ -1419,7 +1593,7 @@ class Game {
             ? `${l} <i>↻ ${beat.clue === 'guilty' ? 'The echo contradicts this.' : 'The echo confirms this.'}</i>` : l));
           this.log.push(beat.log);
           this.hud.toast(`<small>${beat.toast || (beat.clue === 'guilty' ? 'CONTRADICTION FOUND' : 'ALIBI CONFIRMED')}</small><br>${crew.name}`, 4200);
-          if (beat.junoAfter) say([].concat(beat.junoAfter).map((text) => ({ who: 'JUNO', text })));
+          if (beat.junoAfter) say(juno(beat.junoAfter));
           this.beatDone();
         }
       }
@@ -1442,10 +1616,10 @@ class Game {
         say(kind === 'lock' ? sys('lock_key', 'IT WANTS A KEY. I SAW ONE IN ANOTHER STATE OF THIS ROOM.') : sys('socket_empty', 'AN EMPTY CORE SOCKET. THERE IS A CORE IN THIS ROOM.'));
       }
     } else if (kind === 'beacon') {
-      this.saveTo('auto');
+      const ok = this.saveTo('auto');
       this.audio.beacon();
       this.fx.burst(it.pos, 0x9fe8ff, 40, 1.4);
-      this.hud.toast('<small>MEMORY BEACON</small><br>Progress saved.');
+      this.hud.toast(ok ? '<small>MEMORY BEACON</small><br>Progress saved.' : '<small>MEMORY BEACON</small><br>Not saved: storage is blocked or full.');
     } else if (kind === 'fragment') {
       if (!flags[`done_${it.id}`]) {
         flags[`done_${it.id}`] = true;
@@ -1456,7 +1630,8 @@ class Game {
         this.audio.token();
         this.fx.burst(it.pos, this.level.palette.accent2 ?? 0x9fe8ff, 30, 1.4);
         const found = Object.keys(flags).filter((k) => k.startsWith('done_frag_')).length;
-        this.hud.toast(`<small>MEMORY FRAGMENT ${found} / 3</small><br>${this.level.deckName}`, 2600);
+        const total = this.level.interactables.filter((i) => i.kind === 'fragment').length; // the Glass Forest's districts hold two
+        this.hud.toast(`<small>MEMORY FRAGMENT ${found} / ${total}</small><br>${this.level.deckName}`, 2600);
         this.log.push(`<b>Memory fragment.</b> ${it.text}`);
         say([{ who: 'NONE', text: it.text }]);
       }
@@ -1488,28 +1663,35 @@ class Game {
     }
     this.facts.set('verdict_right');
     this.deckWorld.refresh(); // whoever waits for the verdict steps in (Juno, after SEVERED)
-    const $ = (s) => document.querySelector(s);
-    const mins = Math.round(this.playTime / 60);
     const A = this.story.after || {};
-    const again = A.again || ['CYCLE 43', 'A new vessel, a new crew, a new truth'];
-    const coda = (A.coda || []).filter((l) => l.who === 'NONE').map((l) => `<p class="dim">${l.text}</p>`).join('');
-    const show = () => {
-      $('#ending .body').innerHTML = `
-      <h2>${end.title}</h2>${end.text.map((p) => `<p>${p}</p>`).join('')}${coda}
-      <div class="stats"><span>${Math.floor(mins / 60)} h ${mins % 60} min</span><span>${this.facts.get('verdicts')} verdict${this.facts.get('verdicts') > 1 ? 's' : ''}</span>
-      <span>${this.story.cast.filter((c) => this.facts.get(`met_${c.id}`)).length}/7 crew met</span><span>seed ${this.campaign.seed}</span></div>
-      <button class="big" id="newVessel">${again[0]}<small>${again[1]}</small></button>
-      <button id="keepPlaying">STAY ON THE BRIDGE</button>`;
-      $('#newVessel').onclick = () => this.begin('vessel', null, null, { ending: this.campaign.ending ?? null });
-      $('#keepPlaying').onclick = () => this.closeMenu();
-      this.saveTo('auto');
-      this.openMenu('ending');
-    };
+    const show = () => this.showVesselEnding(end);
     // the last scene on the bridge plays first, in the world the prologue ending made
     if (A.coda?.length) {
       this.closeMenu();
       this.hud.say(A.coda, this.facts, show);
     } else show();
+  }
+
+  // the Vessel's ending card: after the coda, and again at the last gate (also after a reload)
+  showVesselEnding(end = verdictEnding(this.story, this.story.truth.culprit)) {
+    const $ = (s) => document.querySelector(s);
+    const mins = Math.round(this.playTime / 60);
+    const A = this.story.after || {};
+    const again = A.again || ['CYCLE 43', 'A new vessel, a new crew, a new truth'];
+    const coda = (A.coda || []).filter((l) => l.who === 'NONE').map((l) => `<p class="dim">${l.text}</p>`).join('');
+    $('#ending .body').innerHTML = `
+      <h2>${end.title}</h2>${end.text.map((p) => `<p>${p}</p>`).join('')}${coda}
+      <div class="stats"><span>${Math.floor(mins / 60)} h ${mins % 60} min</span><span>${this.facts.get('verdicts')} verdict${this.facts.get('verdicts') > 1 ? 's' : ''}</span>
+      <span>${this.story.cast.filter((c) => this.facts.get(`met_${c.id}`)).length}/7 crew met</span><span>seed ${this.campaign.seed}</span></div>
+      <button class="big" id="newVessel">${again[0]}<small>${again[1]}</small></button>
+      <button id="keepPlaying">STAY ON THE BRIDGE</button>`;
+    // a new run gets a free slot of its own (not the hidden old autosave); a Story Studio run keeps its wishes
+    $('#newVessel').onclick = () => (this.run === 'studio'
+      ? this.begin('studio', null, this.freeSlot(), { seed: (Math.random() * 1e9) | 0, wish: this.campaign.wish, ending: this.campaign.ending ?? null })
+      : this.begin('vessel', null, this.freeSlot(), { ending: this.campaign.ending ?? null }));
+    $('#keepPlaying').onclick = () => { this.stayAtGate = true; this.closeMenu(); }; // the gate waits until you step out of it
+    this.saveTo('auto');
+    this.openMenu('ending');
   }
 
   deckHint() {
@@ -1694,7 +1876,7 @@ class Game {
     this.audio.blip(520, 0.2, 'square', 0.08);
     const isDefault = law && law.subject === 'GRAVITY' && law.verb === 'INVERTS' && law.target === 'INVERTED';
     if (law && !isDefault) this.facts.set('wrote_law');
-    if (law && law.subject === 'HELD' && law.verb === 'PERSISTS' && (law.target === 'PHYSICAL' || law.target === 'ALL')) this.facts.set('wrote_held_law');
+    this.facts.set('wrote_held_law', this.engine.has('heldPersists', 'PHYSICAL')); // follows the running laws: an overwritten or cleared law no longer counts
     this.dirty = true;
   }
 
@@ -1739,9 +1921,12 @@ class Game {
       for (const s of this.deckWorld.sentinels) s.reset();
       this.hud.fade(false);
       this.catching = false;
-      if (kind === 'caught' && !this.facts.get('sentinel_tip')) {
-        this.facts.set('sentinel_tip');
-        const learned = this.story?.after?.sentinels === 'learned';
+      // the 'learned' watchers (after SUSTAINED) keep their own one-time line: a HALCYON drone's catch
+      // must not use it up (THE LAST VERSION keeps its key)
+      const learned = this.story?.after?.sentinels === 'learned';
+      const tip = learned && !this.edition ? 'sentinel_tip_learned' : 'sentinel_tip';
+      if (kind === 'caught' && !this.facts.get(tip)) {
+        this.facts.set(tip);
         this.hud.say(this.edition ? [{ who: 'KAI', text: this.edition.line('caught') }] : [{ who: 'TICK', text: learned ? 'IT KNEW WHERE YOU WOULD BE. YOU TAUGHT IT THAT, IN THE HALL.' : 'IT ONLY WATCHES THE FLOOR. OR YOU COULD ASK IT TO HOLD STILL. POLITELY. WITH A LAW.' }], this.facts);
       }
     }, kind === 'caught' ? 700 : 350);
@@ -1845,6 +2030,7 @@ class Game {
       held: this.mode === 'station' ? this.held : undefined,
       combos: this.combos || [],
       comboIndex: this.comboIndex ?? -1,
+      stationVisited: [...this.stationVisited], // Station Zero's map remembers where you have been
     };
     if (this.mode === 'deck') {
       const p = this.checkpoint || this.level.rooms[this.room].spawn;
@@ -1871,10 +2057,30 @@ class Game {
     return { where: 'STATION ZERO', chapter: STATION_ROOMS[this.room]?.name || '' };
   }
 
+  // true when written, false when the browser refused (blocked or full storage), undefined before a game
   saveTo(slot) {
     if (!this.started || !this.room) return;
     if (slot === 'auto' && this.slot !== null && this.slot !== undefined) slot = this.slot; // this game's own slot
-    writeSave(slot, this.snapshot(), { ...this.saveMeta(), run: this.run || 'prologue' });
+    const ok = writeSave(slot, this.snapshot(), { ...this.saveMeta(), run: this.run || 'prologue' });
+    if (!ok && !this.saveFailWarned) {
+      this.saveFailWarned = true; // once: autosaves run often
+      this.hud.toast('<small>NOT SAVED</small><br>This browser is blocking storage or is out of space.', 5000);
+    }
+    return ok;
+  }
+
+  // a second tap confirms, but not the second half of a double tap or double click (two clicks
+  // within 350 ms): DELETE, replacing a used slot, Start fresh, quitting unsaved
+  confirmTap(b) {
+    const t = +b.dataset.sureAt || 0, now = Date.now();
+    if (t && now - t > 350) return true;
+    if (!t) b.dataset.sureAt = String(now);
+    return false;
+  }
+
+  // the first empty slot (null when all ten are used: the game then autosaves as before)
+  freeSlot() {
+    return listSaves().find((s) => s.slot !== 'auto' && !s.data)?.slot ?? null;
   }
 
   // kept for tools and old callers
@@ -1895,6 +2101,8 @@ class Game {
       this.playTime = d.playTime || 0;
       this.combos = d.combos || [];
       this.comboIndex = d.comboIndex ?? -1;
+      for (const id of d.stationVisited || []) this.stationVisited.add(id);
+      if (d.mode !== 'deck') for (const id of this.stationVisited) this.minimap.markVisited(id); // the title already set the station map
       this.hud.lawDraft = null;
       this.restoring = false;
       this.run = d.meta?.run || (d.campaign?.forge ? 'forge' : d.campaign?.zones ? (d.campaign.set === 'cradle' ? 'cradle' : 'halcyon') : d.mode === 'deck' ? 'vessel' : 'prologue');
@@ -1915,8 +2123,9 @@ class Game {
         return true;
       }
       this.held = d.held || null;
-      // quit between Varga's vault recording and the climb: the way up is still waiting
-      if (this.facts.get('vault_seen') && !this.facts.get('zones_done')) {
+      // quit between Varga's vault recording and the climb: the way up is still waiting (not after
+      // the choice: Recording 2 no longer opens the hatch then, see Director)
+      if (this.facts.get('vault_seen') && !this.facts.get('zones_done') && !this.facts.get('ending')) {
         this.enterRoom('archive', true);
         this.enterHalcyon();
         return true;
@@ -1931,13 +2140,101 @@ class Game {
   }
 
   // --- main loop --------------------------------------------------------------
-  frame() {
-    const raw = this.clock.getDelta();
+  // The real-time loop. t is the rAF timestamp: the frame's vsync-aligned start, so motion steps
+  // by whole refresh intervals whatever ran before the callback (input, timers, GC). All pacing
+  // lives here; frame() can still be called on its own (tests, tools) and just steps.
+  //  - a phone with a 90/120/144 Hz panel renders every second refresh (45 fps at 90 Hz, 60 at
+  //    120, 72 at 144, all even), and the GPU rests in between; 60 Hz renders all
+  //  - a phone behind a menu (not the character screen, which shows the 3D view) or on the title
+  //    renders about 30 fps; the canvas keeps its last frame, queued input waits a callback
+  loop(t) {
+    if (this.touch) this.measureRefresh(t);
+    if (this.lastT !== undefined) {
+      const idle = this.touch && this.menu !== 'hero' && (!this.started || this.menu || this.paused);
+      const min = idle ? 1000 / 30 : this.minFrame;
+      const since = t - this.lastT;
+      // 2 ms for timestamp jitter; a timestamp behind the last frame (a direct frame() call) resyncs
+      if (since >= 0 && since < min - 2) {
+        this.pace.skip = t; // did no work: the next callback comes on the next refresh
+        return;
+      }
+    }
+    this.frame(t);
+  }
+
+  // The panel's refresh interval: the median of 60 gaps between callbacks under 40 ms (a hitch
+  // only makes gaps longer, never shorter). Taken on the title, and once more 3 s after the game
+  // starts if the first found no fast panel (a heavy title, or a phone that only switches to
+  // 90/120 Hz once touched). After that it follows a panel that changes its rate (battery saver,
+  // a hot phone, adaptive refresh) through the gaps that follow a skipped callback: one that did
+  // no work, so the next comes on the very next refresh. Gaps after a rendered frame are not used,
+  // since a frame that takes longer than a refresh makes them two refreshes long.
+  measureRefresh(t) {
+    const m = this.pace;
+    const gap = t - m.prev;
+    const clean = m.skip === m.prev;
+    m.prev = t;
+    if (!m.gaps) {
+      if (clean && gap > 4 && gap < 40 && (m.clean ||= []).push(gap) >= 30) {
+        const iv = m.clean.sort((a, b) => a - b)[15];
+        m.clean = [];
+        if (Math.abs(iv - this.refresh) > 0.1 * this.refresh) this.setRefresh(iv);
+      }
+      if (m.again || this.minFrame || !this.started) return;
+      m.from ??= t;
+      if (t - m.from < 3000) return;
+      m.again = true;
+      m.gaps = [];
+      return;
+    }
+    if (gap > 4 && gap < 40) m.gaps.push(gap);
+    if (m.gaps.length < 60) return;
+    const iv = m.gaps.sort((a, b) => a - b)[30];
+    m.gaps = null;
+    this.setRefresh(iv);
+  }
+
+  // A panel faster than ~77 Hz (under 13 ms) renders every second refresh: 45 fps at 90 Hz, 60 at
+  // 120, 72 at 144, 82 at 165, all even. The shortest gap the cap allows is two refreshes but
+  // never more than 1/60 s (at 90 Hz both let the same refreshes through), so a panel that drops
+  // back to 60 Hz still renders every refresh. 72 and 82 fps at 144 and 165 Hz are a choice: the
+  // GPU works about half as much again as at an even 48 or 55 fps, for smoother motion on the
+  // panels bought for it, and resolution gives way first if that is too much.
+  // The smart renderer judges the frame rate the cap lets through (two refreshes) but never more
+  // than 60 fps: a 144 Hz panel that drops to 60 or 120 Hz (battery saver, heat) renders 60 fps,
+  // and that must not read as slow (at 60 Hz every callback renders, so the measurement above
+  // only sees the new rate behind the next menu). Anything slower than 77 Hz keeps 1/60 s: a gap
+  // measured on a phone that cannot keep up is its frame time.
+  setRefresh(iv) {
+    this.refresh = iv;
+    const fast = iv < 13;
+    this.minFrame = fast ? Math.min(2 * iv, 1000 / 60) : 0;
+    this.smart.panel = fast ? iv / 1000 : 1 / 60;
+    this.smart.vsync = fast ? Math.max(iv * Math.ceil((this.minFrame - 2) / iv), 1000 / 60) / 1000 : 1 / 60;
+    this.smart.restart();
+  }
+
+  frame(t = performance.now()) {
+    // dt from the timestamps (loop's from rAF); the first frame steps 1/60 s
+    const raw = this.lastT === undefined ? 1 / 60 : Math.max(0, (t - this.lastT) / 1000);
+    this.lastT = t;
     this.smart.sample(raw);
-    const dt = Math.min(0.05, raw);
-    this.time += dt;
+    // a slow frame (below 20 fps) runs as up to three steps of at most 0.05 s, so the game keeps
+    // real speed, and voiced lines their pace, down to about 7 fps without longer physics steps
+    const real = Math.min(0.15, raw);
+    const steps = Math.max(1, Math.ceil(real / 0.05 - 1e-6));
+    const dt = real / steps;
+    this.time += real;
     // plays the same held upright or sideways
     const active = !this.paused && !this.menu;
+    // a preset change the smart renderer queued compiles a new shader set: do it behind a
+    // panel that has painted (not the character screen, which shows the 3D view), or after
+    // 45 s of play if no menu comes (sector loads flush too)
+    if (this.menu !== this.menuSeen) {
+      this.menuSeen = this.menu;
+      this.menuAt = this.time;
+    }
+    if (this.smart.pending && ((this.menu && this.menu !== 'hero' && this.time - this.menuAt > 0.25) || this.smart.overdue)) this.smart.flush();
 
     for (let a of this.input.consumeActions()) {
       this.lastEvent = this.time;
@@ -1947,6 +2244,7 @@ class Game {
           this.player.cinema = null;
           this.back();
         }
+        else if (this.menu === 'ending' && !document.querySelector('#ending .body button')) this.closeMenu(); // an empty card is never a trap
         else if (this.menu === 'ending' || this.menu === 'decision' || this.menu === 'forgechoice') { /* choose; endings are final */ }
         else if (this.menu) this.closeMenu();
         else if (!this.paused) this.openMenu('pause');
@@ -1959,8 +2257,8 @@ class Game {
         continue;
       }
       if (a === 'quicksave' && !this.paused) {
-        this.saveTo('auto');
-        this.hud.toast('Quick saved.', 1400);
+        const ok = this.saveTo('auto');
+        if (ok !== undefined) this.hud.toast(ok ? 'Quick saved.' : '<small>NOT SAVED</small><br>Storage is blocked or full.', ok ? 1400 : 2600);
         continue;
       }
       if (a === 'quickload' && this.started) {
@@ -1991,9 +2289,9 @@ class Game {
       this.zoomSaveT = 1;
     }
     this.updateHudMood();
-    if (this.zoomSaveT > 0 && (this.zoomSaveT -= dt) <= 0) saveSettings(this.settings);
+    if (this.zoomSaveT > 0 && (this.zoomSaveT -= real) <= 0) saveSettings(this.settings);
 
-    if (active) this.step(dt);
+    if (active) for (let i = 0; i < steps && !this.menu && !this.paused; i++) this.step(dt); // a step may open a menu
     else this.input.consumeLook();
     if (!this.started && this.menu !== 'hero') {
       // title backdrop: drift slowly around the floating object
@@ -2025,10 +2323,10 @@ class Game {
       this.player.grounded = true; // stand for the portrait, even in a weightless room
     }
 
-    this.updateWorlds(active ? dt : 0, dt);
-    this.player.updateCamera(dt);
+    this.updateWorlds(active ? real : 0, real);
+    this.player.updateCamera(real);
     if (active) this.placeFocus();
-    this.updateTheme(dt);
+    this.updateTheme(real);
     if (this.settings.minimap && this.started && !this.menu && ++this.frameN % 3 === 0) this.minimap.drawMini(this.player, this.room, this.mapMarkers());
     this.postfx.render();
   }
@@ -2062,7 +2360,7 @@ class Game {
         const left = Math.max(0, (this.gearCd[key] || 0) - this.time);
         b.classList.toggle('no', !rule.ok);
         b.classList.toggle('cooling', left > 0);
-        b.classList.toggle('spent', !!GEAR[key].once && !!this.deckWorld.flags[`gear_KEYFORGE_${act.index}`]);
+        b.classList.toggle('spent', !!GEAR[key].once && !!this.facts.get(`gear_KEYFORGE_${act.index}`));
         b.classList.toggle('on', (key === 'FLARE' && this.flareT > 0) || (key === 'LENS' && this.deckWorld.lensT > 0) || ((key === 'GRAPPLE' || key === 'RIG') && this.deckWorld.temps.length > 0));
         const cd = (left / GEAR[key].cooldown || 0).toFixed(2);
         if (b._cd !== cd) {
@@ -2078,7 +2376,15 @@ class Game {
     this.fx.update(dt);
     this.bolt = this.weather.update(dt, this.time, this.player.pos);
     for (const t of WATER_NORMALS) { t.offset.x += dt * 0.012; t.offset.y += dt * 0.007; } // water moves
-    this.world.update(dt, this.time, this.held);
+    // Station Zero only lives in the scene while you are in it: out on a deck, district or
+    // Forge it is neither animated nor carried through the renderer's matrix update (a hidden
+    // subtree still is). Checked every frame, so every way in and out of deck mode is covered.
+    const inDeck = this.mode === 'deck';
+    if (!inDeck) this.world.update(dt, this.time, this.held);
+    if (inDeck === !!this.world.root.parent) {
+      if (inDeck) this.world.root.removeFromParent();
+      else this.scene.add(this.world.root);
+    }
     this.npcs.update(simDt, this.time);
     this.hud.update(simDt);
   }
@@ -2127,7 +2433,7 @@ class Game {
     const held = this.heldItem();
     if (held && held.echo) {
       const s = engine.state(this.room);
-      if (s !== engine.residue && !engine.has('heldPersists', s)) {
+      if (s !== engine.residue && !engine.hasIn('heldPersists', this.room)) { // the room's rules count (a null field)
         this.held = null;
         if (this.edition) this.hud.say([{ who: 'KAI', text: this.edition.line('key_dissolve') }], this.facts);
         else if (this.mode === 'deck') this.hud.say([{ who: 'TICK', text: 'THE KEY WAS A MEMORY. IT STAYED BEHIND IN ECHO. A LAW COULD LET YOU KEEP IT.' }], this.facts);
@@ -2179,13 +2485,16 @@ class Game {
 
   placePrompt(pos) {
     this.fx.focus(pos, 0xffffff, this.time, this.camera);
-    if (!pos) return;
-    const v = new THREE.Vector3(pos[0], pos[1] + 0.55, pos[2]).project(this.camera);
+    const v = pos && new THREE.Vector3(pos[0], pos[1] + 0.55, pos[2]).project(this.camera);
     const el = this.hud.el.prompt;
-    if (v.z > 1) {
-      el.classList.remove('on');
-      return;
+    // behind the camera: hidden by a class of its own, so HUD.prompt's record of what it shows
+    // stays true and the text is not rewritten every frame this lasts
+    const behind = !!v && v.z > 1;
+    if (behind !== !!this._promptBehind) {
+      this._promptBehind = behind;
+      el.classList.toggle('behind', behind);
     }
+    if (!v || behind) return;
     const w = window.innerWidth, h = window.innerHeight;
     // whole pixels, written only when they change (each write costs a layout)
     const x = Math.round(THREE.MathUtils.clamp((v.x * 0.5 + 0.5) * w, 90, w - 90));
@@ -2220,7 +2529,7 @@ class Game {
     this.lastObserverMode = this.observer.mode;
     const od = player.pos.distanceTo(this.observer.pos);
     const threat = inHall && !facts.get('observer_tethered') ? Math.max(this.observer.suspicion, Math.max(0, 1 - od / 14) * 0.4) : 0;
-    this.audio.setThreat(threat);
+    this.audio.setThreat(threat, dt);
     this.hud.eye(this.observer.suspicion, inHall && !facts.get('observer_tethered'));
     this.director.update(dt);
   }
@@ -2234,6 +2543,7 @@ class Game {
       for (const cp of lv.checkpoints) if (cp.room === this.room && inBox(cp.box)) this.checkpoint = cp.spawn;
     }
     if (lv.exit && inBox(lv.exit.box)) this.completeSector();
+    else this.stayAtGate = false; // STAY at the last gate lasts until you step out of it
     const ev = this.deckWorld.update(dt, this.time, this);
     if (ev && !this.catching) this.deckSetback(ev);
     // threat music + the watcher meter follow the nearest sentinel
@@ -2252,7 +2562,7 @@ class Game {
       threat = Math.max(threat, GENRES[this.forge.genre].threat); // the genre sets the floor of the music's tension
       if (this.flareT > 0) this.flareT -= dt;
     }
-    this.audio.setThreat(threat);
+    this.audio.setThreat(threat, dt);
     this.hud.eye(sus, near);
     if (this.campaign?.lv) this.edition.step(dt);
     this.updateDeckObjective();
@@ -2291,9 +2601,14 @@ class Game {
     this.postfx.render();
   }
 
-  // the nearest street lamps and lit shopfronts become real lights (every 0.25 s)
+  // the nearest street lamps and lit shopfronts become real lights (chosen every 0.25 s)
+  // Lights follow lamps by identity: a light keeps its lamp while that lamp is still among the
+  // nearest (or only a little farther than the last of them), so two lamps swapping places in
+  // the order changes nothing. A light that loses its lamp fades out first and only then moves
+  // to a lamp that has none; no light ever drops to dark in one frame.
   updateLamps(dt) {
     const glows = this.mode === 'deck' && this.deckWorld.glows?.length && this.deckWorld.glows;
+    const lights = this.lampLights;
     this.lampT = (this.lampT || 0) - dt;
     if (this.lampT <= 0) {
       this.lampT = 0.25;
@@ -2301,29 +2616,52 @@ class Game {
       const near = glows ? glows.filter((g) => g[5] || g[3] >= 3)
         .map((g) => ({ g, d: (g[0] - p.x) ** 2 + (g[2] - p.z) ** 2 }))
         .filter((o) => o.d < 18 * 18).sort((a, b) => a.d - b.d) : [];
-      this.lampLights.forEach((l, i) => {
-        const o = near[i];
-        if (!o) return (l.userData.want = 0);
-        const [x, , z, , c, h] = o.g;
-        if (l.userData.at !== o.g) {
-          l.userData.at = o.g;
-          l.intensity = 0;
-          l.position.set(x, h ? h - 0.35 : 2.4, z);
-          l.color.setHex(h ? 0xffd2a0 : c);
-          l.distance = h ? 11 : 7;
-        }
-        l.userData.want = h ? 14 : 6;
-      });
+      const n = lights.length;
+      const top = near.slice(0, n);
+      // keep a lamp while it is among the n nearest, or within 1.3x the n-th one's squared distance
+      const reach = top.length === n && n ? top[n - 1].d * 1.3 : Infinity;
+      const held = new Set();
+      const free = [];
+      for (const l of lights) {
+        const u = l.userData, g = u.at;
+        const o = g && !held.has(g) ? near.find((o) => o.g === g) : null;
+        if (o && o.d <= reach) {
+          held.add(g);
+          u.want = g[5] ? 14 : 6;
+          u.next = null;
+        } else free.push(l);
+      }
+      free.sort((a, b) => a.intensity - b.intensity); // dark lights first: they light up at once
+      for (const l of free) {
+        const o = top.find((o) => !held.has(o.g));
+        if (o) held.add(o.g);
+        l.userData.want = 0;
+        l.userData.next = o ? o.g : null;
+      }
     }
-    const k = Math.min(1, dt * 4);
-    for (const l of this.lampLights) l.intensity += (l.userData.want - l.intensity) * k;
+    const up = Math.min(1, dt * 4), down = 1 - Math.exp(-dt * 20); // out in about 0.3 s, in gently
+    for (const l of lights) {
+      const u = l.userData;
+      if (u.next && l.intensity < 0.05) {
+        // faded out: move to the new lamp and fade in there
+        const [x, , z, , c, h] = u.next;
+        l.position.set(x, h ? h - 0.35 : 2.4, z);
+        l.color.setHex(h ? 0xffd2a0 : c);
+        l.distance = h ? 11 : 7;
+        u.at = u.next;
+        u.next = null;
+        u.want = h ? 14 : 6;
+      }
+      l.intensity += (u.want - l.intensity) * (u.want < l.intensity ? down : up);
+    }
   }
 
   // how much the vessel runs on emergency light (after SEVERED; districts have their own night)
   emergency() {
     if (this.mode !== 'deck' || !this.level?.palette) return 0;
     if (this.level.forge || this.level.palette.emergency !== undefined) return (this.level.palette.emergency || 0) * (1 - this.flare()); // WORLD FORGE's EMERGENCY light (a flare lifts it); THE LAST VERSION's Helix
-    return this.level.palette.night === undefined ? this.story?.after?.dark || 0 : 0;
+    if (this.story?.zones) return this.level.palette.night === undefined ? this.story.after?.dark || 0 : 0; // districts (and THE LAST VERSION) keep their own night
+    return this.story?.after?.dark || 0; // every vessel deck runs on the emergency light after SEVERED
   }
 
   // how much a signal flare is lighting the act right now (0..1)
@@ -2353,7 +2691,10 @@ class Game {
     _c.set(th.ground);
     if (pal?.look) _c.lerp(_c2.set(pal.fog), 0.5);
     this.hemi.groundColor.lerp(_c, k);
-    let night = (deck ? pal.night || { horror: 0.55, thriller: 0.3 }[this.story?.mood] || this.story?.after?.dark || 0 : room.night || 0) * (1 - this.flare());
+    // a vessel deck's own night never hides the story's darkness (a Horror or Thriller mood, SEVERED's dark ship)
+    const mood = { horror: 0.55, thriller: 0.3 }[this.story?.mood] || 0;
+    const deckNight = this.story?.zones ? pal?.night || mood || this.story?.after?.dark || 0 : Math.max(pal?.night || 0, mood, this.story?.after?.dark || 0);
+    let night = (deck ? deckNight : room.night || 0) * (1 - this.flare());
     if (deck && this.edition?.stateNight) night = this.edition.stateNight(s, night); // THE LAST VERSION: each year has its own hour
     const env = (this.scene.environment ? 0.85 : 1) * (deck ? 0.72 : 1) * (1 - night * 0.55);
     // a sky photo lights the district: the probe takes over most of the flat hemisphere fill
@@ -2366,14 +2707,27 @@ class Game {
     const skyAmt = probe ? 1 : 0;
     this.skyLight.intensity += (skyAmt * (1 - night * 0.35) * 1.1 - this.skyLight.intensity) * k;
     this.hemi.intensity += (th.hemi * env * (1 - skyAmt * 0.55) - this.hemi.intensity) * k;
-    if (this.bolt) this.hemi.intensity = th.hemi * env + this.bolt * 2.2;
+    if (this.bolt && !this.settings.comfort) this.hemi.intensity = th.hemi * env + this.bolt * 2.2; // Comfort mode: no lightning flashes
     this.sun.color.lerp(_c.set(th.sunColor), k);
     this.sun.intensity += (th.sun * (deck ? 0.8 : 1) * (1 - night * 0.7) - this.sun.intensity) * k;
     this.renderer.toneMappingExposure += ((deck ? 0.9 + night * 0.15 - emergency * 0.5 : 0.95 + night * 0.1) - this.renderer.toneMappingExposure) * k;
+    // follow the player, snapped to whole shadow-map texels across the light's view
+    // (the preset's map size is read every frame, so a quality switch is picked up)
     const p = this.player.pos;
-    const sd = this.edition?.sunDir?.() ?? [6, 24, 9];
-    this.sun.position.set(p.x + sd[0], p.y + sd[1], p.z + sd[2]);
-    this.sun.target.position.set(p.x, p.y, p.z);
+    const sd = this.edition?.sunDir?.(); // THE LAST VERSION: each place and year has its own sun
+    if (sd && (sd[0] !== this._sunOff.x || sd[1] !== this._sunOff.y || sd[2] !== this._sunOff.z)) {
+      this._sunOff.set(sd[0], sd[1], sd[2]);
+      this._LZ.copy(this._sunOff).normalize();
+      this._LX.set(0, 1, 0).cross(this._LZ);
+      if (this._LX.lengthSq() < 1e-6) this._LX.set(1, 0, 0); // a sun straight overhead
+      this._LX.normalize();
+      this._LY.copy(this._LZ).cross(this._LX);
+    }
+    const sc = this.sun.shadow.camera, tx = (sc.right - sc.left) / this.sun.shadow.mapSize.x;
+    const u = Math.round(p.dot(this._LX) / tx) * tx, v = Math.round(p.dot(this._LY) / tx) * tx;
+    _sv.copy(this._LX).multiplyScalar(u).addScaledVector(this._LY, v).addScaledVector(this._LZ, p.dot(this._LZ));
+    this.sun.target.position.copy(_sv);
+    this.sun.position.copy(_sv).add(this._sunOff);
     const dc = this.device.userData;
     dc.shell.material.color.lerp(_c.set(th.device), k);
     dc.shell.rotation.y += dt * 1.5;
@@ -2386,6 +2740,12 @@ class Game {
 }
 
 window.addEventListener('DOMContentLoaded', async () => {
+  // the title (with 'Loading characters…') shows while the models load, not a blank page with a dead dock;
+  // its buttons wake up when the game exists. (The second edition shows its own title once it starts.)
+  const titleBody = document.querySelector('#title .body');
+  document.body.classList.add('menu');
+  if (!EDITION) document.querySelector('#title')?.classList.add('on');
+  if (titleBody) titleBody.style.pointerEvents = 'none';
   // your look and Juno load first; the crew follow in the background.
   // The procedural cast stands in if the models can't load.
   let saved = null;
@@ -2412,8 +2772,11 @@ window.addEventListener('DOMContentLoaded', async () => {
   try {
     window.AZ = new Game();
     window.AZSynth = Synth;
+    if (titleBody) titleBody.style.pointerEvents = '';
   } catch (e) {
     document.querySelector('#title .body').innerHTML = `<p class="err">This device could not start WebGL.<br><small>${e.message}</small></p>`;
+    document.querySelector('#title')?.classList.add('on'); // the message must be seen
+    document.body.classList.add('menu');
     throw e;
   }
 });

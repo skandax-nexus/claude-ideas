@@ -318,7 +318,8 @@ export function makeObserver() {
     g.add(arm);
   }
   // A soft cone shows where it is looking (helps players plan, reduces stress).
-  const coneMat = new THREE.MeshBasicMaterial({ color: 0x7fd8ff, transparent: true, opacity: 0.08, depthWrite: false, side: THREE.DoubleSide });
+  // one colour at low opacity: one pass over both faces blends the same as two
+  const coneMat = new THREE.MeshBasicMaterial({ color: 0x7fd8ff, transparent: true, opacity: 0.08, depthWrite: false, side: THREE.DoubleSide, forceSinglePass: true });
   const cone = new THREE.Mesh(new THREE.ConeGeometry(4.5, 9, 24, 1, true), coneMat);
   cone.geometry.translate(0, -4.5, 0);
   cone.rotation.x = Math.PI / 2 - 0.12;

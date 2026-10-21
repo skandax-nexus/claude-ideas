@@ -39,6 +39,17 @@ export class Fx {
     this.tex = dotTexture();
     this.bursts = [];
     this.holos = [];
+    // Burst and hologram materials are reused, never disposed: disposing the last one deletes
+    // its shader program, and the next pickup or log would link it again on the tap.
+    this.pool = [];
+    this.holoPool = [];
+    // one invisible point drawn on the first frames links the burst program before play
+    const warm = new THREE.Points(new THREE.BufferGeometry().setAttribute('position', new THREE.BufferAttribute(new Float32Array(3), 3)), this.burstMaterial());
+    warm.material.opacity = 0;
+    warm.frustumCulled = false;
+    warm.onAfterRender = () => { warm.userData.drawn = true; };
+    this.warm = warm;
+    scene.add(warm);
     // focus marker: a soft pulsing ring + glow under whatever you can use
     const ringMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.8, depthWrite: false, fog: false });
     this.ring = new THREE.Mesh(new THREE.TorusGeometry(0.42, 0.025, 8, 48), ringMat);
@@ -66,6 +77,10 @@ export class Fx {
     this.glow.material.opacity = 0.25 + Math.sin(t * 4) * 0.08;
   }
 
+  burstMaterial() {
+    return this.pool.pop() || new THREE.PointsMaterial({ map: this.tex, size: 0.16, transparent: true, depthWrite: false, fog: false, blending: THREE.AdditiveBlending });
+  }
+
   burst(pos, color = 0xffffff, n = 26, speed = 2.2) {
     const geo = new THREE.BufferGeometry();
     const p = new Float32Array(n * 3);
@@ -77,7 +92,9 @@ export class Fx {
       v.push([Math.cos(a) * Math.cos(e) * s, Math.sin(e) * s + 0.8, Math.sin(a) * Math.cos(e) * s]);
     }
     geo.setAttribute('position', new THREE.BufferAttribute(p, 3));
-    const mat = new THREE.PointsMaterial({ map: this.tex, color, size: 0.16, transparent: true, depthWrite: false, fog: false, blending: THREE.AdditiveBlending });
+    const mat = this.burstMaterial();
+    mat.color.set(color);
+    mat.opacity = 1;
     const pts = new THREE.Points(geo, mat);
     pts.frustumCulled = false;
     this.scene.add(pts);
@@ -109,7 +126,10 @@ export class Fx {
     void color;
     const tex = new THREE.CanvasTexture(c);
     tex.colorSpace = THREE.SRGBColorSpace;
-    const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide, fog: false });
+    // a flat screen: one pass draws both faces (no back-then-front program switch per frame)
+    const mat = this.holoPool.pop() || new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false, side: THREE.DoubleSide, fog: false, forceSinglePass: true });
+    mat.map = tex; // swapping one map for another keeps the same program
+    mat.opacity = 0;
     const mesh = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 1.35), mat);
     mesh.position.set(pos[0], pos[1] + 1.25, pos[2]);
     mesh.rotation.y = yaw;
@@ -119,6 +139,12 @@ export class Fx {
   }
 
   update(dt) {
+    if (this.warm?.userData.drawn) {
+      this.scene.remove(this.warm);
+      this.warm.geometry.dispose();
+      this.pool.push(this.warm.material);
+      this.warm = null;
+    }
     for (const b of this.bursts) {
       b.t += dt;
       const a = b.pts.geometry.attributes.position;
@@ -132,7 +158,7 @@ export class Fx {
     for (const b of this.bursts.filter((x) => x.t >= x.life)) {
       this.scene.remove(b.pts);
       b.pts.geometry.dispose();
-      b.pts.material.dispose();
+      this.pool.push(b.pts.material);
     }
     this.bursts = this.bursts.filter((x) => x.t < x.life);
     for (const h of this.holos) {
@@ -144,9 +170,11 @@ export class Fx {
     }
     for (const h of this.holos.filter((x) => x.t >= x.life)) {
       this.scene.remove(h.mesh);
-      h.mesh.material.map.dispose();
-      h.mesh.material.dispose();
+      const m = h.mesh.material;
+      m.map.dispose();
+      m.map = null; // let the canvas go; the next log sets its own
       h.mesh.geometry.dispose();
+      this.holoPool.push(m);
     }
     this.holos = this.holos.filter((x) => x.t < x.life);
   }

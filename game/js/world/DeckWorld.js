@@ -3,7 +3,7 @@
 // the sector's flags and the rooms' reality states, and runs the moving parts
 // (time sweepers, sentinels, crew).
 import * as THREE from '../../vendor/three.module.min.js';
-import { deckMaterials, boxGeometry, mergeGeometries, textTexture } from './materials.js';
+import { deckMaterials, boxGeometry, mergeGeometries, textTexture, texturesOf } from './materials.js';
 import * as M from './models.js';
 import { makeCrewModel, makeCastModel } from './People.js';
 import { TOKENS } from '../core/Laws.js';
@@ -113,7 +113,9 @@ export class DeckWorld {
       // the glass sky and see-through walls let the light through (a dome shadow cut a hard
       // diagonal edge across HALCYON where the sun's shadow area ended)
       mesh.castShadow = !['ceil', 'glass', 'glow', 'gate', 'leaf', 'dome', 'roots', 'glassWall', 'neon', 'lamp', 'shopfront', 'screen', 'podLight', 'windowStars', 'windowDark'].includes(mat);
-      mesh.receiveShadow = true;
+      // ceilings, the dome and the roots face down, away from the sun: it adds nothing to them
+      // shadowed or not, so they skip the 16 shadow-map lookups per pixel
+      mesh.receiveShadow = !['ceil', 'roots', 'dome'].includes(mat);
       root.add(mesh);
       geos.forEach((g) => g.dispose());
     }
@@ -280,18 +282,46 @@ export class DeckWorld {
   dispose() {
     if (!this.root) return;
     this.scene.remove(this.root);
-    this.root.traverse((o) => {
-      if (o.geometry) o.geometry.dispose();
-      if (o.material && o.material.map && !o.material.userData.keep && !Object.values(this.mats || {}).includes(o.material)) o.material.map.dispose?.();
-    });
+    // Free what this sector made. Characters are clones that share the loaded models' buffers
+    // and textures (and the contact-shadow blob texture), and anything marked keep comes from a
+    // shared cache: those stay on the GPU for the next sector instead of being re-uploaded. Only
+    // a character's own contact-shadow plane is freed with it, and its textures are noted for
+    // freeLeft(). (Every sprite shares three's one sprite quad, also used outside the sector.)
+    const own = new Set(Object.values(this.mats || {}));
+    const left = (this.leftTex ||= new Set());
+    const walk = (o) => {
+      if (o.userData.actor) {
+        for (const c of o.children) if (c.userData.ownGeometry) c.geometry.dispose();
+        texturesOf(o, left);
+        return;
+      }
+      if (o.geometry && !o.isSprite && !o.geometry.userData.keep) o.geometry.dispose();
+      const m = o.material;
+      if (m && !Array.isArray(m) && m.map && !m.userData.keep && !m.map.userData.keep && !own.has(m)) m.map.dispose?.();
+      for (const c of o.children) walk(c);
+    };
+    walk(this.root);
     this.root = null;
     this.level = null;
     this.decor = null;
     this.glows = [];
   }
 
-  echoVisible(state) {
-    return state === 'ECHO' || this.lensT > 0 || this.engine.has('echoVisible', state);
+  // Call once the next place is built (or the station is back): the GPU copies of the textures
+  // of the characters that dispose() let go are freed unless something in the scene still uses
+  // them. Whoever stays (and the player, and Station Zero's cast) keeps theirs; whoever left frees
+  // theirs, so only the people in play hold GPU memory (a Rocketbox colour map with its mips is
+  // 11-17 MB). Someone who comes back uploads again, behind that sector's fade.
+  freeLeft() {
+    if (!this.leftTex) return;
+    const used = texturesOf(this.scene);
+    for (const t of this.leftTex) if (!used.has(t)) t.dispose();
+    this.leftTex = null;
+  }
+
+  // with a room, its local rules count too (WORLD FORGE: ECHOES VISIBLE / SOLID, a null field)
+  echoVisible(state, room) {
+    return state === 'ECHO' || this.lensT > 0 || (room ? this.engine.hasIn('echoVisible', room) : this.engine.has('echoVisible', state));
   }
 
   // WORLD FORGE gear: a solid hard-light box (a grapple line, a stair) for a few seconds
@@ -321,13 +351,13 @@ export class DeckWorld {
       const c = this.ctx(d.el.room);
       const present = !!d.cond(c);
       if (d.kind === 'echo') {
-        const solid = present && this.engine.has('echoSolid', c.state) && d.el.solid !== false;
-        d.mesh.visible = present && (solid || this.echoVisible(c.state));
+        const solid = present && this.engine.hasIn('echoSolid', d.el.room) && d.el.solid !== false;
+        d.mesh.visible = present && (solid || this.echoVisible(c.state, d.el.room));
         d.mesh.material = solid ? this.mats.echoSolid : this.mats.echo;
         if (solid) cols.push(d.box);
       } else if (d.kind === 'light') {
         // hard light is always outlined; a law decides whether it carries weight
-        const solid = present && this.engine.has('lightSolid', c.state);
+        const solid = present && this.engine.hasIn('lightSolid', d.el.room);
         d.mesh.visible = present;
         d.mesh.material = solid ? this.mats.lightSolid : this.mats.light;
         if (solid) cols.push(d.box);
@@ -347,7 +377,7 @@ export class DeckWorld {
     this.colliders = cols;
     for (const tm of this.textMeshes) {
       const c = this.ctx(tm.t.room);
-      tm.mesh.visible = !!tm.cond(c) && (!tm.t.echo || this.echoVisible(c.state));
+      tm.mesh.visible = !!tm.cond(c) && (!tm.t.echo || this.echoVisible(c.state, tm.t.room));
     }
     for (const it of this.level.interactables) {
       const p = this.props[it.id];
@@ -373,6 +403,9 @@ export class DeckWorld {
         p.isEcho = p.model === p.echo;
       }
       p.model.visible = here;
+      // a hidden person is not animated, so their shading may still be for an earlier quality:
+      // brought up to date as they appear, so that frame draws with the programs already in use
+      if (here) p.model.userData.refreshShading?.();
     }
   }
 
@@ -409,7 +442,7 @@ export class DeckWorld {
   isItemAvailable(id) {
     const im = this.itemMeshes[id];
     if (!im || this.flags[`used_${id}`]) return false;
-    return !im.it.echo || this.echoVisible(this.engine.state(im.it.room));
+    return !im.it.echo || this.echoVisible(this.engine.state(im.it.room), im.it.room);
   }
 
   roomAt(p, fallback) {
@@ -470,6 +503,7 @@ export class DeckWorld {
     const feet = player.pos.y - player.half.y, head = player.pos.y + player.half.y;
     for (const h of this.hazards) {
       if (h.stasisT > 0) h.stasisT -= dt; // a stasis pulse holds it still
+      if (h.zapT > 0) h.zapT -= dt;
       const frozen = this.engine.hasIn('timeStop', h.hz.room) || h.stasisT > 0;
       if (!frozen) h.angle += h.hz.speed * dt * (this.engine.hasIn('timeReverse', h.hz.room) ? -1 : 1);
       h.g.rotation.y = h.angle;
@@ -483,6 +517,8 @@ export class DeckWorld {
       const along = dx * ax + dz * az;
       if (Math.abs(along) > h.hz.radius) continue;
       const perp = Math.abs(dx * -az + dz * ax);
+      // a beam passing close by: its zap (the second edition keeps its own soundscape)
+      if (perp < 1.5 && !(h.zapT > 0) && !g.edition) { g.audio?.zap(); h.zapT = 0.9; }
       if (perp < 0.42) event = 'hit';
     }
     // the afterimage the watchers follow (Echo Step)
@@ -552,6 +588,7 @@ export class DeckWorld {
       } else m.userData.lookAt?.(null);
       n.talkT = Math.max(0, n.talkT - dt);
       m.userData.setTalking?.(n.talkT > 0);
+      if (!m.visible) continue; // hidden (not here in this state, or their echo stands in): no pose to compute, nothing to say
       if (!frozen) m.userData.animate(dt, speed, t);
       // a bark: something said in passing, never over a conversation
       // (one bark at a time across the whole place, each person starting somewhere else in their list)
@@ -666,6 +703,7 @@ function lightPools(glows) {
     g.fillStyle = gr;
     g.fillRect(0, 0, 128, 128);
     poolTex = new THREE.CanvasTexture(c);
+    poolTex.userData.keep = true; // every district's pools share it
   }
   const out = [];
   const plane = new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2);
@@ -681,7 +719,9 @@ function lightPools(glows) {
   const lamps = glows.filter((g) => g[5]);
   if (lamps.length) {
     const cone = new THREE.ConeGeometry(1, 1, 20, 1, true).translate(0, -0.5, 0);
-    const coneMat = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.018, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: true });
+    // additive with no depth writes: one pass over both faces looks the same as three's
+    // back-then-front passes, without rebuilding the program twice a frame
+    const coneMat = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.018, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: true, forceSinglePass: true });
     // haze you see from a distance: it fades out as the camera comes close, so walking
     // past (or through) a lamp never washes half the screen
     coneMat.onBeforeCompile = (sh) => {
@@ -824,7 +864,8 @@ export class Sentinel {
     U.coneMat.color.setHex(col);
     U.coneMat.opacity = this.mode === 'chase' ? 0.16 : 0.09;
     this.sync(dt, speed);
-    if (this.mode === 'chase' && here && player.pos.distanceTo(_v.set(this.pos.x, player.pos.y, this.pos.z)) < 1.15) {
+    // no catch through the air: on the ceiling you are out of its reach (unless it learned to look up)
+    if (this.mode === 'chase' && here && !hidden && player.pos.distanceTo(_v.set(this.pos.x, player.pos.y, this.pos.z)) < 1.15) {
       this.mode = 'patrol';
       this.suspicion = 0;
       return 'caught';

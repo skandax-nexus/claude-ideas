@@ -71,7 +71,8 @@ await chips(1, 'target', 'PHYSICAL');
 check(await az(() => AZ.engine.laws[1] === null && !!document.querySelector('#laws [data-install="1"]:not([disabled])')), 'a finished law waits for ACTIVATE');
 // closing and reopening keeps the draft
 await page.keyboard.press('Escape');
-await page.waitForFunction(() => !AZ.menu, null, { timeout: 10000 }).catch(() => {});
+// (the key is read by the next frame: on a busy machine frames can be many seconds apart, so the waits are long)
+await page.waitForFunction(() => !AZ.menu, null, { timeout: 300000 }).catch(() => {});
 await az(() => { if (AZ.menu) AZ.closeMenu(); AZ.openMenu('laws'); });
 check((await page.textContent('#laws .chip[data-slot="1"][data-key="verb"]')).trim() === 'PERSISTS THROUGH', 'closing the panel keeps the unfinished law');
 await page.click('#laws [data-install="1"]');
@@ -97,11 +98,11 @@ check(await az(() => AZ.combos.length === 2 && AZ.comboIndex === 1), 'a second c
 await page.click('#laws [data-combo="0"]');
 check(await az(() => AZ.engine.laws[1]?.subject === 'HELD' && AZ.comboIndex === 0), 'SWITCH installs the whole combo');
 await page.keyboard.press('Escape'); // from the combo-name box: leaves it and closes the panel
-await page.waitForFunction(() => !AZ.menu, null, { timeout: 10000 }).catch(() => {});
+await page.waitForFunction(() => !AZ.menu, null, { timeout: 300000 }).catch(() => {});
 check(await az(() => !AZ.menu && document.activeElement?.id !== 'comboName'), 'Escape leaves the text box and closes the panel');
 await az(() => { if (AZ.menu) AZ.closeMenu(); document.activeElement?.blur(); });
 await page.keyboard.press('KeyX');
-await page.waitForFunction(() => AZ.comboIndex === 1, null, { timeout: 10000 }).catch(() => {});
+await page.waitForFunction(() => AZ.comboIndex === 1, null, { timeout: 300000 }).catch(() => {});
 check(await az(() => AZ.engine.laws[1]?.subject === 'ECHOES' && AZ.comboIndex === 1), 'X switches to the next combo during play', await az(() => JSON.stringify({ idx: AZ.comboIndex, law: AZ.engine.laws[1], pending: AZ.input.actions })));
 check(await az(() => !document.querySelector('#dock .combo').classList.contains('off')), 'the dock shows the COMBO button once a combo exists');
 await az(() => { AZ.engine.setLaw(1, null); AZ.engine.setState('lab', 'ECHO', { force: true }); AZ.held = 'key'; AZ.engine.setState('lab', 'PHYSICAL', { force: true }); });
@@ -115,10 +116,10 @@ check(await az(() => AZ.held === 'core'), 'taking something with full hands is r
 // 4. save/load keeps what you carry and the antechamber's first zero-g
 await az(() => { AZ.engine.setOverride('antechamber', { zeroG: true }); AZ.saveTo('auto'); });
 // loading while a game runs reloads the page and continues from the save
-await Promise.all([page.waitForNavigation({ timeout: 120000 }), az(() => AZ.begin('load', 0))]);
+await Promise.all([page.waitForNavigation({ timeout: 300000 }), az(() => AZ.begin('load', 0))]);
 await page.waitForFunction(() => window.AZ && document.querySelector('#continue')?.offsetParent, null, { timeout: 400000 });
 await page.click('#continue'); // "Tap to enter" (sound needs a tap on phones)
-await page.waitForFunction(() => AZ.started && AZ.room, null, { timeout: 120000 });
+await page.waitForFunction(() => AZ.started && AZ.room, null, { timeout: 300000 });
 await page.waitForTimeout(500);
 check(await az(() => AZ.held === 'core'), 'a carried item survives save and load', await az(() => String(AZ.held)));
 check(await az(() => AZ.engine.overrides.antechamber?.zeroG === true), 'the antechamber\'s scripted zero-g survives save and load');
@@ -170,9 +171,9 @@ check(!hint || /CUSTODIAN/.test(JSON.stringify(hint)), 'after the archive opens,
 await az(() => { if (AZ.menu) AZ.closeMenu(); AZ.openMenu('pause'); AZ.openSettings('pause'); });
 const tapClear = () => az(() => { const b = document.querySelector('#resetData'); b.scrollIntoView(); setTimeout(() => b.click(), 0); });
 await tapClear();
-await page.waitForTimeout(300);
+await page.waitForTimeout(600); // a second tap within 350 ms is the second half of a double tap, not a confirmation
 check((await page.textContent('#resetData')).includes('AGAIN'), 'CLEAR asks for a second tap');
-await Promise.all([page.waitForNavigation({ timeout: 120000 }), tapClear()]);
+await Promise.all([page.waitForNavigation({ timeout: 300000 }), tapClear()]);
 await page.waitForFunction(() => window.AZ, null, { timeout: 400000 });
 check(await az(() => !Object.keys(localStorage).some((k) => k.startsWith('afterzero.'))), 'the second tap clears every save and setting on the device');
 check(errors.length === 0, 'no page errors', errors.join(' | '));

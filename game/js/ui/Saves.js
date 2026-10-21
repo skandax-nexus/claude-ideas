@@ -1,4 +1,4 @@
-// Save slots. A new game picks one of three slots and autosaves into it as you
+// Save slots. A new game picks one of ten slots and autosaves into it as you
 // play (each slot remembers which chapter it belongs to: the prologue,
 // HALCYON, the Cradle, the vessel, a Story Studio tale or a WORLD FORGE game). The old single
 // autosave is still readable. Each entry stores the game state plus a little

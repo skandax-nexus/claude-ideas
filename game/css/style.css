@@ -231,6 +231,8 @@ li small { display: block; color: var(--ink-soft); font-size: 12px; }
 .setting { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 10px; margin: 12px 0; font-size: 14px; font-weight: 600; }
 .setting small { display: block; color: var(--ink-soft); font-weight: 500; font-size: 12px; }
 .setting input[type=range] { width: 150px; accent-color: var(--coral); }
+.setting > span:first-child { min-width: 8.5em; } /* the label keeps its width; the buttons wrap */
+body.touch .setting input[type=range] { height: 32px; }
 .seg { display: flex; gap: 4px; flex-wrap: wrap; justify-content: flex-end; }
 .seg button { font-size: 11px; padding: 7px 10px; }
 .seg button.sel { background: var(--ink); color: #fff; border-color: var(--ink); }
@@ -243,8 +245,9 @@ body.minimap #held { bottom: 196px; }
 .lg::before { content: ""; display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 5px; vertical-align: 0; }
 .lg.player::before { background: #ff7a63; } .lg.npc::before { background: #2f9a64; } .lg.sentinel::before { background: #4f9fe8; }
 .lg.item::before { background: #e0a43a; } .lg.token::before { background: #2fae6a; } .lg.gate::before { background: #7a5fd0; } .lg.beacon::before { background: #22aeb9; }
-body:not(.minimap) body.touch #card { position: fixed; inset: 0; display: flex; align-items: flex-start; padding-top: 16vh; justify-content: center; pointer-events: none; z-index: 25; opacity: 0; transition: opacity 0.9s; }
+#card { position: fixed; inset: 0; display: flex; align-items: flex-start; padding-top: 16vh; justify-content: center; pointer-events: none; z-index: 25; opacity: 0; transition: opacity 0.9s; }
 #card.on { opacity: 1; }
+body.menu #card.on { opacity: 0; } /* never over an open menu */
 #card .inner { text-align: center; background: rgba(255, 255, 255, 0.86); padding: 20px 36px; border-radius: 24px; box-shadow: 0 20px 60px rgba(40, 60, 90, 0.16); max-width: 86vw; }
 #card small { font-size: 11px; letter-spacing: 0.22em; color: var(--ink-soft); font-weight: 700; }
 #card h2 { font-size: clamp(26px, 5vw, 44px); letter-spacing: 0.16em; margin: 8px 0 4px; color: var(--ink); }
@@ -256,6 +259,8 @@ body:not(.minimap) body.touch #card { position: fixed; inset: 0; display: flex; 
 .suspects .st.guilty { background: #fde9e4; color: #c0553f; }
 body.text-lg .sub { font-size: 19px; }
 body.text-lg #objective .txt { font-size: 17px; }
+body.text-lg.touch .sub { font-size: 17px; } /* beats the phone sizes below */
+body.text-lg.touch #objective .txt { font-size: 15px; }
 
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 
@@ -288,6 +293,7 @@ body.calm #buttons .b { opacity: 0.55; }
   font-size: 13px; font-weight: 700; letter-spacing: 0.06em; color: var(--ink); opacity: 0; transition: opacity 0.2s; pointer-events: none; white-space: nowrap; }
 #prompt.on { opacity: 1; }
 body.touch #prompt.on { pointer-events: auto; padding: 12px 18px; font-size: 14px; }
+#prompt.on.behind, body.touch #prompt.on.behind { opacity: 0; pointer-events: none; } /* its spot is behind the camera */
 #prompt kbd { font: 700 11px Inter, sans-serif; background: var(--ink); color: #fff; padding: 2px 7px; border-radius: 6px; }
 #prompt::after { content: ""; position: absolute; left: 50%; bottom: -6px; width: 10px; height: 10px; background: inherit; transform: translateX(-50%) rotate(45deg); border-radius: 2px; }
 body.touch #prompt .txt::before { content: "TAP · "; color: var(--coral); }
@@ -478,12 +484,14 @@ body.touch #dock { bottom: max(10px, env(safe-area-inset-bottom)); }
 #title .ver { margin: -4px 0 10px; font-size: 10.5px; letter-spacing: 0.12em; color: var(--ink-soft); text-transform: uppercase; }
 
 /* look picker: a portrait of each look on its button */
-#hero .heroes.looks { grid-template-columns: repeat(4, 1fr) !important; gap: 6px; }
+#hero .heroes.looks { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; gap: 6px; }
+#hero .heroes.looks button.look span { overflow-wrap: anywhere; }
 #hero .heroes.looks button.look { border-radius: 14px; white-space: normal; letter-spacing: 0.02em; padding: 4px 3px 6px; display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 9.5px; line-height: 1.15; background: rgba(255, 255, 255, 0.55); }
 #hero .heroes.looks button.look img { width: 100%; aspect-ratio: 4 / 5; object-fit: cover; border-radius: 10px; background: linear-gradient(180deg, rgba(220, 232, 244, 0.9), rgba(244, 247, 250, 0.6)); }
 #hero .heroes.looks button.look.sel { background: var(--ink); color: #fff; }
 #hero .heroes.looks button.look.sel img { box-shadow: 0 0 0 2px #fff inset; }
-@media (max-height: 520px) and (orientation: landscape) { #hero .heroes.looks button.look img { aspect-ratio: 1; object-position: top; } }
+#hero .heroes.looks button.look.loading img { animation: tickblink 0.9s ease-in-out infinite; } /* picked, still loading */
+@media (max-height: 520px) and (orientation: landscape) { #hero .heroes.looks button.look img { aspect-ratio: 1; object-position: top; } #hero .heroes.looks { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; } }
 #hero .heroes.looks { max-height: min(46vh, 380px); overflow-y: auto; padding-right: 2px; }
 @media (orientation: portrait) { #hero .heroes.looks { max-height: 26vh; } }
 @media (max-height: 520px) and (orientation: landscape) { #hero .heroes.looks { max-height: 44vh; } }
@@ -526,8 +534,8 @@ button.install.pending { color: #fff; background: var(--coral); border-color: va
 button.install.pending.dim { opacity: 0.45; }
 /* law combos */
 #laws h3 small { font-weight: 500; letter-spacing: 0; text-transform: none; color: var(--ink-soft); margin-left: 6px; }
-.combo { display: grid; grid-template-columns: auto 1fr auto auto; gap: 8px; align-items: center; padding: 8px 10px; border: 1px solid var(--line); border-radius: 12px; margin: 6px 0; font-size: 12px; }
-.combo.cur { border-color: var(--token); box-shadow: 0 0 0 2px rgba(63, 150, 100, 0.18); }
+#laws .combo { display: grid; grid-template-columns: auto 1fr auto auto; gap: 8px; align-items: center; padding: 8px 10px; border: 1px solid var(--line); border-radius: 12px; margin: 6px 0; font-size: 12px; }
+#laws .combo.cur { border-color: var(--token); box-shadow: 0 0 0 2px rgba(63, 150, 100, 0.18); }
 .combo .cname { font-weight: 700; letter-spacing: 0.06em; }
 .combo .claws { color: var(--ink-soft); min-width: 0; overflow-wrap: anywhere; }
 .combo button { font-size: 11px; padding: 6px 10px; }
@@ -592,7 +600,8 @@ body.touch #rules li { font-size: 10px; grid-template-columns: 64px 1fr; margin:
 body.touch #rules li span { display: none; } /* the rule's value is enough at a glance; the journal has the text */
 body.touch #rules .gc { font-size: 9px; padding: 2px 7px; }
 body.touch #rules .k { display: none; }
-@media (orientation: portrait) { #rules { left: 12px; right: 12px; max-width: none; top: 30%; transform: none; } }
+body.touch:has(#rules.on) #objective { opacity: 0; } /* the rules card sits where the objective is */
+@media (orientation: portrait) { #rules, body.touch #rules { left: 12px; right: 12px; max-width: none; top: 30%; transform: none; } }
 
 /* gear in the dock: four slots with a cooldown ring; dimmed where the local rules refuse them */
 #dock .d.gear.off, #dock .d.rules.off { display: none; }
@@ -606,7 +615,7 @@ body.touch #rules .k { display: none; }
 #dock .d.gear.on { color: var(--verb); }
 #gearpad { display: none; }
 body.touch #gearpad { display: grid; position: absolute; right: max(18px, env(safe-area-inset-right)); bottom: 184px; grid-template-columns: 50px 50px; gap: 6px; pointer-events: auto; }
-body.touch #gearpad .g { width: 50px; height: 50px; border-radius: 50%; padding: 0; border: none; background: rgba(255, 255, 255, 0.6); box-shadow: 0 6px 18px rgba(40, 60, 90, 0.14); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; font-size: 7px; font-weight: 800; letter-spacing: 0.06em; color: var(--ink); }
+body.touch #gearpad .g { width: 50px; height: 50px; border-radius: 50%; padding: 0; border: none; background: rgba(255, 255, 255, 0.6); box-shadow: 0 6px 18px rgba(40, 60, 90, 0.14); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; font-size: 9px; font-weight: 800; letter-spacing: 0.06em; color: var(--ink); }
 body.touch #gearpad .g i { width: 22px; height: 22px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; background: conic-gradient(rgba(35, 48, 60, 0.22) calc(var(--cd, 0) * 100%), transparent 0); }
 body.touch #gearpad .g i svg { width: 16px; height: 16px; }
 body.touch #gearpad .g.off { display: none; }

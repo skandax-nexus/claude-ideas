@@ -270,6 +270,7 @@ for (const genre of want) {
           const i = g.forge.gear.indexOf('KEYFORGE');
           const key = g.level.items.find((it) => it.kind === 'key');
           if (i < 0 || !key || !g.forgeAct().gearAllowed.KEYFORGE.ok) return null;
+          const spentBefore = !!g.facts.get(`gear_KEYFORGE_${g.forgeAct().index}`); // once per location: an earlier part of this act used it
           g.transitioning = true;
           g.engine.setState(key.room, 'ECHO', { force: true });
           g.enterRoom(key.room, true);
@@ -285,9 +286,9 @@ for (const genre of want) {
           const again = g.useGear(i);
           g.held = null;
           g.transitioning = false;
-          return { held, r, real, kept, again };
+          return { held, r, real, kept, again, spentBefore };
         });
-        if (kf) check(kf.held && kf.r === 'ok' && kf.real && kf.kept && kf.again === 'spent', `${label}: KEY FORGE makes the memory key real, once`, JSON.stringify(kf));
+        if (kf) check(kf.spentBefore ? kf.r === 'spent' && kf.again === 'spent' : kf.held && kf.r === 'ok' && kf.real && kf.kept && kf.again === 'spent', `${label}: KEY FORGE makes the memory key real, once per location`, JSON.stringify(kf));
         const rooms = await az(() => AZ.level.order.filter((r) => AZ.level.rooms[r].kind === 'puzzle'));
         for (const rid of rooms) {
           const r = await az(PLAY_ROOM, { rid });

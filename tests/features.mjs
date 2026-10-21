@@ -56,6 +56,7 @@ const SPY = () => {
 async function desktop() {
   console.log('Desktop');
   const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
+  page.setDefaultNavigationTimeout(300000); // a reload loads every model and the voice pack again: on a busy machine that outlasts 30 s
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
   page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
@@ -89,6 +90,8 @@ async function desktop() {
   check(await az(() => document.querySelectorAll('#hero .sw button').length) === 0, 'the realistic look has no colour swatches');
   await page.click('[data-hero="nova"]');
   await page.waitForTimeout(1500);
+  // a look that is not loaded yet is fetched first: on a busy machine that can take far longer than the fixed wait
+  await page.waitForFunction(() => AZ.player.model.userData.spec?.model === 'nova', null, { timeout: 300000 }).catch(() => {});
   check(await az(() => AZ.player.model.userData.spec.model) === 'nova', 'the stylised Nova look is still offered');
   await page.click('#hero .sw button[data-k="hair"]:nth-child(3)');
   await page.click('#hero .sw button[data-k="top"]:nth-child(3)');
@@ -97,6 +100,7 @@ async function desktop() {
   check(nova.hero.hair === 0xc79a62 && nova.hero.top === 0x8fc6e8 && nova.spec.hair === 0xc79a62, 'hair and outfit colours apply to the model', JSON.stringify(nova));
   await page.click('[data-hero="scifi"]');
   await page.waitForTimeout(1500);
+  await page.waitForFunction(() => AZ.settings.hero.id === 'scifi' && AZ.player.model.userData.spec?.model === 'scifi', null, { timeout: 300000 }).catch(() => {});
   await page.waitForTimeout(200);
   check(await az(() => AZ.settings.hero.id) === 'scifi', 'picking a look updates the choice');
   check(await az(() => AZ.player.model.userData.actor && AZ.player.model.userData.spec.model) === 'scifi', 'player model rebuilt with the new look');
@@ -111,7 +115,7 @@ async function desktop() {
   await az(() => AZ.saveTo('auto'));
   check(await az(() => { const r = JSON.parse(localStorage.getItem('afterzero.slot.1') || 'null'); return r && r.meta && r.meta.run; }) === 'prologue', 'autosave goes into the chosen slot, tagged with its chapter');
 
-  // smart renderer: eases resolution when slow, gives it back when fast
+  // smart renderer: eases resolution when slow, gives it back after a steady stretch of headroom
   const sm = await az(() => {
     const s = AZ.smart;
     const was = AZ.menu;
@@ -119,15 +123,44 @@ async function desktop() {
     s.reset();
     for (let i = 0; i < 2 * 2 * 30; i++) s.sample(1 / 30); // 4 s at 30 fps
     const low = s.scale;
-    for (let i = 0; i < 6 * 2 * 60; i++) s.sample(1 / 70); // 12 s at 70 fps
+    for (let i = 0; i < 12 * 70; i++) s.sample(1 / 70); // 12 s at 70 fps: a state it just left waits a minute
+    const held = s.scale;
+    for (let i = 0; i < 70 * 70; i++) s.sample(1 / 70); // 70 s more at 70 fps
     const back = s.scale;
     AZ.menu = was;
-    return { low, back, pr: AZ.renderer.getPixelRatio() };
+    return { low, held, back, pr: AZ.renderer.getPixelRatio() };
   });
-  check(sm.low < 1 && sm.back > sm.low, 'smart renderer lowers resolution when slow and raises it with headroom', JSON.stringify(sm));
+  check(sm.low < 1 && sm.held === sm.low && sm.back > sm.low, 'smart renderer lowers resolution when slow, holds it, and raises it after a minute of headroom', JSON.stringify(sm));
   await az(() => { AZ.changeSetting('smart', false); });
   check(await az(() => AZ.renderer.getPixelRatio() === Math.min(devicePixelRatio, AZ.smart.quality().pixelRatio)), 'smart renderer off: full resolution of the chosen quality');
   await az(() => AZ.changeSetting('smart', true));
+
+  // frame pacing on a phone, fed synthetic refresh timestamps (frame() only counts and feeds the
+  // smart renderer): a 144 Hz panel renders an even 72 fps; when it drops to 60 Hz mid-play
+  // (battery saver, heat) the game renders 60 and keeps full resolution; a pause lets the cap follow
+  const pace = await az(() => {
+    const g = AZ, s = g.smart;
+    const keep = { touch: g.touch, menu: g.menu, pace: g.pace, minFrame: g.minFrame, refresh: g.refresh, vsync: s.vsync, panel: s.panel };
+    g.renderer.setAnimationLoop(null);
+    let n = 0, t = 0;
+    g.frame = function (ts) { s.sample(this.lastT === undefined ? 1 / 60 : (ts - this.lastT) / 1000); this.lastT = ts; n++; };
+    Object.assign(g, { touch: true, menu: null, lastT: undefined, minFrame: 0, pace: { prev: undefined, gaps: [], again: true, from: undefined } });
+    s.reset();
+    const run = (hz, sec) => { const n0 = n; for (const end = t + sec * 1000; t < end; t += 1000 / hz) g.loop(t); return Math.round((n - n0) / sec); };
+    run(144, 1);
+    const r = { at144: run(144, 10), at60: run(60, 40), scale: s.scale, level: s.level, chosen: s.chosen, pending: s.pending };
+    g.menu = 'pause';
+    run(60, 3);
+    g.menu = null;
+    r.capAfterPause = g.minFrame;
+    delete g.frame;
+    Object.assign(g, keep, { lastT: undefined });
+    Object.assign(s, { vsync: keep.vsync, panel: keep.panel });
+    s.reset();
+    g.renderer.setAnimationLoop((ts) => g.loop(ts));
+    return r;
+  });
+  check(pace.at144 === 72 && pace.at60 === 60 && pace.scale === 1 && pace.level === pace.chosen && !pace.pending && pace.capAfterPause === 0, 'a 144 Hz phone renders 72 fps, and 60 at full resolution when its panel drops to 60 Hz; a pause drops the cap', JSON.stringify(pace));
 
   // dock: laws hidden until the device, map and log open, key hints present
   check(await az(() => document.querySelector('#dock .laws').classList.contains('off')), 'LAWS hidden in the dock before you have the device');
@@ -264,8 +297,17 @@ async function desktop() {
   await az(() => { AZ.openMenu('pause'); });
   await page.click('#heroBtn2');
   await page.waitForTimeout(300);
+  // a stylised look loads when first picked: it is marked at once, and the latest pick wins
+  const was = await az(() => AZ.settings.hero.id);
+  const renModel = page.waitForResponse((r) => /Michelle\.(glb|json)/.test(r.url()), { timeout: 120000 }).catch(() => null);
   await page.click('[data-hero="ren"]');
-  await page.waitForTimeout(300);
+  check(await az(() => document.querySelector('#hero [data-hero="ren"]').classList.contains('sel')), 'a look still loading is marked as picked at once');
+  await page.click(`[data-hero="${was}"]`);
+  await renModel;
+  await page.waitForTimeout(2000);
+  check(await az((w) => AZ.settings.hero.id === w && AZ.player.model.userData.spec.model === w, was), 'a look that arrives after another was picked does not replace it');
+  await page.click('[data-hero="ren"]');
+  await page.waitForFunction(() => AZ.settings.hero.id === 'ren', null, { timeout: 300000 }).catch(() => {}); // a look still downloading can take long on a busy machine
   check(await az(() => AZ.settings.hero.id === 'ren' && AZ.menu === 'hero'), 'look can be changed from the pause menu');
   await page.screenshot({ timeout: 180000, path: path.join(shots, 'f04-character-midgame.png') });
   await page.click('#heroGo');
@@ -290,6 +332,7 @@ async function phone() {
   console.log('Phone (touch)');
   const ctx = await browser.newContext({ viewport: { width: 915, height: 412 }, isMobile: true, hasTouch: true });
   const page = await ctx.newPage();
+  page.setDefaultNavigationTimeout(300000); // a reload loads every model and the voice pack again: on a busy machine that outlasts 30 s
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
   await page.goto(url);
@@ -306,6 +349,7 @@ async function phone() {
   check(heroBox && heroBox.y + heroBox.height <= 412, 'START is on screen on a phone', JSON.stringify(heroBox));
   await page.tap('[data-hero="spacer"]');
   await page.waitForTimeout(1500);
+  await page.waitForFunction(() => AZ.settings.hero.id === 'spacer', null, { timeout: 300000 }).catch(() => {});
   await page.waitForTimeout(200);
   await page.tap('#heroGo');
   await page.waitForTimeout(1500);
@@ -395,6 +439,7 @@ async function phone() {
 async function chapters() {
   console.log('Chapters, save slots, Story Studio');
   const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
+  page.setDefaultNavigationTimeout(300000); // a reload loads every model and the voice pack again: on a busy machine that outlasts 30 s
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
   const ready = () => page.waitForFunction(() => window.AZ && document.querySelector('#begin'), null, { timeout: 180000 });
@@ -442,6 +487,7 @@ async function chapters() {
   await page.click('#saves [data-del="0"]');
   check(await az(() => !!localStorage.getItem('afterzero.slot.0')), 'DELETE asks for a second tap');
   await page.screenshot({ timeout: 180000, path: path.join(shots, 'f09-slots.png') });
+  await page.waitForTimeout(400); // a second tap within 350 ms would be the second half of a double tap
   await page.click('#saves [data-del="0"]');
   check(await az(() => !localStorage.getItem('afterzero.slot.0')), 'the second tap deletes the save');
   check(await az(() => document.querySelector('#saves [data-slot="0"]').classList.contains('empty')), 'the slot shows as empty again');

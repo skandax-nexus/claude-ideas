@@ -48,6 +48,7 @@ export class HUD {
       this.subT = 0;
       return;
     }
+    this.cur = s;
     this.onLine?.(s.who, s);
     const sp = s.name ? { name: s.name, color: s.color || '#23303c' } : this.speakers[s.who] || SPEAKERS[s.who] || SPEAKERS.NONE;
     const name = sp.name ? `<b style="color:${sp.color}">${sp.name}</b> ` : '';
@@ -55,6 +56,14 @@ export class HUD {
     this.el.subs.innerHTML = `<div class="sub ${cls}">${name}<span style="color:${sp.color}">${s.text}</span></div>`;
     this.subT = s.dur;
     this.subSeq = (this.subSeq || 0) + 1;
+  }
+
+  // a menu closed over a line: say it again from the start, so voice and text stay together
+  replay() {
+    if (this.subT > 0 && this.cur) {
+      this.subs.unshift(this.cur);
+      this.nextSub();
+    }
   }
 
   // end the whole conversation now (its end callbacks still run)
@@ -277,7 +286,8 @@ export class HUD {
     const deck = story.decks[campaign.deck];
     const sus = story.cast.map((c) => {
       const st = facts.get(`clue_${c.id}`);
-      const label = st === 'guilty' ? 'ECHO CONTRADICTS' : st === 'cleared' ? 'ALIBI CONFIRMED' : facts.get(`met_${c.id}`) ? 'MET' : 'UNKNOWN';
+      // (HALCYON and the Cradle clear Varga by correcting the record: nobody there has an alibi)
+      const label = st === 'guilty' ? 'ECHO CONTRADICTS' : st === 'cleared' ? (story.zones ? 'RECORD CORRECTED' : 'ALIBI CONFIRMED') : facts.get(`met_${c.id}`) ? 'MET' : 'UNKNOWN';
       return `<li><span><b>${c.name}</b> <small>${c.role}${st || c.deck === undefined ? '' : ` &middot; deck ${c.deck + 1}`}</small></span><span class="st ${st || ''}">${label}</span></li>`;
     }).join('');
     const logs = game.log.slice().reverse().map((l) => `<li>${l}</li>`).join('') || '<li class="dim">Nothing yet.</li>';
@@ -406,8 +416,16 @@ export class HUD {
     for (const b of document.querySelectorAll('#laws [data-combo-del]')) b.onclick = () => { game.deleteCombo(+b.dataset.comboDel); this.renderLaws(game); };
     const save = $('#comboSave');
     if (save) save.onclick = () => {
-      const name = ($('#comboName').value || '').trim().toUpperCase() || `COMBO ${(game.combos?.length || 0) + 1}`;
+      const name = ($('#comboName').value || '').replace(/[<>&"]/g, '').trim().toUpperCase() || `COMBO ${(game.combos?.length || 0) + 1}`; // no markup: the name is shown as HTML
       this.renderLaws(game, game.saveCombo(name));
+    };
+    // Enter (or the keyboard's Go) saves the combo and closes the keyboard (Android IMEs often send key 'Enter' with no code)
+    const cn = $('#comboName');
+    if (cn && save) cn.onkeydown = (e) => {
+      if (e.key !== 'Enter' && e.keyCode !== 13) return;
+      e.preventDefault();
+      cn.blur();
+      save.click();
     };
   }
 }

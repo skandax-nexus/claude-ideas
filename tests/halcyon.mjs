@@ -88,7 +88,7 @@ for (let z = 0; z < 4; z++) {
       const toast = document.querySelector('#toast').innerHTML;
       for (let i = 0; i < 80; i++) { AZ.hud.subT = 0; AZ.simulate(0.1); }
       if (beat.kind === 'contradiction') { AZ.engine.setState(AZ.room, 'PHYSICAL', { force: true }); AZ.simulate(0.1); }
-      return { ok: !!AZ.deckWorld.flags.beat_done, kind: beat.kind, gate: AZ.deckWorld.dynamic.find((d) => d.el.id?.startsWith('gate_'))?.mesh.visible, toast, said, logWho: beat.log?.who, junoAfter: [].concat(beat.junoAfter || []), clues: ['kade', 'osei', 'theo', 'varga'].filter((k) => AZ.facts.get(`clue_${k}`)) };
+      return { ok: !!AZ.deckWorld.flags.beat_done, kind: beat.kind, gate: AZ.deckWorld.dynamic.find((d) => d.el.id?.startsWith('gate_'))?.mesh.visible, toast, said, logWho: beat.log?.who, junoAfter: [].concat(beat.junoAfter || []).filter((l) => !l.when || AZ.facts.test(l.when)).map((l) => l.text ?? l), clues: ['kade', 'osei', 'theo', 'varga'].filter((k) => AZ.facts.get(`clue_${k}`)) };
     });
     check(scene.ok && scene.gate === false, `${label}: the ${scene.kind} scene opens the gate`);
     if (scene.kind === 'contradiction') {
@@ -151,13 +151,15 @@ const stairs = await az(() => {
 });
 check(stairs, 'ECHOES SOLIDIFY IN ECHO: the remembered stairs are solid');
 await az(() => { AZ.engine.setLaw(1, null); AZ.engine.setState(AZ.room, 'PHYSICAL', { force: true }); AZ.campaign.sector = 1; AZ.loadSector(false); });
+// a fall's setback runs on a real-time timer: on a busy machine it can take longer than the 2.5 s wait
+const settled = () => page.waitForFunction(() => !AZ.catching, null, { timeout: 300000 });
 const canal = await az(() => {
   AZ.engine.setLaw(1, { subject: 'ECHOES', verb: 'SOLIDIFIES', target: 'ECHO' });
   AZ.engine.setState(AZ.room, 'ECHO', { force: true });
   AZ.player.place([0, 0.86, -46, 0]); AZ.simulate(0.2);
   AZ.input.keys.add('KeyW'); for (let i = 0; i < 70; i++) AZ.simulate(0.05); AZ.input.keys.delete('KeyW');
   return true;
-}).then(async () => { await page.waitForTimeout(2500); return az(() => { AZ.simulate(0.1); return { z: AZ.player.pos.z, y: AZ.player.pos.y }; }); });
+}).then(async () => { await page.waitForTimeout(2500); await settled(); return az(() => { AZ.simulate(0.1); return { z: AZ.player.pos.z, y: AZ.player.pos.y }; }); });
 check(canal.z < -58 && canal.y > 0.5, 'ECHO bridge: walk over the water on the remembered bridge', JSON.stringify(canal));
 const swim = await az(() => {
   AZ.engine.setLaw(1, null);
@@ -165,7 +167,7 @@ const swim = await az(() => {
   AZ.player.place([0, 0.86, -46, 0]); AZ.simulate(0.2);
   AZ.input.keys.add('KeyW'); for (let i = 0; i < 70; i++) AZ.simulate(0.05); AZ.input.keys.delete('KeyW');
   return true;
-}).then(async () => { await page.waitForTimeout(2500); return az(() => { AZ.simulate(0.1); return { z: AZ.player.pos.z, y: AZ.player.pos.y }; }); });
+}).then(async () => { await page.waitForTimeout(2500); await settled(); return az(() => { AZ.simulate(0.1); return { z: AZ.player.pos.z, y: AZ.player.pos.y }; }); });
 check(swim.z > -50, 'without a law, the water sends you back to the bank', JSON.stringify(swim));
 await page.screenshot({ path: path.join(shots, 'h03-reactor-or-city.png'), timeout: 240000 });
 

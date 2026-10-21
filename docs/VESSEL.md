@@ -57,7 +57,7 @@ Rooms are joined by corridors that can turn left or right. Rooms never overlap, 
 
 The Vessel is the forward night of the ark. Every cycle the fold wakes eight sleepers from THE CRADLE into the night watch (seven crew and a captain) and gives them the roles and eleven years of memories, which is why every story number has a new crew. The core's first law takes a **key** and a pair of **hands**. The key was written at 03:04 on 14 March 2071 by the first Ren, on a badge that read VARGA, so that the fold has to be chosen again every cycle. The hands at the core at 03:12 are new every cycle: they are the culprit's. The Bridge reconstruction says so on every run, the chair asks *"Whose hands were on the first law at 03:12?"*, and the YOU HELPED twist names both signatures.
 
-v1.0 also makes every story number agree with itself: the victim is met as an echo when the twist is THE WATCHER'S NAME and alive when the motive is to keep them alive (no rng draw, so every seed keeps its truth), and innocent echoes say ON THE RADIO WITH a witness, so nobody is in two places at once.
+v1.0 also makes every story number agree with itself: the victim is met as an echo when the twist is THE WATCHER'S NAME and alive when the motive is to keep them alive (with both, the motive says the fold keeps what was uploaded of them; no rng draw, so every seed keeps its truth), and innocent echoes say ON THE RADIO WITH a witness, so nobody is in two places at once.
 
 ## The vessel after each prologue ending (`VESSEL_AFTER`, v1.0)
 
@@ -73,7 +73,7 @@ v1.0 also makes every story number agree with itself: the victim is met as an ec
 | Deck 1 card | DECK 1 OF 8 | · AFTER SEVERED | · AFTER SUSTAINED | · AFTER OBSERVED |
 | replay button | CYCLE 43 | TELL IT AGAIN | FOLD AGAIN | CYCLE 43 ("The ship will listen") |
 
-Deck 1 opens with the ending's own lines (its `{trail}` line is the existing recorded crew line), and after the right name the Bridge plays the ending's last scene before the ending card; its narration closes the card. After SEVERED a wrong name no longer "folds back", and THE WATCHER'S NAME is told in the past tense. OBSERVER FREEZES IN works in every mode and watched halls stay optional, so no room loses its answer.
+Deck 1 opens with the ending's own lines (its `{trail}` line is the existing recorded crew line), and after the right name the Bridge plays the ending's last scene before the ending card; its narration closes the card. After SEVERED a wrong name no longer "folds back", and THE WATCHER'S NAME and THE WINDOWS are told in the past tense. OBSERVER FREEZES IN works in every mode and watched halls stay optional, so no room loses its answer.
 
 Where the ending comes from (`main.startVessel`): a save's own `campaign.ending` (v0.9 saves have none and play as before), else the Cradle's gate or the replay button, else `facts.ending` (set at the machine, or adopted from `afterzero.lastEnding` when a chapter starts from the menu). If the ending is SUSTAINED but the Observer learned nothing, the watchers simply hunt.
 
