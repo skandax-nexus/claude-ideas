@@ -14,103 +14,109 @@ const L = (who, text, when) => (when ? { who, text, when } : { who, text });
 const N = (text, when) => L('NONE', text, when);
 const K = (text, when) => L('KAI', text, when);
 
-// Rain City's people: commuters on the sidewalks, a crowd at the checkpoint, waiters on the platform
-function commuters(M, rng) {
+// Rain City's people: commuters on the sidewalks, a queue at the checkpoint, waiters on the platform
+function commuters(P, rng) {
   const A = AMBIENT.rain;
   let k = 0;
-  const add = (pos, o = {}) => M.npcs.push({
+  const add = (pos, o = {}) => P.npcs.push({
     crew: `amb_${k}`, first: A.names[k % A.names.length], seed: 100 + k, ambient: true,
     pronoun: k % 2 ? { their: 'his', them: 'him' } : { their: 'her', them: 'her' },
-    pos, yaw: o.yaw ?? rng.float(0, 6.28), barks: o.barks || A.barks, barkEvery: 22, freezeWhen: 'zero_second && !after_zero', silent: !o.talk, ...o, id: `amb_${k++}`,
+    pos, yaw: o.yaw ?? rng.float(0, 6.28), barks: o.barks || A.barks, barkEvery: 22, freezeWhen: 'zero_second && !after_zero', silent: !o.talk, ...o, id: `amb_${k++}`, room: P.rid,
   });
-  // walkers along the sidewalks (each a loop between two points)
-  for (let i = 0; i < 8; i++) {
-    const side = i % 2 ? 1 : -1;
-    const x = side * 5.9;
-    const z0 = -8 - i * 6, z1 = z0 - rng.float(12, 22);
-    add([x, 0, z0], { path: [[x, z0], [x, z1]], speed: rng.float(0.9, 1.3) });
+  // walkers along the avenue's sidewalks (each a loop between two points)
+  for (let i = 0; i < 7; i++) {
+    const x = i % 2 ? 11 : -11;
+    const z0 = -4 - i * 7, z1 = z0 - rng.float(12, 22);
+    add([x, 0.15, z0], { path: [[x, z0], [x, z1]], speed: rng.float(0.9, 1.3) });
   }
-  // the crowd before the checkpoint
-  for (let i = 0; i < 6; i++) add([-3.6 + i * 1.5, 0, -56 - (i % 3) * 1.4], { yaw: Math.PI, barks: [A.barks[0], A.barks[1], A.barks[3]] });
+  // the queue before the checkpoint bridge
+  const [qx, qy, qz] = P.at('checkpointQueue');
+  for (let i = 0; i < 6; i++) add([qx + (i % 2 ? 0.6 : -0.6), qy, qz - 4 + i * 1.5], { yaw: Math.PI, barks: [A.barks[0], A.barks[1], A.barks[3]] });
   // waiting on the platform
-  for (let i = 0; i < 4; i++) add([-3 + i * 2.6, 0, -80 - i * 3.5], { yaw: -Math.PI / 2 });
+  const [px, py, pz] = P.at('platform');
+  for (let i = 0; i < 3; i++) add([px - 18 + i * 12, py, pz + (i % 2 ? -4 : 2)], { yaw: i % 2 ? -Math.PI / 2 : Math.PI / 2 });
 }
 
 export const M01 = {
   key: 'm01', n: 1, chapter: 'prologue', name: 'THE LAST NORMAL DAY', title: 'Rain City, 2049', subtitle: 'Eight-fourteen on a Tuesday. The 41 is late.',
   // PAST here is not 2026: it is 8:13, the minute before the crash, which the station keeps falling back into (quest chain A)
-  kind: 'zone', theme: 'rain', sectors: 1, states: ['PRESENT', 'PAST'], canal: false, drones: [0], noDress: true, stateWeather: { PAST: 'rain' },
+  place: 'rain_south', sectors: 1, states: ['PRESENT', 'PAST'], drones: [0], noDress: true, stateWeather: { PAST: 'rain' },
   ambience: 'rain',
-  palette: { fog: 0x6f7c8c, wall: '#5a6470', floor: '#3a4048', accent: 0xffc06a, accent2: 0x9fd8ff, light: 0xffe0b0, tint: 0x6a7890, night: 0.55, weather: 'rain', sky: 'night', grade: { shadowTint: 0x1c2a44, highlightTint: 0xffe6c8, toning: 0.16, contrast: 1.1, saturation: 0.92 } },
-  rooms: ['RAIN CITY - SOUTH SQUARE'], motto: 'RAIN CITY',
-  gate: 'HELIX TEMPORAL RESEARCH - STAFF ENTRANCE',
-  // rects kept clear of buildings: the checkpoint band and the station
-  clear: [[-34, -70, 34, -54], [-34, -101, 34, -72]],
   fragments: [[
     'A wet newspaper on a bench: HELIX DENIES "TIME TESTS" - DIRECTOR ROOK: "WE STUDY CLOCKS, NOT MIRACLES".',
     'A pharmacy receipt dated tomorrow. The total is right. The date is not.',
     'A child\'s mitten on the platform railing. Somebody has tied it there so it will not be lost twice.',
   ]],
   beats: [{ kind: 'custom', goal: 'Get to work.' }],
-  overlay(M, si, { rng }) {
+  // Mission 1's set pieces, each on its landmark in Rain City South (places/specs/rain_south.js)
+  overlay(P, si, { A }) {
+    const L = (n) => P.at(n);
+    const rid = P.rid;
+    const box = (b, o = {}) => P.cols.push({ box: b, mat: 'wall', solid: true, room: rid, ...o });
     // Kai's door
-    M.texts.push({ text: 'VAREN - 4B', pos: [2.4, 2.3, 3.6], rotY: Math.PI, size: 0.36, color: '#ffe0b0' });
-    commuters(M, rng);
+    const [dx, dy, dz] = L('door4B');
+    P.texts.push({ text: 'VAREN - 4B', pos: [dx + 1.66, dy + 2.4, dz - 2.6], rotY: -Math.PI / 2, size: 0.3, color: '#ffe0b0', room: rid });
+    commuters(P, P.rng);
     // --- the optional anomalies -----------------------------------------------------
-    M.box([-7.0, 0, -17.2, -6.2, 0.45, -14.8], { mat: 'crate' }); // a bench
-    M.npcs.push({ id: 'amb_child', crew: 'amb_child', first: 'Child', seed: 77, ambient: true, pronoun: { their: 'her', them: 'her' }, pos: [-6.4, 0, -18.2], yaw: 0.4, silent: true, height: 1.25, freezeWhen: 'zero_second && !after_zero' });
-    M.inter.push({ id: 'toy', kind: 'scene', scene: 'toy', pos: [-6.0, 0.25, -16.6], r: 2.4, prompt: 'LOOK', model: () => makeToy(), once: true });
-    M.box([5.85, 0, -30.15, 6.15, 3.0, -29.85], { mat: 'trimDark' }); // a transit clock on a pole
-    M.inter.push({ id: 'clock', kind: 'scene', scene: 'clock', pos: [6.0, 3.1, -30], yaw: -Math.PI / 2, r: 3.2, prompt: 'LOOK AT THE CLOCK', model: () => makeClock({ mode: 'backwards' }), once: true });
-    M.box([-6.15, 0, -44.15, -5.85, 1.3, -43.85], { mat: 'trimDark' }); // a shop's security feed on a stand
-    M.inter.push({ id: 'camera', kind: 'scene', scene: 'camera', pos: [-6.0, 1.7, -44], yaw: Math.PI / 2, r: 3.0, prompt: 'WATCH THE FEED', model: () => makeScreen(0xbfe4ff), once: true });
-    // --- Rook's call, on the way -----------------------------------------------------
-    M.triggers.push({ box: [-5, -1, -27, 5, 4, -22], set: { rook_message: true }, once: true });
-    // --- the checkpoint ---------------------------------------------------------------
-    M.box([-34, 0, -62.4, -2, 2.4, -61.6], { mat: 'trim' });
-    M.box([2, 0, -62.4, 34, 2.4, -61.6], { mat: 'trim' });
-    M.box([-6.4, 0, -66, -2.4, 3.2, -62.6], { mat: 'industrial' }); // the checkpoint booth
-    M.texts.push({ text: 'CHECKPOINT - HELIX CONTRACTORS', pos: [-4.4, 3.6, -62.5], rotY: 0, size: 0.4, color: '#ffc06a' });
-    M.box([-2, 0, -62.4, 2, 3.2, -61.6], { mat: 'door', when: '!checkpoint_passed', id: 'gate_checkpoint' });
-    M.glows.push([-4.4, 0.02, -60.5, 3.2, 0xffc06a]);
-    M.npcs.push({ id: 'guard', crew: 'guard', pos: [3.0, 0, -60.4], yaw: Math.PI, dialogue: DIALOGUE.guard, prompt: 'TALK TO THE OFFICER', freezeWhen: 'zero_second && !after_zero' });
-    // --- the station ----------------------------------------------------------------------
-    for (const z of [-76, -84, -92]) for (const x of [-12, 12]) M.box([x - 0.4, 0, z - 0.4, x + 0.4, 5, z + 0.4], { mat: 'pillar' });
-    M.box([-14, 5, -96, 14, 5.4, -74], { mat: 'trimDark' });
-    M.box([8, -0.02, -100, 30, 0.06, -74], { mat: 'trimDark' }); // the tracks
-    M.box([7.8, 0.06, -100, 8.2, 0.09, -74], { mat: 'lamp', solid: false }); // the yellow line
-    for (const x of [10.5, 12.5]) M.box([x - 0.08, 0.06, -100, x + 0.08, 0.12, -74], { mat: 'metal', solid: false });
-    M.texts.push({ text: 'LINE 41 - ON TIME - 08:14', pos: [0, 4.2, -77.8], rotY: 0, size: 0.46, color: '#9fd8ff', when: '!zero_second' });
-    M.texts.push({ text: 'LINE 41 - ARRIVING - YESTERDAY', pos: [0, 4.2, -77.8], rotY: 0, size: 0.46, color: '#ffc06a', when: 'zero_second' });
-    M.inter.push({ id: 'board_back', kind: 'scene', scene: 'board', pos: [0, 4.2, -78.3], r: 0, prompt: '', model: () => makeBoard(5.2, 0.8) });
-    M.inter.push({ id: 'clock_station', kind: 'scene', scene: 'station_clock', pos: [-11.5, 3.6, -84], yaw: Math.PI / 2, r: 3.0, prompt: 'LOOK AT THE CLOCK', model: () => makeClock({ mode: 'stopped' }), once: true, when: 'zero_second' });
-    M.box([-16, 0, -82, -13, 2.8, -78], { mat: 'facade' });
-    M.texts.push({ text: 'OPERATOR', pos: [-12.95, 2.3, -80], rotY: Math.PI / 2, size: 0.34, color: '#ffe0b0' });
-    M.npcs.push({ id: 'jun', crew: 'jun', pos: [-12.2, 0, -80], yaw: Math.PI / 2, dialogue: DIALOGUE.jun, freezeWhen: 'zero_second && !after_zero' });
-    // the 41, after the Zero Second: three carriages, the last one up on the platform
-    M.box([9, 0, -99, 13, 3.4, -87], { mat: 'car', when: 'zero_second && !@PAST' });
-    M.box([11, 0, -87, 15, 3.4, -78], { mat: 'car', when: 'zero_second && !@PAST' });
-    M.box([5.5, 0.6, -78, 9.5, 4.0, -70.5], { mat: 'car', when: 'zero_second && !@PAST' });
-    M.box([4.8, 0, -79, 5.6, 1.1, -76.5], { mat: 'crate', when: 'zero_second && !@PAST' }); // a bench, thrown
-    M.texts.push({ text: '08:13', pos: [-11.6, 3.0, -84], rotY: Math.PI / 2, size: 0.5, color: '#ffe0b0', when: '@PAST' });
-    // quest chain A, LAST TRAIN HOME: relay 41-B feeds the maintenance gate by Jun's booth
-    M.box([-16, 0, -89, -15, 2.4, -87], { mat: 'prop' });
-    M.box([-16.3, 0, -93.6, -15.9, 3.0, -90.4], { mat: 'door', when: '!jun_line', id: 'door_gate41' });
-    M.texts.push({ text: 'MAINTENANCE GATE 41-B', pos: [-15.8, 3.4, -92], rotY: Math.PI / 2, size: 0.32, color: '#ffc06a' });
-    M.texts.push({ text: 'RELAY 41-B', pos: [-14.9, 2.7, -88], rotY: Math.PI / 2, size: 0.3, color: '#9fd8ff' });
-    M.inter.push({ id: 'relay', kind: 'scene', scene: 'relay', pos: [-14.6, 1.4, -88], yaw: Math.PI / 2, r: 2.6, prompt: 'INSPECT THE RELAY', model: () => makePanel(0x9fd8ff), when: 'zero_second && !@PAST && !jun_rerouted' });
-    M.inter.push({ id: 'reroute', kind: 'scene', scene: 'reroute', pos: [-14.6, 1.4, -88], yaw: Math.PI / 2, r: 2.6, prompt: 'REROUTE THE POWER (8:13)', model: () => makePanel(0xffd27a), when: '@PAST && !jun_rerouted' });
-    M.inter.push({ id: 'relay_choice', kind: 'scene', scene: 'relay_choice', pos: [-14.6, 1.4, -88], yaw: Math.PI / 2, r: 2.6, prompt: 'THE RELAY: THE LINE, OR THE EVIDENCE', model: () => makePanel(0x7fe0a8), when: 'jun_rerouted && !jun_choice && !@PAST' });
-    M.texts.push({ text: 'LINE 41 - EVACUATION SERVICE - BOARDING', pos: [0, 3.5, -77.8], rotY: 0, size: 0.36, color: '#7fe0a8', when: 'jun_line' });
-    M.texts.push({ text: 'HELIX EVIDENCE TERMINAL - ONLINE', pos: [-12.95, 1.7, -80], rotY: Math.PI / 2, size: 0.26, color: '#7fe0a8', when: 'jun_evidence' });
-    M.glows.push([7, 0.02, -82, 4, 0xff6a48]);
-    M.npcs.push({ id: 'trapped_a', crew: 'trapped_a', first: 'Woman', seed: 201, ambient: true, pronoun: { their: 'her', them: 'her' }, pos: [6.2, 0, -89], yaw: -Math.PI / 2, when: 'zero_second && !rescued_a', scene: 'rescue_a', prompt: 'PULL HER FREE' });
-    M.npcs.push({ id: 'trapped_b', crew: 'trapped_b', first: 'Man', seed: 202, ambient: true, pronoun: { their: 'his', them: 'him' }, pos: [3.9, 0, -74.5], yaw: Math.PI, when: 'zero_second && !rescued_b', scene: 'rescue_b', prompt: 'PULL HIM FREE' });
+    const [tx, ty, tz] = L('toyChild');
+    A.prop(P, 'bench', tx, tz, 0.4, { y: ty });
+    P.npcs.push({ id: 'amb_child', crew: 'amb_child', first: 'Child', seed: 77, ambient: true, pronoun: { their: 'her', them: 'her' }, pos: [tx - 0.6, ty, tz - 1.7], yaw: 0.4, silent: true, height: 1.25, freezeWhen: 'zero_second && !after_zero', room: rid });
+    P.inter.push({ id: 'toy', kind: 'scene', scene: 'toy', pos: [tx + 0.4, ty + 0.25, tz - 1.1], r: 2.4, prompt: 'LOOK', model: () => makeToy(), once: true, room: rid });
+    const [cx, cy, cz] = L('plazaClock');
+    P.inter.push({ id: 'clock', kind: 'scene', scene: 'clock', pos: [cx, cy + 6.15, cz + 0.95], yaw: 0, r: 7, prompt: 'LOOK AT THE CLOCK', model: () => { const m = makeClock({ mode: 'backwards' }); m.scale.setScalar(2.4); return m; }, once: true, room: rid });
+    const [lx, ly, lz] = L('laundromat');
+    P.inter.push({ id: 'camera', kind: 'scene', scene: 'camera', pos: [lx - 0.1, ly + 1.7, lz], yaw: -Math.PI / 2, r: 3.2, prompt: 'WATCH THE FEED', model: () => makeScreen(0xbfe4ff), once: true, room: rid });
+    // --- Rook's call, on the way into the plaza ----------------------------------------
+    const [rx, , rz] = L('rookCall');
+    P.triggers.push({ box: [rx - 46, -1, rz - 3, rx + 46, 5, rz + 3], set: { rook_message: true }, once: true, room: rid });
+    // --- the checkpoint at the bridge -------------------------------------------------
+    const [bx, by, bz] = L('checkpointBooth');
+    A.prop(P, 'booth', bx, bz, 0, { y: by, m: 'helixWhite' });
+    P.texts.push({ text: 'CHECKPOINT - HELIX CONTRACTORS', pos: [bx + 4.2, by + 3.4, bz - 3.6], rotY: 0, size: 0.36, color: '#ffc06a', room: rid });
+    box([-4.85, by, bz - 6.4, 4.85, by + 2.6, bz - 6.0], { mat: 'door', when: '!checkpoint_passed', id: 'gate_checkpoint', lvMat: 'gateBarrier' });
+    P.glow(bx + 4, by + 0.02, bz - 3.5, 3.2, 0xffc06a);
+    P.npcs.push({ id: 'guard', crew: 'guard', pos: [bx + 5.4, by, bz - 3.0], yaw: 0, dialogue: DIALOGUE.guard, prompt: 'TALK TO THE OFFICER', freezeWhen: 'zero_second && !after_zero', room: rid });
+    // --- the station --------------------------------------------------------------------
+    const [sx, sy, sz] = L('boardSign');
+    P.texts.push({ text: 'LINE 41 - ON TIME - 08:14', pos: [sx, sy + 0.1, sz + 0.08], rotY: 0, size: 0.42, color: '#9fd8ff', when: '!zero_second', room: rid });
+    P.texts.push({ text: 'LINE 41 - ARRIVING - YESTERDAY', pos: [sx, sy + 0.1, sz + 0.08], rotY: 0, size: 0.42, color: '#ffc06a', when: 'zero_second', room: rid });
+    P.inter.push({ id: 'board_back', kind: 'scene', scene: 'board', pos: [sx, sy + 0.1, sz - 0.02], r: 0, prompt: '', model: () => makeBoard(5.6, 0.9), room: rid });
+    const [px, py, pz] = L('platform');
+    // the station clock hangs on the canopy's column west of the board
+    P.inter.push({ id: 'clock_station', kind: 'scene', scene: 'station_clock', pos: [sx - 13.6, py + 3.4, sz - 0.75], yaw: 0, r: 3.4, prompt: 'LOOK AT THE CLOCK', model: () => makeClock({ mode: 'stopped' }), once: true, when: 'zero_second', room: rid });
+    P.texts.push({ text: '08:13', pos: [sx - 13.6, py + 4.2, sz - 0.7], rotY: 0, size: 0.5, color: '#ffe0b0', when: '@PAST', room: rid });
+    // Jun Park's operator booth, relay 41-B and the maintenance gate (quest chain A, LAST TRAIN HOME)
+    const [jx, jy, jz] = L('junBooth');
+    A.prop(P, 'booth', jx - 1.4, jz, Math.PI / 2, { y: jy, m: 'boothBlue' });
+    P.texts.push({ text: 'OPERATOR', pos: [jx - 0.25, jy + 2.4, jz], rotY: Math.PI / 2, size: 0.3, color: '#ffe0b0', room: rid });
+    P.npcs.push({ id: 'jun', crew: 'jun', pos: [jx + 0.4, jy, jz], yaw: Math.PI / 2, dialogue: DIALOGUE.jun, freezeWhen: 'zero_second && !after_zero', room: rid });
+    const [ex, ey, ez] = L('relay41B');
+    box([ex - 0.5, ey, ez - 1, ex + 0.4, ey + 2.4, ez + 1], { invisible: true });
+    P.vbox([ex - 0.5, ey, ez - 1, ex + 0.4, ey + 2.4, ez + 1], 'relayCabinet');
+    P.texts.push({ text: 'RELAY 41-B', pos: [ex + 0.45, ey + 2.7, ez], rotY: Math.PI / 2, size: 0.28, color: '#9fd8ff', room: rid });
+    const relayAt = [ex + 0.62, ey + 1.4, ez];
+    P.inter.push({ id: 'relay', kind: 'scene', scene: 'relay', pos: relayAt, yaw: Math.PI / 2, r: 2.6, prompt: 'INSPECT THE RELAY', model: () => makePanel(0x9fd8ff), when: 'zero_second && !@PAST && !jun_rerouted', room: rid });
+    P.inter.push({ id: 'reroute', kind: 'scene', scene: 'reroute', pos: relayAt, yaw: Math.PI / 2, r: 2.6, prompt: 'REROUTE THE POWER (8:13)', model: () => makePanel(0xffd27a), when: '@PAST && !jun_rerouted', room: rid });
+    P.inter.push({ id: 'relay_choice', kind: 'scene', scene: 'relay_choice', pos: relayAt, yaw: Math.PI / 2, r: 2.6, prompt: 'THE RELAY: THE LINE, OR THE EVIDENCE', model: () => makePanel(0x7fe0a8), when: 'jun_rerouted && !jun_choice && !@PAST', room: rid });
+    const [gx, gy, gz] = L('maintGate41B');
+    box([gx - 0.2, gy, gz - 1.6, gx + 0.2, gy + 3.0, gz + 1.6], { mat: 'door', when: '!jun_line', id: 'door_gate41', lvMat: 'gateSteel' });
+    P.texts.push({ text: 'MAINTENANCE GATE 41-B', pos: [gx + 0.25, gy + 3.4, gz], rotY: Math.PI / 2, size: 0.28, color: '#ffc06a', room: rid });
+    P.texts.push({ text: 'LINE 41 - EVACUATION SERVICE - BOARDING', pos: [sx, sy - 0.6, sz + 0.08], rotY: 0, size: 0.32, color: '#7fe0a8', when: 'jun_line', room: rid });
+    P.texts.push({ text: 'HELIX EVIDENCE TERMINAL - ONLINE', pos: [jx - 0.25, jy + 1.8, jz], rotY: Math.PI / 2, size: 0.22, color: '#7fe0a8', when: 'jun_evidence', room: rid });
+    // the 41, after the Zero Second: three carriages, the last one up on the platform (DeckWorld draws them; the edition dresses them)
+    const [kx, ky, kz] = L('carriageDoor');
+    box([kx - 32, ky - 1, kz - 10.5, kx - 14, ky + 2.4, kz - 6.7], { mat: 'car', when: 'zero_second && !@PAST', lvMat: 'trainBody' });
+    box([kx - 13, ky - 1, kz - 10, kx + 4, ky + 2.4, kz - 6], { mat: 'car', when: 'zero_second && !@PAST', lvMat: 'trainBody' });
+    box([kx - 2, ky + 0.4, kz - 3.2, kx + 14, ky + 3.8, kz + 0.3], { mat: 'car', when: 'zero_second && !@PAST', lvMat: 'trainBody' });
+    box([kx - 4.5, ky, kz + 1.0, kx - 2.2, ky + 1.1, kz + 2.0], { mat: 'crate', when: 'zero_second && !@PAST', lvMat: 'wood' }); // a bench, thrown
+    P.glow(kx + 2, ky + 0.02, kz - 2, 4, 0xff6a48);
+    P.npcs.push({ id: 'trapped_a', crew: 'trapped_a', first: 'Woman', seed: 201, ambient: true, pronoun: { their: 'her', them: 'her' }, pos: [kx - 3.2, ky, kz + 2.4], yaw: Math.PI, when: 'zero_second && !rescued_a', scene: 'rescue_a', prompt: 'PULL HER FREE', room: rid });
+    P.npcs.push({ id: 'trapped_b', crew: 'trapped_b', first: 'Man', seed: 202, ambient: true, pronoun: { their: 'his', them: 'him' }, pos: [kx + 6, ky, kz + 0.9], yaw: Math.PI, when: 'zero_second && !rescued_b', scene: 'rescue_b', prompt: 'PULL HIM FREE', room: rid });
     // the Child in the Station (optional, recurring): only after the clocks stop
-    M.npcs.push({ id: 'child', crew: 'child', pos: [-20, 0, -92], yaw: 0.6, hologram: true, height: 1.22, dialogue: DIALOGUE.child, when: 'zero_second', barks: ['Do you know the song? It goes up and then it goes up again and then it stops.'] });
-    // Mira, for one second, at the far end
-    M.npcs.push({ id: 'mira', crew: 'mira', pos: [0, 0, -99.2], yaw: 0, silent: true, when: 'voice_heard && !mira_gone' });
-    M.triggers.push({ box: [-30, -1, -100, 30, 6, -73], set: { zero_second: true }, once: true, when: 'checkpoint_passed && rook_message' });
+    P.npcs.push({ id: 'child', crew: 'child', pos: [px - 31, py, pz - 7], yaw: 0.6, hologram: true, height: 1.22, dialogue: DIALOGUE.child, when: 'zero_second', barks: ['Do you know the song? It goes up and then it goes up again and then it stops.'], room: rid });
+    // Mira, for one second, at the far end: on the north platform by the stair down to the staff gate
+    P.npcs.push({ id: 'mira', crew: 'mira', pos: [px + 3, py, pz - 30], yaw: 0, silent: true, when: 'voice_heard && !mira_gone', room: rid });
+    P.triggers.push({ box: [px - 35, py - 1, pz - 14, px + 35, py + 6, pz + 8], set: { zero_second: true }, once: true, when: 'checkpoint_passed && rook_message', room: rid });
   },
   intro: [
     N('Rain City, 2049. Eight-fourteen on a Tuesday.'),
@@ -211,7 +217,8 @@ export const M01 = {
         g.hud.say([K('Mira?'), N('The crowd closes. There is nobody there.')], f);
       }
     }
-    if (f.get('after_zero') && g.player.pos.z < -72) {
+    const plat = rt.level?.landmarks?.platform;
+    if (f.get('after_zero') && plat && g.player.pos.z < plat[2] + 10 && g.player.pos.y > plat[1] - 1.5) {
       rt.annT = (rt.annT ?? 38) + dt;
       if (rt.annT >= 41 && !g.hud.talking) {
         rt.annT = 0;
@@ -234,21 +241,30 @@ export const M01 = {
 };
 
 // --- Mission 2: HELIX GOES DARK -------------------------------------------------------------
-const HELIX_PALETTE = { look: 'eng', emergency: 0.85, fog: 0x2a2226, density: 1.6, wall: '#5c5a62', floor: '#3b3a40', accent: 0xff6a48, accent2: 0xffb36b, light: 0xffb0a0, tint: 0x6a4a4a, night: 0.7, weather: 'motes', sky: 'warehouse', probe: false, ink: 0.85, grade: { shadowTint: 0x2a1418, highlightTint: 0xffc0a8, toning: 0.24, contrast: 1.14, saturation: 0.92 } };
+// Helix's rooms take the light of their own palette (DeckWorld's few pieces: doors, the gate); the
+// place draws everything else in the Helix style (places/specs/helix.js). No Vessel look.
+const HELIX_PALETTE = { emergency: 0.85, fog: 0x2a2226, density: 1.6, wall: '#e8ecf0', floor: '#202428', accent: 0xff6a48, accent2: 0xffb36b, light: 0xffb0a0, tint: 0x6a4a4a, night: 0.7, weather: 'storm', sky: 'night', probe: false, ink: 0.85, grade: { shadowTint: 0x2a1418, highlightTint: 0xffc0a8, toning: 0.24, contrast: 1.14, saturation: 0.92 } };
 
 const HELIX_SENTINEL_HINTS = ['The drone watches the floor in front of it. Only that.', 'Stay behind the pillars. Move when it turns. The cell is in the alcove past its loop.', 'Wait behind a pillar until the drone walks away, then cross behind it to the alcove on the east side.'];
+const T0 = 0.4;
 
-function buildHelixDark(story, si, rt) {
-  const D = new Deck({ id: 'm02', deckName: 'HELIX', palette: HELIX_PALETTE, seed: 'lv', states: ['PRESENT'], estimateMin: 40 });
-  // r0 SECURITY
-  D.room({ id: 'security', name: 'SECURITY', W: 12, L: 14, H: 6, kind: 'arrival', beat: 'custom' }, (R) => {
-    R.floor();
-    R.text('HELIX TEMPORAL RESEARCH - STAFF', [0, 4.6, -13.9], 0, { size: 0.5, color: '#ffb0a0' });
+// Mission 2's rooms in Helix's west wing, round the court (the bible's map: ENTRY → DARK CORRIDOR →
+// POWER ROOM → LIFT, with the archive): the lobby faces the city, the dark gallery the court, the
+// plant terrace is open to the storm, the conduit hall is a glass bridge-hall over the court's edge,
+// and the glass lift drops into the chamber under the oculus.
+function helixDarkRooms(P, story, si, rt) {
+  const D = new Deck({ id: 'm02', deckName: 'HELIX', palette: HELIX_PALETTE, seed: 'lv', states: ['PRESENT'], estimateMin: 40, place: P, start: { at: [-48, 40], rot: 0 } });
+  const land = (R, name, at, yaw = 0) => { const w = R.p(at); P.land(name, w[0], w[1], w[2], yaw + R.th); };
+  // r0 SECURITY: the double-height lobby, glass to the city and the court
+  D.room({ id: 'security', name: 'SECURITY', W: 12, L: 14, H: 9, kind: 'arrival', beat: 'custom', windows: { S: 'full', E: 'full' } }, (R) => {
+    R.floor(0, -R.L, 0, { mat: 'terrazzo' });
+    R.text('HELIX TEMPORAL RESEARCH - STAFF', [0, 6.6, -13.9], 0, { size: 0.5, color: '#ffb0a0' });
     R.text('LOCKDOWN IN EFFECT', [-5.9, 3.2, -7], Math.PI / 2, { size: 0.5, color: '#ff6a48' });
     R.prop('desk', -4, -4);
     R.prop('console', -4, -5.2);
-    R.prop('crate', 4.4, -10);
-    R.prop('crate', 3.2, -11.4, { size: 0.5 });
+    for (const x of [-1.6, 0, 1.6]) R.box([x - 0.08, 0, -9.6, x + 0.08, 1.0, -8.4], { mat: 'trim' }); // turnstiles
+    R.box([2.4, 0, -12.6, 4.6, 1.1, -11.6], { mat: 'prop' });
+    R.box([2.5, 1.1, -12.5, 4.5, 1.9, -11.7], { mat: 'glass', solid: false }); // the Site Zero print, in its case
     R.npc({ id: 'lin', crew: 'researcher', pos: [4.2, 0, -5], yaw: -Math.PI * 0.75, lines: [
       L('CREW', 'Don\'t go to the lift. The lift is dead. Everything below three is dead.'),
       K('Rook said system failure.'),
@@ -257,9 +273,14 @@ function buildHelixDark(story, si, rt) {
     ], barks: AMBIENT.helix.barks });
     R.scene('intercom', [-4, 1.5, -5.6], 'ANSWER THE INTERCOM', { color: 0xff6a48, once: true, scene: 'intercom' });
     R.trigger([-6, -1, -14, 6, 5, -10], { helix_entered: true });
+    land(R, 'lobby', [0, 0, -7]);
+    land(R, 'lobbyIntercom', [-4, 1.5, -5.6]);
+    land(R, 'sitePrint', [3.5, 1.2, -12.1]);
+    land(R, 'linPeg', [5.6, 1.6, -2.2], -Math.PI / 2);
+    land(R, 'cameraRoom', [-4.4, 0, -12], Math.PI);
   });
-  // r1 DARK CORRIDOR: a malfunctioning drone on a loop, pillars, the first cell in an alcove
-  D.room({ id: 'corridor', name: 'DARK CORRIDOR', W: 16, L: 24, H: 6 }, (R) => {
+  // r1 DARK CORRIDOR: the west gallery, glass to the court; a malfunctioning drone on a loop, the first cell in an alcove
+  D.room({ id: 'corridor', name: 'DARK CORRIDOR', W: 16, L: 24, H: 6, windows: { E: [[1, 9], [15, 23]] } }, (R) => {
     R.floor();
     for (const [x, z] of [[-4, -7], [4, -7], [0, -12], [-4, -17], [4, -17]]) R.pillar(x, z, 0.7);
     R.sentinel({ path: [[-6, -4], [6, -4], [6, -20], [-6, -20]], speed: 1.9, range: 8, fov: 0.8 });
@@ -267,11 +288,15 @@ function buildHelixDark(story, si, rt) {
     R.box([7, 0, -14, 8, 2.4, -10], { mat: 'prop' });
     R.item({ id: 'cell_1', kind: 'core', pos: [7.5, 2.75, -12], label: 'POWER CELL' });
     R.text('EMERGENCY LIGHTING - DO NOT RUN', [0, 4.6, -23.9], 0, { size: 0.42, color: '#ff6a48' });
+    R.prop('desk', -6.2, -21);
     R.challenge('helix:drone', 0, -24, HELIX_SENTINEL_HINTS);
     R.checkpoint(0, -2, -1.6);
+    land(R, 'westGallery', [0, 0, -12]);
+    land(R, 'linDesk', [-6.2, 0.8, -21]);
+    land(R, 'cellA', [7.5, 2.75, -12]);
   });
-  // r2 POWER ROOM: three sockets restore the lift; Iven Marr; cell two up a short stair; cell three in Iven's locker
-  D.room({ id: 'power', name: 'POWER ROOM', W: 14, L: 18, H: 6.5 }, (R) => {
+  // r2 POWER: the plant terrace on the roof, open to the storm: chillers, cable trays, three sockets; Iven Marr under a canopy
+  D.room({ id: 'power', name: 'PLANT TERRACE', W: 14, L: 18, H: 6.5, roof: 'open', windows: { E: [[2, 16, 1.0, 3.2]] } }, (R) => {
     R.floor();
     for (const [i, x] of [[0, -3], [1, 0], [2, 3]]) {
       R.prop('console', x, -16.4);
@@ -285,18 +310,27 @@ function buildHelixDark(story, si, rt) {
     R.ledge(-7, -14, -3.6, -6, 2.6);
     R.stairs(-5.2, -3.8, -6, 2.6);
     R.item({ id: 'cell_2', kind: 'core', pos: [-5.4, 3.05, -11], label: 'POWER CELL' });
-    // Iven's locker, east: opens when he gives the code
+    // Iven's locker, east: opens when he gives the code; his post under a canopy
     R.box([5.6, 0, -11, 7, 2.2, -9.4], { mat: 'prop' });
     R.box([5.5, 0, -11, 5.6, 2.2, -9.4], { mat: 'door', when: '!quest_iven', id: 'door_locker' });
     R.item({ id: 'cell_3', kind: 'core', pos: [6.3, 1.0, -10.2], label: 'POWER CELL', when: 'quest_iven' });
     R.text('MARR', [5.45, 1.8, -10.2], -Math.PI / 2, { size: 0.28, color: '#ffb36b' });
+    R.box([2.6, 3.0, -9, 7, 3.2, -4.2], { mat: 'trim', solid: false });
     R.npc({ id: 'iven', crew: 'iven', pos: [4.6, 0, -7.4], yaw: -Math.PI * 0.7, dialogue: DIALOGUE.iven, barks: ['I signed nothing. Remember that when they ask.'] });
     R.scene('shift_notes', [6.4, 1.1, -5], 'READ THE SHIFT NOTES', { yaw: -Math.PI / 2, model: () => makePanel(0xffb36b), once: true });
+    // the chillers and the cable trays of the plant
+    R.box([-6.6, 0, -3.2, -3.8, 1.9, -1.6], { mat: 'tank' });
+    R.box([-6.6, 0, -17.6, -4.6, 1.6, -15.8], { mat: 'tank' });
+    R.box([-7, 2.9, -17, 7, 3.0, -16.6], { mat: 'trimDark', solid: false });
     R.prop('crate', -5, -3);
     R.checkpoint(0, -2, -1.6);
+    land(R, 'plantTerrace', [0, 0, -9]);
+    land(R, 'cellB', [-5.4, 3.05, -11]);
+    land(R, 'cellC', [6.3, 1.0, -10.2]);
+    land(R, 'ivenPost', [4.6, 0, -7.4]);
   });
-  // r3 RECORDS: three recorded conversations; one officer can be trusted
-  D.room({ id: 'records', name: 'RECORDS', W: 12, L: 14, H: 6 }, (R) => {
+  // r3 RECORDS: the staff lounge: three recorded conversations; one officer can be trusted
+  D.room({ id: 'records', name: 'STAFF LOUNGE', W: 12, L: 14, H: 6, exit: 'E', windows: { E: [[1, 8]] } }, (R) => {
     R.floor();
     const recs = [
       ['rec_pryce', -4, 'OFFICER PRYCE - 05:52', 'Pryce, night desk. Chamber door is logged shut all night. Nobody went in. Nobody. I checked the log myself and the log is clean, so there is nothing to discuss.'],
@@ -305,57 +339,76 @@ function buildHelixDark(story, si, rt) {
     ];
     for (const [id, x, title, text] of recs) {
       R.prop('console', x, -5.4);
-      R.inter({ id, kind: 'terminal', pos: [x, 1.25, -5], yaw: 0, r: 2.4, prompt: 'PLAY RECORDING', log: { title, text } });
+      R.inter({ id, kind: 'terminal', pos: [x, 1.25, -5], yaw: 0, r: 2.4, prompt: 'PLAY RECORDING', log: { title, text }, kit: 'recorder' });
     }
     R.text('ROSTER 05:00 - PRYCE · HAIG · DALE', [-5.9, 3.0, -8], Math.PI / 2, { size: 0.34, color: '#dfe8f0' });
-    R.text('CHAMBER DOOR LOG - EDITED 06:10', [5.9, 3.0, -8], -Math.PI / 2, { size: 0.34, color: '#ff6a48' });
+    R.text('CHAMBER DOOR LOG - EDITED 06:10', [5.9, 3.0, -4], -Math.PI / 2, { size: 0.34, color: '#ff6a48' });
     R.prop('console', 0, -12.6);
     R.scene('whose_code', [0, 1.3, -12.2], 'ENTER AN OFFICER\'S CODE', { model: () => makePanel(0xff6a48) });
-    R.box([-1.5, 0, -14.4, 1.5, 4, -14], { mat: 'door', when: '!officer_trusted', id: 'door_records' });
+    R.box([R.W / 2, 0, -R.L + 0.6, R.W / 2 + T0, 4, -R.L + 3.6], { mat: 'door', when: '!officer_trusted', id: 'door_records' });
     R.checkpoint(0, -2, -1.6);
+    land(R, 'staffLounge', [0, 0, -7]);
   });
-  // r4 CONDUIT HALL: the unit that rewinds damage; a live conduit along the east wall
-  D.room({ id: 'conduit', name: 'CONDUIT HALL', W: 16, L: 24, H: 7 }, (R) => {
+  // r4 CONDUIT HALL: the glass hall over the court's edge (the skybridge); the unit that rewinds damage; a live conduit
+  D.room({ id: 'conduit', name: 'THE SKYBRIDGE', W: 16, L: 24, H: 7, roof: 'glass', windows: { E: 'full', W: [[3, 21, 1.2, 5.6]] } }, (R) => {
     R.floor();
     for (const [x, z] of [[-5, -6], [-5, -12], [-5, -18], [2, -9], [2, -15]]) R.pillar(x, z, 0.65);
     R.box([6.6, 0, -20, 7.4, 1.0, -4], { mat: 'pipe' });
     R.box([6.4, 1.0, -14, 7.6, 1.6, -10], { mat: 'glow', solid: false, when: 'conduit_live' });
-    R.text('CONDUIT 4 - DAMAGED', [7.9, 2.6, -12], -Math.PI / 2, { size: 0.4, color: '#ffb36b' });
+    R.text('CONDUIT 4 - DAMAGED', [6.2, 2.6, -12], -Math.PI / 2, { size: 0.4, color: '#ffb36b' });
     R.prop('console', -6.6, -21);
     R.scene('breaker', [-6.6, 1.3, -20.6], 'THROW THE BREAKER', { model: () => makePanel(0xff6a48), once: true });
     R.sentinel({ path: [[-2, -4], [5, -4], [5, -20], [-2, -20]], speed: 2.1, range: 9, fov: 0.85, conduit: [5.4, -15, 8, -9], conduitWhen: 'conduit_live', unit: true });
     R.challenge('helix:unit', 0, -24, ['It puts itself back together. I watched it do it.', 'The damaged conduit on the east wall. If it were live, and the unit walked through it...', 'Throw the breaker at the far console, let the unit see me, and lead it along the east wall through the conduit.']);
     R.box([-1.5, 0, -24.4, 1.5, 4, -24], { mat: 'door', when: '!unit_down', id: 'door_conduit' });
     R.checkpoint(0, -2, -1.6);
+    land(R, 'skybridge', [0, 0, -12]);
+    land(R, 'conduit', [7, 1, -12]);
   });
-  // r5 ARCHIVE: Mira's file, and the drawing
-  D.room({ id: 'archive', name: 'ARCHIVE', W: 12, L: 14, H: 6 }, (R) => {
-    R.floor();
-    R.prop('shelf', -4, -4);
-    R.prop('shelf', -4, -8);
-    R.prop('shelf', 4, -4);
-    R.prop('console', 4, -9);
-    R.inter({ id: 'mira_file', kind: 'terminal', pos: [4, 1.25, -8.6], yaw: 0, r: 2.4, prompt: 'OPEN THE FILE', log: { title: 'HELIX JUNIOR PROGRAMME - 2026', text: 'VAREN, MIRA. Age nine. Admitted to the junior observation programme by the director\'s office. Status: discharged. Reason for discharge: redacted. Next of kin: VAREN, KAI, age twelve.' } });
+  // r5 ARCHIVE: the reading room (old wood, one green lamp): Mira's file, the junior pass drawer, the drawing
+  D.room({ id: 'archive', name: 'READING ROOM', W: 12, L: 14, H: 6, windows: { E: [[3, 10, 1.4, 4.2]] } }, (R) => {
+    R.floor(0, -R.L, 0, { mat: 'woodFloor' });
+    R.prop('shelf', -4, -4, { mat: 'prop2' });
+    R.prop('shelf', -4, -8, { mat: 'prop2' });
+    R.prop('shelf', 4, -4, { mat: 'prop2' });
+    R.prop('desk', 4, -9, { mat: 'prop2' });
+    R.box([3.8, 0.78, -9.2, 4.0, 1.3, -9.0], { mat: 'trimDark', solid: false });
+    R.box([3.6, 1.3, -9.4, 4.2, 1.5, -8.8], { mat: 'lampGreen', solid: false });
+    R.inter({ id: 'mira_file', kind: 'terminal', pos: [4, 1.05, -8.6], yaw: 0, r: 2.4, prompt: 'OPEN THE FILE', log: { title: 'HELIX JUNIOR PROGRAMME - 2026', text: 'VAREN, MIRA. Age nine. Admitted to the junior observation programme by the director\'s office. Status: discharged. Reason for discharge: redacted. Next of kin: VAREN, KAI, age twelve.' }, kit: 'fileFolder' });
+    R.box([-5.6, 0, -12.4, -3.6, 1.0, -11.4], { mat: 'prop2' });
     R.scene('drawing', [0, 1.7, -13.85], 'LOOK AT THE DRAWING', { model: () => makeDrawing(), once: true });
     R.text('LIFT - LEVEL -3', [-5.9, 3.2, -11], Math.PI / 2, { size: 0.4, color: '#ffb36b' });
     R.box([-1.5, 0, -14.4, 1.5, 4, -14], { mat: 'door', when: '!lift_powered || !drawing_seen', id: 'door_lift' });
     R.checkpoint(0, -2, -1.6);
+    land(R, 'readingRoom', [0, 0, -7]);
+    land(R, 'passDrawer', [-4.6, 1.0, -11.9]);
   });
-  // r6 THE LIFT and the chamber antechamber
-  D.room({ id: 'chamber', name: 'CHRONOLITH CHAMBER', W: 16, L: 20, H: 9, kind: 'encounter', beat: 'custom' }, (R) => {
+  // r6 THE LIFT: a glass lift into the oculus
+  const lift = D.room({ id: 'liftAtrium', name: 'THE LIFT', W: 8, L: 8, H: 6, roof: 'glass', exit: 'none', windows: { E: 'full', W: 'full' } }, (R) => {
     R.floor();
-    R.text('CHAMBER - AUTHORISED PERSONNEL - DIRECTOR\'S OFFICE', [0, 6.2, -19.9], 0, { size: 0.42, color: '#ff6a48' });
-    R.scene('chronolith', [0, 2.95, -12], 'APPROACH THE CHRONOLITH', { model: () => makeChronolith(1.05), r: 4.5, once: true });
+    R.box([-2.2, 0, -7.6, 2.2, 0.12, -3.4], { mat: 'glow', solid: false });
+    R.text('LIFT - LEVEL -3 - CHAMBER', [0, 4.2, -7.9], 0, { size: 0.36, color: '#ffb36b' });
+    land(R, 'liftAtrium', [0, 0, -5.5]);
+  });
+  // r7 THE CHRONOLITH CHAMBER, 11.5 m under the oculus; the lift lets you out at its south wall
+  const ch = D.room({ id: 'chamber', name: 'CHRONOLITH CHAMBER', W: 24, L: 24, H: 12, at: [0, 12], rot: 0, y: -11.5, exit: 'E', corridor: { len: 26, rise: 11.5 }, roof: 'glass', closedS: true, kind: 'encounter', beat: 'custom' }, (R) => {
+    R.floor(0, -R.L, 0, { mat: 'chamberFloor' });
+    R.text('CHAMBER - AUTHORISED PERSONNEL - DIRECTOR\'S OFFICE', [0, 8.2, -23.9], 0, { size: 0.42, color: '#ff6a48' });
+    R.scene('chronolith', [0, 4.6, -12], 'APPROACH THE CHRONOLITH', { model: () => makeChronolith(1.15, 'helix'), r: 6, once: true });
     R.box([-3, -T0, -15, 3, 0.02, -9], { mat: 'glow', solid: false });
     R.checkpoint(0, -2, -1.6);
+    land(R, 'chamberDoor', [0, 0, -0.8]);
+    land(R, 'chamber', [0, 0, -12]);
   });
+  // the lift goes down: walk into it, and the doors open on the chamber
+  const [sx, sy, sz] = ch.p([0, 0.86, -1.6]);
+  P.triggers.push({ box: lift.b([-2.2, -1, -7.6, 2.2, 3, -3.4]), set: { lift_down: true }, once: false, to: [sx, sy, sz, ch.th], room: 'liftAtrium' });
   return D.finish({ gated: true });
 }
-const T0 = 0.4;
 
 export const M02 = {
   key: 'm02', n: 2, chapter: 'prologue', name: 'HELIX GOES DARK', title: 'Helix Temporal Research Facility', subtitle: 'Lockdown. Emergency light. Rook calls it a system failure.',
-  kind: 'custom', build: buildHelixDark, sectors: 1, states: ['PRESENT'], palette: HELIX_PALETTE, dark: 0.45,
+  place: 'helix', wing: 'west', rooms: helixDarkRooms, sectors: 1, states: ['PRESENT'], dark: 0.45,
   ambience: 'hum',
   intro: [
     N('The facility is dark. Every third light is red. Somewhere below, a pump is running backwards.'),
@@ -431,25 +484,32 @@ const IVEN_ROUTE = [
   { when: 'ev_raw_log', lines: [L('IVEN', 'You have the log. Use it on him. That is the only way it was worth it.')] },
 ];
 
-function buildFirstSwitch(story, si, rt) {
-  const D = new Deck({ id: 'm03', deckName: 'HELIX', palette: SWITCH_PALETTE, seed: 'lv', states: ['PRESENT', 'PAST', 'FUTURE'], unstable: true, estimateMin: 40 });
+// Mission 3's rooms: the same chamber under the oculus, then up the stair under the court into the
+// east wing (the temporal lab, glass to the court), the machine hall in the north-east corner, the
+// open service court, and the control room's panoramic window over the valley. In 2026 the wing is a
+// bare frame and the hall has no roof; in 2196 the roof has fallen in and the oculus is open.
+function firstSwitchRooms(P, story, si, rt) {
+  const D = new Deck({ id: 'm03', deckName: 'HELIX', palette: SWITCH_PALETTE, seed: 'lv', states: ['PRESENT', 'PAST', 'FUTURE'], unstable: true, estimateMin: 40, place: P, start: { at: [0, 12], rot: 0, y: -11.5 } });
+  const land = (R, name, at, yaw = 0) => { const w = R.p(at); P.land(name, w[0], w[1], w[2], yaw + R.th); };
   // r0 the chamber: the Chronolith teaches the switch
-  D.room({ id: 'chamber', name: 'CHRONOLITH CHAMBER', W: 16, L: 20, H: 9, kind: 'arrival', beat: 'custom' }, (R) => {
-    R.floor();
-    R.scene('touch', [0, 2.95, -12], 'TOUCH THE CHRONOLITH', { model: () => makeChronolith(1.05), r: 4.5, once: true });
+  D.room({ id: 'chamber', name: 'CHRONOLITH CHAMBER', W: 24, L: 24, H: 12, exit: 'E', corridor: { len: 26, rise: 11.5 }, roof: { PRESENT: 'glass', PAST: 'open', FUTURE: 'open' }, kind: 'arrival', beat: 'custom' }, (R) => {
+    R.floor(0, -R.L, 0, { mat: 'chamberFloor' });
+    R.scene('touch', [0, 4.6, -12], 'TOUCH THE CHRONOLITH', { model: () => makeChronolith(1.15, 'helix', { eras: { PRESENT: 'helix', PAST: 'helix', FUTURE: 'halo' } }), r: 6, once: true });
     // 2026: scaffolding around a half-built ring, a thermos; 2196: the ceiling gone, moss, a fallen beam
-    for (const [x, z] of [[-5, -8], [5, -8], [-5, -16], [5, -16]]) R.box([x - 0.15, 0, z - 0.15, x + 0.15, 7, z + 0.15], { mat: 'trimDark', when: '@PAST' });
-    R.box([-5, 4.0, -16, 5, 4.2, -8], { mat: 'crate', solid: false, when: '@PAST' });
-    R.text('HELIX - CHAMBER 1 - UNDER CONSTRUCTION - 2026', [0, 6.2, -19.9], 0, { size: 0.42, color: '#ffd9a0', when: '@PAST' });
-    R.text('CHAMBER - AUTHORISED PERSONNEL - DIRECTOR\'S OFFICE', [0, 6.2, -19.9], 0, { size: 0.42, color: '#9fd8ff', when: '@PRESENT' });
-    R.box([-8, 0, -20, 8, 0.3, -2], { mat: 'moss', solid: false, when: '@FUTURE' });
-    R.box([-7, 3, -14, 7, 3.4, -13.6], { mat: 'industrial', when: '@FUTURE' });
-    R.text('2196', [0, 6.2, -19.9], 0, { size: 0.5, color: '#9fe8c8', when: '@FUTURE' });
-    R.box([-1.5, 0, -20.4, 1.5, 4, -20], { mat: 'door', when: '!has_chronolith', id: 'door_chamber' });
+    for (const [x, z] of [[-7, -6], [7, -6], [-7, -18], [7, -18]]) R.box([x - 0.15, 0, z - 0.15, x + 0.15, 10, z + 0.15], { mat: 'trimDark', when: '@PAST' });
+    R.box([-7, 5.0, -18, 7, 5.2, -6], { mat: 'crate', solid: false, when: '@PAST' });
+    R.text('HELIX - CHAMBER 1 - UNDER CONSTRUCTION - 2026', [0, 8.2, -23.9], 0, { size: 0.42, color: '#ffd9a0', when: '@PAST' });
+    R.text('CHAMBER - AUTHORISED PERSONNEL - DIRECTOR\'S OFFICE', [0, 8.2, -23.9], 0, { size: 0.42, color: '#9fd8ff', when: '@PRESENT' });
+    R.box([-12, 0, -24, 12, 0.3, 0], { mat: 'moss', solid: false, when: '@FUTURE' });
+    R.box([-9, 5, -16, 9, 5.4, -15.6], { mat: 'industrial', when: '@FUTURE' });
+    R.text('2196', [0, 8.2, -23.9], 0, { size: 0.5, color: '#9fe8c8', when: '@FUTURE' });
+    R.box([R.W / 2, 0, -R.L + 0.6, R.W / 2 + T0, 4, -R.L + 3.6], { mat: 'door', when: '!has_chronolith', id: 'door_chamber' });
     R.checkpoint(0, -2, -1.6);
+    land(R, 'chamber', [0, 0, -12]);
+    land(R, 'ringTouch', [0, 1, -8.2]);
   });
-  // r1 the cable: connect it in 2026, throw the power in 2049
-  D.room({ id: 'cable', name: 'TEMPORAL LAB', W: 14, L: 18, H: 6.5 }, (R) => {
+  // r1 the temporal lab (the east wing's ground floor, glass to the court): connect the cable in 2026, throw the power in 2049
+  D.room({ id: 'cable', name: 'TEMPORAL LAB', W: 14, L: 18, H: 6.5, exit: 'W', windows: { S: 'full', E: [[2, 9, 1.0, 4.6]] } }, (R) => {
     R.floor();
     R.prop('desk', -4, -5);
     R.prop('console', 4, -5);
@@ -457,34 +517,45 @@ function buildFirstSwitch(story, si, rt) {
     R.box([-7.4, -0.4, -18, 7.4, 0, -12], { mat: 'trimDark', when: '@PAST' });
     R.item({ id: 'cable', kind: 'key', pos: [-4, 1.0, -9], echo: true, label: 'POWER CABLE' });
     R.box([-4.6, 0, -9.6, -3.4, 0.5, -8.4], { mat: 'prop', when: '@PAST' });
-    R.inter({ id: 'cable_socket', kind: 'socket', pos: [5.9, 1.3, -14], yaw: -Math.PI / 2, r: 2.4, prompt: 'CABLE SOCKET (2026)', needs: 'cable', only: 'PAST' });
-    R.text('MAIN FEED - NOT CONNECTED', [5.9, 2.6, -14], -Math.PI / 2, { size: 0.34, color: '#ffd9a0', when: '!cable_connected' });
-    R.text('MAIN FEED - CONNECTED', [5.9, 2.6, -14], -Math.PI / 2, { size: 0.34, color: '#7fe0a8', when: 'cable_connected' });
+    R.inter({ id: 'cable_socket', kind: 'socket', pos: [6.6, 1.3, -14], yaw: -Math.PI / 2, r: 2.4, prompt: 'CABLE SOCKET (2026)', needs: 'cable', only: 'PAST' });
+    R.text('MAIN FEED - NOT CONNECTED', [6.9, 2.6, -14], -Math.PI / 2, { size: 0.34, color: '#ffd9a0', when: '!cable_connected' });
+    R.text('MAIN FEED - CONNECTED', [6.9, 2.6, -14], -Math.PI / 2, { size: 0.34, color: '#7fe0a8', when: 'cable_connected' });
     R.prop('console', 0, -16.6);
     R.scene('power', [0, 1.3, -16.2], 'ACTIVATE THE POWER (2049)', { model: () => makePanel(0x4f9fe8), when: '@PRESENT' });
-    R.box([-1.5, 0, -18.4, 1.5, 4, -18], { mat: 'door', when: '!power_on', id: 'door_cable' });
+    R.box([-R.W / 2 - T0, 0, -R.L + 0.6, -R.W / 2, 4, -R.L + 3.6], { mat: 'door', when: '!power_on', id: 'door_cable' });
     R.box([-7, 0, -18, 7, 0.25, -2], { mat: 'moss', solid: false, when: '@FUTURE' });
-    R.challenge('switch:cable', 0, -18, ['The cable only exists in 2026. The switch only works in 2049.', 'Switch to 2026 (the room cycles with Q, or 1 / 2 / 3). Take the cable to the socket on the east wall. Then switch back and throw the power.', 'Press 2 for 2026, take the cable, use the socket on the east wall, press 1 for 2049, use the panel at the far end.']);
+    R.challenge('switch:cable', 0, -18, ['The cable only exists in 2026. The switch only works in 2049.', 'Switch to 2026 (the room cycles with Q, or 1 / 2 / 3). Take the cable to the socket on the east wall. Then switch back and throw the power.', 'Press 2 for 2026, take the cable, use the socket on the east wall, press 1 for 2049, use the panel at the far end.'], { answer: ['PAST', 'PRESENT'] });
     R.checkpoint(0, -2, -1.6);
+    land(R, 'temporalLab', [0, 0, -9]);
+    land(R, 'cableSocket', [6.6, 1.3, -14]);
+    land(R, 'powerPanel', [0, 1.3, -16.2]);
   });
-  // r2 collapsed machinery: in 2196 a lift platform spans it; stability drains while you are there
-  D.room({ id: 'collapse', name: 'MACHINE HALL', W: 14, L: 22, H: 7 }, (R) => {
+  // r2 the machine hall: its floor collapsed into the plant level; in 2196 a lift is parked across the gap
+  D.room({ id: 'collapse', name: 'MACHINE HALL', W: 14, L: 22, H: 14, exit: 'W', roof: { PRESENT: 'solid', PAST: 'open', FUTURE: 'open' }, windows: { E: [[2, 20, 8, 13]], W: [[2, 16, 8, 13]] } }, (R) => {
     R.floor(0, -6);
     R.pit(-6, -16, { depth: 5 });
     R.floor(-16, -22);
-    // 2196: a maintenance lift, left parked across the gap, and the moss that grew on it
+    // the gantry crane overhead
+    R.box([-7, 11.5, -21, 7, 12.0, -20.4], { mat: 'trimDark', solid: false });
+    R.box([-7, 11.5, -1.6, 7, 12.0, -1.0], { mat: 'trimDark', solid: false });
+    R.box([-0.5, 11.2, -20.4, 0.5, 11.9, -1.6], { mat: 'trim', solid: false });
+    // 2196: a maintenance lift, left parked across the gap, and the moss that grew on it; the roof slabs in the pit
     R.box([-1.6, -0.4, -16.4, 1.6, 0, -5.6], { mat: 'industrial', when: '@FUTURE' });
     R.box([-1.6, 0, -16.4, 1.6, 0.05, -5.6], { mat: 'moss', solid: false, when: '@FUTURE' });
+    R.box([2.4, -5, -15, 6.6, -2.4, -8], { mat: 'industrial', when: '@FUTURE' });
     R.text('LIFT PARKED - 2196', [0, 3.5, -21.9], 0, { size: 0.42, color: '#9fe8c8', when: '@FUTURE' });
     R.text('MACHINE HALL - FLOOR COLLAPSED', [0, 3.5, -21.9], 0, { size: 0.42, color: '#9fd8ff', when: '!@FUTURE' });
-    R.challenge('switch:lift', 0, -22, ['The floor is gone in every year but one.', 'In 2196 somebody parked a lift across the gap. Stability drains out there, so do not linger.', 'Press 3 for 2196, cross on the parked lift, press 1 for 2049 on the far side.']);
+    R.challenge('switch:lift', 0, -22, ['The floor is gone in every year but one.', 'In 2196 somebody parked a lift across the gap. Stability drains out there, so do not linger.', 'Press 3 for 2196, cross on the parked lift, press 1 for 2049 on the far side.'], { answer: 'FUTURE' });
     R.checkpoint(0, -2, -1.6);
     R.checkpoint(-16, -22, -18);
+    land(R, 'machineHall', [0, 0, -11]);
+    land(R, 'lift2196', [0, 0, -11]);
+    land(R, 'plaque2196', [0, 3.5, -21.6]);
   });
-  // r3 quest chain D, THE TECHNICIAN'S KEY: Marr's maintenance route, behind a lock that resets
+  // r3 quest chain D, THE TECHNICIAN'S KEY: the service court (open to the sky) behind a lock that resets
   // after every switch; the service panel exists only in 2026, the drone only in 2049
-  D.room({ id: 'route', name: 'MAINTENANCE ROUTE', W: 16, L: 22, H: 6.5 }, (R) => {
-    R.floor();
+  D.room({ id: 'route', name: 'SERVICE YARD', W: 16, L: 22, H: 6.5, roof: 'open' }, (R) => {
+    R.floor(0, -R.L, 0, { mat: 'yardConcrete' });
     R.npc({ id: 'iven3', crew: 'iven', pos: [-4.2, 0, -3.6], yaw: Math.PI * 0.8, dialogue: IVEN_ROUTE, barks: ['Panel was installed before the drone was.'] });
     R.pillar(-2.4, -11, 0.6);
     R.prop('crate', -5.6, -17.4);
@@ -509,11 +580,12 @@ function buildFirstSwitch(story, si, rt) {
     for (const [k, x, z] of [[0, 5.0, -12.6], [1, 6.4, -11.2], [2, 5.6, -9.4]]) R.npc({ id: `tech_${k}`, crew: `tech_${k}`, first: 'Technician', seed: 310 + k, ambient: true, pronoun: k === 1 ? { their: 'her', them: 'her' } : { their: 'his', them: 'him' }, pos: [x, 0, z], yaw: -Math.PI / 2, silent: true, when: 'iven_team_saved' });
     // the drone: 2049 only
     R.sentinel({ path: [[-6, -7], [1.6, -7], [1.6, -15.4], [-6, -15.4]], speed: 1.7, range: 7.5, fov: 0.8, when: '@PRESENT' });
-    R.challenge('helix:route', 0, -22, ['The drone only exists in 2049.', 'Cross in another year, or let Marr keep it busy. Stability drains out of 2049.', 'Switch to 2026 or 2196 and walk straight through to the far door, then switch back.']);
+    R.challenge('helix:route', 0, -22, ['The drone only exists in 2049.', 'Cross in another year, or let Marr keep it busy. Stability drains out of 2049.', 'Switch to 2026 or 2196 and walk straight through to the far door, then switch back.'], { answer: ['PAST', 'FUTURE'] });
     R.checkpoint(0, -2, -1.6);
+    land(R, 'serviceYard', [0, 0, -11]);
   });
-  // r4 control: the keycard waits in 2026 (anchor it), the panel works in 2049
-  D.room({ id: 'control', name: 'CONTROL', W: 12, L: 16, H: 6, kind: 'encounter', beat: 'custom' }, (R) => {
+  // r4 control: the panoramic window over the valley; the keycard waits in 2026 (anchor it), the panel works in 2049
+  D.room({ id: 'control', name: 'CONTROL', W: 12, L: 16, H: 6, kind: 'encounter', beat: 'custom', windows: { W: 'full' } }, (R) => {
     R.floor();
     R.prop('desk', 4, -4);
     R.item({ id: 'keycard', kind: 'key', pos: [4, 1.1, -4], echo: true, label: 'KEYCARD (2026)' });
@@ -524,15 +596,18 @@ function buildFirstSwitch(story, si, rt) {
     R.inter({ id: 'lock_control', kind: 'lock', pos: [2.2, 1.3, -9.6], r: 2.4, prompt: 'CARD LOCK (2049)', needs: 'keycard', opens: 'open_control' });
     R.prop('console', 0, -14.6);
     R.scene('panel', [0, 1.3, -14.2], 'THE CONTROL PANEL (2049)', { model: () => makePanel(0x4f9fe8), when: '@PRESENT && open_control' });
-    R.challenge('switch:anchor', 0, -16, ['The lock reads 2049. The card is on a desk in 2026.', 'Whatever I carry out of 2026 comes apart in 2049 - unless I hold on to it. C anchors what I carry.', 'Press 2, take the keycard, press C to anchor it, press 1, use the lock, then the panel.']);
+    R.challenge('switch:anchor', 0, -16, ['The lock reads 2049. The card is on a desk in 2026.', 'Whatever I carry out of 2026 comes apart in 2049 - unless I hold on to it. C anchors what I carry.', 'Press 2, take the keycard, press C to anchor it, press 1, use the lock, then the panel.'], { answer: ['PAST', 'PRESENT'] });
     R.checkpoint(0, -2, -1.6);
+    land(R, 'controlRoom', [0, 0, -8]);
+    land(R, 'keycard', [4, 1.1, -4]);
+    land(R, 'controlPanel', [0, 1.3, -14.2]);
   });
   return D.finish({ gated: true });
 }
 
 export const M03 = {
   key: 'm03', n: 3, chapter: 'prologue', name: 'THE FIRST SWITCH', title: 'Helix, three years at once', subtitle: '2049. 2026. 2196. The facility cannot decide.',
-  kind: 'custom', build: buildFirstSwitch, sectors: 1, states: ['PRESENT', 'PAST', 'FUTURE'], unstable: true, palette: SWITCH_PALETTE,
+  place: 'helix', wing: 'east', rooms: firstSwitchRooms, sectors: 1, states: ['PRESENT', 'PAST', 'FUTURE'], unstable: true,
   ambience: 'hum',
   intro: [N('The ring is awake. The room has three dates and is trying all of them.')],
   objectives: [

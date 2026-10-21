@@ -64,6 +64,18 @@ const frame = async () => {
   if (!ok(r)) console.log('  (frame)', r);
 };
 
+// LV_ONLY=places: only the survey of the open places (at the end of this file)
+if (process.env.LV_ONLY === 'places') {
+  await page.close();
+  await survey();
+  check(errors.length === 0, 'no page errors', [...new Set(errors)].join(' | '));
+  await browser.close();
+  server.close();
+  console.log(`\n${passed} passed, ${failures.length} failed`);
+  if (failures.length) console.log(failures.map((f) => ' - ' + f).join('\n'));
+  process.exit(failures.length ? 1 : 0);
+}
+
 await page.goto(url);
 await page.evaluate(() => { try { localStorage.clear(); } catch { /* */ } });
 await page.reload();
@@ -92,8 +104,17 @@ await az(() => {
     return 'ok';
   };
   B.place = (x, z, y = 0.86, yaw = 0) => { g.player.place([x, y, z, yaw]); g.simulate(0.05); };
+  // a hand-built room's own frame (Build.js): x across, z from its entry wall, turned by its heading
+  B.w = (id, x, z) => {
+    const [sx, , sz, th] = g.level.rooms[id].spawn;
+    const c = Math.cos(th), s = Math.sin(th), X = sx + 1.6 * s, Z = sz + 1.6 * c;
+    return [X + x * c + z * s, Z - x * s + z * c];
+  };
   B.z0 = (id) => g.level.rooms[id].spawn[2] + 1.6;
-  B.at = (id, x, z, y = 0.86) => B.place(g.level.rooms[id].spawn[0] + x, B.z0(id) + z, y);
+  B.at = (id, x, z, y = 0.86) => { const [wx, wz] = B.w(id, x, z); B.place(wx, wz, g.level.rooms[id].spawn[1] - 0.86 + y); };
+  // stand by something to use (its focus point), dz metres off it
+  B.go = (id, dx = 0, dz = 1.2) => { const c = B.cand(id); if (!c) return `no ${id}`; B.place(c.pos[0] + dx, c.pos[2] + dz, c.pos[1] + 0.2); g.simulate(0.3); return 'ok'; };
+  B.lm = (name) => g.level.landmarks?.[name];
   B.choose = (match) => {
     if (g.menu !== 'choice') return `no choice open (${g.menu})`;
     const bs = [...document.querySelectorAll('#choice [data-choice]')];
@@ -177,14 +198,14 @@ check(m1.chapter === 'prologue' && m1.deck === 0 && m1.state === 'PRESENT', 'NEW
 
 // --- Mission 1: THE LAST NORMAL DAY ---------------------------------------------------------
 console.log('Mission 1: The Last Normal Day');
-const walked = await az(() => { LVB.step(3); LVB.skip(); const z0 = AZ.player.pos.z; LVB.walkTo(0, -14, 4); return [z0, AZ.player.pos.z]; });
-check(walked[1] < walked[0] - 6, 'you walk up the avenue', JSON.stringify(walked));
-const toy = await az(() => { LVB.place(-6.0, -15.2); const u = LVB.use('toy'); LVB.skip(); return [u, LVB.f('ev_toy')]; });
+const walked = await az(() => { LVB.step(3); LVB.skip(); const z0 = AZ.player.pos.z; LVB.walkTo(11, -14, 4); return [z0, AZ.player.pos.z, AZ.level.place, AZ.room]; });
+check(walked[1] < walked[0] - 6 && walked[2] === 'rain_south', 'you walk up the avenue of Rain City South (an open place under the sky)', JSON.stringify(walked));
+const toy = await az(() => { const u = LVB.go('toy'); LVB.use('toy'); LVB.skip(); return [u, LVB.f('ev_toy')]; });
 check(toy[1].ev_toy, 'an optional anomaly: the toy that un-falls goes on the case board', JSON.stringify(toy));
-const rook = await az(() => { LVB.place(0, -24); LVB.step(0.3); const s = LVB.said.join('\n'); LVB.skip(); return [AZ.facts.get('rook_message'), s.includes('ROOK: Kai. Where are you.')]; });
+const rook = await az(() => { const l = LVB.lm('rookCall'); LVB.place(l[0], l[2], l[1] + 0.86); LVB.step(0.3); const s = LVB.said.join('\n'); LVB.skip(); return [AZ.facts.get('rook_message'), s.includes('ROOK: Kai. Where are you.')]; });
 check(rook[0] && rook[1], 'Rook calls on the way', JSON.stringify(rook));
 // the checkpoint officer, with real input: look at her and press E
-await az(() => { LVB.place(2.0, -58.2, 0.86); AZ.player.H.set(0.4, 0, -1).normalize(); AZ.simulate(0.2); AZ.focus = AZ.findFocus(); });
+await az(() => { const n = LVB.npc('guard').model.position; LVB.place(n.x - 0.8, n.z + 2.2, n.y + 0.86); AZ.player.H.set(0.35, 0, -1).normalize(); AZ.simulate(0.2); AZ.focus = AZ.findFocus(); });
 await page.keyboard.press('KeyE');
 await frame();
 await az(() => LVB.skip());
@@ -192,14 +213,14 @@ const guard = await az(() => [AZ.menu, [...document.querySelectorAll('#choice [d
 check(guard[0] === 'choice' && ['INVESTIGATE', 'CHALLENGE', 'COMFORT', 'WITHDRAW'].every((k) => guard[1].includes(k)), 'talking to the officer offers four intents', JSON.stringify(guard));
 await page.click('#choice button.comfort');
 check(await az(() => { LVB.skip(); return AZ.facts.get('checkpoint_passed') && AZ.facts.get('trust_guard') === 1; }), 'comfort gets you through and the officer trusts you more');
-const zero = await az(() => { LVB.place(0, -80); LVB.step(0.2); LVB.step(5); LVB.skip(); return { ...LVB.f('zero_second', 'after_zero'), said: LVB.said.includes('NONE: All the clocks stop.'), train: AZ.deckWorld.dynamic.some((d) => d.el.mat === 'car' && d.mesh.visible) }; });
+const zero = await az(() => { const l = LVB.lm('platform'); LVB.place(l[0], l[2], l[1] + 0.86); LVB.step(0.2); LVB.step(5); LVB.skip(); return { ...LVB.f('zero_second', 'after_zero'), said: LVB.said.includes('NONE: All the clocks stop.'), train: AZ.deckWorld.dynamic.some((d) => d.el.mat === 'car' && d.mesh.visible) }; });
 check(zero.zero_second && zero.after_zero && zero.said && zero.train, 'the Zero Second: the clocks stop and the 41 comes in', JSON.stringify(zero));
 // quest chain A: Last Train Home
-const jun = await az(() => { LVB.place(-11, -80); const u = LVB.use('jun'); LVB.skip(); return [u, AZ.menu, LVB.said.slice(-3)]; });
+const jun = await az(() => { const n = LVB.npc('jun').model.position; LVB.place(n.x + 2, n.z, n.y + 0.86); const u = LVB.use('jun'); LVB.skip(); return [u, AZ.menu, LVB.said.slice(-3)]; });
 check(jun[1] === 'choice' && jun[2].some((l) => l.includes('The train keeps arriving.')), 'Jun Park: "The train keeps arriving..."', JSON.stringify(jun));
 await az(() => { LVB.choose('investigate'); LVB.skip(); });
 const relay = await az(() => {
-  LVB.place(-13.2, -88);
+  LVB.go('relay', 1.4, 0);
   const u = LVB.use('relay');
   LVB.skip();
   let t = 0;
@@ -222,13 +243,12 @@ check(reroute[2] === 'choice' && reroute[3].jun_rerouted, 'rerouted at 8:13; bac
 await az(() => { LVB.choose('comfort'); LVB.skip(); });
 check(await az(() => AZ.facts.get('jun_line') && AZ.facts.get('quest_jun') === 'resolved'), 'quest chain A resolved: the passengers get off the 41');
 const rescued = await az(() => {
-  LVB.place(6.2, -87.2); LVB.use('trapped_a'); LVB.skip();
-  LVB.place(3.9, -73); LVB.use('trapped_b'); LVB.skip();
+  for (const id of ['trapped_a', 'trapped_b']) { const n = LVB.npc(id).model.position; LVB.place(n.x + 1.4, n.z + 0.4, n.y + 0.86); LVB.use(id); LVB.skip(); }
   LVB.step(1.5); LVB.skip(); LVB.step(0.5); LVB.skip();
   return { ...LVB.f('rescued', 'voice_heard'), said: LVB.said.includes('VOICE: Kai Varen. Do not build the machine.') && LVB.said.includes('ROOK: The event lasted one second.') };
 });
 check(rescued.rescued && rescued.voice_heard && rescued.said, 'the rescue; "The event lasted one second."; every speaker: "Do not build the machine."', JSON.stringify(rescued));
-const mira = await az(() => { LVB.place(0, -96.6); LVB.step(0.3); LVB.skip(); return { ...LVB.f('mira_gone', 'beat_done'), gate: LVB.gate() }; });
+const mira = await az(() => { const n = LVB.npc('mira').model.position; LVB.place(n.x, n.z + 2.5, n.y + 0.86); LVB.step(0.3); LVB.skip(); return { ...LVB.f('mira_gone', 'beat_done'), gate: LVB.gate() }; });
 check(mira.mira_gone && mira.beat_done && mira.gate === false, 'the woman with Mira\'s face vanishes; the staff gate opens', JSON.stringify(mira));
 await az(() => LVB.exit());
 await nextPlace();
@@ -255,12 +275,12 @@ check(officer[1].officer_trusted, 'the recordings name the officer to trust: Dal
 const unit = await az(() => {
   LVB.at('conduit', -6.6, -19.2); LVB.use('breaker'); LVB.skip();
   const s = AZ.deckWorld.sentinels.find((x) => x.def.unit);
-  const ox = AZ.level.rooms.conduit.spawn[0], z0 = LVB.z0('conduit');
-  s.pos.set(ox + 6.5, 0, z0 - 4); s.dir.set(0, 0, -1); s.mode = 'patrol'; s.suspicion = 0;
-  LVB.place(ox + 6.5, z0 - 11.5);
+  const a = LVB.w('conduit', 6.5, -4), b = LVB.w('conduit', 6.5, -11.5), c = LVB.w('conduit', 6.5, -21);
+  s.pos.set(a[0], 0, a[1]); s.dir.set(b[0] - a[0], 0, b[1] - a[1]).normalize(); s.mode = 'patrol'; s.suspicion = 0;
+  LVB.place(b[0], b[1]);
   for (let i = 0; i < 40 && s.mode !== 'chase'; i++) AZ.simulate(0.05);
   const saw = s.mode === 'chase';
-  LVB.place(ox + 6.5, z0 - 21);
+  LVB.place(c[0], c[1]);
   for (let i = 0; i < 120 && !s.dead; i++) AZ.simulate(0.05);
   LVB.skip();
   return { saw, dead: !!s.dead, ...LVB.f('conduit_live', 'unit_down') };
@@ -268,6 +288,9 @@ const unit = await az(() => {
 check(unit.saw && unit.dead && unit.unit_down, 'the unit that rewinds its damage, lured through the live conduit, stays down', JSON.stringify(unit));
 const drawing = await az(() => { LVB.at('archive', 0, -12); LVB.use('drawing'); LVB.skip(); return [LVB.said.includes('KAI: This drawing is twenty-three years old.'), LVB.f('drawing_seen')]; });
 check(drawing[0] && drawing[1].drawing_seen, '"This drawing is twenty-three years old." / "I was twelve."');
+// the glass lift into the oculus: walk in, and it carries Kai down into the chamber
+const lift = await az(() => { LVB.at('liftAtrium', 0, -5.5); for (let i = 0; i < 30; i++) AZ.simulate(0.05); return { room: AZ.room, y: +AZ.player.pos.y.toFixed(1), down: !!AZ.facts.get('lift_down') }; });
+check(lift.room === 'chamber' && lift.y < -8 && lift.down, 'the glass lift carries Kai down into the chamber under the oculus', JSON.stringify(lift));
 const chrono = await az(() => { LVB.at('chamber', 0, -7); LVB.use('chronolith'); LVB.skip(); return LVB.f('chronolith_seen', 'beat_done'); });
 check(chrono.chronolith_seen && chrono.beat_done, 'the Chronolith chamber');
 await az(() => LVB.exit());
@@ -297,7 +320,8 @@ const cross = await az(() => {
   LVB.at('collapse', 0, -4.5);
   AZ.edition.shift('FUTURE');
   const before = AZ.edition.stability;
-  const left = LVB.walkTo(AZ.level.rooms.collapse.spawn[0], LVB.z0('collapse') - 18.5, 10);
+  const far = LVB.w('collapse', 0, -18.5);
+  const left = LVB.walkTo(far[0], far[1], 10);
   const r = { left, y: AZ.player.pos.y, crossed: AZ.facts.get('crossed'), drained: AZ.edition.stability < before, setbacks: LVB.setbacks };
   AZ.edition.shift('PRESENT');
   LVB.skip();
@@ -374,18 +398,19 @@ const niko = await az(() => { AZ.edition.shift('FUTURE'); AZ.simulate(0.1); cons
 check(niko[0] && !niko[1], 'Niko is himself in the present, an echo in the flooded future', JSON.stringify(niko));
 await scene('the river is diverted in the earliest state (refused in the present)', 'scene_' + (await az(() => AZ.room)), 'PRESENT', 'PAST');
 // the river cuts the village: walk the old bridge in the past
-const fell = await az(() => { AZ.edition.shift('PRESENT'); LVB.place(0, -46); const s0 = LVB.setbacks; LVB.walkTo(0, -62, 6); return LVB.setbacks > s0 || AZ.player.pos.z > -58; });
+const fell = await az(() => { AZ.edition.shift('PRESENT'); const [x, , z] = LVB.lm('footbridgeS'); LVB.place(x, z); const s0 = LVB.setbacks; LVB.walkTo(x, LVB.lm('footbridgeN')[2], 8); return LVB.setbacks > s0 || AZ.player.pos.z > 1; });
 await page.waitForTimeout(1200); // the fall's fade and the walk back to the checkpoint
 const canal = await az(() => {
   const r = {};
   AZ.simulate(0.2);
-  LVB.place(0, -46); AZ.edition.shift('PAST'); AZ.simulate(0.1); const s1 = LVB.setbacks;
-  r.left = LVB.walkTo(0, -62, 8); r.pastCrossed = LVB.setbacks === s1 && AZ.player.pos.z < -58;
+  const [x, , z] = LVB.lm('footbridgeS'), n = LVB.lm('footbridgeN');
+  LVB.place(x, z); AZ.edition.shift('PAST'); AZ.simulate(0.1); const s1 = LVB.setbacks;
+  r.left = LVB.walkTo(n[0], n[2], 10); r.pastCrossed = LVB.setbacks === s1 && AZ.player.pos.z < n[2] + 1.5;
   AZ.edition.shift('PRESENT');
   return r;
 });
 canal.presentFell = fell;
-check(canal.presentFell && canal.pastCrossed, 'the water cuts the village in two; in the past the bridge still stands', JSON.stringify(canal));
+check(canal.presentFell && canal.pastCrossed, 'the river cuts the village in two; in the thriving year the footbridge still stands', JSON.stringify(canal));
 await az(() => LVB.exit());
 await az(() => { AZ.simulate(0.3); LVB.skip(); });
 await page.waitForTimeout(1300);
@@ -761,9 +786,147 @@ const ending = await az(() => ({ menu: AZ.menu, text: document.querySelector('#e
 check(ending.menu === 'ending' && ending.ending === 'C' && /ENDING C/.test(ending.text) && /AFTERZERO/.test(ending.text), 'Ending C, Afterzero', JSON.stringify({ ...ending, text: ending.text.slice(0, 120) }));
 check(/a second that belongs to nobody/.test(ending.text) && /Version one hundred and eighteen/.test(ending.text), '"I finally found a second that belongs to nobody." A voice: "Version one hundred and eighteen."');
 
+// --- the open places: Missions 1-8, each under its own sky (OVERHAUL.md §4.8) -----------------------------------------
+// At quarter 0's spawn, in every year the mission has: a frame rendered, a 16×16 average hash of it (written to this log),
+// and the top quarter of the frame, which must be sky (or a ceiling's lights), never flat fog. Two missions in different
+// places must differ by 18 bits or more in every pair of years; the same place in another year (sameAs) may look alike.
+// Each mission is surveyed in a fresh page (a new game started the player's way, then that mission), small (384 x 216:
+// the hash is taken at 16 x 16), with the real-time loop stopped before the game begins, so the only frames drawn are
+// the ones the survey asks for, and the year's shaders compiled ahead without blocking. On a busy machine a headless
+// SwiftShader page that keeps drawing grows by gigabytes (the pre-U2 build does the same), and the session's shared
+// memory limit then kills it; a page per mission starts each one from nothing. LV_ONLY=places runs the survey alone;
+// LV_PLACE_SHOTS=<folder> keeps a screenshot of every view; LV_SURVEY_W / LV_SURVEY_H set the page's size;
+// LV_SURVEY_ONLY=m01,m04 surveys only those missions (the pair check then covers only them).
+async function survey() {
+  console.log('The places: Missions 1 to 8 under their own skies');
+  const SHOTS = process.env.LV_PLACE_SHOTS || null;
+  if (SHOTS) fs.mkdirSync(SHOTS, { recursive: true });
+  const W = +(process.env.LV_SURVEY_W || 384), H = +(process.env.LV_SURVEY_H || 216);
+  const ONLY = (process.env.LV_SURVEY_ONLY || '').split(',').filter(Boolean);
+  const VIEWS = [['prologue', 0, 'm01'], ['prologue', 1, 'm02'], ['prologue', 2, 'm03'], ['act1', 0, 'm04'], ['act1', 1, 'm05'], ['act1', 2, 'm06'], ['act1', 3, 'm07'], ['act1', 4, 'm08']].filter(([, , key]) => !ONLY.length || ONLY.includes(key));
+  const views = [];
+  let lost = 0;
+  for (const [ch, d, key] of VIEWS) {
+    const sp = await browser.newPage({ viewport: { width: W, height: H } });
+    await sp.route('**/*', (route) => {
+      const u = new URL(route.request().url());
+      return u.hostname === 'localhost' || u.hostname === '127.0.0.1' ? route.continue() : route.abort();
+    });
+    let crashed = false;
+    sp.on('crash', () => { crashed = true; });
+    sp.on('pageerror', (e) => errors.push(e.message));
+    const run = (fn, arg) => (crashed ? Promise.resolve('ERR the page crashed') : sp.evaluate(([src, a]) => {
+      try { return (0, eval)(`(${src})`)(a); } catch (e) { return `ERR ${e.message} @ ${(e.stack || '').split('\n').slice(1, 4).join(' | ')}`; }
+    }, [fn.toString(), arg]).catch((e) => { if (/closed|crash/i.test(e.message)) crashed = true; return `ERR ${e.message.split('\n')[0]}`; }));
+    await sp.goto(url);
+    await sp.waitForFunction(() => window.AZ, null, { timeout: 400000 });
+    await run(() => {
+      AZ.changeSetting('quality', 'low');
+      AZ.changeSetting('smart', false);
+      // nothing on the page animates by itself (the dock's blinking hint), and nothing is drawn but what the survey asks for
+      const st = document.createElement('style');
+      st.textContent = '* { animation: none !important; transition: none !important; }';
+      document.head.appendChild(st);
+      AZ.renderer.setAnimationLoop(null);
+      // a new game, started inside the page as a click does
+      setTimeout(() => AZ.begin('lv:prologue', null, 0), 0);
+      return 'ok';
+    });
+    await sp.waitForFunction(() => AZ.started && AZ.room && AZ.level?.place, null, { timeout: 300000 }).catch((e) => { crashed = crashed || /closed|crash/i.test(e.message); });
+    const m = await run(([ch, d]) => {
+      const g = AZ;
+      g.renderer.setAnimationLoop(null);
+      const skip = () => { for (let i = 0; i < 800 && g.hud.talking; i++) { g.hud.subT = 0; g.simulate(0.1); } };
+      if (g.campaign?.chapter !== ch) { g.edition.start(ch); g.simulate(0.2); skip(); }
+      g.campaign.deck = d; g.campaign.sector = 0; g.campaign.flags = {}; g.campaign.visited = [];
+      g.loadSector(true);
+      g.simulate(0.3);
+      skip();
+      const lv = g.level;
+      return { place: lv.place, sameAs: lv.sameAs, states: g.edition.deck.states, quarter: lv.quarters?.[0]?.name, sky: !!g.edition.mounted?.sky, horizon: !!g.edition.mounted?.horizon };
+    }, [ch, d]);
+    if (!ok(m)) { check(false, `${key} loads`, m); lost++; await sp.close().catch(() => {}); continue; }
+    check(m.place && m.sky && m.horizon, `${key}: ${m.place}, ${m.quarter}, with its sky and horizon`, JSON.stringify(m));
+    for (const st of m.states) {
+      // the year at once (sky, fog and light without easing); its shaders compiled without blocking the page; then a
+      // couple of frames, each its own short call that waits for the GPU
+      await run((st) => {
+        const g = AZ;
+        g.edition.inv?.release?.('year');
+        g.engine.setState(g.room, st, { force: true });
+        g.edition.weatherState = null;
+        g.player.place(g.level.spawn);
+        g.player.pitch = 0.05;
+        g.simulate(0.1);
+        g.updateTheme(1);
+        return 'ok';
+      }, st);
+      await run(async () => { await AZ.renderer.compileAsync(AZ.scene, AZ.camera); return 'ok'; });
+      for (let i = 0; i < 2; i++) await run(() => { const gl = AZ.renderer.getContext(); AZ.tickFrame(1 / 30); gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array(4)); return 'ok'; });
+      const v = await run(() => {
+        const g = AZ;
+        const c = document.createElement('canvas');
+        c.width = 64;
+        c.height = 36;
+        const x = c.getContext('2d', { willReadFrequently: true });
+        g.tickFrame(1 / 30);
+        x.drawImage(g.renderer.domElement, 0, 0, 64, 36);
+        const big = x.getImageData(0, 0, 64, 36).data;
+        const h = document.createElement('canvas');
+        h.width = h.height = 16;
+        const hx = h.getContext('2d', { willReadFrequently: true });
+        hx.drawImage(c, 0, 0, 16, 16);
+        const px = hx.getImageData(0, 0, 16, 16).data;
+        const lum = [];
+        for (let i = 0; i < 256; i++) lum.push(0.299 * px[i * 4] + 0.587 * px[i * 4 + 1] + 0.114 * px[i * 4 + 2]);
+        const mean = lum.reduce((a, b) => a + b, 0) / 256;
+        const bits = lum.map((l) => (l > mean ? 1 : 0)).join('');
+        // the top quarter: its spread of light, and how far its average is from the fog's colour
+        const top = [], rgb = [0, 0, 0];
+        for (let y = 0; y < 9; y++) for (let i = 0; i < 64; i++) {
+          const k = (y * 64 + i) * 4;
+          top.push((0.299 * big[k] + 0.587 * big[k + 1] + 0.114 * big[k + 2]) / 255);
+          rgb[0] += big[k]; rgb[1] += big[k + 1]; rgb[2] += big[k + 2];
+        }
+        const tm = top.reduce((a, b) => a + b, 0) / top.length;
+        const sd = Math.sqrt(top.reduce((a, b) => a + (b - tm) ** 2, 0) / top.length);
+        const fog = g.scene.fog.color.clone().convertLinearToSRGB();
+        const fogD = Math.hypot(rgb[0] / top.length / 255 - fog.r, rgb[1] / top.length / 255 - fog.g, rgb[2] / top.length / 255 - fog.b);
+        return { bits, sd: +sd.toFixed(4), fogD: +fogD.toFixed(3), year: g.engine.state(g.room) };
+      });
+      if (!ok(v)) { check(false, `${key} ${st} renders`, v); if (crashed) break; continue; }
+      if (SHOTS) {
+        // the place itself: the page's overlays (HUD, dock, minimap, subtitles; not the grade's tint and vignette) hidden for the picture
+        await run(() => { for (const el of document.body.children) if (!el.contains(AZ.renderer.domElement) && !['tint', 'vignette'].includes(el.id)) { el.dataset.svyVis = el.style.visibility; el.style.visibility = 'hidden'; } return 'ok'; });
+        await sp.screenshot({ path: path.join(SHOTS, `${key}_${st}.png`), timeout: 240000 }).catch((e) => console.log(`  (screenshot ${key} ${st}: ${e.message.split('\n')[0]})`));
+        await run(() => { for (const el of document.body.children) if (el.dataset.svyVis !== undefined) { el.style.visibility = el.dataset.svyVis; delete el.dataset.svyVis; } return 'ok'; });
+      }
+      views.push({ key, place: m.place, sameAs: m.sameAs, st, ...v });
+      console.log(`  hash ${key} ${st.padEnd(7)} ${v.bits.match(/.{4}/g).map((n) => parseInt(n, 2).toString(16)).join('')} sky sd ${v.sd} fog distance ${v.fogD}`);
+      check(v.year === st && (v.sd >= 0.012 || v.fogD >= 0.05), `${key} ${st}: the top quarter is sky, not flat fog`, JSON.stringify({ sd: v.sd, fogD: v.fogD }));
+    }
+    if (crashed) lost++;
+    await sp.close().catch(() => {});
+  }
+  check(!lost, 'every survey page stays up', `${lost} lost`);
+  const alike = (a, b) => a.place === b.place || [].concat(a.sameAs || []).includes(b.place) || [].concat(b.sameAs || []).includes(a.place);
+  const hd = (a, b) => [...a].reduce((n, c, i) => n + (c !== b[i] ? 1 : 0), 0);
+  const pairs = [];
+  for (const a of views) for (const b of views) {
+    if (a.key >= b.key || alike(a, b)) continue;
+    pairs.push({ a: `${a.key} ${a.st}`, b: `${b.key} ${b.st}`, d: hd(a.bits, b.bits) });
+  }
+  pairs.sort((x, y) => x.d - y.d);
+  console.log(`  closest pairs: ${pairs.slice(0, 5).map((p) => `${p.a} / ${p.b}: ${p.d}`).join(', ')}`);
+  const want = ONLY.length ? 1 : 18;
+  check(views.length >= want && (pairs.length || ONLY.length) && (pairs[0]?.d ?? 99) >= 18, `no two missions look alike: ${pairs.length} pairs of views in different places differ by 18 bits or more (closest ${pairs[0]?.d})`, JSON.stringify(pairs.slice(0, 5)));
+}
+
 // --- saves --------------------------------------------------------------------------------------------------------
 const keys = await az(() => { AZ.saveTo(0); return Object.keys(localStorage); });
 check(keys.includes('afterzero.lv.slot.0') && !keys.includes('afterzero.slot.0') && !keys.includes('afterzero.save.v1'), 'this edition saves under its own namespace (afterzero.lv.*)', JSON.stringify(keys));
+await page.close();
+await survey();
 check(errors.length === 0, 'no page errors', [...new Set(errors)].join(' | '));
 await browser.close();
 server.close();

@@ -38,6 +38,7 @@ export class Player {
     this.bob = 0;
     this.half = HALF;
     this.floatY = 1.25;
+    this.stepUp = 0; // an edge this high is stepped up onto, not walked into (THE LAST VERSION sets 0.35)
   }
 
   // Swap the character model (character select: settings.hero); returns the new model.
@@ -169,6 +170,12 @@ export class Player {
         }
       }
       if (!overlap) continue;
+      const lift = axis !== 1 && this.stepUp && this.gravity === -1 ? c.max[1] - (p[1] - h[1]) + 1e-3 : 0;
+      if (lift > 0 && lift <= this.stepUp && !cols.some((o) => o !== c && [0, 1, 2].every((a) => p[a] + h[a] + (a === 1 ? lift : 0) > o.min[a] && p[a] - h[a] + (a === 1 ? lift : 0) < o.max[a]))) {
+        this.pos.y += lift;
+        p[1] += lift;
+        continue;
+      }
       if (d > 0) p[axis] = c.min[axis] - h[axis] - 1e-4;
       else p[axis] = c.max[axis] + h[axis] + 1e-4;
       this.pos[key] = p[axis];

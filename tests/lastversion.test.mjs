@@ -24,6 +24,12 @@ import { checkRecord, makeRecord, colliderEntry, Process, MAX_PROCESSES, MAX_PAR
 import * as THREE from '../game/vendor/three.module.min.js';
 import { ENDINGS, LOCK_ORDER } from '../game/js/editions/lastversion/acts.js';
 import { NPCS, DIALOGUE, AMBIENT, npcState, JUN_HOOK, WATER_HOOK, MARA_HOOK, IVEN_HOOK } from '../game/js/editions/lastversion/npcs.js';
+import { PLACES, signature, quartersOf } from '../game/js/editions/lastversion/places/index.js';
+import { SKIES } from '../game/js/editions/lastversion/places/years.js';
+import { MATS, SURFACES } from '../game/js/editions/lastversion/places/materials.js';
+import { KIT_NAMES } from '../game/js/editions/lastversion/places/kits.js';
+import { STYLES } from '../game/js/editions/lastversion/places/styles.js';
+import { Player } from '../game/js/entities/Player.js';
 
 const INTENTS = ['challenge', 'comfort', 'investigate', 'withdraw'];
 const engine = () => new RealityEngine(LV.engineOptions());
@@ -303,7 +309,7 @@ test('every obstacle has a state (or the anchor) that gets past it', () => {
       }
     }
   }
-  assert.ok(rooms > 150, `${rooms} challenges checked`);
+  assert.ok(rooms > 100, `${rooms} challenges checked`); // (the generators' rooms: Missions 9 on, until U3 retires them)
 });
 
 test('every generated route only uses states its room was authored with', () => {
@@ -474,7 +480,7 @@ test('three years and nothing else: no INVERTED, no gravity, no ceiling in any m
       for (const w of [...(room.route || []), ...(room.keyRoute || [])]) if (w.state) assert.ok(LV.states.includes(w.state), `${here} ${rid}: route ${w.state}`);
     }
   }
-  assert.ok(checked > 150, `${checked} challenges`);
+  assert.ok(checked > 100, `${checked} challenges`);
 });
 
 test('no laws, no law tokens, no memory keys, and Kai thinks without ceilings or domes', () => {
@@ -704,4 +710,290 @@ test('the REVERSE rules, refusals and lines are the spec\'s, and recorded', () =
   assert.ok(has('KAI', INV_LINES.unlock) && has('KAI', INV_LINES.refuse) && has('NONE', INV_LINES.intercom) && has('NONE', INV_LINES.watch));
   for (const [, t] of RULES) assert.ok(has('NONE', t), t);
   for (const p of main.find((m) => m.n === 11).processes) for (const h of p.hints || []) assert.ok(has('KAI', h), h);
+});
+
+// --- open-sky places (OVERHAUL.md §4; U2: the Prologue and Act I) --------------------------------------------------
+// what each mission sheet (§5) names: its place, its quarters and every landmark
+const SHEETS = {
+  m01: { place: 'rain_south', quarters: ['HOME & MARKET', 'TRANSIT PLAZA & CHECKPOINT', 'LINE 41'],
+    landmarks: 'door4B photoByDoor marketLane toyChild floristStall noodleAlley laundromat pocketPark puddle pigeonLedge plazaClock tramStop photoBooth rookCall checkpointBooth checkpointQueue towpath fireEscape roofTerrace platform junBooth relay41B maintGate41B boardSign viaduct carriageDoor busDepot staffGate' },
+  m02: { place: 'helix', quarters: ['SECURITY', 'THE DARK CORRIDOR', 'POWER', 'CONDUIT & ARCHIVE', 'THE CHAMBER'],
+    landmarks: 'lobby lobbyIntercom sitePrint linPeg cameraRoom westGallery linDesk plantTerrace cellA cellB cellC ivenPost staffLounge skybridge conduit readingRoom passDrawer liftAtrium chamberDoor chamber' },
+  m03: { place: 'helix', quarters: ['THE CHAMBER', 'TEMPORAL LAB', 'THE DIG', 'MACHINE HALL', 'CONTROL'],
+    landmarks: 'chamber ringTouch temporalLab cableSocket powerPanel excavationHut excavationLog thermosER footprints polaroid machineHall lift2196 plaque2196 serviceYard controlRoom keycard controlPanel' },
+  m04: { place: 'valley_upper', quarters: ['THE FIRST FIRE', 'THE WATER STEPS', 'THE RING'],
+    landmarks: 'blanketHouse firePit granary lintelHouse pictoFire pictoWater pictoRing tellingStone waterSteps cistern stele grainStore ring elderSeat underStair underChamber panels card childRingCord' },
+  m05: { place: 'valley_river', quarters: ['THE HEAD-STONE', 'THE RETAINING WALL', 'THE PRESSURE GATE', 'THE UPPER GORGE'],
+    landmarks: 'weir millRace headStone waterMill wall80 wallBrace stiltHouses jetties tallyWall coldHearths muralWall gateTower basin buriedMachine cairnSite dryChannel gate1 gate2 gate3 aqueduct muralCliff' },
+  m06: { place: 'oldtown', quarters: ['SHOP FLOOR & CANAL STREET', 'THE GALLERIES', 'THE CLOCK ROOM / ROOF'],
+    landmarks: 'cellarStair shopFloor repeatArm canalBridge shopWindows lightWell galleries floorboards hiddenStair ezraBench clockRoom clock2026 clock2049 clock2196 recordingCase roofTerrace clockFace loopSpring' },
+  m07: { place: 'observatory', quarters: ['THE LOWER RING', 'THE INSTRUMENT STAIR', 'THE OUTER RING'],
+    landmarks: 'gnomon lowerRing astronomerRoofs nikoGuide rotatingPlatforms starTube datesRing scavengerCamp cache outerRingWalk horizonRing tinSpot' },
+  m08: { place: 'helix_v17', quarters: ['STAFF RECORDS', 'THE CORRUPTED LOG', 'THE LAST TEN MINUTES'],
+    landmarks: 'receptionDesk riverCourt printCase photoWall recordsTerminal linDesk staffDoor riverWall serverRoom2026 securityOffice rookOffice reconstruction containmentCube versionTerminal groupPhoto' },
+};
+const PLACED = LEVELS.filter((l) => SHEETS[l.deck.mkey]);
+const sameAs = (a, b) => a === b || [].concat(PLACES[a].sameAs || []).includes(b) || [].concat(PLACES[b].sameAs || []).includes(a);
+// the horizontal extent of a visual piece, and its height
+function extent(v) {
+  if (v.b) return [v.b[0], v.b[2], v.b[3], v.b[5], v.b[4] - v.b[1], v.b[1]];
+  const r = v.R ?? v.r ?? Math.max(v.w ?? 0, v.d ?? 0) / 2;
+  const hw = v.w !== undefined ? Math.hypot(v.w, v.d ?? 0) / 2 : r;
+  return [v.x - hw, v.z - hw, v.x + hw, v.z + hw, v.h ?? (v.R ? v.R * 2 : r * 2), v.y];
+}
+
+test('Missions 1 to 8 stand in their own open places, every quarter and every landmark of their sheet', () => {
+  for (const [key, sheet] of Object.entries(SHEETS)) {
+    const ls = PLACED.filter((l) => l.deck.mkey === key);
+    assert.ok(ls.length, `${key} builds`);
+    for (const { deck, s, level } of ls) {
+      const here = `${key}/${s}`;
+      assert.equal(level.place, sheet.place, `${here}: its place`);
+      assert.deepEqual(level.quarters.map((q) => q.name), sheet.quarters, `${here}: its quarters`);
+      const missing = sheet.landmarks.split(' ').filter((n) => !level.landmarks[n]);
+      assert.deepEqual(missing, [], `${here}: landmarks the sheet names`);
+      for (const [n, l] of Object.entries(level.landmarks)) assert.ok(l.length === 4 && l.every(Number.isFinite), `${here}: ${n}`);
+      // D2 step 1: sector i spawns in quarter i
+      const q = level.quarters[Math.min(s, level.quarters.length - 1)];
+      if (deck.sectors > 1) assert.ok(Math.hypot(level.spawn[0] - q.spawn[0], level.spawn[2] - q.spawn[2]) < 0.01, `${here}: spawns at ${q.name}`);
+      assert.ok(level.exit?.box && level.checkpoints.length >= level.quarters.length, `${here}: an exit, and a checkpoint per quarter`);
+    }
+  }
+});
+
+test('open sky: no dome, no ceiling over more than 15% of a place, and no tall wall on its bounds', () => {
+  const COVER = new Set(['dome', 'ceil', 'roots', 'helixCeil']);
+  const ROCK = new Set(['rock', 'cliffRock', 'rockGrass']);
+  for (const { deck, s, level } of PLACED) {
+    const here = `${deck.mkey}/${s}`;
+    const [bx0, bz0, bx1, bz1] = level.bounds;
+    const area = (bx1 - bx0) * (bz1 - bz0);
+    let cover = 0;
+    for (const v of level.vis) {
+      if (!COVER.has(v.m)) continue;
+      const [x0, z0, x1, z1] = extent(v);
+      cover += (x1 - x0) * (z1 - z0);
+    }
+    for (const e of level.elements) if (!e.invisible && ['dome', 'ceil', 'roots'].includes(e.mat)) cover += (e.box[3] - e.box[0]) * (e.box[5] - e.box[2]);
+    assert.ok(cover <= area * 0.15, `${here}: ${Math.round((cover / area) * 100)}% under a ceiling`);
+    assert.ok(!level.elements.some((e) => !e.invisible && !e.ghost && e.mat === 'dome'), `${here}: no dome`);
+    // the bounds are an invisible ring: what stands on them is never a wall taller than 6 m (cliffs excepted)
+    for (const v of level.vis) {
+      if (ROCK.has(v.m) || !['box', 'obox'].includes(v.k)) continue;
+      const [x0, z0, x1, z1, h] = extent(v);
+      // a wall that runs along an edge: thin across it, long along it, standing on the line
+      const near = (a, b) => Math.abs(a - b) < 1.5;
+      const alongX = z1 - z0 < 2 && x1 - x0 > 6 && (near(z0, bz0) || near(z1, bz0) || near(z0, bz1) || near(z1, bz1));
+      const alongZ = x1 - x0 < 2 && z1 - z0 > 6 && (near(x0, bx0) || near(x1, bx0) || near(x0, bx1) || near(x1, bx1));
+      assert.ok(!((alongX || alongZ) && h > 6), `${here}: a ${h} m ${v.m} wall on the bounds at ${[x0, z0, x1, z1]}`);
+    }
+    const ring = level.elements.filter((e) => e.invisible && (e.box[3] <= bx0 + 0.01 || e.box[0] >= bx1 - 0.01 || e.box[5] <= bz0 + 0.01 || e.box[2] >= bz1 - 0.01));
+    assert.ok(ring.length >= 4, `${here}: an invisible ring at the bounds`);
+  }
+});
+
+test('no generator and no Vessel look: Missions 1 to 8 are built from their place specs', () => {
+  for (const { deck, s, level } of PLACED) {
+    const here = `${deck.mkey}/${s}`;
+    assert.ok(level.place && !level.zone, `${here}: not a ZoneGen district`);
+    assert.equal(level.palette.look, undefined, `${here}: no Vessel look`);
+    assert.ok(!['rooms', 'zone'].includes(deck.kind) && !deck.deckKey && !deck.theme, `${here}: no LevelGen deck or ZoneGen theme (${deck.kind})`);
+    assert.ok(!level.elements.some((e) => e.dress), `${here}: no dress.js decoration`);
+    assert.ok(level.rooms[level.outdoorRoom]?.outdoor, `${here}: the place is an outdoor room`);
+    for (const rid of level.order) assert.ok(!level.rooms[rid].look, `${here} ${rid}`);
+  }
+});
+
+test('every year a mission is authored with has a sky, a light and an hour', () => {
+  for (const { deck, s, level } of PLACED) {
+    for (const st of deck.states) {
+      const y = level.years[st];
+      assert.ok(y, `${deck.mkey}/${s}: a year for ${st}`);
+      assert.ok(SKIES[y.sky], `${deck.mkey} ${st}: sky preset ${y.sky}`);
+      for (const k of ['hour', 'fog', 'density', 'night']) assert.ok(Number.isFinite(y[k]), `${deck.mkey} ${st}: ${k}`);
+      assert.ok(Number.isFinite(y.sun?.elev) && Number.isFinite(y.sun?.az), `${deck.mkey} ${st}: the sun ${JSON.stringify(y.sun)}`);
+      assert.ok(y.era, `${deck.mkey} ${st}: an era for the horizon`);
+    }
+  }
+  for (const [k, p] of Object.entries(SKIES)) for (const f of ['zenith', 'horizon', 'ground', 'sun']) assert.ok(Number.isFinite(p[f]), `${k}.${f}`);
+});
+
+test('no two missions look alike: the signature is unique unless the place is the same in another year', () => {
+  const sig = {};
+  for (const key of Object.keys(SHEETS)) {
+    const { deck } = PLACED.find((l) => l.deck.mkey === key);
+    const sg = signature(PLACES[deck.place], deck);
+    for (const [other, o] of Object.entries(sig)) {
+      if (o.sg !== sg) continue;
+      assert.ok(sameAs(o.place, deck.place), `${key} looks like ${other}: ${sg}`);
+    }
+    sig[key] = { sg, place: deck.place };
+  }
+  assert.ok(sameAs('helix_v17', 'helix') && sameAs('helix', 'helix_v17'), 'Helix in VERSION 17 is Helix, declared both ways');
+  assert.equal(new Set(Object.values(sig).map((o) => o.sg)).size, Object.keys(SHEETS).length, 'every signature differs');
+});
+
+test('places are big enough to explore: a short side of 120 m or more, quarters of 2,500 m² or more', () => {
+  for (const [key, spec] of Object.entries(PLACES)) {
+    const [x0, z0, x1, z1] = spec.bounds;
+    assert.ok(Math.min(x1 - x0, z1 - z0) >= 120, `${key}: ${x1 - x0} × ${z1 - z0}`);
+  }
+  for (const { deck, level } of PLACED) {
+    for (const q of level.quarters) {
+      const [x0, z0, x1, z1] = q.area;
+      assert.ok((x1 - x0) * (z1 - z0) >= 2500, `${deck.mkey}: ${q.name} is ${(x1 - x0) * (z1 - z0)} m²`);
+    }
+  }
+});
+
+test('the years of a place share one layout and differ by big pieces (20 or more per extra year)', () => {
+  const big = (v) => { const [x0, z0, x1, z1, h] = extent(v); return Math.max(x1 - x0, z1 - z0, h) >= 2; };
+  for (const key of Object.keys(SHEETS)) {
+    const ls = PLACED.filter((l) => l.deck.mkey === key);
+    const { deck, level } = ls[0];
+    // the unconditioned pieces are the same in every sector of the mission (and so in every year)
+    const plain = (lv) => JSON.stringify(lv.vis.filter((v) => !v.e && !v.when).map((v) => [v.k, v.m, v.b || [v.x, v.y, v.z]]));
+    for (const l of ls.slice(1)) assert.equal(plain(l.level), plain(level), `${key}: one layout`);
+    for (const st of deck.states) {
+      if (st === 'PRESENT') continue;
+      const n = level.vis.filter((v) => v.e && v.e.includes(st) && v.e.length < 3 && big(v)).length + level.veg.filter((t) => t.e && t.e.includes(st) && t.s >= 1).length;
+      assert.ok(n >= 20, `${key}: ${n} big pieces only in ${st}`);
+    }
+  }
+});
+
+test('ancient years carry no lamp, neon, road or written sign', () => {
+  let checked = 0;
+  for (const { deck, s, level } of PLACED) {
+    const ancient = PLACES[level.place].ancientYears || [];
+    for (const st of deck.states.filter((x) => ancient.includes(x))) {
+      checked++;
+      const here = `${deck.mkey}/${s} ${st}`;
+      for (const v of level.vis) {
+        if (v.e && !v.e.includes(st)) continue;
+        const tags = MATS[v.m]?.tags || [];
+        assert.ok(!tags.includes('modern'), `${here}: ${v.m} (${tags})`);
+      }
+      for (const t of level.texts) {
+        const shows = !t.when || compileCondition(t.when)({ fact: () => false, state: st });
+        assert.ok(!shows, `${here}: the words "${t.text}"`);
+      }
+    }
+  }
+  assert.ok(checked >= 6, `${checked} ancient years checked`);
+});
+
+test('every traversal challenge names an answer in its room\'s years', () => {
+  const WATCH = /drone|unit|sentinel|sweeper/;
+  let n = 0;
+  for (const { deck, s, level } of PLACED) {
+    for (const rid of level.order) {
+      const room = level.rooms[rid];
+      const st = room.states || deck.states;
+      for (const c of room.challenges || []) {
+        if (WATCH.test(c.key)) continue;
+        n++;
+        assert.ok(c.answer?.length, `${deck.mkey}/${s} ${rid}: ${c.key} names its answer`);
+        for (const a of c.answer) assert.ok(st.includes(a), `${deck.mkey}/${s} ${rid}: ${c.key} answers in ${a}, the room has ${st}`);
+        assert.equal(c.hints?.length ?? HINTS[c.key]?.length, 3, `${deck.mkey}: ${c.key} has three hints`);
+      }
+    }
+  }
+  assert.ok(n >= 8, `${n} crossings`);
+});
+
+test('a place keeps to its budgets: colliders, texts, people, vegetation kinds, materials and kits', () => {
+  for (const { deck, s, level } of PLACED) {
+    const here = `${deck.mkey}/${s}`;
+    assert.ok(level.elements.length <= 1500, `${here}: ${level.elements.length} colliders`);
+    assert.ok(level.texts.length <= 60, `${here}: ${level.texts.length} texts`);
+    // people: today's level, and the named and tier-2 people plus the crowd U4 walks along level.crowd (it replaces
+    // today's numbered commuters, amb_<n>), each within §4.7's 24
+    const crowdN = level.crowd.reduce((a, c) => a + c.n, 0);
+    const named = level.npcs.filter((n) => !/^amb_\d+$/.test(n.id)).length;
+    assert.ok(level.npcs.length <= 24 && named + crowdN <= 24, `${here}: ${level.npcs.length} people today, ${named} named + ${crowdN} in the crowd`);
+    const [bx0, bz0, bx1, bz1] = level.bounds;
+    assert.ok(level.crowd.length, `${here}: crowd paths for U4`);
+    for (const c of level.crowd) {
+      assert.ok(['present', 'ancient', 'future'].includes(c.era) && c.region && c.role && c.n >= 1, `${here}: crowd ${JSON.stringify(c)}`);
+      assert.ok(c.years?.length && c.years.every((y) => deck.states.includes(y)), `${here}: the ${c.role}s walk in this mission's years (${c.years})`);
+      assert.ok(c.path.length >= 2 && c.path.every(([x, z]) => x > bx0 && x < bx1 && z > bz0 && z < bz1), `${here}: the ${c.role}s' path is inside the place`);
+    }
+    assert.ok(new Set(level.veg.map((t) => t.k)).size <= 6, `${here}: vegetation kinds`);
+    for (const v of level.vis) assert.ok(MATS[v.m] && SURFACES[MATS[v.m].s], `${here}: material ${v.m}`);
+    for (const it of level.interactables) if (it.kit) assert.ok(KIT_NAMES.includes(it.kit), `${here}: kit ${it.kit}`);
+    for (const it of level.interactables) assert.ok(!['terminal', 'fragment', 'plaque'].includes(it.kind) || it.kit, `${here}: ${it.id} is a thing of its place, not a terminal or a crystal`);
+  }
+  for (const st of Object.values(STYLES)) assert.ok(st.veg.length <= 6 && st.palette.look === undefined);
+});
+
+// Kai walks a route through a place with the game's own physics (entities/Player.js, stepUp 0.35):
+// [x, z] waypoints, steering only; it fails where a stair, ramp or bridge does not carry him
+function walkRoute(level, state, start, route, facts = {}) {
+  const cols = [];
+  for (const e of level.elements) {
+    if (!e.solid || (e.when && !compileCondition(e.when)({ fact: (k) => facts[k], state }))) continue;
+    cols.push({ min: e.box.slice(0, 3), max: e.box.slice(3) });
+  }
+  const p = Object.assign(Object.create(Player.prototype), { pos: new THREE.Vector3(start[0], start[1] + 0.86, start[2]), vel: new THREE.Vector3(), H: new THREE.Vector3(0, 0, -1), U: new THREE.Vector3(0, 1, 0), gravity: -1, grounded: false, half: new THREE.Vector3(0.3, 0.85, 0.3), stepUp: 0.35, comfort: true, pitch: 0, facing: new THREE.Vector3(0, 0, -1), colliders: [] });
+  for (const [x, z, jump] of route) {
+    let best = 1e9, stuck = 0;
+    for (let t = 0; t < 40; t += 1 / 30) {
+      const dx = x - p.pos.x, dz = z - p.pos.z, d = Math.hypot(dx, dz);
+      if (d < 0.45) break;
+      p.H.set(dx / d, 0, dz / d);
+      p.update(1 / 30, { forward: 1, strafe: 0, run: false, jump: !!jump && p.grounded, slow: false }, cols);
+      if (d < best - 0.05) { best = d; stuck = 0; } else if ((stuck += 1 / 30) > 3) break;
+    }
+    const left = Math.hypot(x - p.pos.x, z - p.pos.z);
+    if (left > 0.6) return { stuck: [x, z], at: p.pos.toArray().map((v) => +v.toFixed(2)) };
+  }
+  return { at: [+p.pos.x.toFixed(2), +(p.pos.y - 0.85).toFixed(2), +p.pos.z.toFixed(2)] };
+}
+
+test('the places can be walked: their stairs, terraces, ramps and bridges carry Kai (Player physics, stepUp 0.35)', () => {
+  const lv = (key, s = 0) => PLACED.find((l) => l.deck.mkey === key && l.s === s).level;
+  const lm = (l, n) => l.landmarks[n];
+  const routes = [
+    ['m01', 'PRESENT', (l) => lm(l, 'door4B'), [[10.5, -4], [10.5, -66], [4, -84]], 0.15, {}],
+    ['m01', 'PRESENT', (l) => [lm(l, 'fireEscape')[0], 0.15, lm(l, 'fireEscape')[2] + 1.5], [[46.9, -97.5], [46.9, -80.6], [46.2, -79], [45.6, -80.5], [45.6, -97.4], [46.2, -99.2], [46.9, -97.5], [46.9, -80.6], [46.2, -79], [45.6, -80.5], [45.6, -97.4], [46.2, -99.4], [48.6, -99.4], [60, -90]], 12.3, {}],
+    ['m01', 'PRESENT', () => [0, 0.15, -100], [[0, -112], [0, -128], [0, -152]], 3.4, { checkpoint_passed: true }],
+    ['m02', 'PRESENT', (l) => [l.rooms.security.spawn[0], 0, l.rooms.security.spawn[2]], [[-47.2, 32.4], [-47.2, 18.4]], 0, {}],
+    ['m04', 'PRESENT', (l) => lm(l, 'blanketHouse'), [[-10, 70], [0, 67], [0, 58], [-20, 40], [-20, 32], [0, 14], [0, 11], [0, 3], [2.8, -1], [2.8, -7.5], [0, -8.6], [0, -16]], 6, {}],
+    ['m04', 'PAST', () => [55, 0, 75], [[55, 60], [55, 50]], 3, {}],
+    ['m05', 'PRESENT', (l) => lm(l, 'weir'), [[30, -26], [16.5, -26], [8, -26]], 2, {}],
+    ['m05', 'PRESENT', (l) => lm(l, 'southBank'), [[-16, 44.5], [-28, 44.5], [-28, 34.2], [-28.6, 30]], 7.4, {}],
+    ['m06', 'PRESENT', (l) => lm(l, 'cellarStair'), [[9.8, -20.6], [12, -18.4]], 0, {}],
+    ['m06', 'PRESENT', () => [21.1, 0, -18.5], [0, 1, 2, 3, 4].flatMap((k) => (k % 2 ? [[22.5, -29.4], [22.5, -19], [21.1, -18.4]] : [[21.1, -19.2], [21.1, -29.7], [22.5, -30.2]])), 20, {}],
+    ['m06', 'PAST', () => [19.5, 0, -28], [[19.4, -30.5], [11.2, -30.5]], 4, {}],
+    ['m07', 'PRESENT', () => [30, 0, -18], [[30, -37], [26, -70], [41, -70], [46.5, -52], [40, -52], [14, -52], [12, -52]], 18, {}],
+    ['m07', 'PAST', () => [46, 16, -70], [[44, -74], [66, -74], [74, -77]], 27.5, {}],
+    ['m07', 'FUTURE', () => [-80, 0, -52], [[-78, -52], [-37, -52], [-35, -52]], 18, {}],
+    ['m08', 'PRESENT', (l) => lm(l, 'atriumDoors'), [[-40, -20], [-30, -24], [30, -20], [30, -21], [30, -37.5], [30, -38.6]], 9, {}],
+    ['m08', 'PRESENT', () => [40, 0, -28], [[40, -24.5], [40, -14.3], [44, -10]], 6, {}],
+    ['m08', 'PRESENT', () => [0, 0, -22], [[0, -18.4], [-0.3, -17], [0.4, -15.6], [-0.2, -14.2], [0.3, -12.8], [0, -11]], 0.4, {}],
+  ];
+  for (const [key, st, start, route, y, facts] of routes) {
+    const l = lv(key);
+    const r = walkRoute(l, st, start(l), route, facts);
+    assert.ok(!r.stuck && Math.abs(r.at[1] - y) < 0.6, `${key} ${st}: ${JSON.stringify(route.slice(-1))} ${JSON.stringify(r)}`);
+  }
+  // the river in Mission 5: in the abandoned year its footbridge is gone, in the thriving year it carries Kai over
+  const m5 = lv('m05');
+  const [sx, , sz] = m5.landmarks.footbridgeS, n = m5.landmarks.footbridgeN;
+  assert.ok(walkRoute(m5, 'PAST', [sx, 0, sz], [[n[0], n[2]]]).at?.[1] > 0, 'THRIVING: over the footbridge');
+  assert.ok(walkRoute(m5, 'PRESENT', [sx, 0, sz], [[n[0], n[2]]]).at?.[1] === undefined || walkRoute(m5, 'PRESENT', [sx, 0, sz], [[n[0], n[2]]]).at[1] < -1, 'ABANDONED: into the river');
+});
+
+test('the Chronolith has the edition\'s three forms and stands in them: stone (the village), the black ring (Helix), the broken halo (2196)', async () => {
+  const { makeChronolith } = await import('../game/js/editions/lastversion/Build.js');
+  for (const k of ['stone', 'helix', 'halo']) assert.equal(makeChronolith(1, k).userData.kind, k);
+  const model = (key, id) => PLACED.find((l) => l.deck.mkey === key).level.interactables.find((i) => i.id === id)?.model?.();
+  assert.equal(model('m02', 'scene_chronolith')?.userData.kind ?? model('m02', 'chronolith')?.userData.kind, 'helix', 'Mission 2: the black ring');
+  const m3 = PLACED.find((l) => l.deck.mkey === 'm03').level.interactables.find((i) => i.model && /touch/.test(i.id + i.scene))?.model();
+  assert.ok(m3?.userData.setEra, 'Mission 3: one model, a form per year');
+  const shown = (st) => { m3.userData.setEra(st); return m3.children.find((c) => c.visible)?.userData.kind; };
+  assert.deepEqual(['PRESENT', 'PAST', 'FUTURE'].map(shown), ['helix', 'helix', 'halo'], 'Mission 3: broken into a halo by 2196');
+  assert.equal(model('m04', 'chronolith_m04')?.userData.kind, 'stone', 'Mission 4: the ring as the village keeps it');
+  for (const f of fs.readdirSync('game/js/editions/lastversion').filter((n) => n.endsWith('.js'))) assert.ok(!/makeMachineRing/.test(fs.readFileSync(`game/js/editions/lastversion/${f}`, 'utf8')), `${f}: no Station Zero lab ring`);
 });

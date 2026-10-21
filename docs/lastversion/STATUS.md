@@ -29,6 +29,17 @@ story beats. How it works: [`DESIGN.md`](DESIGN.md).
   refusal, and Ward 32's four-bolt reversing lock with its three clues. v2.0 saves that stood in
   an INVERTED room are migrated on load. Mission 11's sound puzzle, hazards and Nurse Odile, and
   every later mission's processes, come with the story rewrite (U6–U8).
+- **Open places under a real sky** (v2.1, U2; DESIGN.md "Places under an open sky"): Missions 1–8
+  stand in seven authored places (`places/specs/`): Rain City South, Helix (three wings round the
+  court; the north wing waits for Mission 12), Helix in VERSION 17, the Ring Hill 3,000 years ago,
+  the river bend with its upstream gorge, Old Town with Ezra Moll's light-well house, and the
+  Ridge's observatory. Each has its own sky per year (a shader dome with sun, moon, stars, two
+  cloud layers, lightning and Mission 1's ring-shaped hole), a horizon painted from one valley
+  atlas (the Ring Hill, the Ridge, the Notch, the city, the sea at their true bearings), light,
+  fog, weather and grade per year, years that differ by big pieces on one layout, and quarters
+  the beats happen in (sector *i* is quarter *i*). Records and fragments are things of their place
+  (telling-stones, ledgers, bronze plates, glass cases), never terminals or crystals. No ZoneGen,
+  LevelGen, `dress.js` or Vessel look in Missions 1–8. PERF_PLACEHOLDER
 - **The NPC system** of the supplement: trust, knowledge, quest state, temporal state, faction
   standing and evidence flags in the save; dialogue choices by intent (challenge / comfort /
   investigate / withdraw); barks; echoes standing in for people absent from a state; the case
@@ -68,7 +79,7 @@ story beats. How it works: [`DESIGN.md`](DESIGN.md).
 
 ## Generated (playable, solvable by construction, not hand-tuned)
 
-- **The places of Acts I–IV, the Finale and the Cases**: 64 generated levels (open districts and
+- **The places of Acts II–IV, the Finale and the Cases** (until U3): the generated levels (open districts and
   interiors) dressed per state, each with an authored beat. Every one is checked: each obstacle
   has a state or the anchor that gets past it, each generated route uses only its room's states,
   each beat has something that completes it, every place can snap back to the present.

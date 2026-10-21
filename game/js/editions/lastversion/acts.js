@@ -8,6 +8,7 @@
 // combat, so soldiers, scavengers and security systems are watchers to slip past
 // (docs/lastversion/DESIGN.md says so too).
 import { CAST, WATER_HOOK, MARA_HOOK, intent } from './npcs.js';
+import { makeChronolith } from './Build.js';
 
 const L = (who, text, when) => (when ? { who, text, when } : { who, text });
 const N = (text) => L('NONE', text);
@@ -33,6 +34,8 @@ const P = {
 };
 
 const zone = (o) => ({ kind: 'zone', sectors: o.beats.length, ...o });
+// a mission in one of the open places (places/specs/<key>.js): sector i activates quarter i
+const place = (o) => ({ kind: 'place', sectors: o.beats.length, ...o });
 const rooms = (o) => ({ kind: 'rooms', sectors: o.beats.length, gated: true, ...o });
 const E = (id, lines, extra = {}) => ({ kind: 'encounter', crew: C(id), lines: says(id, lines), ...extra });
 const encounterQ = (id, lines, choices, extra = {}) => E(id, lines, { choices, ...extra });
@@ -40,12 +43,19 @@ const encounterQ = (id, lines, choices, extra = {}) => E(id, lines, { choices, .
 // =============================================================================================
 // ACT I: THE WORLD THAT REMEMBERS
 export const ACT1 = [
-  zone({
+  place({
     key: 'm04', n: 4, chapter: 'act1', name: 'THE MAN FROM THE LAST DAY', title: 'The Ancient Settlement', subtitle: 'A village built around a stone ring. Its leader knows the mark on your wrist.',
-    theme: 'settlement', palette: P.settlement, states: ['PRESENT', 'PAST'], canal: false, drones: [0, 0, 0], ambience: 'water', ambient: 'settlement',
+    place: 'valley_upper', states: ['PRESENT', 'PAST'], drones: [0, 0, 0], ambience: 'water', ambient: 'settlement',
     labels: { PRESENT: 'THE VILLAGE', PAST: 'BEFORE THE FIRE' }, // three thousand years before Helix: here, now is the village
-    rooms: ['THE FIRST FIRE', 'THE WATER STEPS', 'THE RING CHAMBER'], motto: 'YOU CAME BEFORE THE FIRST FIRE', gate: 'THE UNDER-CHAMBER',
+    motto: 'YOU CAME BEFORE THE FIRST FIRE', gate: 'THE UNDER-CHAMBER',
     crew: C('elder'),
+    // the Chronolith as the settlement keeps it: dressed stone with a bronze band, standing inside the ring of
+    // standing stones north of the under-chamber (Build.js makeChronolith 'stone'; the same ring Helix digs out)
+    overlay(P) {
+      const [x, , z] = P.at('underChamber');
+      P.col([x - 2.3, 10, z - 10.3, x + 2.3, 14.2, z - 8.9]);
+      P.inter.push({ id: 'chronolith_m04', kind: 'scene', scene: 'chronolith_m04', pos: [x, 12.05, z - 9.6], yaw: 0, r: 0, prompt: '', model: () => makeChronolith(0.5, 'stone'), room: P.rid });
+    },
     intro: [N('Kai wakes in grass, under a sky that has never seen a plane. The ring in the middle of the village is stone, and it is the same ring.'), K('Where is this. When is this.')],
     fragments: [[
       'A wrist mark carved into the lintel of the first house: a circle with a broken halo. Yours.',
@@ -77,11 +87,11 @@ export const ACT1 = [
     ],
     outro: [N('Mission 4 ends with a card that cannot exist in a chamber that should not.')],
   }),
-  zone({
+  place({
     key: 'm05', n: 5, chapter: 'act1', name: 'THE VILLAGE THAT NEVER EXISTED', title: 'The settlement, thriving, abandoned, flooded', subtitle: 'Niko follows you through the years.',
-    theme: 'settlement', palette: P.settlement, states: ['PAST', 'PRESENT', 'FUTURE'], canal: true, drones: [0, 0, 0], unstable: true, ambience: 'water', ambient: 'settlement',
+    place: 'valley_river', states: ['PAST', 'PRESENT', 'FUTURE'], drones: [0, 0, 0], unstable: true, ambience: 'water', ambient: 'settlement',
     labels: { PAST: 'THRIVING', PRESENT: 'ABANDONED', FUTURE: 'FLOODED' },
-    rooms: ['THE LIVING VILLAGE', 'THE EMPTY VILLAGE', 'THE DROWNED VILLAGE'], motto: 'THE RIVER WAS TAUGHT TO STAY', gate: 'THE BURIED MACHINE',
+    motto: 'THE RIVER WAS TAUGHT TO STAY', gate: 'THE BURIED MACHINE',
     crew: C('niko'),
     intro: [N('The village in three states: thriving in the earliest, abandoned in the middle, flooded in the last. Niko watches you switch.'), ...says('niko', ['You keep changing the world.']), K('I\'m trying to get home.'), ...says('niko', ['Then stop changing it.'])],
     fragments: [[
@@ -107,11 +117,10 @@ export const ACT1 = [
     },
     outro: [N('Niko reveals that Helix did not invent the machine; it found it.')],
   }),
-  rooms({
+  place({
     key: 'm06', n: 6, chapter: 'act1', name: 'THE CLOCKMAKER\'S HOUSE', title: 'A workshop that repeats itself', subtitle: 'The clockmaker says you visited decades ago.',
-    deckKey: 'eng', palette: { ...P.helix2, look: 'eng', fog: 0x4a3a2c, wall: '#6b6258', floor: '#5a5c5e', accent: 0xffb020, light: 0xffa04a, tint: 0xffc890, night: 0.35, weather: 'steam', sky: 'warehouse' }, feature: 'time', mechs: ['echo', 'time'],
-    states: ['PAST', 'PRESENT', 'FUTURE'], roomsNames: ['THE SHOP FLOOR', 'THE ARM', 'THE HIDDEN STAIR', 'THE ESCAPEMENT', 'THE BACK ROOM'], motto: 'YOU ASK WHAT TIME IT IS. WRONG QUESTION',
-    ambience: 'hum', ambient: 'helix',
+    place: 'oldtown', states: ['PRESENT', 'PAST', 'FUTURE'], drones: [0, 0, 0], motto: 'YOU ASK WHAT TIME IT IS. WRONG QUESTION',
+    ambience: 'hum', ambient: 'rain',
     beats: [
       { kind: 'arrival', log: { title: 'THE CLOCKMAKER\'S LEDGER', text: 'A customer with no dust on him. Paid in advance for a clock that will not be built for forty years. Asked me to set the arm to repeat. Said he would need to learn it.' }, goal: 'Observe the repeating arm and cross the workshop.' },
       encounterQ('clockmaker', ['You ask what time it is. Wrong question.'], [
@@ -126,10 +135,11 @@ export const ACT1 = [
     },
     outro: [N('A recording warns: when the child returns, do not let him see the ninth minute.')],
   }),
-  zone({
+  place({
     key: 'm07', n: 7, chapter: 'act1', name: 'THE BROKEN OBSERVATORY', title: 'Bronze rings under an open sky', subtitle: 'An ancient observatory, tracking alignments that include your birth.',
-    theme: 'tower', palette: P.observatory, states: ['PAST', 'PRESENT', 'FUTURE'], canal: true, drones: [0, 1, 2], unstable: true, ambience: 'wind', ambient: 'settlement',
-    rooms: ['THE LOWER RING', 'THE INSTRUMENT STAIR', 'THE OUTER RING'], motto: 'THEY DID NOT KNOW WHEN. THEY KNEW WHO', gate: 'THE RING ROOM',
+    place: 'observatory', states: ['PAST', 'PRESENT', 'FUTURE'], drones: [0, 1, 2], unstable: true, ambience: 'wind', ambient: 'settlement',
+    labels: { PAST: 'THE FIRST SKY' },
+    motto: 'THEY DID NOT KNOW WHEN. THEY KNEW WHO', gate: 'THE RING ROOM',
     crew: C('mira'),
     intro: [N('The observatory tracks the sun and the stars across three thousand years. Its rings still turn. Scavengers turn with them, and what they throw lands yesterday.')],
     fragments: [[
@@ -147,10 +157,9 @@ export const ACT1 = [
     ],
     outro: [N('Mira\'s hidden recording implies the Chronolith has been anticipating Kai, not merely recording him.')],
   }),
-  rooms({
+  place({
     key: 'm08', n: 8, chapter: 'act1', name: 'THE FIRST DEATH', title: 'Helix, altered', subtitle: 'The facility you return to is not the one you left.',
-    deckKey: 'arch', palette: P.helix2, feature: 'echo', mechs: ['echo', 'sentinel'], states: ['PAST', 'PRESENT'], unstable: true,
-    roomsNames: ['THE ALTERED LAB', 'STAFF RECORDS', 'THE CORRUPTED LOG', 'CONTAINMENT', 'THE LAST TEN MINUTES'], motto: 'VERSION 17',
+    place: 'helix_v17', states: ['PRESENT', 'PAST'], drones: [0, 1, 1], unstable: true, motto: 'VERSION 17',
     ambience: 'hum', ambient: 'helix',
     beats: [
       { kind: 'arrival', goal: 'Investigate the altered facility: the staff records.', log: { title: 'STAFF RECORDS - REVISED', text: 'VARGA, I. - no record. ROOK, E. - Director. VAREN, K. - Temporal systems engineer, deceased 2026. A researcher named Lin has not come in since the Zero Second. Nobody remembers hiring her.' } },

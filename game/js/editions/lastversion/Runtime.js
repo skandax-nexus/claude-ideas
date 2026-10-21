@@ -16,6 +16,7 @@ import { CAST, DIALOGUE, NPCS, TRUST, KNOWLEDGE, npcState } from './npcs.js';
 import { dressStates, stateWeather } from './dress.js';
 import { Inversion } from './inversion.js';
 import { placeAuthored } from './processes.js';
+import { buildPlace, themeFor as placeTheme, sunDir as placeSun } from './places/index.js';
 
 export const CHAPTERS = {
   prologue: { name: 'PROLOGUE', sub: 'The Zero Second: Rain City, Helix, the first switch', question: 'What happened in the chamber, and why does the voice know Kai?' },
@@ -79,6 +80,9 @@ export const HINTS = {
   sweepers: ['The beams sweep on a rhythm. Watch it twice.', 'Learn the loop, then cross between sweeps.', 'Wait for the beam to pass, then walk through behind it.'],
   sentinel: ['It watches the floor in front of it.', 'Stay behind the pillars. Move when it turns.', 'Wait behind a pillar until it walks away, then cross behind it.'],
   'exit:open': ['The door is open.', 'Just walk.', 'Walk through the door.'],
+  // the open places' own crossings (places/specs)
+  ice: ['The canal is between me and the other side.', 'In 2196 the canal is frozen over, and ice holds a man.', 'Switch to 2196 and walk across the ice, or take a bridge.'],
+  hiddenStair: ['The floorboards are worn where nobody walks any more.', 'In 2026 a stair ran up the north wall. Later somebody bricked it up.', 'Switch to 2026 and take the old stair up from the shop floor.'],
 };
 export const HINTS_REVERSE = {
   roof: ['The scene is on a roof.', 'In the past the old stairs still stand. If something here glints silver, it fell from somewhere, and it can go back.', 'Switch to the past and climb the remembered stairs.'],
@@ -131,6 +135,8 @@ export class LastVersion {
     hud.speakers = def.speakers;
     hud.stabilityBar = true;
     this.inv = new Inversion(this); // REVERSE (Mission 11 on)
+    this.mounted = null; // the open place in the browser: scenery, sky, horizon (places/mount.js)
+    if (game.player) game.player.stepUp = 0.35; // kerbs, terrace steps and ramps are walked up, not jumped
     game.facts.onChange(() => this.onFact());
     // a watcher that rewinds its own damage, lured into a live conduit, stays down
     game.deckWorld.onSentinelDown = (s) => {
@@ -273,15 +279,19 @@ export class LastVersion {
   buildLevel(c) {
     const g = this.g;
     this.inv?.unload(); // the outgoing level's REVERSE processes leave before DeckWorld disposes of it
+    this.mounted?.dispose();
+    this.mounted = null;
     const story = g.story;
     const deck = story.decks[c.deck];
     story.after.dark = deck.dark || 0;
     let level;
-    if (deck.build) level = deck.build(story, c.sector, this);
+    // a mission in an open place (OVERHAUL.md §4): sector i loads the whole map and activates quarter i
+    if (deck.place) level = buildPlace(deck.place, story, c.sector, this, { deck });
+    else if (deck.build) level = deck.build(story, c.sector, this);
     else if (deck.kind === 'rooms') level = generateSector(story, c.deck, c.sector, story.seed);
     else level = generateZone(story, c.deck, c.sector);
     level.deckName = deck.name;
-    level.palette = deck.palette;
+    if (!level.place) level.palette = deck.palette;
     const states = level.states || deck.states || ['PRESENT'];
     // the generator's routes speak Station Zero's states: PHYSICAL is this edition's present, ECHO its past
     const RENAME = { PHYSICAL: 'PRESENT', ECHO: 'PAST' };
@@ -309,15 +319,18 @@ export class LastVersion {
     // a 'tasks' beat: things to do along the avenue, each perhaps in its own state; the last one opens the gate
     const beat = deck.beats?.[c.sector];
     if (beat?.kind === 'tasks') {
-      const rid = level.order[0];
+      const rid = level.outdoorRoom || level.order[0];
       const spots = [[-3.6, -18], [3.6, -34], [-3.6, -68]];
+      // (in a place, a task stands at its landmark: `at: 'landmarkName'`)
+      const where = (at, i) => (typeof at === 'string' && level.landmarks?.[at] ? level.landmarks[at] : at ? [at[0], 0, at[1]] : [spots[i % spots.length][0], 0, spots[i % spots.length][1]]);
       beat.tasks.forEach((t, i) => {
-        const [x, z] = t.at || spots[i % spots.length];
-        level.elements.push({ box: [x - 0.5, 0, z - 0.4, x + 0.5, 1.0, z + 0.4], mat: 'prop', solid: true, room: rid });
-        level.interactables.push({ id: `task_${i}`, kind: 'scene', scene: `task_${i}`, task: i, pos: [x, 1.3, z], r: 2.8, prompt: t.prompt, color: t.state ? { PAST: 0xffc07a, PRESENT: 0x9fd8ff, FUTURE: 0x9fffb0 }[t.state] : 0xffc04a, room: rid });
-        level.texts.push({ text: t.prompt, pos: [x, 2.4, z], rotY: 0, size: 0.3, color: '#ffe6c0', room: rid });
+        const [x, y, z] = where(t.at, i);
+        level.elements.push({ box: [x - 0.5, y, z - 0.4, x + 0.5, y + 1.0, z + 0.4], mat: 'prop', solid: true, room: rid, ...(level.place ? { invisible: true } : {}) });
+        level.interactables.push({ id: `task_${i}`, kind: 'scene', scene: `task_${i}`, task: i, pos: [x, y + 1.3, z], r: 2.8, prompt: t.prompt, color: t.state ? { PAST: 0xffc07a, PRESENT: 0x9fd8ff, FUTURE: 0x9fffb0 }[t.state] : 0xffc04a, room: rid, ...(level.place ? { kit: t.kit || 'crate' } : {}) });
+        level.texts.push({ text: t.prompt, pos: [x, y + 2.4, z], rotY: 0, size: 0.3, color: '#ffe6c0', room: rid });
       });
-      if (beat.npc) level.npcs.push({ id: `npc_${rid}`, crew: beat.npc, pos: [1.8, 0, -8], yaw: Math.PI, room: rid, lines: beat.lines || [], hologram: !!beat.hologram });
+      const [nx, ny, nz] = beat.npcAt && level.landmarks?.[beat.npcAt] ? level.landmarks[beat.npcAt] : [1.8, 0, -8];
+      if (beat.npc) level.npcs.push({ id: `npc_${rid}`, crew: beat.npc, pos: [nx, ny, nz], yaw: Math.PI, room: rid, lines: beat.lines || [], hologram: !!beat.hologram });
     }
     // people who only exist in some of this place's states leave an echo in the others (NPC failure handling)
     for (const n of level.npcs) {
@@ -333,7 +346,7 @@ export class LastVersion {
     placeAuthored(deck, level);
     for (const k of Object.keys(g.engine.overrides)) g.engine.setOverride(k, null);
     for (const rid of level.reversedRooms) g.engine.setOverride(rid, { timeReverse: true });
-    if (!deck.noDress) dressStates(level, states);
+    if (!deck.noDress && !level.place) dressStates(level, states);
     this.level = level;
     this.unstable = !!(level.unstable || deck.unstable);
     return level;
@@ -358,6 +371,13 @@ export class LastVersion {
         g.hud.card(kicker, deck.name, deck.title || deck.subtitle, 4200);
         if (deck.intro?.length) g.after(2.6, () => g.hud.say(deck.intro, g.facts));
       } else g.hud.card(kicker, this.level.rooms[start].name, deck.subtitle || '', 2600);
+    }
+    // an open place: its scenery, sky and horizon, in the room's year (instantly: no easing at a load)
+    if (this.level.place) {
+      this.mounted = this.level.scenery?.(g.deckWorld.root, this) || null;
+      this.placeYear = g.engine.state(this.level.outdoorRoom);
+      this.mounted?.setYear(this.placeYear, true);
+      this.weatherState = null;
     }
     this.inv?.load(this.level);
     this.objective(true);
@@ -412,6 +432,7 @@ export class LastVersion {
     }
     if (deck.done && !flags.beat_done && g.facts.test(deck.done)) g.beatDone();
     g.deckWorld.refresh?.();
+    this.mounted?.refresh(); // pieces of the place that wait on a fact (the braced wall, the drained basin)
     this.objective();
   }
 
@@ -764,6 +785,12 @@ export class LastVersion {
       if (p.x >= b[0] && p.x < b[3] && p.y >= b[1] && p.y < b[4] && p.z >= b[2] && p.z < b[5]) {
         flags[`trig_${i}`] = true;
         for (const [k, v] of Object.entries(t.set)) facts.set(k, v);
+        // a trigger that carries Kai somewhere (Helix's glass lift down into the chamber): a short fade, then there
+        if (t.to && !g.catching) {
+          g.catching = true;
+          g.hud.fade(true);
+          g.after(0.35, () => { g.player.place(t.to); g.hud.fade(false); g.catching = false; });
+        }
       }
     });
     // Chronolith stability: drains in unstable places outside the present, comes back in it
@@ -936,20 +963,39 @@ export class LastVersion {
     g.log.push(`I anchored the ${it.label.toLowerCase()}. It comes with me through the years now.`);
   }
 
+  // what main.js's lights take from the place's year (places/years.js), or the edition's default themes
+  themeFor(state) {
+    return this.level?.place ? placeTheme(this.level, this.yearOf(state)) : null;
+  }
+
+  // where the sun shines from, for the shadows (a low sun throws long ones), or main.js's default
+  sunDir() {
+    return this.level?.place ? placeSun(this.level, this.yearOf(this.g.room ? this.g.engine.state(this.g.room) : 'PRESENT')) : null;
+  }
+
+  // a place's year for a state (a room of the mission's own (Helix's rooms) shares the place's years)
+  yearOf(state) {
+    const ys = this.level?.years || {};
+    return ys[state] ? state : Object.keys(ys)[0];
+  }
+
   // each year of an open district has its own hour: 2026 at dusk, 2196 in a pale dawn
   stateNight(state, night) {
+    if (this.level?.place) return night; // a place's year sets its own night (theme)
     if (!this.level?.zone || this.deck?.noDress) return night;
     return night * ({ PAST: 0.55, FUTURE: 0.4 }[state] ?? 1);
   }
 
   // ...and its own air: how much of the year's fog colour (warm 2026, pale green 2196) fills the district
   stateFog(state) {
+    if (this.level?.place) return 0; // the year's own fog colour, all of it
     if (!this.level?.zone || this.deck?.noDress) return undefined;
     return { PRESENT: 0.1, PAST: 0.8, FUTURE: 0.85 }[state];
   }
 
   // ...and how thick that air is: 2026's warm haze, 2196's pale mist
   stateDensity(state) {
+    if (this.level?.place) return 1; // (the year's density comes through themeFor)
     if (!this.level?.zone || this.deck?.noDress) return 1;
     return { PAST: 2.4, FUTURE: 2.8 }[state] ?? 1;
   }
@@ -958,6 +1004,7 @@ export class LastVersion {
   theme(dt, state) {
     const g = this.g;
     if (g.mode !== 'deck') return;
+    if (this.level?.place) return this.placeTheme(dt, state);
     g.deckWorld.setLook(state, Math.min(1, dt * 2));
     // an open district's weather follows its year
     if (this.level?.zone && state !== this.weatherState) {
@@ -969,6 +1016,30 @@ export class LastVersion {
       const w = this.deck?.stateWeather?.[state] ?? stateWeather(state, this.level.palette);
       if (w !== g.weather.kind) g.weather.set(w);
     }
+  }
+
+  // an open place: the year drives the fog, the night, the weather, the grade, the light probe, the sky,
+  // the horizon and which of the place's pieces stand (OVERHAUL.md §4.5); no shared change
+  placeTheme(dt, state) {
+    const g = this.g;
+    const lv = this.level;
+    const s = this.yearOf(state);
+    const y = lv.years[s];
+    if (!y) return;
+    const pal = lv.palette;
+    pal.fog = y.fog;
+    pal.density = 1;
+    pal.night = y.night ?? 0;
+    if (s !== this.weatherState) {
+      const first = this.weatherState === null;
+      this.weatherState = s;
+      this.mounted?.setYear(s, first);
+      g.postfx.setGrade({ shadowTint: 0x2a4a66, highlightTint: 0xfff0dc, toning: 0.08, contrast: 1.1, saturation: 1, ...(y.grade || {}) });
+      g.postfx.setEnvironment(y.ibl || null);
+      const w = y.weather || null;
+      if (w !== g.weather.kind) g.weather.set(w);
+    }
+    this.mounted?.update(dt);
   }
 
   roomEntered() {}

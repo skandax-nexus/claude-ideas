@@ -2334,7 +2334,7 @@ class Game {
   updateTheme(dt) {
     this.updateLamps(dt);
     const s = this.room ? this.engine.state(this.room) : this.engine.baseline;
-    const th = THEMES[s] || THEMES.PHYSICAL;
+    const th = this.edition?.themeFor?.(s) ?? (THEMES[s] || THEMES.PHYSICAL);
     this.edition?.theme(dt, s);
     const k = Math.min(1, dt * 3);
     const deck = this.mode === 'deck';
@@ -2371,7 +2371,8 @@ class Game {
     this.sun.intensity += (th.sun * (deck ? 0.8 : 1) * (1 - night * 0.7) - this.sun.intensity) * k;
     this.renderer.toneMappingExposure += ((deck ? 0.9 + night * 0.15 - emergency * 0.5 : 0.95 + night * 0.1) - this.renderer.toneMappingExposure) * k;
     const p = this.player.pos;
-    this.sun.position.set(p.x + 6, p.y + 24, p.z + 9);
+    const sd = this.edition?.sunDir?.() ?? [6, 24, 9];
+    this.sun.position.set(p.x + sd[0], p.y + sd[1], p.z + sd[2]);
     this.sun.target.position.set(p.x, p.y, p.z);
     const dc = this.device.userData;
     dc.shell.material.color.lerp(_c.set(th.device), k);

@@ -132,7 +132,9 @@ level.landmarks = { name: [x, y, z, yaw] }        // every name in the mission s
 level.quarters  = [{ name, area: [x0, z0, x1, z1], spawn: [x, y, z, yaw], threshold: { at, kind } }]
 level.years     = { PRESENT: {...}, PAST: {...}, FUTURE: {...} } // sky preset, hour, sun, fog, density, night, weather, grade, ibl, hemi, sunColor
 level.scenery   = (root, rt) => ({ setEra(state), update(dt, camera), dispose() })
-level.crowd     = [{ era, region, role, path: [[x, z], ...], n }]    // consumed by crowds.js (U4)
+level.crowd     = [{ era, years, region, role, path: [[x, z], ...], n, y?, when?, echo? }] // consumed by crowds.js (U4)
+// era: the wardrobe (§6.3) 'present' | 'ancient' | 'future'; years: the states the crowd walks in; y: the path's
+// height where it is not the ground; when: a fact condition (M1's EMS after the crash); echo: Tier-4 echoes
 level.sites     = { processId: { at, parts: [...] } }   // geometry anchors for REVERSE processes (U1 API)
 ```
 

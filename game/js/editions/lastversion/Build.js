@@ -1,102 +1,236 @@
-// THE LAST VERSION OF EARTH: hand-authored interiors (the Helix facility) in the
-// level format gen/LevelGen.js produces, so world/DeckWorld.js runs them unchanged.
+// THE LAST VERSION OF EARTH: hand-authored interiors (the Helix facility) in the level format
+// gen/LevelGen.js produces, so world/DeckWorld.js runs them unchanged.
 //
-// A Deck is a chain of rooms laid along -z. Each room is authored in its own
-// local frame (x across, z from 0 at the south door to -L at the north door,
-// y up from the floor) and the builder turns boxes, props, people, watchers and
-// scenes into world coordinates. Small procedural props (a clock, a toy, a power
-// cell, the Chronolith) live here too.
+// A Deck is a chain of rooms. Each room is authored in its own local frame (x across, z from 0 at
+// its entry wall to -L at its far wall, y up from its floor) and the builder turns boxes, props,
+// people, watchers and scenes into world coordinates. A room may be placed and turned (`at`, `rot`
+// in quarter turns, `y` its floor), may leave by its far wall or by a side wall (`exit: 'N' | 'E' |
+// 'W'`, so a chain can turn a corner round a court), may climb to the next room on a stair corridor
+// (`corridor: { len, rise }`), has a roof that can differ per year (`roof: 'solid' | 'glass' | 'open'`
+// or `{ PAST: 'open', ... }`) and windows in its walls (`windows: { S, E, W, N }`, 'full' or
+// [[from, to, y0, y1], ...]). Inside a place (`place:` a Place builder, OVERHAUL.md §4.3) the rooms
+// stand among the place's own geometry: their surfaces are drawn by the place's scenery in the
+// place's materials (never a Vessel look), their doors and conditional pieces stay DeckWorld's.
+// Small procedural props (a clock, a toy, a power cell, the three Chronoliths) live here too.
 import * as THREE from '../../../vendor/three.module.min.js';
-import { makeMachineRing } from '../../world/models.js';
 
 const T = 0.4; // wall thickness
 const DOOR_W = 1.5; // half width of a doorway
 const DOOR_H = 4;
 const CL = 4; // corridor length
 
+// the place materials a room's own materials become inside a place
+const PLACE_MATS = {
+  wall: 'helixWhite', floor: 'rubber', ceil: 'helixCeil', prop: 'helixProp', prop2: 'wood', pillar: 'steel', trim: 'steel', trimDark: 'ironDark',
+  glow: 'glowAccent', panelGlow: 'lightPanel', door: 'helixDoor', crate: 'wood', industrial: 'rawConcrete', pit: 'rawConcrete', pipe: 'rust',
+  moss: 'moss', tank: 'steel', metal: 'steel', glass: 'glass', console: 'helixProp',
+};
+
+// a condition that only names years ('@PAST', '!@PAST', '@PAST || @FUTURE'): the years it holds in
+const ALL = ['PRESENT', 'PAST', 'FUTURE'];
+export function eraOf(when) {
+  if (!when) return null;
+  const neg = /^!@([A-Z]+)$/.exec(when);
+  if (neg) return ALL.filter((s) => s !== neg[1]);
+  if (/^@[A-Z]+(\s*\|\|\s*@[A-Z]+)*$/.test(when)) return when.split('||').map((x) => x.trim().slice(1));
+  return null;
+}
+
 export class Deck {
-  constructor({ id, deckName, palette, seed = 'lv', deck = 0, sector = 0, states = null, unstable = false, estimateMin = 20 }) {
-    this.level = {
-      id, deck, sector, seed, deckName, palette,
-      rooms: {}, order: [], elements: [], texts: [], interactables: [], items: [], tokens: [], hazards: [], sentinels: [], npcs: [], checkpoints: [], triggers: [],
-      map: { rooms: [], corridors: [] }, effects: ['echoSolid'], estimateMin, states, unstable,
-    };
-    this.cursor = 0; // world z of the next room's south wall
+  constructor({ id, deckName, palette, seed = 'lv', deck = 0, sector = 0, states = null, unstable = false, estimateMin = 20, place = null, start = null, mats = null }) {
+    this.place = place;
+    this.mats = { ...PLACE_MATS, ...(mats || {}) };
+    if (place) {
+      // inside a place: the rooms write into the place's own lists
+      const P = place;
+      this.level = {
+        id, deck, sector, seed, deckName, palette, rooms: P.rooms, order: P.order, elements: P.cols, texts: P.texts, interactables: P.inter, items: P.items, tokens: [],
+        hazards: P.hazards, sentinels: P.sentinels, npcs: P.npcs, checkpoints: P.checkpoints, triggers: P.triggers, map: { rooms: [], corridors: [] }, effects: ['echoSolid'], estimateMin, states, unstable,
+      };
+    } else {
+      this.level = {
+        id, deck, sector, seed, deckName, palette,
+        rooms: {}, order: [], elements: [], texts: [], interactables: [], items: [], tokens: [], hazards: [], sentinels: [], npcs: [], checkpoints: [], triggers: [],
+        map: { rooms: [], corridors: [] }, effects: ['echoSolid'], estimateMin, states, unstable,
+      };
+    }
+    // the cursor: where the next room's entry is, which way it faces, its floor
+    this.cur = { x: start?.at?.[0] ?? 0, z: start?.at?.[1] ?? 0, th: ((start?.rot ?? 0) * Math.PI) / 2, y: start?.y ?? 0 };
     this.rooms = [];
+    this.pending = null; // the corridor of the last room, built once the next room's floor is known
   }
 
   // Author one room. fn(R) places its contents; R.W, R.L, R.H are the room size.
-  room({ id, name, W = 12, L = 16, H = 6, kind = 'puzzle', beat, states, lights, tint, floatY, ox = 0 }, fn) {
+  room({ id, name, W = 12, L = 16, H = 6, kind = 'puzzle', beat, states, lights, tint, floatY, ox, exit = 'N', at, rot, y, corridor, roof = 'solid', windows = {}, closedS = false, interior = true, sky = null }, fn) {
     const lv = this.level;
-    const z0 = this.cursor; // south wall at world z = z0, room runs to z0 - L
-    const R = new Room(this, id, { W, L, H, z0, ox });
+    if (ox !== undefined && !this.place) this.cur.x = ox; // (the old side offset)
+    if (at) {
+      this.cur.x = at[0];
+      this.cur.z = at[1];
+    }
+    if (rot !== undefined) this.cur.th = (rot * Math.PI) / 2;
+    if (y !== undefined) this.cur.y = y;
+    const R = new Room(this, id, { W, L, H, x: this.cur.x, z: this.cur.z, th: this.cur.th, y0: this.cur.y, exit, roof, windows, corridor });
     const first = !this.rooms.length;
-    R.first = first;
+    R.first = first || closedS;
     fn(R);
     R.shell();
+    const [bx0, bz0, bx1, bz1] = R.rectXZ(-W / 2 - T, -L - T - (corridor?.len ?? CL) - 1, W / 2 + T, T, exit);
     const room = {
-      name, kind, bounds: [[ox - W / 2 - T, -12, z0 - L - T - CL - 1, ox + W / 2 + T, 30, z0 + T]],
-      spawn: [ox, 0.86, z0 - 1.6, 0],
-      lights: lights || [[ox, H - 0.8, z0 - L * 0.3, lv.palette.light, 2.0, Math.max(14, L)], [ox, H - 0.8, z0 - L * 0.75, lv.palette.light, 1.8, Math.max(14, L)], [ox + W / 2 - 1, 2.2, z0 - L / 2, lv.palette.accent, 0.8, 10]],
-      tint: tint ?? lv.palette.tint, killY: -3, floatY: floatY ?? 1.3, challenges: R.challenges, route: [], exitSide: 'N', L, W, H,
-      states: states || lv.states || undefined,
+      name, kind, bounds: [[bx0, this.place ? R.y0 + Math.min(0, corridor?.rise ?? 0) - 6 : -12, bz0, bx1, this.place ? R.y0 + Math.max(H, (corridor?.rise ?? 0) + DOOR_H) + 0.6 : 30, bz1]],
+      spawn: [...R.p([0, 0.86, -1.6]).map((v) => Math.round(v * 1000) / 1000), R.th],
+      lights: lights || [[...R.p([0, H - 0.8, -L * 0.3]), lv.palette.light, 2.0, Math.max(14, L)], [...R.p([0, H - 0.8, -L * 0.75]), lv.palette.light, 1.8, Math.max(14, L)], [...R.p([W / 2 - 1, 2.2, -L / 2]), lv.palette.accent, 0.8, 10]],
+      tint: tint ?? lv.palette.tint, killY: R.y0 - 3, floatY: floatY ?? R.y0 + 1.3, challenges: R.challenges, route: [], exitSide: exit, L, W, H,
+      states: states || lv.states || undefined, interior, sky: sky || (roof === 'solid' ? null : typeof roof === 'string' ? roof : 'year'),
+      rect: R.rectXZ(-W / 2, -L, W / 2, 0),
     };
     if (beat) room.beat = beat;
     lv.rooms[id] = room;
     lv.order.push(id);
-    lv.map.rooms.push({ id, rect: [ox - W / 2, z0 - L, ox + W / 2, z0], name, kind });
-    lv.map.corridors.push([ox - DOOR_W, z0 - L - T - CL, ox + DOOR_W, z0 - L]);
+    const mapRoom = { id, rect: room.rect, name, kind };
+    if (this.place) this.place.mapRooms = [...(this.place.mapRooms || []), mapRoom];
+    else lv.map.rooms.push(mapRoom);
+    // the next room starts where this one's corridor ends
+    const d = R.exitFrame();
+    const len = corridor?.len ?? CL;
+    this.cur.x = d.x + d.ox * (T + len);
+    this.cur.z = d.z + d.oz * (T + len);
+    this.cur.th = d.th;
+    this.cur.y = R.y0 + (corridor?.rise ?? 0);
+    if (this.place) this.place.reserve(...room.rect, 1);
     this.rooms.push(R);
-    this.cursor = z0 - L - 2 * T - CL;
     return R;
   }
 
-  // the last room's north door is the way out (walking into it completes the sector)
+  // the last room's exit is the way out (walking into it completes the sector)
   finish({ gated = true } = {}) {
     const lv = this.level;
     const R = this.rooms[this.rooms.length - 1];
-    const z = R.z0 - R.L - T - CL;
-    lv.exit = { room: R.id, box: [R.ox - DOOR_W, -1, z - 1, R.ox + DOOR_W, DOOR_H + 1, z + 1.2] };
-    lv.map.gate = [R.ox, z];
-    if (gated) lv.elements.push({ box: [R.ox - DOOR_W, 0, R.z0 - R.L - T, R.ox + DOOR_W, DOOR_H, R.z0 - R.L], mat: 'door', solid: true, when: '!beat_done', id: `gate_${lv.id}`, room: R.id });
+    const len = R.corridor?.len ?? CL, rise = R.corridor?.rise ?? 0;
+    // in the room's own frame: the doorway in the exit wall, and the end of its corridor
+    const { W, L } = R;
+    let door, end;
+    if (R.exit === 'E') {
+      door = [W / 2, 0, -L + 2.1 - DOOR_W, W / 2 + T, DOOR_H, -L + 2.1 + DOOR_W];
+      end = [W / 2 + T + len - 1.2, rise - 1, -L + 2.1 - DOOR_W, W / 2 + T + len + 1, rise + DOOR_H + 1, -L + 2.1 + DOOR_W];
+    } else if (R.exit === 'W') {
+      door = [-W / 2 - T, 0, -L + 2.1 - DOOR_W, -W / 2, DOOR_H, -L + 2.1 + DOOR_W];
+      end = [-W / 2 - T - len - 1, rise - 1, -L + 2.1 - DOOR_W, -W / 2 - T - len + 1.2, rise + DOOR_H + 1, -L + 2.1 + DOOR_W];
+    } else {
+      door = [-DOOR_W, 0, -L - T, DOOR_W, DOOR_H, -L];
+      end = [-DOOR_W, rise - 1, -L - T - len - 1, DOOR_W, rise + DOOR_H + 1, -L - T - len + 1.2];
+    }
+    lv.exit = { room: R.id, box: R.b(end) };
+    const eb = lv.exit.box;
+    lv.map.gate = [(eb[0] + eb[3]) / 2, (eb[2] + eb[5]) / 2];
+    if (gated) lv.elements.push({ box: R.b(door), mat: 'door', solid: true, when: '!beat_done', id: `gate_${lv.id}`, room: R.id, lvMat: this.mats.door });
+    if (this.place) {
+      this.place.exit = lv.exit;
+      this.place.exitAt = [(eb[0] + eb[3]) / 2, eb[1] + 1, (eb[2] + eb[5]) / 2];
+    }
     lv.spawn = lv.rooms[lv.order[0]].spawn;
     return lv;
   }
 }
 
 class Room {
-  constructor(deck, id, { W, L, H, z0, ox }) {
+  constructor(deck, id, { W, L, H, x, z, th, y0, exit, roof, windows, corridor }) {
     this.deck = deck;
     this.lv = deck.level;
+    this.P = deck.place;
     this.id = id;
     this.W = W;
     this.L = L;
     this.H = H;
-    this.z0 = z0;
-    this.ox = ox;
+    this.x = x;
+    this.z = z;
+    this.th = th;
+    this.c = Math.round(Math.cos(th) * 1e6) / 1e6;
+    this.s = Math.round(Math.sin(th) * 1e6) / 1e6;
+    this.y0 = y0;
+    this.exit = exit;
+    this.roof = roof;
+    this.windows = windows;
+    this.corridor = corridor;
     this.challenges = [];
     this.openings = { S: true, N: true };
+    this.ox = x; // (kept for code that reads the room's x)
+    this.z0 = z;
   }
 
   // local -> world
   p([x, y, z]) {
-    return [this.ox + x, y, this.z0 + z];
+    return [this.x + x * this.c + z * this.s, this.y0 + y, this.z - x * this.s + z * this.c];
   }
 
+  // a local box -> a world AABB (exact for quarter turns)
   b([x0, y0, z0, x1, y1, z1]) {
-    return [this.ox + Math.min(x0, x1), Math.min(y0, y1), this.z0 + Math.min(z0, z1), this.ox + Math.max(x0, x1), Math.max(y0, y1), this.z0 + Math.max(z0, z1)];
+    const a = this.p([x0, y0, z0]), b = this.p([x1, y1, z1]);
+    const r = (v) => Math.round(v * 1e4) / 1e4;
+    return [r(Math.min(a[0], b[0])), r(Math.min(a[1], b[1])), r(Math.min(a[2], b[2])), r(Math.max(a[0], b[0])), r(Math.max(a[1], b[1])), r(Math.max(a[2], b[2]))];
   }
 
+  // a local rect (x0..x1, z0..z1) -> a world [x0, z0, x1, z1]; with an exit side, the corridor's reach is added on that side
+  rectXZ(x0, z0, x1, z1, exit = null) {
+    let lx0 = x0, lx1 = x1, lz0 = z0, lz1 = z1;
+    if (exit === 'E') {
+      lz0 = -this.L - T;
+      lx1 = this.W / 2 + T + (this.corridor?.len ?? CL) + 1;
+    } else if (exit === 'W') {
+      lz0 = -this.L - T;
+      lx0 = -this.W / 2 - T - (this.corridor?.len ?? CL) - 1;
+    }
+    const b = this.b([lx0, 0, lz0, lx1, 0, lz1]);
+    return [b[0], b[2], b[3], b[5]];
+  }
+
+  // the exit doorway: its world centre, the outward direction and the next room's heading
+  exitFrame() {
+    const { W, L } = this;
+    let at, out, th;
+    if (this.exit === 'E') {
+      at = [W / 2 + T, 0, -L + 2.1];
+      out = [1, 0];
+      th = this.th - Math.PI / 2;
+    } else if (this.exit === 'W') {
+      at = [-W / 2 - T, 0, -L + 2.1];
+      out = [-1, 0];
+      th = this.th + Math.PI / 2;
+    } else {
+      at = [0, 0, -L - T];
+      out = [0, -1];
+      th = this.th;
+    }
+    const w = this.p(at);
+    const ox = out[0] * this.c + out[1] * this.s, oz = -out[0] * this.s + out[1] * this.c;
+    return { x: w[0], z: w[2], ox: Math.round(ox), oz: Math.round(oz), th, local: at };
+  }
+
+  // every box goes through here: plain DeckWorld elements outside a place; inside one, the place
+  // draws it (an era piece goes to the era's group, its collider is a ghost), while doors and
+  // pieces that wait on facts stay DeckWorld's own (the edition swaps in a place material)
   box(local, o = {}) {
-    this.lv.elements.push({ box: this.b(local), mat: 'wall', solid: true, ...o, room: this.id });
+    const b = this.b(local);
+    const el = { box: b, mat: 'wall', solid: true, ...o, room: this.id };
+    if (!this.P) return this.lv.elements.push(el);
+    const m = this.deck.mats[el.mat] || el.mat;
+    const era = eraOf(el.when);
+    if (el.echo || el.id || (el.when && !era)) {
+      this.lv.elements.push({ ...el, lvMat: m });
+      return;
+    }
+    const P = this.P;
+    const run = () => (el.solid === false ? P.vbox(b, m, { t: o.t }) : P.box(b, m, { t: o.t, room: this.id }));
+    if (era) P.E(era, run);
+    else run();
   }
 
   text(str, pos, rotY = 0, o = {}) {
-    this.lv.texts.push({ text: str, pos: this.p(pos), rotY, size: 0.4, color: '#dfe8f0', ...o, room: this.id });
+    this.lv.texts.push({ text: str, pos: this.p(pos), rotY: rotY + this.th, size: 0.4, color: '#dfe8f0', ...o, room: this.id });
   }
 
   inter(it) {
-    this.lv.interactables.push({ r: 2.6, ...it, pos: this.p(it.pos), room: this.id });
+    this.lv.interactables.push({ r: 2.6, ...it, pos: this.p(it.pos), yaw: (it.yaw || 0) + this.th, room: this.id });
   }
 
   // a scene: something to inspect (kind 'scene' is handled by the edition's runtime)
@@ -109,12 +243,16 @@ class Room {
   }
 
   npc(n) {
-    this.lv.npcs.push({ ...n, pos: this.p(n.pos), path: n.path?.map(([x, z]) => [this.ox + x, this.z0 + z]), room: this.id });
+    this.lv.npcs.push({ ...n, pos: this.p(n.pos), yaw: (n.yaw || 0) + this.th, path: n.path?.map(([x, z]) => { const w = this.p([x, 0, z]); return [w[0], w[2]]; }), room: this.id });
   }
 
   sentinel(s) {
-    const path = s.path.map(([x, z]) => [this.ox + x, this.z0 + z]);
-    const conduit = s.conduit ? [this.ox + s.conduit[0], this.z0 + s.conduit[1], this.ox + s.conduit[2], this.z0 + s.conduit[3]] : undefined;
+    const path = s.path.map(([x, z]) => { const w = this.p([x, 0, z]); return [w[0], w[2]]; });
+    let conduit;
+    if (s.conduit) {
+      const b = this.b([s.conduit[0], 0, s.conduit[1], s.conduit[2], 0, s.conduit[3]]);
+      conduit = [b[0], b[2], b[3], b[5]];
+    }
     this.lv.sentinels.push({ speed: 1.8, range: 8.5, fov: 0.85, ...s, path, conduit, room: this.id, id: `${this.id}_s${this.lv.sentinels.length}` });
   }
 
@@ -127,11 +265,11 @@ class Room {
   }
 
   checkpoint(zFrom, zTo, spawnZ) {
-    this.lv.checkpoints.push({ box: this.b([-this.W / 2, -1, zTo, this.W / 2, this.H + 1, zFrom]), spawn: [this.ox, 0.86, this.z0 + spawnZ, 0], room: this.id });
+    this.lv.checkpoints.push({ box: this.b([-this.W / 2, -1, zTo, this.W / 2, this.H + 1, zFrom]), spawn: [...this.p([0, 0.86, spawnZ]), this.th], room: this.id });
   }
 
-  challenge(key, zFrom, zTo, hints) {
-    this.challenges.push({ key, hints, box: this.b([-this.W / 2, -12, zTo, this.W / 2, 30, zFrom]) });
+  challenge(key, zFrom, zTo, hints, o = {}) {
+    this.challenges.push({ key, hints, box: this.b([-this.W / 2, -12, zTo, this.W / 2, 30, zFrom]), ...o, ...(o.answer ? { answer: [].concat(o.answer) } : {}) });
   }
 
   // a floor slab (default: the whole room)
@@ -162,9 +300,9 @@ class Room {
     this.box([x0, -T, z1, x1, h, z0], { mat: 'prop', ...o });
   }
 
-  // plain stairs along -z from (x0..x1, zFace) up to height h
+  // plain stairs along -z from (x0..x1, zFace) up to height h (rises of 0.35 m inside a place, for stepUp)
   stairs(x0, x1, zFace, h, o = {}) {
-    const RISE = 0.5, TREAD = 0.8;
+    const RISE = this.P ? 0.34 : 0.5, TREAD = this.P ? 0.6 : 0.8;
     const n = Math.ceil(h / RISE);
     for (let i = 0; i < n; i++) {
       const top = Math.min(h, (i + 1) * (h / n));
@@ -198,8 +336,44 @@ class Room {
     }
   }
 
+  // a wall of the room along one side, with its doorway and its windows (place rooms only)
+  side(which, x0, z0, x1, z1, door) {
+    const H = this.H;
+    const win = this.windows[which];
+    const spans = []; // along the wall, [from, to] of glass
+    const len = Math.hypot(x1 - x0, z1 - z0);
+    if (win === 'full') {
+      if (door) spans.push([0.6, door[0] - 0.3, 0.15, H - 0.3], [door[1] + 0.3, len - 0.6, 0.15, H - 0.3]);
+      else spans.push([0.6, len - 0.6, 0.15, H - 0.3]);
+    }
+    else if (Array.isArray(win)) for (const w of win) spans.push(w);
+    const openings = [...(door ? [[door[0], door[1], 0, DOOR_H]] : []), ...spans.map(([a, b, y0 = 0.9, y1 = H - 0.6]) => [a, b, y0, y1])].sort((a, b) => a[0] - b[0]);
+    const ux = (x1 - x0) / len, uz = (z1 - z0) / len;
+    const seg = (a, b, y0, y1, o = {}) => {
+      const lx0 = x0 + ux * a, lz0 = z0 + uz * a, lx1 = x0 + ux * b, lz1 = z0 + uz * b;
+      const nx = Math.abs(uz) > 0.5 ? T / 2 : 0, nz = Math.abs(ux) > 0.5 ? T / 2 : 0;
+      this.box([Math.min(lx0, lx1) - nx, y0, Math.min(lz0, lz1) - nz, Math.max(lx0, lx1) + nx, y1, Math.max(lz0, lz1) + nz], { mat: 'wall', ...o });
+    };
+    let u = 0;
+    const lowY = -T; // inside a place the walls stop at the floor slab
+    for (const [a, b, y0, y1] of openings) {
+      if (a > u) seg(u, a, lowY, H);
+      if (y0 > 0) seg(a, b, lowY, y0);
+      if (y1 < H) seg(a, b, y1, H);
+      const isDoor = door && a === door[0] && b === door[1];
+      if (!isDoor) {
+        // glass, solid, with thin mullions every 1.5 m
+        seg(a, b, y0, y1, { mat: 'glass', t: undefined });
+        for (let m = a + 1.5; m < b - 0.2; m += 1.5) seg(m - 0.04, m + 0.04, y0, y1, { mat: 'trim', solid: false });
+      }
+      u = Math.max(u, b);
+    }
+    if (u < len) seg(u, len, lowY, H);
+  }
+
   // the shell: floor (unless the author laid it), ceiling, four walls with the doorways
   shell() {
+    if (this.P) return this.placeShell();
     const { W, L, H } = this;
     const wall = (b, o = {}) => this.box(b, { mat: 'wall', ...o });
     this.box([-W / 2 - T, H, -L - T, W / 2 + T, H + T, T], { mat: 'ceil' });
@@ -239,7 +413,93 @@ class Room {
     this.box([-DOOR_W - T, 0, z1, -DOOR_W, DOOR_H, z0], { mat: 'wall' });
     this.box([DOOR_W, 0, z1, DOOR_W + T, DOOR_H, z0], { mat: 'wall' });
     this.box([-DOOR_W, DOOR_H, -L - 0.06, DOOR_W, DOOR_H + 0.12, -L], { mat: 'glow', solid: false });
-    this.lv.checkpoints.push({ box: this.b([-W / 2, -1, -3.5, W / 2, H + 1, 0]), spawn: [this.ox, 0.86, this.z0 - 1.6, 0], room: this.id });
+    this.lv.checkpoints.push({ box: this.b([-W / 2, -1, -3.5, W / 2, H + 1, 0]), spawn: [...this.p([0, 0.86, -1.6]), this.th], room: this.id });
+  }
+
+  // a room inside a place: walls with real windows, a roof that may be glass or open (or differ per
+  // year), ceiling light panels instead of the Vessel's ribs, the corridor (or stair) to the next room
+  placeShell() {
+    const { W, L, H } = this;
+    const sx = this.exit === 'E' ? 1 : this.exit === 'W' ? -1 : 0;
+    const doorAt = (len) => [len / 2 - DOOR_W, len / 2 + DOOR_W];
+    // the entry wall (south), from local x -W/2 to W/2 at z = 0
+    this.side('S', -W / 2 - T, T / 2, W / 2 + T, T / 2, this.first ? null : doorAt(W + 2 * T));
+    // the far wall (north)
+    this.side('N', -W / 2 - T, -L - T / 2, W / 2 + T, -L - T / 2, sx || this.exit === 'none' ? null : doorAt(W + 2 * T));
+    // the sides, from the entry toward the far wall; a side exit sits 2.1 m from the far wall
+    const sideDoor = [L - 2.1 - DOOR_W, L - 2.1 + DOOR_W];
+    this.side('W', -W / 2 - T / 2, 0, -W / 2 - T / 2, -L, sx < 0 ? sideDoor : null);
+    this.side('E', W / 2 + T / 2, 0, W / 2 + T / 2, -L, sx > 0 ? sideDoor : null);
+    // the roof, per year
+    const roofs = typeof this.roof === 'string' ? { PRESENT: this.roof, PAST: this.roof, FUTURE: this.roof } : { PRESENT: 'solid', PAST: 'solid', FUTURE: 'solid', ...this.roof };
+    const kinds = [...new Set(Object.values(roofs))];
+    for (const k of kinds) {
+      const years = Object.keys(roofs).filter((s) => roofs[s] === k);
+      const when = years.length === 3 ? undefined : years.map((s) => `@${s}`).join(' || ');
+      if (k === 'solid') {
+        this.box([-W / 2 - T, H, -L - T, W / 2 + T, H + T, T], { mat: 'ceil', when });
+        for (let i = 1; i < Math.max(2, Math.floor(L / 5)); i++) {
+          const rz = -(i * L) / Math.max(2, Math.floor(L / 5));
+          this.box([-1.4, H - 0.05, rz - 0.5, 1.4, H, rz + 0.5], { mat: 'panelGlow', solid: false, when });
+        }
+      } else if (k === 'glass') {
+        this.box([-W / 2 - T, H, -L - T, W / 2 + T, H + 0.1, T], { mat: 'glassRoof', when });
+        for (let i = 0; i <= Math.floor(W / 3); i++) {
+          const rx = -W / 2 + (i * W) / Math.floor(W / 3);
+          this.box([rx - 0.08, H - 0.3, -L - T, rx + 0.08, H, T], { mat: 'trim', solid: false, when });
+        }
+      }
+      // 'open': nothing overhead; a parapet coping marks the top of the walls
+    }
+    this.box([-W / 2 - T - 0.1, H, -L - T - 0.1, -W / 2 + 0.1, H + 0.35, T + 0.1], { mat: 'trim', solid: false });
+    this.box([W / 2 - 0.1, H, -L - T - 0.1, W / 2 + T + 0.1, H + 0.35, T + 0.1], { mat: 'trim', solid: false });
+    // what the place builds round: this room (and, below, its corridor), up to their tops
+    const open = typeof this.roof === 'string' ? this.roof !== 'solid' : Object.values(this.roof).some((r) => r !== 'solid');
+    const occ = (this.P.occupied ||= []);
+    const rr = this.rectXZ(-W / 2 - T, -L - T, W / 2 + T, T);
+    occ.push({ rect: rr, top: this.y0 + H + T, open });
+    this.checkpointShell();
+    if (this.exit === 'none') return;
+    // the corridor to the next room (a stair when the next floor is higher or lower)
+    const len = this.corridor?.len ?? CL, rise = this.corridor?.rise ?? 0;
+    const f = this.exitFrame();
+    const [ax, , az] = f.local;
+    const ox = sx || 0, oz = sx ? 0 : -1;
+    const along = (u, v, y0, y1, w) => {
+      // a box in the corridor's frame: u from the doorway outward, v across
+      const p0 = [ax + ox * u + (sx ? 0 : v), az + oz * u + (sx ? v : 0)];
+      const p1 = [ax + ox * w + (sx ? 0 : -v), az + oz * w + (sx ? -v : 0)];
+      return [Math.min(p0[0], p1[0]), y0, Math.min(p0[1], p1[1]), Math.max(p0[0], p1[0]), y1, Math.max(p0[1], p1[1])];
+    };
+    const hw = DOOR_W + T;
+    const lo = Math.min(0, rise) - T;
+    this.box(along(0, -hw, lo, Math.min(0, rise), len + T), { mat: 'floor' });
+    // a stair: steps of at most 0.34 m, and a ceiling that steps with them
+    const n = rise ? Math.ceil(Math.abs(rise) / 0.34) : 1;
+    for (let i = 0; i < n; i++) {
+      const u0 = (i * len) / n, u1 = i === n - 1 ? len + T : ((i + 1) * len) / n;
+      const yTop = rise ? (rise > 0 ? (rise * (i + 1)) / n : rise * (i / n)) : 0;
+      if (rise) this.box(along(u0, -DOOR_W, lo, yTop, u1), { mat: 'floor' });
+      const ceil = Math.max(yTop, rise > 0 ? (rise * i) / n : yTop) + DOOR_H + 0.5;
+      const side1 = along(u0, -hw, lo, ceil, u1), side2 = side1.slice();
+      if (sx) {
+        side1[5] = side1[2] + T;
+        side2[2] = side2[5] - T;
+      } else {
+        side1[3] = side1[0] + T;
+        side2[0] = side2[3] - T;
+      }
+      this.box(side1, { mat: 'wall' });
+      this.box(side2, { mat: 'wall' });
+      this.box(along(u0, -hw, ceil, ceil + T, u1), { mat: 'ceil' });
+    }
+    const cw = this.b(along(0, -hw, lo, Math.max(0, rise) + DOOR_H + 0.9, len + T));
+    occ.push({ rect: [cw[0], cw[2], cw[3], cw[5]], top: cw[4], open: false, corridor: true });
+  }
+
+  checkpointShell() {
+    const { W, H } = this;
+    this.lv.checkpoints.push({ box: this.b([-W / 2, -1, -3.5, W / 2, H + 1, 0]), spawn: [...this.p([0, 0.86, -1.6]), this.th], room: this.id });
   }
 }
 
@@ -386,25 +646,99 @@ export function makeDrawing() {
   return m;
 }
 
-// the Chronolith: a black ring, taller than the room should allow; a thin light runs around it when it wakes
-export function makeChronolith(scale = 1.6) {
-  const g = new THREE.Group();
-  const ring = makeMachineRing();
-  ring.traverse((o) => {
-    if (o.isMesh && o.material) {
-      o.material = o.material.clone();
-      if (o.material.color) o.material.color.setHex(0x0c0e12);
-      if ('emissive' in o.material) o.material.emissive.setHex(0x101420);
-      o.material.metalness = 0.75;
-      o.material.roughness = 0.35;
+// The Chronolith, in the edition's own three forms (OVERHAUL.md §4.3; never Station Zero's lab ring):
+//   'stone'  a ring of dressed stone with a bronze band, as the settlement kept it (the past)
+//   'helix'  the black machined ring Helix dug out of Site Zero, glyphs inlaid, a light that wakes
+//   'halo'   2196: the same ring broken, a halo of fragments hanging where the rest should be
+// The ring's centre is the model's origin; `inner` turns slowly (DeckWorld spins userData.inner).
+// With { eras: { PRESENT: 'helix', PAST: 'stone', FUTURE: 'halo' } } one model carries several forms
+// and userData.setEra(state) shows the right one (the runtime calls it on a year switch).
+export function makeChronolith(scale = 1, kind = 'helix', opts = {}) {
+  if (opts.eras) {
+    const g = new THREE.Group();
+    const forms = {};
+    for (const k of new Set(Object.values(opts.eras))) {
+      forms[k] = makeChronolith(scale, k);
+      g.add(forms[k]);
     }
-  });
-  ring.position.set(0, 0, 0); // (the lab's machine ring is mounted 3.6 m up; the Chronolith stands where it is put)
-  ring.scale.setScalar(scale);
-  const halo = new THREE.Mesh(new THREE.TorusGeometry(3.05 * scale * 0.62, 0.025, 8, 96), basic(0x4f9fe8, { transparent: true, opacity: 0.6 }));
-  g.add(ring, halo);
-  g.userData.inner = ring.userData.inner;
+    g.userData.setEra = (state) => {
+      const want = opts.eras[state] || opts.eras.PRESENT;
+      for (const [k, f] of Object.entries(forms)) f.visible = k === want;
+      g.userData.inner = forms[want]?.userData.inner;
+    };
+    g.userData.setEra('PRESENT');
+    g.userData.inner = forms[opts.eras.PRESENT]?.userData.inner;
+    return g;
+  }
+  const g = new THREE.Group();
+  const R = 3.6 * scale, tube = 0.42 * scale;
+  if (kind === 'stone') {
+    const stone = std(0x8a8478, { roughness: 0.95 });
+    const n = 14;
+    for (let i = 0; i < n; i++) {
+      // dressed blocks laid round the circle
+      const a = (i / n) * Math.PI * 2;
+      const b = new THREE.Mesh(new THREE.BoxGeometry(tube * 2.2, (2 * Math.PI * R) / n * 0.96, tube * 2.2), stone);
+      b.position.set(Math.cos(a) * R, Math.sin(a) * R, 0);
+      b.rotation.z = a;
+      g.add(b);
+    }
+    const band = new THREE.Mesh(new THREE.TorusGeometry(R, tube * 0.32, 8, 72), std(0xa8743a, { metalness: 0.8, roughness: 0.35 }));
+    band.position.z = tube * 1.12;
+    g.add(band);
+    const inner = new THREE.Mesh(new THREE.TorusGeometry(R * 0.72, tube * 0.18, 6, 60), std(0x7a5a30, { metalness: 0.7, roughness: 0.4 }));
+    g.add(inner);
+    g.userData.inner = inner;
+  } else if (kind === 'halo') {
+    const black = std(0x0c0e12, { metalness: 0.75, roughness: 0.4 });
+    // the lower two thirds stand; the rest hangs in fragments
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(R, tube, 12, 64, Math.PI * 1.25), black);
+    ring.rotation.z = -Math.PI * 0.12;
+    g.add(ring);
+    for (let i = 0; i < 7; i++) {
+      const a = Math.PI * (1.18 + i * 0.1);
+      const f = new THREE.Mesh(new THREE.TorusGeometry(R + 0.4 * scale * Math.sin(i * 1.9), tube * 0.8, 8, 6, Math.PI * 0.07), black);
+      f.rotation.z = a;
+      f.position.set(Math.cos(a) * 0.3 * scale, Math.sin(a) * 0.3 * scale + 0.2 * i * scale * 0.2, (i % 2 ? 0.3 : -0.3) * scale);
+      g.add(f);
+    }
+    const moss = new THREE.Mesh(new THREE.TorusGeometry(R, tube * 1.04, 8, 40, Math.PI * 0.5), std(0x4a6a3a, { roughness: 1 }));
+    moss.rotation.z = Math.PI * 1.2 + 0.4;
+    g.add(moss);
+    const inner = new THREE.Mesh(new THREE.TorusGeometry(R * 0.7, tube * 0.12, 6, 48, Math.PI * 1.4), basic(0x9fe8c8, { transparent: true, opacity: 0.35 }));
+    g.add(inner);
+    g.userData.inner = inner;
+  } else {
+    const black = std(0x0b0d11, { metalness: 0.82, roughness: 0.28 });
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(R, tube, 16, 96), black);
+    g.add(ring);
+    // a machined face: two flat rims and inlaid glyph lines in bronze
+    for (const z of [-tube * 0.9, tube * 0.9]) {
+      const rim = new THREE.Mesh(new THREE.TorusGeometry(R, tube * 0.16, 6, 96), std(0x16191f, { metalness: 0.9, roughness: 0.2 }));
+      rim.position.z = z;
+      g.add(rim);
+    }
+    const glyph = std(0x8a6a3a, { metalness: 0.85, roughness: 0.35, emissive: 0x2a1a08 });
+    for (let i = 0; i < 24; i++) {
+      const a = (i / 24) * Math.PI * 2;
+      const gl = new THREE.Mesh(new THREE.BoxGeometry(0.05 * scale, tube * (i % 3 ? 0.8 : 1.3), 0.02), glyph);
+      gl.position.set(Math.cos(a) * (R + tube * 0.95), Math.sin(a) * (R + tube * 0.95), tube * 0.35);
+      gl.rotation.z = a;
+      g.add(gl);
+    }
+    const inner = new THREE.Mesh(new THREE.TorusGeometry(R * 0.74, tube * 0.22, 8, 72), std(0x121418, { metalness: 0.8, roughness: 0.3 }));
+    g.add(inner);
+    g.userData.inner = inner;
+  }
+  // the light that runs round it when it wakes
+  const halo = new THREE.Mesh(new THREE.TorusGeometry(R * 0.86, 0.025 * scale, 8, 96), basic(kind === 'stone' ? 0xffc06a : kind === 'halo' ? 0x9fe8c8 : 0x4f9fe8, { transparent: true, opacity: 0.6 }));
+  g.add(halo);
   g.userData.halo = halo;
+  // a low plinth it stands in
+  const plinth = new THREE.Mesh(new THREE.BoxGeometry(R * 1.1, 0.5 * scale, tube * 3.2), std(kind === 'stone' ? 0x6a6458 : 0x1a1d22, { roughness: 0.8 }));
+  plinth.position.y = -R - tube * 0.3;
+  g.add(plinth);
+  g.userData.kind = kind;
   return g;
 }
 
