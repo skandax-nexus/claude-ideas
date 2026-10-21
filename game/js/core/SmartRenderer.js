@@ -12,7 +12,9 @@
 // A preset change rebuilds the lights, shadows and post chain and compiles a new
 // shader set, which can stall a phone for a moment. So step 2 is only requested
 // here; the game applies it (flush) at a safe moment: behind a menu that has
-// already painted, during a sector load, or after 45 s if neither comes.
+// already painted, during a sector load, or after 45 s of play if neither comes.
+// While one waits it keeps watching: a step up that the frames no longer have
+// room for is dropped.
 //
 // Every change costs something (a resolution pop and new render targets, or a
 // recompile), so it remembers: a state it had to leave is not tried again for a
@@ -22,9 +24,14 @@
 // (more than one frame in eight late, around 52 fps on a 60 Hz screen) counts as
 // slow even when the average looks fine.
 //
-// Once a state has held for 20 s it is stored on the device, so the next page load
-// (a new game, a load and QUIT all reload the page) starts there instead of
-// stepping down from full again, and compiles one shader set instead of two.
+// A frame over 250 ms (a load, a compile, a return from the background) stays out
+// of the averages, but three in one window are the device's real rate, and that
+// window is slow.
+//
+// Once a state has held for 20 s it is stored on the device (the lowest state even
+// when it is still slow: there is nowhere lower to go), so the next page load (a
+// new game, a load and QUIT all reload the page) starts there instead of stepping
+// down from full again, and compiles one shader set instead of two.
 import { QUALITY } from '../ui/Settings.js';
 import { NS } from './Edition.js';
 
@@ -38,6 +45,8 @@ const LATE = 1.5; // a frame later than its slot by half a refresh missed the sc
 const BAN_MAX = 600; // s: the longest a state that failed is kept out
 const SKEY = `${NS}smart.v1`; // the settled state, per edition
 const KEEP = 864e5; // ms: a stored state older than a day is ignored
+const LONG = 0.25; // s: a frame this long is a stall, not the steady rate
+const WAIT = 45; // s of play a queued preset change waits for a menu or a sector load
 
 export class SmartRenderer {
   constructor(game) {
@@ -47,14 +56,15 @@ export class SmartRenderer {
     this.acc = 0;
     this.frames = 0;
     this.late = 0; // frames in this window that missed the refresh
+    this.long = 0; // frames in this window over LONG (left out of acc and frames)
     this.slow = 0;
     this.fast = 0;
     this.note = '';
     this.pending = null; // a preset change waiting for a safe moment
-    this.pendingAt = 0;
+    this.pendingAt = 0; // clock time it was queued
     this.vsync = 1 / 60; // the interval between frames the screen allows (s): its refresh, or the game's cap (main.js setRefresh)
     this.panel = 1 / 60; // the screen's refresh interval (s)
-    this.clock = 0; // seconds of play watched, for the bans
+    this.clock = 0; // seconds of play watched (a stall counts LONG at most), for the bans and WAIT
     this.ban = {}; // state -> clock time until which it is not tried again
     this.fails = {}; // state -> how often it had to be left
     this.held = 0; // judged windows the current state has lasted
@@ -111,7 +121,7 @@ export class SmartRenderer {
 
   // start a new judging window (and the counts of slow and good windows)
   restart(counts = true) {
-    this.acc = this.frames = this.late = 0;
+    this.acc = this.frames = this.late = this.long = 0;
     if (counts) this.slow = this.fast = 0;
   }
 
@@ -121,21 +131,36 @@ export class SmartRenderer {
     // a window never spans a menu, a pause or a hidden tab
     if (!g.settings.smart || g.capturing || !g.started || g.menu || g.paused || document.hidden) return this.restart(false);
     if (this.level === null) this.level = this.chosen;
-    this.clock += dt;
-    // nothing else changes until a queued preset is in; a frame over 250 ms is a load,
-    // a compile or a resume, not the steady rate
-    if (this.pending || dt > 0.25) return this.restart(false);
-    this.acc += dt;
-    this.frames++;
-    if (dt > this.vsync + (LATE - 1) * this.panel) this.late++;
-    if (this.acc < 2) return; // judge every two seconds
-    const fps = this.frames / this.acc;
-    const late = this.late / this.frames;
+    // play time: the first frame back from the background spans the whole time away
+    this.clock += Math.min(dt, LONG);
+    if (dt > LONG) {
+      // a load, a compile or a resume: not the steady rate, so it stays out of the window. Three
+      // in one window are the rate (a device this slow, or one that stalls this often): judge now
+      if (++this.long < 3) return;
+    } else {
+      this.acc += dt;
+      this.frames++;
+      if (dt > this.vsync + (LATE - 1) * this.panel) this.late++;
+      if (this.acc < 2) return; // judge every two seconds
+    }
+    const fps = this.acc ? this.frames / this.acc : 0;
+    const late = this.frames ? this.late / this.frames : 1;
     const hz = 1 / this.vsync;
+    const slow = this.long >= 3 || fps < TARGET * hz || late > 0.12;
     this.restart(false);
     this.fps = fps;
-    const slow = fps < TARGET * hz || late > 0.12;
-    if (++this.held >= 10 && !slow) this.remember(); // settled: 20 s in this state
+    if (this.pending) {
+      // nothing else changes until a queued preset is in, but a step up that the frames no longer
+      // have room for is dropped, and that preset waits like one that failed. A step down stands.
+      if (slow && ORDER.indexOf(this.pending) > ORDER.indexOf(this.level)) {
+        this.forbid(`level:${this.pending}`, 120);
+        this.pending = null;
+        this.restart();
+      }
+      return;
+    }
+    // settled: 20 s in this state, and the lowest state is stored even while it is slow
+    if (++this.held >= 10 && (!slow || (ORDER.indexOf(this.level) === 0 && this.scale < 0.61))) this.remember();
     if (slow) {
       this.fast = 0;
       if (++this.slow < 2) return; // two slow windows in a row before acting
@@ -185,8 +210,13 @@ export class SmartRenderer {
   // queue a preset change; the game calls flush() when a stall will not be seen
   request(level) {
     this.pending = level;
-    this.pendingAt = performance.now();
+    this.pendingAt = this.clock;
     this.restart();
+  }
+
+  // a queued change that no menu or sector load has taken in WAIT seconds of play
+  get overdue() {
+    return !!this.pending && this.clock - this.pendingAt > WAIT;
   }
 
   flush() {

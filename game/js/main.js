@@ -2062,12 +2062,12 @@ class Game {
     const active = !this.paused && !this.menu;
     // a preset change the smart renderer queued compiles a new shader set: do it behind a
     // panel that has painted (not the character screen, which shows the 3D view), or after
-    // 45 s if no menu comes (sector loads flush too)
+    // 45 s of play if no menu comes (sector loads flush too)
     if (this.menu !== this.menuSeen) {
       this.menuSeen = this.menu;
       this.menuAt = this.time;
     }
-    if (this.smart.pending && ((this.menu && this.menu !== 'hero' && this.time - this.menuAt > 0.25) || performance.now() - this.smart.pendingAt > 45000)) this.smart.flush();
+    if (this.smart.pending && ((this.menu && this.menu !== 'hero' && this.time - this.menuAt > 0.25) || this.smart.overdue)) this.smart.flush();
 
     for (let a of this.input.consumeActions()) {
       this.lastEvent = this.time;
