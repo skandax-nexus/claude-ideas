@@ -1213,6 +1213,21 @@ test('the places can be walked: their stairs, terraces, ramps and bridges carry 
   assert.ok(walkRoute(m5, 'PRESENT', [sx, 0, sz], [[n[0], n[2]]]).at?.[1] === undefined || walkRoute(m5, 'PRESENT', [sx, 0, sz], [[n[0], n[2]]]).at[1] < -1, 'ABANDONED: into the river');
 });
 
+// a quarter's spawn is also where a setback and a load put Kai: never inside a stair or a wall (a step's rise is fine)
+test('every quarter of the Prologue and Act I spawns Kai clear of colliders (M8\'s arcade was on the office stair)', () => {
+  let n = 0;
+  for (const { deck, level } of PLACED) {
+    if (!(deck.n <= 8)) continue;
+    for (const q of level.quarters) {
+      const [x, y, z] = q.spawn;
+      const hit = level.elements.filter((e) => e.solid !== false && !e.when && !e.e && e.box[0] < x + 0.35 && e.box[3] > x - 0.35 && e.box[2] < z + 0.35 && e.box[5] > z - 0.35 && e.box[4] > y + 0.4 && e.box[1] < y + 1.7);
+      assert.equal(hit.length, 0, `${deck.mkey}: ${q.name}'s spawn ${JSON.stringify(q.spawn)} is inside ${JSON.stringify(hit.map((e) => e.box))}`);
+      n++;
+    }
+  }
+  assert.ok(n >= 25, `${n} spawns`);
+});
+
 // Helix's wings build round a mission's rooms: the storeys over a room stand on its roof, never over empty ground
 test('Helix: no wing storey hangs in the air; every raised panel block stands on a room (Missions 2, 3 and 12)', () => {
   let n = 0;

@@ -125,7 +125,7 @@ export default {
     P.box([48, 6, -6.6, 62, WING_H, 6.6], 'helixPanel', { t: 0xf4f2f8 });
     P.vbox([48, WING_H, -6.6, 62, WING_H + 0.3, 6.6], 'roofLight');
     for (const x of [48.6, 61.4]) for (const z of [-6.4, 6.4]) P.box([x - 0.5, -2.6, z - 0.3, x + 0.5, 6, z + 0.3], 'helixWhite');
-    P.land('eastArcade', 40, 0, -22, Math.PI / 2);
+    P.land('eastArcade', 40, 0, -26.4, Math.PI / 2); // (at the foot of the office stair, whose first step is at z -24: not on it)
     colonnade(P, 44, -36, 44, -8, 8, 4.5, 0.3, 'steel');
     P.box([44, 4.5, -38, 48, 5.0, -8], 'helixWhite');
     P.land('serverRoom2026', 46, 0, -26, -Math.PI / 2);
