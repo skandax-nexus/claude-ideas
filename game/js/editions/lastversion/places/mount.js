@@ -15,6 +15,8 @@ import { Horizon } from './Horizon.js';
 import { makeKit, makeGlint } from './kits.js';
 import { namedMaterial, setLit } from './materials.js';
 import { underWater } from './Place.js';
+import { armAngle, bridging, armSteps } from './turntables.js';
+import { colliderEntry } from '../processes.js';
 
 // how far above the ground a kind of interactable floats (Place.stageBeat, fragments)
 const KIND_Y = { terminal: 1.15, plaque: 1.6, fragment: 1.1, scene: 1.3 };
@@ -26,6 +28,35 @@ const _pc = new THREE.Vector3(), _pinv = new THREE.Matrix4();
 // most of the scene pass's. Each of a person's skinned meshes gets a sphere round the whole body, fixed in its own
 // frame (from the feet, a metre up, 1.6 m round: a standing, walking or reaching person, generously), and is culled
 // against it: the camera draws the people in front of it, the shadow pass the ones in its box. (Station Zero is untouched.)
+// a turntable's gangway (places/turntables.js): its steps and rails along +x from the centre, and two bronze spokes
+// across the disc that show it turning; the group turns about the turntable's centre
+function makeGangway(tt) {
+  const g = new THREE.Group();
+  g.position.set(tt.c[0], tt.top, tt.c[1]);
+  const mat = namedMaterial('bronzeAged');
+  const add = (w, h, d, x, y, z, ry = 0) => {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+    m.position.set(x, y, z);
+    m.rotation.y = ry;
+    m.castShadow = m.receiveShadow = true;
+    g.add(m);
+  };
+  for (const b of armSteps({ ...tt, c: [0, 0], top: 0, to: tt.to - tt.top })) add(b[3] - b[0], b[4] - b[1], b[5] - b[2], (b[0] + b[3]) / 2, (b[1] + b[4]) / 2, (b[2] + b[5]) / 2);
+  const len = tt.r1 - tt.r0, rise = tt.to - tt.top, hw = (tt.w || 1.6) / 2;
+  for (const s of [-1, 1]) {
+    const rail = new THREE.Mesh(new THREE.BoxGeometry(Math.hypot(len, rise), 0.06, 0.06), mat);
+    rail.position.set(tt.r0 + len / 2, rise / 2 + 1.0, s * hw);
+    rail.rotation.z = Math.atan2(rise, len);
+    g.add(rail);
+    add(0.08, 1.1, 0.08, tt.r0 + 0.1, 0.5, s * hw);
+    add(0.08, 1.1, 0.08, tt.r1 - 0.1, rise + 0.5, s * hw);
+  }
+  add(10.2, 0.08, 0.3, 0, 0.06, 0);
+  add(0.3, 0.08, 10.2, 0, 0.06, 0);
+  g.userData.mat = mat;
+  return g;
+}
+
 function cullPeople(dw, seen) {
   for (const a of dw.npcs || []) {
     for (const m of [a.body, a.model, a.echo]) {
@@ -112,13 +143,39 @@ export function mountPlace(rt) {
     for (const { box: b } of drowns) if (pt[0] >= b[0] && pt[0] <= b[3] && pt[2] >= b[2] && pt[2] <= b[5] && pt[1] <= b[4]) return true;
     return false;
   };
+  // the turning platforms: a gangway each, turned every frame; while one bridges its gap its steps are colliders
+  // (edition-owned entries in deckWorld.temps, which never expire), and when it turns on they go
+  const gangways = (level.turntables || []).map((tt) => {
+    const grp = makeGangway(tt);
+    root.add(grp);
+    return { tt, grp, entries: null };
+  });
+  const turn = (t) => {
+    let changed = false;
+    for (const gw of gangways) {
+      const a = armAngle(gw.tt, state, t);
+      gw.grp.visible = a !== null;
+      if (a !== null) gw.grp.rotation.y = a;
+      const want = a !== null && bridging(gw.tt, state, t);
+      if (want && !gw.entries) {
+        gw.entries = armSteps(gw.tt).map((b) => colliderEntry({ min: b.slice(0, 3), max: b.slice(3) }));
+        dw.temps.push(...gw.entries);
+        changed = true;
+      } else if (!want && gw.entries) {
+        dw.temps = dw.temps.filter((x) => !gw.entries.includes(x));
+        gw.entries = null;
+        changed = true;
+      }
+    }
+    if (changed) dw.refresh();
+  };
   const so = { time: 0, flash: 0, ctx: null }, at = [0, 0, 0];
   const people = new WeakSet();
   let peopleT = 0;
   cullPeople(dw, people);
   let state = null;
   const api = {
-    scenery, sky, horizon,
+    scenery, sky, horizon, gangways,
     // a year: the scenery's groups, the sky's preset (eased unless instant), the horizon's panorama, the lit windows
     setYear(s, instant = false) {
       const y = level.years[s] || Object.values(level.years)[0];
@@ -128,6 +185,10 @@ export function mountPlace(rt) {
       sky.setYear(y, instant);
       horizon.setYear(s, y);
       setLit(y.lit ?? 0);
+      // the gangways' bronze: polished at the first sky, aged in 2049 (gone by 2196)
+      for (const gw of gangways) gw.grp.userData.mat = namedMaterial(s === 'PAST' ? 'bronzePolished' : 'bronzeAged');
+      for (const gw of gangways) gw.grp.traverse((o) => { if (o.isMesh) o.material = gw.grp.userData.mat; });
+      if (gangways.length) turn(g.time || 0);
       // a model that has a form per year (the Chronolith: the black ring, broken into a halo by 2196)
       for (const p of Object.values(dw.props)) p.traverse((o) => o.userData.setEra?.(s));
     },
@@ -146,6 +207,7 @@ export function mountPlace(rt) {
       sky.update(dt, cam, so);
       horizon.update(cam);
       scenery.update(dt, cam);
+      if (gangways.length) turn(g.time || 0);
       // (a person whose model arrives or is dressed after the load is culled from the next half second)
       if ((peopleT += dt) > 0.5) {
         peopleT = 0;

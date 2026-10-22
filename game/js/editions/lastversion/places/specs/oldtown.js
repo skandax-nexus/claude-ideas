@@ -3,8 +3,9 @@
 // four- and five-storey townhouses with steep slate roofs, dormers, shutters and workshops. Ezra
 // Moll's corner house is 16 × 16 m and five storeys round an open 6 × 6 m light well that runs from
 // the cellar (the village's old water steps) to a glass lantern; galleries on every floor, a scissor
-// stair, the repeating brass arm sweeping the shop floor, the clock room behind a 6 m face, the roof
-// terrace. 2026 is a spring morning (and the hidden stair still stands); 2049 an autumn evening;
+// stair up to the third floor, the repeating brass arm sweeping the shop floor, the clock room behind a 6 m face (up
+// the servants' stair along the north wall, which stands only in 2026: later it is bricked up and floored over, so the
+// clock room is reached in 2026 or not at all), the roof terrace. 2026 is a spring morning; 2049 an autumn evening;
 // 2196 winter, the canal iced over, the lantern broken, vines down the well, the arm rusted solid.
 //   Q0 SHOP FLOOR & CANAL STREET   the street, the cellar, the shop floor (below 3.5 m)
 //   Q1 THE GALLERIES               floors 1-3 of the house (4 / 8 / 12 m)
@@ -99,10 +100,10 @@ export default {
     floors.forEach((y, j) => {
       const holes = [WELL];
       if (j === 0) holes.push([8.6, -31, 11, -19.4]);
+      else if (j === 4) holes.push([11.4, -31.6, 19, -29.4]); // (the clock room's floor: the servants' stair comes up here; the scissor stair stops below)
       else {
         const arrivedNorth = (j - 1) % 2 === 0;
         holes.push(arrivedNorth ? [STRIP[0], -29.6, STRIP[2], STRIP[3]] : [STRIP[0], STRIP[1], STRIP[2], -19]);
-        if (j === 1) holes.push([11.4, -31.6, 19, -29.4]);
       }
       groundHoles(P, H, holes, y, j === 0 ? 'oakFloor' : j === 5 ? 'roofLead' : 'oakFloor', { depth: 0.3 });
       // the well's railings on the galleries
@@ -113,17 +114,22 @@ export default {
         railing(P, WELL[2], WELL[1], WELL[2], WELL[3], 1.0, 'brass', { y });
       }
     });
-    // the hidden stair: in 2026 it stands along the north wall; later it is bricked up and floored over
-    P.E('PAST', () => stair(P, 19, -30.5, 0, 11.4, -30.5, 4, 2.0, 'oakFloor'));
+    // the hidden stair: the servants' stair from the third floor up to the clock room, along the north wall. In 2026
+    // it stands; later it is bricked up and floored over, and the third floor's boards are worn in a path to the brick
+    P.E('PAST', () => stair(P, 19, -30.5, 12, 11.4, -30.5, 16, 2.0, 'oakFloor'));
     P.E(['PRESENT', 'FUTURE'], () => {
-      P.box([11.4, 3.7, -31.6, 19, 4, -29.4], 'oakFloor');
-      P.box([11.4, 0, -29.3, 19, 3.7, -29.0], 'brickWall');
+      P.box([11.4, 15.7, -31.6, 19, 16, -29.4], 'oakFloor');
+      P.box([11.4, 12, -29.3, 19, 15.7, -29.0], 'brickWall');
+      P.box([19, 12, -31.6, 19.3, 15.7, -29.0], 'brickWall'); // (and its end: nobody walks in behind the brick)
     });
-    P.land('hiddenStair', 15, 0, -29.6, Math.PI);
-    P.land('floorboards', 15, 4, -28.6, 0);
+    P.land('hiddenStair', 15, 12, -29.6, Math.PI);
+    P.land('floorboards', 15, 12, -28.6, 0);
     P.challenge('hiddenStair', [8, -32, 24, -16], ['PAST', 'PRESENT'], null, { optional: true });
-    // the scissor stair, five flights of 4 m in two lanes: north in the inner lane, south in the outer
+    // the scissor stair, flights of 4 m in two lanes (north in the inner lane, south in the outer): up to the third
+    // floor, and from the clock room on to the roof. Between the third floor and the clock room there is none: that
+    // flight is the servants' stair's
     for (let k = 0; k < 5; k++) {
+      if (k === 3) continue;
       const north = k % 2 === 0, lx = north ? 21.1 : 22.5;
       stair(P, lx, north ? -19 : -29.6, k * 4, lx, north ? -29.6 : -19, k * 4 + 4, 1.3, 'oakFloor');
     }

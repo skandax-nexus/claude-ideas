@@ -1154,8 +1154,10 @@ test('the places can be walked: their stairs, terraces, ramps and bridges carry 
     ['m05', 'PRESENT', (l) => lm(l, 'weir'), [[30, -26], [16.5, -26], [8, -26]], 2, {}],
     ['m05', 'PRESENT', (l) => lm(l, 'southBank'), [[-16, 44.5], [-28, 44.5], [-28, 34.2], [-28.6, 30]], 7.4, {}],
     ['m06', 'PRESENT', (l) => lm(l, 'cellarStair'), [[9.8, -20.6], [12, -18.4]], 0, {}],
-    ['m06', 'PRESENT', () => [21.1, 0, -18.5], [0, 1, 2, 3, 4].flatMap((k) => (k % 2 ? [[22.5, -29.4], [22.5, -19], [21.1, -18.4]] : [[21.1, -19.2], [21.1, -29.7], [22.5, -30.2]])), 20, {}],
-    ['m06', 'PAST', () => [19.5, 0, -28], [[19.4, -30.5], [11.2, -30.5]], 4, {}],
+    // (Mission 6: the scissor stair climbs to the third floor; the clock room is up the servants' stair, there in 2026
+    // only; from the clock room the scissor stair goes on to the roof)
+    ['m06', 'PRESENT', () => [21.1, 0, -18.5], [0, 1, 2].flatMap((k) => (k % 2 ? [[22.5, -29.4], [22.5, -19], [21.1, -18.4]] : [[21.1, -19.2], [21.1, -29.7], [22.5, -30.2]])), 12, {}],
+    ['m06', 'PAST', () => [19.5, 12, -28], [[19.4, -30.5], [11.2, -30.5], [11, -28], [11, -20], [20.5, -18.6], [21.1, -19.2], [21.1, -29.7]], 20, {}],
     ['m07', 'PRESENT', () => [30, 0, -18], [[30, -37], [26, -70], [41, -70], [46.5, -52], [40, -52], [14, -52], [12, -52]], 18, {}],
     ['m07', 'PAST', () => [46, 16, -70], [[44, -74], [66, -74], [74, -77]], 27.5, {}],
     ['m07', 'FUTURE', () => [-80, 0, -52], [[-78, -52], [-37, -52], [-35, -52]], 18, {}],
@@ -1195,6 +1197,10 @@ test('the places can be walked: their stairs, terraces, ramps and bridges carry 
     const r = walkRoute(l, st, start(l), route, facts);
     assert.ok(!r.stuck && Math.abs(r.at[1] - y) < 0.6, `${key} ${st}: ${JSON.stringify(route.slice(-1))} ${JSON.stringify(r)}`);
   }
+  // Mission 6: in 2049 the third floor is as high as the stairs go (the old flight's lane is open air), and the
+  // servants' stair is brick
+  assert.ok((walkRoute(lv('m06'), 'PRESENT', [22.5, 12, -30.2], [[22.5, -29.4], [22.5, -19]]).at?.[1] ?? 0) < 12.6, 'M6: no scissor flight to the clock room');
+  assert.ok(walkRoute(lv('m06'), 'PRESENT', [19.5, 12, -28], [[19.7, -30.5], [11.2, -30.5]]).stuck, 'M6: in 2049 the servants\' stair is bricked up');
   // where the year is the answer, the wrong year does not carry Kai: the lab's glass in 2049, the 2049 chasm, the reflection out of step
   assert.ok(walkRoute(lv('m03'), 'PRESENT', [40.8, 0, -6], [[40.8, -1]]).stuck, 'M3: in 2049 the lab\'s south wall is glass');
   assert.ok((walkRoute(lv('m18'), 'PRESENT', [0, 0, -80], [[0, -66], [0, -54], [0, -40]]).at?.[1] ?? -99) < -1, 'M18: no way over the chasm in 2049');
@@ -1284,6 +1290,41 @@ test('Helix: the court is the hub of Mission 2; the plant terrace is on a roof a
     assert.deepEqual(cps.map((c) => c.spawn), [], `M3 court ${p}: no room's checkpoint`);
   }
   assert.ok(m3.checkpoints.some((c) => c.room === m3.outdoorRoom && inB(c.box, [0, 0.86, 30])), 'M3: the dig is a quarter of the court, with its checkpoint');
+});
+
+// Mission 7: the bible's "rooftops, rotating platforms and an exterior ring". The turntables turn, and their gangways
+// bridge the gaps only while they point across them (places/turntables.js); at the first sky they turn, in 2049 they
+// are seized pointing at nothing, by 2196 they have fallen. The roofs come down to the first one
+test('Mission 7: the turntables turn; a gangway bridges its gap only while it points across, and only at the first sky', async () => {
+  const { armAngle, bridging, armSteps } = await import('../game/js/editions/lastversion/places/turntables.js');
+  const l = PLACED.find((p) => p.deck.mkey === 'm07').level;
+  assert.equal(l.turntables.length, 2);
+  for (const tt of l.turntables) {
+    const on = (st) => { let n = 0; for (let t = 0; t < 20; t += 0.05) if (bridging(tt, st, t)) n++; return n * 0.05; };
+    assert.ok(on('PAST') >= 5.9 && on('PAST') <= 7, `${tt.id}: at the first sky it bridges ${on('PAST').toFixed(1)} s in every 20`);
+    assert.equal(on('PRESENT'), 0, `${tt.id}: seized in 2049, pointing at nothing`);
+    assert.equal(on('FUTURE'), 0, `${tt.id}: fallen by 2196`);
+    assert.equal(armAngle(tt, 'FUTURE', 3), null);
+    const angles = new Set(); for (let t = 0; t < 20; t += 1) angles.add(Math.round(armAngle(tt, 'PAST', t) * 10)); assert.ok(angles.size > 8, `${tt.id}: it turns all the way round`);
+  }
+  // walked with the Player physics: with the gangway across, from each turntable up onto the next; without it, no way
+  const steps = (i) => armSteps(l.turntables[i]).map((b) => ({ box: b, solid: true }));
+  const withArm = (...i) => ({ ...l, elements: [...l.elements, ...i.flatMap(steps)] });
+  const up1 = walkRoute(withArm(0), 'PAST', [-47, 2, -4], [[-44, -4], [-40, -4], [-38, -4]]);
+  assert.ok(!up1.stuck && Math.abs(up1.at[1] - 4) < 0.3, `over the first gangway onto the second turntable: ${JSON.stringify(up1)}`);
+  const up2 = walkRoute(withArm(1), 'PAST', [-33, 4, -4], [[-30, -4], [-26, -4], [-24, -4]]);
+  assert.ok(!up2.stuck && Math.abs(up2.at[1] - 6) < 0.3, `over the second gangway onto the third: ${JSON.stringify(up2)}`);
+  for (const st of ['PAST', 'PRESENT', 'FUTURE']) {
+    const no = walkRoute(l, st, [-47, 2, -4], [[-44, -4], [-40, -4], [-38, -4]]);
+    assert.ok(no.stuck || no.at[1] < 3, `${st}, no gangway across: not onto the second turntable (${JSON.stringify(no)})`);
+  }
+  // the second turntable is where the thread "over the roofs to the turning platforms" is done: not from the ground
+  const go = l.triggers.find((t) => t.set?.t_m07_roofs);
+  const inB = (b, p) => p[0] >= b[0] && p[0] < b[3] && p[1] >= b[1] && p[1] < b[4] && p[2] >= b[2] && p[2] < b[5];
+  assert.ok(go && inB(go.box, [-36, 4.86, -4]) && !inB(go.box, [-36, 0.86, 3]) && !inB(go.box, [-50, 2.86, -4]), 'the platforms\' thread: on the second turntable, not under it or on the first');
+  // over the astronomers' roofs: the highest roof comes down to the first turntable
+  const roofs = walkRoute(l, 'PAST', [-50, 4.4, 22], [[-53, 20], [-53, 10], [-53, 1.5], [-50, -3]]);
+  assert.ok(!roofs.stuck && Math.abs(roofs.at[1] - 2) < 0.3, `from the roofs down to the first turntable: ${JSON.stringify(roofs)}`);
 });
 
 // the Zero Second waits for Rook's call (checkpoint_passed && rook_message): no way into the plaza may miss the call

@@ -600,7 +600,7 @@ export const M06 = {
       set: { ev_arm_count: true }, log: 'The arm has turned two thousand six hundred and nine times.' },
     windows: { lines: [N('Three faces in the window: morning, evening, noon. Under each, a year: 2026, 2049, 2196.')], set: { ev_window_faces: true } },
     boards_now: { lines: [N('The boards are worn in a path toward the north wall, and stop at brick.')], set: { ev_boards_now: true } },
-    boards_then: { lines: [N('In 2026 the path runs on, down a stair later years do not have.')], set: { ev_boards_then: true } },
+    boards_then: { lines: [N('In 2026 the path runs on, up a stair later years do not have.')], set: { ev_boards_then: true } },
     clock26: { when: '@PAST', lines: [N('Morning, as the window says. The 2026 clock takes the hour.')], set: { clk_26: true } },
     clock26_no: { lines: [K('This one belongs to 2026.')] },
     clock49: { when: '@PRESENT', lines: [N('Evening. The 2049 clock takes it.')], set: { clk_49: true } },

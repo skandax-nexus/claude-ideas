@@ -402,6 +402,7 @@ export function assemble(P, { story, deck, si, beat, years, name, extraRooms = [
     place: P.key, landmarks: P.landmarks, quarters, years, crowd: [...(spec.variants?.[deck.mkey]?.crowd || spec.crowd || []), ...P.crowd], sites: P.sites, vis: P.vis, veg: P.veg, style: spec.style,
     sameAs: spec.sameAs || null, backdrop: spec.backdrop || {}, skyFeatures: spec.skyFeatures?.[deck.mkey] || spec.skyFeatures?.all || [],
     bounds: spec.bounds, outdoorRoom: rid, drowns: P.drowns || [],
+    turntables: P.turntables || [], // (places/turntables.js: gangways that turn and bridge, Mission 7)
   };
   return level;
 }

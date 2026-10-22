@@ -165,7 +165,12 @@ export default {
     // --- Q1: the instrument stair: the turntables, the dates ring, the Star Tube, the scavengers' camp --------
     P.land('instrumentFoot', -48, 0, 14, Math.PI);
     P.land('rotatingPlatforms', -36, 3, -6, 0);
-    for (const [x, z, y] of [[-50, -4, 2], [-36, -10, 4], [-22, -4, 6]]) {
+    // three turntables in a row, each a step higher (2, 4, 6 m); no stair joins them. Each of the first two carries a
+    // bronze gangway that turns with it (places/turntables.js, drawn and moved by mount.js): at the first sky it stops
+    // pointing at the next platform for six seconds in every twenty and bridges the gap, then sweeps on round; in 2049
+    // the survey finds them seized, the gangways pointing at nothing; by 2196 they have fallen
+    const TT = [[-50, -4, 2], [-36, -4, 4], [-22, -4, 6]];
+    for (const [x, z, y] of TT) {
       P.cyl(x, 0, z, 6, y, 'sandstone', { seg: 28, solid: true });
       P.col([x - 5.2, 0, z - 5.2, x + 5.2, y, z + 5.2]);
       P.setTerrain(x - 5.2, z - 5.2, x + 5.2, z + 5.2, y);
@@ -173,9 +178,19 @@ export default {
       P.E('PAST', () => P.torus(x, y + 0.1, z, 4.6, 0.12, 'bronzePolished', { rx: Math.PI / 2, seg: 36 }));
       P.E('PRESENT', () => P.torus(x, y + 0.1, z, 4.6, 0.12, 'bronzeAged', { rx: Math.PI / 2, seg: 36 }));
     }
+    P.turntables = [0, 1].map((i) => ({ id: `tt${i}`, c: [TT[i][0], TT[i][1]], top: TT[i][2], to: TT[i + 1][2], r0: 5.2, r1: TT[i + 1][0] - TT[i][0] - 5.2, w: 1.8,
+      period: 20, dwell: 6, phase: i * 10, years: { PAST: 'turn', PRESENT: i ? 4.1 : 2.3, FUTURE: null } }));
+    // (2196: the gangways lie in the grass under the gaps they bridged; 2049: the survey's board at the foot of the stair)
+    P.E('FUTURE', () => [[-43, 2.2], [-29, 2.2]].forEach(([x, z], i) => P.obox(x, 0, z, 4.2, 0.3, 1.8, 0.4 - i * 0.7, 'bronzeVerdigris', { rz: 0.2, solid: false })));
+    P.E('PRESENT', () => {
+      P.box([-42.1, 0, 5.9, -41.9, 1.6, 6.1], 'scaffold');
+      sign(P, 'TURNTABLES SEIZED - DO NOT CLIMB', -42, 1.9, 6.2, 0, { size: 0.16, color: '#ffe0b0' });
+    });
     stair(P, -46, 4, 0, -48, -0.6, 2, 2.4, 'sandstone');
-    stair(P, -43, -6, 2, -40.6, -8, 4, 2.4, 'sandstone');
-    stair(P, -29.5, -8.5, 4, -27.2, -6.4, 6, 2.4, 'sandstone');
+    // the astronomers' roofs come down to the first turntable: a stepped causeway from the highest roof (4.4 m), on a
+    // wall of its own (the stair's steps stand on 1.7 m)
+    stair(P, -53, 19, 4.4, -53, 1.0, 2.0, 2.4, 'sandstone');
+    P.box([-54.2, 0, 1.0, -51.8, 1.7, 19], 'sandstone');
     // the Star Tube: a 20 m tower with a sighting tube on its roof, an outside stair to its gallery
     P.land('starTube', 6, 0, -14, Math.PI);
     P.box([3, 0, -17, 9, 20, -11], 'sandstone');

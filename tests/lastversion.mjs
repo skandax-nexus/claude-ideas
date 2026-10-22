@@ -1094,6 +1094,30 @@ check(order(m6.steps, 'ezra', 'arm', 'boards', 'stair', 'clocks', 'recording') &
 await finish();
 
 // --- Mission 7: the three instruments in three years, the dates, Mira's tape; the scavengers' cache ------------------
+// the turning platforms (places/turntables.js): at the first sky the first gangway turns, stops pointing at the second
+// turntable, and Kai walks across it on its steps (real movement), up from 2 m to 4 m; in 2049 it is seized
+const turning = await az(() => {
+  const g = AZ, gw = g.edition.mounted?.gangways?.[0];
+  if (!gw) return 'no gangway';
+  const home = g.engine.state(g.room), at = g.player.pos.toArray();
+  g.edition.shift('PAST'); g.simulate(0.1);
+  const a0 = gw.grp.rotation.y;
+  let waited = 0;
+  // (the Chronolith is held steady while the bot waits: the year is what is tested here, not stability)
+  while (gw.entries && waited < 25) { g.edition.stability = 1; g.simulate(0.1); waited += 0.1; } // (past this dwell, if it is in one)
+  const swept = new Set();
+  while (!gw.entries && waited < 50) { g.edition.stability = 1; g.simulate(0.1); waited += 0.1; swept.add(Math.round(gw.grp.rotation.y * 4)); }
+  const bridged = !!gw.entries;
+  LVB.place(-47, -4, 2.9);
+  const left = LVB.walkTo(-38, -4, 6);
+  const r = { a0: +a0.toFixed(2), swept: swept.size, bridged, left: +left.toFixed(2), y: +(g.player.pos.y - 0.86).toFixed(2) };
+  g.edition.shift('PRESENT'); g.simulate(0.2);
+  r.seized = !gw.entries && Math.abs(gw.grp.rotation.y - 2.3) < 0.01;
+  g.edition.shift(home); g.simulate(0.1);
+  LVB.place(at[0], at[2], at[1]);
+  return r;
+});
+check(typeof turning === 'object' && turning.bridged && turning.swept > 6 && turning.left < 0.6 && Math.abs(turning.y - 4) < 0.3 && turning.seized, 'Mission 7: at the first sky the turntable\'s gangway sweeps round, stops across the gap, and Kai walks over it up onto the next platform; in 2049 it is seized', JSON.stringify(turning));
 const m7 = await playMission('m07', { sides: ['cache'] });
 const m7f = await az(() => ({ ...LVB.f('align_sun', 'align_star', 'align_new', 'mira_tape', 'ev_cache'), said: LVB.said.includes('NIKO: They didn\'t know when. They knew who.'), tape: LVB.voices.find((v) => v.who === 'MIRA9')?.fx }));
 check(m7f.align_sun && m7f.align_star && m7f.align_new && m7f.said && ['kept', 'left'].includes(m7f.mira_tape) && m7f.ev_cache, 'Mission 7: the sun, a star, the new star; "They didn\'t know when. They knew who."; Mira\'s tape kept or left', JSON.stringify(m7f));
