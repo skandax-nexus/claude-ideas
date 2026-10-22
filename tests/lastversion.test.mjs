@@ -1213,6 +1213,19 @@ test('the places can be walked: their stairs, terraces, ramps and bridges carry 
   assert.ok(walkRoute(m5, 'PRESENT', [sx, 0, sz], [[n[0], n[2]]]).at?.[1] === undefined || walkRoute(m5, 'PRESENT', [sx, 0, sz], [[n[0], n[2]]]).at[1] < -1, 'ABANDONED: into the river');
 });
 
+test('Mission 4: the pictograms are carved on standing stones, in both years; the carved lintel stands only in the village', () => {
+  const l = PLACED.find((p) => p.deck.mkey === 'm04').level;
+  for (const m of ['pictoFire', 'pictoWater', 'pictoRing']) {
+    const g = l.vis.find((v) => v.m === m);
+    const stone = l.vis.find((v) => v.k === 'obox' && v.m === 'drystone' && v.x === g.x && v.z === g.z);
+    assert.ok(stone && stone.y <= 0 && stone.y + stone.h >= g.y && stone.w >= g.w && !stone.e && !g.e, `${m}: on a stone from the ground (${JSON.stringify(stone)})`);
+    assert.ok(l.elements.some((e) => e.box[0] <= g.x && e.box[3] >= g.x && e.box[2] <= g.z && e.box[5] >= g.z && e.box[1] <= 0 && e.solid !== false), `${m}: its stone is solid`);
+  }
+  const lintel = l.vis.find((v) => v.m === 'glyphStone' && v.x === -46 && v.z === 69);
+  assert.deepEqual(lintel?.e, ['PRESENT'], 'BEFORE THE FIRE nothing is built');
+  assert.equal(l.interactables.find((i) => i.scene === 'frag_door').when, '@PRESENT', 'the lintel is read where it stands');
+});
+
 // main.js keeps the last checkpoint Kai stands in (stepDeck); Threads.quarters names the quarter he is in
 test('every quarter is somewhere to come back to: at its spawn, its spawn is the checkpoint; M6\'s floors are quarters of their own', async () => {
   const { Threads } = await import('../game/js/editions/lastversion/Threads.js');

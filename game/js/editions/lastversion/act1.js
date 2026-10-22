@@ -142,7 +142,7 @@ export const M04 = {
           goal: 'Read the stele, and what it said before the fire.', because: 'It says who raised the ring.', ev: 'found_not_built', hints: M04_HINTS.stele, minutes: 3 },
         { id: 'frags', kind: 'clue', need: 3, of: ['ev_frag_door', 'ev_frag_never', 'ev_frag_early'], after: ['meal'],
           spots: [
-            { id: 'frag_door', scene: 'frag_door', at: 'lintelHouse', prompt: 'THE LINTEL', offset: [0, 1.6, -6.9], r: 2.8, model: NO_MODEL },
+            { id: 'frag_door', scene: 'frag_door', at: 'lintelHouse', prompt: 'THE LINTEL', offset: [0, 1.6, -6.9], r: 2.8, model: NO_MODEL, when: '@PRESENT' },
             { id: 'frag_never', scene: 'frag_never', at: 'grainStore', prompt: 'THE GRAIN STORE', offset: [0, 0, 1.4], r: 3, model: kit('carvedStone'), when: '@PRESENT' },
             { id: 'frag_early', scene: 'frag_early', at: 'waterSteps', prompt: 'A STONE IN THE STEPS', offset: [-2.4, 0, 0], r: 3, model: kit('carvedStone'), when: '@PAST' },
           ],

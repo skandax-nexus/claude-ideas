@@ -162,12 +162,17 @@ export default {
       prop(P, 'cart', 48, 90, 0.6);
       for (const x of [-60, -30, 0, 30, 60]) P.cone(x, 0, 66 + (x % 3), 0.3, 6, 'smoke', { noShadow: 1, prop: 1 });
     });
-    // pictograms: carved on the house walls and a boulder; and the carved lintel
-    glyphs(P, -40, 1.2, 71.2, 1.8, 1.4, 0, { m: 'pictoFire' });
-    glyphs(P, -8, 1.0, 64.2, 1.8, 1.4, 0, { m: 'pictoWater' });
-    glyphs(P, 46, 1.0, 69.6, 1.8, 1.6, 0, { m: 'pictoRing' });
-    P.box([-48.6, 0, 69.2, -43.4, 2.4, 70.6], 'drystone');
-    glyphs(P, -46, 2.1, 69.0, 4.6, 0.6, 0, { m: 'glyphStone' });
+    // pictograms: carved on the heads of three standing stones (older than the houses: they stand before the fire too)
+    for (const [x, y, z, h, m] of [[-40, 1.2, 71.2, 1.4, 'pictoFire'], [-8, 1.0, 64.2, 1.4, 'pictoWater'], [46, 1.0, 69.6, 1.6, 'pictoRing']]) {
+      P.obox(x, 0, z, 2.1, y + 0.02, 0.6, 0, 'drystone', { solid: true });
+      glyphs(P, x, y, z, 1.8, h, 0, { m });
+    }
+    // the carved lintel: a stone doorway at the lane into the lower village (before the fire nothing is built)
+    P.E('PRESENT', () => {
+      for (const x0 of [-48.6, -44.6]) P.box([x0, 0, 69.2, x0 + 1.2, 2.4, 70.6], 'drystone');
+      P.box([-48.8, 2.4, 69.1, -43.2, 3.0, 70.7], 'drystone');
+      glyphs(P, -46, 2.45, 69.0, 4.6, 0.5, 0, { m: 'glyphStone' });
+    });
     P.E('PAST', () => {
       // before the fire: hide tents, the first campfire, tall grass where the houses will be
       for (const [x, z] of [[-30, 84], [-14, 90], [12, 92], [30, 84], [-48, 78], [48, 78], [-22, 72], [22, 70]]) tent(P, { x, z, r: 2.3, h: 3.4 });
