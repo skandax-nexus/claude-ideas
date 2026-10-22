@@ -123,10 +123,16 @@ await az(() => {
     const ls = lines.filter((l) => !l.when || facts.test(l.when));
     B.said.push(...ls.map((l) => `${l.who}: ${l.text}`));
     B.voices.push(...ls.map((l) => ({ who: l.who, text: l.text, id: l.voice?.id || null, fx: l.voice?.fx || null })));
-    // every line said has a plan in the packs (while a chapter's pack is still coming, it is counted, not judged)
+    // every line said has a plan in the packs (one said while a chapter's pack is still coming is judged once the
+    // packs are here: the voice waits for them the same way)
+    const judge = (l, pre = '') => {
+      if (!g.voice.plan(l.text, l.who, l.voice || {})) B.planMiss.push(`${pre}${l.who}${l.voice?.id ? `/${l.voice.id}` : ''}: ${l.text}`);
+    };
     for (const l of ls) {
-      if (g.voice.loading < 1) B.pending++;
-      else if (!g.voice.plan(l.text, l.who, l.voice || {})) B.planMiss.push(`${l.who}${l.voice?.id ? `/${l.voice.id}` : ''}: ${l.text}`);
+      if (g.voice.loading < 1) {
+        B.pending++;
+        g.voice.ready().then(() => judge(l, '(said while loading) '));
+      } else judge(l);
     }
     return say(lines, facts, done);
   };
@@ -255,7 +261,9 @@ const startChapter = async (ch) => {
 };
 // a mission's opening (the chapter's card, the mission's card, the cold open) waits for its voices: let it play out
 const opening = async () => {
-  await page.waitForFunction(() => { LVB.step(0.2); LVB.skip(); return !AZ.edition.opening && !AZ.edition.cinema.active && AZ.voice.loading >= 1; }, null, { timeout: 120000, polling: 250 }).catch(() => {});
+  const over = await page.waitForFunction(() => { LVB.step(0.2); LVB.skip(); return !AZ.edition.opening && !AZ.edition.cinema.active && AZ.voice.loading >= 1; }, null, { timeout: 120000, polling: 250 }).then(() => true, () => false);
+  // (an opening that never ends is a failure, said here, not as the next check's)
+  if (!over) check(false, 'a mission\'s opening ends (it did not within 120 s)', JSON.stringify(await az(() => ({ where: LVB.where(), opening: !!AZ.edition.opening, cinema: !!AZ.edition.cinema.active, loading: AZ.voice.loading }))));
   await az(() => { LVB.step(0.2); LVB.skip(); });
 };
 
@@ -302,6 +310,41 @@ check(cold.said.indexOf('NONE: Rain City. 05:40.') >= 0 && cold.said.indexOf('NO
 check(cold.obj === 'Look at the photo by the door.' && cold.why === 'It is the anniversary. It always starts at the door.', 'the objective is the first thread, with its because line under it', JSON.stringify(cold));
 const m1 = await az(() => ({ ...LVB.where(), state: AZ.engine.state(AZ.room), quarter: AZ.campaign.quarter }));
 check(m1.chapter === 'prologue' && m1.deck === 0 && m1.state === 'PRESENT' && m1.quarter === 0, 'NEW GAME > PROLOGUE > slot 1 starts Mission 1 in the present, in its first quarter', JSON.stringify(m1));
+// a staged moment holds Kai (U5 review): a thumb on the touch stick, W, the stick zone and the year key do nothing to
+// it, and no line is skipped by them; a tap on the view skips one; when it is over the stick walks him again
+const held = await az(() => {
+  const g = AZ, cine = g.edition.cinema, inp = g.input;
+  const p0 = g.player.pos.clone();
+  const year = g.engine.state(g.room);
+  const dist = () => +Math.hypot(g.player.pos.x - p0.x, g.player.pos.z - p0.z).toFixed(2);
+  cine.play({ shots: 'default', lines: [{ who: 'NONE', text: 'Rain City. 05:40.' }, { who: 'KAI', text: 'Twenty-three years today.' }] });
+  const r = { active: !!cine.active, line: g.hud.cur?.text };
+  Object.assign(inp.stick, { id: 7, x: 0, y: -1 });
+  g.simulate(0.8);
+  r.stick = dist();
+  document.querySelector('#stickzone').dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+  window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyW' }));
+  window.dispatchEvent(new KeyboardEvent('keyup', { code: 'KeyW' }));
+  inp.actions.push('shift', 'use');
+  g.frame();
+  g.simulate(0.1);
+  r.kept = g.hud.cur?.text === r.line && g.hud.talking;
+  r.year = g.engine.state(g.room) === year;
+  r.moved = dist();
+  g.canvas.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+  g.simulate(0.2);
+  r.tapped = g.hud.cur?.text;
+  cine.skipAll();
+  LVB.talkOut();
+  r.over = !cine.active;
+  g.simulate(0.5);
+  r.walks = dist() > 0.3;
+  Object.assign(inp.stick, { id: null, x: 0, y: 0 });
+  LVB.place(p0.x, p0.z);
+  return r;
+});
+check(held.active && held.stick < 0.05 && held.moved < 0.05 && held.kept && held.year && held.tapped === 'Twenty-three years today.' && held.over && held.walks,
+  'a staged moment holds Kai: the stick, W and the year key move nothing and skip no line; a tap on the view skips one; then the stick walks him again', JSON.stringify(held));
 const cast1 = await az(() => {
   const m = (id) => LVB.npc(id)?.model.userData.spec?.model;
   const crowd = AZ.deckWorld.npcs.filter((n) => n.n.crowd);
@@ -443,12 +486,18 @@ const m1min = +((m1t1 - m1t0) / 60).toFixed(1);
 console.log(`  (Mission 1 walked by the bot: ${m1min} min of game time, lines at their own length, with the florist and Last Train Home)`);
 check(m1min > 5, `Mission 1, walked: ${m1min} min of game time`, String(m1min));
 // a save and a load: the mission comes back at the furthest quarter it reached (LINE 41), after a PREVIOUSLY card
-const resume = await az(() => {
+// (loaded during the mission's outro: a load in the page drops the outro, and the gates must still open after it
+// (U5 review; a player's load reloads the page first: main.begin); the exit below is the proof)
+const outroLoad = await az(() => {
   const q = AZ.campaign.quarter;
   AZ.saveTo(0);
+  AZ.edition.exitReached();
+  const outro = !!AZ.edition.cinema.active && !!AZ.transitioning;
   AZ.load(0);
-  return q;
+  return { q, outro, after: !!AZ.transitioning };
 });
+const resume = outroLoad.q;
+check(outroLoad.outro && !outroLoad.after, 'a load during a mission\'s outro leaves no gate shut (transitioning is cleared)', JSON.stringify(outroLoad));
 // the PREVIOUSLY card: a tap on SKIP (the button, as a touch screen has it) ends it at once
 await page.waitForFunction(() => { LVB.step(0.05); return AZ.edition.opening?.previously && AZ.edition.cinema.active; }, null, { timeout: 120000, polling: 250 }).catch(() => {});
 const skipTap = await az(() => { const b = document.querySelector('#lvSkip'); const shown = getComputedStyle(b).display !== 'none'; b.click(); AZ.simulate(0.1); return { shown, opening: !!AZ.edition.opening, cine: !!AZ.edition.cinema.active }; });

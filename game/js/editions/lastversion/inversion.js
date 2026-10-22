@@ -247,6 +247,7 @@ export class Inversion {
   press() {
     const g = this.g;
     if (!g.started || g.menu || g.paused || g.mode !== 'deck' || !g.campaign?.lv) return;
+    if (this.rt.cinema?.active && !this.active) return; // (a staged moment holds Kai: cinema.js; a hold can still be let go)
     if (!this.unlocked) {
       g.audio.deny?.();
       if (this.once('locked', 30)) g.hud.toast('<small>REVERSE</small><br>Not yet. Something in Act II catches the rhythm.', 1800);

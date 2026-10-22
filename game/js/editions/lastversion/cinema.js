@@ -5,8 +5,9 @@
 // shots: [{ cam, look, t }] where cam and look are landmark names or [x, y, z] points (t: seconds, else the
 // lines' length shared out); 'default' stages the level's spawn: a wide view behind it easing in, then over
 // the shoulder; null keeps the game's camera (letterbox and lines only). The camera runs through the
-// existing Player.cinema hook; held keys are dropped meanwhile; the lines are said through hud.say (the voice packs).
-// A tap or a key skips the line being said and the shot it is in; the moment ends with its last line.
+// existing Player.cinema hook; Kai is held meanwhile (keys, the touch stick, the actions that act in the world);
+// the lines are said through hud.say (the voice packs). A tap on the view, a click, Space or E skips the line being
+// said and the shot it is in (Enter, or SKIP, the whole moment); the moment ends with its last line.
 import * as THREE from '../../../vendor/three.module.min.js';
 
 const STYLE = `
@@ -25,6 +26,11 @@ const STYLE = `
   body.lastversion #lvSkip small { opacity: 0.6; font-size: 10px; margin-left: 4px; }
   body.lastversion.touch #lvSkip small { display: none; }
 `;
+
+// the keys that skip a line (Enter skips the whole moment); the actions held while a moment plays (use, the year,
+// REVERSE, echo-step, the anchor, THINK, gear): what acts in the world. Pause, the map, the case board, saves pass.
+const SKIP_KEYS = ['Space', 'KeyE'];
+const HELD = /^(use|shift|set:|combo|anchor|hint|gear:|rules$)/;
 
 const _a = new THREE.Vector3(), _b = new THREE.Vector3();
 const ease = (x) => x * x * (3 - 2 * x);
@@ -53,22 +59,44 @@ export class Cinema {
         else this.skipAll();
       };
       document.body.appendChild(skipBtn);
-      // a tap, a click or a key skips a shot (and the line being said)
+      // a deliberate tap, click or key skips a shot (and the line being said): Space or E, a click, a tap on the
+      // view. Not a movement key, and not the thumb landing on the stick (a player reaching for the controls
+      // as a mission starts would cut its card off line by line)
       const skip = (e) => {
         if (!this.active || this.g.menu) return;
-        // (a key held down repeats: one press skips one line, not the whole moment)
-        if (e.type === 'keydown' && (e.repeat || ['Escape', 'ShiftLeft', 'ShiftRight', 'F5', 'F9'].includes(e.code))) return;
-        if (e.target?.closest?.('button, input, .overlay')) return;
-        // Enter is SKIP's key: with the pointer locked (a desktop at play) the button cannot be clicked
-        if (e.type === 'keydown' && (e.code === 'Enter' || e.code === 'NumpadEnter')) {
-          if (this.rt.skipOpening) this.rt.skipOpening();
-          else this.skipAll();
-          return;
-        }
+        if (e.type === 'keydown') {
+          if (e.repeat) return; // (a key held down repeats: one press skips one line, not the whole moment)
+          // Enter is SKIP's key: with the pointer locked (a desktop at play) the button cannot be clicked
+          if (e.code === 'Enter' || e.code === 'NumpadEnter') {
+            if (this.rt.skipOpening) this.rt.skipOpening();
+            else this.skipAll();
+            return;
+          }
+          if (!SKIP_KEYS.includes(e.code)) return;
+        } else if (e.target?.closest?.('button, input, .overlay, #stickzone, #dock, #buttons, #topbtns')) return;
         this.skip();
       };
       window.addEventListener('pointerdown', skip, true);
       window.addEventListener('keydown', skip, true);
+    }
+    // nothing the player does walks Kai off his mark or acts in the world meanwhile: the movement the input
+    // reads (keys, the touch stick, the jump button) is nought, and only the menus' and saves' actions pass
+    const input = this.g.input;
+    if (input?.poll && input.consumeActions) {
+      const poll = input.poll.bind(input);
+      input.poll = () => {
+        const s = poll();
+        if (this.active) {
+          s.forward = s.strafe = 0;
+          s.jump = false;
+        }
+        return s;
+      };
+      const consume = input.consumeActions.bind(input);
+      input.consumeActions = () => {
+        const a = consume();
+        return this.active ? a.filter((x) => !HELD.test(x)) : a;
+      };
     }
   }
 

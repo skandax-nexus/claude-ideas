@@ -732,8 +732,13 @@ export class LastVersion {
     const deck = this.deck;
     const chapter = CHAPTERS[this.chapter];
     g.audio.setAmbience(null); // (the score's beds, per place and year)
-    this.opening = null; // (an opening still running for the place left behind ends with it)
+    // an opening still running for the place left behind ends with it, and its card with it; a moment it drops
+    // (an outro whose go() never comes) leaves no gate shut behind it (every in-game load reloads the page
+    // first; these hold for a load in the page as well, the bots')
+    if (this.opening) this.hideCard();
+    this.opening = null;
     this.cinema.end(true);
+    g.transitioning = false;
     g.hud.states = this.def.states.map((key) => ({ key, label: this.label(key) }));
     this.weatherState = null;
     this.loopT = this.loopPeriod();
