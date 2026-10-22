@@ -143,7 +143,7 @@ export const M04 = {
         { id: 'frags', kind: 'clue', need: 3, of: ['ev_frag_door', 'ev_frag_never', 'ev_frag_early'], after: ['meal'],
           spots: [
             { id: 'frag_door', scene: 'frag_door', at: 'lintelHouse', prompt: 'THE LINTEL', offset: [0, 1.6, -6.9], r: 2.8, model: NO_MODEL, when: '@PRESENT' },
-            { id: 'frag_never', scene: 'frag_never', at: 'grainStore', prompt: 'THE GRAIN STORE', offset: [0, 0, 1.4], r: 3, model: kit('carvedStone'), when: '@PRESENT' },
+            { id: 'frag_never', scene: 'frag_never', at: 'grainStore', prompt: 'THE GRAIN STORE', offset: [0, 0, 8.6], r: 3, model: kit('carvedStone'), when: '@PRESENT' },
             { id: 'frag_early', scene: 'frag_early', at: 'waterSteps', prompt: 'A STONE IN THE STEPS', offset: [-2.4, 0, 0], r: 3, model: kit('carvedStone'), when: '@PAST' },
           ],
           say: [K('Early for what?')],
@@ -625,7 +625,7 @@ export const M06 = {
   },
   overlay(P) {
     person(P, { id: 'ezra_shop', crew: 'clockmaker', at: 'shopFloor', off: [1.4, 0, -1.6], turn: Math.PI, when: '!t_m06_stair', prompt: 'TALK TO EZRA MOLL' });
-    person(P, { id: 'ezra_room', crew: 'clockmaker', at: 'clockRoom', off: [1.2, 0, -2.8], turn: Math.PI, when: 't_m06_stair', prompt: 'TALK TO EZRA MOLL' });
+    person(P, { id: 'ezra_room', crew: 'clockmaker', at: 'clockRoom', off: [1.2, 0, -1.6], turn: Math.PI, when: 't_m06_stair', prompt: 'TALK TO EZRA MOLL' });
   },
   hook: { cue: 'cliff', minutes: 1, lines: [FX(L('WITNESS', 'When the child returns, do not let him see the ninth minute.'), 'recording'), K('What is the ninth minute?'),
     EZRA('He said you\'d ask. He said not to tell you. It\'s the minute before your sister—'), N('The arm completes its turn. The clockmaker straightens his apron.'), EZRA('Good evening. You\'re early.')] },

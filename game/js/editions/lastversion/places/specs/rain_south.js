@@ -31,7 +31,7 @@ export default {
   ],
   exits: { m01: 'staffGate' },
   gates: { m01: { visible: true, solid: true, mat: 'gateSteel', box: [-3, 0, -224.3, 3, 3.2, -223.7] } },
-  frags: { m01: [['towpath', 'pigeonLedge', 'carriageDoor']] },
+  frags: { m01: [['towpath', 'laundromat', 'carriageDoor']] }, // (a fragment is read within 2.4 m: never up on the pigeons' ledge)
   crowd: [
     // (17 in all: with the seven named and tier-2 people, M1 keeps to §4.7's 24)
     { era: 'present', years: ['PRESENT', 'PAST'], region: 'rain', role: 'commuter', path: [[-11, 6], [-11, -64]], n: 4 },

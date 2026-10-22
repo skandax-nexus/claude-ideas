@@ -79,7 +79,7 @@ export const M19 = {
           ] },
         { id: 'gallery', name: 'THE CLOCKMAKER\'S MARK', done: 'ev_ezra_mark', minutes: 4,
           threads: [
-            { id: 'galleryGo', kind: 'go', at: 'clockGallery', r: 5, goal: 'The clockmaker\'s gallery, floating.', because: 'His light well, in a sky with no sun.', hints: M19_HINTS.gallery, minutes: 2 },
+            { id: 'galleryGo', kind: 'go', at: 'clockGallery', r: 7, goal: 'The clockmaker\'s gallery, floating.', because: 'His light well, in a sky with no sun.', hints: M19_HINTS.gallery, minutes: 2 },
             { id: 'galleryArm', kind: 'scene', scene: 'arm', at: 'clockGallery', after: ['galleryGo'], spot: { prompt: 'THE BRASS ARM', offset: [0, 1.0, -6.4], r: 2.4, kit: 'brassArm', when: '@PAST || @FUTURE' },
               goal: 'The brass arm in the light well.', because: 'Something is cut under his mark.', done: 'ev_ezra_mark', hints: M19_HINTS.arm, minutes: 2 },
           ] },
@@ -430,7 +430,7 @@ export const M21 = {
   named: ['witness', 'sera', 'anja', 'iven', 'rook', 'guard', 'mara'],
   minutes: { main: 34, optional: 6 }, autoExit: 1.2, gateAfter: true,
   processes: M21_PROCESSES,
-  fragSpots: [['gliderDeck'], ['eliteRamps'], ['mast']],
+  fragSpots: [['gliderDeck'], ['eliteRamps'], ['mastRail']],
   fragments: [[
     'A glider deck with one glider missing. Its mooring line is cut, not untied.',
     'An elite\'s visor, cracked, and mended, and cracked again in the same place.',

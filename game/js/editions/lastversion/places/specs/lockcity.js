@@ -38,7 +38,10 @@ function bowl(P, { seats }) {
         if (i > 0) P.vbox(r, seats(side, i), { noShadow: 1 });
       }
     }
-    P.setTerrain(-a - out, -b - out, a + out, b + out, y);
+    // (each tier's ground is its own ring: Place.heightAt takes the highest terrain under a point, so nested
+    // rectangles would put the pitch, its stalls and its people at the rim's height)
+    const A = a + out, B = b + out;
+    for (const r of [[-A, -B, A, -b], [-A, b, A, B], [-A, -b, -a, b], [a, -b, A, b]]) P.setTerrain(...r, y);
   }
   // the pitch is the floor of the bowl
   P.setTerrain(-PX, -PZ, PX, PZ, 0);
@@ -84,8 +87,8 @@ export default {
   crowd: [
     { era: 'future', years: ['FUTURE'], region: 'lockcity', role: 'resident', path: [[-30, -10], [30, -10], [30, 10], [-30, 10]], n: 6,
       barks: ['Same bread as yesterday.'] },
-    { era: 'future', years: ['FUTURE'], region: 'lockcity', role: 'child', path: [[-62, -10], [-62, 10]], y: T0 + 2 * RISE, n: 3, barks: ['Present, miss.'] },
-    { era: 'present', years: ['PAST'], region: 'lockcity', role: 'fan', path: [[-40, -48], [40, -48]], y: T0 + 3 * RISE, n: 5,
+    { era: 'future', years: ['FUTURE'], region: 'lockcity', role: 'child', path: [[-60, -20], [-60, -4]], y: T0 + 2 * RISE, n: 3, barks: ['Present, miss.'] }, // (along the second tier, clear of the aisle)
+    { era: 'present', years: ['PAST'], region: 'lockcity', role: 'fan', path: [[-20, -48], [-6, -48]], y: T0 + 3 * RISE, n: 5, // (between the aisle and the tunnel)
       barks: ['Two-nil at the half!'] },
     { era: 'present', years: ['PRESENT'], region: 'lockcity', role: 'evacuee', path: [[-20, 20], [20, 20]], n: 4,
       barks: ['Trains by noon, they said.'] },
@@ -195,7 +198,9 @@ export default {
     P.E('PAST', () => { P.vbox([TX - 10, RIM + 9, TZ - 10, TX + 10, RIM + 9.5, TZ + 10], 'roofLight'); P.vbox([TX - 10, RIM, TZ + 9.4, TX + 10, RIM + 9, TZ + 10], 'glass', { noShadow: 1 }); });
     for (const [x, z] of [[TX - 6, TZ - 8], [TX + 6, TZ - 8], [TX - 8, TZ - 4]]) P.box([x - 1.6, RIM, z - 0.4, x + 1.6, RIM + 2.4, z + 0.4], 'woodWhite');
     // reach the archive from the east concourse
-    railing(P, TX - 10, TZ + 10, TX + 10, TZ + 10, 1.1, 'steel', { y: RIM, openings: [[6, 10]] });
+    // (the opening is where the east concourse meets the tower, at the rim's height; the stand's lower tiers fall
+    // away below the rest of the railing)
+    railing(P, TX - 10, TZ + 10, TX + 10, TZ + 10, 1.1, 'steel', { y: RIM, openings: [[17.6, 19.4]] });
     sign(P, 'PRESS', TX, RIM + 7.4, TZ + 10.1, 0, { size: 0.8, board: 0, color: '#3a3a40', e: ['PAST'] });
     // the outside: houses of the suburbs round the stadium
     for (const [x, z] of [[-96, -40], [-96, 40], [96, 40], [96, 80], [-96, 86], [40, 96], [-40, 96]]) P.box([x - 6, 0, z - 6, x + 6, 7, z + 6], 'whitewash', { t: 0xe8e0d8 });

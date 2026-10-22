@@ -127,7 +127,8 @@ export default {
     sign(P, 'MARKET', -28, 7.6, 29, Math.PI, { size: 0.5, board: 0, color: '#2e3a34', e: ['PRESENT'] });
     // the square's east side: houses and the street up to the steps
     for (const [z0, z1, now, then, tint] of [[24, 40, 5, 3, 0xe8dccc], [42, 58, 6, 4, 0xd8c4b0]]) house(P, [10, z0, 30, z1], now, then, { tint, roof: 'hip', roofMat: 'copperRoof', shop: { side: 'W', color: 0xffd9a8 } });
-    for (const [z0, z1, now, then, tint] of [[24, 42, 4, 3, 0xf4ece0], [44, 58, 5, 3, 0xc89a80]]) house(P, [-96, z0, -70, z1], now, then, { tint, roof: 'gable', roofMat: 'slate' });
+    // (and on the headland, two keepers' cottages clear of the transmitter's ring and the way to it from the stair)
+    for (const [x0, z0, x1, z1, now, then, tint] of [[-99, 34, -90, 44, 4, 3, 0xf4ece0], [-68, 27, -59, 35, 3, 2, 0xc89a80]]) house(P, [x0, z0, x1, z1], now, then, { tint, roof: 'gable', roofMat: 'slate' });
     // --- CLOCK B: the funicular, its stair-street, the mid-station, the order board -------------------------------
     P.land('funicularStation', 74, 0, 50, Math.PI);
     P.land('funicularTrack', 74, 6, 20, Math.PI);
@@ -204,10 +205,11 @@ export default {
     const [tx, tz] = TOWER;
     P.land('towerBase', tx + 7, HEAD, tz + 6, Math.PI / 4);
     P.land('transmitter', tx, HEAD, tz, 0);
-    P.box([tx - 6, HEAD, tz - 6, tx + 6, HEAD + 0.4, tz + 6], 'damConcrete');
+    P.box([tx - 6, HEAD, tz - 6, tx + 6, HEAD + 0.3, tz + 6], 'damConcrete'); // (a step up from the headland)
     // the climb: a stair spiralling up inside the mast to a gallery at 23 m, and the view across the river
     const top = spiralStair(P, tx, tz, HEAD + 0.4, HEAD + 17, 2.2, 1.8, 'gratingSteel', { per: 6 });
-    P.box([tx - 4.2, HEAD + 16.7, tz - 4.2, tx + 4.2, HEAD + 17, tz + 4.2], 'gratingSteel');
+    // (the gallery's floor leaves the west side open as the stairwell: the stair's last flights climb under it)
+    P.box([tx - 1.8, HEAD + 16.7, tz - 4.2, tx + 4.2, HEAD + 17, tz + 4.2], 'gratingSteel');
     P.land('towerTop', tx, HEAD + 17, tz + 2.6, Math.PI);
     for (const [x0, z0, x1, z1] of [[-4.2, -4.2, 4.2, -4.2], [4.2, -4.2, 4.2, 4.2], [4.2, 4.2, -4.2, 4.2], [-4.2, 4.2, -4.2, -4.2]]) railing(P, tx + x0, tz + z0, tx + x1, tz + z1, 1.1, 'ironDark', { y: HEAD + 17 });
     void top;

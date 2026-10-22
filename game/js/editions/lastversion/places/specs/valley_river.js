@@ -199,8 +199,9 @@ export default {
     for (let i = 0; i < 6; i++) P.obox(P.rng.float(14, 20), 0, -48 - i * 18, 8, P.rng.float(16, 24), 14, P.rng.float(-0.2, 0.2), 'cliffRock');
     P.land('dryChannel', 55, 0, -46, Math.PI);
     for (const [z0, z1, y] of [[-60, -40, 0], [-90, -60, 3], [-150, -90, 6]]) P.vbox([51, y - 0.4, z0, 59, y + 0.02, z1], 'riverBed', { noShadow: 1 });
-    stair(P, 70, -58.6, 0, 70, -61.6, 3, 4, 'riverStone');
-    stair(P, 70, -88.6, 3, 70, -91.6, 6, 4, 'riverStone');
+    // (each stair climbs to its terrace's face, never into it: the gorge's way up for Mission 5 and Case B)
+    stair(P, 70, -57, 0, 70, -60, 3, 4, 'riverStone');
+    stair(P, 70, -87, 3, 70, -90, 6, 4, 'riverStone');
     for (const [name, z, y] of [['gate1', -60, 0], ['gate2', -90, 3], ['gate3', -120, 6]]) {
       P.land(name, 55, y, z + 1.4, Math.PI);
       arch(P, 55, z, 8, 4.2, 1.8, 0, 'riverStone', { y });

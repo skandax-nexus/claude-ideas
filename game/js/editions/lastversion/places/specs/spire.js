@@ -69,7 +69,7 @@ export default {
   frags: {},
   watch: { m21: [[[[-50, 40], [50, 40]], [[-40, 60], [40, 60]]], [], []] },
   crowd: [
-    { era: 'present', years: ['PRESENT'], region: 'spire', role: 'officer', path: [[36, -40], [60, -40], [60, -10]], n: 3,
+    { era: 'present', years: ['PRESENT'], region: 'spire', role: 'officer', path: [[36, -36], [60, -36], [60, -10]], y: T1, n: 3, // (on the command halls' floor)
       barks: ['One timeline. Hold your post.', 'Nobody goes up to the ring room. Nobody.'] },
   ],
 
@@ -207,6 +207,7 @@ export default {
     gapAt('arenaGap2', 255, 240);
     P.land('arenaMid', ...((p) => [p[0], TA, p[1]])(at(262.5, rm())), 0);
     P.land('mast', MX, TA, MZ, 0);
+    P.land('mastRail', ...((p) => [p[0], TA, p[1]])(at(160, AR0 + 1.6)), (-160 * Math.PI) / 180 - Math.PI / 2); // (the ring's inner edge, facing the mast)
     P.land('summitStair', ax, TA, az + 3, Math.PI);
     P.land('witnessStand', -36, T3, -60, Math.PI / 2);
     P.land('citadelRing', -50, T3, -58, 0);

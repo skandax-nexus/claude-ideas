@@ -46,7 +46,7 @@ export default {
   frags: { m18: [['anchorMast', 'canyonArch', 'highwaySign'], ['verge', 'tollBooth', 'surge']] },
   watch: { m18: [[], [[[-40, -30], [40, -30]], [[-30, -96], [30, -96]]], [[[-36, 110], [36, 110]], [[-40, 150], [-40, 120]], [[30, 160], [30, 130]]]] },
   crowd: [
-    { era: 'future', years: ['FUTURE'], region: 'fracture', role: 'evacuee', path: [[-20, -150], [20, -150], [20, -130]], n: 6 },
+    { era: 'future', years: ['FUTURE'], region: 'fracture', role: 'evacuee', path: [[-20, -152], [8, -152], [8, -132]], n: 6 }, // (on the road, short of the ramp)
     { era: 'present', years: ['PRESENT'], region: 'fracture', role: 'driver', path: [[-6, 20], [-6, 80]], n: 2,
       barks: ['The road was dry an hour ago.', 'Turn the engine off. Listen. That is the river.'] },
   ],
@@ -165,7 +165,7 @@ export default {
     P.land('pylon2', 30, 0, 148, 0);
     P.land('pylon3', 6, 0, 186, 0);
     P.land('slabs', -14, 6, 108, 0); // (the slab stair's foot, at the stump's edge: it climbs east to the ramp at 9 m)
-    P.land('floorFragment', -30, 0, 112, 0);
+    P.land('floorFragment', -30, 6, 112, 0); // (on the stump, in 2196)
     P.land('pocket', 40, 0, 116, 0);
     P.land('towerDeck', 24, TOP, 186, Math.PI);
     P.land('transmissionScreen', 24, TOP, 182, Math.PI);

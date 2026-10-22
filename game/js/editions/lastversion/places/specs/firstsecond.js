@@ -112,7 +112,7 @@ export default {
     // --- the village wedge (south, golden evening): terraces, roundhouses, the causal-chain wall ----------------------
     P.land('wedgeVillage', 0, 2.4, 64, Math.PI);
     P.land('chainWall', 11.6, 2.4, 59, -Math.PI / 2);
-    P.land('roundhouse1', -10, 1.2, 46, 0);
+    P.land('roundhouse1', -10, 1.2, 50, 0); // (at its door: the roundhouse stands at z 46)
     terrace(P, [-22, 40, 22, 52], 1.2, 'ridgeGrass', { wall: 'drystone', sides: 'NEW' });
     terrace(P, [-16, 52, 16, 68], 2.4, 'ridgeGrass', { wall: 'drystone', sides: 'NEW' });
     stair(P, 0, 37.6, 0, 0, 40.4, 1.2, 3, 'drystone');

@@ -142,7 +142,7 @@ export const M14 = {
   named: ['sera', 'gardener', 'warden'],
   minutes: { main: 30, optional: 8 }, autoExit: 1.2, gateAfter: true,
   processes: M14_PROCESSES,
-  fragSpots: [['bankTower'], ['lowWaterPath'], ['kaiStatue']],
+  fragSpots: [['bankTerrace'], ['lowWaterPath'], ['kaiStatue']],
   fragments: [[
     'A ticket for the 41, kept a hundred and forty-seven years.',
     'Beans growing in a bank\'s safety deposit boxes.',
@@ -174,7 +174,7 @@ export const M14 = {
           spots: [
             { id: 'stones3', scene: 'stones3', at: 'stackedStones', prompt: 'STACKED STONES', offset: [0, 0.6, 0], r: 2.6, model: NO_MODEL },
             { id: 'stones4', scene: 'stones4', at: 'stackedStones', prompt: 'STACKED STONES', offset: [0, 0.6, -32], r: 2.6, model: NO_MODEL },
-            { id: 'stones0', scene: 'stones0', at: 'stackedStones', prompt: 'A KICKED-OVER CAIRN', offset: [-35, 0.6, 24], r: 2.6, model: NO_MODEL },
+            { id: 'stones0', scene: 'stones0', at: 'stackedStones', prompt: 'A KICKED-OVER CAIRN', offset: [-35, 0.6, 3], r: 2.6, model: NO_MODEL },
           ],
           say: [K('They went south under the gap. When the water was low.')],
           goal: 'Track the survivors by their stacked stones.', because: 'Somebody went this way, and marked it.', hints: M14_HINTS.stones, minutes: 3 },
@@ -493,7 +493,7 @@ export const M15 = {
     person(P, { id: 'anja', crew: 'anja', at: 'anjaDesk', off: [0, 0, 1.4], turn: Math.PI, prompt: 'TALK TO ANJA', when: '@FUTURE' });
     person(P, { id: 'mara', crew: 'mara', at: 'pressFoot', off: [1.8, 0, 1.2], turn: Math.PI, prompt: 'TALK TO MARA', when: '@FUTURE' });
     person(P, { id: 'jun_echo', crew: 'jun', at: 'evacTrain', off: [0, 0, -2], turn: Math.PI, hologram: true, when: '@FUTURE', prompt: 'TALK TO THE DRIVER' });
-    person(P, { id: 'tomas', crew: 'tomas', at: 'register', off: [-3.5, 0, 3.4], turn: Math.PI, when: '@FUTURE' });
+    person(P, { id: 'tomas', crew: 'tomas', at: 'register', off: [-2.5, 0, 1.6], turn: Math.PI, when: '@FUTURE' }); // (on the rim, by his desk)
     person(P, { id: 'warden15', crew: 'warden', at: 'market', off: [6, 0, 2], turn: Math.PI, silent: true, when: '@FUTURE', barks: ['Noon in four minutes. Same as always.'] });
   },
   hook: {

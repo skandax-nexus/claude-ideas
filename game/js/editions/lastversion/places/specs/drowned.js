@@ -63,12 +63,12 @@ export default {
   ],
   beatAt: { m14: ['partsList', 'unstableZones', 'memorial'] },
   exits: { m14: 'seraSchool' },
-  frags: { m14: [['bankTower', 'fallenTower', 'roofGarden'], ['antenna', 'stackedStones', 'lowWaterPath']] },
+  frags: { m14: [['bankTerrace', 'fallenTower', 'roofGarden'], ['antenna', 'stackedStones', 'lowWaterPath']] },
   watch: { m14: [[], [[[-50, -12], [50, -12]]], [[[-40, -54], [40, -54], [40, -48], [-40, -48]], [[-90, -20], [-90, 20]]]] },
   crowd: [
     { era: 'future', years: ['FUTURE'], region: 'drowned', role: 'survivor', path: [[VX - 2, 96], [VX - 2, 40]], y: VY, n: 4 },
     { era: 'present', years: ['PRESENT'], region: 'rain', role: 'commuter', path: [[-6, 90], [-6, -90]], n: 6 },
-    { era: 'present', years: ['PAST'], region: 'rain', role: 'builder', path: [[-70, 70], [-30, 70]], n: 3,
+    { era: 'present', years: ['PAST'], region: 'rain', role: 'builder', path: [[-70, 57], [-30, 57]], n: 3, // (along the bank's front, not over its roof)
       barks: ['Thirty floors by spring.'] },
   ],
 
@@ -117,6 +117,7 @@ export default {
     // the bank's outside lift on its east face: in 2196 its car lies at the foot of the shaft (Mission 14 reverses it)
     P.land('liftCar', -41.6, 0.15, 69.5, -Math.PI / 2);
     P.land('roofGarden', -56, 24, 76, 0); // (on the bank's roof terrace, west of the lift's landing)
+    P.land('bankTerrace', -92, 24, 70, Math.PI / 2); // (the roof terrace's far end, under the set-back tower)
     P.land('fallenTower', -92, 0, 40, -Math.PI / 2);
     // the bank: six storeys to a roof terrace at 24 m, its tower set back above
     P.box([-106, 0, 60, -44, 24, 106], 'concreteStained', { t: 0xe8e0d8 });
@@ -153,7 +154,7 @@ export default {
       for (let i = 0; i < 4; i++) P.obox(VX + P.rng.float(-3, 3), -0.6, -22 + i * 5, 7, 1.2, 4.6, P.rng.float(-0.3, 0.3), 'viaductDeck', { rx: P.rng.float(-0.3, 0.3), rz: P.rng.float(-0.3, 0.3) });
     });
     railing(P, VX - 3.4, -110, VX - 3.4, 110, 1.1, 'rust', { y: VY, openings: [[38, 42], [86, 106], [214, 220]] });
-    railing(P, VX + 3.4, -110, VX + 3.4, 110, 1.1, 'rust', { y: VY, openings: [[86, 106]] });
+    railing(P, VX + 3.4, -110, VX + 3.4, 110, 1.1, 'rust', { y: VY, openings: [[76, 84], [86, 106]] }); // (onto the survivors' platform; the fallen span)
     P.land('viaduct', VX, VY, 40, Math.PI);
     P.land('viaductMid', VX, VY, 12, Math.PI);
     P.land('transitBridge', VX, VY, -14, Math.PI);
@@ -178,7 +179,7 @@ export default {
     });
     // unstable zones: shimmering patches where the street flickers between years
     for (const [x, z, r] of [[6, -10, 5], [-30, 8, 4], [56, 30, 4.5], [-6, -30, 3.5]]) P.disc(x, 0.2, z, r, 'stormGlow', { noShadow: 1 });
-    for (const [x, z] of [[VX - 9, 6], [VX - 9, -26], [-12, 30]]) P.E('FUTURE', () => { for (let i = 0; i < 3; i++) P.box([x - 0.3 + i * 0.05, 0.15 + i * 0.25, z - 0.25, x + 0.3 - i * 0.05, 0.4 + i * 0.25, z + 0.25], 'riverStone', { solid: false }); });
+    for (const [x, z] of [[VX - 9, 6], [VX - 9, -26], [-12, 9]]) P.E('FUTURE', () => { for (let i = 0; i < 3; i++) P.box([x - 0.3 + i * 0.05, 0.15 + i * 0.25, z - 0.25, x + 0.3 - i * 0.05, 0.4 + i * 0.25, z + 0.25], 'riverStone', { solid: false }); });
     // --- Q2: the memorial on the old Helix Plaza, Sera's school, the statue ------------------------------------------
     terrace(P, [-46, -104, 8, -60], 1.6, 'limestonePave', { wall: 'concreteStained', sides: 'NESW', cap: 'limestoneBlock' });
     stair(P, -19, -55.5, 0.15, -19, -60, 1.6, 10, 'limestonePave');

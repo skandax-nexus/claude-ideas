@@ -228,7 +228,7 @@ export default {
     P.E('PRESENT', () => P.torus(-22, 1.5, 50, 9, 0.22, 'bronzeAged', { rx: Math.PI / 2, seg: 48 }));
     glyphs(P, -22, 0.8, 41.6, 3, 0.8, 0, { m: 'glyphStone' });
     // the astronomers' houses: flat roofs stepping up to the first turntable (a route over the rooftops)
-    P.land('astronomerRoofs', -40, 4.4, 30, Math.PI);
+    P.land('astronomerRoofs', -50, 4.4, 22, Math.PI); // (on the highest of the stepped roofs)
     const houses = [[-62, 40, 1.1], [-58, 34, 2.2], [-54, 28, 3.3], [-50, 22, 4.4]]; // touching, each a jump higher
     houses.forEach(([x, z, h], i) => {
       P.box([x - 3.6, 0, z - 3, x + 3.6, h, z + 3], 'sandstone');

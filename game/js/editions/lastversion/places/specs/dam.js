@@ -131,7 +131,7 @@ export default {
       x = cx + 3.2;
     }
     P.land('cell', CELLS[3], 0, FZ - 3, 0);
-    P.land('cellWall', CELLS[2], 0, FZ - 5.6, 0);
+    P.land('cellWall', CELLS[3], 0, FZ - 5.6, 0); // (the back wall of Kai's own cell: the next cell's front is the gallery stair)
     // the cells' bars (2049; in 2026 these are store bays with roller doors open)
     P.E('PRESENT', () => {
       for (const cx of CELLS) {
