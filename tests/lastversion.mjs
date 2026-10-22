@@ -241,7 +241,9 @@ const onward = async () => {
 // after a mission's last gate: the outro plays, the fade's timer moves on to the next place
 const nextPlace = async () => {
   await page.waitForTimeout(1600);
-  await page.waitForFunction(() => !AZ.transitioning, null, { timeout: 300000 }).catch(() => {}); // (a new chapter's people load behind its card)
+  // (a new chapter's people load behind its card; a wait that never ends is a failure, said here: U4 review)
+  const arrived = await page.waitForFunction(() => !AZ.transitioning, null, { timeout: 300000 }).then(() => true, () => false);
+  if (!arrived) check(false, 'the next place arrives (the transition did not end within 300 s)', JSON.stringify(await az(() => ({ where: LVB.where(), card: document.querySelector('#card')?.textContent?.slice(0, 80) }))));
   await az(() => { LVB.step(0.3); LVB.skip(); });
   await opening();
 };
@@ -1037,7 +1039,8 @@ const finish = async () => {
     if (!ok(r) || (r.at !== from && !r.tr)) break;
     if (r.tr) await page.waitForTimeout(150);
   }
-  await page.waitForFunction(() => !AZ.transitioning, null, { timeout: 300000 }).catch(() => {});
+  const arrived = await page.waitForFunction(() => !AZ.transitioning, null, { timeout: 300000 }).then(() => true, () => false);
+  if (!arrived) check(false, 'the next mission arrives (the transition did not end within 300 s)', JSON.stringify(await az(() => LVB.where())));
   // (the next mission's card and cold open at their own length: its time starts as it loads)
   await page.waitForFunction(() => { LVB.talkOut(1); return !AZ.edition.opening && !AZ.edition.cinema.active && AZ.voice.loading >= 1; }, null, { timeout: 180000, polling: 250 }).catch(() => {});
   await az(() => LVB.talkOut(10));
