@@ -124,6 +124,23 @@ measured with a player.
   120 × 420 m) 15–18 static draw calls, 19k triangles (30–31k for the whole frame), 3.4–3.9 ms
   (5.1–6.8 ms p95). All within §4.7 (≤ 70 static draw calls, a sky of 1, a horizon of ≤ 4, ≤ 300k
   triangles).
+- **The places after the U3 review** (2026-10-22; `git log 90ad79a..`): every mission can be walked, and a test proves
+  it. `tests/lastversion-reach.mjs` floods each mission's colliders from its spawn in every year it has (a step, a jump,
+  a year switch where the body fits, Helix's lift, the wrapping edges, a REVERSE part that carries Kai, drowning
+  water) and must reach every interaction, person, crowd, thread trigger and process, an unstable mission with no
+  stretch over 60 m outside its home year; nobody may stand on nothing (`tests/lastversion-reach.test.mjs`, in worker
+  threads, about 50 s). What it found was fixed: Mission 9's transmitter (two houses stood on it; the gallery floor
+  covered the stair), Mission 15's press tower (its only opening faced a 7 m drop; the bowl's nested terrain put the
+  pitch's stalls and people at the rim's 13.6 m), the gorge stairs of Mission 5 and Case B (they ended inside the
+  terraces), Mission 14's antenna platform (railed off), a cairn inside a tower and the bank's fragment inside the bank,
+  Mission 18's floor plan inside the stump, Mission 19's gallery trigger (the railed light well), and fragments out of
+  reach in Missions 1, 4, 7, 10, 21 and 22. Mission 14's memorial, statue and school are 2196's (in 2026 and 2049 the
+  Helix Plaza: a fountain and the company's entrance canopy). Quarters are where they say: vertical places name height
+  boxes (`cp`), threshold spawns belong to the quarter they open, and the save's quarter moves on only once the story
+  has reached it (a unit test checks every spawn and main thread). Watchers patrol open ground (a unit test samples
+  every path). Checked: `npm test` 131/131; the whole browser bot (`node tests/lastversion.mjs`, 2026-10-22) 313
+  passed, 0 failed, with no page error (the survey's 1,657 pairs of views in different places, the closest 22 bits
+  apart). No shared file changed.
 - **The NPC system** of the supplement: trust, knowledge, quest state, temporal state, faction
   standing and evidence flags in the save; dialogue choices by intent (challenge / comfort /
   investigate / withdraw); barks; echoes standing in for people absent from a state; the case
@@ -453,3 +470,6 @@ measured with a player.
   does Mission 18's hold read as a defence and Mission 20's board as an alignment, are the model's minutes what a
   player takes) has not been done; the bot and the length model stand in for it.
 - **Device testing** of the Android build on phones has not been done in this session.
+- **Mission 11's discontinuity court** shows its rain as still filaments (falling on the west half, rising on the
+  east is drawn, not animated; only the clouds drift backwards there), and Mission 14's arrival view was not
+  recomposed to frame the 2196 lagoon (U3 review nits, deferred).
