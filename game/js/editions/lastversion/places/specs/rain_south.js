@@ -39,17 +39,19 @@ export default {
   gates: { m01: { visible: true, solid: true, mat: 'gateSteel', box: [-3, 0, -224.3, 3, 3.2, -223.7] } },
   frags: { m01: [['towpath', 'laundromat', 'carriageDoor']] }, // (a fragment is read within 2.4 m: never up on the pigeons' ledge)
   crowd: [
-    // (24 asked for; with the seven named and tier-2 people, crowds.js scales them to §4.7's 24 in all)
+    // (24 asked for, with the seven named and tier-2 people; Rain City's faces walk at most twice a year in a place, so
+    // crowds.js casts 13, in this order: the knot at the staff gate first (the pursuit ends in it), then the station
+    // staff, the avenue's commuters, the checkpoint queue, the EMS, the concourse)
+    // after the Zero Second, a knot of people at the staff gate, where the woman with Mira's face is lost among them
+    { era: 'present', years: ['PRESENT'], region: 'rain', role: 'commuter', path: [[-9, -217.5], [9, -217.5], [7, -221], [-7, -221]], n: 4, when: 'after_zero' },
     // (the morning's people are not out yet at 05:40, while the cold open plays: co_m01)
+    { era: 'present', years: ['PRESENT', 'PAST'], region: 'rain', role: 'staff', path: [[-30, -153], [28, -153]], y: 3.4, n: 3, when: '!co_m01' },
     { era: 'present', years: ['PRESENT', 'PAST'], region: 'rain', role: 'commuter', path: [[-11, 6], [-11, -64]], n: 4, when: '!co_m01' },
     { era: 'present', years: ['PRESENT', 'PAST'], region: 'rain', role: 'commuter', path: [[11, -8], [11, -66]], n: 4, when: '!co_m01' },
     { era: 'present', years: ['PRESENT', 'PAST'], region: 'rain', role: 'contractor', path: [[-4, -98], [4, -104]], n: 4, when: '!co_m01' },
-    { era: 'present', years: ['PRESENT', 'PAST'], region: 'rain', role: 'staff', path: [[-30, -153], [28, -153]], y: 3.4, n: 3, when: '!co_m01' },
     { era: 'present', years: ['PRESENT'], region: 'rain', role: 'ems', path: [[-6, -160], [14, -160]], y: 3.4, n: 2, when: 'after_zero' },
-    // after the Zero Second, the station empties onto the north concourse: people streaming out toward the depot, and a
-    // knot of them at the staff gate, where the woman with Mira's face is lost among them (Mission 1's pursuit)
+    // and the people streaming out of the station across the concourse toward the depot
     { era: 'present', years: ['PRESENT'], region: 'rain', role: 'commuter', path: [[-2, -197], [24, -201], [44, -206]], n: 3, when: 'after_zero' },
-    { era: 'present', years: ['PRESENT'], region: 'rain', role: 'commuter', path: [[-9, -217.5], [9, -217.5], [7, -221], [-7, -221]], n: 4, when: 'after_zero' },
   ],
 
   build(P, { mission }) {
