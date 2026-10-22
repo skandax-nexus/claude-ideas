@@ -36,7 +36,7 @@ import { WARDROBE, hasVariant, packRules } from '../game/js/editions/lastversion
 import { ERAS, EXCEPTIONS, ANCIENT_WOMEN, AMBIENT_CAST, eraModels, MAX_PEOPLE, MET, CAP } from '../game/js/editions/lastversion/crowds.js';
 import { M01 } from '../game/js/editions/lastversion/prologue.js';
 import { WATCHERS, HUMAN, watcherModels, kindsOf } from '../game/js/editions/lastversion/watchers.js';
-import { spokenLines, voiceOf, lexicon, GROUPS, chapterCardLines, missionCardLines, endingLines, POSTCREDIT, choiceLine, numberWords } from '../game/js/editions/lastversion/voicelines.js';
+import { spokenLines, buildLevels, voiceOf, lexicon, GROUPS, chapterCardLines, missionCardLines, endingLines, POSTCREDIT, choiceLine, numberWords } from '../game/js/editions/lastversion/voicelines.js';
 import { voicePieces } from '../game/js/audio/voiceKey.js';
 import { KINDS as THREAD_KINDS, MINUTES, threadsOf, sidesOf, quartersOf as threadQuarters, factOf, isRewritten, estimate, doneCond, sideState, isDone, roomAt } from '../game/js/editions/lastversion/Threads.js';
 import { QUESTIONS, CLUES, CONSEQUENCES, PREVIOUSLY, EPILOGUE, MISSION_ORDER, missionIndex } from '../game/js/editions/lastversion/ledger.js';
@@ -1874,6 +1874,30 @@ test('every spoken line plans fully from the common pack and its own group\'s: n
     const size = fs.statSync(`game/assets/voice/lv/${g}/voice.ogg`).size;
     for (const lib of Object.values(PACKS[g])) for (const [off, len, dur] of Object.values(lib)) assert.ok(off >= 0 && off + len <= size && dur > 0, `${g}: a clip outside voice.ogg`);
   }
+});
+
+test('what a consequence adds to a place (a mission\'s adjust, after an earlier choice) is walked, so it is recorded (U5 review)', () => {
+  // every mission with an adjust is built a second time, with every fact it could test granted
+  const levels = buildLevels();
+  const adjusts = Object.values(MISSIONS).flat().filter((m) => m.adjust);
+  assert.ok(adjusts.length >= 3, 'Missions 10, 11 and 23 adjust their places');
+  for (const m of adjusts) assert.ok(levels.some((x) => x.adjusted && x.deck.mkey === m.key), `${m.key}: built with its facts granted`);
+  // a person an adjust adds only when a fact is set: their lines are walked (an empty fact store would miss them)
+  const m23 = MISSIONS.finale.find((m) => m.key === 'm23');
+  const own = m23.adjust;
+  m23.adjust = function (level, rt) {
+    own.call(this, level, rt);
+    if (rt.g.facts.get('jun_line')) level.npcs.push({ id: 'probe_jun', crew: 'jun', pos: [0, 0, 0], lines: [{ who: 'JUN', text: 'A consequence line nobody recorded.' }] });
+  };
+  try {
+    assert.ok(spokenLines().some((e) => e.text === 'A consequence line nobody recorded.' && e.group === 'finale'), 'a fact-gated line an adjust adds is walked');
+  } finally {
+    m23.adjust = own;
+  }
+  // and nobody's own words are read by the narrator: a record, a call or a statement is said in its speaker's voice
+  const names = [...new Set(SPOKEN.map((e) => voiceOf(e.who, e.extra)))].filter((v) => !['NONE', 'KAI', 'PA'].includes(v) && /^[A-Z]+$/.test(v)).map((v) => v[0] + v.slice(1).toLowerCase());
+  const read = SPOKEN.filter((e) => e.who === 'NONE' && names.some((n) => new RegExp(`^${n}[.,] `).test(e.text)));
+  assert.deepEqual(read.map((e) => `${e.path}: ${e.text}`), [], 'a line in a speaker\'s own words, read by the narrator');
 });
 
 test('every line authored in the missions\' files is one spokenLines walks (a line said from code lives in its mission\'s spoken)', () => {

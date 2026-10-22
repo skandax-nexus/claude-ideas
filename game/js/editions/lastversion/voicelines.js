@@ -119,7 +119,16 @@ export function lexicon(text) {
 const vidOf = (id) => NPCS[id]?.vid ?? null;
 const castVid = (i) => (i != null && CAST[i] ? CAST[i].vid : null);
 
-// every level, built the way the runtime builds it (Runtime.buildLevel, with a stand-in game)
+// a store in which every fact not set is true: what a consequence (deck.adjust) adds to a place after an earlier
+// choice is built too, and so walked and recorded (a line an adjust adds with an empty store would never be)
+class Granted extends FactStore {
+  get(k) {
+    return k in this.facts ? this.facts[k] : true;
+  }
+}
+
+// every level, built the way the runtime builds it (Runtime.buildLevel, with a stand-in game); a mission with
+// an adjust is built again with every fact it could test granted (adjusted: true)
 export function buildLevels() {
   const out = [];
   for (const ch of Object.keys(MISSIONS)) {
@@ -127,7 +136,13 @@ export function buildLevels() {
     const rt = Object.assign(Object.create(LastVersion.prototype), { g: game, def: { states: ['PRESENT', 'PAST', 'FUTURE'], labels: { PRESENT: '2049', PAST: '2026', FUTURE: '2196' } } });
     game.story = rt.makeStory(ch);
     game.story.decks.forEach((deck, d) => {
-      for (let s = 0; s < deck.sectors; s++) out.push({ ch, deck, s, level: rt.buildLevel({ lv: true, chapter: ch, deck: d, sector: s, flags: {} }) });
+      for (let s = 0; s < deck.sectors; s++) {
+        out.push({ ch, deck, s, level: rt.buildLevel({ lv: true, chapter: ch, deck: d, sector: s, flags: {} }) });
+        if (!deck.adjust) continue;
+        game.facts = new Granted();
+        out.push({ ch, deck, s, adjusted: true, level: rt.buildLevel({ lv: true, chapter: ch, deck: d, sector: s, flags: {} }) });
+        game.facts = new FactStore();
+      }
     });
   }
   return out;
