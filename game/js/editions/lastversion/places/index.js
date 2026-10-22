@@ -67,8 +67,13 @@ export function buildPlace(key, story, si, rt, opts = {}) {
   // its area alone would be every floor at once (M6). After the quarters, a pad round each quarter's spawn, so that
   // standing at a quarter's spawn its spawn is the checkpoint, whichever quarter's area covers it)
   const anchor = (s) => [s[0], s[1] + 0.86, s[2], s[3] || 0];
+  // (a quarter whose spawn stands in one of the mission's own rooms (Helix's, in Missions 2 and 3) is that room, as
+  // Threads has it: the room's own checkpoints serve it, and its area gets none outdoors. Else, with Helix Court open
+  // between the rooms, the court would send Kai back into the chamber, or past a door he has not opened)
+  const inRoom = (s) => Object.values(P.rooms).some((r) => r.bounds?.some((b) => s[0] >= b[0] && s[0] <= b[3] && s[1] + 0.86 >= b[1] && s[1] + 0.86 <= b[4] && s[2] >= b[2] && s[2] <= b[5]));
   quarters.forEach((q, i) => {
     const [x0, z0, x1, z1] = q.area;
+    if (!q.cp && inRoom(P.quarterSpawns[i])) return;
     P.checkpoints.push({ box: q.cp ? [...q.cp] : [x0, -12, z0, x1, 30, z1], spawn: anchor(P.quarterSpawns[i]), room: rid });
   });
   for (const s of P.quarterSpawns) P.checkpoints.push({ box: [s[0] - 2.5, s[1] - 0.5, s[2] - 2.5, s[0] + 2.5, s[1] + 2.5, s[2] + 2.5], spawn: anchor(s), room: rid });

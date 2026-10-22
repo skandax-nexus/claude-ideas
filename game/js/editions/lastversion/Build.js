@@ -482,7 +482,7 @@ class Room {
     const open = typeof this.roof === 'string' ? this.roof !== 'solid' : Object.values(this.roof).some((r) => r !== 'solid');
     const occ = (this.P.occupied ||= []);
     const rr = this.rectXZ(-W / 2 - T, -L - T, W / 2 + T, T);
-    occ.push({ rect: rr, top: this.y0 + H + T, open });
+    occ.push({ rect: rr, base: this.y0, top: this.y0 + H + T, open }); // (base: a room raised off the ground stands on the place's own storeys)
     this.checkpointShell();
     if (this.exit === 'none') return;
     // the corridor to the next room (a stair when the next floor is higher or lower)

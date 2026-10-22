@@ -413,13 +413,15 @@ const M02_HINTS = {
 
 // Mission 2's rooms in Helix's west wing, round the court (the bible's map: ENTRY → DARK CORRIDOR →
 // POWER ROOM → LIFT, with the archive): the lobby faces the city, the dark gallery the court, the
-// plant terrace is open to the storm, the conduit hall is a glass bridge-hall over the court's edge,
-// and the glass lift drops into the chamber under the oculus, where Rook is waiting.
+// plant terrace is on the first-floor roof, open to the storm, the conduit hall is a glass hall on the court's edge,
+// and the glass lift drops into the chamber under the oculus, where Rook is waiting. Helix Court is the hub
+// (OVERHAUL.md §4.6): the lobby, the gallery and the staff lounge each have a door onto it, so the court in the storm
+// is walked between them, and the stair from the gallery climbs to the terrace over it.
 function helixDarkRooms(P, story, si, rt) {
   const D = new Deck({ id: 'm02', deckName: 'HELIX', palette: HELIX_PALETTE, seed: 'lv', states: ['PRESENT'], estimateMin: 40, place: P, start: { at: [-48, 40], rot: 0 } });
   const land = (R, name, at, yaw = 0) => { const w = R.p(at); P.land(name, w[0], w[1], w[2], yaw + R.th); };
   // r0 SECURITY: the double-height lobby, glass to the city and the court
-  D.room({ id: 'security', name: 'SECURITY', W: 12, L: 14, H: 9, kind: 'arrival', beat: 'custom', windows: { S: 'full', E: 'full' } }, (R) => {
+  D.room({ id: 'security', name: 'SECURITY', W: 12, L: 14, H: 9, kind: 'arrival', beat: 'custom', windows: { S: 'full', E: 'full' }, gaps: { E: [{ at: [6.5, 9.5] }] } }, (R) => {
     R.floor(0, -R.L, 0, { mat: 'terrazzo' });
     R.text('HELIX TEMPORAL RESEARCH - STAFF', [0, 6.6, -13.9], 0, { size: 0.5, color: '#ffb0a0' });
     R.text('LOCKDOWN IN EFFECT', [-5.9, 3.2, -7], Math.PI / 2, { size: 0.5, color: '#ff6a48' });
@@ -441,7 +443,8 @@ function helixDarkRooms(P, story, si, rt) {
     land(R, 'cameraRoom', [-4.4, 0, -12], Math.PI);
   });
   // r1 DARK CORRIDOR: the west gallery, glass to the court; a malfunctioning drone on a loop, the first cell in an alcove
-  D.room({ id: 'corridor', name: 'DARK CORRIDOR', W: 16, L: 24, H: 6, windows: { E: [[1, 9], [15, 23]] } }, (R) => {
+  // (its door onto the court beside the entry; its stair climbs 4.5 m to the plant terrace on the first-floor roof)
+  D.room({ id: 'corridor', name: 'DARK CORRIDOR', W: 16, L: 24, H: 6, windows: { E: [[1, 2.4], [6.6, 9], [15, 23]] }, gaps: { E: [{ at: [3, 6] }] }, corridor: { len: 6, rise: 4.5 } }, (R) => {
     R.floor();
     for (const [x, z] of [[-4, -7], [4, -7], [0, -12], [-4, -17], [4, -17]]) R.pillar(x, z, 0.7);
     R.sentinel({ path: [[-6, -4], [6, -4], [6, -20], [-6, -20]], speed: 1.9, range: 8, fov: 0.8 });
@@ -457,8 +460,9 @@ function helixDarkRooms(P, story, si, rt) {
     land(R, 'linDesk', [-6.2, 0.8, -21]);
     land(R, 'cellA', [7.5, 2.75, -12]);
   });
-  // r2 POWER: the plant terrace on the roof, open to the storm: chillers, cable trays, three sockets; Iven Marr under a canopy
-  D.room({ id: 'power', name: 'PLANT TERRACE', W: 14, L: 18, H: 6.5, roof: 'open', windows: { E: [[2, 16, 1.0, 3.2]] } }, (R) => {
+  // r2 POWER: the plant terrace on the first-floor roof (4.5 m, on the wing's ground storey), open to the storm, its glass
+  // over the court: chillers, cable trays, three sockets; Iven Marr under a canopy; a stair back down to the lounge
+  D.room({ id: 'power', name: 'PLANT TERRACE', W: 14, L: 18, H: 6.5, roof: 'open', windows: { E: [[2, 16, 1.0, 3.2]] }, corridor: { len: 6, rise: -4.5 } }, (R) => {
     R.floor();
     for (const [i, x] of [[0, -3], [1, 0], [2, 3]]) {
       R.prop('console', x, -16.4);
@@ -492,7 +496,7 @@ function helixDarkRooms(P, story, si, rt) {
     land(R, 'ivenPost', [4.6, 0, -7.4]);
   });
   // r3 RECORDS: the staff lounge: three recorded statements, the roster, the door log; one officer can be trusted
-  D.room({ id: 'records', name: 'STAFF LOUNGE', W: 12, L: 14, H: 6, exit: 'E', windows: { E: [[1, 8]] } }, (R) => {
+  D.room({ id: 'records', name: 'STAFF LOUNGE', W: 12, L: 14, H: 6, exit: 'E', windows: { E: [[1, 5.8]] }, gaps: { E: [{ at: [6.4, 9.4] }] } }, (R) => {
     R.floor();
     for (const [id, x, crew] of [['rec_pryce', -4, 'guard'], ['rec_haig', 0, 'haig'], ['rec_dale', 4, 'dale']]) {
       R.prop('console', x, -5.4);
@@ -833,7 +837,8 @@ function firstSwitchRooms(P, story, si, rt) {
   });
   // r3 quest chain D, THE TECHNICIAN'S KEY: the service court (open to the sky) behind a lock that resets
   // after every switch; the service panel exists only in 2026, the drone only in 2049
-  D.room({ id: 'route', name: 'SERVICE YARD', W: 16, L: 22, H: 6.5, roof: 'open' }, (R) => {
+  // (from its far end a stair climbs 9 m inside the north wing to the control room on the top floor)
+  D.room({ id: 'route', name: 'SERVICE YARD', W: 16, L: 22, H: 6.5, roof: 'open', corridor: { len: 9, rise: 9 } }, (R) => {
     R.floor(0, -R.L, 0, { mat: 'yardConcrete' });
     R.npc({ id: 'iven3', crew: 'iven', pos: [-4.2, 0, -3.6], yaw: Math.PI * 0.8, dialogue: IVEN_ROUTE, barks: ['Panel was installed before the drone was.'] });
     R.pillar(-2.4, -11, 0.6);
@@ -863,8 +868,10 @@ function firstSwitchRooms(P, story, si, rt) {
     R.checkpoint(0, -2, -1.6);
     land(R, 'serviceYard', [0, 0, -11]);
   });
-  // r4 control: the panoramic window over the valley; the keycard waits in 2026 (anchor it), the panel works in 2049
-  D.room({ id: 'control', name: 'CONTROL', W: 12, L: 16, H: 6, kind: 'encounter', beat: 'custom', windows: { W: 'full' } }, (R) => {
+  // r4 control, on the north wing's top floor (9 m): its panoramic window looks south over the court and the city to the
+  // valley; the keycard waits in 2026 (anchor it), the panel works in 2049. (The mission ends there, on the fracture:
+  // no door out, exit 'none')
+  D.room({ id: 'control', name: 'CONTROL', W: 12, L: 16, H: 6, kind: 'encounter', beat: 'custom', exit: 'none', windows: { W: 'full' } }, (R) => {
     R.floor();
     R.prop('desk', 4, -4);
     R.item({ id: 'keycard', kind: 'key', pos: [4, 1.1, -4], echo: true, label: 'KEYCARD (2026)' });

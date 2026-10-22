@@ -1245,6 +1245,43 @@ test('Helix: no wing storey hangs in the air; every raised panel block stands on
   assert.ok(n >= 10, `${n} raised blocks`);
 });
 
+// Helix Court is the hub of Missions 2 and 3 (OVERHAUL.md §4.6): rooms with doors onto it, a terrace on a roof, a control
+// room on the top floor, each raised room on the wing's own storeys; and the court never sends Kai back past a door
+test('Helix: the court is the hub of Mission 2; the plant terrace is on a roof and the control room on the top floor', () => {
+  const m2 = PLACED.find((p) => p.deck.mkey === 'm02').level, m3 = PLACED.find((p) => p.deck.mkey === 'm03').level;
+  const ok = (l, st, start, route, y, facts = {}) => {
+    const r = walkRoute(l, st, start, route, facts);
+    assert.ok(!r.stuck && Math.abs(r.at[1] - y) < 0.6, `${JSON.stringify(route.slice(-1))} ${JSON.stringify(r)}`);
+  };
+  // M2: out of the lobby onto the court in the storm, along it into the dark gallery; from the court into the staff lounge
+  ok(m2, 'PRESENT', [-48, 0, 38.4], [[-44.5, 32], [-40, 32], [-34, 32], [-34, 16.7], [-41, 16.7], [-45, 16.7]], 0);
+  ok(m2, 'PRESENT', [-30, 0, -25], [[-40, -36], [-40, -42.3], [-46, -42.3]], 0);
+  // up the gallery's stair to the plant terrace on the first-floor roof (4.5 m), and down to the lounge
+  ok(m2, 'PRESENT', [-46, 0, 12], [[-46, 2], [-48, 0], [-48, -12]], 4.5);
+  ok(m2, 'PRESENT', [-48, 4.5, -12], [[-49.5, -24], [-49.5, -27], [-48, -28.5], [-48, -36]], 0);
+  assert.ok(Math.abs(m2.rooms.power.spawn[1] - 0.86 - 4.5) < 0.01 && m2.rooms.power.sky === 'open', 'the plant terrace: 4.5 m up, open to the storm');
+  // M3: up the service yard's stair to the control room on the north wing's top floor (9 m)
+  ok(m3, 'PRESENT', [41.3, 0, -41.6], [[30, -41.6], [21, -41.6], [12, -41.6], [8, -41.6]], 9);
+  // each raised room stands on a solid block from the ground to its floor slab
+  for (const [l, id] of [[m2, 'power'], [m3, 'control']]) {
+    const [x0, z0, x1, z1] = l.rooms[id].rect, base = l.rooms[id].spawn[1] - 0.86;
+    const cx = (x0 + x1) / 2, cz = (z0 + z1) / 2;
+    assert.ok(l.elements.some((e) => e.solid && !e.when && e.box[1] <= 0 && Math.abs(e.box[4] - (base - 0.4)) < 0.05 && cx > e.box[0] && cx < e.box[3] && cz > e.box[2] && cz < e.box[5]), `${id}: stands on the wing's storeys`);
+  }
+  // the court resolves to no room's checkpoint (main.js keeps the last one Kai stood in): never into the chamber, nor
+  // past the officer's door into the conduit hall
+  const inB = (b, p) => p[0] >= b[0] && p[0] < b[3] && p[1] >= b[1] && p[1] < b[4] && p[2] >= b[2] && p[2] < b[5];
+  for (const p of [[0, 0.86, -25], [-25, 0.86, 0], [-30, 0.86, -25], [-36, 0.86, 30], [20, 0.86, -20], [-12, 0.86, -36]]) {
+    const cps = m2.checkpoints.filter((c) => c.room === m2.outdoorRoom && inB(c.box, p));
+    assert.deepEqual(cps.map((c) => c.spawn), [], `M2 court ${p}: no checkpoint`);
+  }
+  for (const p of [[0, 0.86, -25], [20, 0.86, -20], [-20, 0.86, 0]]) {
+    const cps = m3.checkpoints.filter((c) => c.room === m3.outdoorRoom && inB(c.box, p));
+    assert.deepEqual(cps.map((c) => c.spawn), [], `M3 court ${p}: no room's checkpoint`);
+  }
+  assert.ok(m3.checkpoints.some((c) => c.room === m3.outdoorRoom && inB(c.box, [0, 0.86, 30])), 'M3: the dig is a quarter of the court, with its checkpoint');
+});
+
 // the Zero Second waits for Rook's call (checkpoint_passed && rook_message): no way into the plaza may miss the call
 test('Mission 1: Rook\'s call spans the whole street between home and the plaza, wall to wall and up to the roofs', () => {
   const l = PLACED.find((p) => p.deck.mkey === 'm01').level;

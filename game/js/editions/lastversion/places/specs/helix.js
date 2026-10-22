@@ -132,8 +132,8 @@ export default {
       quarters: [
         { name: 'SECURITY', area: [-70, 14, -20, 70], spawn: [-48, 0, 38.4, 0] },
         { name: 'THE DARK CORRIDOR', area: [-70, -14, -18, 40], spawn: [-48, 0, 19.6, 0] },
-        { name: 'POWER', area: [-70, -48, -18, 4], spawn: [-48, 0, -9.2, 0] },
-        { name: 'CONDUIT & ARCHIVE', area: [-40, -70, 20, -20], spawn: [-35.6, 0, -42.3, -Math.PI / 2] },
+        { name: 'POWER', area: [-70, -48, -18, 4], spawn: [-48, 4.5, -11.2, 0] }, // (the plant terrace, on the first-floor roof)
+        { name: 'CONDUIT & ARCHIVE', area: [-40, -70, 20, -20], spawn: [-35.6, 0, -46.3, -Math.PI / 2] },
         { name: 'THE CHAMBER', area: [-26, -26, 26, 26], spawn: [0, -11.5, 10.4, 0] },
       ],
       // a cleaner in the lobby (one bark: the ring was humming at five)
@@ -154,7 +154,7 @@ export default {
         { name: 'TEMPORAL LAB', area: [26, -36, 70, 26], spawn: [40.4, 0, -9.9, -Math.PI / 2] },
         { name: 'THE DIG', area: [-30, 8, 30, 60], spawn: [0, 0, 44, Math.PI] },
         { name: 'MACHINE HALL', area: [20, -70, 70, -20], spawn: [54.7, 0, -23.3, 0] },
-        { name: 'CONTROL', area: [-34, -70, 24, -26], spawn: [14.5, 0, -41.6, Math.PI / 2] },
+        { name: 'CONTROL', area: [-34, -70, 24, -26], spawn: [9.5, 9, -41.6, Math.PI / 2] }, // (the north wing's top floor)
       ],
       // 2026: the builders round the open dig (echoes)
       crowd: [{ era: 'present', years: ['PAST'], region: 'helix', role: 'builder', path: [[-16, 50], [16, 50]], n: 3, echo: true }],
@@ -235,6 +235,9 @@ export default {
       P.E(['PRESENT'], () => prop(P, 'bollard', Math.cos(a) * 31, Math.sin(a) * 31, 0, { lit: 'bollardLit', solid: false }));
     }
     // --- the wings ---------------------------------------------------------------------------------------
+    // a mission's room raised off the ground (Mission 2's plant terrace on the first-floor roof, Mission 3's control
+    // room on the top floor) stands on the wing's lower storeys, solid from the ground to its floor slab
+    for (const o of occ) if (!o.corridor && o.base > 0.5) P.box([o.rect[0], 0, o.rect[1], o.rect[2], o.base - 0.4, o.rect[3]], 'helixPanel', { t: 0xffffff });
     wing(P, [-62, -38, -38, 44], { court: 'E' });
     if (mission === 'm12') {
       // 2049 and 2026: the north wing stands; 2196: it has fallen into the sinkhole (northRuin below)
