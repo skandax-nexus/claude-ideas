@@ -1213,6 +1213,23 @@ test('the places can be walked: their stairs, terraces, ramps and bridges carry 
   assert.ok(walkRoute(m5, 'PRESENT', [sx, 0, sz], [[n[0], n[2]]]).at?.[1] === undefined || walkRoute(m5, 'PRESENT', [sx, 0, sz], [[n[0], n[2]]]).at[1] < -1, 'ABANDONED: into the river');
 });
 
+// Helix's wings build round a mission's rooms: the storeys over a room stand on its roof, never over empty ground
+test('Helix: no wing storey hangs in the air; every raised panel block stands on a room (Missions 2, 3 and 12)', () => {
+  let n = 0;
+  for (const key of ['m02', 'm03', 'm12']) {
+    const l = PLACED.find((p) => p.deck.mkey === key).level;
+    const rooms = l.order.filter((id) => id !== l.outdoorRoom).flatMap((id) => l.rooms[id].bounds);
+    for (const v of l.vis.filter((x) => x.m === 'helixPanel' && x.b && x.b[1] > 3)) {
+      const [x0, y0, z0, x1, , z1] = v.b;
+      let tot = 0, held = 0;
+      for (let x = x0 + 0.25; x < x1; x += 0.5) for (let z = z0 + 0.25; z < z1; z += 0.5) { tot++; if (rooms.some((r) => x >= r[0] && x <= r[3] && z >= r[2] && z <= r[5] && r[4] <= y0 + 0.5)) held++; }
+      assert.ok(held / tot >= 0.9, `${key}: ${JSON.stringify(v.b)} stands on rooms for ${((100 * held) / tot).toFixed(0)}% of it`);
+      n++;
+    }
+  }
+  assert.ok(n >= 10, `${n} raised blocks`);
+});
+
 test('Mission 4: the pictograms are carved on standing stones, in both years; the carved lintel stands only in the village', () => {
   const l = PLACED.find((p) => p.deck.mkey === 'm04').level;
   for (const m of ['pictoFire', 'pictoWater', 'pictoRing']) {

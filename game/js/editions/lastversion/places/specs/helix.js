@@ -16,7 +16,7 @@ const DIG = [-6, 12, 14, 28]; // the dig at Site Zero, in the old riverbed at th
 export const CHAMBER = { at: [0, 12], y: -11.5, W: 24, L: 24, H: 12 };
 
 // a wing: bays along its length; a bay a mission's room stands in is left to the room (only what
-// is above the room's roof is built), a bay over an open room is left open to the sky
+// is above the room's roof is built, over the room), a bay over an open room is left open to the sky
 function wing(P, rect, { court, era = null, frame = false }) {
   const [x0, z0, x1, z1] = rect;
   const alongX = x1 - x0 > z1 - z0;
@@ -44,10 +44,15 @@ function wing(P, rect, { court, era = null, frame = false }) {
         continue;
       }
       if (hit.some((o) => o.open && !o.corridor)) continue; // open to the sky above the room
-      const top = Math.max(...hit.map((o) => o.top)) + 0.2;
-      if (top < WING_H - 1) {
-        P.vbox([b[0], top, b[1], b[2], WING_H, b[3]], 'helixPanel', { t: 0xffffff });
-        P.vbox([b[0] - 0.15, WING_H, b[1] - 0.15, b[2] + 0.15, WING_H + 0.3, b[3] + 0.15], 'roofLight');
+      // the storeys over a room stand on its roof, over its footprint only: beside the room the bay is open to the
+      // sky (no block hangs over empty ground), and a corridor carries none
+      for (const o of hit) {
+        if (o.corridor) continue;
+        const r = [Math.max(b[0], o.rect[0]), Math.max(b[1], o.rect[1]), Math.min(b[2], o.rect[2]), Math.min(b[3], o.rect[3])];
+        const top = o.top + 0.2;
+        if (r[2] - r[0] < 2 || r[3] - r[1] < 2 || top >= WING_H - 1) continue;
+        P.vbox([r[0], top, r[1], r[2], WING_H, r[3]], 'helixPanel', { t: 0xffffff });
+        P.vbox([r[0] - 0.15, WING_H, r[1] - 0.15, r[2] + 0.15, WING_H + 0.3, r[3] + 0.15], 'roofLight');
       }
     }
   });
