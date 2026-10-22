@@ -42,8 +42,8 @@ export default {
   exits: { m05: 'buriedMachine', c_b: 'aqueduct' },
   frags: { m05: [['weir', 'wall80', 'gateTower'], ['stiltHouses', 'jetties', 'basin']] },
   crowd: [
-    { era: 'ancient', years: ['PAST'], region: 'settlement', role: 'waterKeeper', path: [[-60, -20], [-20, -30], [-10, -10]], n: 6 },
-    { era: 'ancient', years: ['PAST'], region: 'settlement', role: 'fisher', path: [[-70, 18], [-20, 18]], n: 3 },
+    { era: 'ancient', years: ['PAST'], region: 'settlement', role: 'waterKeeper', path: [[-60, -21], [-20, -31], [-10, -11]], n: 6 },
+    { era: 'ancient', years: ['PAST'], region: 'settlement', role: 'fisher', path: [[-77, 18], [-27, 18]], n: 3 },
     // (U7) in ABANDONED the same villagers walk their old rounds as echoes (§5 M5)
     { era: 'ancient', years: ['PRESENT'], region: 'settlement', role: 'waterKeeper', path: [[-58, -22], [-22, -30], [-12, -12]], n: 3, echo: true },
   ],

@@ -55,8 +55,8 @@ export default {
   frags: { m23: [['junPassengers', 'busField', 'tala'], ['ivenStatement', 'memorial2196', 'seraGarden']] },
   watch: { m23: [[[[-6, 146], [6, 124]]], [[[-22, 86], [22, 86]]], [[[-3, -36], [-3, -96]], [[3, -96], [3, -36]]]] },
   crowd: [
-    { era: 'present', years: ['PRESENT', 'PAST'], region: 'south', role: 'commuter', path: [[-10, 168], [-10, 122]], n: 4 },
-    { era: 'ancient', years: ['PAST', 'PRESENT'], region: 'settlement', role: 'villager', path: [[-20, 96], [20, 96]], n: 3 },
+    { era: 'present', years: ['PRESENT', 'PAST'], region: 'south', role: 'commuter', path: [[-10, 170], [-10, 138]], n: 4 },
+    { era: 'ancient', years: ['PAST', 'PRESENT'], region: 'settlement', role: 'villager', path: [[-13, 89], [13, 89]], n: 3 },
     { era: 'future', years: ['FUTURE'], region: 'lagoon', role: 'gardener', path: [[10, -64], [20, -72]], n: 3 },
   ],
 

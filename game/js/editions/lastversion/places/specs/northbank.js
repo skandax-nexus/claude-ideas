@@ -65,8 +65,8 @@ export default {
   ] },
   crowd: [
     { era: 'present', years: ['PRESENT'], region: 'northbank', role: 'evacuee', path: [[-4, 90], [-4, 34], [4, 30]], n: 6 },
-    { era: 'present', years: ['PRESENT'], region: 'northbank', role: 'responder', path: [[30, 76], [56, 76]], n: 3 },
-    { era: 'present', years: ['PAST'], region: 'northbank', role: 'shopper', path: [[-36, 40], [-12, 40], [-12, 52]], n: 5 },
+    { era: 'present', years: ['PRESENT'], region: 'northbank', role: 'responder', path: [[30, 77], [56, 77]], n: 3 },
+    { era: 'present', years: ['PAST'], region: 'northbank', role: 'shopper', path: [[-38, 39], [-14, 39], [-14, 51]], n: 5 },
   ],
 
   build(P) {

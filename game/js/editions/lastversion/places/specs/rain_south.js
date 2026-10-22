@@ -37,7 +37,7 @@ export default {
     { era: 'present', years: ['PRESENT', 'PAST'], region: 'rain', role: 'commuter', path: [[-11, 6], [-11, -64]], n: 4 },
     { era: 'present', years: ['PRESENT', 'PAST'], region: 'rain', role: 'commuter', path: [[11, -8], [11, -66]], n: 4 },
     { era: 'present', years: ['PRESENT', 'PAST'], region: 'rain', role: 'contractor', path: [[-4, -98], [4, -104]], n: 4 },
-    { era: 'present', years: ['PRESENT', 'PAST'], region: 'rain', role: 'staff', path: [[-30, -152], [28, -152]], y: 3.4, n: 3 },
+    { era: 'present', years: ['PRESENT', 'PAST'], region: 'rain', role: 'staff', path: [[-30, -153], [28, -153]], y: 3.4, n: 3 },
     { era: 'present', years: ['PRESENT'], region: 'rain', role: 'ems', path: [[-6, -160], [14, -160]], y: 3.4, n: 2, when: 'after_zero' },
   ],
 

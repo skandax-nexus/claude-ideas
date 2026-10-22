@@ -47,7 +47,7 @@ export default {
   ] },
   crowd: [
     { era: 'present', years: ['PRESENT'], region: 'dam', role: 'prisoner', path: [[-30, 12], [-30, 24], [-16, 24]], y: HALL, n: 6 },
-    { era: 'present', years: ['PAST'], region: 'dam', role: 'builder', path: [[-40, -6], [40, -6]], n: 4 },
+    { era: 'present', years: ['PAST'], region: 'dam', role: 'builder', path: [[-40, -9], [40, -9]], n: 4 },
   ],
 
   build(P) {

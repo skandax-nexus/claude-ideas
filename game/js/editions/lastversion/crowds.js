@@ -10,6 +10,7 @@
 //   - neighbours never share a model and variant; height varies by up to 4%, walk speed by up to 8%,
 //     and hair is tinted; Rain City's crowds read 15% darker (wet) and carry umbrellas;
 //   - a place's people, named and crowd, stay within §4.7's 24.
+import { compileCondition } from '../../core/conditions.js';
 import { CAST, NPCS, AMBIENT } from './npcs.js';
 import { sexOf, isChild, LV_MODELS, SHARED_MODELS } from './casting.js';
 import { RAIN_DARK } from './wardrobe.js';
@@ -191,6 +192,117 @@ function pickPeople(c, n, named, r, turn) {
   return out;
 }
 
+// --- feet on the ground (U4 review) -----------------------------------------------------------------------------------
+// DeckWorld walks a crowd's people round their paths in x and z only. So that nobody floats off a terrace, sinks into a
+// plaza or walks through a wall, each walker's route is followed over the level's solid boxes when the level is cast:
+// up or down a step of at most STEP_UP, never into anything taller (with a body's width round it), never off a ledge,
+// in every year the walker shows in. A loop that can be walked all the way round stays a loop; else the walker goes out
+// and back over the stretch it can walk from where it stands (a stretch under MIN_RUN: it stands). Every waypoint
+// carries the ground's height ([x, z, y]), with one either side of each step, and Runtime.step sets a walker's height
+// from the two it walks between.
+export const STEP_UP = 0.4, BODY_R = 0.3, MIN_RUN = 4;
+const SAMPLE = 0.25, CELL = 2, HEAD = 1.7;
+const cellKey = (i, j) => (i + 4096) * 8192 + (j + 4096);
+export function groundOf(level, deck) {
+  const states = (level.states || deck.states || ['PRESENT']).filter((st) => !level.years || level.years[st]);
+  const solids = (level.elements || []).filter((e) => e.solid && e.box);
+  const grid = new Map();
+  solids.forEach((e, i) => {
+    const b = e.box;
+    for (let gx = Math.floor((b[0] - BODY_R) / CELL); gx <= Math.floor((b[3] + BODY_R) / CELL); gx++) {
+      for (let gz = Math.floor((b[2] - BODY_R) / CELL); gz <= Math.floor((b[5] + BODY_R) / CELL); gz++) {
+        const k = cellKey(gx, gz);
+        let l = grid.get(k);
+        if (!l) grid.set(k, (l = []));
+        l.push(i);
+      }
+    }
+  });
+  const holds = (when, st, v) => !when || !!compileCondition(when)({ fact: () => v, state: st });
+  const masks = new Map();
+  // for the years a walker shows in: which solids are ground (there whatever the facts) and which are in the way
+  // (there with some facts) in each
+  const maskOf = (when) => {
+    let m = masks.get(when || '');
+    if (m) return m;
+    let sts = states.filter((st) => holds(when, st, false) || holds(when, st, true));
+    if (!sts.length) sts = states;
+    m = sts.map((st) => ({
+      ground: solids.map((e) => holds(e.when, st, false) && holds(e.when, st, true)),
+      wall: solids.map((e) => holds(e.when, st, false) || holds(e.when, st, true)),
+    }));
+    masks.set(when || '', m);
+    return m;
+  };
+  // the ground under (x, z) within a step of y in every year, or null: blocked, a ledge, or years that disagree
+  const at = (m, x, z, y) => {
+    const l = grid.get(cellKey(Math.floor(x / CELL), Math.floor(z / CELL))) || [];
+    let out = null;
+    for (const yr of m) {
+      let best = null;
+      for (const i of l) {
+        const b = solids[i].box;
+        if (yr.wall[i] && b[1] < y + HEAD && b[4] > y + STEP_UP && x > b[0] - BODY_R && x < b[3] + BODY_R && z > b[2] - BODY_R && z < b[5] + BODY_R) return null;
+        if (yr.ground[i] && x >= b[0] && x <= b[3] && z >= b[2] && z <= b[5] && Math.abs(b[4] - y) <= STEP_UP && (best === null || Math.abs(b[4] - y) < Math.abs(best - y))) best = b[4];
+      }
+      if (best === null || (out !== null && Math.abs(best - out) > 0.05)) return null;
+      out ??= best;
+    }
+    return out;
+  };
+  const R2 = (v) => Math.round(v * 100) / 100;
+  // walk from a point along a list of points (the first leg starts at the point), as far as the ground allows: the
+  // points walked through with their heights (one either side of each step) and how far it got
+  const walk = (m, x, z, y, pts) => {
+    const out = [];
+    let dist = 0;
+    let px = x, pz = z, py = y;
+    for (const [tx, tz] of pts) {
+      const L = Math.hypot(tx - px, tz - pz);
+      const n = Math.max(1, Math.ceil(L / SAMPLE));
+      let qx = px, qz = pz, qy = py;
+      for (let i = 1; i <= n; i++) {
+        const sx = px + ((tx - px) * i) / n, sz = pz + ((tz - pz) * i) / n;
+        const sy = at(m, sx, sz, qy);
+        if (sy === null) return { pts: out, dist, end: [R2(qx), R2(qz), qy], done: false };
+        if (Math.abs(sy - qy) > 0.02) out.push([R2(qx), R2(qz), qy], [R2(sx), R2(sz), sy]); // (a step: its foot and its top)
+        dist += L / n;
+        qx = sx; qz = sz; qy = sy;
+      }
+      out.push([R2(tx), R2(tz), qy]);
+      px = tx; pz = tz; py = qy;
+    }
+    return { pts: out, dist, end: [R2(px), R2(pz), py], done: true };
+  };
+  // A walker's route: path (DeckWorld's waypoints, the first the one it walks to first) from (x, z), standing near y.
+  // { y, path } with path [[x, z, y], ...] or undefined (standing), or null: nowhere to stand.
+  return (when, x, z, y, path) => {
+    const m = maskOf(when);
+    const y0 = at(m, x, z, y);
+    if (y0 === null) return null;
+    if (!path || path.length < 2) return { y: y0 };
+    const L = path.length;
+    // round the loop and back to where it started
+    const loop = walk(m, x, z, y0, [...path, [x, z]]);
+    if (loop.done && Math.abs(loop.end[2] - y0) < 0.03) {
+      const pts = loop.pts.slice(0, -1); // (not the starting point itself)
+      return { y: y0, path: pts.length > 1 ? pts : undefined };
+    }
+    // else out and back over what can be walked: ahead (the waypoints in order) and behind (in reverse); a loop that
+    // came round at another height is walked out and back the way it went
+    const ahead = loop;
+    const behind = ahead.done ? { pts: [], dist: 0, done: true } : walk(m, x, z, y0, [...path].reverse().slice(0, L));
+    if (ahead.dist + behind.dist < MIN_RUN) return { y: y0 };
+    const F = ahead.done ? ahead.pts.slice(0, -1) : [...ahead.pts, ahead.end];
+    const B = behind.done ? behind.pts : [...behind.pts, behind.end];
+    // forward to F's end, back through the start to B's end, forward again to the start
+    const route = [...F, ...F.slice(0, -1).reverse(), [R2(x), R2(z), y0], ...B, ...B.slice(0, -1).reverse(), [R2(x), R2(z), y0]];
+    // (drop points that repeat the one before)
+    const clean = route.filter((p, i) => i === 0 || Math.hypot(p[0] - route[i - 1][0], p[1] - route[i - 1][1]) > 0.05 || p[2] !== route[i - 1][2]);
+    return { y: y0, path: clean.length > 1 ? clean : undefined };
+  };
+}
+
 // the named people of the whole mission (its beats' people and the ones it names), not only this sector's:
 // the settlement's women are whichever named woman is not in the mission at all
 export function missionNamed(deck, level, cast) {
@@ -249,6 +361,7 @@ export function castLevel(level, deck, { facts = null } = {}) {
   for (const ci of crowds.map((c, i) => i).sort((a, b) => (crowds[b].n * scale % 1) - (crowds[a].n * scale % 1))) if (left-- > 0) counts[ci]++;
   const r = rng(hash(`${deck.mkey}:${level.id}`));
   const turn = {};
+  const route = crowds.length ? groundOf(level, deck) : null;
   const wet = ['rain', 'storm'].includes(level.years?.PRESENT?.weather);
   let k = 0;
   crowds.forEach((c, ci) => {
@@ -259,7 +372,6 @@ export function castLevel(level, deck, { facts = null } = {}) {
     const when = whenOf(c);
     const rainy = wet && ['rain', 'northbank', 'south'].includes(c.region);
     people.forEach(([model, variant], j) => {
-      const id = `crowd_${k++}`;
       const sex = sexOf(model) || 'm';
       const child = isChild(model);
       const old = variant === 'elder';
@@ -269,19 +381,30 @@ export function castLevel(level, deck, { facts = null } = {}) {
       // where along the path, which way, a step to one side
       const f = (j + 0.5) / people.length;
       const at = along(c.path, f);
-      const side = (r() - 0.5) * 1.4;
+      const side0 = (r() - 0.5) * 1.4;
       const reverse = j % 2 === 1;
-      let path = c.path.map(([x, z]) => [Math.round((x + side) * 100) / 100, Math.round((z + side * 0.6) * 100) / 100]);
-      if (c.path.length > 1) {
-        // walk on from where they stand: the waypoint ahead first (or, walking the other way, the one behind)
-        const L = path.length;
-        if (reverse) {
-          const R = [...path].reverse(), s0 = L - 1 - at.seg;
-          path = [...R.slice(s0), ...R.slice(0, s0)];
-        } else path = [...path.slice(at.seg + 1), ...path.slice(0, at.seg + 1)];
+      // (the step to one side that leaves the most of the route to walk on the ground, the one drawn first if it can)
+      let best = null;
+      for (const side of [...new Set([side0, side0 / 2, 0, -side0 / 2, -side0])]) {
+        let path = c.path.map(([x, z]) => [Math.round((x + side) * 100) / 100, Math.round((z + side * 0.6) * 100) / 100]);
+        if (c.path.length > 1) {
+          // walk on from where they stand: the waypoint ahead first (or, walking the other way, the one behind)
+          const L = path.length;
+          if (reverse) {
+            const R = [...path].reverse(), s0 = L - 1 - at.seg;
+            path = [...R.slice(s0), ...R.slice(0, s0)];
+          } else path = [...path.slice(at.seg + 1), ...path.slice(0, at.seg + 1)];
+        }
+        const x = Math.round((at.x + side) * 100) / 100, z = Math.round((at.z + side * 0.6) * 100) / 100;
+        const w = route(whenOf(c), x, z, c.y ?? level.heightAt?.(x, z) ?? 0, path);
+        if (!w) continue;
+        const len = w.path ? w.path.reduce((a, p, i) => a + (i ? Math.hypot(p[0] - w.path[i - 1][0], p[1] - w.path[i - 1][1]) : 0), 0) : 0;
+        if (!best || len > best.len + 0.5) best = { x, z, y: w.y, path: w.path, len };
+        if (len >= 2 * MIN_RUN && path.length > 1) break;
       }
-      const x = at.x + side, z = at.z + side * 0.6;
-      const y = c.y ?? level.heightAt?.(x, z) ?? 0;
+      if (!best) return; // (nowhere on this route to stand)
+      const { x, y, z, path } = best;
+      const id = `crowd_${k++}`;
       const voices = pool.voices || {};
       const vlist = child ? voices.child : old ? voices[`old_${sex}`] : voices[sex];
       const props = [];
@@ -296,8 +419,8 @@ export function castLevel(level, deck, { facts = null } = {}) {
       });
       level.npcs.push({
         id, crew: id, first, ambient: true, crowd: true, seed: 300 + k, pronoun: PRONOUN[sex] || PRONOUN.m, pos: [x, y, z], yaw: r() * 6.28, height,
-        path: path.length > 1 ? path : undefined, speed: Math.round(1.05 * walk * 100) / 100, when, silent: true, room: level.outdoorRoom || level.order[0],
-        hologram: !!c.echo, ...(c.echo ? {} : { barks: c.barks || pool.barks.filter((b, i) => i % 2 === k % 2), barkEvery: 24 + (k % 4) * 3 }), // (a crowd may say its own;
+        path: path?.length > 1 ? path : undefined, speed: Math.round(1.05 * walk * 100) / 100, when, silent: true, room: level.outdoorRoom || level.order[0],
+        hologram: !!c.echo, ...(c.echo ? {} : { barks: c.barks || pool.barks.filter((b, i) => b && i % 2 === k % 2), barkEvery: 24 + (k % 4) * 3 }), // (a crowd may say its own;
         // else every other line of its pool: neighbours share the walla between them, and the speech budget holds)
         ...(deck.crowdFreeze ? { freezeWhen: deck.crowdFreeze } : {}),
         voiceExtra: { id: vlist?.[k % vlist.length] || null, gender: sex },

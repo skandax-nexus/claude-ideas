@@ -90,7 +90,7 @@ export default {
     { era: 'future', years: ['FUTURE'], region: 'lockcity', role: 'child', path: [[-60, -20], [-60, -4]], y: T0 + 2 * RISE, n: 3, barks: ['Present, miss.'] }, // (along the second tier, clear of the aisle)
     { era: 'present', years: ['PAST'], region: 'lockcity', role: 'fan', path: [[-20, -48], [-6, -48]], y: T0 + 3 * RISE, n: 5, // (between the aisle and the tunnel)
       barks: ['Two-nil at the half!'] },
-    { era: 'present', years: ['PRESENT'], region: 'lockcity', role: 'evacuee', path: [[-20, 20], [20, 20]], n: 4,
+    { era: 'present', years: ['PRESENT'], region: 'lockcity', role: 'evacuee', path: [[-20, 17], [20, 17]], n: 4,
       barks: ['Trains by noon, they said.'] },
   ],
 

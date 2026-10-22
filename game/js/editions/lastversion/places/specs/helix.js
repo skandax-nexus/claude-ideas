@@ -137,7 +137,7 @@ export default {
         { name: 'THE CHAMBER', area: [-26, -26, 26, 26], spawn: [0, -11.5, 10.4, 0] },
       ],
       // a cleaner in the lobby (one bark: the ring was humming at five)
-      crowd: [{ era: 'present', years: ['PRESENT'], region: 'helix', role: 'cleaner', path: [[-51, 36], [-51, 29]], n: 1, barks: ['The ring was humming at five. It hums a song.', 'Lockdown. Stay where the lights are.'] }],
+      crowd: [{ era: 'present', years: ['PRESENT'], region: 'helix', role: 'cleaner', path: [[-50, 39], [-50, 32]], n: 1, barks: ['The ring was humming at five. It hums a song.', 'Lockdown. Stay where the lights are.'] }],
     },
     m03: {
       primary: 'controlRoom',

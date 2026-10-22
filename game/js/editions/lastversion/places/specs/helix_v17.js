@@ -38,8 +38,8 @@ export default {
   frags: { m08: [['printCase', 'photoWall', 'groupPhoto'], ['securityOffice', 'riverWall', 'rookOffice'], ['reconstruction', 'riverCourt', 'southBridge']] },
   watch: { m08: [[], [[[18, -30], [30, -30], [30, -14], [18, -14]]], [[[-20, 22], [20, 22], [20, 30], [-20, 30]]]] },
   crowd: [
-    { era: 'present', years: ['PRESENT', 'PAST'], region: 'helix', role: 'researcher', path: [[-30, -34], [30, -34]], n: 4 },
-    { era: 'present', years: ['PRESENT', 'PAST'], region: 'helix', role: 'technician', path: [[30, -20], [30, 20]], n: 3 }, // (over the east bridge, not the river)
+    { era: 'present', years: ['PRESENT', 'PAST'], region: 'helix', role: 'researcher', path: [[-33, -32], [27, -32]], n: 4 },
+    { era: 'present', years: ['PRESENT', 'PAST'], region: 'helix', role: 'technician', path: [[30, -16], [30, 24]], n: 3 }, // (over the east bridge, not the river)
   ],
 
   build(P) {

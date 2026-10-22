@@ -1674,6 +1674,59 @@ test('crowds walk every mission\'s place: neighbours differ, heights and paces v
   assert.ok(m1.npcs.filter((n) => n.crowd).every((n) => n.freezeWhen === 'zero_second && !after_zero'), 'M1: the crowds stop with the clocks');
 });
 
+// (U4 review) DeckWorld walks a crowd in x and z only; Runtime.step sets each walker's height from the two waypoints it
+// walks between (crowds.js groundOf). Walked here leg by leg, as the game walks them, in every year each one shows in.
+test('crowd walkers keep to the ground: no floating off a terrace, no sinking into a plaza, no walking through a wall', () => {
+  const holds = (when, st, v) => !when || !!compileCondition(when)({ fact: () => v, state: st });
+  let walkers = 0, metres = 0;
+  for (const { deck, s, level } of LEVELS) {
+    const crowd = level.npcs.filter((n) => n.crowd && n.path);
+    if (!crowd.length) continue;
+    const states = (level.states || deck.states || ['PRESENT']).filter((st) => !level.years || level.years[st]);
+    const solids = level.elements.filter((e) => e.solid && e.box);
+    const grid = new Map();
+    solids.forEach((e, i) => {
+      const b = e.box;
+      for (let gx = Math.floor((b[0] - 0.5) / 2); gx <= Math.floor((b[3] + 0.5) / 2); gx++) for (let gz = Math.floor((b[2] - 0.5) / 2); gz <= Math.floor((b[5] + 0.5) / 2); gz++) {
+        const k = `${gx},${gz}`;
+        (grid.get(k) || grid.set(k, []).get(k)).push(e);
+      }
+    });
+    const near = (x, z) => grid.get(`${Math.floor(x / 2)},${Math.floor(z / 2)}`) || [];
+    for (const n of crowd) {
+      walkers++;
+      const P = n.path;
+      assert.ok(P.length >= 2 && P.every((p) => p.length === 3 && Number.isFinite(p[2])), `${deck.mkey}/${s}: ${n.id}'s waypoints carry the ground's height`);
+      let sts = states.filter((st) => holds(n.when, st, false) || holds(n.when, st, true));
+      if (!sts.length) sts = states;
+      // where it stands is on the leg it starts on (from the last waypoint to the first), at that leg's height there
+      const a0 = P[P.length - 1], b0 = P[0];
+      const L0 = Math.hypot(b0[0] - a0[0], b0[1] - a0[1]);
+      const f0 = L0 > 1e-3 ? 1 - Math.hypot(b0[0] - n.pos[0], b0[1] - n.pos[2]) / L0 : 1;
+      assert.ok(Math.abs(n.pos[1] - (a0[2] + (b0[2] - a0[2]) * f0)) < 0.03, `${deck.mkey}/${s}: ${n.id} stands at ${n.pos[1]}, off its route's height`);
+      for (const st of sts) {
+        for (let i = 0; i < P.length; i++) {
+          const a = P[(i + P.length - 1) % P.length], b = P[i];
+          const L = Math.hypot(b[0] - a[0], b[1] - a[1]);
+          const dy = Math.abs(b[2] - a[2]);
+          assert.ok(dy <= 0.41 && (dy < 0.03 || L < 0.6), `${deck.mkey}/${s}: ${n.id} climbs ${dy.toFixed(2)} m over ${L.toFixed(1)} m`);
+          const steps = Math.max(1, Math.ceil(L / 0.25));
+          for (let k = 0; k <= steps; k++) {
+            const x = a[0] + ((b[0] - a[0]) * k) / steps, z = a[1] + ((b[1] - a[1]) * k) / steps, y = a[2] + ((b[2] - a[2]) * k) / steps;
+            const here = near(x, z);
+            const ground = here.some((e) => holds(e.when, st, false) && holds(e.when, st, true) && x >= e.box[0] && x <= e.box[3] && z >= e.box[2] && z <= e.box[5] && Math.abs(e.box[4] - y) <= Math.max(0.03, dy + 0.01));
+            assert.ok(ground, `${deck.mkey}/${s} (${st}): ${n.id} leaves the ground at (${x.toFixed(1)}, ${y.toFixed(2)}, ${z.toFixed(1)})`);
+            const wall = here.find((e) => (holds(e.when, st, false) || holds(e.when, st, true)) && x > e.box[0] - 0.25 && x < e.box[3] + 0.25 && z > e.box[2] - 0.25 && z < e.box[5] + 0.25 && e.box[1] < y + 1.6 && e.box[4] > y + 0.45);
+            assert.ok(!wall, `${deck.mkey}/${s} (${st}): ${n.id} walks into [${wall?.box}] at (${x.toFixed(1)}, ${y.toFixed(2)}, ${z.toFixed(1)})`);
+          }
+          metres += L;
+        }
+      }
+    }
+  }
+  assert.ok(walkers > 300 && metres > 30000, `${walkers} walkers, ${Math.round(metres)} m walked`);
+});
+
 test('the watchers: each mission\'s kind, people built from the edition\'s models, never the Observer', () => {
   for (const { deck, level } of LEVELS) {
     if (!level.sentinels.length) continue;

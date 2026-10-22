@@ -40,8 +40,8 @@ export default {
   exits: { m06: 'roofTerrace' },
   frags: { m06: [['canalBridge', 'floorboards', 'loopSpring']] },
   crowd: [
-    { era: 'present', years: ['PRESENT', 'PAST'], region: 'rain', role: 'civilian', path: [[-50, -11], [50, -11]], n: 6 },
-    { era: 'present', years: ['PRESENT', 'PAST'], region: 'rain', role: 'courier', path: [[-50, 11], [50, 11]], n: 4 },
+    { era: 'present', years: ['PRESENT', 'PAST'], region: 'rain', role: 'civilian', path: [[-50, -9], [50, -9]], n: 6 },
+    { era: 'present', years: ['PRESENT', 'PAST'], region: 'rain', role: 'courier', path: [[-50, 9], [50, 9]], n: 4 },
   ],
 
   build(P) {

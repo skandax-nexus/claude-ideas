@@ -1383,8 +1383,19 @@ export class LastVersion {
     const p = g.player.pos;
     // the people: the watchers' bodies and walks, the animation budget, Ward 32's flickering figure
     this.watchers.update(dt);
-    lodUpdate([...g.deckWorld.npcs, ...this.watchers.list.map((w) => ({ model: w.current?.actor }))], g.camera.position);
-    for (const n of g.deckWorld.npcs) if (n.n.flicker && n.model.visible) n.model.userData.setOpacity?.(0.45 + 0.55 * Math.abs(Math.sin(g.time * 7.3) * Math.sin(g.time * 2.9 + n.n.seed)));
+    lodUpdate(g.deckWorld.npcs, g.camera.position); // (the watchers' people pose every frame: watchers.update)
+    for (const n of g.deckWorld.npcs) {
+      if (!n.model.visible) continue;
+      if (n.n.flicker) n.model.userData.setOpacity?.(0.45 + 0.55 * Math.abs(Math.sin(g.time * 7.3) * Math.sin(g.time * 2.9 + n.n.seed)));
+      // a crowd's walker keeps to the ground: its height from the two waypoints it walks between (crowds.js groundOf)
+      const P = n.n.crowd && n.n.path;
+      if (P && P[0].length > 2) {
+        const to = P[n.wp], from = P[(n.wp - 1 + P.length) % P.length], m = n.model.position;
+        const L = Math.hypot(to[0] - from[0], to[1] - from[1]);
+        const f = L > 1e-3 ? 1 - Math.min(1, Math.hypot(to[0] - m.x, to[1] - m.z) / L) : 1;
+        m.y = from[2] + (to[2] - from[2]) * f;
+      }
+    }
     // authored triggers
     (this.level.triggers || []).forEach((t, i) => {
       if (t.once && flags[`trig_${i}`]) return;

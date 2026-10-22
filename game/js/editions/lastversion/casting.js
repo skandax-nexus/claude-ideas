@@ -144,21 +144,31 @@ export function gate(actor) {
 
 // rank the people of a place by distance each frame: the nearest LOD.full within LOD.near pose every
 // frame, the rest within LOD.far a few times a second, anyone farther holds their pose
-const _w = { x: 0, y: 0, z: 0, setFromMatrixPosition(m) { const e = m.elements; this.x = e[12]; this.y = e[13]; this.z = e[14]; return this; } };
+// (each frame, with no allocation: the people's models and distances in buffers kept between frames, ranked by an
+// insertion sort, which a place's at most two dozen people, nearly in last frame's order, make cheap)
+const _m = [], _d = [];
 export function lodUpdate(people, at) {
-  const list = [];
-  for (const p of people) {
-    const m = p.model;
+  let n = 0;
+  for (let i = 0; i < people.length; i++) {
+    const m = people[i].model;
     if (!m?.visible || !m.userData.lvGate) continue;
-    _w.setFromMatrixPosition(m.matrixWorld); // (last frame's: a watcher's body sits inside its sentinel)
-    list.push([(_w.x - at.x) ** 2 + (_w.y - at.y) ** 2 + (_w.z - at.z) ** 2, m]);
+    const e = m.matrixWorld.elements; // (last frame's)
+    const d2 = (e[12] - at.x) ** 2 + (e[13] - at.y) ** 2 + (e[14] - at.z) ** 2;
+    let j = n++;
+    while (j > 0 && _d[j - 1] > d2) {
+      _d[j] = _d[j - 1];
+      _m[j] = _m[j - 1];
+      j--;
+    }
+    _d[j] = d2;
+    _m[j] = m;
   }
-  list.sort((a, b) => a[0] - b[0]);
   let full = 0;
-  for (const [d2, m] of list) {
-    const d = Math.sqrt(d2);
+  for (let i = 0; i < n; i++) {
+    const m = _m[i], d = Math.sqrt(_d[i]);
     m.userData.lodTier = d < LOD.near && full < LOD.full ? 0 : d < LOD.far ? 1 : 2;
     if (m.userData.lodTier === 0) full++;
+    _m[i] = null;
   }
   return full;
 }

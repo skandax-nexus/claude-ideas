@@ -69,7 +69,7 @@ export default {
   frags: {},
   watch: { m21: [[[[-50, 40], [50, 40]], [[-40, 60], [40, 60]]], [], []] },
   crowd: [
-    { era: 'present', years: ['PRESENT'], region: 'spire', role: 'officer', path: [[36, -36], [60, -36], [60, -10]], y: T1, n: 3, // (on the command halls' floor)
+    { era: 'present', years: ['PRESENT'], region: 'spire', role: 'officer', path: [[34, -36], [58, -36], [58, -10]], y: T1, n: 3, // (on the command halls' floor)
       barks: ['One timeline. Hold your post.', 'Nobody goes up to the ring room. Nobody.'] },
   ],
 

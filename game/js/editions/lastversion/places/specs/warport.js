@@ -43,7 +43,7 @@ export default {
     [[[-70, -56], [0, -56]], [[10, -60], [100, -60]], [[-100, -96], [-100, -60], [-80, -60]]],
   ] },
   crowd: [
-    { era: 'present', years: ['PRESENT'], region: 'port', role: 'trapped', path: [[40, -66], [80, -66]], n: 5 },
+    { era: 'present', years: ['PRESENT'], region: 'port', role: 'trapped', path: [[40, -61], [80, -61]], n: 5 },
     { era: 'present', years: ['PAST'], region: 'port', role: 'docker', path: [[-60, 74], [40, 74]], n: 5 },
     { era: 'future', years: ['FUTURE'], region: 'port', role: 'unwritten', path: [[60, 84], [100, 84], [100, 60]], n: 3 },
   ],
