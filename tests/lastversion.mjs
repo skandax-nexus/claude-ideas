@@ -2039,6 +2039,43 @@ check(replay.key === 'c_garden' && replay.chapter === 'cases' && replay.quarter 
 // --- saves --------------------------------------------------------------------------------------------------------
 const keys = await az(() => { AZ.saveTo(0); return Object.keys(localStorage); });
 check(keys.includes('afterzero.lv.slot.0') && !keys.includes('afterzero.slot.0') && !keys.includes('afterzero.save.v1'), 'this edition saves under its own namespace (afterzero.lv.*)', JSON.stringify(keys));
+
+// --- a save loaded while its chapter's people are still on their way (U4 review) ----------------------------------
+// A save of Act II that is not the latest: the title preloads the latest save's chapter, so Act II's people (the
+// troopers, Rhea, Rook, Dale) are not loaded when it is loaded. The waiting card shows, and goes once they have come,
+// whatever follows it; between two chapters (under the fade) it shows over the fade.
+await page.evaluate(() => {
+  const s = JSON.parse(localStorage.getItem('afterzero.lv.slot.0'));
+  for (const k of ['room', 'pos', 'track', 'restarted']) delete s.campaign[k];
+  Object.assign(s.campaign, { chapter: 'act2', deck: 0, sector: 0, quarter: 0, flags: {}, visited: [] });
+  s.meta = { ...s.meta, savedAt: 1 };
+  localStorage.setItem('afterzero.lv.slot.7', JSON.stringify(s));
+});
+await page.reload();
+await page.waitForFunction(() => window.AZ && document.querySelector('#title') && AZ.edition, null, { timeout: 400000 });
+const castCold = await page.evaluate(() => {
+  const card = document.querySelector('#card');
+  AZ.begin('load', 7);
+  return { waiting: !!AZ.edition.castWaitFor, on: card.classList.contains('on'), text: card.textContent };
+});
+await page.waitForFunction(() => AZ.mode === 'deck' && AZ.edition.deck?.mkey === 'm09' && !AZ.edition.castWaitFor, null, { timeout: 300000 });
+const coldIn = await page.evaluate(() => { const card = document.querySelector('#card'); return { on: card.classList.contains('on'), text: card.textContent, prev: !!AZ.edition.opening?.previously }; });
+await page.waitForFunction(() => { if (AZ.edition.cinema.active) AZ.edition.skipOpening(); return !AZ.edition.opening && !AZ.edition.cinema.active && AZ.voice.loading >= 1; }, null, { timeout: 120000, polling: 250 }).catch(() => {});
+const coldAfter = await page.evaluate(() => ({ on: document.querySelector('#card').classList.contains('on'), lvwait: document.body.classList.contains('lvwait'), paused: AZ.paused }));
+check(castCold.waiting && castCold.on && /on their way/.test(castCold.text) && !/on their way/.test(coldIn.text) && !coldAfter.on && !coldAfter.lvwait && !coldAfter.paused,
+  'a save loaded before its chapter\'s people: the waiting card, then the chapter (PREVIOUSLY), and no card left over play', JSON.stringify({ castCold, coldIn, coldAfter }));
+// between two chapters the wait starts under the fade: its card is drawn over it, and goes when the people are here
+const overFade = await page.evaluate(() => new Promise((resolve) => {
+  const card = document.querySelector('#card'), fade = document.querySelector('#fade');
+  AZ.hud.fade(true);
+  let during = null;
+  AZ.edition.waitForCast(AZ.edition.chapter, () => {
+    AZ.hud.fade(false);
+    resolve({ during, after: card.classList.contains('on') });
+  });
+  during = { on: card.classList.contains('on'), card: +getComputedStyle(card).zIndex, fade: +getComputedStyle(fade).zIndex };
+}));
+check(overFade.during.on && overFade.during.card > overFade.during.fade && !overFade.after, 'between chapters the waiting card shows over the fade, and goes when the people come', JSON.stringify(overFade));
 await page.close();
 await survey();
 check(errors.length === 0, 'no page errors', [...new Set(errors)].join(' | '));

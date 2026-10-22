@@ -5,7 +5,7 @@
 // has made its preload list, so they load lazily: each chapter loads the models it needs behind its
 // chapter card (CHAPTER_CAST), one at a time so that no frame waits for more than one of them.
 // Actors keeps a model once loaded (it has no release), so a chapter's models stay for the session.
-import { MODELS, loadActors, actorLoaded } from '../../world/Actors.js';
+import { MODELS, loadActors, actorLoaded, makeActor } from '../../world/Actors.js';
 import { dress, afterPose } from './wardrobe.js';
 
 // the 31 new people: named characters at 1024 px, crowds at 512 px (tools/rocketbox-to-glb.mjs LV_AVATARS)
@@ -118,8 +118,17 @@ export const LOD = { full: 16, near: 40, far: 70, slow: 0.25 };
 
 // People.setCrewDresser(makeDresser(...)): everyone the edition builds is dressed, then posed through
 // a gate that keeps the nearest people at full rate, the rest a few times a second, the far ones still
+// A person whose own model has not arrived (a load that failed or is still coming after the chapter's wait) is not
+// put in somebody else's body (People's fallback would make Officer Pryce a doctor again): they are a plain hologram
+// stand-in of their height until the next place is built.
 export function makeDresser(renderer) {
-  return (actor, crew) => {
+  return (actor, crew, o = {}) => {
+    const want = crew?.model;
+    if (want && want !== 'xbot' && MODELS[want] && actor.userData.spec?.model !== want) {
+      actor.traverse((x) => { if (x.userData.ownGeometry) x.geometry.dispose(); });
+      actor = makeActor({ model: 'xbot', hologram: true, glow: o.glow || 0x8fe0ff, height: crew.height || actor.userData.spec?.height });
+      actor.userData.standIn = want;
+    }
     dress(actor, crew, { renderer: renderer(), px: pxOf });
     gate(actor);
     return actor;
