@@ -141,6 +141,34 @@ measured with a player.
   every path). Checked: `npm test` 131/131; the whole browser bot (`node tests/lastversion.mjs`, 2026-10-22) 313
   passed, 0 failed, with no page error (the survey's 1,657 pairs of views in different places, the closest 22 bits
   apart). No shared file changed.
+- **The cast after the U4 review** (2026-10-22; `git log 4579986..`): crowd walkers keep to the ground (each route
+  is followed over the level's solid boxes when it is cast, a step of at most 0.4 m, never into a wall or off a
+  ledge; seventeen paths moved onto open ground; a unit test walks all 329 walkers leg by leg in every year). A
+  chapter's waiting card never stays over play: it is cleared when the wait ends (a resumed save with its people
+  cold), drawn over the fade between chapters, a stalled model gives up after 90 s, and whoever is still missing
+  stands in as a hologram of their height, never as a doctor (the bot loads a cold Act II save and checks it).
+  The CHARACTER buttons are hidden: Kai has one look, and the screen was Station Zero's. Ward 32's figure stands in
+  its ward once the lock is open, in 2049 only; recolour source maps are let go after their recolours; Mission 22
+  has no watchers; the settlement's crowd no longer says Niko's line before he does. The cast: Sera, Mara, Iven
+  and the Gardener wear their own faces (`rb_sera`, `rb_mara`, `rb_iven`, `rb_gardener_f`), and Juno's, Varga's,
+  Kade's, Ren's FIELD JACKET and the airline captain are out of the edition; two more 2026/2049 crowd faces
+  (`rb_civ_m3`, `rb_civ_f4`) widen every working role; one face walks at most twice a year in a place's crowds,
+  and never one placed by hand there; the Place Outside Time's echoes are people Kai has met, by name; Mission 5's
+  villagers are echoes in FLOODED too, Mission 10's twelve prisoners flicker in the loop cells until released,
+  Loop City's evacuees wear dust, the lock city's are holograms. The costumes: Mira's yellow rain jacket and the toy
+  boy's red one (recoloured sleeves to the wrist, a hood fitted to the head), Odile in a navy skirt and white shoes,
+  Sera's Continuum disguise with a trooper's helmet (its visor raised) and a plate carrier, and the boys' jersey
+  without its 38 (painted out of the map at conversion). The packs the recast crowds changed (common, act1, act3,
+  act4) were recorded again: no misses. The edition's APK (`EDITION=lastversion bash android/build-apk.sh`,
+  2026-10-22) is 46,786,715 bytes with every line recorded: 27.4 MB of people (41 files), 15.0 MB of voice, 3.2 MB
+  under the 50 MB budget; its preview is 54.6 MB with no file over 4 MB. Checked: `npm test` 133/133; the whole
+  browser bot (`node tests/lastversion.mjs`, 2026-10-22) 315 passed, 0 failed, with no page error: the campaign from
+  NEW GAME to Ending C, a save loaded before its chapter's people, the wait over the fade, every line said (1,551)
+  from the packs, `speechSynthesis` never asked, and the survey's 1,657 pairs of views in different places (the
+  closest 26 bits apart). No shared runtime file changed (a comment in
+  `android/build-apk.sh`; `tools/rocketbox-textures.py` gained TRANSPLANT, used only for `Male_Child_02`, which
+  Station Zero does not carry). Still open: the settlement's wardrobe (below), and the cast-load check of
+  `tests/lastversion-perf.mjs`, which counts only tasks over 50 ms and ran on a desktop CPU.
 - **The NPC system** of the supplement: trust, knowledge, quest state, temporal state, faction
   standing and evidence flags in the save; dialogue choices by intent (challenge / comfort /
   investigate / withdraw); barks; echoes standing in for people absent from a state; the case
@@ -248,15 +276,16 @@ measured with a player.
   in two wardrobes; the Witness wears Kai's; the Child, young Kai, Tomas and every crowd child have
   children's bodies; Ward 32's bed holds a silent, flickering figure of Mira and Nurse Odile speaks
   for the ward. 31 Microsoft Rocketbox avatars (MIT, `game/assets/characters/CREDITS.md`) were
-  converted for it: 18.3 MB (16 named at 1024 px, 11.2 MB; 15 crowd bodies at 512 px, 7.1 MB).
+  converted for it: 18.3 MB (16 named at 1024 px, 11.2 MB; 15 crowd bodies at 512 px, 7.1 MB); since the U4
+  review 37 (20 named, 14.3 MB; 17 crowd bodies, 8.0 MB), and no one but Kai wears a Station Zero face.
   Wardrobes are GPU recolours cached per model, variant and map, with the person's own skin kept.
   Crowds walk every mission's place (24 people at most with the named), by era (2026/2049, the
   settlement, 2196) and role, never wearing a named face or another era's; Rain City's carry
   umbrellas and stop with the clocks. Watchers are Helix drones, Continuum troopers, scavengers with
   lanterns, the Unwritten, the Spire's elites or Mission 17's red mimics; the Observer robot is gone
   from the edition. The edition's APK and preview carry only its 40 character files (27.3 MB; the
-  23.9 MB of Station Zero's own looks and crew stay out), and Station Zero's build carries exactly
-  the 28 files it shipped in 1.1.1. Measured 2026-10-21 in this container:
+  23.9 MB of Station Zero's own looks and crew stay out; 41 files and 27.4 MB since the U4 review), and
+  Station Zero's build carries exactly the 28 files it shipped in 1.1.1. Measured 2026-10-21 in this container:
   `EDITION=lastversion bash android/build-apk.sh` built `AFTERZERO-LastVersion-v2.0.apk` at
   45,712,284 bytes (budget 50 MB), and its preview at 53.3 MB with no file over 15 MB (the largest is
   the 14 MB voice pack); a chapter's people loading behind its card (`CAST_LOAD`, the game running in
@@ -447,12 +476,22 @@ measured with a player.
   fought.
 - **People** are all placed since U8 (the Warden and the Gardener in Missions 14 and 15, Tomas and Jun's echo in 15,
   young Kai and the Child in 17 and 20, the Director as `rook_fate` made them in 21, the Elder's, Ezra's and Odile's
-  echoes in 22, the people Kai's choices changed along the Finale's road). Missions 22 and 23 still carry a few
-  watchers of the fragments' kind (a drone or a scavenger), where the spec has none; Jun's line clears the Finale's.
-- **The settlement's wardrobe** (Rocketbox's robe, kurta and head-cloth avatars recoloured in ochre,
-  indigo, madder and undyed linen) waits for a human review of its render sheet.
+  echoes in 22, the people Kai's choices changed along the Finale's road). Mission 22 has no watchers since the U4
+  review; the Finale still carries a few of the fragments' kind (a drone or a scavenger), where the spec has none,
+  and Jun's line clears them (U8 built the Finale's opening streets on them).
+- **The settlement's wardrobe waits for a person's decision** (OVERHAUL.md §6.3 makes it a condition of U4 being
+  done, and it has not been made). Its people are Rocketbox's robe, kurta and head-cloth avatars recoloured in
+  ochre, indigo, madder and undyed linen; both U4 reviews read them as present-day Islamic and Gulf dress (Tala's
+  lace-fringed hijab, the Elder's khimar and abaya, thobes with ghutras, Niko's kurta and taqiyah) on a fictional
+  settlement 3,000 years old: an anachronism, and a risk of reading as a stereotype of a living religion. Rocketbox
+  has nothing else that reads as ancient (its other avatars wear modern clothes), so the options are a person's to
+  weigh: keep them, hide the men's head cloths (`keffiyeh` is its own part) and accept the rest, or bring other
+  meshes from elsewhere for the Elder, Tala, Niko and the settlement's crowd (and record the choice here). The
+  render sheet is in the U4 review's report. Until then the settlement's crowd also stays on three faces (the men's
+  robe, the girls' linen, and the women on whichever of Tala's or the Elder's meshes the mission does not place),
+  each at most twice a year in a place.
 - **Models stay loaded.** Each chapter loads its people behind its card, but Actors has no release, so
-  a long session keeps the models of every chapter it has visited (at most the edition's 40).
+  a long session keeps the models of every chapter it has visited (at most the edition's 41).
 - **Faction support** changes who answers in Mission 21 and what people say; it does not change
   patrol responses or open safe routes elsewhere (Jun's line in the Finale is the one safe route).
 - **A human ear check** of the U5 voices (the audition page above), and of the score's regions and cues,

@@ -68,7 +68,7 @@ fs.writeFileSync(out + '/assets/index.html', html);
 JS
 # character models and the voice pack, served by MainActivity from https://afterzero.app/assets/...
 # Each game carries its own people: THE LAST VERSION the models of its manifest (casting.js MANIFEST: its
-# 31 people and the 9 shared models it uses), Station Zero every model but the edition's own people.
+# 37 people and the 4 shared models it uses), Station Zero every model but the edition's own people.
 CHARS=$(node --input-type=module -e "
   const m = await import('$(pwd)/../game/js/editions/lastversion/casting.js');
   const all = (await import('node:fs')).readdirSync('../game/assets/characters').filter((f) => f.endsWith('.glb')).sort();
