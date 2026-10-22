@@ -63,16 +63,22 @@ export function loadVoicePack(base = 'assets/voice/', onProgress = null, vocab =
       let bin;
       const total = +res.headers?.get?.('content-length') || 0;
       if (onProgress && total && res.body?.getReader) {
+        // (the length announced is only the progress's measure: a server that compresses the file announces the
+        // compressed length, and the stream gives more bytes than that; the buffer grows as they come)
         const reader = res.body.getReader();
-        const buf = new Uint8Array(total);
+        let buf = new Uint8Array(total);
         let at = 0;
         for (;;) {
           const { done, value } = await reader.read();
           if (done) break;
-          if (at + value.length > buf.length) throw new Error('voice pack longer than announced');
+          if (at + value.length > buf.length) {
+            const more = new Uint8Array(Math.max(at + value.length, buf.length * 2));
+            more.set(buf.subarray(0, at));
+            buf = more;
+          }
           buf.set(value, at);
           at += value.length;
-          onProgress(at / total);
+          onProgress(Math.min(0.99, at / total));
         }
         bin = buf.buffer.slice(0, at);
       } else bin = await res.arrayBuffer();
@@ -289,7 +295,12 @@ export class Voice {
       const token = this.token;
       const t0 = Date.now();
       Promise.race([this.ready(), new Promise((r) => setTimeout(r, 2000))]).then(() => {
-        if (token !== this.token || !this.enabled) return; // another line (or a skip) took over
+        if (!this.enabled) return;
+        if (token !== this.token) {
+          // another line (or a skip) took over: this one is not said, but one the packs cannot say is still a miss
+          if (this.loading >= 1 && !this.plan(text, who, extra)) this.miss(text, who, extra, 'not in the packs (passed over while they loaded)');
+          return;
+        }
         const p = Date.now() - t0 <= 2100 && this.plan(text, who, extra);
         if (p) this.playPlan(p, extra).catch(() => this.miss(text, who, extra, 'decode'));
         else this.miss(text, who, extra, this.loading < 1 ? 'pack still loading' : undefined);

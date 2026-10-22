@@ -2007,8 +2007,55 @@ test('in the edition the voice never touches the device\'s speech, waits for a l
     v.loading = 1;
     await new Promise((r) => setTimeout(r, 20));
     assert.equal(win.__voiceMiss.length, 3, 'a miss once the pack came without it');
+    // a line waiting for its pack plays when the pack arrives with it (U5 review)
+    const key = voicePieces('Here I am.', []).find((p) => p.key).key;
+    const pack = { base: 'p/', index: { KAI: { [key]: [0, 10, 1.2] } }, vocab: [] };
+    const played = [];
+    v.playPlan = async (plan) => { played.push(plan.map((p) => p.key)); };
+    v.loading = 0.5;
+    v.packs = [];
+    v.whenReady = new Promise((r) => (release = r));
+    v.speak('Here I am.', 'KAI', {});
+    assert.equal(played.length, 0, 'it waits');
+    v.packs = [pack];
+    v.loading = 1;
+    release([pack]);
+    await new Promise((r) => setTimeout(r, 20));
+    assert.deepEqual(played, [[`KAI|${key}`]], 'it plays once its pack is here');
+    assert.equal(win.__voiceMiss.length, 3, 'and is no miss');
+    // a waiting line another line passes over is not said; if its pack cannot say it, it is still a miss
+    v.loading = 0.5;
+    v.whenReady = new Promise((r) => (release = r));
+    v.speak('A line nobody recorded.', 'KAI', {});
+    v.stop();
+    v.loading = 1;
+    release([pack]);
+    await new Promise((r) => setTimeout(r, 20));
+    assert.equal(played.length, 1, 'the passed-over line is not said');
+    assert.equal(win.__voiceMiss.length, 4, 'but its miss is recorded');
   } finally {
     delete globalThis.window;
+  }
+});
+
+test('a voice pack a server sends compressed (more bytes than the length it announced) still loads (U5 review)', async () => {
+  const { loadVoicePack } = await import('../game/js/audio/Voice.js');
+  const bytes = Uint8Array.from({ length: 300 }, (_, i) => i & 255);
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = async (u) => (String(u).endsWith('voice.json') ? { ok: true, json: async () => ({ KAI: {} }) } : {
+    ok: true,
+    headers: { get: (k) => ({ 'content-length': '100', 'content-encoding': 'gzip' })[k] ?? null },
+    body: { getReader() { let i = 0; return { read: async () => (i < 3 ? { done: false, value: bytes.subarray(i * 100, ++i * 100) } : { done: true }) }; } },
+  });
+  try {
+    const seen = [];
+    const pack = await loadVoicePack('test/compressed/', (f) => seen.push(f), []);
+    assert.ok(pack, 'the pack loads');
+    assert.equal(pack.bin.byteLength, 300, 'every byte the stream gave');
+    assert.deepEqual([...new Uint8Array(pack.bin, 98, 4)], [98, 99, 100, 101], 'in order');
+    assert.ok(seen.every((f) => f <= 1) && seen.at(-1) === 1, 'the progress never passes 1, and ends at 1');
+  } finally {
+    globalThis.fetch = realFetch;
   }
 });
 
@@ -2043,6 +2090,13 @@ test('the effect chains are the edition\'s (voicefx.js): pa, radio, recording an
     if (fx === 'radio' || fx === 'recording') assert.ok(v.playing.some((x) => x.kind === 'src' && x.buffer !== buf && made.indexOf(x) >= before), `${fx}: a bed under the line`);
     if (fx === 'recording') assert.ok(made.slice(before).some((x) => x.kind === 'osc'), 'a record wanders (wow)');
   }
+  // the reverb sends of pa and echo follow the Dialogue row (the reverb returns to the master): U5 review
+  const bus = v.effects.sendBus;
+  assert.ok(bus && reaches(bus, audio.reverb) && reaches(v.effects.input('pa', v.output()), bus) && reaches(v.effects.input('echo', v.output()), bus), 'pa and echo send through the dialogue-level send');
+  audio.level = (b) => (b === 'voice' ? 0 : 1);
+  await v.playPlan(plan, { fx: 'echo' });
+  assert.equal(bus.gain.value, 0, 'Dialogue at 0: no reverb wash either');
+  delete audio.level;
   await v.playPlan(plan, {});
   assert.equal(v.playing[v.playing.length - 1].to[0], v.output(), 'a line with no fx is dry');
   // Station Zero: no effects, whatever a line carries; it plays straight into the voice's output
@@ -2091,10 +2145,11 @@ test('the score: every region plays a minute in every year, and every cue plays,
   const param = () => ({ value: 0, setValueAtTime() {}, linearRampToValueAtTime() {}, exponentialRampToValueAtTime() {}, setTargetAtTime() {}, cancelScheduledValues() {} });
   let nodes = 0;
   const node = () => { nodes++; const n = { gain: param(), frequency: param(), detune: param(), Q: param(), playbackRate: param(), connect: (x) => x || n, disconnect() {}, start() {}, stop() {}, type: '', buffer: null, loop: false, curve: null }; return n; };
+  let buffers = 0;
   const ctx = { currentTime: 1, sampleRate: 8000, createOscillator: node, createGain: node, createBiquadFilter: node, createBufferSource: node, createDelay: node, createWaveShaper: node,
-    createBuffer: (ch, len) => ({ getChannelData: () => new Float32Array(len), duration: len / 8000 }) };
+    createBuffer: (ch, len) => (buffers++, { getChannelData: () => new Float32Array(len), duration: len / 8000 }) };
   const synth = { ctx, music: node(), sfx: node(), amb: node(), master: node(), reverb: node(), threat: 0.4, mix: {},
-    osc() {}, noise() {}, pad() {}, pluck() {}, bell() {}, silence() {}, setMix() {}, level: () => 1 };
+    osc() {}, noise() { throw new Error('Synth.noise: the effects bus, and a buffer each time'); }, pad() {}, pluck() {}, bell() {}, silence() {}, setMix() {}, level: () => 1 };
   const facts = new FactStore();
   const rt = { g: { audio: synth, facts, voice: null }, inv: null, wallaLines: () => [] };
   const score = new Score(rt);
@@ -2117,6 +2172,12 @@ test('the score: every region plays a minute in every year, and every cue plays,
   score.cut();
   assert.equal(score.heard.length, 17);
   assert.ok(nodes > 1000, `${nodes} nodes made`);
+  // (U5 review) one noise buffer for every bed, hit and breath; the music cues at the Music row, the rest on Effects
+  assert.equal(buffers, 1, 'one shared noise buffer');
+  assert.ok(score.cues && score.cues.gain.value === 0.8, 'the music cues have a bus at the Music row (0.8 by default)');
+  synth.mix.music = 0; // (what Synth.setMix does with the row)
+  score.applyMix({ mix: { music: 0 } });
+  assert.equal(score.cues.gain.value, 0, 'Music at 0: the chapter theme and the endings\' cadences are silent too');
 });
 
 // --- story part 1: threads, ledgers and the Prologue rewrite (OVERHAUL.md §3.3, §5 M1-M3, §9; U6) ----------------------

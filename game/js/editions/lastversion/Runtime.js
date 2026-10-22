@@ -205,6 +205,8 @@ const _v = new THREE.Vector3();
 const CASE_FACTS = 'afterzero.lv.caseFacts';
 // how long a chapter waits behind its card for its people before it starts with what arrived (Runtime.waitForCast)
 export const CAST_WAIT_MS = 90000;
+// how long the station chime (score.js 'pa': two tones 0.42 s apart) sounds before an announcement is said
+const PA_LEAD = 0.9;
 
 export class LastVersion {
   constructor(game, def) {
@@ -338,6 +340,14 @@ export class LastVersion {
         const fx = this.fxFor(who, line);
         if (fx && !line.voice?.fx) line.voice = { ...(line.voice || {}), fx };
         if (line.voice?.cue) this.score.cue(line.voice.cue);
+        // the station's two-tone chime comes before the announcement, not over its first words: the line is said
+        // when the chime has sounded (and stays up that much longer); a line skipped meanwhile is not said
+        if (line.voice?.cue === 'pa' && this.score.ready()) {
+          line.dur = (line.dur || 0) + PA_LEAD;
+          clearTimeout(this.paT);
+          this.paT = setTimeout(() => g.hud.cur === line && !g.menu && on?.(who, line), PA_LEAD * 1000);
+          return;
+        }
       }
       on?.(who, line);
     };

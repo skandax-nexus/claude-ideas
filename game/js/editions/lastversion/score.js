@@ -105,6 +105,24 @@ const CAPTIONS = {
   zero: 'every clock stops ticking', pa: 'a two-tone chime', reveal: 'a low drop', loopReset: 'a tape rewinds; sirens',
   fracture: 'the air tears', postcredit: 'a clock ticks', consequence: 'a low metallic ring', echoStep: 'a reversed rush',
 };
+// the cues that are music (the Music row sets their level); the rest are sound effects (the Effects row)
+const MUSIC_CUES = new Set(['chapter', 'card', 'reveal', 'consequence', 'cliff', 'ending:A', 'ending:B', 'ending:C']);
+// four seconds of white noise, made once per audio context: the beds, the score's noise hits and the flute's
+// breath all play windows of it (a fresh buffer for each bed, hit and note was a main-thread fill and a GC hitch)
+const NOISE_BUFS = new WeakMap();
+const NOISE_SEC = 4;
+function noiseBuffer(c) {
+  let b = NOISE_BUFS.get(c);
+  if (!b) {
+    const len = Math.max(1, Math.floor(c.sampleRate * NOISE_SEC));
+    b = c.createBuffer(1, len, c.sampleRate);
+    const d = b.getChannelData(0);
+    let s = 22222;
+    for (let i = 0; i < len; i++) d[i] = ((s = (s * 16807) % 2147483647) / 2147483647) * 2 - 1;
+    NOISE_BUFS.set(c, b);
+  }
+  return b;
+}
 const STYLE = `
   body.lastversion #lvSound { position: fixed; left: 50%; bottom: 18%; transform: translateX(-50%); z-index: 60; display: none;
     padding: 12px 20px; border-radius: 22px; background: rgba(20,26,34,0.82); color: #fff; font: 600 14px/1.2 system-ui, sans-serif;
@@ -173,6 +191,7 @@ export class Score {
     const m = s.mix || {};
     this.a.setMix?.({ voice: m.voice ?? 1, music: m.music ?? 0.8, sfx: m.sfx ?? 1, amb: m.amb ?? 0.85 });
     this.captions = !!s.captions;
+    if (this.cues) this.cues.gain.value = this.cueLevel();
   }
 
   // rows under SOUND in the settings: Dialogue, Music, Effects, Ambience, Sound captions
@@ -282,12 +301,8 @@ export class Score {
         if (EVENTS[k]) this.beds.set(k, { events: true, gain: { gain: { setTargetAtTime() {} } } });
         continue;
       }
-      const len = c.sampleRate * 4;
-      const buf = c.createBuffer(1, len, c.sampleRate);
-      const d = buf.getChannelData(0);
-      for (let i = 0; i < len; i++) d[i] = this.rand() * 2 - 1;
       const src = c.createBufferSource();
-      src.buffer = buf;
+      src.buffer = noiseBuffer(c);
       src.loop = true;
       const f = c.createBiquadFilter();
       f.type = a.type;
@@ -303,7 +318,7 @@ export class Score {
       gain.gain.value = 0.0001;
       gain.gain.setTargetAtTime(a.vol, t, sec / 3);
       src.connect(f).connect(gain).connect(this.a.amb || this.a.master);
-      src.start();
+      src.start(t, this.rand() * NOISE_SEC); // (each bed its own stretch of the noise)
       this.beds.set(k, { src, gain, lfo });
     }
   }
@@ -320,7 +335,7 @@ export class Score {
         for (let i = 0; i < 3; i++) this.chirp(f * (1 + i * 0.06), t + i * 0.11, out);
       } else if (k === 'drip') a.osc('sine', 1400 + this.rand() * 600, t, 0.08, 0.02, 0.002, 0.07, out);
       else if (k === 'siren') this.siren(t, 0.012, out, 3);
-      else if (k === 'fire') a.noise(t, 0.04, { type: 'highpass', from: 3000, to: 5000, vol: 0.03 });
+      else if (k === 'fire') this.noise(t, 0.04, { type: 'highpass', from: 3000, to: 5000, vol: 0.03 }, out);
       else if (k === 'walla') this.walla(t, out);
     }
   }
@@ -439,21 +454,44 @@ export class Score {
 
   flute(f, t, dur, v, dest) {
     this.a.osc('sine', f, t, dur, v, 0.08, 0.3, dest);
+    // the breath: a band of the noise, swelling and fading over the note's first two seconds
+    this.noise(t, Math.min(dur, 2), { type: 'bandpass', from: f * 2, to: f * 2, q: 3, vol: v * 0.25 }, dest);
+  }
+
+  // a burst of noise through a filter sweep, rising and falling over its length (Synth.noise, which always plays on the
+  // effects bus and makes a buffer each time; this one plays where it is sent, from the shared noise)
+  noise(t, dur, { type = 'bandpass', from = 800, to = 800, q = 1, vol = 0.1 } = {}, dest = this.a.sfx) {
     const c = this.a.ctx;
-    const len = Math.floor(c.sampleRate * Math.min(dur, 2));
-    const b = c.createBuffer(1, Math.max(1, len), c.sampleRate);
-    const d = b.getChannelData(0);
-    for (let i = 0; i < len; i++) d[i] = (this.rand() * 2 - 1) * Math.sin((Math.PI * i) / len);
-    const s = c.createBufferSource();
-    s.buffer = b;
-    const bp = c.createBiquadFilter();
-    bp.type = 'bandpass';
-    bp.frequency.value = f * 2;
-    bp.Q.value = 3;
+    const src = c.createBufferSource();
+    src.buffer = noiseBuffer(c);
+    const f = c.createBiquadFilter();
+    f.type = type;
+    f.Q.value = q;
+    f.frequency.setValueAtTime(from, t);
+    f.frequency.exponentialRampToValueAtTime(Math.max(40, to), t + dur);
     const g = c.createGain();
-    g.gain.value = v * 0.25;
-    s.connect(bp).connect(g).connect(dest);
-    s.start(t);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(vol, t + dur / 2);
+    g.gain.linearRampToValueAtTime(0.0001, t + dur);
+    src.connect(f).connect(g).connect(dest);
+    src.start(t, this.rand() * Math.max(0, NOISE_SEC - dur), dur);
+  }
+
+  // the music cues' own bus: at the Music row's level (at the default mix, the level they had on the effects bus),
+  // into the master and the reverb (not the score's layer: the duck and the music's low-pass would change them)
+  cueLevel() {
+    return this.a.mix?.music ?? 0.8;
+  }
+
+  cueBus() {
+    const a = this.a;
+    if (!this.cues) {
+      this.cues = a.ctx.createGain();
+      this.cues.connect(a.master);
+      if (a.reverb) this.cues.connect(a.reverb);
+    }
+    this.cues.gain.value = this.cueLevel();
+    return this.cues;
   }
 
   tick(t, v, dest) {
@@ -510,7 +548,7 @@ export class Score {
         case 'pad': if (beat === 0) for (const m of chord) synth.pad(mtof(m), t, len * 8.4, 0.016); break;
         case 'strings': if (beat === 0) for (const m of [...chord, chord[0] + 12]) this.cello(mtof(m + 12), t, len * 7.6, 0.012, dest, rev); break;
         case 'piano': if (beat === 0 || (this.rand() < 0.22 + energy * 0.3 && beat % 2 === 0)) this.piano(mtof(chord[Math.floor(this.rand() * 3)] + 12), t, v * 0.9, dest, rev, this.regionKey === 'memory'); break;
-        case 'prepared': if (this.rand() < 0.3) { this.piano(mtof(chord[0] + 24 + Math.floor(this.rand() * 3)), t, v * 0.6, dest, rev); synth.noise(t, 0.05, { type: 'highpass', from: 4000, to: 4000, vol: 0.02 }); } break;
+        case 'prepared': if (this.rand() < 0.3) { this.piano(mtof(chord[0] + 24 + Math.floor(this.rand() * 3)), t, v * 0.6, dest, rev); this.noise(t, 0.05, { type: 'highpass', from: 4000, to: 4000, vol: 0.02 }, dest); } break;
         case 'pulse': if (beat % 2 === 0) synth.osc('sine', mtof(chord[0] - 12), t, len * 0.8, 0.035, 0.005, len * 0.6, dest); break;
         case 'ticks': this.tick(t + (this.rand() - 0.5) * len * 0.3 * (1 + bar % 3), 0.012, dest); break;
         case 'bass': if (beat === 0 || (beat === 4 && energy > 0.3)) synth.osc('sine', mtof(chord[0] - 12), t, len * 5, 0.07, 0.04, 0.6, dest); break;
@@ -527,7 +565,7 @@ export class Score {
         case 'clock': for (const bpm of [60, 72, 90]) { const p = 60 / bpm; const first = Math.ceil(t / p) * p; for (let x = first; x < t + len; x += p) this.tick(x, bpm === 60 ? 0.016 : 0.009, dest); } break;
         case 'beeps': if (beat % 4 === 0) synth.osc('sine', 1000, t, 0.09, 0.012, 0.004, 0.06, dest); break;
         case 'revpad': if (beat === 0 && bar % 2 === 0) for (const m of chord) synth.osc('triangle', mtof(m), t, len * 15, 0.012, len * 14, 0.03, dest); break;
-        case 'perc': if (beat % 2 === 0 || this.rand() < energy * 0.5) synth.noise(t, 0.08, { type: 'lowpass', from: beat === 0 ? 200 : 900, to: 120, vol: beat === 0 ? 0.12 : 0.05 }); break;
+        case 'perc': if (beat % 2 === 0 || this.rand() < energy * 0.5) this.noise(t, 0.08, { type: 'lowpass', from: beat === 0 ? 200 : 900, to: 120, vol: beat === 0 ? 0.12 : 0.05 }, dest); break;
         case 'ostinato': synth.osc('sawtooth', mtof(R.root + MOTIF[k % 3] + (beat >= 4 ? 7 : 0)), t, len * 0.7, 0.008, 0.01, len * 0.4, dest); break;
         case 'brass': if (beat === 0 && bar % 4 === 0) synth.osc('sawtooth', mtof(chord[0]), t, len * 12, 0.008, 0.8, 1.6, dest); break;
         case 'choir': if (beat === 0) for (const m of chord) synth.osc('sawtooth', mtof(m + 12), t, len * 8, 0.004, 1.2, 1.4, dest, 4); break;
@@ -551,7 +589,7 @@ export class Score {
     this.cap(name);
     if (!this.ready()) return;
     const a = this.a, c = a.ctx, t = c.currentTime + 0.02;
-    const out = a.sfx;
+    const out = MUSIC_CUES.has(name) ? this.cueBus() : a.sfx;
     const R = this.region || REGIONS.title;
     const root = R.root;
     switch (name) {
@@ -567,7 +605,7 @@ export class Score {
       case 'card':
         // a reversed swell, the motif in the mission's key, a low resonance
         a.osc('triangle', mtof(root), t, 0.8, 0.05, 0.78, 0.02, out);
-        a.noise(t, 0.8, { type: 'bandpass', from: 400, to: 3000, q: 0.7, vol: 0.05 });
+        this.noise(t, 0.8, { type: 'bandpass', from: 400, to: 3000, q: 0.7, vol: 0.05 }, out);
         this.motif(R.motif === 'witness' ? 'witness' : R.motif === 'mira' ? 'mira' : 'theme', root, t + 0.85, 0.32, out, 0.055);
         a.osc('sine', mtof(root - 24), t + 0.85, 3.2, 0.12, 0.02, 2.6, out);
         break;
@@ -610,13 +648,14 @@ export class Score {
         this.silentUntil = t + 1;
         a.silence(1.0);
         this.horn(t + 1.1, out);
-        a.noise(t + 1.6, 1.6, { type: 'bandpass', from: 3800, to: 2400, q: 6, vol: 0.06 });
+        this.noise(t + 1.6, 1.6, { type: 'bandpass', from: 3800, to: 2400, q: 6, vol: 0.06 }, out);
         this.impact(t + 2.9, out);
         break;
       case 'fracture':
-        a.noise(t, 1.2, { type: 'highpass', from: 200, to: 6000, q: 0.5, vol: 0.08 });
+        // the whiteout swell first, then the breath of silence after it (silence() from the start muted the swell)
+        this.noise(t, 1.2, { type: 'highpass', from: 200, to: 6000, q: 0.5, vol: 0.08 }, out);
         this.silentUntil = t + 2.0;
-        a.silence(0.8);
+        setTimeout(() => a.silence(0.7), 1150);
         for (let i = 0; i < 12; i++) a.pluck(mtof(root + 36 - i * 3), t + 2.0 + i * 0.05, 0.04, out);
         this.impact(t + 2.7, out, 0.5);
         break;
@@ -625,14 +664,14 @@ export class Score {
         a.bell(mtof(91), t + 0.12, 0.05, out);
         break;
       case 'echoStep':
-        a.noise(t, 0.6, { type: 'bandpass', from: 600, to: 4800, q: 1.2, vol: 0.08 });
+        this.noise(t, 0.6, { type: 'bandpass', from: 600, to: 4800, q: 1.2, vol: 0.08 }, out);
         this.motif('mira', root, t + 0.3, 0.12, out, 0.035);
         break;
       case 'reverse':
-        if (o.release) { a.noise(t, 0.12, { type: 'highpass', from: 5000, to: 1200, vol: 0.08 }); a.osc('sine', mtof(root), t, 0.3, 0.05, 0.002, 0.2, out); } else a.osc('triangle', mtof(root + 12), t, 1.2, 0.03, 1.1, 0.03, out);
+        if (o.release) { this.noise(t, 0.12, { type: 'highpass', from: 5000, to: 1200, vol: 0.08 }, out); a.osc('sine', mtof(root), t, 0.3, 0.05, 0.002, 0.2, out); } else a.osc('triangle', mtof(root + 12), t, 1.2, 0.03, 1.1, 0.03, out);
         break;
       case 'loopReset':
-        a.noise(t, 0.9, { type: 'bandpass', from: 3000, to: 200, q: 2, vol: 0.08 });
+        this.noise(t, 0.9, { type: 'bandpass', from: 3000, to: 200, q: 2, vol: 0.08 }, out);
         this.siren(t + 0.6, 0.02, out, 2.4);
         this.loops++;
         break;
@@ -723,7 +762,7 @@ export class Score {
 
   impact(t, out, v = 1) {
     this.a.osc('sine', 48, t, 1.6, 0.3 * v, 0.004, 1.4, out);
-    this.a.noise(t, 0.6, { type: 'lowpass', from: 1800, to: 120, vol: 0.2 * v });
+    this.noise(t, 0.6, { type: 'lowpass', from: 1800, to: 120, vol: 0.2 * v }, out);
   }
 }
 

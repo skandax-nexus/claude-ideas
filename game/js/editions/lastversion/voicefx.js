@@ -8,7 +8,29 @@
 //   recording  a record, a file, a terminal: a little dull, its speed wandering (wow), a crackle under it
 //   echo       an echo, a memory, Ending C's "Live.": far off, a little slow, in a large room
 //
-// Each chain is built once and ends in the voice's own output (voice.output(), on the voice bus).
+// Each chain is built once and ends in the voice's own output (voice.output(), on the voice bus); its reverb send
+// goes through a gain at the Dialogue row's level (the reverb returns to the master, not to the voice bus).
+
+// a few seconds of the radio's hiss and of a record's crackle, made once per audio context: every line plays a
+// window of them (a fresh buffer the length of each line was a multi-megabyte fill on the main thread)
+const BEDS = new WeakMap();
+const BED_SEC = 3;
+function bedBuffer(ctx, fx) {
+  let m = BEDS.get(ctx);
+  if (!m) BEDS.set(ctx, (m = {}));
+  if (!m[fx]) {
+    const len = Math.max(1, Math.floor(ctx.sampleRate * BED_SEC));
+    const b = ctx.createBuffer(1, len, ctx.sampleRate);
+    const d = b.getChannelData(0);
+    let s = 12345;
+    const rnd = () => ((s = (s * 16807) % 2147483647) / 2147483647) * 2 - 1;
+    if (fx === 'radio') for (let i = 0; i < len; i++) d[i] = rnd();
+    else for (let i = 0; i < len; i++) d[i] = Math.abs(rnd()) > 0.9993 ? rnd() : rnd() * 0.04;
+    m[fx] = b;
+  }
+  return m[fx];
+}
+
 export class VoiceFx {
   constructor(voice) {
     this.v = voice;
@@ -24,8 +46,21 @@ export class VoiceFx {
     return fx === 'echo' ? 0.97 : 1;
   }
 
+  // the chains' reverb sends, at the Dialogue row's level as each line starts (Dialogue at 0: no reverb wash either)
+  sends() {
+    const a = this.a;
+    if (!a.reverb) return null;
+    if (!this.sendBus) {
+      this.sendBus = a.ctx.createGain();
+      this.sendBus.connect(a.reverb);
+    }
+    this.sendBus.gain.value = a.level ? a.level('voice') : 1;
+    return this.sendBus;
+  }
+
   // where the sources of a line with this effect connect (null: the voice's own output)
   input(fx, out) {
+    this.sends();
     if (this.chains[fx]) return this.chains[fx];
     const ctx = this.a.ctx;
     const f = (type, freq, q = 0.7, gain = 0) => {
@@ -37,10 +72,11 @@ export class VoiceFx {
       return n;
     };
     const send = (from, amount) => {
-      if (!this.a.reverb) return;
+      const bus = this.sends();
+      if (!bus) return;
       const g = ctx.createGain();
       g.gain.value = amount;
-      from.connect(g).connect(this.a.reverb);
+      from.connect(g).connect(bus);
     };
     const delay = (from, sec, fb, wet) => {
       const d = ctx.createDelay(1);
@@ -98,22 +134,17 @@ export class VoiceFx {
   bed(fx, t, dur, out) {
     if (fx !== 'radio' && fx !== 'recording') return null;
     const ctx = this.a.ctx;
-    const len = Math.max(1, Math.floor(ctx.sampleRate * Math.min(dur, 30)));
-    const b = ctx.createBuffer(1, len, ctx.sampleRate);
-    const d = b.getChannelData(0);
-    let s = 12345;
-    const rnd = () => ((s = (s * 16807) % 2147483647) / 2147483647) * 2 - 1;
-    if (fx === 'radio') for (let i = 0; i < len; i++) d[i] = rnd();
-    else for (let i = 0; i < len; i++) d[i] = Math.abs(rnd()) > 0.9993 ? rnd() : rnd() * 0.04;
     const src = ctx.createBufferSource();
-    src.buffer = b;
+    src.buffer = bedBuffer(ctx, fx);
+    src.loop = true; // (as long as the line: it stops with it, below, or when the voice stops)
     const bp = ctx.createBiquadFilter();
     bp.type = 'bandpass';
     bp.frequency.value = fx === 'radio' ? 1800 : 3000;
     const g = ctx.createGain();
     g.gain.value = fx === 'radio' ? 0.0126 : 0.05;
     src.connect(bp).connect(g).connect(out);
-    src.start(t);
+    src.start(t, ((t * 7.3) % 1) * BED_SEC); // (a different window of it each line)
+    src.stop(t + Math.max(0.05, dur));
     return src;
   }
 }
