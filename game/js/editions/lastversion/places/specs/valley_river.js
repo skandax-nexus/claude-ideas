@@ -37,16 +37,8 @@ export default {
     { name: 'THE PRESSURE GATE', area: [-100, 14, 10, 70], spawnAt: 'southBank', threshold: { at: 'gateTower', kind: 'tower' } },
     { name: 'THE UPPER GORGE', area: [10, -150, 100, -40], spawnAt: 'gorgeMouth', threshold: null },
   ],
-  variants: {
-    // Case B, THE WATER THAT REMEMBERS: Tala's dry channel and the three gates, in the upper gorge (until U8)
-    c_b: {
-      quarters: [
-        { name: 'THE DRY CHANNEL', area: [10, -90, 100, -40], spawnAt: 'gorgeMouth', threshold: { at: 'gate2', kind: 'gate' } },
-        { name: 'THE GATES', area: [10, -150, 100, -90], spawnAt: 'gate2', threshold: null },
-      ],
-    },
-  },
-  beatAt: { m05: ['headStone', 'wallBrace', 'gateTop'], c_b: ['muralCliff', 'gate3'] },
+  // (Case B, THE WATER THAT REMEMBERS, replays Mission 5's upper gorge: cases.js; this map, its quarters)
+  beatAt: { m05: ['headStone', 'wallBrace', 'gateTop'] },
   exits: { m05: 'buriedMachine', c_b: 'aqueduct' },
   frags: { m05: [['weir', 'wall80', 'gateTower'], ['stiltHouses', 'jetties', 'basin']] },
   crowd: [

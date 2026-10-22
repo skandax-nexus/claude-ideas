@@ -220,7 +220,7 @@ export function makeRecord(def, anchor, level) {
     refuse: def.refuse || null, line: def.line || null, hints: def.hints || null, grain: def.grain || K.grain, required: !!def.required,
     ambient: def.ambient || null, target: def.target || null, layers: def.layers || null, volume: def.volume || null, mode: def.mode || null,
     cycle: def.cycle || null, clip: def.clip || null, spin: def.spin || null, hazard: def.hazard ?? null, tones: def.tones || null, carry: !!def.carry,
-    beat: def.beat || null, offBeat: def.offBeat || null, stuck: def.stuck ?? null, lineWho: def.lineWho || null, once: def.once || null,
+    beat: def.beat || null, offBeat: def.offBeat || null, stuck: def.stuck ?? null, lineWho: def.lineWho || null, once: def.once || null, arm: def.arm || null,
   };
 }
 

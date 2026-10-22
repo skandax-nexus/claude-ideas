@@ -3,60 +3,20 @@
 // The bible's ten optional missions and chains A-D live inside the missions now (their side stories). The CASE FILES
 // screen (Runtime.caseFiles) lists the fourteen stories with their bible state: not started, active, resolved,
 // consequence observed; it replays a story from its place, with the facts the player had (the story's own facts
-// cleared, so it can happen again). The keys c_b and c_c stay replay entries (old saves load into them, at their
-// old index); the ten new keys replay a side story of the mission it lives in.
+// cleared, so it can happen again). The keys c_b and c_c stay replay entries at their old index (an old save loads
+// into them): c_b replays chain B in Mission 5's gorge, c_c chain C in Mission 15's archive; the ten new keys replay a
+// side story of the mission it lives in.
 //
 //   CASE_FILES   the fourteen entries: { id, name, where, key?, start, resolved, observed } (conditions)
 //   CASES        the 'cases' chapter's missions: c_b, c_c, then one replay per new key
 //   caseState    'open' | 'active' | 'resolved' | 'observed' for an entry, from a fact store
-import { CAST, WATER_HOOK, MARA_HOOK, intent } from './npcs.js';
 import { M01 } from './prologue.js';
-import { M06 } from './act1.js';
+import { M05, M06 } from './act1.js';
 import { M13 } from './act2.js';
 import { M14, M15, M16, M17, M18 } from './act3.js';
 import { M20, M22 } from './act4.js';
 import { doneCond } from './Threads.js';
 import { PLACES } from './places/index.js';
-
-const L = (who, text, when) => (when ? { who, text, when } : { who, text });
-const C = (id) => CAST.findIndex((c) => c.id === id);
-const says = (id, texts) => texts.map((text) => ({ who: CAST[C(id)].voice, name: CAST[C(id)].name.toUpperCase(), color: CAST[C(id)].color, text, ...(CAST[C(id)].voice === 'CREW' ? { voice: { id: CAST[C(id)].vid } } : {}) }));
-const place = (o) => ({ kind: 'place', sectors: o.beats.length, ...o });
-const E = (id, lines, extra = {}) => ({ kind: 'encounter', crew: C(id), lines: says(id, lines), ...extra });
-const encounterQ = (id, lines, choices, extra = {}) => E(id, lines, { choices, ...extra });
-
-// --- the two quest chains kept as replay entries (their saves load here) -----------------------------------------
-export const C_B = place({
-  key: 'c_b', n: 'B', chapter: 'cases', name: 'THE WATER THAT REMEMBERS', title: 'Tala and Niko, the Ancient Settlement', subtitle: 'A dry channel in the present was a river in the past.',
-  place: 'valley_river', states: ['PRESENT', 'PAST', 'FUTURE'], drones: [0, 0], ambience: 'water', ambient: 'settlement',
-  motto: 'WHO TAUGHT IT TO STAY', gate: 'THE RUINS',
-  crew: C('tala'),
-  intro: WATER_HOOK,
-  beats: [
-    { kind: 'contradiction', goal: 'Follow the water marks. Read the mural, and what it was painted over.', official: 'THE RIVER WAS A GIFT OF THE SKY', echo: 'THE RIVER WAS TAUGHT TO STAY BY THE ONE WITH NO DUST', clue: 'cleared', crew: C('tala'), toast: 'MURAL READ', log: 'The mural says the river was a gift. Under it: the river was taught to stay by the one with no dust.' },
-    { kind: 'scene', goal: 'Find the three stone gates and align the flow without flooding the houses.', scene: 'gates', prompt: 'THE THREE GATES', npc: 'tala', lines: says('tala', ['Three gates. Stone does not argue, it only waits.']) },
-  ],
-  scenes: {
-    gates: { when: '@PAST', lines: [L('NONE', 'Left, right, centre. The water takes the channel and leaves the houses. In 2196 the ruins now have a way through.')], set: { water_route: true, quest_tala: 'resolved' }, beatDone: true, log: 'The water route through the settlement is open in every year, including the ruins.' },
-    gates_no: { lines: [L('KAI', 'The gates only move in the year the river was alive.')] },
-  },
-  outro: [L('TALA', 'The river knows the way now. So do you.'), L('NIKO', 'The observatory was built by people who watched water. Remember that, when you go up there.')],
-});
-export const C_C = place({
-  key: 'c_c', n: 'C', chapter: 'cases', name: 'TWO RECORDS, ONE DISASTER', title: 'Mara Quill, the 2196 city', subtitle: 'Two archives name different first Chronolith operators.',
-  place: 'lockcity', states: ['FUTURE', 'PAST', 'PRESENT'], drones: [0, 0], ambience: 'wind', ambient: 'future',
-  motto: 'TRUE FOR WHOM', gate: 'THE MUSEUM DISPLAY',
-  crew: C('mara'),
-  intro: MARA_HOOK,
-  beats: [
-    { kind: 'contradiction', goal: 'Compare the timestamps. Recover the damaged audio cylinder.', official: 'FIRST OPERATOR: E. ROOK - 05:40', echo: 'FIRST OPERATOR: K. VAREN - 05:40', clue: 'cleared', crew: C('mara'), toast: 'BOTH TRUE', log: 'Both records are accurate for different branches. Rook in one. Me in the other. Same minute.' },
-    encounterQ('mara', ['Both records are true. Which branch do you want to live in?'], [
-      intent('investigate', 'Neither. I want the museum display.', { lines: says('mara', ['Then go and look at it in another year. Displays are honest in the year they were made.']), set: { quest_mara: 'resolved', ev_dual_archive: true }, beatDone: true }),
-      intent('comfort', 'I\'m not calling anyone a liar.', { lines: says('mara', ['Good. That is the whole job. Go and look at the display in another year.']), set: { quest_mara: 'resolved', ev_dual_archive: true }, trust: 1, beatDone: true }),
-    ], { goal: 'Inspect the museum display in another era.' }),
-  ],
-  outro: [L('MARA', 'Incomplete is not the same as false. Write that over the door, and nobody has to be a liar.')],
-});
 
 // --- a side story, replayed from its place -------------------------------------------------------------------------
 // The replay is the mission's place, its people and what the story itself uses (its processes, talks, scenes,
@@ -66,14 +26,18 @@ export const C_C = place({
 const IDENT = /\b[a-z_][a-z0-9_]*\b/gi;
 const idents = (cond) => (typeof cond === 'string' ? cond.replace(/"[^"]*"/g, '').match(IDENT) || [] : []).filter((k) => !['true', 'false'].includes(k) && !/^[A-Z]+$/.test(k));
 function replay(m, sideId, o) {
-  const qi = m.quarters.findIndex((q) => (q.sides || []).some((s) => s.id === sideId));
-  const side = m.quarters[qi].sides.find((s) => s.id === sideId);
+  // (o.threads: a story that lives on the main path, as chain C does in Mission 15: those threads of their quarter)
+  const qi = o.threads ? m.quarters.findIndex((q) => (q.threads || []).some((t) => o.threads.includes(t.id)))
+    : m.quarters.findIndex((q) => (q.sides || []).some((s) => s.id === sideId));
+  const side = o.threads ? { id: sideId, name: o.name, done: o.done, minutes: o.minutes, threads: m.quarters[qi].threads.filter((t) => o.threads.includes(t.id)) }
+    : m.quarters[qi].sides.find((s) => s.id === sideId);
   const ts = side.threads;
   const ids = new Set(ts.map((t) => t.id));
   const used = { proc: new Set(o.processes || []), talk: new Set(o.talks || []), scene: new Set(o.scenes || []), deduce: new Set(), rule: new Set(o.rules || []) };
   for (const t of ts) {
     if (t.kind === 'invert') used.proc.add(t.target);
     for (const k of t.of || []) if (k.startsWith('rev_')) used.proc.add(k.slice(4));
+    for (const k of t.of || []) if (/^inv_.+_done$/.test(k)) used.proc.add(k.slice(4, -5));
     if (t.kind === 'talk') used.talk.add(t.npc);
     if (t.scene) used.scene.add(t.scene);
     for (const s of t.spots || []) used.scene.add(s.scene || s.id);
@@ -105,6 +69,11 @@ function replay(m, sideId, o) {
 }
 
 const R = {
+  // the two quest chains of v2.0 keep their keys (an old save loads into them): chain B is Mission 5's gorge, chain C
+  // Mission 15's archive
+  b: replay(M05, 'water', { key: 'c_b', n: 'B', title: 'Tala, the Ancient Settlement', subtitle: 'A dry channel in the present was a river in the past.', motto: 'WHO TAUGHT IT TO STAY' }),
+  c: replay(M15, 'archive', { key: 'c_c', n: 'C', title: 'Mara Quill, the lock city', subtitle: 'Two archives name different first Chronolith operators.', motto: 'TRUE FOR WHOM',
+    threads: ['mara', 'ink'], name: 'TWO RECORDS, ONE DISASTER', done: 'ev_dual_archive', minutes: 8 }),
   child: replay(M01, 'booth', { key: 'c_child', n: 'E', title: 'Rain City, the first morning', subtitle: 'A photo booth that printed with nobody in it.' }),
   train: replay(M15, 'train', { key: 'c_train', n: 'F', title: 'The lock city', subtitle: 'An evacuation train that arrives yesterday.' }),
   letter: replay(M17, 'letter', { key: 'c_letter', n: 'G', title: 'The Witness\'s archive', subtitle: 'An envelope in Mira\'s handwriting.' }),
@@ -118,7 +87,7 @@ const R = {
 };
 
 // the cases chapter: c_b and c_c first (old saves point at their index), then the replays
-export const CASES = [C_B, C_C, R.child, R.train, R.letter, R.house, R.signal, R.names, R.debt, R.ninth, R.garden, R.record];
+export const CASES = [R.b, R.c, R.child, R.train, R.letter, R.house, R.signal, R.names, R.debt, R.ninth, R.garden, R.record];
 
 // --- the fourteen case files ---------------------------------------------------------------------------------------
 // start: the story has begun; resolved: its outcome is set; observed: its consequence has been seen later on

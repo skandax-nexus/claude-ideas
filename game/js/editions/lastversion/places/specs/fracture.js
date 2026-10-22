@@ -47,7 +47,8 @@ export default {
   watch: { m18: [[], [[[-40, -30], [40, -30]], [[-30, -96], [30, -96]]], [[[-36, 110], [36, 110]], [[-40, 150], [-40, 120]], [[30, 160], [30, 130]]]] },
   crowd: [
     { era: 'future', years: ['FUTURE'], region: 'fracture', role: 'evacuee', path: [[-20, -150], [20, -150], [20, -130]], n: 6 },
-    { era: 'present', years: ['PRESENT'], region: 'fracture', role: 'driver', path: [[-6, 20], [-6, 80]], n: 2 },
+    { era: 'present', years: ['PRESENT'], region: 'fracture', role: 'driver', path: [[-6, 20], [-6, 80]], n: 2,
+      barks: ['The road was dry an hour ago.', 'Turn the engine off. Listen. That is the river.'] },
   ],
 
   build(P) {

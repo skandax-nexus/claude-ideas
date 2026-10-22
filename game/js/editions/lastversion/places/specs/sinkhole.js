@@ -105,7 +105,8 @@ export default {
   frags: { m16: [['entranceHall', 'rimBench', 'alcove1Case'], ['alcove2', 'alcove3', 'shatteredCase']] },
   crowd: [
     { era: 'future', years: ['FUTURE'], region: 'museum', role: 'visitor', path: [[-20, 66], [20, 66]], y: RIM, n: 3, echo: true },
-    { era: 'present', years: ['PAST'], region: 'quarry', role: 'quarryman', path: [[-14, 10], [14, 10], [14, -10]], y: FLOOR, n: 4 },
+    { era: 'present', years: ['PAST'], region: 'quarry', role: 'quarryman', path: [[-14, 10], [14, 10], [14, -10]], y: FLOOR, n: 4,
+      barks: ['Cut, numbered, off to the Old Town.', 'Dust in everything. Even the tea.'] },
   ],
 
   build(P) {

@@ -77,23 +77,18 @@ export default {
     { name: 'THE SCHOOL & MARKET', area: [-110, -62, 40, 110], spawnAt: 'market', threshold: { at: 'pressFoot', kind: 'stair' } },
     { name: 'THE ARCHIVE / THE LOCK', area: [40, -62, 110, 110], spawnAt: 'pressFoot', threshold: null },
   ],
-  variants: {
-    // Case C, TWO RECORDS, ONE DISASTER: Mara's two archives in the press tower
-    c_c: {
-      quarters: [
-        { name: 'THE FIRST ARCHIVE', area: [40, -62, 110, 0], spawnAt: 'pressFoot', threshold: { at: 'pressStairTop', kind: 'stair' } },
-        { name: 'THE SECOND ARCHIVE', area: [40, 0, 110, 60], spawnAt: 'pressStairTop', threshold: null },
-      ],
-    },
-  },
-  beatAt: { m15: ['departureBoard', 'floodLine', 'lockConsole'], c_c: ['archiveA', 'archiveB'] },
+  // (Case C, TWO RECORDS, ONE DISASTER, replays Mission 15's archive: cases.js; this map, its quarters)
+  beatAt: { m15: ['departureBoard', 'floodLine', 'lockConsole'] },
   exits: { m15: 'pressFoot', c_c: 'museumDisplay' },
   frags: { m15: [['railHalt', 'evacTrain', 'gateTunnel'], ['register', 'marketWell', 'schoolDoor']] },
   crowd: [
-    { era: 'future', years: ['FUTURE'], region: 'lockcity', role: 'resident', path: [[-30, -10], [30, -10], [30, 10], [-30, 10]], n: 6 },
-    { era: 'future', years: ['FUTURE'], region: 'lockcity', role: 'child', path: [[-62, -10], [-62, 10]], y: T0 + 2 * RISE, n: 3 },
-    { era: 'present', years: ['PAST'], region: 'lockcity', role: 'fan', path: [[-40, -48], [40, -48]], y: T0 + 3 * RISE, n: 5 },
-    { era: 'present', years: ['PRESENT'], region: 'lockcity', role: 'evacuee', path: [[-20, 20], [20, 20]], n: 4 },
+    { era: 'future', years: ['FUTURE'], region: 'lockcity', role: 'resident', path: [[-30, -10], [30, -10], [30, 10], [-30, 10]], n: 6,
+      barks: ['Same bread as yesterday.'] },
+    { era: 'future', years: ['FUTURE'], region: 'lockcity', role: 'child', path: [[-62, -10], [-62, 10]], y: T0 + 2 * RISE, n: 3, barks: ['Present, miss.'] },
+    { era: 'present', years: ['PAST'], region: 'lockcity', role: 'fan', path: [[-40, -48], [40, -48]], y: T0 + 3 * RISE, n: 5,
+      barks: ['Two-nil at the half!'] },
+    { era: 'present', years: ['PRESENT'], region: 'lockcity', role: 'evacuee', path: [[-20, 20], [20, 20]], n: 4,
+      barks: ['Trains by noon, they said.'] },
   ],
 
   build(P) {

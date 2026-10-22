@@ -39,6 +39,8 @@ const M23_PROCESSES = [
     hints: ['The bridge fell into the stream.', 'Fallen things rise.', 'REVERSE the bridge.'],
   },
 ];
+// (the road is every year at once: the people on it stand in all three, never as echoes)
+const EVERY = ['PRESENT', 'PAST', 'FUTURE'];
 const M23_SAY = {
   across: [N('The Witness crosses while it holds. He does not look down.')],
 };
@@ -69,7 +71,7 @@ export const M23 = {
   place: 'afterzero', sectors: 1, states: ['PRESENT', 'PAST', 'FUTURE'], drones: [2, 0, 0, 1, 0], unstable: true, ambience: 'rain', ambient: 'rain',
   named: ['witness', 'mira', 'jun', 'tala', 'sera', 'anja', 'iven', 'clockmaker', 'odile'],
   motto: 'A SECOND THAT BELONGS TO NOBODY', gate: 'THE ORIGINAL CHRONOLITH', crew: C('mira'),
-  minutes: { main: 40, optional: 10 },
+  minutes: { main: 40, optional: 10 }, gateAfter: true,
   processes: M23_PROCESSES,
   zones: [{ at: 'settlementBridge', box: [-8, -1, 7, 8, 4, 14], set: { m23_across: true } }],
   watch: [[[[-8, 152], [8, 142]], [[-10, 160], [-2, 146]]], [], [], [[[-3, -36], [-3, -96]]], []],
@@ -218,25 +220,26 @@ export const M23 = {
     },
   },
   step: m23Step,
+  spoken: M23_SAY, // (what its code says: the Witness crossing)
   // quest chain A's consequence: the passengers Kai got off the 41 clear the opening streets of watchers
   adjust(level, rt) {
     if (!rt.g.facts.get('jun_line')) return;
     level.sentinels = (level.sentinels || []).filter((s) => !/_q0s\d$/.test(s.id));
   },
   overlay(P) {
-    person(P, { id: 'jun23', crew: 'jun', at: 'platform41', off: [-2, 0, 1], turn: Math.PI / 2, silent: true, when: 'jun_line || jun_evidence' });
+    person(P, { id: 'jun23', crew: 'jun', at: 'platform41', off: [-2, 0, 1], turn: Math.PI / 2, silent: true, when: 'jun_line || jun_evidence', temporal: EVERY });
     person(P, { id: 'm23_passenger', crew: 'm23_passenger', first: 'A passenger', seed: 2301, ambient: true, at: 'junPassengers', off: [0, 0, 2], turn: Math.PI / 2, silent: true, when: 'jun_line' });
     person(P, { id: 'witness_street', crew: 'witness', at: 'streetCollapse', off: [5, 0, 13], turn: Math.PI, silent: true, when: 't_m23_streets && !t_m23_street' });
     person(P, { id: 'witness_bridge', crew: 'witness', at: 'settlementBridge', off: [2.6, 0, -8], turn: 0, silent: true, when: 't_m23_street && !m23_witness_across' });
     person(P, { id: 'witness_far', crew: 'witness', at: 'settlementBridge', off: [2.6, 0, 8.4], turn: Math.PI, silent: true, when: 'm23_witness_across && !t_m23_lab' });
-    person(P, { id: 'tala23', crew: 'tala', at: 'tala', off: [0, 0, 1.2], turn: Math.PI, prompt: 'TALK TO TALA', when: 'water_route' });
+    person(P, { id: 'tala23', crew: 'tala', at: 'tala', off: [0, 0, 1.2], turn: Math.PI, prompt: 'TALK TO TALA', when: 'water_route', temporal: EVERY });
     person(P, { id: 'ezra23', crew: 'clockmaker', at: 'tellingStone', off: [1.6, 0, 4], turn: Math.PI, silent: true, when: 'ezra_debt' });
     person(P, { id: 'm23_listener', crew: 'm23_listener', first: 'One who listened', seed: 2302, ambient: true, at: 'busField', off: [-1.6, 0, 2], turn: Math.PI, silent: true, when: 'warned_evacuees' });
     person(P, { id: 'odile23', crew: 'odile', at: 'labGate', off: [3, 0, 2], turn: Math.PI, silent: true, when: 'odile_released' });
-    person(P, { id: 'iven23', crew: 'iven', at: 'ivenStatement', off: [0, 0, 1.6], turn: Math.PI, silent: true });
-    person(P, { id: 'sera23', crew: 'sera', at: 'seraGarden', off: [0, 0, 1.6], turn: Math.PI, prompt: 'TALK TO SERA' });
-    person(P, { id: 'anja23', crew: 'anja', at: 'anja', off: [2.4, 0, 0], turn: -Math.PI / 2, prompt: 'TALK TO ANJA' });
-    person(P, { id: 'mira23', crew: 'mira', at: 'miraStands', off: [0, 0, 0], turn: 0, prompt: 'TALK TO MIRA' });
+    person(P, { id: 'iven23', crew: 'iven', at: 'ivenStatement', off: [0, 0, 1.6], turn: Math.PI, silent: true, temporal: EVERY });
+    person(P, { id: 'sera23', crew: 'sera', at: 'seraGarden', off: [0, 0, 1.6], turn: Math.PI, prompt: 'TALK TO SERA', temporal: EVERY });
+    person(P, { id: 'anja23', crew: 'anja', at: 'anja', off: [2.4, 0, 0], turn: -Math.PI / 2, prompt: 'TALK TO ANJA', temporal: EVERY });
+    person(P, { id: 'mira23', crew: 'mira', at: 'miraStands', off: [0, 0, 0], turn: 0, prompt: 'TALK TO MIRA', when: 't_m23_city' });
   },
   // (the Finale has no hook: the ending sequence is Runtime.ending's; the voice in every speaker closes it)
   hook: { cue: 'postcredit', minutes: 5, lines: POSTCREDIT },

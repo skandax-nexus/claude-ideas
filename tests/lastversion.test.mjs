@@ -565,6 +565,7 @@ test('every REVERSE process record is valid', () => {
       assert.equal(rec.done, `inv_${rec.id}_done`);
       assert.ok(['held', 'settled'].includes(rec.settle), `${rec.id}: settle ${rec.settle}`);
       if (rec.when) compileCondition(rec.when);
+      if (rec.arm) compileCondition(rec.arm); // (in sight, not yet the story's to reverse: M18's slabs)
       if (rec.kind === 'refusal') assert.ok(['NOT A PROCESS', 'A MEMORY'].includes(rec.refuse) && rec.line, `${rec.id}: a refusal says why`);
       else assert.ok(rec.label && rec.hints?.length === 3, `${rec.id}: a label and three hints`);
       for (const p of rec.parts) for (const q of [p.rest.q, p.origin.q]) assert.ok(Math.abs(Math.hypot(...q) - 1) < 1e-3, `${rec.id}/${p.name}: a unit quaternion`);
@@ -788,9 +789,9 @@ const SHEETS = {
     landmarks: 'wedgeVillage chainWall wedgeClock clockArm wedgeHospital twinChamber finalSeals evidenceTable memoryCards wedgeStation wedgeCourt' },
   m23: { place: 'afterzero', quarters: ['THE OPENING STREETS', 'THE SETTLEMENT, AGAIN', 'THE HELIX LAB', '2196', 'THE ORIGINAL CHRONOLITH'],
     landmarks: 'platform41 streetCollapse junPassengers tellingStone settlementBridge tala rookTransmission ivenStatement memorial2196 seraGarden anja originalRing miraStands endingChoice' },
-  // the two cases kept as replay entries (until U8): Tala's gorge and Mara's press tower
-  c_b: { place: 'valley_river', quarters: ['THE DRY CHANNEL', 'THE GATES'], landmarks: 'gorgeMouth dryChannel gate1 gate2 gate3 aqueduct muralCliff' },
-  c_c: { place: 'lockcity', quarters: ['THE FIRST ARCHIVE', 'THE SECOND ARCHIVE'], landmarks: 'pressTower pressFoot pressStairTop archiveA archiveB card14 audioCylinder museumDisplay' },
+  // the two v2.0 cases, replay entries since U8: Tala's gorge in Mission 5's place, Mara's press tower in Mission 15's
+  c_b: { place: 'valley_river', quarters: ['THE HEAD-STONE', 'THE RETAINING WALL', 'THE PRESSURE GATE', 'THE UPPER GORGE'], landmarks: 'gorgeMouth dryChannel gate1 gate2 gate3 aqueduct muralCliff' },
+  c_c: { place: 'lockcity', quarters: ['THE STATION', 'THE SCHOOL & MARKET', 'THE ARCHIVE / THE LOCK'], landmarks: 'pressTower pressFoot pressStairTop archiveA archiveB card14 audioCylinder museumDisplay' },
 };
 const PLACED = LEVELS.filter((l) => SHEETS[l.deck.mkey]);
 const sameAs = (a, b) => a === b || [].concat(PLACES[a].sameAs || []).includes(b) || [].concat(PLACES[b].sameAs || []).includes(a);
@@ -1410,6 +1411,22 @@ test('every spoken line plans fully from the common pack and its own group\'s: n
   }
 });
 
+test('every line authored in the missions\' files is one spokenLines walks (a line said from code lives in its mission\'s spoken)', () => {
+  const said = new Set(SPOKEN.map((l) => l.text));
+  const S = "'((?:[^'\\\\]|\\\\.)*)'";
+  const res = [new RegExp(`\\b(?:K|N|CREW|PUPIL|AMB\\('[A-Z_0-9]+'\\))\\(${S}`, 'g'), new RegExp(`\\bL\\('[A-Z0-9]+', ${S}`, 'g'), new RegExp(`\\bSAYS\\('[^']*', '[A-Z_0-9]+', ${S}`, 'g')];
+  let n = 0;
+  for (const f of ['prologue.js', 'act1.js', 'act2.js', 'act3.js', 'act4.js', 'finale.js']) {
+    const src = fs.readFileSync(new URL(`../game/js/editions/lastversion/${f}`, import.meta.url), 'utf8');
+    for (const re of res) for (const m of src.matchAll(re)) {
+      const t = m[1].replace(/\\'/g, "'");
+      n++;
+      assert.ok(!t || said.has(t), `${f}: "${t}" is never walked, so it is never recorded`);
+    }
+  }
+  assert.ok(n > 900, `${n} authored lines`);
+});
+
 test('the spoken text is clean: no tags, key names, design notes or digits the voice would guess at; no templates in say calls', () => {
   const seen = new Set();
   for (const e of SPOKEN) {
@@ -1706,7 +1723,7 @@ test('the clue ledger: every plant comes before its payoff, and a rewritten miss
 const EV_KEYS = new Set();
 walkObj([MISSIONS, DIALOGUE], (o) => { if (o.ev) EV_KEYS.add(o.ev); if (o.set && typeof o.set === 'object') for (const k of Object.keys(o.set)) if (k.startsWith('ev_')) EV_KEYS.add(k.slice(3)); });
 
-test('the consequence ledger: every fact a rewritten mission\'s choices set is read later, or listed for a later mission', () => {
+test('the consequence ledger (global since U8): every fact a choice sets is read later in the campaign', () => {
   const later = (m) => main.slice(main.findIndex((x) => x.key === m));
   const conds = (ms) => {
     const out = [];
@@ -1714,7 +1731,6 @@ test('the consequence ledger: every fact a rewritten mission\'s choices set is r
     for (const m of ms) for (const t of threadsOf(asDeck(m))) for (const k of ['when', 'done', 'until']) if (t[k]) out.push(t[k]);
     return out.join(' ');
   };
-  const listed = (k, m) => CONSEQUENCES.some((c) => c.facts.includes(k) && c.set === m && c.shown.some((x) => missionIndex(x) > missionIndex(m)));
   let n = 0;
   for (const m of REWRITTEN) {
     const read = conds(later(m.key));
@@ -1723,7 +1739,7 @@ test('the consequence ledger: every fact a rewritten mission\'s choices set is r
       for (const k of Object.keys(o.set || {})) {
         if (k.startsWith('ev_') || k.startsWith('t_')) continue; // (evidence is pinned to the case board)
         n++;
-        assert.ok(new RegExp(`\\b${k}\\b`).test(read) || listed(k, m.key), `${m.key}: "${o.label}" sets ${k}, which nothing later reads and the ledger does not list`);
+        assert.ok(new RegExp(`\\b${k}\\b`).test(read), `${m.key}: "${o.label}" sets ${k}, which nothing later reads`);
       }
       if (o.trust && !['jun', 'child', 'iven'].includes(o.npc)) assert.ok(true);
     });
@@ -1889,10 +1905,12 @@ test('the save format: a pre-U6 save in the middle of a rewritten mission restar
   const now = { lv: true, chapter: 'prologue', deck: 0, sector: 0, quarter: 2, pos: [1, 2, 3, 0], flags: { beat_done: false }, lvFormat: SAVE_FORMAT };
   migrateSave(engine(), now, LV);
   assert.deepEqual([now.quarter, now.pos], [2, [1, 2, 3, 0]]);
-  // a case kept as it was (c_b, two sectors) keeps its sector; a U7 save in Act IV restarts its mission (format 24)
+  // a v2.0 case (c_b, two sectors) is a replay of Mission 5's gorge now: it starts again where that story lives (format
+  // 24); a U7 save in Act IV restarts its mission
   const cb = { lv: true, chapter: 'cases', deck: 0, sector: 1, flags: {}, lvFormat: 21 };
   migrateSave(engine(), cb, LV);
-  assert.equal(cb.sector, 1);
+  assert.deepEqual([cb.sector, cb.quarter, cb.lvFormat], [0, MISSIONS.cases[0].startQuarter, 24]);
+  assert.ok(MISSIONS.cases[0].startQuarter > 0 && MISSIONS.cases[0].origin === 'm05' && MISSIONS.cases[1].origin === 'm15');
   const act = { lv: true, chapter: 'act4', deck: 2, sector: 1, quarter: 1, pos: [1, 2, 3, 0], flags: { beat_done: false }, lvFormat: 23 };
   migrateSave(engine(), act, LV);
   assert.deepEqual([act.sector, act.quarter, act.pos, act.lvFormat], [0, 0, null, 24]);
@@ -2101,6 +2119,41 @@ test('the global ledgers: every question is answered in its mission, a deduction
   }
 });
 
+test('Acts III, IV and the Finale: nothing that ends a mission answers before the story reaches it (gateAfter)', () => {
+  let n = 0;
+  for (const ch of ['act3', 'act4', 'finale']) {
+    for (const m of MISSIONS[ch]) {
+      assert.ok(m.gateAfter, `${m.key}: its threads' own interactions wait on what they come after`);
+      const { level } = LEVELS.find((l) => l.deck.mkey === m.key);
+      const deck = asDeck(m);
+      const thr = threadsOf(deck);
+      // a thread's own spot, trigger, deduction, record or playback names every thread it comes after
+      for (const t of thr.filter((x) => x.after?.length)) {
+        const mine = level.interactables.filter((it) => it.id === (t.scene || t.id) && t.spot || [`deduce_${t.id}`, `residue_${t.id}`, `playback_${t.id}`].includes(it.id));
+        for (const it of mine) for (const a of t.after) { n++; assert.ok((it.when || '').includes(`t_${m.key}_${a}`), `${m.key}/${t.id}: ${it.id} waits on ${a}`); }
+      }
+      // as a chapter starts (its PRIMES, faction neutral), nothing that sets what the mission ends on answers, in any year
+      const f = new FactStore();
+      for (const c of ORDER.slice(0, ORDER.indexOf(ch) + 1)) for (const k of PRIMES[c] || []) (Array.isArray(k) ? f.set(k[0], k[1]) : f.set(k));
+      f.set('faction', 'neutral');
+      const ends = new Set(IDS(m.done));
+      for (const t of thr) if (ends.has(`t_${m.key}_${t.id}`)) IDS(doneCond(deck, t) || '').forEach((k) => ends.add(k));
+      const setsEnd = (node) => [node, ...(node?.choices || [])].some((x) => Object.keys(x?.set || {}).some((k) => ends.has(k)));
+      const open = (when) => ['PRESENT', 'PAST', 'FUTURE'].some((st) => f.test(when || 'true', st));
+      for (const it of level.interactables) {
+        const node = m.scenes?.[it.scene];
+        if (node && setsEnd(node)) { n++; assert.ok(!open(it.when), `${m.key}: ${it.id} ends the mission from its start`); }
+      }
+      for (const tr of level.triggers) if (Object.keys(tr.set || {}).some((k) => ends.has(k))) { n++; assert.ok(!open(tr.when), `${m.key}: a trigger ends the mission from its start`); }
+      for (const p of level.npcs) {
+        const talk = m.talks?.[p.id] || m.talks?.[p.crew];
+        if (talk?.some(setsEnd)) { n++; assert.ok(!open(p.when), `${m.key}: ${p.id} ends the mission from its start`); }
+      }
+    }
+  }
+  assert.ok(n >= 30, `${n} gates checked`);
+});
+
 test('the hold (Mission 18): posts at the place\'s landmarks, each re-anchored in its own year; allies and the lock city change it', () => {
   const m18 = main.find((x) => x.key === 'm18');
   const t = threadsOf(asDeck(m18)).find((x) => x.kind === 'hold');
@@ -2198,7 +2251,7 @@ test('CASE FILES: fourteen stories with their bible state; twelve replays, each 
   assert.equal(caseState(done, CASE_FILES.find((c) => c.id === 'chainB')), 'resolved');
   done.set('ev_tala23');
   assert.equal(caseState(done, CASE_FILES.find((c) => c.id === 'chainB')), 'observed');
-  for (const r of MISSIONS.cases.slice(2)) {
+  for (const r of MISSIONS.cases) {
     const origin = main.find((x) => x.key === r.origin);
     assert.ok(origin && isRewritten(origin) && r.voiceGroup === origin.chapter, `${r.key}: from ${r.origin}, in its voice`);
     const q = r.quarters[r.startQuarter];

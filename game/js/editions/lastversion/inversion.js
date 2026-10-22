@@ -206,6 +206,7 @@ export class Inversion {
       const r = p.rec;
       if (p.hiddenByWhen || r.room !== g.room || p.heldBy) continue; // (one someone else holds: the Witness, an ally)
       if (p.settled && r.kind !== 'recording') continue;
+      if (r.arm && !g.facts.test(r.arm)) continue; // (in plain sight, but not yet the story's to reverse: M18's slabs)
       const pts = r.kind === 'lock' ? r.parts.map((pt, i) => (p.partOut[i] ? null : { pos: pt.rest.p, part: i })) : [{ pos: this.aimOf(p), part: -1 }];
       for (const pt of pts) {
         if (!pt) continue;
@@ -572,7 +573,7 @@ export class Inversion {
     if (!this.unlocked) return null;
     let best = null, bd = Infinity;
     for (const p of this.procs) {
-      if (p.hiddenByWhen || p.settled || !p.rec.hints || p.rec.room !== g.room) continue;
+      if (p.hiddenByWhen || p.settled || !p.rec.hints || p.rec.room !== g.room || (p.rec.arm && !g.facts.test(p.rec.arm))) continue;
       _p.set(...p.rec.aim);
       const d = _p.distanceTo(g.player.pos);
       if (d < p.rec.reach && d < bd) {

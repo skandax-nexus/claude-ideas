@@ -123,6 +123,16 @@ export function sideState(facts, m, s) {
 export function placeThreads(deck, level) {
   if (!isRewritten(deck)) return;
   const anchor = (name) => (Array.isArray(name) ? { pos: name.slice(0, 3), yaw: name[3] || 0, room: roomAt(level, name) } : level.anchorsAt?.[name] ?? resolveAnchor(level, deck, name));
+  // deck.gateAfter (Acts III, IV and the Finale): a thread's own interaction (its spot, its trigger, its deduction,
+  // record or playback) answers only once the threads it comes after are done, so nothing that ends a mission can be
+  // used before the story reaches it. The evidence a clue or tasks thread lists (`spots`) stays free to find.
+  const all = threadsOf(deck);
+  const ids = Object.fromEntries(all.map((t) => [t.id, t]));
+  const gate = (t, when) => {
+    if (!deck.gateAfter || !t.after?.length) return when;
+    const need = t.after.filter((id) => ids[id]).map((id) => factOf(deck, ids[id])).join(' && ');
+    return need ? (when ? `(${when}) && ${need}` : need) : when;
+  };
   const spot = (s, t) => {
     const a = anchor(s.at || t.at);
     if (!a) return;
@@ -131,20 +141,22 @@ export function placeThreads(deck, level) {
       ...(s.model ? { model: typeof s.model === 'function' ? s.model : spotModel(s.model) } : {}), ...(s.kit ? { kit: s.kit } : {}), when: s.when, color: s.color, ...(s.once ? { once: true } : {}) });
     for (const tx of s.texts || []) level.texts.push({ text: tx.text, pos: toWorld(a, tx.at || [0, 2, 0.05]), rotY: a.yaw + (tx.turn || 0), size: tx.size || 0.2, color: tx.color || '#ffe6c0', when: tx.when, room: a.room });
   };
-  for (const t of threadsOf(deck)) {
+  // (the thread's own interaction: gated on what it comes after)
+  const own = (s, t) => spot({ ...s, when: gate(t, s.when) }, t);
+  for (const t of all) {
     for (const s of t.spots || []) spot(s, t);
-    if (t.spot) spot({ id: t.scene || t.id, scene: t.scene, ...t.spot }, t);
+    if (t.spot) own({ id: t.scene || t.id, scene: t.scene, ...t.spot }, t);
     if ((t.kind === 'go' || t.kind === 'stealth') && t.at && !t.done) {
       const a = anchor(t.at);
       const r = t.r ?? 4;
-      if (a) level.triggers.push({ box: [a.pos[0] - r, a.pos[1] - 1.5, a.pos[2] - r, a.pos[0] + r, a.pos[1] + 5, a.pos[2] + r], set: { [factOf(deck, t)]: true }, when: t.when, once: true, room: a.room });
+      if (a) level.triggers.push({ box: [a.pos[0] - r, a.pos[1] - 1.5, a.pos[2] - r, a.pos[0] + r, a.pos[1] + 5, a.pos[2] + r], set: { [factOf(deck, t)]: true }, when: gate(t, t.when), once: true, room: a.room });
     }
-    if (t.kind === 'deduce' && t.at && deck.deductions?.[t.deduction]) spot({ id: `deduce_${t.id}`, scene: `deduce:${t.deduction || t.id}`, prompt: t.prompt || 'PIECE IT TOGETHER', ...(t.spotOpts || {}) }, t);
+    if (t.kind === 'deduce' && t.at && deck.deductions?.[t.deduction]) own({ id: `deduce_${t.id}`, scene: `deduce:${t.deduction || t.id}`, prompt: t.prompt || 'PIECE IT TOGETHER', ...(t.spotOpts || {}) }, t);
     if (t.kind === 'residue' && t.at && t.record) {
-      spot({ id: `residue_${t.id}`, scene: `residue:${t.id}`, prompt: t.record.prompt || 'READ IT', kit: t.record.kit, model: t.record.model, offset: t.record.offset, when: t.record.when }, t);
+      own({ id: `residue_${t.id}`, scene: `residue:${t.id}`, prompt: t.record.prompt || 'READ IT', kit: t.record.kit, model: t.record.model, offset: t.record.offset, when: t.record.when }, t);
     }
     if (t.kind === 'playback' && t.at) {
-      spot({ id: `playback_${t.id}`, scene: `playback:${t.id}`, prompt: t.prompt || 'WATCH WHAT IT KEPT', model: t.model, kit: t.kit, offset: t.offset, r: t.r, when: t.spotWhen }, t);
+      own({ id: `playback_${t.id}`, scene: `playback:${t.id}`, prompt: t.prompt || 'WATCH WHAT IT KEPT', model: t.model, kit: t.kit, offset: t.offset, r: t.r, when: t.spotWhen }, t);
       // the echoes: holograms that stand (and walk) only while it plays (the fact pb_<mkey>_<id>)
       const a = anchor(t.at);
       for (const [k, e] of (t.echoes || []).entries()) {
@@ -168,10 +180,21 @@ export function placeThreads(deck, level) {
       }
     }
   }
+  // the cold open's cast: people who stand in the shot only while the opening plays (coldOpen.cast: { crew, at,
+  // off, turn, variant, hologram }; the fact co_<mkey>, which the runtime holds for the opening and clears at a load)
+  for (const [k, c] of (deck.coldOpen?.cast || []).entries()) {
+    const a = anchor(c.at);
+    if (!a) continue;
+    const p = toWorld(a, c.off || [0, 0, 0]);
+    level.npcs.push({ id: `co_${k}`, crew: c.crew, first: c.first, variant: c.variant, height: c.height, pos: [p[0], p[1], p[2]], yaw: a.yaw + (c.turn || 0),
+      hologram: !!c.hologram, silent: true, temporal: ['PRESENT', 'PAST', 'FUTURE'], when: coldFact(deck), room: a.room || roomAt(level, p) || level.outdoorRoom });
+  }
   // the quarters: the room each one's spawn stands in (a quarter of rooms is reached by entering that room;
   // one of the open place by standing in its area)
   for (const q of level.quarters || []) q.room = roomAt(level, q.spawn) || level.outdoorRoom;
 }
+// the cold open's people stand while this holds (Runtime.openMission)
+export const coldFact = (m) => `co_${m.mkey || m.key}`;
 
 // the room a point stands in (DeckWorld.roomAt's rule: the first room in order whose bounds hold it)
 export function roomAt(level, p) {

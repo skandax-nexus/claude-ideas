@@ -190,7 +190,10 @@ export const EPILOGUE = [
   { when: 'water_route', who: 'CREW', name: 'THE GARDENER', color: '#4f6170', voice: { id: 'GARDENER' }, text: 'The channel is running again. Nobody alive remembers who opened it.' },
   { when: 'ezra_debt == "release"', who: 'CREW', name: 'EZRA MOLL', color: '#8a6a3a', voice: { id: 'CLOCKMAKER' }, text: 'Wednesday. Imagine that.' },
   { when: 'city_freed', who: 'ANJA', text: 'We planted things.' },
-  { when: 'ev_raw_log', who: 'IVEN', text: 'Elias Rook testified for nine days. The log said I refused to sign, forty-one times.' },
+  // (Rook testifies only where Kai exposed him; Iven's raw log is what the court read)
+  { when: 'ev_raw_log && rook_fate == "expose"', who: 'IVEN', text: 'Elias Rook testified for nine days. The log said I refused to sign, forty-one times.' },
+  { when: '!ev_raw_log && rook_fate == "expose"', who: 'NONE', text: 'Elias Rook testified for nine days. He signed every page.' },
+  { when: 'rook_fate == "persuade"', who: 'ROOK', text: 'I kept her drawing on my desk for twenty-three years. This morning I gave it back.' },
   // Acts III and IV (U8)
   { when: 'ezra_debt == "finish"', who: 'CREW', name: 'EZRA MOLL', color: '#8a6a3a', voice: { id: 'CLOCKMAKER' }, text: 'The clock keeps its own time. So do I.' },
   { when: 'odile_released', who: 'CREW', name: 'NURSE ODILE', color: '#7aa6c8', voice: { id: 'ODILE' }, text: 'My shift finished. Thirty-two went home.' },

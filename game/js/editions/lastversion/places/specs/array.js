@@ -52,7 +52,8 @@ export default {
     [[[-110, -20], [-40, -20]]],
   ] },
   crowd: [
-    { era: 'present', years: ['PAST'], region: 'array', role: 'builder', path: [[-40, 0], [40, 0]], n: 4 },
+    { era: 'present', years: ['PAST'], region: 'array', role: 'builder', path: [[-40, 0], [40, 0]], n: 4,
+      barks: ['Forty degrees, and they want the dish true to a millimetre.', 'Somebody is paying for all this. Nobody will say who.'] },
     { era: 'present', years: ['PRESENT'], region: 'array', role: 'recording', path: [[-6, -100], [6, -100]], n: 2, echo: true },
   ],
 

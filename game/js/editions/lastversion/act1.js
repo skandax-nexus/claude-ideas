@@ -276,6 +276,7 @@ const M05_SAY = {
   gateOk: [[N('The lowest gate lifts. Under the water, a low note.')], [N('The highest gate lifts. A higher note.')], [N('The middle gate lifts, and the three notes are a song: up, up, and a stop.')]],
   gateWrong: [N('The water backs up toward the houses. Tala drops the gates again.'), L('TALA', 'Not that one. Stone does not argue, it only waits.')],
   gateNotNow: [K('The gates only move while the river is alive.')],
+  askTala: [K('Tala\'s gates. I should ask her first.')],
   gatesDone: [N('The water takes the channel and leaves the houses dry.'), L('TALA', 'The river knows the way now. So do you.')],
 };
 
@@ -445,7 +446,7 @@ M05.outro = M05.hook.lines;
 function gorgeGate(rt, k) {
   const g = rt.g, f = g.facts;
   if (g.engine.state(g.room) !== 'PAST') return g.hud.say(M05_SAY.gateNotNow, f);
-  if (!f.get('quest_tala')) return g.hud.say([K('Tala\'s gates. I should ask her first.')], f);
+  if (!f.get('quest_tala')) return g.hud.say(M05_SAY.askTala, f);
   const n = f.get('gates_n') || 0;
   if (f.get('water_route')) return;
   const note = [261.63, 349.23, 466.16][k];

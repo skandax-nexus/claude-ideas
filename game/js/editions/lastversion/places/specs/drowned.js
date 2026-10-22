@@ -68,7 +68,8 @@ export default {
   crowd: [
     { era: 'future', years: ['FUTURE'], region: 'drowned', role: 'survivor', path: [[VX - 2, 96], [VX - 2, 40]], y: VY, n: 4 },
     { era: 'present', years: ['PRESENT'], region: 'rain', role: 'commuter', path: [[-6, 90], [-6, -90]], n: 6 },
-    { era: 'present', years: ['PAST'], region: 'rain', role: 'builder', path: [[-70, 70], [-30, 70]], n: 3 },
+    { era: 'present', years: ['PAST'], region: 'rain', role: 'builder', path: [[-70, 70], [-30, 70]], n: 3,
+      barks: ['Thirty floors by spring.'] },
   ],
 
   build(P) {
@@ -193,9 +194,7 @@ export default {
     P.box([-27, 1.6, -84, -11, 4.6, -82.6], 'basalt');
     sign(P, 'KAI VAREN', -19, 4.0, -82.5, 0, { size: 0.5, board: 0, color: '#e8e4dc' });
     sign(P, 'ARCHITECT OF THE FRACTURE', -19, 3.3, -82.5, 0, { size: 0.32, board: 0, color: '#c8c4bc' });
-    P.box([-35.5, 1.6, -83.5, -32.5, 3.2, -80.5], 'statueStone');
-    P.cyl(-34, 3.2, -82, 0.45, 1.9, 'statueStone', { seg: 10 });
-    P.sphere(-34, 5.3, -82, 0.25, 'statueStone');
+    P.box([-35.5, 1.6, -83.5, -32.5, 3.2, -80.5], 'statueStone'); // (the statue on it is Kai himself, in stone: M14's overlay)
     P.E('FUTURE', () => { P.box([-17, 1.6, -79, -15, 1.9, -78], 'flowersStall', { solid: false }); for (let i = 0; i < 6; i++) P.tree('fern', -44 + i * 8, -102, 1.2, { y: 1.6, solid: false }); });
     // Sera's school: an open schoolroom under a canopy at the back of the plaza
     P.box([-12, 1.6, -104, 8, 5.4, -100], 'concreteStained');

@@ -57,8 +57,10 @@ export default {
   frags: { m20: [['blueDoor', 'nightBadge', 'yellowBoots'], ['childChair', 'whiteChamber', 'garden']] },
   watch: { m20: [[], [], []] },
   crowd: [
-    { era: 'present', years: ['PAST'], region: 'memory', role: 'neighbour', path: [[-50, 30], [40, 30]], n: 4 },
-    { era: 'future', years: ['FUTURE'], region: 'memory', role: 'walker', path: [[-50, 30], [50, 30]], n: 3 },
+    { era: 'present', years: ['PAST'], region: 'memory', role: 'neighbour', path: [[-50, 30], [40, 30]], n: 4,
+      barks: ['Sprinkler is on again. Mind the bikes.', 'Your mum on nights again? Come in for tea.'] },
+    { era: 'future', years: ['FUTURE'], region: 'memory', role: 'walker', path: [[-50, 30], [50, 30]], n: 3,
+      barks: ['The bus is late again. Nobody minds.', 'Lovely morning for it. Whatever it is.'] },
   ],
 
   build(P) {

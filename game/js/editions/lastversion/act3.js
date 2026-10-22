@@ -107,7 +107,19 @@ const M14_PROCESSES = [
   { id: 'memorialRefusal', kind: 'refusal', refuse: 'NOT A PROCESS', at: 'memorial', label: 'THE MEMORIAL', line: 'It isn\'t something that happened. It\'s something they decided.', aim: [0, 2.6, -0.8] },
 ];
 
+// the statue of Kai on its plinth: his own body in weathered stone, still (it takes its pose, then holds it)
+const STONE = new THREE.MeshStandardMaterial({ color: 0x9c978d, roughness: 0.96, metalness: 0 });
+function m14Statue(rt) {
+  const g = rt.g, n = g.deckWorld?.npcs.find((x) => x.n.statue);
+  if (!n || n.stone) return;
+  n.stone = true;
+  g.facts.set('m14_statue', false); // (a load: the pose first)
+  n.model.traverse((o) => { if (o.isMesh) { o.material = STONE; o.castShadow = true; } });
+  n.model.userData.setOpacity = null;
+  g.after(0.6, () => g.facts.set('m14_statue', true)); // (then it stands still: freezeWhen)
+}
 function m14Step(rt, dt) {
+  m14Statue(rt);
   const g = rt.g, p = g.player?.pos;
   if (!p || g.catching || rt.opening || rt.cinema?.active) return;
   // in a zone the street flickers between years, and the Chronolith pays for it, in any year
@@ -128,7 +140,7 @@ export const M14 = {
   place: 'drowned', sectors: 1, home: 'FUTURE', states: ['FUTURE', 'PRESENT', 'PAST'], drones: [0, 1, 2], unstable: true, ambience: 'wind', ambient: 'future',
   motto: 'WE TEACH CHILDREN YOUR NAME', gate: 'THE BEACON', crew: C('sera'),
   named: ['sera', 'gardener', 'warden'],
-  minutes: { main: 30, optional: 8 }, autoExit: 1.2,
+  minutes: { main: 30, optional: 8 }, autoExit: 1.2, gateAfter: true,
   processes: M14_PROCESSES,
   fragSpots: [['bankTower'], ['lowWaterPath'], ['kaiStatue']],
   fragments: [[
@@ -266,6 +278,7 @@ export const M14 = {
   overlay(P) {
     person(P, { id: 'sera', crew: 'sera', at: 'seraSteps', off: [0, 0, 1.6], turn: Math.PI, prompt: 'TALK TO SERA' });
     person(P, { id: 'gardener', crew: 'gardener', at: 'gardenChannel', off: [1.6, 0, 1.0], turn: -Math.PI / 2, prompt: 'TALK TO THE GARDENER', when: '@FUTURE' });
+    person(P, { id: 'kai_statue', crew: 'kai', at: 'kaiStatue', off: [0, 1.6, 0], turn: 0, silent: true, statue: true, freezeWhen: 'm14_statue', temporal: ['PRESENT', 'PAST', 'FUTURE'] });
     person(P, { id: 'warden', crew: 'warden', at: 'unstableZones', off: [3, 0, 2], turn: Math.PI, silent: true, when: '@FUTURE', barks: ['Do not cross before noon. It is always before noon.'] });
     person(P, { id: 'm14_pupil', crew: 'm14_pupil', first: 'A child', seed: 1401, ambient: true, at: 'seraSchool', off: [2, 0, 3], turn: Math.PI, when: '@FUTURE', prompt: 'TALK TO THE CHILD' });
     person(P, { id: 'm14_pupilA', crew: 'm14_pupilA', first: 'A child', seed: 1402, ambient: true, at: 'seraSchool', off: [-2, 0, 1.5], turn: Math.PI, when: '@FUTURE', silent: true });
@@ -333,7 +346,7 @@ export const M15 = {
   place: 'lockcity', sectors: 1, home: 'FUTURE', states: ['FUTURE', 'PAST', 'PRESENT'], drones: [0, 0, 0], ambience: 'wind', ambient: 'future',
   motto: 'THE WORLDS THAT NEVER FINISHED BECOMING WORLDS', gate: 'THE LOCK', crew: C('anja'),
   named: ['anja', 'mara', 'warden', 'tomas', 'jun'],
-  minutes: { main: 30, optional: 10 }, autoExit: 1.2,
+  minutes: { main: 30, optional: 10 }, autoExit: 1.2, gateAfter: true,
   // the city resets at noon, every two minutes of play, until the lock is decided
   loop: { period: 120, until: 'city_freed || city_stabilized' },
   processes: M15_PROCESSES,
@@ -532,7 +545,7 @@ export const M16 = {
   place: 'sinkhole', sectors: 1, home: 'FUTURE', states: ['FUTURE', 'PAST', 'PRESENT'], drones: [0, 0, 0, 0], ambience: 'hum', ambient: 'future',
   motto: 'WE HAD A THOUSAND CHANCES', gate: 'THE PHOTOGRAPH', crew: C('mara'),
   named: ['mara', 'mira', 'witness'],
-  minutes: { main: 30, optional: 8 }, autoExit: 1.2,
+  minutes: { main: 30, optional: 8 }, autoExit: 1.2, gateAfter: true,
   processes: M16_PROCESSES,
   spots: [{ id: 'case41label', at: 'shatteredCase', scene: 'case41', prompt: 'THE CASE', offset: [0, 1.0, 1.0], model: 'none',
     texts: [{ text: 'VERSION 41 · UNFINISHED', at: [0, 2.2, 0.5], size: 0.12, color: '#ffc27a', when: 'inv_shatteredCase_done' }] }],
@@ -765,7 +778,7 @@ export const M17 = {
   place: 'array', sectors: 1, states: ['PRESENT', 'PAST', 'FUTURE'], drones: [0, 2, 1, 0], unstable: true, ambience: 'hum', ambient: 'liminal',
   motto: 'THEY BECAME THE PRICE', gate: 'THE CONTROL HALL', crew: C('witness'),
   named: ['witness', 'kai12', 'child'],
-  minutes: { main: 32, optional: 6 }, autoExit: 1.2,
+  minutes: { main: 32, optional: 6 }, autoExit: 1.2, gateAfter: true,
   processes: M17_PROCESSES,
   spots: [{ id: 'sheetLabel', at: 'earlierRooms', scene: 'sheet', prompt: 'THE SHEET', offset: [0, 1.2, 0.9], model: 'none',
     texts: [{ text: 'RECORDING 117 OF 117', at: [0, 1.1, 0.02], size: 0.09, color: '#2a3442', when: 'inv_shredded_done' }] }],
@@ -903,7 +916,7 @@ const M18_HINTS = {
 const M18_PROCESSES = [
   // the core's slabs, fallen into the street: held, they come back last fallen first, a stair to the ramp at 9 m
   {
-    id: 'slabs', kind: 'collapse', at: 'slabs', label: 'THE CORE\'S SLABS', weight: 1.5, when: '@FUTURE', grain: 'stone', mat: 'concrete',
+    id: 'slabs', kind: 'collapse', at: 'slabs', label: 'THE CORE\'S SLABS', weight: 1.5, when: '@FUTURE', arm: 'm18_stabilized', grain: 'stone', mat: 'concrete',
     span: { from: [0, 0, 0], to: [10, 3, 0], width: 3, pieces: 10, thick: 0.4, floor: -6 }, aim: [5, 1.6, 0],
     hints: ['Slabs in the street.', 'They fell in order. Last fallen, first back.', 'REVERSE them, and climb the stair while it holds.'],
   },
@@ -929,10 +942,10 @@ export const M18 = {
   place: 'fracture', sectors: 1, home: 'FUTURE', states: ['FUTURE', 'PAST', 'PRESENT'], drones: [0, 1, 0, 3], ambience: 'wind', ambient: 'future',
   motto: 'THE ONE BEFORE YOU TRIED TO SAVE ME', gate: 'THE TRANSMISSION TOWER', crew: C('sera'),
   named: ['sera', 'mira', 'iven'],
-  minutes: { main: 32, optional: 8 }, autoExit: 1.2,
+  minutes: { main: 32, optional: 8 }, autoExit: 1.2, gateAfter: true,
   watch: [[], [[[-30, -96], [30, -96]]], [], [[[-36, 110], [36, 110]], [[-40, 150], [-40, 120]], [[30, 160], [30, 130]]]],
   processes: M18_PROCESSES,
-  zones: [{ at: 'towerDeck', box: [-8, -1, -8, 8, 4, 8], set: { m18_on_deck: true } }],
+  zones: [{ at: 'towerDeck', box: [-8, -1, -8, 8, 4, 8], set: { m18_on_deck: true }, when: 'm18_stabilized' }],
   fragSpots: [['anchorMast', 'garden'], ['canyonArch', 'highwaySign'], ['verge', 'tollBooth']],
   fragments: [[
     'An evacuation list, every name ticked but one.',

@@ -43,7 +43,7 @@ export const M19 = {
   place: 'unwritten', sectors: 1, states: ['PRESENT', 'PAST', 'FUTURE'], drones: [0, 0, 0], ambience: null, ambient: 'liminal',
   motto: 'FOLLOW WHAT THEY REFUSE TO STEP ON', gate: 'THE DOOR', crew: C('orren'),
   named: ['orren', 'mira'],
-  minutes: { main: 30, optional: 8 }, autoExit: 1.2,
+  minutes: { main: 30, optional: 8 }, autoExit: 1.2, gateAfter: true,
   processes: M19_PROCESSES,
   fragSpots: [['canopy41'], ['stonePattern'], ['door2']],
   fragments: [[
@@ -233,7 +233,7 @@ export const M20 = {
   place: 'memory', sectors: 1, home: 'PAST', states: ['PAST', 'PRESENT', 'FUTURE'], drones: [0, 0, 0], ambience: null, ambient: 'liminal',
   motto: 'I REMEMBER BEING YOUR SISTER', gate: 'THREE MEMORIES', crew: C('mira'),
   named: ['mira', 'child', 'kai12', 'witness'],
-  minutes: { main: 30, optional: 10 }, autoExit: 1.2,
+  minutes: { main: 30, optional: 10 }, autoExit: 1.2, gateAfter: true,
   processes: M20_PROCESSES,
   fragSpots: [['blueDoor'], ['whiteChamber'], ['stop41']],
   fragments: [[
@@ -245,6 +245,7 @@ export const M20 = {
   coldOpen: {
     first: true, minutes: 1, cue: 'card',
     shots: [{ cam: 'kitchen', look: 'fridgeDrawing', t: 9 }],
+    cast: [{ crew: 'kai12', at: 'fridgeDrawing', off: [0.7, 0, 1.3], turn: Math.PI }, { crew: 'child', variant: 'mira9', at: 'fridgeDrawing', off: [-0.8, 0, 1.7], turn: Math.PI + 0.5 }],
     lines: [SAYS('KAI, TWELVE', 'KAI12', 'It goes up, and then up again, and then it stops.'), L('MIRA9', 'It goes up, up, and then down.'), SAYS('KAI, TWELVE', 'KAI12', 'Stops.'), L('MIRA9', 'Fine. Stops. For you.')],
   },
   quarters: [
@@ -427,7 +428,7 @@ export const M21 = {
   place: 'spire', sectors: 1, states: ['PRESENT', 'PAST', 'FUTURE'], drones: [2, 0, 0, 0], unstable: true, ambience: 'wind', ambient: 'loop',
   motto: 'ONE PERMANENT TIMELINE', gate: 'THE ARENA', crew: C('witness'),
   named: ['witness', 'sera', 'anja', 'iven', 'rook', 'guard', 'mara'],
-  minutes: { main: 34, optional: 6 }, autoExit: 1.2,
+  minutes: { main: 34, optional: 6 }, autoExit: 1.2, gateAfter: true,
   processes: M21_PROCESSES,
   fragSpots: [['gliderDeck'], ['eliteRamps'], ['mast']],
   fragments: [[
@@ -439,6 +440,7 @@ export const M21 = {
   coldOpen: {
     first: true, minutes: 1, cue: 'card',
     shots: [{ cam: 'arrival', look: 'mast', t: 9 }],
+    cast: [{ crew: 'director', at: 'arrival', off: [0, 0, 12], turn: Math.PI, hologram: true }],
     lines: [L('ROOK', DIRECTOR_LINE, 'rook_fate == "persuade"'), SAYS('THE DIRECTOR', 'PRYCE', DIRECTOR_LINE, 'rook_fate == "expose"'),
       FX(SAYS('THE DIRECTOR', 'DIRECTOR', DIRECTOR_LINE, '!(rook_fate == "persuade") && !(rook_fate == "expose")'), 'recording'), N('Above the clouds, every elite on the Spire turns toward the stairs.')],
   },
@@ -537,6 +539,7 @@ export const M21 = {
   },
   onEcho: m21Echo,
   step: m21Step,
+  spoken: M21_SAY, // (the lines its code says: the snap back, the stuck elite, the ally letting go)
   watch: [[[[-50, 40], [50, 40]], [[40, 58], [-40, 58]]], [], [], []],
   overlay(P) {
     person(P, { id: 'witness21', crew: 'witness', at: 'witnessStand', off: [-2, 0, 0], turn: Math.PI / 2, prompt: 'TALK TO HIM', when: 't_m21_gapTwo' });
@@ -599,7 +602,7 @@ export const M22 = {
   place: 'firstsecond', sectors: 1, states: ['PRESENT', 'PAST', 'FUTURE'], drones: [0, 1, 1], unstable: true, ambience: null, ambient: 'liminal',
   motto: 'YOU WERE TRYING TO STOP ME FROM BECOMING YOU', gate: 'THE FINAL CHAMBER', crew: C('witness'),
   named: ['witness', 'elder', 'clockmaker', 'odile', 'orren'], // (their echoes are quoted here: no crowd wears their faces)
-  minutes: { main: 30, optional: 8 }, autoExit: 1.2,
+  minutes: { main: 30, optional: 8 }, autoExit: 1.2, gateAfter: true,
   processes: M22_PROCESSES,
   fragSpots: [['roundhouse1'], ['wedgeHospital'], ['wedgeStation']],
   fragments: [[
@@ -611,6 +614,7 @@ export const M22 = {
   coldOpen: {
     first: true, minutes: 1, cue: 'card',
     shots: [{ cam: 'wedgeStation', look: 'paMic', t: 9 }],
+    cast: [{ crew: 'witness', at: 'paMic', off: [0, -1, 0.7], turn: Math.PI }],
     lines: [N('The station at 8:14, replayed in a wedge of rain. A man at the public-address microphone.'), REV(FX(L('WITNESS', 'Kai Varen. Do not build the machine.'), 'pa'))],
   },
   quarters: [

@@ -21,7 +21,7 @@ import { Score } from './score.js';
 import { Cinema } from './cinema.js';
 import { VoiceFx } from './voicefx.js';
 import { choiceLine, chapterCardLines, missionCardLines, endingLines, POSTCREDIT } from './voicelines.js';
-import { Threads, placeThreads, isRewritten, sidesOf, sideState } from './Threads.js';
+import { Threads, placeThreads, isRewritten, sidesOf, sideState, coldFact } from './Threads.js';
 import { QUESTIONS, PREVIOUSLY, CHOSEN } from './ledger.js';
 
 // the edition's voice packs: common to every chapter, then one per chapter (OVERHAUL.md §8.3)
@@ -51,8 +51,8 @@ function mechsFor(m, fits) {
 // the Prologue); 23 = Acts I and II as one map each (U7); 24 = Acts III, IV and the Finale too, and the CASE FILES (U8)
 export const SAVE_FORMAT = 24;
 // the format in which each chapter's missions became one map: a save from before it restarts that mission
-// (the cases' c_b and c_c are what they were: their saves load as they are)
-export const REWRITTEN_IN = { prologue: 22, act1: 23, act2: 23, act3: 24, act4: 24, finale: 24 };
+// (the cases' c_b and c_c became replays of Missions 5 and 15 in 24: an older save in one starts it again, where its story lives)
+export const REWRITTEN_IN = { prologue: 22, act1: 23, act2: 23, act3: 24, act4: 24, finale: 24, cases: 24 };
 
 // v2.0 saves came from a four-state engine (INVERTED flipped gravity): the room states it no longer
 // has go back to the baseline, rooms lose a state they cannot have, and REVERSE gets its charge. A save
@@ -70,7 +70,7 @@ export function migrateSave(engine, campaign, def) {
     campaign.inv = { cap: 8, charge: 8, ...(campaign.inv || {}) };
     const deck = MISSIONS[campaign.chapter]?.[campaign.deck ?? 0];
     if ((campaign.lvFormat ?? 20) < (REWRITTEN_IN[campaign.chapter] ?? 22) && isRewritten(deck)) {
-      Object.assign(campaign, { sector: 0, quarter: 0, room: null, pos: null, flags: {}, visited: [], restarted: true });
+      Object.assign(campaign, { sector: 0, quarter: deck.startQuarter || 0, room: null, pos: null, flags: {}, visited: [], restarted: true });
     }
     campaign.quarter ??= 0;
     campaign.lvFormat = SAVE_FORMAT;
@@ -750,6 +750,8 @@ export class LastVersion {
     this.watchers.mount(g.deckWorld, deck.mkey, { renderer: g.renderer, hero: g.settings.hero, stateOf: (rid) => g.engine.state(rid) });
     this.objective(true);
     this.quietPins = false;
+    // (the cold open's people stand only while it plays: a save taken during it loads without them)
+    if (deck.coldOpen?.cast) g.facts.set(coldFact(deck), false);
     if (opening) this.openMission(deck, opening);
     else if (resumed) this.previously();
   }
@@ -802,17 +804,18 @@ export class LastVersion {
     const card = { card: [kicker, deck.name, deck.title || deck.subtitle], cue: 'card', lines: missionCardLines(deck) };
     // a cold open may come before the title (co.first: it plays, then the mission's card, then what follows the title)
     if (co?.first) {
-      if (cold.length) steps.push({ shots: co.shots || 'default', lines: cold, cue: co.cue || null });
+      if (cold.length) steps.push({ shots: co.shots || 'default', lines: cold, cue: co.cue || null, cast: !!co.cast });
       steps.push(card);
       if (co.title?.lines?.length) steps.push({ shots: co.title.shots || 'default', lines: co.title.lines, cue: co.title.cue || null });
     } else {
       steps.push(card);
-      if (cold.length) steps.push({ shots: co?.shots || 'default', lines: cold, cue: co?.cue || null });
+      if (cold.length) steps.push({ shots: co?.shots || 'default', lines: cold, cue: co?.cue || null, cast: !!co?.cast });
     }
     // the opening is over (played or skipped): what the cold open sets is set, and what it starts starts
     const finish = () => {
       this.hideCard();
       this.opening = null;
+      if (co?.cast) g.facts.set(coldFact(deck), false);
       if (co?.set) for (const [k, v] of Object.entries(co.set)) g.facts.set(k, v);
       if (co?.then) deck.fx?.[co.then]?.(this);
     };
@@ -825,6 +828,7 @@ export class LastVersion {
         this.cinema.play({ shots: null, lines: k.lines, cue: k.cue }, () => next(i + 1));
       } else {
         this.hideCard();
+        if (k.cast) g.facts.set(coldFact(deck), true); // (the cold open's people step into the shot)
         this.cinema.play({ shots: k.shots, lines: k.lines, cue: k.cue }, () => next(i + 1));
       }
     };

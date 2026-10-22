@@ -268,10 +268,23 @@ authors against, beyond U6's:
   { period, on }` with `offBeat` (M22's arm jams off its counted beat), `mode: 'rewind'` with `stuck` on a patrol
   (M21's elites: reversing the rewind leaves one stuck forward), and a refusal's `lineWho` and `once` (M20: Mira
   answers the first try). An `ink` process of one layer is an original: trying it settles it, and nothing comes off.
-- A case file is `replay(mission, sideId, o)`: the mission's place, people and what the side story uses, its threads
+  `arm: cond` keeps a process in plain sight but out of REVERSE's reach until the story gets there (M18's slabs wait for
+  the stabilizer).
+- `gateAfter: true` (every mission of Acts III, IV and the Finale): a thread's own interaction (its `spot`, its `go` or
+  `stealth` trigger, its deduction, record or playback) answers only once the threads in its `after` are done, so
+  nothing that ends a mission can be used before the story reaches it; the evidence a clue or tasks thread lists in
+  `spots` stays free to find (a unit test checks, from each chapter's PRIMES, that no spot, trigger or person that sets
+  a mission's end answers at its start).
+- `coldOpen.cast: [{ crew, at, off, turn, variant, hologram }]`: people who stand in the opening's shot only while it
+  plays (the fact `co_<mkey>`, cleared at a load): M20's two children at the fridge, M21's Director as a broadcast,
+  M22's Witness at the microphone.
+- A case file is `replay(mission, sideId, o)` (or, for a story on the main path, `o.threads`: chain C is M15's `mara`
+  and `ink`): the mission's place, people and what the side story uses, its threads
   in the quarter it lives in (`startQuarter`, where the replay spawns), `voiceGroup` (it speaks from the mission's pack:
   no new lines), and `clear` (the facts the story sets or waits for, unset when it starts, over the facts the player
-  had). Saves are `lvFormat` 24; a U7 save inside a mission of Acts III, IV or the Finale restarts it at quarter 0.
+  had). `c_b` and `c_c` are replays too (Mission 5's gorge, Mission 15's archive). Saves are `lvFormat` 24; a U7 save
+  inside a mission of Acts III, IV or the Finale restarts it at quarter 0, and an older save in `c_b` or `c_c` starts its
+  replay again where the story lives.
 
 ### 3.4 People (U4 provides; U5 voices; U6–U8 write lines)
 
@@ -2626,9 +2639,23 @@ At the end the charge cap rises to 12 s.
   is still the old street; the Witness holds the north half (his REVERSE, scripted, released once Kai is past). The
   settlement's timber bridge lies in the stream: Kai holds it while the Witness crosses, then crosses himself. The
   consequences gallery asks for three of its five people. The Finale's hook is the voice in every speaker; the
-  epilogue has 19 lines (`ledger.EPILOGUE`), one per fact set.
+  epilogue has 21 lines (`ledger.EPILOGUE`), one per fact set.
+- **M14:** the statue on the memorial's plinth is Kai's own body (`rb_ren_m`) in weathered stone, posed and then still.
+- **M15:** the city's crowds speak for themselves (a resident's bread, a pupil's "Present, miss.", 2026's fans, 2049's
+  evacuees); the other places whose crowds had no pool of their own (the 2026 builders downtown and at the array, the
+  quarrymen, the 2049 drivers, Mira's neighbours and the walkers by her sea, the Spire's officers) got their own barks.
+- **M18:** the slabs are in plain sight from the start but answer REVERSE only once the stabilizer holds (`arm`); the
+  tower deck counts from then too.
+- **M20–M22:** the cold opens stage their people (`coldOpen.cast`): the children at the fridge, the Director's
+  broadcast (Rook, Pryce, or no one), the Witness at the station's microphone.
+- **M23:** everyone on the road stands in every year (it is all of them at once), so nobody there is an echo; Mira is
+  at the ring once the road has been walked to her (2196 done).
+- **Epilogue:** Rook's testimony is said only where Kai exposed him (Iven's line with the raw log, else the narrator's);
+  persuaded, Rook gives the drawing back. 21 lines in all.
 - **CASE FILES:** the replays have no cold open or hook of their own (no new lines) and are lettered E–N after chains B
-  and C; the chapters menu's card and THE CASES after an ending open the screen; a case ends back on it.
+  and C, which are replays too now (Mission 5's gorge, Mission 15's archive, so chain B's gates are the same low, high,
+  middle as in the mission); the chapters menu's card and THE CASES after an ending open the screen; a case ends back
+  on it.
 
 ## 6. Casting
 
