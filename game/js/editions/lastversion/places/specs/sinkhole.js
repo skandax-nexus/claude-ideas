@@ -89,7 +89,7 @@ export default {
   years: {
     FUTURE: { sky: 'quarryDusk', era: '2196', hour: 18.8, sun: { elev: 3, az: 285 }, fog: 0x3a3848, density: 1.2, night: 0.35, weather: 'steam', ibl: 'dusk', lit: 0.8,
       hemi: { sky: 0xffb878, ground: 0x1a2030, k: 0.8 }, sunColor: 0xffb070, sunK: 1.0, grade: { shadowTint: 0x14303a, highlightTint: 0xffcc8a, toning: 0.22, contrast: 1.12, saturation: 1.04 } },
-    PAST: { sky: 'dustNoon', era: '2026', hour: 12.4, sun: { elev: 68, az: 175 }, fog: 0xd8c8a8, density: 1.5, night: 0, weather: 'motes', ibl: 'plant', lit: 0,
+    PAST: { sky: 'dustNoon', era: '2026', hour: 12.4, sun: { elev: 68, az: 175 }, fog: 0xd8bc94, density: 1.5, night: 0, weather: 'motes', ibl: 'plant', lit: 0,
       hemi: { sky: 0xe8dcc0, ground: 0xa89878, k: 1.0 }, sunColor: 0xfffaf0, sunK: 1.3, grade: { shadowTint: 0x4a3a28, highlightTint: 0xfff4e0, toning: 0.14, contrast: 1.08, saturation: 0.9 } },
     PRESENT: { sky: 'lakeGrey', era: '2049', hour: 9.6, sun: { elev: 24, az: 120 }, fog: 0x9aaab4, density: 1.1, night: 0.1, weather: null, ibl: 'night', lit: 0.2,
       hemi: { sky: 0xc4d0d6, ground: 0x4a5a60, k: 0.9 }, sunColor: 0xe8eef4, sunK: 0.7, grade: { shadowTint: 0x1c2a34, highlightTint: 0xe8f0f4, toning: 0.1, contrast: 1.06, saturation: 0.86 } },

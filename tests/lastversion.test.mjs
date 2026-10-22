@@ -956,6 +956,39 @@ test('no two missions look alike: the signature is unique unless the place is th
   assert.equal(new Set(ms.map(([, o]) => o.sg)).size, ms.length, 'every signature differs');
 });
 
+// the signature only reads the default year: here every year of the Prologue and Act I, against every other mission's
+// years in another place. The same light is the same kind of weather, a sun disc in both or neither, the zenith within
+// 50 and the horizon within 70 (RGB distance), the sun within 12° of height, and its bearing within 35° (or under the
+// horizon in both: one twilight looks like another)
+test('no year of the Prologue or Act I shares its light with another mission\'s year: sky colours, sun, weather', () => {
+  const rgb = (c) => [(c >> 16) & 255, (c >> 8) & 255, c & 255];
+  const dist = (a, b) => Math.hypot(...rgb(a).map((v, i) => v - rgb(b)[i]));
+  const FAMILY = { pollen: 'specks', motes: 'specks', stardust: 'specks', storm: 'rain' };
+  const years = [];
+  for (const { deck, level } of PLACED) {
+    if (!/^m\d\d$/.test(deck.mkey) || years.some((y) => y.key === deck.mkey)) continue;
+    for (const [st, y] of Object.entries(level.years)) years.push({ key: deck.mkey, n: deck.n, st, y, sky: SKIES[y.sky], place: deck.place });
+  }
+  let pairs = 0;
+  for (const a of years) {
+    if (a.n > 8) continue;
+    for (const b of years) {
+      if (b.place === a.place || sameAs(a.place, b.place) || (b.n <= 8 && b.n < a.n)) continue;
+      pairs++;
+      const twilight = a.y.sun.elev < 0 && b.y.sun.elev < 0;
+      const az = Math.abs(((a.y.sun.az - b.y.sun.az + 540) % 360) - 180);
+      const same = (FAMILY[a.y.weather] || a.y.weather || 'clear') === (FAMILY[b.y.weather] || b.y.weather || 'clear') && (a.sky.sunSize > 0) === (b.sky.sunSize > 0)
+        && dist(a.sky.zenith, b.sky.zenith) < 50 && dist(a.sky.horizon, b.sky.horizon) < 70 && Math.abs(a.y.sun.elev - b.y.sun.elev) < 12 && (twilight || az < 35);
+      assert.ok(!same, `${a.key} ${a.st} (${a.y.sky}) has the light of ${b.key} ${b.st} (${b.y.sky})`);
+    }
+  }
+  assert.ok(pairs > 400, `${pairs} pairs of years`);
+  // (the review's pairs: M4's village, M6's 2049 and M7's 2196 were one low golden western sun; M4's pre-dawn and M7's blue hour one twilight)
+  const y = (k, st) => years.find((r) => r.key === k && r.st === st).y;
+  assert.ok(y('m07', 'FUTURE').sun.elev - y('m04', 'PRESENT').sun.elev >= 12 && y('m06', 'PRESENT').hour - y('m04', 'PRESENT').hour >= 1);
+  assert.ok(!SKIES[y('m04', 'PAST').sky].moon && SKIES[y('m07', 'PRESENT').sky].moon > 0, 'the moon is M7\'s alone');
+});
+
 test('every mission\'s default sky is its own (the M22 and M23 composites excepted)', () => {
   const seen = {};
   for (const key of Object.keys(SHEETS).filter((k) => /^m\d\d$/.test(k))) {

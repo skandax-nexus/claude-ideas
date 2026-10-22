@@ -58,10 +58,11 @@ export const SKIES = {
     clouds: { cover: 0.18, color: 0xfff0d8, shade: 0xc89a78, speed: 0.004, scale: 1.3 },
     cirrus: { cover: 0.66, color: 0xffe4c0, shade: 0xd8a888, speed: 0.007, scale: 2.6 },
   },
-  // M4 BEFORE THE FIRE: blue pre-dawn, the last stars, valley mist
+  // M4 BEFORE THE FIRE: blue pre-dawn, the last stars, valley mist (no moon, and the mist pales the whole horizon:
+  // never M7's violet blue hour, which has the moon and the survey's sodium haze)
   blueDawn: {
-    zenith: 0x14203c, horizon: 0x8a9cb8, ground: 0x2a3446, glow: 0xb8c4e0, glowK: 0.25,
-    sun: 0xc8d4f0, sunSize: 0, sunGlow: 0.25, stars: 0.8, moon: 0.4,
+    zenith: 0x14203c, horizon: 0x9fb0c8, ground: 0x2a3446, glow: 0xb8c4e0, glowK: 0.25,
+    sun: 0xc8d4f0, sunSize: 0, sunGlow: 0.25, stars: 0.8, moon: 0,
     clouds: { cover: 0.12, color: 0x6a7a98, shade: 0x2a3450, speed: 0.003, scale: 1.2 },
     cirrus: { cover: 0.22, color: 0x9aa8c4, shade: 0x4a5670, speed: 0.004, scale: 2.4 },
   },
@@ -86,12 +87,13 @@ export const SKIES = {
     clouds: { cover: 0.84, color: 0x7ab0aa, shade: 0x274442, speed: 0.008, scale: 0.85 },
     cirrus: { cover: 0.3, color: 0xa8e0d4, shade: 0x5a8a86, speed: 0.012, scale: 1.8 },
   },
-  // M6 2049: autumn, late afternoon into evening
+  // M6 2049: an autumn evening, the sun going down behind the rooftops: a dusky violet sky, a rose horizon, a
+  // broken cloud deck lit from under (never M4's golden afternoon or M7's windy gold)
   autumnEvening: {
-    zenith: 0x7aa0c8, horizon: 0xf0c890, ground: 0x6a5a4a, glow: 0xf0a860, glowK: 0.45,
-    sun: 0xf0a860, sunSize: 0.0022, sunGlow: 1.1,
-    clouds: { cover: 0.42, color: 0xf8d0a8, shade: 0x8a7078, speed: 0.008, scale: 1.1 },
-    cirrus: { cover: 0.35, color: 0xffd8b0, shade: 0xb08878, speed: 0.012, scale: 2.2 },
+    zenith: 0x4a5a8a, horizon: 0xe8a080, ground: 0x5a4a4a, glow: 0xf08850, glowK: 0.55,
+    sun: 0xf08850, sunSize: 0.0022, sunGlow: 1.2,
+    clouds: { cover: 0.55, color: 0xe0a090, shade: 0x4a3a58, speed: 0.008, scale: 1.1 },
+    cirrus: { cover: 0.4, color: 0xf0b090, shade: 0x8a6a80, speed: 0.012, scale: 2.2 },
   },
   // M6 2026: a soft spring morning
   springMorning: {
@@ -114,18 +116,19 @@ export const SKIES = {
     clouds: { cover: 0.22, color: 0xffa878, shade: 0x5a4a6a, speed: 0.004, scale: 1.2 },
     cirrus: { cover: 0.45, color: 0xffc89a, shade: 0x7a5a78, speed: 0.006, scale: 2.4 },
   },
-  // M7 2049: blue hour, one bright star and a thin moon
+  // M7 2049: blue hour, one bright star and a thin moon; a violet horizon, the survey's floodlights a sodium haze on it
   blueHour: {
-    zenith: 0x101c40, horizon: 0x5070a0, ground: 0x1a2232, glow: 0x6a88c0, glowK: 0.3,
+    zenith: 0x161640, horizon: 0x7a6aa8, ground: 0x1a2232, glow: 0xffb070, glowK: 0.4,
     sun: 0x8aa0d0, sunSize: 0, sunGlow: 0.15, stars: 0.35, moon: 0.9, star: 1,
     clouds: { cover: 0.15, color: 0x3a4a78, shade: 0x141c34, speed: 0.003, scale: 1.2 },
     cirrus: { cover: 0.18, color: 0x5a6a98, shade: 0x2a3454, speed: 0.004, scale: 2.4 },
   },
-  // M7 2196: a golden windy afternoon, and a new star: the Fracture's light
+  // M7 2196: a golden windy afternoon, and a new star: the Fracture's light. A deep cobalt sky over the ridge, the wind's
+  // dust an amber haze on the horizon, big fast clouds, the sun still high (never the low gold of M4, M6, M8 or M11)
   windyGold: {
-    zenith: 0x5a8ac8, horizon: 0xf2d49a, ground: 0x8a7a50, glow: 0xffd890, glowK: 0.35,
+    zenith: 0x2a5cb8, horizon: 0xe8b870, ground: 0x8a7a50, glow: 0xffd890, glowK: 0.35,
     sun: 0xffd890, sunSize: 0.002, sunGlow: 1.0, star: 1,
-    clouds: { cover: 0.48, color: 0xfff0d0, shade: 0xa08878, speed: 0.03, scale: 1.0 },
+    clouds: { cover: 0.55, color: 0xfff0d0, shade: 0x7a7480, speed: 0.05, scale: 1.0 },
     cirrus: { cover: 0.3, color: 0xffeccc, shade: 0xc0a080, speed: 0.05, scale: 2.0 },
   },
   // M8 VERSION 17: a still, grey-violet pre-storm afternoon; no wind at all
@@ -135,7 +138,7 @@ export const SKIES = {
     clouds: { cover: 0.72, color: 0xbcb8c8, shade: 0x6a6878, speed: 0, scale: 1.0 },
     cirrus: { cover: 0.5, color: 0xd0ccd8, shade: 0x8a8898, speed: 0, scale: 2.2 },
   },
-  // M8 2026 (this version): warm light over a young garden
+  // M8 2026 (this version): warm late-morning light over a young garden
   warmGarden: {
     zenith: 0x7aa8d8, horizon: 0xf0dcc0, ground: 0x8a8060, glow: 0xffe0b0, glowK: 0.3,
     sun: 0xffe2b0, sunSize: 0.002, sunGlow: 0.9,
@@ -278,7 +281,7 @@ export const SKIES = {
   },
   // M16 2026: the quarry working at noon, dust in the air
   dustNoon: {
-    zenith: 0x9ab0c0, horizon: 0xe8dcc0, ground: 0xa89878, glow: 0xfff0d0, glowK: 0.2,
+    zenith: 0x9ab0c0, horizon: 0xe0c49a, ground: 0xa89878, glow: 0xfff0d0, glowK: 0.2,
     sun: 0xfffaf0, sunSize: 0.002, sunGlow: 0.6,
     clouds: { cover: 0.1, color: 0xf8f4ec, shade: 0xd0c8b8, speed: 0.004, scale: 1.4 },
     cirrus: { cover: 0.7, color: 0xf0e8d8, shade: 0xd8ccb4, speed: 0.006, scale: 2.0 },

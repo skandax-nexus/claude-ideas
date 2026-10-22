@@ -23,7 +23,7 @@ export default {
   years: {
     PRESENT: { sky: 'stillViolet', era: 'v17', hour: 15.4, sun: { elev: 24, az: 228 }, fog: 0xb8b4c4, density: 1.2, night: 0.08, weather: null, ibl: 'dusk', lit: 0.3,
       hemi: { sky: 0xc8c4d0, ground: 0x6a6870, k: 0.85 }, sunColor: 0xe8e0f0, sunK: 0.6, grade: { shadowTint: 0x2a2a3a, highlightTint: 0xf0ecf8, toning: 0.16, contrast: 1.04, saturation: 0.78 } },
-    PAST: { sky: 'warmGarden', era: '2026', hour: 16.0, sun: { elev: 28, az: 240 }, fog: 0xe8dcc8, density: 0.9, night: 0, weather: 'pollen', ibl: 'plant', lit: 0,
+    PAST: { sky: 'warmGarden', era: '2026', hour: 11.6, sun: { elev: 52, az: 160 }, fog: 0xe8dcc8, density: 0.9, night: 0, weather: 'pollen', ibl: 'plant', lit: 0,
       hemi: { sky: 0xf0dcc0, ground: 0x8a8060, k: 0.95 }, sunColor: 0xffe2b0, sunK: 1.15, grade: { shadowTint: 0x3a2a1a, highlightTint: 0xfff0d8, toning: 0.14, contrast: 1.06, saturation: 1.0 } },
   },
   quarters: [
