@@ -66,7 +66,7 @@ function m23Step(rt) {
 }
 
 export const M23 = {
-  key: 'm23', n: 23, chapter: 'finale', name: 'AFTERZERO', title: 'Past, present and future collide', subtitle: 'Fragments of the opening streets, the settlement, the laboratory and the future city.',
+  key: 'm23', n: 23, chapter: 'finale', name: 'AFTERZERO', title: 'Past, present, future and inversion collide', subtitle: 'Fragments of the opening streets, the settlement, the laboratory and the future city.',
   logline: 'One road through every year, held open by two men with the same scar.',
   place: 'afterzero', sectors: 1, states: ['PRESENT', 'PAST', 'FUTURE'], drones: [2, 0, 0, 1, 0], unstable: true, ambience: 'rain', ambient: 'rain',
   named: ['witness', 'mira', 'jun', 'tala', 'sera', 'anja', 'iven', 'clockmaker', 'odile'],
