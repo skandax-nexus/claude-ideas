@@ -38,6 +38,23 @@ const M01_SAY = {
   announcement: [{ who: 'PA', text: 'The 8:14 service to Helix North is now arriving. Yesterday.', voice: { fx: 'pa', cue: 'pa' } }],
 };
 
+// the staged moments of LINE 41's platform (cinema.js shots; the landmarks of rain_south): the Zero Second, first the
+// stopped clock's face (it hangs on the canopy's first column, facing the plaza stair) with the frozen platform
+// behind it, then from high at the platform's east end down across the wreck; after the rescue, from the track bed
+// east of the 41, the far platform where a woman turns (the overlay's 'mira', at the foot of the north stair)
+function m01Shots(rt, which) {
+  const L = rt.level?.landmarks;
+  const pl = L?.platform, cd = L?.carriageDoor;
+  if (!pl || !cd) return null;
+  if (which === 'zero') {
+    return [
+      { cam: [pl[0] - 7, pl[1] + 2.6, pl[2] + 12.5], to: [pl[0] - 9, pl[1] + 2.9, pl[2] + 10], look: [pl[0] - 13.6, pl[1] + 3.5, pl[2] + 6], t: 2.6 },
+      { cam: [cd[0] + 20, cd[1] + 4.5, cd[2] + 12.5], to: [cd[0] + 16, cd[1] + 3.8, cd[2] + 11], look: [cd[0] - 8, cd[1] + 0.8, cd[2] - 3], t: 6 },
+    ];
+  }
+  return [{ cam: [cd[0] + 13, cd[1] + 0.8, cd[2] - 7.5], to: [cd[0] + 10, cd[1] + 1, cd[2] - 9], look: [pl[0] + 3, pl[1] + 1.5, pl[2] - 30], t: 6 }];
+}
+
 const M01_HINTS = {
   photo: ['The photo. It always starts with the photo.', 'Beside my door, at eye height.', 'Look at the photo beside the door.'],
   anomalies: ['Things are wrong on this street. Look at them.', 'A toy, a clock, a shop camera, a puddle, a pigeon, the roof.', 'The toy by the market, the plaza clock, the laundromat screen.'],
@@ -317,19 +334,17 @@ export const M01 = {
     },
     zeroSecond(rt) {
       const g = rt.g;
-      // the Zero Second's cue (score.js): the ticks stop, one second of silence under the narration, the 41
-      if (rt.score) rt.score.cue('zero');
-      else g.audio.silence(1.0);
       g.hud.flash('rgba(255,255,255,0.7)');
       g.deckWorld.flags.freeze_people = true;
       g.deckWorld.refresh();
       g.weather.set(null);
-      g.hud.say(M01_SAY.clocks, g.facts);
+      // the Zero Second, staged (cinema.js: letterboxed, Kai held): the stopped clock, then the 41 coming up onto the
+      // platform. Its cue (score.js 'zero'): the ticks stop, one second of silence under the narration, the horn, the impact
+      rt.cinema.play({ shots: m01Shots(rt, 'zero'), lines: [...M01_SAY.clocks, ...M01_SAY.train], cue: 'zero' });
       g.after(1.1, () => {
         g.weather.set('rain');
         g.audio.caught();
         g.hud.flash('rgba(255,120,80,0.5)');
-        g.hud.say(M01_SAY.train, g.facts);
       });
       g.after(3.4, () => {
         g.deckWorld.flags.freeze_people = false;
@@ -342,10 +357,12 @@ export const M01 = {
       g.after(0.4, () => g.hud.say(M01_SAY.wrist, f, () => {
         f.set('wrist_cut');
         g.after(0.6, () => g.hud.say(M01_SAY.event, f, () => {
-          g.hud.say(M01_SAY.speakers, f, () => {
+          // staged (cinema.js): every speaker in the station at once, over Kai; then the woman at the far end, from
+          // high over the wreck. Kai's "Wait" is said as he is let go, to follow her
+          rt.cinema.play({ shots: 'default', lines: M01_SAY.speakers }, () => {
             f.set('voice_heard');
             g.deckWorld.refresh();
-            g.hud.say([...M01_SAY.face, ...M01_SAY.follow], f);
+            rt.cinema.play({ shots: m01Shots(rt, 'face'), lines: M01_SAY.face }, () => g.hud.say(M01_SAY.follow, f));
           });
         }));
       }));
@@ -1037,11 +1054,13 @@ export const M03 = {
     },
     fracture(rt) {
       const g = rt.g;
-      g.hud.say(M03_SAY.reading, g.facts, () => {
+      // staged (cinema.js: letterboxed, Kai held): Rook reads the number; the whiteout, a breath of silence, and the
+      // year lets go (the hook, the mission's outro, follows in the same letterbox)
+      rt.cinema.play({ shots: null, lines: M03_SAY.reading }, () => {
         g.hud.flash('rgba(255,255,255,0.95)');
         if (rt.score) rt.score.cue('fracture'); // a whiteout swell, a breath of silence, a fall, a landing
         else g.audio.silence(0.8);
-        g.after(1.0, () => {
+        rt.cinema.play({ shots: null, total: 1.0 }, () => {
           g.engine.setState(g.room, 'PAST', { force: true });
           g.deckWorld.refresh();
           g.facts.set('fracture_done');
