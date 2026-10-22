@@ -1916,6 +1916,35 @@ test('the save format: a pre-U6 save in the middle of a rewritten mission restar
   assert.deepEqual([act.sector, act.quarter, act.pos, act.lvFormat], [0, 0, null, 24]);
 });
 
+// a v2.0 save had no has_inversion (its inversion was the INVERTED year); chapter changes never apply PRIMES
+test('a v2.0 save in Mission 11 restarts it where REVERSE is taught; one past Mission 11 has REVERSE and its cap', () => {
+  const resume = (campaign, set = []) => {
+    const facts = new FactStore();
+    for (const k of set) facts.set(k);
+    const rt = Object.assign(Object.create(LastVersion.prototype), { g: { facts, engine: engine() }, def: LV, start: (ch, c) => (rt.started = c) });
+    rt.resume(campaign);
+    return { c: rt.started, facts };
+  };
+  // Mission 11, in what was its lock sector: back to the first quarter, REVERSE still to learn from the charred file
+  const m11 = MISSIONS.act2.findIndex((m) => m.n === 11);
+  const { c, facts } = resume({ lv: true, chapter: 'act2', deck: m11, sector: 2, room: 'd2s2r1', pos: [1, 2, 3, 0], flags: { beat_done: false, rule_lock: true } }, ['m09_done', 'm10_done', 'lock_open']);
+  assert.deepEqual([c.deck, c.sector, c.quarter, c.room, c.pos, c.flags], [m11, 0, 0, null, null, {}], 'Mission 11 starts again at its first quarter');
+  assert.equal(facts.get('has_inversion'), undefined, 'REVERSE is learnt there, from the charred file');
+  facts.set('m11_saw_file');
+  const unlock = MISSIONS.act2[m11].rules.find((r) => r.then === 'unlock');
+  assert.ok(facts.test(unlock.when) && !c.flags[`rule_${unlock.id}`], 'watching the file unlocks REVERSE, so Ward 32\'s lock can be taken apart');
+  // past Mission 11: REVERSE, with the cap the place has earned (Missions 16, 17 and 22 have REVERSE threads on the main road)
+  for (const [chapter, deck, cap] of [['act2', m11 + 1, 8], ['act2', m11 + 2, 8], ['act3', 2, 10], ['act3', 3, 10], ['act4', 3, 12], ['finale', 0, 12], ['cases', 0, 12]]) {
+    const r = resume({ lv: true, chapter, deck, sector: 0, flags: {} });
+    assert.ok(r.facts.get('has_inversion'), `${chapter}/${deck}: REVERSE`);
+    assert.equal(r.facts.get('inv_cap'), cap, `${chapter}/${deck}: cap`);
+  }
+  // before Mission 11 nothing changes; a save that has REVERSE is left as it is
+  for (const [chapter, deck] of [['prologue', 2], ['act1', 4], ['act2', 0], ['act2', 1]]) assert.equal(resume({ lv: true, chapter, deck, sector: 0, flags: {} }).facts.get('has_inversion'), undefined, `${chapter}/${deck}`);
+  const kept = resume({ lv: true, chapter: 'act4', deck: 0, sector: 0, flags: {}, lvFormat: SAVE_FORMAT }, ['has_inversion']);
+  assert.equal(kept.facts.get('inv_cap'), undefined);
+});
+
 // --- story part 2: Acts I and II (OVERHAUL.md §5 M4-M13; U7) ------------------------------------------------------------
 test('Acts I and II are rewritten as threads; the length model: each mission 25-42 minutes, the main path 70% or more', () => {
   assert.deepEqual(REWRITTEN.map((m) => m.key), MISSION_ORDER, 'Missions 1-23 are rewritten (U8: Acts III-IV and the Finale)');

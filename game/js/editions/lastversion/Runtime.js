@@ -78,6 +78,19 @@ export function migrateSave(engine, campaign, def) {
   return campaign;
 }
 
+// REVERSE is learnt in Mission 11 (has_inversion) and holds longer after Missions 13 and 18. A v2.0 save never
+// had it (its inversion was the INVERTED year), and a chapter change does not apply PRIMES, so a save that stands
+// past Mission 11 without it gets it on load, with the cap its place has earned: 0 before Mission 12 (Mission 11
+// teaches it), else the cap in seconds. (Without it the REVERSE threads of Missions 16, 17 and 22 could never be done.)
+export function reverseEarned(campaign) {
+  const ch = campaign?.chapter;
+  if (ch === 'cases') return 12; // (the case files come after the Finale)
+  const i = ORDER.indexOf(ch), act2 = ORDER.indexOf('act2');
+  if (i < act2) return 0;
+  if (i === act2) return (campaign.deck ?? 0) > MISSIONS.act2.findIndex((m) => m.n === 11) ? 8 : 0;
+  return ch === 'act3' ? 10 : 12;
+}
+
 // facts a chapter started from the menu counts as already true ([fact, value] for a value)
 export const PRIMES = {
   prologue: [],
@@ -588,6 +601,12 @@ export class LastVersion {
       const deck = MISSIONS[campaign.chapter]?.[campaign.deck ?? 0];
       for (const r of deck?.rules || []) if (this.g.facts.test(r.when)) campaign.flags[`rule_${r.id}`] = true;
       delete campaign.restarted;
+    }
+    // (after the rules above: a rule that waits on REVERSE has not happened yet, and fires as it would have)
+    const cap = reverseEarned(campaign);
+    if (cap && !this.g.facts.get('has_inversion')) {
+      this.g.facts.set('has_inversion');
+      if ((this.g.facts.get('inv_cap') || 0) < cap) this.g.facts.set('inv_cap', cap);
     }
     this.resumed = true; // (the sector loads at the furthest quarter reached, after a PREVIOUSLY card)
     this.start(campaign.chapter, campaign);
