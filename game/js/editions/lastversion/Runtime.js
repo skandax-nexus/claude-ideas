@@ -180,7 +180,7 @@ const EV_LABELS = {
   florist: 'A receipt for 08:04: an older me, with a scar', puddle: 'A ripple before the drop', pigeon: 'A pigeon that landed backwards', helix_window: 'One window pulsing in Helix',
   relay: 'Relay 41-B: dead now, live at 8:13', rook_terminal: 'Rook\'s order, timestamped before the Zero Second', site_zero_print: 'The Site Zero print: a boot print, c. 1077 BC',
   lin_peg: 'Lin\'s peg: empty, and dripping', lin_badge: 'Lin\'s badge: PHOTO PENDING SINCE 2026', empty_corridor: 'At 05:40 the chamber door opened on an empty corridor',
-  door_log: 'The door log: my card at 05:40, edited at 06:10', junior_pass: 'My junior pass: OVERRIDE 14-03-2026 16:02', site_zero: 'Site Zero: the ring was found, not built',
+  door_log: 'The door log: my card at 05:40, edited at 05:50', junior_pass: 'My junior pass: OVERRIDE 14-03-2026 16:02', site_zero: 'Site Zero: the ring was found, not built',
   thermos_er: 'A thermos marked E.R. at the 2026 dig', footprints: 'Two children\'s footprints at the dig, one with a star tread', polaroid: 'The ring, half dug out of the clay',
   plaque2196: 'HELIX. WHERE THE FRACTURE BEGAN. WE REMEMBER.',
   // Acts I and II (U7)
@@ -634,7 +634,7 @@ export class LastVersion {
       this.g.facts.set('has_inversion');
       if ((this.g.facts.get('inv_cap') || 0) < cap) this.g.facts.set('inv_cap', cap);
     }
-    this.resumed = true; // (the sector loads at the furthest quarter reached, after a PREVIOUSLY card)
+    this.resumed = true; // (the sector loads where the save was taken, after a PREVIOUSLY card: onSectorLoaded)
     this.start(campaign.chapter, campaign);
   }
 
@@ -776,10 +776,18 @@ export class LastVersion {
       } else g.hud.card(kicker, this.level.rooms[start].name, deck.subtitle || '', 2600);
     }
     c.mStart ??= g.playTime || 0;
-    // a save loads in a rewritten mission at the furthest quarter it reached (D2), after a PREVIOUSLY card
+    // a save loads in a rewritten mission where Kai last stood safely, after a PREVIOUSLY card: its checkpoint, in its
+    // room (main.loadSector put him there: the spawn of the quarter or the room he saved in). Only a save with none, a
+    // mission the save format restarted, starts at the spawn of the furthest quarter reached (D2). (The furthest
+    // quarter's spawn alone can be somewhere the rooms' years shut him out of: U6 review, Mission 3's dig with the lab
+    // switched to 2049 and its 2026 frame closed behind it)
     const resumed = !intro && this.resumed;
     this.resumed = false;
-    if (resumed && this.threads.on) {
+    // (what a load picks up once its card is over: the moments a save cut off, a mission's own end; Runtime.step)
+    this.pendingResume = resumed ? deck : null;
+    this.autoExited = null;
+    delete g.deckWorld.flags.auto_exit; // (saved in the flags before the U6 review; no longer read)
+    if (resumed && this.threads.on && !Array.isArray(c.pos)) {
       const q = this.level.quarters?.[c.quarter || 0];
       if (q?.spawn) {
         const sp = [q.spawn[0], q.spawn[1] + 0.86, q.spawn[2], q.spawn[3] || 0];
@@ -807,22 +815,24 @@ export class LastVersion {
     this.watchers.mount(g.deckWorld, deck.mkey, { renderer: g.renderer, hero: g.settings.hero, stateOf: (rid) => g.engine.state(rid) });
     this.objective(true);
     this.quietPins = false;
-    // (the cold open's people stand only while it plays: a save taken during it loads without them)
-    if (deck.coldOpen?.cast) g.facts.set(coldFact(deck), false);
+    // (the cold open's people, and the place as it stages it, only while it plays: a save taken during it loads without)
+    if (deck.coldOpen?.cast || deck.coldOpen?.stage) g.facts.set(coldFact(deck), false);
     if (opening) this.openMission(deck, opening);
     else if (resumed) this.previously();
   }
 
-  // the PREVIOUSLY card (ledger.PREVIOUSLY): three lines when a chapter starts or a save loads
-  previouslySteps(chapter) {
-    const lines = PREVIOUSLY[chapter];
+  // the PREVIOUSLY card (ledger.PREVIOUSLY): three lines when a chapter starts or a save loads (a load in a mission
+  // that has its own, `key`, says those: Mission 3's is not the morning before the crash)
+  previouslySteps(chapter, key = null) {
+    const lines = PREVIOUSLY[key || chapter];
     if (!lines) return [];
     return [{ card: ['PREVIOUSLY', CHAPTERS[chapter]?.name || '', ''], lines: lines.map((text) => ({ who: 'NONE', text })) }];
   }
 
   previously() {
     const g = this.g;
-    const [k] = this.previouslySteps(this.chapter);
+    const mk = this.deck?.mkey;
+    const [k] = this.previouslySteps(this.chapter, PREVIOUSLY[mk] ? mk : null);
     if (!k) return;
     const token = (this.opening = { deck: this.deck, previously: true });
     g.hud.card(k.card[0], k.card[1], k.card[2], 600000);
@@ -859,10 +869,14 @@ export class LastVersion {
     const co = deck.coldOpen;
     const cold = co?.lines || deck.intro || [];
     const card = { card: [kicker, deck.name, deck.title || deck.subtitle], cue: 'card', lines: missionCardLines(deck) };
+    // a cold open the place stages (co.stage: what waits on co_<mkey> in the place, Mission 1's 05:40 sky, its
+    // pulsing window, its streets before the people are out) holds from the start until the cold open is over
+    const staged = !!co?.stage && cold.length > 0;
+    if (staged) g.facts.set(coldFact(deck), true);
     // a cold open may come before the title (co.first: it plays, then the mission's card, then what follows the title)
     if (co?.first) {
       if (cold.length) steps.push({ shots: co.shots || 'default', lines: cold, cue: co.cue || null, cast: !!co.cast });
-      steps.push(card);
+      steps.push(staged ? { ...card, unstage: true } : card);
       if (co.title?.lines?.length) steps.push({ shots: co.title.shots || 'default', lines: co.title.lines, cue: co.title.cue || null });
     } else {
       steps.push(card);
@@ -872,7 +886,7 @@ export class LastVersion {
     const finish = () => {
       this.hideCard();
       this.opening = null;
-      if (co?.cast) g.facts.set(coldFact(deck), false);
+      if (co?.cast || staged) g.facts.set(coldFact(deck), false);
       if (co?.set) for (const [k, v] of Object.entries(co.set)) g.facts.set(k, v);
       if (co?.then) deck.fx?.[co.then]?.(this);
     };
@@ -882,6 +896,7 @@ export class LastVersion {
       const k = steps[i];
       if (k.card) {
         g.hud.card(k.card[0], k.card[1], k.card[2], 600000);
+        if (k.unstage) g.facts.set(coldFact(deck), false); // (behind the title card, the place comes back to its hour)
         this.cinema.play({ shots: null, lines: k.lines, cue: k.cue }, () => next(i + 1));
       } else {
         this.hideCard();
@@ -1007,14 +1022,29 @@ export class LastVersion {
     }
     this.threads.update(); // (a thread that is now done sets its fact, once, with what it carries)
     if (deck.done && !flags.beat_done && g.facts.test(deck.done)) g.beatDone();
-    // a mission whose last thread is its end (Helix's chamber, the fracture) goes on without a walk to the gate
-    if (deck.autoExit != null && flags.beat_done && !flags.auto_exit && g.after) {
-      flags.auto_exit = true;
-      g.after(deck.autoExit, () => this.deck === deck && this.exitReached());
-    }
+    if (!this.opening) this.autoExit();
     g.deckWorld.refresh?.();
     this.mounted?.refresh(); // pieces of the place that wait on a fact (the braced wall, the drained basin)
     this.objective();
+  }
+
+  // a mission whose last thread is its end (Helix's chamber, the fracture) goes on without a walk to the gate: once a
+  // load (marked on the runtime, never in the saved flags: a save taken between the end and the exit loads with the
+  // exit still to come, once its PREVIOUSLY card is over; Runtime.step)
+  autoExit() {
+    const g = this.g, deck = this.deck;
+    if (deck?.autoExit == null || !g.deckWorld.flags.beat_done || this.autoExited === deck || !g.after) return;
+    this.autoExited = deck;
+    g.after(deck.autoExit, () => this.deck === deck && this.exitReached());
+  }
+
+  // a load, once its card is over: a moment that runs in callbacks (lines that set their facts as each ends; the
+  // mission's `resumes`, { when, until, fx }) and that the save cut off plays again (its fx skips what is already
+  // set). Else a save taken inside one loads with its rule fired and its last fact never set (U6 review: Mission 1's
+  // rescue, then no voice in the speakers and no Mira; Mission 3's first cycle, its objective held for good)
+  afterResume(deck) {
+    const f = this.g.facts;
+    for (const r of deck.resumes || []) if (f.test(r.when) && !f.test(r.until)) deck.fx?.[r.fx]?.(this);
   }
 
   // --- interactions --------------------------------------------------------------------------------
@@ -1471,6 +1501,15 @@ export class LastVersion {
     if (this.anchored && g.held !== this.anchored) {
       this.anchored = null;
       g.engine.setGlobal('heldPersists', false);
+    }
+    // a load, once its card is over: the moments its save cut off play again; a mission that has ended goes on
+    if (!this.opening && !g.transitioning) {
+      if (this.pendingResume && !this.cinema.active && !g.hud.talking) {
+        const deck = this.pendingResume;
+        this.pendingResume = null;
+        if (deck === this.deck) this.afterResume(deck);
+      }
+      this.autoExit();
     }
     // local loops: the city resets every so often; the watchers go back to their rounds
     if (this.loopT > 0 && !this.opening && !this.cinema.active) {

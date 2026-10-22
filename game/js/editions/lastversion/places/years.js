@@ -15,6 +15,13 @@ export const SKIES = {
     clouds: { cover: 0.95, color: 0x8a96a4, shade: 0x2f3946, speed: 0.016, scale: 1.0 },
     cirrus: { cover: 0.55, color: 0x9aa6b2, shade: 0x55606c, speed: 0.03, scale: 2.2 },
   },
+  // M1's cold open, 05:40: the rain before dawn, the cloud lit from under by the city, no sun yet
+  rainPreDawn: {
+    zenith: 0x0c1220, horizon: 0x3a4660, ground: 0x161a22, glow: 0xc89a6a, glowK: 0.3,
+    sun: 0x8a96b0, sunSize: 0, sunGlow: 0,
+    clouds: { cover: 0.96, color: 0x3a4458, shade: 0x0e131c, speed: 0.012, scale: 1.0 },
+    cirrus: { cover: 0.5, color: 0x4a5468, shade: 0x1a2030, speed: 0.024, scale: 2.2 },
+  },
   // M1 "8:13", the flicker: lighter rain, one low sunbreak in the east
   rainSunbreak: {
     zenith: 0x3e4c60, horizon: 0xa8a49a, ground: 0x464c54, glow: 0xffc890, glowK: 0.35,

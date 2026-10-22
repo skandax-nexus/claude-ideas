@@ -15,6 +15,8 @@
 //   route      the light changing along a route: night rain, dusk, pre-dawn, sunrise (M23)
 //   preset     another preset while a fact holds (M23's three ending skies)
 //   reverse    a zone where the clouds drift backwards (M11's discontinuity court, M23's collision)
+//   beacon     one lit window far off that pulses, slow, like a sleeper's light: at a bearing and elevation on the
+//              horizon band (M1's cold open: Chamber One, in Helix's crescent across the river; a mesh)
 // On a year switch every uniform eases over about 1.2 s. One draw call, plus a feature's meshes.
 import * as THREE from '../../../../vendor/three.module.min.js';
 import { compileCondition } from '../../../core/conditions.js';
@@ -228,6 +230,32 @@ function blend(out, a, b, k) {
 }
 
 // --- the features that are meshes -----------------------------------------------------------------------
+// a window's light far off (beacon): a small warm pane and a soft glow round it, both added light, faded by the feature
+let glowTex = null;
+function beaconMesh(f) {
+  if (!glowTex) {
+    const S = 32, d = new Uint8Array(S * S * 4);
+    for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
+      const r = Math.hypot(x - S / 2 + 0.5, y - S / 2 + 0.5) / (S / 2);
+      const a = Math.max(0, 1 - r) ** 2;
+      d.set([255, 255, 255, Math.round(a * 255)], (y * S + x) * 4);
+    }
+    glowTex = new THREE.DataTexture(d, S, S);
+    glowTex.needsUpdate = true;
+  }
+  const s = f.size ?? 2.6, color = f.color ?? 0xffd49a;
+  const g = new THREE.Group();
+  const pane = new THREE.Mesh(new THREE.PlaneGeometry(s, s * 0.62), new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }));
+  pane.userData.base = 1;
+  const glow = new THREE.Mesh(new THREE.PlaneGeometry(s * 5, s * 5), new THREE.MeshBasicMaterial({ color, map: glowTex, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }));
+  glow.userData.base = 0.55;
+  g.add(glow, pane);
+  g.renderOrder = 2;
+  g.frustumCulled = false;
+  for (const o of g.children) o.frustumCulled = false;
+  return g;
+}
+
 const glowMat = (color, opacity) => new THREE.MeshBasicMaterial({ color, transparent: true, opacity, depthWrite: false, blending: THREE.AdditiveBlending, fog: false, side: THREE.DoubleSide });
 
 // Anja's lock: a turning halo of light in an open sky
@@ -366,6 +394,7 @@ export class Sky {
       if (f.kind === 'halo') o.mesh = haloMesh(f);
       if (f.kind === 'unbuilt') o.mesh = unbuiltMesh(f);
       if (f.kind === 'cloudSea') o.mesh = cloudSea(f);
+      if (f.kind === 'beacon') o.mesh = beaconMesh(f);
       if (o.mesh) {
         o.mesh.visible = false;
         root.add(o.mesh);
@@ -463,6 +492,14 @@ export class Sky {
         if (f.kind === 'cloudSea') {
           f.mesh.position.set(cam.x, 0, cam.z);
           f.mesh.userData.mat.uniforms.uTime.value = time;
+        }
+        if (f.kind === 'beacon' && f.mesh.visible) {
+          // (on the horizon band's cylinder, just inside it: the band is drawn round the camera, 1.6 m down)
+          const b = (f.az ?? 0) * deg, r = 376;
+          f.mesh.position.set(cam.x + r * Math.sin(b), cam.y - 1.6 + r * Math.tan((f.elev ?? 6) * deg), cam.z - r * Math.cos(b));
+          f.mesh.lookAt(cam);
+          const pulse = 0.25 + 0.75 * (0.5 + 0.5 * Math.sin(time * (f.speed ?? 1.3)));
+          for (const o of f.mesh.children) o.material.opacity = o.userData.base * f.k * pulse;
         }
       }
     }

@@ -1527,15 +1527,17 @@ test('THINK answers in every mission of the Prologue and Act I, and in Mission 1
   }
 });
 
-test('the Chronolith has the edition\'s three forms and stands in them: stone (the village), the black ring (Helix), the broken halo (2196)', async () => {
+test('the Chronolith has the edition\'s three forms and stands in them: stone (the village), the black ring (Helix), the broken halo (2196); in 2026 Helix\'s cradle waits for it', async () => {
   const { makeChronolith } = await import('../game/js/editions/lastversion/Build.js');
-  for (const k of ['stone', 'helix', 'halo']) assert.equal(makeChronolith(1, k).userData.kind, k);
+  for (const k of ['stone', 'helix', 'halo', 'cradle']) assert.equal(makeChronolith(1, k).userData.kind, k);
+  assert.ok(!makeChronolith(1, 'cradle').userData.halo, 'an empty cradle has no light');
   const model = (key, id) => PLACED.find((l) => l.deck.mkey === key).level.interactables.find((i) => i.id === id)?.model?.();
   assert.equal(model('m02', 'scene_chronolith')?.userData.kind ?? model('m02', 'chronolith')?.userData.kind, 'helix', 'Mission 2: the black ring');
   const m3 = PLACED.find((l) => l.deck.mkey === 'm03').level.interactables.find((i) => i.model && /touch/.test(i.id + i.scene))?.model();
   assert.ok(m3?.userData.setEra, 'Mission 3: one model, a form per year');
   const shown = (st) => { m3.userData.setEra(st); return m3.children.find((c) => c.visible)?.userData.kind; };
-  assert.deepEqual(['PRESENT', 'PAST', 'FUTURE'].map(shown), ['helix', 'helix', 'halo'], 'Mission 3: broken into a halo by 2196');
+  // (in 2026 the ring is still in the ground at the dig, where the excavation log says it was found: U6 review)
+  assert.deepEqual(['PRESENT', 'PAST', 'FUTURE'].map(shown), ['helix', 'cradle', 'halo'], 'Mission 3: its empty cradle in 2026, broken into a halo by 2196');
   assert.equal(model('m04', 'chronolith_m04')?.userData.kind, 'stone', 'Mission 4: the ring as the village keeps it');
   for (const f of fs.readdirSync('game/js/editions/lastversion').filter((n) => n.endsWith('.js'))) assert.ok(!/makeMachineRing/.test(fs.readFileSync(`game/js/editions/lastversion/${f}`, 'utf8')), `${f}: no Station Zero lab ring`);
 });
@@ -2267,7 +2269,11 @@ test('the clue ledger: every plant comes before its payoff, and a rewritten miss
   }
   // the questions: each chapter's bible question verbatim, as its card shows it (D21)
   for (const ch of ORDER) assert.ok(QUESTIONS.some((q) => q.chapter === ch && q.bible && q.text === CHAPTERS[ch].question), `${ch}: the bible's question`);
-  for (const q of QUESTIONS) assert.ok(missionIndex(q.answer) >= 0 && q.clues.every((k) => EV_KEYS.has(k) || true), q.id);
+  // (every clue a question pins is evidence something in the campaign sets: a key nothing sets would never show)
+  for (const q of QUESTIONS) {
+    assert.ok(missionIndex(q.answer) >= 0, q.id);
+    for (const k of q.clues) assert.ok(EV_KEYS.has(k), `${q.id}: ev_${k} is set somewhere`);
+  }
 });
 
 // the evidence keys anything in the campaign can pin (ev_<key>)
@@ -2292,7 +2298,6 @@ test('the consequence ledger (global since U8): every fact a choice sets is read
         n++;
         assert.ok(new RegExp(`\\b${k}\\b`).test(read), `${m.key}: "${o.label}" sets ${k}, which nothing later reads`);
       }
-      if (o.trust && !['jun', 'child', 'iven'].includes(o.npc)) assert.ok(true);
     });
   }
   assert.ok(n >= 8, `${n} consequence facts checked`);
@@ -2413,7 +2418,7 @@ test('a thread is paid once, even when its kind sets its own fact (the chase); a
   th.update();
   th.update();
   assert.ok(game.facts.get('mira_gone'), 'the chase\'s set is applied');
-  assert.equal(said.filter((t) => t.includes('she leaves a yellow raincoat')).length, 1, 'its line is said once');
+  assert.equal(said.filter((t) => t.includes('lies a yellow raincoat')).length, 1, 'its line is said once');
   // Mission 3 (carryOut): Kai walks out of the lab in 2026, and the court is 2026 behind him; walking back in keeps the lab's year
   game.campaign = { lv: true, chapter: 'prologue', deck: 2, sector: 0, flags: {}, quarter: 0 };
   rt.level = rt.buildLevel(game.campaign);
@@ -2451,7 +2456,7 @@ test('the save format: a pre-U6 save in the middle of a rewritten mission restar
   const save = { lv: true, chapter: 'prologue', deck: 0, sector: 0, pos: [1, 2, 3, 0], flags: {}, lvFormat: 21 };
   rt.resume(save);
   assert.ok(rt.started.flags.rule_rook_call && rt.started.flags.rule_zero && !rt.started.flags.rule_rescued, 'Rook does not call again; the Zero Second does not happen twice');
-  assert.ok(rt.resumed, 'the sector loads at the furthest quarter reached');
+  assert.ok(rt.resumed, 'the sector loads after a PREVIOUSLY card');
   // a current save keeps where it was
   const now = { lv: true, chapter: 'prologue', deck: 0, sector: 0, quarter: 2, pos: [1, 2, 3, 0], flags: { beat_done: false }, lvFormat: SAVE_FORMAT };
   migrateSave(engine(), now, LV);
@@ -2465,6 +2470,143 @@ test('the save format: a pre-U6 save in the middle of a rewritten mission restar
   const act = { lv: true, chapter: 'act4', deck: 2, sector: 1, quarter: 1, pos: [1, 2, 3, 0], flags: { beat_done: false }, lvFormat: 23 };
   migrateSave(engine(), act, LV);
   assert.deepEqual([act.sector, act.quarter, act.pos, act.lvFormat], [0, 0, null, 24]);
+});
+
+// U6 review: a Prologue mission played with every skippable thread left undone, step by step along its main path
+test('a skipped early thread is walked past: the objective is always the next main beat (Missions 1-3)', () => {
+  const walk = (deck, steps) => {
+    const game = { engine: engine(), facts: new FactStore(), story: null, campaign: { lv: true, chapter: 'prologue', deck, sector: 0, flags: {}, quarter: 0 }, log: [], hud: { say() {} }, deckWorld: { flags: {}, npcs: [] } };
+    const rt = Object.assign(Object.create(LastVersion.prototype), { g: game, def: LV });
+    game.story = rt.makeStory('prologue');
+    rt.level = rt.buildLevel(game.campaign);
+    const th = rt.threads;
+    for (const [facts, want] of steps) {
+      for (const k of facts) game.facts.set(k);
+      th.update();
+      assert.equal(th.current()?.id ?? null, want, `${th.deck.mkey} after ${facts.join(', ') || 'nothing'}`);
+    }
+    return rt;
+  };
+  // Mission 1: the photo never looked at (the avenue, the plaza, the checkpoint, the platform, the wreck, the pursuit)
+  walk(0, [[[], 'photo'], [['ev_toy'], 'anomalies'], [['ev_clock', 'ev_camera'], 'deduce'], [['rook_message', 'checkpoint_passed'], 'jun'],
+    [['zero_second'], 'zero'], [['after_zero'], 'rescue'], [['rescued_a', 'rescued_b', 'wrist_cut'], 'voice'], [['voice_heard'], 'chase'], [['mira_gone'], 'raincoat'], [['raincoat'], null]]);
+  walk(0, [[['rook_message'], 'anomalies']]); // (Rook's call alone walks past the photo)
+  // Mission 2: the intercom, the print and Dr. Lin all skipped; out into the court the lobby is behind him
+  const m2 = walk(1, [[[], 'intercom'], [['left_lobby'], 'gallery'], [['cells_1'], 'cells']]);
+  assert.ok(m2.level.triggers.some((t) => t.set?.left_lobby && t.room === m2.level.outdoorRoom), 'the court sets left_lobby');
+  // Mission 3: the excavation office never read; once the cable is in, the objective is the cable, then the hall
+  walk(2, [[['first_cycle'], 'lab'], [['t_m03_lab'], 'dig'], [['t_m03_dig'], 'office'], [['cable_connected'], 'cable'], [['power_on'], 'hall']]);
+  // (and three of the four office things never pin SITE ZERO: only the excavation log does)
+  const m3 = walk(2, [[['first_cycle', 't_m03_lab', 't_m03_dig', 'ev_thermos_er', 'ev_footprints', 'ev_polaroid'], 'cable']]);
+  assert.ok(m3.g.facts.get('t_m03_office') && !m3.g.facts.get('ev_site_zero'), 'the office is done without the log, and SITE ZERO is not pinned');
+});
+
+// U6 review: a moment that sets its facts in callbacks, cut off by a save, plays again on load from what it has not set
+test('a save inside a moment that runs in callbacks loads with it played again (the rescue, the Zero Second, the first cycle, a pre-U6 save)', () => {
+  const make = (deck, set = []) => {
+    const said = [];
+    const game = { engine: engine(), facts: new FactStore(), story: null, campaign: { lv: true, chapter: 'prologue', deck, sector: 0, flags: {}, quarter: 0 }, log: [],
+      hud: { say: (l, f, done) => { said.push(...l.filter((x) => !x.when || f.test(x.when)).map((x) => x.text)); done?.(); }, flash() {}, toast() {} },
+      deckWorld: { flags: {}, npcs: [], refresh() {} }, after: (t, fn) => fn(), weather: { set() {} }, audio: { caught() {}, sweep() {}, silence() {} }, room: null };
+    const rt = Object.assign(Object.create(LastVersion.prototype), { g: game, def: LV, cinema: { play: (o, done) => { said.push(...(o.lines || []).map((x) => x.text)); done?.(); } } });
+    game.story = rt.makeStory('prologue');
+    rt.level = rt.buildLevel(game.campaign);
+    for (const k of set) game.facts.set(k);
+    return { rt, game, said, deck: game.story.decks[deck] };
+  };
+  // Mission 1: saved after the second rescue, the rule fired, before the wrist and the voice
+  const a = make(0, ['rook_message', 'checkpoint_passed', 'zero_second', 'after_zero', 'rescued_a', 'rescued_b', 'rescued']);
+  a.game.deckWorld.flags.rule_rescued = true;
+  a.rt.afterResume(a.deck);
+  assert.ok(a.game.facts.get('wrist_cut') && a.game.facts.get('voice_heard'), 'the wrist, then the voice in every speaker');
+  assert.ok(a.said.includes('Kai Varen. Do not build the machine.'));
+  // a moment already played to its end is not played again
+  a.said.length = 0;
+  a.rt.afterResume(a.deck);
+  assert.equal(a.said.length, 0);
+  // the Zero Second: saved in the three seconds before after_zero (the people frozen in the saved flags)
+  const z = make(0, ['rook_message', 'checkpoint_passed', 'zero_second']);
+  z.game.deckWorld.flags.freeze_people = true;
+  z.rt.afterResume(z.deck);
+  assert.ok(z.game.facts.get('after_zero') && !z.game.deckWorld.flags.freeze_people, 'the platform moves again');
+  // a pre-U6 save past the pursuit (facts through mira_gone, no wrist_cut): it restarts Mission 1 with its facts, the
+  // rescue's rule marked fired; on load the wrist is cut (and only that), and the objective is the raincoat
+  const old = make(0, ['rook_message', 'checkpoint_passed', 'zero_second', 'after_zero', 'rescued_a', 'rescued_b', 'rescued', 'voice_heard', 'mira_gone']);
+  old.rt.start = (ch, c) => (old.rt.started = c);
+  old.rt.resume({ lv: true, chapter: 'prologue', deck: 0, sector: 0, room: 'm01_rain_south', pos: [0, 4.26, -154, 0], flags: { beat_done: false }, lvFormat: 21 });
+  assert.ok(old.rt.started.flags.rule_rescued && old.rt.started.pos === null);
+  old.game.deckWorld.flags = old.rt.started.flags;
+  old.rt.afterResume(old.deck);
+  assert.ok(old.game.facts.get('wrist_cut'), 'wrist_cut, the clue the later missions read');
+  assert.ok(old.said.includes('Your wrist—') && !old.said.includes('Kai Varen. Do not build the machine.'), 'the wrist is said; the voice is not heard twice');
+  old.rt.threads.update();
+  assert.equal(old.rt.threads.current()?.id, 'raincoat');
+  // Mission 3: saved during the first cycle (has_chronolith, no first_cycle), and during the fracture
+  const c = make(2, ['has_chronolith', 'chronolith_touched', 'wrist_mark']);
+  c.rt.afterResume(c.deck);
+  assert.ok(c.game.facts.get('first_cycle'), 'the first cycle plays again and ends');
+  assert.equal(c.rt.threads.current()?.id, 'lab');
+  const f = make(2, ['has_chronolith', 'first_cycle', 'power_on', 'crossed', 'open_control', 'fractured']);
+  f.game.engine.setState = () => {};
+  f.rt.afterResume(f.deck);
+  assert.ok(f.game.facts.get('fracture_done'), 'the fracture ends, and the mission with it');
+});
+
+// U6 review: a mission that ends on its own exits once a load, never from a flag kept in the save
+test('a mission that ends on its own: the exit is marked on the runtime, never in the saved flags', () => {
+  const calls = [];
+  const game = { engine: engine(), facts: new FactStore(), story: null, campaign: { lv: true, chapter: 'prologue', deck: 1, sector: 0, flags: {}, quarter: 0 }, log: [], hud: { say() {} },
+    deckWorld: { flags: {}, npcs: [] }, after: (t) => calls.push(t) };
+  const rt = Object.assign(Object.create(LastVersion.prototype), { g: game, def: LV });
+  game.story = rt.makeStory('prologue');
+  rt.level = rt.buildLevel(game.campaign);
+  assert.ok(rt.deck.autoExit != null);
+  rt.autoExit();
+  assert.equal(calls.length, 0, 'not before the mission has ended');
+  game.deckWorld.flags.beat_done = true;
+  rt.autoExit();
+  rt.autoExit();
+  assert.deepEqual(calls, [rt.deck.autoExit], 'once');
+  assert.equal(game.deckWorld.flags.auto_exit, undefined, 'nothing in the saved flags');
+  rt.autoExited = null; // (a load: onSectorLoaded)
+  rt.autoExit();
+  assert.equal(calls.length, 2, 'a save taken between the end and the exit exits after its load');
+});
+
+// U6 review: the Prologue's story fixes, as data
+test('the Prologue reads fairly: the deduction names what Kai found, one ring in 2026, Pryce\'s two statements, the 05:40 cold open', () => {
+  // the anomalies: the question names each only when it was found; the roof's view is a sight, not one of them
+  const an = threadsOf(M01).find((t) => t.id === 'anomalies');
+  const q = M01.deductions.minute.question;
+  assert.ok(!an.of.includes('ev_helix_window'));
+  for (const k of an.of) assert.ok(q.some((l) => l.when === k), `the question names ${k} when it was found`);
+  assert.ok(q.every((l) => !l.when || an.of.includes(l.when)) && !q[q.length - 1].when, 'and asks, whatever was found');
+  assert.ok(M01.deductions.minute.answers.find((x) => x.correct).lines.some((l) => l.text === 'There\'s a cause. There\'s always a cause.'), 'Kai\'s arc starts at control (§9.6)');
+  // Mission 3: in 2026 the ring is in the ground at the dig; the chamber's cradle is empty
+  const m3 = MISSIONS.prologue[2];
+  assert.ok(!/half built/.test(m3.spoken.past[0].text));
+  const src = fs.readFileSync(new URL('../game/js/editions/lastversion/prologue.js', import.meta.url), 'utf8');
+  assert.ok(src.includes("eras: { PRESENT: 'helix', PAST: 'cradle', FUTURE: 'halo' }"));
+  // Pryce: her 05:52 statement read the log the director's office had cleaned at 05:50; at 08:14 her badge record had the card
+  const m2 = MISSIONS.prologue[1];
+  assert.ok(/EDITED 05:50/.test(m2.scenes.door_log.lines[0].text));
+  assert.ok(m2.scenes.rec_pryce.lines.some((l) => l.who === 'KAI' && /05:52/.test(l.text)), 'Kai notices the two statements');
+  // the 05:40 cold open: the rain before dawn and one window pulsing in Helix's crescent, the streets empty, while it plays
+  const co = M01.coldOpen;
+  assert.ok(co.stage && co.first);
+  const rs = PLACES.rain_south;
+  const feats = rs.skyFeatures.m01;
+  assert.ok(feats.some((f) => f.kind === 'preset' && f.when === 'co_m01' && SKIES[f.sky]) && feats.some((f) => f.kind === 'beacon' && f.when === 'co_m01'));
+  for (const c of rs.crowd) assert.ok(/after_zero|!co_m01/.test(c.when || ''), `the ${c.role}s are not out at 05:40`);
+  // the pursuit: about 180 m from the far platform to the staff gate, into the crowd there after the Zero Second
+  const ch = threadsOf(M01).find((t) => t.id === 'chase');
+  const len = ch.path.reduce((a, p, i) => a + (i ? Math.hypot(p[0] - ch.path[i - 1][0], p[2] - ch.path[i - 1][2]) : 0), 0);
+  assert.ok(len >= 150 && len <= 220, `${len.toFixed(0)} m`);
+  const end = ch.path[ch.path.length - 1];
+  assert.ok(rs.crowd.some((c) => c.when === 'after_zero' && c.path.some(([x, z]) => Math.hypot(x - end[0], z - end[2]) < 10)), 'a crowd at the staff gate');
+  // a load in Missions 2 and 3 recaps its own mission, not the morning before the crash
+  for (const k of ['m02', 'm03']) assert.equal(PREVIOUSLY[k]?.length, 3, k);
+  assert.ok(!/Tuesday/.test(M01.subtitle), '14 March 2049 is a Sunday');
 });
 
 // a v2.0 save had no has_inversion (its inversion was the INVERTED year); chapter changes never apply PRIMES

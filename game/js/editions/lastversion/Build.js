@@ -676,6 +676,7 @@ export function makeDrawing() {
 //   'stone'  a ring of dressed stone with a bronze band, as the settlement kept it (the past)
 //   'helix'  the black machined ring Helix dug out of Site Zero, glyphs inlaid, a light that wakes
 //   'halo'   2196: the same ring broken, a halo of fragments hanging where the rest should be
+//   'cradle' 2026 in Helix's chamber: the steel cradle built for it, empty (the ring is still in the ground at the dig)
 // The ring's centre is the model's origin; `inner` turns slowly (DeckWorld spins userData.inner).
 // With { eras: { PRESENT: 'helix', PAST: 'stone', FUTURE: 'halo' } } one model carries several forms
 // and userData.setEra(state) shows the right one (the runtime calls it on a year switch).
@@ -734,6 +735,17 @@ export function makeChronolith(scale = 1, kind = 'helix', opts = {}) {
     const inner = new THREE.Mesh(new THREE.TorusGeometry(R * 0.7, tube * 0.12, 6, 48, Math.PI * 1.4), basic(0x9fe8c8, { transparent: true, opacity: 0.35 }));
     g.add(inner);
     g.userData.inner = inner;
+  } else if (kind === 'cradle') {
+    const steel = std(0x6a6e74, { metalness: 0.7, roughness: 0.45 });
+    // an arc of steel under where the ring will sit, on two legs; nothing in it
+    const arc = new THREE.Mesh(new THREE.TorusGeometry(R + tube * 1.4, tube * 0.35, 8, 32, Math.PI * 0.55), steel);
+    arc.rotation.z = Math.PI * 1.225; // (centred under the ring)
+    g.add(arc);
+    for (const s of [-1, 1]) {
+      const leg = new THREE.Mesh(new THREE.BoxGeometry(0.16 * scale, R * 0.9, 0.16 * scale), steel);
+      leg.position.set(s * R * 0.62, -R * 0.62, 0);
+      g.add(leg);
+    }
   } else {
     const black = std(0x0b0d11, { metalness: 0.82, roughness: 0.28 });
     const ring = new THREE.Mesh(new THREE.TorusGeometry(R, tube, 16, 96), black);
@@ -756,10 +768,12 @@ export function makeChronolith(scale = 1, kind = 'helix', opts = {}) {
     g.add(inner);
     g.userData.inner = inner;
   }
-  // the light that runs round it when it wakes
-  const halo = new THREE.Mesh(new THREE.TorusGeometry(R * 0.86, 0.025 * scale, 8, 96), basic(kind === 'stone' ? 0xffc06a : kind === 'halo' ? 0x9fe8c8 : 0x4f9fe8, { transparent: true, opacity: 0.6 }));
-  g.add(halo);
-  g.userData.halo = halo;
+  // the light that runs round it when it wakes (an empty cradle has none)
+  if (kind !== 'cradle') {
+    const halo = new THREE.Mesh(new THREE.TorusGeometry(R * 0.86, 0.025 * scale, 8, 96), basic(kind === 'stone' ? 0xffc06a : kind === 'halo' ? 0x9fe8c8 : 0x4f9fe8, { transparent: true, opacity: 0.6 }));
+    g.add(halo);
+    g.userData.halo = halo;
+  }
   // a low plinth it stands in
   const plinth = new THREE.Mesh(new THREE.BoxGeometry(R * 1.1, 0.5 * scale, tube * 3.2), std(kind === 'stone' ? 0x6a6458 : 0x1a1d22, { roughness: 0.8 }));
   plinth.position.y = -R - tube * 0.3;

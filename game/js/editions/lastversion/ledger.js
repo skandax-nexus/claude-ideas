@@ -179,6 +179,9 @@ export const PREVIOUSLY = {
   act4: ['In the future, Kai\'s name is on a memorial.', 'A museum keeps every attempt at one world.', 'In the archive, he heard himself confess.'],
   finale: ['Outside time, Mira walked through a blue door alone.', 'She told him whose idea it was.', 'At the first second, the logs said who was early.'],
   cases: ['The stories the main road walked past.', 'Each one waits in its own place.', 'Some of them are still open.'],
+  // a load inside a mission its chapter's recap has fallen behind (the Prologue's starts before the crash): its own
+  m02: ['At 8:14 the 41 came into Line 41 at full speed.', 'Every speaker in the station said his name: Do not build the machine.', 'Tonight Helix has gone dark, and Kai Varen is inside it.'],
+  m03: ['Helix went dark, and under it waited the ring Mira drew.', 'Kai touched it, and it let him in.', 'Now the building has three dates, and it is trying all of them.'],
 };
 
 // --- EPILOGUE (§5 M23): one line per fact the player set, after an ending's quote ------------------------------------

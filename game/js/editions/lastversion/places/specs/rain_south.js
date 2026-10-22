@@ -22,8 +22,14 @@ export default {
     PAST: { sky: 'rainSunbreak', era: '2049', hour: 8.2, sun: { elev: 9, az: 104 }, fog: 0x8a8c90, density: 1.2, night: 0.3, weather: 'rain', ibl: 'dusk', lit: 0.7,
       hemi: { sky: 0xb0a898, ground: 0x464c54, k: 0.9 }, sunColor: 0xffd6a0, sunK: 0.9, grade: { shadowTint: 0x2a2c3c, highlightTint: 0xffdcb0, toning: 0.2, contrast: 1.08, saturation: 0.96 } },
   },
-  // after the Zero Second a black ring-shaped hole opens in the clouds over the station
-  skyFeatures: { m01: [{ kind: 'ringHole', when: 'zero_second', at: [0, -170], elev: 58, r: 11, w: 2.6 }] },
+  // after the Zero Second a black ring-shaped hole opens in the clouds over the station. While Mission 1's cold open
+  // plays (co_m01: 05:40), the rain before dawn, and one window in Helix's crescent across the river pulsing: Chamber
+  // One (the crescent stands due north of the district, its lit glass at about 6.5°: atlas.horizonFor)
+  skyFeatures: { m01: [
+    { kind: 'ringHole', when: 'zero_second', at: [0, -170], elev: 58, r: 11, w: 2.6 },
+    { kind: 'preset', when: 'co_m01', sky: 'rainPreDawn' },
+    { kind: 'beacon', when: 'co_m01', az: 1.8, elev: 6.5, rate: 3 },
+  ] },
   quarters: [
     { name: 'HOME & MARKET', area: [-90, -70, 90, 12], spawnAt: 'door4B', threshold: { at: 'rookCall', kind: 'street' }, frags: ['puddle', 'noodleAlley', 'pocketPark'] },
     { name: 'TRANSIT PLAZA & CHECKPOINT', area: [-90, -140, 90, -70], spawnAt: 'tramStop', threshold: { at: 'checkpointBooth', kind: 'barrier' } },
@@ -33,12 +39,17 @@ export default {
   gates: { m01: { visible: true, solid: true, mat: 'gateSteel', box: [-3, 0, -224.3, 3, 3.2, -223.7] } },
   frags: { m01: [['towpath', 'laundromat', 'carriageDoor']] }, // (a fragment is read within 2.4 m: never up on the pigeons' ledge)
   crowd: [
-    // (17 in all: with the seven named and tier-2 people, M1 keeps to §4.7's 24)
-    { era: 'present', years: ['PRESENT', 'PAST'], region: 'rain', role: 'commuter', path: [[-11, 6], [-11, -64]], n: 4 },
-    { era: 'present', years: ['PRESENT', 'PAST'], region: 'rain', role: 'commuter', path: [[11, -8], [11, -66]], n: 4 },
-    { era: 'present', years: ['PRESENT', 'PAST'], region: 'rain', role: 'contractor', path: [[-4, -98], [4, -104]], n: 4 },
-    { era: 'present', years: ['PRESENT', 'PAST'], region: 'rain', role: 'staff', path: [[-30, -153], [28, -153]], y: 3.4, n: 3 },
+    // (24 asked for; with the seven named and tier-2 people, crowds.js scales them to §4.7's 24 in all)
+    // (the morning's people are not out yet at 05:40, while the cold open plays: co_m01)
+    { era: 'present', years: ['PRESENT', 'PAST'], region: 'rain', role: 'commuter', path: [[-11, 6], [-11, -64]], n: 4, when: '!co_m01' },
+    { era: 'present', years: ['PRESENT', 'PAST'], region: 'rain', role: 'commuter', path: [[11, -8], [11, -66]], n: 4, when: '!co_m01' },
+    { era: 'present', years: ['PRESENT', 'PAST'], region: 'rain', role: 'contractor', path: [[-4, -98], [4, -104]], n: 4, when: '!co_m01' },
+    { era: 'present', years: ['PRESENT', 'PAST'], region: 'rain', role: 'staff', path: [[-30, -153], [28, -153]], y: 3.4, n: 3, when: '!co_m01' },
     { era: 'present', years: ['PRESENT'], region: 'rain', role: 'ems', path: [[-6, -160], [14, -160]], y: 3.4, n: 2, when: 'after_zero' },
+    // after the Zero Second, the station empties onto the north concourse: people streaming out toward the depot, and a
+    // knot of them at the staff gate, where the woman with Mira's face is lost among them (Mission 1's pursuit)
+    { era: 'present', years: ['PRESENT'], region: 'rain', role: 'commuter', path: [[-2, -197], [24, -201], [44, -206]], n: 3, when: 'after_zero' },
+    { era: 'present', years: ['PRESENT'], region: 'rain', role: 'commuter', path: [[-9, -217.5], [9, -217.5], [7, -221], [-7, -221]], n: 4, when: 'after_zero' },
   ],
 
   build(P, { mission }) {

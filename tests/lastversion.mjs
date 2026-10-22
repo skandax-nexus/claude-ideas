@@ -468,24 +468,39 @@ const chase = await az(() => {
   r.waited = m && Math.hypot(m.model.position.x - r.start[0], m.model.position.z - r.start[1]) < 0.3; // (Kai is 25 m away)
   LVB.walk([[26, -160], [29.5, -165], [29.5, -177.5], [12, -181]]);
   r.moved = Math.hypot(m.model.position.x - r.start[0], m.model.position.z - r.start[1]) > 1;
-  let lead = 99;
-  const steps = [[3, -185], [1, -192], [0.5, -200], [0.6, -210], [0.8, -217]];
-  for (const [x, z] of steps) {
-    LVB.walk([[x, z]]);
-    if (m.model.visible) lead = Math.min(lead, Math.hypot(m.model.position.x - AZ.player.pos.x, m.model.position.z - AZ.player.pos.z));
+  // (the pursuit, about 180 m: down the stair, across the concourse, through the depot, back along the fence; Kai keeps
+  // five metres behind her, and she keeps ahead of him)
+  let lead = 99, walked = 0, last = [m.model.position.x, m.model.position.z], far = 0;
+  const t0 = AZ.time;
+  for (let i = 0; i < 600 && !AZ.facts.get('mira_gone'); i++) {
+    const mx = m.model.position.x, mz = m.model.position.z, px = AZ.player.pos.x, pz = AZ.player.pos.z;
+    const d = Math.hypot(mx - px, mz - pz);
+    if (m.model.visible) lead = Math.min(lead, d);
+    if (d > 6) { const k = (d - 5) / d; LVB.walkTo(px + (mx - px) * k, pz + (mz - pz) * k, 1); } else AZ.simulate(0.25);
+    walked += Math.hypot(m.model.position.x - last[0], m.model.position.z - last[1]);
+    last = [m.model.position.x, m.model.position.z];
+    far = Math.max(far, m.model.position.x);
   }
-  for (let t = 0; t < 20 && !AZ.facts.get('mira_gone'); t += 0.1) AZ.simulate(0.1);
+  r.secs = +(AZ.time - t0).toFixed(1);
+  r.walked = Math.round(walked);
+  r.depot = far > 70; // (she went through the bus depot)
+  r.crowd = AZ.deckWorld.npcs.filter((n) => n.n.crowd && n.model.visible && Math.hypot(n.model.position.x, n.model.position.z + 219) < 12).length;
   LVB.talkOut();
-  return { ...r, lead: +lead.toFixed(1), ...LVB.f('mira_gone', 't_m01_chase'), said: LVB.said.some((l) => l.includes('On the wet steps she leaves a yellow raincoat.')), coat: !!LVB.cand('raincoat') };
+  return { ...r, lead: +lead.toFixed(1), ...LVB.f('mira_gone', 't_m01_chase'), said: LVB.said.some((l) => l.includes('When it opens again she is gone. On the wet steps lies a yellow raincoat.')), coat: !!LVB.cand('raincoat') };
 });
 check(chase.visible && chase.waited && chase.moved && chase.mira_gone && chase.t_m01_chase && chase.said && chase.coat, 'the pursuit: the woman with Mira\'s face waits while Kai is far, walks ahead of him to the staff gate, and is gone; a yellow raincoat on the steps', JSON.stringify(chase));
+check(chase.walked >= 150 && chase.depot && chase.secs >= 60 && chase.crowd >= 2, `the pursuit is a pursuit: ${chase.walked} m in ${chase.secs} s, through the bus depot, lost in the crowd at the staff gate (${chase.crowd} there)`, JSON.stringify(chase));
 const coat = await az(() => { LVB.walk([[1.0, -221.4]]); LVB.use('raincoat'); LVB.talkOut(); AZ.simulate(0.3); return { ...LVB.f('raincoat', 'beat_done'), gate: LVB.gate() }; });
 check(coat.raincoat && coat.beat_done && coat.gate === false, 'the raincoat is Kai\'s now (raincoat); the staff gate opens', JSON.stringify(coat));
 const m1t1 = await az(() => AZ.time);
 const m1min = +((m1t1 - m1t0) / 60).toFixed(1);
-console.log(`  (Mission 1 walked by the bot: ${m1min} min of game time, lines at their own length, with the florist and Last Train Home)`);
-check(m1min > 5, `Mission 1, walked: ${m1min} min of game time`, String(m1min));
-// a save and a load: the mission comes back at the furthest quarter it reached (LINE 41), after a PREVIOUSLY card
+const m1model = await az(() => AZ.edition.deck.minutes);
+const m1ratio = +(m1min / m1model.main).toFixed(2);
+console.log(`  (Mission 1 walked by the bot: ${m1min} min of game time, lines at their own length, with the florist and Last Train Home: ${m1ratio} of the model's ${m1model.main}-minute main path)`);
+// (the bot knows every coordinate and reads nothing twice: it is no player. What this guards is the mission itself: a
+// Mission 1 that shrank, a pursuit cut back to a walk, would fall under a third of the model's main path)
+check(m1ratio >= 0.33, `Mission 1, walked: ${m1min} min of game time, ${m1ratio} of the model's main path`, String(m1min));
+// a save and a load: the mission comes back where Kai saved (in LINE 41, its quarter's spawn), after a PREVIOUSLY card
 // (loaded during the mission's outro: a load in the page drops the outro, and the gates must still open after it
 // (U5 review; a player's load reloads the page first: main.begin); the exit below is the proof)
 const outroLoad = await az(() => {
@@ -504,7 +519,7 @@ const skipTap = await az(() => { const b = document.querySelector('#lvSkip'); co
 check(skipTap.shown && !skipTap.opening && !skipTap.cine, 'the SKIP button (a tap) ends the PREVIOUSLY card at once', JSON.stringify(skipTap));
 await page.waitForFunction(() => { LVB.talkOut(1); return !AZ.edition.opening && !AZ.edition.cinema.active && AZ.voice.loading >= 1; }, null, { timeout: 120000, polling: 250 }).catch(() => {});
 const back = await az(() => { const lm = LVB.lm('platform'); return { quarter: AZ.campaign.quarter, room: AZ.room, at: AZ.player.pos.toArray().map((v) => +v.toFixed(1)), d: Math.hypot(AZ.player.pos.x - lm[0], AZ.player.pos.z - lm[2]), prev: LVB.said.includes('NONE: Rain City, 2049.'), done: !!AZ.deckWorld.flags.beat_done, raincoat: AZ.facts.get('raincoat') }; });
-check(resume === 2 && back.quarter === 2 && back.d < 1 && back.prev && back.done && back.raincoat, 'an M1 save loads at the furthest quarter reached (LINE 41), after a PREVIOUSLY card; its facts and flags kept', JSON.stringify({ resume, back }));
+check(resume === 2 && back.quarter === 2 && back.d < 1 && back.prev && back.done && back.raincoat, 'an M1 save loads where it was taken (LINE 41, its quarter\'s spawn), after a PREVIOUSLY card; its facts and flags kept', JSON.stringify({ resume, back }));
 await az(() => { LVB.walk([[26, -158], [29.5, -165], [29.5, -177.5], [3, -185], [1, -192], [0.5, -205], [0.5, -225]]); LVB.skip(); }); // (the exit is past the staff gate, z < -222)
 // Mission 2's opening: its cold open plays before its card; SKIP ends the whole opening at once
 await page.waitForFunction(() => { LVB.step(0.1); return AZ.campaign.deck === 1 && !AZ.transitioning && AZ.edition.cinema.active && LVB.said.some((l) => l.startsWith('IVEN: Test')); }, null, { timeout: 180000, polling: 250 }).catch(() => {});
@@ -633,6 +648,13 @@ const cable = await az(() => {
 check(cable.held === 'cable' && cable.back.n === cable.back.of && cable.cable_connected, 'the cable from the dig, carried back into the lab in 2026 and connected there', JSON.stringify(cable));
 await press('Digit1');
 check(await az(() => { LVB.at('cable', 0, -14.6); LVB.step(0.2); LVB.use('power'); LVB.skip(); return AZ.engine.state(AZ.room) === 'PRESENT' && AZ.facts.get('power_on'); }), 'key 1: 2049, and the power a 2026 cable carries comes on');
+// a save in the lab with the power on (the furthest quarter reached is the dig, out on the court): the load puts Kai back
+// in the lab in 2049, where he saved, never on the court with the lab's 2026 frame shut behind him (U6 review)
+const labSave = await az(() => { const r = { room: AZ.room, q: AZ.campaign.quarter, year: AZ.engine.state('cable') }; AZ.saveTo(0); AZ.load(0); return r; });
+await page.waitForFunction(() => { LVB.step(0.05); LVB.talkOut(1); return !AZ.edition.opening && !AZ.edition.cinema.active && AZ.voice.loading >= 1; }, null, { timeout: 120000, polling: 250 }).catch(() => {});
+const labBack = await az(() => ({ room: AZ.room, year: AZ.engine.state('cable'), power: !!AZ.facts.get('power_on'), prev: LVB.said.includes('NONE: Now the building has three dates, and it is trying all of them.'), obj: AZ.edition.threads.current()?.id }));
+check(labSave.q === 2 && labSave.room === 'cable' && labSave.year === 'PRESENT' && labBack.room === 'cable' && labBack.year === 'PRESENT' && labBack.power && labBack.prev && labBack.obj === 'hall',
+  'a save in the lab after the power loads in the lab, in 2049, after Mission 3\'s own PREVIOUSLY card; the objective is the machine hall', JSON.stringify({ labSave, labBack }));
 const cross = await az(() => {
   LVB.at('collapse', 0, -4.5);
   AZ.edition.shift('FUTURE');
