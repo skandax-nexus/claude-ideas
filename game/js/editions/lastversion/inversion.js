@@ -615,10 +615,13 @@ export class Inversion {
     const st = this.state, a = this.active, t = this.target;
     const name = (p, part) => (p.rec.kind === 'lock' && part >= 0 ? `${p.rec.label} · ${p.rec.parts[part].name}` : p.rec.label);
     const holdFor = (rec) => Math.floor(Math.min(st.charge / rec.weight, rec.max));
+    // the chip: what is held and its seconds left, else the charge (an upright phone leaves the name to the label)
+    const chipName = a && !a.lock ? `${a.p.rec.label} ` : '';
+    const chipNum = a && !a.lock ? (a.left ?? 0).toFixed(1) : `${Math.floor(st.charge)}s`;
     return {
       on: this.unlocked,
       frac: Math.max(0, Math.min(1, st.charge / st.cap)),
-      chip: a && !a.lock ? `⟲ ${a.p.rec.label} ${(a.left ?? 0).toFixed(1)}` : `⟲ ${Math.floor(st.charge)}s`,
+      chip: `⟲ ${chipName}${chipNum}`, chipName, chipNum,
       hold: !!(a && !a.lock),
       warn: !!(a && !a.lock && a.left < 1.5),
       aim: !!t,
@@ -637,6 +640,17 @@ body.lastversion.touch #lvTop { top: max(14px, env(safe-area-inset-top)); left: 
 body.lastversion #lvReverse { display: none; position: relative; align-items: center; gap: 7px; padding: 8px 12px 8px 8px; border-radius: 999px; background: rgba(255, 255, 255, 0.28);
   color: #fff; font: 700 12px Inter, sans-serif; letter-spacing: 0.06em; text-shadow: 0 1px 6px rgba(40, 30, 80, 0.55); transition: opacity 0.6s, background 0.3s; white-space: nowrap; }
 body.lastversion #lvReverse.on { display: flex; }
+body.lastversion #lvReverse u, body.lastversion #lvReverse em, body.lastversion #lvReverse b { font: inherit; text-decoration: none; }
+/* upright on a phone the row keeps clear of the minimap, as #state does alone, and three years still fit on one
+   line: the pips drop their key digits (a phone has no 1 2 3), the chip is its ring and its seconds, and the held
+   thing's name is on its label over the target */
+@media (orientation: portrait) {
+  body.lastversion.touch #lvTop { max-width: calc(100vw - 130px); }
+  body.lastversion.touch #lvTop > #state { max-width: none; }
+  body.lastversion.touch #lvTop > #state .pip em { display: none; }
+  body.lastversion.touch #lvReverse { flex: none; gap: 5px; padding: 6px 10px 6px 6px; }
+  body.lastversion.touch #lvReverse u, body.lastversion.touch #lvReverse em { display: none; }
+}
 body.lastversion #lvReverse i { width: 22px; height: 22px; border-radius: 50%; flex: none;
   background: conic-gradient(#c9b8ff calc(var(--lvc, 1) * 360deg), rgba(255, 255, 255, 0.22) 0); -webkit-mask: radial-gradient(circle, transparent 7px, #000 8px); mask: radial-gradient(circle, transparent 7px, #000 8px); }
 body.lastversion #lvReverse.aim { background: rgba(201, 184, 255, 0.45); }
@@ -691,8 +705,9 @@ class ReverseUI {
     } else ui.appendChild(this.top);
     this.chip = document.createElement('div');
     this.chip.id = 'lvReverse';
-    this.chip.innerHTML = '<i></i><span>⟲ 8s</span>';
-    this.chipText = this.chip.querySelector('span');
+    this.chip.innerHTML = '<i></i><span><u>⟲ </u><em></em><b>8s</b></span>';
+    this.chipName = this.chip.querySelector('em');
+    this.chipNum = this.chip.querySelector('b');
     this.top.appendChild(this.chip);
     this.label = document.createElement('div');
     this.label.id = 'lvTarget';
@@ -751,7 +766,10 @@ class ReverseUI {
     }
     const frac = h.frac.toFixed(2);
     this.set('frac', frac, (v) => document.body.style.setProperty('--lvc', v));
-    this.set('chip', h.chip, (v) => (this.chipText.textContent = v));
+    this.set('chip', h.chip, () => {
+      this.chipName.textContent = h.chipName;
+      this.chipNum.textContent = h.chipNum;
+    });
     this.set('state', `${h.aim}|${h.hold}|${h.warn}`, () => {
       this.chip.classList.toggle('aim', h.aim);
       this.chip.classList.toggle('hold', h.hold);

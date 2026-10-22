@@ -938,7 +938,8 @@ export class LastVersion {
         body.lastversion #objective .lvside { font-size: 11.5px; font-weight: 500; margin-top: 7px; opacity: 0.92; }
         body.lastversion #objective .lvside small { display: block; font-size: 9.5px; letter-spacing: 0.16em; }
         body.lastversion #objective .lvwhy:empty, body.lastversion #objective .lvside:empty { display: none; }
-        body.lastversion.touch #objective .lvwhy { font-size: 10.5px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }`;
+        body.lastversion.touch #objective .lvwhy { font-size: 10.5px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        @media (orientation: portrait) { body.lastversion.touch #objective { top: calc(max(14px, env(safe-area-inset-top)) + 150px); } }`; // (upright, under the dock, as style.css puts it; its edition top of 90 px sat behind the dock)
       document.head.appendChild(st);
     }
     const part = (cls) => el.querySelector(`.${cls}`) || el.appendChild(Object.assign(document.createElement('div'), { className: cls }));
