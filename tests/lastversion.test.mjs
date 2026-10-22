@@ -1262,6 +1262,10 @@ test('Helix: the court is the hub of Mission 2; the plant terrace is on a roof a
   assert.ok(Math.abs(m2.rooms.power.spawn[1] - 0.86 - 4.5) < 0.01 && m2.rooms.power.sky === 'open', 'the plant terrace: 4.5 m up, open to the storm');
   // M3: up the service yard's stair to the control room on the north wing's top floor (9 m)
   ok(m3, 'PRESENT', [41.3, 0, -41.6], [[30, -41.6], [21, -41.6], [12, -41.6], [8, -41.6]], 9);
+  // and where there is no door the walls hold: the lobby's glass, the gallery's alcove, the conduit hall, the archive and
+  // the lift (past the officer's door) from the court, the blocks the raised rooms stand on
+  for (const [l, start, to] of [[m2, [-48, 0, 38.4], [[-44, 37], [-36, 37]]], [m2, [-34, 0, 9], [[-44, 9]]], [m2, [-25, 0, -30], [[-25, -45]]], [m2, [-2, 0, -30], [[-2, -45]]],
+    [m2, [14, 0, -30], [[14, -45]]], [m2, [-35, 0, -18], [[-48, -18]]], [m3, [4, 0, -30], [[4, -45]]]]) assert.ok(walkRoute(l, 'PRESENT', start, to).stuck, `no way through from ${start} to ${JSON.stringify(to)}`);
   // each raised room stands on a solid block from the ground to its floor slab
   for (const [l, id] of [[m2, 'power'], [m3, 'control']]) {
     const [x0, z0, x1, z1] = l.rooms[id].rect, base = l.rooms[id].spawn[1] - 0.86;
