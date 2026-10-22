@@ -1968,7 +1968,8 @@ async function survey() {
       }
       views.push({ key, place: m.place, sameAs: m.sameAs, st, ...v });
       console.log(`  hash ${key} ${st.padEnd(7)} ${v.bits.match(/.{4}/g).map((n) => parseInt(n, 2).toString(16)).join('')} sky sd ${v.sd} fog distance ${v.fogD}`);
-      check(v.year === st && (v.sd >= 0.012 || v.fogD >= 0.05), `${key} ${st}: the top quarter is sky, not flat fog`, JSON.stringify({ sd: v.sd, fogD: v.fogD }));
+      // (what this proves: the top quarter is not flat fog. A lit ceiling passes it as sky does, so it is no proof of open sky)
+      check(v.year === st && (v.sd >= 0.012 || v.fogD >= 0.05), `${key} ${st}: the top quarter is sky or a lit ceiling, not flat fog`, JSON.stringify({ sd: v.sd, fogD: v.fogD }));
     }
     if (crashed) lost++;
     await sp.close().catch(() => {});

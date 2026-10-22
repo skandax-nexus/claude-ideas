@@ -39,6 +39,9 @@ export const CHAPTERS = {
 export const ORDER = ['prologue', 'act1', 'act2', 'act3', 'act4', 'finale'];
 export const MISSIONS = { prologue: PROLOGUE, ...ACTS };
 
+// main.js's own sun offset (main.js _sunOff): the shadows' sun outside a place
+const DEFAULT_SUN = Object.freeze([6, 24, 9]);
+
 // what the generators may build in this edition: residue bridges and stairs, watchers, sweepers
 export const MECHS = ['echo', 'sentinel', 'time'];
 const EFFECTS = ['echoSolid', 'echoVisible', 'heldPersists', 'timeStop', 'observerFrozen']; // what a level here can ask for
@@ -1665,9 +1668,10 @@ export class LastVersion {
     return this.level?.place ? placeTheme(this.level, this.yearOf(state)) : null;
   }
 
-  // where the sun shines from, for the shadows (a low sun throws long ones), or main.js's default
+  // where the sun shines from, for the shadows (a low sun throws long ones); outside a place main.js's own default
+  // offset, given back (main.js keeps the last offset it was handed, so a null would leave the last place's sun)
   sunDir() {
-    return this.level?.place ? placeSun(this.level, this.yearOf(this.g.room ? this.g.engine.state(this.g.room) : 'PRESENT')) : null;
+    return (this.level?.place && placeSun(this.level, this.yearOf(this.g.room ? this.g.engine.state(this.g.room) : 'PRESENT'))) || DEFAULT_SUN;
   }
 
   // a place's year for a state (a room of the mission's own (Helix's rooms) shares the place's years)

@@ -1345,6 +1345,29 @@ test('every year of a place lights main.js: a full theme and a sun direction, th
     assert.equal(themeFor(level, 'NOPE'), null);
   }
   assert.equal(themeFor({}, 'PRESENT'), null, 'outside a place, main.js keeps its own themes');
+  // outside a place the edition hands main.js its own default sun back (main.js keeps the last offset it is given)
+  const rt = Object.assign(Object.create(LastVersion.prototype), { g: { room: null }, def: LV, level: null });
+  assert.deepEqual([...rt.sunDir()], [6, 24, 9], 'no place: the default sun, not the last place\'s');
+  rt.level = { place: 'x', years: {} };
+  assert.deepEqual([...rt.sunDir()], [6, 24, 9], 'a level without years: the default sun');
+  assert.ok(/this\._sunOff = new THREE\.Vector3\(6, 24, 9\)/.test(fs.readFileSync('game/js/main.js', 'utf8')), 'the same default as main.js');
+});
+
+// a 'tasks' beat stands each task at its landmark; a name the place does not have is an error, never a task at NaN
+test('a tasks beat puts every task at a finite point, and a landmark the place lacks is an error', () => {
+  const game = { engine: engine(), facts: new FactStore(), story: null };
+  const rt = Object.assign(Object.create(LastVersion.prototype), { g: game, def: LV });
+  game.story = rt.makeStory('prologue');
+  const deck = game.story.decks[0];
+  const tasks = (...at) => ({ ...deck, beats: [{ kind: 'tasks', tasks: at.map((a, i) => ({ at: a, prompt: `TASK ${i}` })) }] });
+  game.story.decks[0] = tasks('door4B', 'tramStop', [3, -20]);
+  const level = rt.buildLevel({ lv: true, chapter: 'prologue', deck: 0, sector: 0, flags: {} });
+  const ts = level.interactables.filter((i) => i.task !== undefined);
+  assert.equal(ts.length, 3);
+  for (const t of ts) assert.ok(t.pos.every(Number.isFinite), `task ${t.task} at ${t.pos}`);
+  game.story.decks[0] = tasks('door4B', 'tramStpo');
+  assert.throws(() => rt.buildLevel({ lv: true, chapter: 'prologue', deck: 0, sector: 0, flags: {} }), /no landmark tramStpo/);
+  game.story.decks[0] = deck;
 });
 
 // THINK (H): Kai answers from the mission's own thoughts, never ZoneGen's challenge-hint table
