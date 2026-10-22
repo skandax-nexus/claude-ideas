@@ -37,7 +37,7 @@ import { ERAS, EXCEPTIONS, ANCIENT_WOMEN, AMBIENT_CAST, eraModels, MAX_PEOPLE } 
 import { WATCHERS, HUMAN, watcherModels, kindsOf } from '../game/js/editions/lastversion/watchers.js';
 import { spokenLines, voiceOf, lexicon, GROUPS, chapterCardLines, missionCardLines, endingLines, POSTCREDIT, choiceLine, numberWords } from '../game/js/editions/lastversion/voicelines.js';
 import { voicePieces } from '../game/js/audio/voiceKey.js';
-import { KINDS as THREAD_KINDS, MINUTES, threadsOf, sidesOf, quartersOf as threadQuarters, factOf, isRewritten, estimate, doneCond, sideState } from '../game/js/editions/lastversion/Threads.js';
+import { KINDS as THREAD_KINDS, MINUTES, threadsOf, sidesOf, quartersOf as threadQuarters, factOf, isRewritten, estimate, doneCond, sideState, isDone } from '../game/js/editions/lastversion/Threads.js';
 import { QUESTIONS, CLUES, CONSEQUENCES, PREVIOUSLY, EPILOGUE, MISSION_ORDER, missionIndex } from '../game/js/editions/lastversion/ledger.js';
 import { SAVE_FORMAT } from '../game/js/editions/lastversion/Runtime.js';
 
@@ -1624,7 +1624,8 @@ test('the Prologue is rewritten as threads: one map each, soft quarters, a cold 
       if (t.at && typeof t.at === 'string') assert.ok(level.landmarks[t.at], `${at}: at ${t.at}, a landmark of the place`);
       for (const sp of t.spots || []) assert.ok(level.landmarks[sp.at] && level.interactables.some((i) => i.id === sp.id), `${at}: spot ${sp.id} at ${sp.at}`);
       if (t.kind === 'deduce' && t.deduction) assert.ok(m.deductions?.[t.deduction]?.answers.some((a) => a.correct), `${at}: a deduction with a right answer`);
-      if (t.kind === 'talk') assert.ok(level.npcs.some((n) => n.crew === t.npc || n.id === t.npc), `${at}: ${t.npc} is in the level`);
+      // (someone to talk to: in the level, and offered a talk: not silent, and a passer-by only with lines or a scene)
+      if (t.kind === 'talk') assert.ok(level.npcs.some((n) => (n.crew === t.npc || n.id === t.npc) && !n.silent && (!n.ambient || n.lines || n.scene)), `${at}: ${t.npc} is in the level, and can be talked to`);
       if (t.kind === 'chase') {
         const n = level.npcs.find((x) => x.id === t.npc);
         assert.ok(n?.chase && n.path?.length >= 2 && n.chase.leash === 14, `${at}: the chase walks a path on a 14 m leash`);
@@ -1883,6 +1884,43 @@ test('Acts I and II are rewritten as threads; the length model: each mission 25-
   }
 });
 
+test('a rewritten mission starts with none of its threads done (a chapter started from the menu: its PRIMES, faction neutral)', () => {
+  for (const ch of ['prologue', 'act1', 'act2']) {
+    const facts = new FactStore();
+    for (const c of ORDER.slice(0, ORDER.indexOf(ch) + 1)) for (const k of PRIMES[c] || []) (Array.isArray(k) ? facts.set(k[0], k[1]) : facts.set(k));
+    if (ch !== 'prologue') facts.set('faction', 'neutral');
+    for (const m of MISSIONS[ch]) {
+      const d = asDeck(m);
+      for (const t of threadsOf(d)) assert.ok(!isDone(facts, d, t), `${m.key}/${t.id} is done before it is played (${doneCond(d, t)})`);
+      assert.ok(!facts.test(m.done), `${m.key}: its end (${m.done}) holds at the start`);
+    }
+  }
+});
+
+test('a staged moment is kept in the load, not the save: a save taken while it plays loads with it still to come', () => {
+  const game = { engine: engine(), facts: new FactStore(), story: null, campaign: { lv: true, chapter: 'act2', deck: 0, sector: 0, flags: {}, quarter: 0 }, log: [], hud: { say() {}, toast() {} }, deckWorld: { flags: {}, npcs: [] }, menu: null, after() {} };
+  const rt = Object.assign(Object.create(LastVersion.prototype), { g: game, def: LV });
+  game.story = rt.makeStory('act2');
+  rt.level = rt.buildLevel(game.campaign);
+  const played = [];
+  rt.cinema = { active: null, play: (o, then) => played.push(then) };
+  const th = rt.threads;
+  for (const k of ['t_m09_loop1', 't_m09_loop2', 'clk_a', 't_m09_order', 'clk_b', 'clk_c', 'transmitter_cut', 'rhea_freed', 'ev_ninth_view']) game.facts.set(k, true);
+  th.update();
+  assert.equal(th.current()?.id, 'reset', 'Mission 9\'s last thread: the reset, a staged moment');
+  th.stage();
+  assert.equal(played.length, 1, 'it plays');
+  th.stage();
+  assert.equal(played.length, 1, 'once');
+  assert.ok(!Object.keys(game.deckWorld.flags).some((k) => k.startsWith('staged_')), 'nothing about it is in the saved flags');
+  // a load while it plays: the level comes back, and so does the moment (its thread is not done yet)
+  th.attach(rt.deck, rt.level);
+  th.stage();
+  assert.equal(played.length, 2, 'after a load it plays again');
+  played[1]();
+  assert.ok(game.facts.get('t_m09_reset'), 'and when it ends, its thread is done');
+});
+
 test('Act I: the moments the sheets name, and the choices they keep (machine_buried, water_route, ezra_debt, mira_tape, rook_fate)', () => {
   const m = (k) => main.find((x) => x.key === k);
   const thr = (k, id) => threadsOf(asDeck(m(k))).find((t) => t.id === id);
@@ -1894,7 +1932,7 @@ test('Act I: the moments the sheets name, and the choices they keep (machine_bur
   assert.ok(m('m04').deductions.panels.answers.some((a) => a.correct && a.needs === 'ev_ash_layers'));
   assert.ok(m('m04').scenes.card.set.card_found && m('m04').done === 'card_found');
   // M5: divert -> the abandoned village investigated -> the gate -> the machine buried or left; chain B in the gorge
-  assert.deepEqual([...thr('m05', 'gate').after].sort(), ['wall', 'why']);
+  assert.deepEqual([...thr('m05', 'gate').after].sort(), ['leave', 'mural', 'wall'], 'the gate waits for why they left: the hearths\' echoes and the mural');
   assert.deepEqual([thr('m05', 'why').after, thr('m05', 'machine').after, thr('m05', 'bury').after], [['divert'], ['gate'], ['machine']]);
   assert.deepEqual(sets(m('m05').talks, 'machine_buried').sort(), ['cairn', 'clay']);
   assert.equal(thr('m05', 'leave').kind, 'playback', 'the villagers\' leaving, played back by its echoes');

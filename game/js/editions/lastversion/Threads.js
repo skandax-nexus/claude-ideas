@@ -181,6 +181,8 @@ export class Threads {
     this.deck = null;
     this.list = [];
     this.byId = {};
+    this.staged = new Set();
+    this.tick = 0;
   }
 
   get g() {
@@ -201,6 +203,10 @@ export class Threads {
     this.playing = null;
     this.chasers = null;
     this.room = null;
+    // the staged moments already started in this load (kept here, not in the saved flags: a save taken while one
+    // plays loads with its thread not done, and the moment plays again)
+    this.staged = new Set();
+    this.tick = 0;
   }
 
   done(t) {
@@ -271,7 +277,11 @@ export class Threads {
     this.quarters();
     this.chase(dt);
     this.stage();
-    this.update(); // (a thread whose done reads a count, or a condition no fact change re-tested)
+    // (a thread whose done reads a count, or a condition no fact change re-tested; a fact change updates at once)
+    if ((this.tick -= dt) <= 0) {
+      this.tick = 0.25;
+      this.update();
+    }
   }
 
   // a year carries out of a room into the open place (deck.carryOut: the rooms whose year does): Mission 3's lab,
@@ -343,8 +353,8 @@ export class Threads {
     for (const t of this.list) {
       if (t.kind !== 'cinema' || !t.lines?.length || this.done(t) || !this.available(t) || this.passed(t)) continue;
       const k = factOf(this.deck, t);
-      if (g.deckWorld.flags[`staged_${t.id}`]) continue;
-      g.deckWorld.flags[`staged_${t.id}`] = true;
+      if (this.staged.has(t.id)) continue;
+      this.staged.add(t.id);
       rt.cinema.play({ shots: t.shots || null, lines: t.lines, cue: t.cue || null, letterbox: t.letterbox !== false }, () => {
         g.facts.set(k);
         this.update();

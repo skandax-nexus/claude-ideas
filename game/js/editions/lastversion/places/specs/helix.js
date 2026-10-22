@@ -95,9 +95,9 @@ function northRuin(P) {
   });
   // 2026: the construction gangway across the court at roof height, from the north wing to a scaffold tower in the south
   P.land('gangway2026', 0, WING_H, -40.5, Math.PI);
-  P.land('bouquet', 2, WING_H, 0, 0);
+  P.land('bouquet', 0.4, WING_H, 0, 0); // (U7: on the gangway itself, which is 2.8 m wide)
   P.land('lunchRoom2026', -24, 0, 22, Math.PI / 2);
-  P.land('eastRuin', 44, 0, 20, Math.PI / 2);
+  P.land('eastRuin', 31, 0, 10, Math.PI / 2); // (U7: in the court's east side, by the east wing's glass: the wing itself is solid)
   P.E('PAST', () => {
     P.box([-1.4, WING_H - 0.3, -38.5, 1.4, WING_H, 30], 'scaffold');
     for (const sx of [-1.4, 1.4]) P.vbox([sx - 0.04, WING_H, -38.5, sx + 0.04, WING_H + 1.1, 30], 'scaffold', { noShadow: 1 });
@@ -170,7 +170,7 @@ export default {
       quarters: [
         { name: 'THE CHASE — 2049', area: [-70, -90, 70, -38], spawn: [-40, WING_H, -44, -Math.PI / 2], threshold: { at: 'gangway2026', kind: 'gangway' } },
         { name: 'THE CORRIDOR THAT WAS — 2026', area: [-38, -38, 38, 38], spawn: [0, 0, 26, 3.1416], threshold: { at: 'eastRuin', kind: 'ruin' } },
-        { name: 'THE RUIN — 2196', area: [38, -38, 70, 44], spawn: [30, 0, 4, -0.6], threshold: { at: 'sinkTerraces', kind: 'stair' } },
+        { name: 'THE RUIN — 2196', area: [20, -38, 70, 44], spawn: [30, 0, 4, -0.6], threshold: { at: 'sinkTerraces', kind: 'stair' } },
         { name: 'THE SECOND CHAMBER', area: [-46, -70, 46, -38], spawnAt: 'sinkTerraces', threshold: null },
       ],
       crowd: [{ era: 'present', years: ['PAST'], region: 'helix', role: 'builder', path: [[-20, -30], [20, -30], [20, -20]], n: 4, echo: true }],

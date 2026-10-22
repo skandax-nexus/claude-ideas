@@ -248,19 +248,20 @@ scratchpad before a pack is committed. The same person shares a base voice:
 Kai, the Witness (and the VOICE, recorded as him) and young Kai on `am_eric`; Mira, Dr. Lin and the
 Child on `af_river`. Every tier-2 person and each crowd voice (by sex and age) has a voice of its own.
 
-### Threads and ledgers (v2.1, U6; OVERHAUL.md §3.3, §9)
+### Threads and ledgers (v2.1, U6–U7; OVERHAUL.md §3.3, §9)
 
 A rewritten mission is one map with soft quarters, not a chain of sectors behind gates. Each quarter holds
 main threads (the story's way through) and side stories; the objective on the HUD is the first main thread not
 yet done, with its *because* line under it, and THINK reads that thread's three hint tiers (a nudge, the place,
-the answer). Missions 1–3 are written this way; every other mission runs through a shim that makes each of its
-legacy beats one thread in quarter *i*, so the case board, hints and save format are the same everywhere.
+the answer). Missions 1–13 are written this way (the Prologue in U6, Acts I and II in U7); every later mission
+runs through a shim that makes each of its legacy beats one thread in quarter *i*, so the case board, hints and
+save format are the same everywhere.
 
 | Module | What it does |
 | --- | --- |
-| `Threads.js` | The twelve kinds (`go`, `talk`, `clue`, `residue`, `deduce`, `scene`, `choice`, `tasks`, `stealth`, `chase`, `cinema`, `invert`) and their default minutes (`MINUTES`); `quartersOf` (the mission's quarters or the shim's), `threadsOf`, `sidesOf`, `estimate` (the length model: cold open + main threads + hook = main; side stories = optional); `placeThreads` (what a kind needs at its landmark: triggers, spots, deduction and record scenes, the chase's path); and the runtime class: the objective and its because line, the tracked side story, completion (each thread's fact `t_<mkey>_<id>`; what the thread carries is paid out once, `_paid`, even when its kind sets the fact itself), the year carried out of a room into the open place (`carryOut`), THINK's tiers, the furthest quarter (a toast and an autosave at each new one), the chase (DeckWorld's own path walker, paced so she keeps 10 m ahead and waits beyond 14 m; it never fails), staged `cinema` moments, deductions (a wrong answer is said and the question stays open; a right one without its evidence is not yet provable) and residue records (what a record says now, and in the past what it said first). |
+| `Threads.js` | The fourteen kinds (`go`, `talk`, `clue`, `residue`, `deduce`, `scene`, `choice`, `tasks`, `stealth`, `chase`, `cinema`, `invert`, and since U7 `loop` and `playback`) and their default minutes (`MINUTES`); `quartersOf` (the mission's quarters or the shim's), `threadsOf`, `sidesOf`, `estimate` (the length model: cold open + main threads + hook = main; side stories = optional); `placeThreads` (what a kind needs at its landmark: triggers, spots, deduction and record scenes, the chase's path); and the runtime class: the objective and its because line, the tracked side story, completion (each thread's fact `t_<mkey>_<id>`; what the thread carries is paid out once, `_paid`, even when its kind sets the fact itself), the year carried out of a room into the open place (`carryOut`), THINK's tiers, the furthest quarter (a toast and an autosave at each new one), the chase (DeckWorld's own path walker, paced so she keeps 10 m ahead and waits beyond 14 m; it never fails), staged `cinema` moments (each started once per load, never marked in the saved flags: a save taken while one plays loads with it still to come), deductions (a wrong answer is said and the question stays open; a right one without its evidence is not yet provable) and residue records (what a record says now, and in the past what it said first); `loop` (done once its resets happen while it is the objective) and `playback` (the recovered pieces put in order, one a use, then echoes that stand only while it plays re-enact the scene). A thread's completion is re-tested on every fact change and four times a second. |
 | `ledger.js` | The campaign's ledgers in one place (§9.3–§9.7): `QUESTIONS` (each with the mission that opens it and the one that answers it; the case board shows the open ones as THE QUESTIONS), `CLUES` (C1–C12: plant, reinforce, payoff, each step a fact or a line of text in a named mission), `CONSEQUENCES` (every consequence fact, where it is set and where it is read), `CHOSEN` (what WHAT YOU CHOSE says for each), `PREVIOUSLY` (three lines per chapter, for a chapter's start and a loaded save), `EPILOGUE` (a line per consequence, read by the ending: Pryce, Dale and Iven's team since U6). Unit tests hold them to the missions: every clue planted before its payoff, every consequence read later or listed as an epilogue line. |
-| `Runtime.js` | A rewritten mission loads once (all its quarters), opens on its `coldOpen` (with `first` before the mission's card, the rest after), offers SKIP for the whole opening (the button, or Enter while the pointer is locked), and ends on its hook (`autoExit` where the story ends the mission rather than a gate). A load spawns at the furthest quarter after a PREVIOUSLY card. The case board has THE QUESTIONS, SIDE STORIES (a TRACK button puts that story's next thread under the objective), WHAT YOU CHOSE and ABILITIES. `time_<mkey>` stores each mission's play time (the ending sums them per chapter). Save format 22 (`campaign.lvFormat`): an older save inside a rewritten mission restarts it at its first quarter with its facts. Starting a chapter from the menu primes the facts a player would carry into it (`PRIMES`). |
+| `Runtime.js` | A rewritten mission loads once (all its quarters), opens on its `coldOpen` (with `first` before the mission's card, the rest after), offers SKIP for the whole opening (the button, or Enter while the pointer is locked), and ends on its hook (`autoExit` where the story ends the mission rather than a gate). A load spawns at the furthest quarter after a PREVIOUSLY card. The case board has THE QUESTIONS, SIDE STORIES (a TRACK button puts that story's next thread under the objective), WHAT YOU CHOSE and ABILITIES. `time_<mkey>` stores each mission's play time (the ending sums them per chapter). Save format 23 (`campaign.lvFormat`; 22 for the Prologue's rewrite, 23 for Acts I and II): an older save inside a mission rewritten since restarts it at its first quarter with its facts. Starting a chapter from the menu primes the facts a player would carry into it (`PRIMES`). A loop (`deck.loop: { period, variants, upward, until }`) resets the place every `period` seconds until `until` holds: the patrols walk the next variant's rounds, the crowds restart further along their routes, the rain falls upward for a second. While an opening or a staged moment plays, the watchers walk their rounds but see nobody. Authored triggers may ask for a year (`@FUTURE`). |
 
 The Prologue as written (OVERHAUL.md §5, M1–M3): Mission 1 opens before its title on Helix at 05:40 (a card
 opens Chamber One while Kai sleeps; his phone lights once), then 08:02 at door 4B; the avenue's anomalies read
@@ -274,6 +275,42 @@ junior pass (OVERRIDE 14-03-2026 16:02); chain D begins; Rook in person at the c
 for clocks?", `trust_rook`). Mission 3: the ring takes Kai's hand and the cut seals into a circle with a broken halo
 (`wrist_mark`); the 2026 excavation office through a gap in the lab's wall that only 2026 has (`ev_site_zero`); the
 2196 plaque; chain D's route; the fracture, after which the mission ends on its own.
+
+Acts I and II as written (OVERHAUL.md §5, M4–M13; `act1.js`, `act2.js`): Mission 4 opens on the villagers' side at
+night ("Then it is him again. Put a blanket over him."), then Kai wakes under the blanket; three pictograms, the
+telling-stone, the meal at the first fire where the craftswoman, the storyteller and a girl speak of "the others" (the
+grey one is the Witness) and the ash under the pot keeps the order cooking, feasting, nothing, cooking; the stele and
+its residue, the three stones ("HE IS NOT LYING. HE IS EARLY."), the Elder's bible exchange, the under-chamber's panels
+read from the ash, and the card (VAREN, K., grey at the temples); Niko's questions (`niko_told`) and the girl's stone
+ring. Mission 5: Niko's bible exchange, the river turned at its head (thriving), the abandoned village's why (tallies,
+names, cold hearths, and the hearth's echoes walking out: "Then they left because of me."), the wall braced, the
+mural of what Kai told Niko, the gate released in the flood, the machine in the drained basin and Niko's choice
+(`machine_buried`); chain B (Tala's three gorge gates, read off the mural cliff, `water_route`). Mission 6: the 1999
+cold open, Ezra Moll ("Which version of the question are you asking?"), the arm's tally, the window's three faces,
+the hidden stair deduced from the boards in two years, three clocks in three years, the recording; the Clockmaker's
+Debt (`ezra_debt`) and Rook's gauge. Mission 7: the gnomon at the first sky, the star tube at 2049's blue hour, the
+dates ring ("They didn't know when. They knew who."), the scavengers' camp (their stones come back), the outer ring,
+the new star of 2196, and Mira's tape (`mira_tape`); the scavengers' cache, Niko's river clue. Mission 8: what changed
+(the river court, the print case, the photo wall), the revised staff records, Lin's desk, the 2026 security log, Rook
+confronted in his office (`rook_fate`: expose, persuade, record; his words follow `trust_rook` and `machine_buried`), the
+boot print, the last ten minutes put in order and played back by echoes, Lin in the cube ("Because I am not the one
+who died."), VERSION 17; Iven's testimony, the staff door (Pryce or Dale), the 2026 group photo. Mission 9: two loops
+(each reset moves the patrols, burns one more shopfront on the quay, restarts the crowds further along, and the rain
+falls upward), clocks A, B and C, the cancelled evacuation order, the transmitter whose carrier is the three notes,
+Rhea, the tower at 08:13 ("To become me."); the evacuees warned with the order, the Child at the loop's edge. Mission
+10: the Director as `rook_fate` made them, the cell block, Sera ("For ending it."), the power runs in two years, the
+captured afterimage projector (Echo Step), the prisoners' choice, the yard; troopers that move their rounds and look
+further after each catch; the intake records, the Director's office. Mission 11: the music box quieter as Kai
+approaches, a gurney, an IV stand and a pane of glass that go back where they were, young Kai on the bench, REVERSE
+taught in the records hall, the records compared, Nurse Odile (`odile_released`), the reversing lock, Ward 32 and Lin's
+photograph; the photo board's two ages, Odile's echo, the intercom room. Mission 12: the roof chase (he waits at the
+glass; it never fails), Corridor B in 2026, the route deduced from his stops, the Witness reversing the fallen stair
+in Kai's own colour, Kai following by REVERSE, the beam, the voicemail, face to face at the second ring; Rook in the
+corridor, the bouquet, the lunch-room whiteboard; a drone that can be patrol-reversed. Mission 13: the field orders,
+a shell from each side reversed into its own gun (`ev_both_sides`), nobody fired first (a deduction), across the
+battlefield (one Continuum patrol walks its round backwards), Sera and Brask, three devices in three years, the
+stabilizer (`faction`, with `stabilizer_destroyed` or `civilians_freed`), the district thawing or not, REVERSE's cap at
+10 s; the burial reversed (a scarred wrist, `ev_witness_cause`), the people who listened, the roll-call wall.
 
 ## Authored and generated
 
@@ -290,7 +327,8 @@ for clocks?", `trust_rook`). Mission 3: the ring takes Kai's hand and the cut se
   then the Chronolith's first switch, the cable connected in 2026 and powered in 2049, the
   machine hall crossed in 2196, Iven's maintenance route (quest chain D) and the control room.
   Every bible line of these missions is spoken verbatim.
-- For every mission of Acts I–IV and the Finale: its setup (intro), its three beats with their
+- Acts I and II, all of them, rewritten for U7 as threads in quarters (above).
+- For every mission of Acts III–IV and the Finale: its setup (intro), its three beats with their
   goals, the bible's quoted lines, the scenes and choices, the memory fragments, and its mission
   ending (outro); the Mission 13 faction choice; the Mission 10 Echo Step unlock; the ally call in
   Mission 21; the three endings and the post-credit "Version one hundred and eighteen."
@@ -312,16 +350,16 @@ for clocks?", `trust_rook`). Mission 3: the ring takes Kai's hand and the cut se
 | 1 | The Last Normal Day | Prologue | Rain City South (`rain_south`, open place) | 2049 (+ 8:13) | Anomalies, Rook's call, checkpoint, the Zero Second, rescue, "Do not build the machine", Mira; chain A |
 | 2 | Helix Goes Dark | Prologue | Helix, west wing (`helix`, rooms round the court) | 2049 | Emergency light, drone, three cells, Iven, the trustworthy officer, the rewinding unit, the drawing, the chamber |
 | 3 | The First Switch | Prologue | Helix, east wing (`helix`) | 2049 2026 2196 | The switch, cable/power, the parked lift, chain D, the anchor, the fracture |
-| 4 | The Man from the Last Day | I | The Ring Hill (`valley_upper`) | THE VILLAGE, BEFORE THE FIRE | Telling-stone, inscription residue, the elder; the access card |
-| 5 | The Village That Never Existed | I | The river bend and the gorge (`valley_river`) | THRIVING, ABANDONED, FLOODED | River (past), wall (middle), gate (latest); the buried machine |
-| 6 | The Clockmaker's House | I | Old Town and the light-well house (`oldtown`) | 2026 2049 2196 | Repeating arms, the clockmaker, the mechanism; the recording |
-| 7 | The Broken Observatory | I | The Ridge (`observatory`) | THE FIRST SKY, 2049, 2196 | Alignment, the dates, Mira's recording |
-| 8 | The First Death | I | Helix in VERSION 17 (`helix_v17`) | 2049 (V17), 2026 | Staff records, the corrupted log, containment; VERSION 17 |
-| 9 | Nine Minutes to Zero | II | Northbank (`northbank`) | 2049 2026 | Loop (82 s), clocks, the cancelled order, the engineer |
-| 10 | Enemies Who Remember | II | The dam (`dam`) | 2049 2026 | Intake log, Sera, the prisoners' choice; Echo Step |
-| 11 | The Inverted Hospital | II | Rain City General (`hospital`) | 2049 2026 (+ reversed wards) | REVERSE unlocks: the tutorial, the charred file, the reversing lock; Mira's file |
-| 12 | The Man Behind the Glass | II | Helix, north wing (`helix`) | all three | The 2026 corridor, the route, the Witness and the second Chronolith |
-| 13 | The Nine-Minute War | II | The delta port (`warport`) | all three | Field orders, three devices in three years, the stabilizer (faction) |
+| 4 | The Man from the Last Day | I | The Ring Hill (`valley_upper`) | THE VILLAGE, BEFORE THE FIRE | Pictograms, the telling-stone, the meal at the first fire, the stele, three stones, the Elder, the panels; the access card |
+| 5 | The Village That Never Existed | I | The river bend and the gorge (`valley_river`) | THRIVING, ABANDONED, FLOODED | River (thriving), why they left (abandoned), wall, mural, gate (flooded); the machine buried or left; chain B |
+| 6 | The Clockmaker's House | I | Old Town and the light-well house (`oldtown`) | 2026 2049 2196 | Ezra Moll, the arm, the hidden stair, three clocks; the recording; the Debt |
+| 7 | The Broken Observatory | I | The Ridge (`observatory`) | THE FIRST SKY, 2049, 2196 | Three instruments in three years, the dates, the scavengers; Mira's tape |
+| 8 | The First Death | I | Helix in VERSION 17 (`helix_v17`) | 2049 (V17), 2026 | What changed, the log, Rook confronted (`rook_fate`), the boot print, the last ten minutes, Lin; VERSION 17 |
+| 9 | Nine Minutes to Zero | II | Northbank (`northbank`) | 2049 2026 | Two loops (90 s), three clocks, the cancelled order, the transmitter, Rhea, the tower at 08:13 |
+| 10 | Enemies Who Remember | II | The dam (`dam`) | 2049 2026 | The Director, the cell block, Sera, the power runs, the projector (Echo Step), the prisoners |
+| 11 | The Inverted Hospital | II | Rain City General (`hospital`) | 2049 2026 (+ reversed wards) | The quieter sound, returning hazards, REVERSE taught, the records compared, Odile, the lock; Mira's file |
+| 12 | The Man Behind the Glass | II | Helix, north wing (`helix`) | all three | The chase, Corridor B, the route, his stair then Kai's, the voicemail, the second Chronolith |
+| 13 | The Nine-Minute War | II | The delta port (`warport`) | all three | Field orders, shells reversed (`ev_both_sides`), who fired first, three devices, the stabilizer (faction) |
 | 14 | Welcome to 2196 | III | Downtown (`drowned`) | all three | The beacon's parts, Sera's safe path, the memorial |
 | 15 | The City That Forgot Tomorrow | III | The lock city (`lockcity`) | 2196 2026 2049 | Loop (120 s), the fabricated record, Anja's lock (stabilize / free) |
 | 16 | The Museum of Failed Worlds | III | The sinkhole (`sinkhole`) | 2196 2026 2049 | Three memories, comparison, the photograph |
@@ -383,7 +421,10 @@ for clocks?", `trust_rook`). Mission 3: the ring takes Kai's hand and the cut se
   clue ledger (every plant before its payoff), the consequence ledger, the bible's exchanges verbatim with their
   speakers and no design-note words, the speech budget, PREVIOUSLY and THE QUESTIONS from the common pack, the
   thread engine, a thread paid once, the year carried out of Mission 3's lab, the save-format migration, and
-  Mission 3's walk out through the lab's 2026 frame to the dig.
+  Mission 3's walk out through the lab's 2026 frame to the dig. Acts I and II (U7): rewritten as threads, each
+  mission 25–42 minutes in the length model with its main path ≥ 70%; the moments each sheet names and the choices
+  it keeps; no mission starting with a thread already done (a chapter from the menu, with its PRIMES and faction
+  neutral); every talk's person can be talked to; a staged moment kept in the load, not the save.
 - `tests/lastversion-perf.mjs` (browser, read-only): what a place costs on an emulated phone
   (915×412 at 2.625, medium quality) at quarter 0 of each mission and year: full-frame and
   scene-pass draw calls and triangles, the static draws split into scenery, sky, horizon and
@@ -393,10 +434,17 @@ for clocks?", `trust_rook`). Mission 3: the ring takes Kai's hand and the cut se
   played through (both quest chains) into Act I (since U6 Mission 1 is walked with real movement and every line
   at its own length, its time logged; the cold opens, SKIP by Enter and by a tap, Pryce's 05:40 line, `wrist_cut`
   and `wrist_mark`, the chase and the raincoat, an M1 save loading at its furthest quarter, Rook at the chamber
-  door, the excavation office, `time_<mkey>` and the case board's new sections; `LV_ONLY=prologue` stops there), then Missions 5, 11 (REVERSE: R does nothing
-  before it is taught, the unlock in the records, R and the touch ⟲ button start and release a
-  hold, a year switch releases it, the refusal, the file readable only while held, a jammed bolt,
-  a settled bolt through a save and a load, the lock opening Ward 32), 13, 14 and 19 and the
+  door, the excavation office, `time_<mkey>` and the case board's new sections; `LV_ONLY=prologue` stops there), then
+  Acts I and II played thread by thread (U7: LVP walks each mission's objective, real movement where a straight walk
+  gets there and placed elsewhere, every line at its own length, with side stories; each mission's time is its
+  telemetry): a side story tracked from the case board; Mission 5's order (the river, the abandoned village's why,
+  the gate, `machine_buried`) and chain B; Mission 8's confrontation (`rook_fate`) and VERSION 17; Mission 9's two
+  loops with other patrols and the rain upward, then the transmitter, Rhea and the tower; Mission 10's troopers that
+  see, catch and remember; Mission 11 (REVERSE: R does nothing before it is taught, the music box quieter toward its
+  source, a returning gurney's setback, the unlock in the records, R and the touch ⟲ button start and release a hold,
+  a year switch releases it, the refusal, the file readable only while held, a jammed bolt, a settled bolt through
+  a save and a load, the lock opening Ward 32); Mission 12's chase that never fails and the Witness's stair before
+  Kai's REVERSE; Mission 13's shells from each side (`ev_both_sides`) and the faction; then 14 and 19 and the
   Finale to an ending, real walks through the places (Mission 13's quay to the container canyons,
   Mission 14's viaduct, the Museum's spiral from the rim to the Comparison Hall, Mission 19's
   reflection bridge in 2026 and the water under it in 2049, its wrapping edge, the Finale's road and

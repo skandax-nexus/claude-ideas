@@ -40,6 +40,9 @@ function spotAt(P, name, [dx, dy, dz] = [0, 0, 0]) {
 function person(P, o) {
   const { at, off, turn = 0, ...n } = o;
   const [x, y, z, yaw] = spotAt(P, at, off);
+  // (a passer-by cast by role who can be talked to: DeckWorld offers a talk only to a passer-by with lines of their own;
+  // what they say is the mission's talks for them)
+  if (n.ambient && n.prompt && !n.lines) n.lines = [];
   P.npcs.push({ room: P.rid, ...n, pos: [x, n.y ?? y, z], yaw: yaw + turn });
 }
 
@@ -154,7 +157,7 @@ export const M04 = {
     {
       name: 'THE RING',
       threads: [
-        { id: 'elder', kind: 'talk', npc: 'elder', at: 'elderSeat', after: ['meal'], goal: 'The Elder is waiting at the ring.', because: 'She knew the mark on my wrist before I did.', done: 'elder_met', hints: M04_HINTS.elder, minutes: 3 },
+        { id: 'elder', kind: 'talk', npc: 'elder', at: 'elderSeat', after: ['stele', 'frags'], goal: 'The Elder is waiting at the ring.', because: 'She knew the mark on my wrist before I did.', done: 'elder_met', hints: M04_HINTS.elder, minutes: 3 },
         { id: 'panels', kind: 'deduce', deduction: 'panels', at: 'panels', after: ['elder'], spotOpts: { offset: [0, -0.4, 1.4], r: 3 },
           goal: 'Under the ring: put the four carved panels in order.', because: 'The chamber will not open the rest until the story is told right.', hints: M04_HINTS.panels, minutes: 4 },
         { id: 'card', kind: 'scene', scene: 'card', at: 'card', after: ['panels'], spot: { prompt: 'WHAT LIES ON THE FLOOR', offset: [0, 0.05, 0], r: 2.4, model: flatCard(), when: 't_m04_panels' },
@@ -165,6 +168,7 @@ export const M04 = {
   talks: {
     elder: [
       { when: '!t_m04_meal', lines: [CREW('Eat first. Questions are lighter after bread.')] },
+      { when: '!elder_met && !(t_m04_stele && t_m04_frags)', lines: [CREW('Read the stele and the three stones first. Then come up.')] },
       {
         when: '!elder_met',
         lines: [CREW('You came before the first fire.'), K('I\'ve never been here.'), CREW('That is what the others said.'),
@@ -316,27 +320,27 @@ export const M05 = {
             { id: 'hearths', scene: 'hearths', at: 'coldHearths', prompt: 'THE COLD HEARTH', offset: [0, 0.7, 1.2], r: 2.8, model: NO_MODEL, when: '@PRESENT' },
           ],
           goal: 'Abandoned: find out why they left.', because: 'Nobody leaves a village with a river like that.', hints: M05_HINTS.why, minutes: 4 },
-        { id: 'leave', kind: 'playback', at: 'coldHearths', after: ['why'], prompt: 'WATCH WHAT THE HEARTH KEPT', offset: [1.6, 0.8, 0], r: 3, model: NO_MODEL, spotWhen: '@PRESENT',
+        { id: 'leave', kind: 'playback', at: 'coldHearths', after: ['why'], until: 'gate_released', prompt: 'WATCH WHAT THE HEARTH KEPT', offset: [1.6, 0.8, 0], r: 3, model: NO_MODEL, spotWhen: '@PRESENT',
           echoes: [
             { crew: 'm5_potter', first: 'Potter', ambient: true, offset: [-2, 0, 2], path: [[-62, 2, -26], [-30, 2, -10], [-8, 2, -26]] },
             { crew: 'm5_mother', first: 'Mother', ambient: true, offset: [0, 0, 2.4], path: [[-60, 2, -27], [-28, 2, -11], [-6, 2, -27]] },
             { crew: 'm5_child', first: 'Child', ambient: true, offset: [1.4, 0, 3], path: [[-58, 2, -28], [-26, 2, -12], [-4, 2, -28]] },
           ],
           lines: [N('The echoes of a family lift their bundles and walk out, not looking at the ring.'),
-            SAYS('A POTTER (ECHO)', 'CROWD_M', 'It took the potter\'s son. He only touched it.'),
+            FX(SAYS('A CRAFTSWOMAN (ECHO)', 'CROWD_F2', 'It took the potter\'s son. He only touched it.'), 'echo'),
             K('They didn\'t leave because of the flood. They left because the ring kept taking people.'),
             L('NIKO', 'It took them when you came. Every time you came.'), K('Then they left because of me.')],
           goal: 'Watch what the cold hearths kept.', because: 'Somebody ate here the night before they went.', set: { ev_ring_took: true }, log: 'They left because the ring kept taking people. Every time I came.', hints: M05_HINTS.leave, minutes: 3 },
         { id: 'wall', kind: 'scene', scene: 'wall', at: 'wallBrace', after: ['divert'], spot: { prompt: 'BRACE THE WALL', offset: [0, 1.2, 0.6], r: 3, model: NO_MODEL },
           goal: 'Brace the retaining wall, while it is abandoned.', because: 'In the flood the water needs an edge to stop at.', done: 'wall_braced', hints: M05_HINTS.wall, minutes: 4 },
-        { id: 'mural', kind: 'scene', scene: 'mural', at: 'muralWall', after: ['why'], spot: { prompt: 'THE MURAL', offset: [0, 1.6, 0.8], r: 3, model: NO_MODEL, when: '@PRESENT' },
+        { id: 'mural', kind: 'scene', scene: 'mural', at: 'muralWall', after: ['why'], until: 'gate_released', spot: { prompt: 'THE MURAL', offset: [0, 1.6, 0.8], r: 3, model: NO_MODEL, when: '@PRESENT' },
           goal: 'Somebody painted the village wall after they left.', because: 'Niko says it is a story he told.', done: 'ev_mural', hints: M05_HINTS.mural, minutes: 2 },
       ],
     },
     {
       name: 'THE PRESSURE GATE',
       threads: [
-        { id: 'gate', kind: 'scene', scene: 'gate', at: 'gateTop', after: ['wall', 'why'], spot: { prompt: 'RELEASE THE GATE', offset: [0, 1.0, 0], r: 3, model: NO_MODEL },
+        { id: 'gate', kind: 'scene', scene: 'gate', at: 'gateTop', after: ['wall', 'leave', 'mural'], spot: { prompt: 'RELEASE THE GATE', offset: [0, 1.0, 0], r: 3, model: NO_MODEL },
           goal: 'Release the pressure gate, while it is flooded.', because: 'The wall holds now. The water has somewhere to go.', done: 'gate_released', hints: M05_HINTS.gate, minutes: 4 },
         { id: 'machine', kind: 'scene', scene: 'machine', at: 'buriedMachine', after: ['gate'], spot: { prompt: 'WHAT HUMS IN THE MUD', offset: [0, 0.9, 2.4], r: 3.2, model: NO_MODEL, when: 'gate_released' },
           goal: 'Go down into the drained basin.', because: 'Something under the mud is humming.', done: 'machine_found', hints: M05_HINTS.machine, minutes: 2 },
@@ -507,7 +511,7 @@ export const M06 = {
         { id: 'ezra', kind: 'talk', npc: 'clockmaker', at: 'shopFloor', after: ['cellar'], goal: 'Talk to the clockmaker.', because: 'He looked up as if I were late.', done: 'ezra_met', hints: M06_HINTS.ezra, minutes: 3 },
         { id: 'arm', kind: 'scene', scene: 'arm', at: 'repeatArm', after: ['ezra'], spot: { prompt: 'WATCH THE ARM', offset: [-7.6, 0.8, 4], r: 3, model: NO_MODEL },
           goal: 'Watch the repeating arm.', because: 'He set it repeating for somebody.', done: 'ev_arm_count', hints: M06_HINTS.arm, minutes: 2 },
-        { id: 'windows', kind: 'scene', scene: 'windows', at: 'shopWindows', after: ['ezra'], spot: { prompt: 'THE THREE FACES', offset: [0, 0, 1.6], r: 3, model: NO_MODEL },
+        { id: 'windows', kind: 'scene', scene: 'windows', at: 'shopWindows', after: ['ezra'], until: 't_m06_cross', spot: { prompt: 'THE THREE FACES', offset: [0, 0, 1.6], r: 3, model: NO_MODEL },
           goal: 'Read the three clock faces in the shop window.', because: 'A clockmaker\'s window is his notebook.', done: 'ev_window_faces', hints: M06_HINTS.windows, minutes: 1 },
         { id: 'cross', kind: 'go', at: 'galleryLanding', r: 3, after: ['arm'], when: 'ev_arm_count', goal: 'Get past the arm to the stair.', because: 'It sweeps the whole floor. It always comes back.', hints: M06_HINTS.cross, minutes: 3 },
       ],
@@ -686,7 +690,6 @@ export const M07 = {
     {
       name: 'THE INSTRUMENT STAIR',
       threads: [
-        { id: 'scav', kind: 'stealth', at: 'scavengerCamp', r: 5, after: ['roofs'], when: 'align_sun', goal: 'Cross the scavengers\' camp unseen.', because: 'They wear a closed circle. They are looking for someone.', hints: M07_HINTS.scav, minutes: 5 },
         { id: 'star', kind: 'scene', scene: 'star', at: 'starTube', after: ['roofs'], spot: { prompt: 'SIGHT THE TUBE', offset: [0, 1.4, 1.6], r: 3, model: NO_MODEL },
           goal: 'Align the second instrument: a star, at 2049\'s blue hour.', because: 'The tube is cut for one bright star.', done: 'align_star', hints: M07_HINTS.star, minutes: 3 },
         { id: 'dates', kind: 'residue', at: 'datesRing', after: ['star'],
@@ -694,6 +697,7 @@ export const M07 = {
             hint: 'Four dates. The first sky will have cut something else.', after: [K('How could they know when I would be born?'), L('NIKO', 'They didn\'t know when. They knew who.')], prompt: 'READ THE DATES', offset: [0, 1.2, 1.2], model: 'none',
             log: 'The observatory\'s first dates ring names my birth. They didn\'t know when. They knew who.' },
           goal: 'Read the dates on the ring, and what it said at the first sky.', because: 'One of them is mine.', hints: M07_HINTS.dates, minutes: 3 },
+        { id: 'scav', kind: 'stealth', at: 'scavengerCamp', r: 5, after: ['dates'], until: 't_m07_ring', when: 'align_sun', goal: 'Cross the scavengers\' camp unseen.', because: 'They wear a closed circle. They camp on the way to the summit stair.', hints: M07_HINTS.scav, minutes: 5 },
       ],
       sides: [
         { id: 'cache', name: 'THE SCAVENGERS\' CACHE', done: 'ev_cache', minutes: 3,
@@ -704,7 +708,7 @@ export const M07 = {
     {
       name: 'THE OUTER RING',
       threads: [
-        { id: 'ring', kind: 'go', at: 'outerRingWalk', r: 5, after: ['dates'], when: 'align_star', goal: 'Walk the great ring\'s outer walkway.', because: 'From up there the last instrument is in sight.', hints: M07_HINTS.ring, minutes: 3 },
+        { id: 'ring', kind: 'go', at: 'outerRingWalk', r: 5, after: ['scav'], when: 'align_star', goal: 'Walk the great ring\'s outer walkway.', because: 'From up there the last instrument is in sight.', hints: M07_HINTS.ring, minutes: 3 },
         { id: 'tape', kind: 'scene', scene: 'tape', at: 'tinSpot', after: ['ring'], spot: { prompt: 'A TIN IN THE GROUND', offset: [0, 0.2, 0], r: 2.6, model: tin, when: '@PRESENT && !mira_tape' },
           goal: 'Something is buried at the foot of the great ring.', because: 'The bronze says a child stood here.', done: 'mira_tape', hints: M07_HINTS.tape, minutes: 2 },
         { id: 'newstar', kind: 'scene', scene: 'newstar', at: 'horizonRing', after: ['tape'], spot: { prompt: 'SIGHT THE HORIZON RING', offset: [0, 1.2, -2], r: 3.4, model: NO_MODEL },

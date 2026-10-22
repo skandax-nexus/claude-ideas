@@ -173,7 +173,7 @@ const EV_LABELS = {
   order_cancelled: 'The tower order was cancelled at 08:09', ninth_view: 'From the tower: a man at the console, looking at me', intakes: 'Four earlier intakes of Varen, one grey',
   echo_step: 'Echo Step: an afterimage a step ahead', missing_patient: 'VAREN, M., 9, admitted to Ward 32 in 2026', young_kai: 'Me at twelve, on the bench',
   steps: 'His route: every pane of glass', both_sides: 'Both sides fire at their own last attack', witness_cause: 'A scarred wrist buried the first device',
-  field_orders: 'The field orders answer each other', casing: 'HELIX. PROPERTY OF K. VAREN', corridor_b: 'Corridor B, in 2026', junior_tour: 'SITE ZERO JUNIOR TOUR, 14 MARCH',
+  field_orders: 'The field orders answer each other', nobody_first: 'Nobody fired first: each side answers its own last attack', casing: 'HELIX. PROPERTY OF K. VAREN', corridor_b: 'Corridor B, in 2026', junior_tour: 'SITE ZERO JUNIOR TOUR, 14 MARCH',
 };
 
 const _v = new THREE.Vector3();
@@ -825,7 +825,7 @@ export class LastVersion {
         body.lastversion #objective .lvside { font-size: 11.5px; font-weight: 500; margin-top: 7px; opacity: 0.92; }
         body.lastversion #objective .lvside small { display: block; font-size: 9.5px; letter-spacing: 0.16em; }
         body.lastversion #objective .lvwhy:empty, body.lastversion #objective .lvside:empty { display: none; }
-        body.lastversion.touch #objective .lvwhy { display: none; }`;
+        body.lastversion.touch #objective .lvwhy { font-size: 10.5px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }`;
       document.head.appendChild(st);
     }
     const part = (cls) => el.querySelector(`.${cls}`) || el.appendChild(Object.assign(document.createElement('div'), { className: cls }));
@@ -1265,7 +1265,7 @@ export class LastVersion {
     (this.level.triggers || []).forEach((t, i) => {
       if (t.once && flags[`trig_${i}`]) return;
       if (t.room && t.room !== g.room) return;
-      if (t.when && !facts.test(t.when)) return;
+      if (t.when && !facts.test(t.when, g.engine.state(g.room))) return; // (a trigger may ask for a year: @FUTURE)
       const b = t.box;
       if (p.x >= b[0] && p.x < b[3] && p.y >= b[1] && p.y < b[4] && p.z >= b[2] && p.z < b[5]) {
         // an edge that wraps (M19's plain: walk off one side and come back from the other), seamlessly
@@ -1311,6 +1311,14 @@ export class LastVersion {
       this.loopT -= dt;
       if (this.loopT <= 0) this.loopReset();
     }
+    // a staged moment (an opening, a cold open, a hook) is not the watchers' business: they walk their rounds, and see
+    // nobody until it is over (nothing walks Kai back to a checkpoint while the camera is not his)
+    if (this.opening || this.cinema?.active) {
+      for (const s of g.deckWorld.sentinels) {
+        s.suspicion = 0;
+        if (s.mode === 'chase') s.mode = 'patrol';
+      }
+    }
     this.deck.step?.(this, dt);
     this.threads.step(dt);
     this.inv?.step(dt);
@@ -1345,6 +1353,19 @@ export class LastVersion {
     for (const s of g.deckWorld.sentinels) {
       s.pos.copy(s.home);
       s.reset();
+    }
+    // the civilians go back to 08:05 as well, each a little further along its route than the time before (the loop
+    // drifts: a loop with variants nudges its crowds' routes)
+    if (L?.variants?.length) {
+      const k = g.facts.get(`loops_${deck.mkey}`) || 0;
+      g.deckWorld.npcs.forEach((n, i) => {
+        const path = n.n.crowd && n.n.path;
+        if (!path || path.length < 2) return;
+        const j = (i + k * 2) % path.length;
+        n.model.position.x = path[j][0];
+        n.model.position.z = path[j][1];
+        n.wp = (j + 1) % path.length;
+      });
     }
     g.audio.sweep(false);
     this.score.cue('loopReset');
@@ -1603,7 +1624,7 @@ export class LastVersion {
     }).join('');
     // SIDE STORIES: the chapter's so far, and this mission's, with a track button
     const missions = MISSIONS[this.chapter] || [];
-    const here = deck ? missions.indexOf(deck) : -1;
+    const here = deck ? missions.findIndex((m) => m.key === deck.key) : -1; // (this.deck is the story's copy of its mission)
     const sideRows = [];
     missions.forEach((m, mi) => {
       if (mi > here) return;

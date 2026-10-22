@@ -229,6 +229,29 @@ the first written to it. What U7–U8 author against:
 - `time_<mkey>`: the seconds of play a mission took, set when it ends (the ending screen sums them per
   chapter).
 
+**As built (U7).** Missions 4–13 are written to it in `act1.js` and `act2.js` (re-exported by `acts.js`). What U8
+authors against, beyond U6's:
+
+- `loop`: the mission's `loop: { period, variants: [{ watch: { '<q>s<k>': path } }], upward, until }` resets the
+  place every `period` seconds until `until` holds (M9: the carrier cut). Each reset counts `loops_<mkey>`, moves
+  the patrols (sentinel ids end `_q<i>s<k>` in a one-map mission) to the next variant's rounds, restarts the crowds
+  further along their routes, and with `upward` the rain falls upward for a second; a `loop` thread is done once
+  `loops` (1) resets happen while it is the objective. Pieces of the place may wait on the count (`P.W('loops_m09 >= 2',
+  …)`: M9's burnt shopfronts).
+- `playback`: `{ at, echoes: [{ crew, offset | at, path }], entries?: [{ label, lines }], question, next, wrong, lines,
+  set, log }`; a spot `playback_<id>` (its `spotWhen` gates it), echoes that stand only while it plays (`pb_<mkey>_<id>`);
+  with `entries` each use offers the pieces not yet placed, and only the next in order goes in.
+- A staged `cinema` thread plays once per load (kept in `Threads.staged`, not the saved flags). A thread's completion is
+  re-tested on every fact change and four times a second.
+- Authored triggers and `zones` may ask for a year (`when: 't_m12_route && @FUTURE'`). While an opening or a staged
+  moment plays, the watchers walk their rounds but see nobody.
+- A passer-by placed with `ambient: true` and a `prompt` (cast by role, `AMBIENT_CAST`) gets `lines: []`, so DeckWorld
+  offers the talk; what they say is the mission's `talks[<crew>]`.
+- A thread's `done` must not hold at its chapter's start (a unit test primes each chapter as the menu does, with
+  `faction: 'neutral'`): M13's stabilizer is done on `stabilizer_destroyed || civilians_freed`, not `faction`.
+- Saves are `lvFormat` 23 (`REWRITTEN_IN`: a chapter's missions became one map in that format); an older save inside a
+  mission of Act I or II restarts it at quarter 0 with its facts.
+
 ### 3.4 People (U4 provides; U5 voices; U6–U8 write lines)
 
 An NPC entry (`npcs.js`) is:

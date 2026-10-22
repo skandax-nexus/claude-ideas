@@ -2,8 +2,8 @@
 
 An honest account of what the v2.0 edition is today, measured against the creator's bible.
 The bible describes a 25–30 hour campaign; this is a playable adaptation of all of it on the
-AFTERZERO engine, with the Prologue written by hand and the rest generated around authored
-story beats. How it works: [`DESIGN.md`](DESIGN.md).
+AFTERZERO engine, with the Prologue and Acts I and II written by hand on threads (U6, U7) and the rest
+generated around authored story beats. How it works: [`DESIGN.md`](DESIGN.md).
 
 ## Built (by hand, playable, tested)
 
@@ -105,6 +105,37 @@ story beats. How it works: [`DESIGN.md`](DESIGN.md).
   recordings (2.39 MB, 4,142 words of the 4,200 budget), `common` 668 (2.55 MB, 2,236 words), `finale` 62
   (0.33 MB), and `act1`, `act2`, `act4` and `cases` re-packed from the cache for lines that moved between
   groups; the edition's voice is 9.0 MB.
+- **Acts I and II, rewritten on threads** (v2.1, U7, 2026-10-22; DESIGN.md "Acts I and II as written"; OVERHAUL.md §5
+  M4–M13, §9.7, §11 U7): `act1.js` (Missions 4–8) and `act2.js` (Missions 9–13), re-exported by `acts.js`. Each mission
+  is one map with its sheet's soft quarters, a cold open, main threads with their *because* lines and three hint tiers,
+  side stories on the case board, and a hook into the next. `Threads.js` gained `loop` (Mission 9's resets: each moves
+  the patrols to the next round, burns one more shopfront on the quay, restarts the crowds further along, and the rain
+  falls upward for a second) and `playback` (Mission 5's villagers walking out of the hearth's echo; Mission 8's last ten
+  minutes put in order and re-enacted by echoes). The choices the sheets keep are set and read later (§9.7):
+  `niko_told`, `machine_buried`, `water_route` (chain B, moved into Mission 5's gorge), `ezra_debt`, `mira_tape`,
+  `rook_fate` (who directs Mission 10, its office and its cells, and Mission 12's corridor follow it),
+  `warned_evacuees`, `prisoners_freed` / `prisoners_held`, `odile_released`, `faction`. REVERSE's set pieces: Mission 11's tutorial, file and lock, the music box
+  quieter the nearer Kai comes, a gurney, an IV stand and a pane that go back where they were (a hit is a setback),
+  Odile's echo; Mission 12's chase that never fails, the fallen stair the Witness reverses in Kai's colour before Kai
+  follows, the beam, his footsteps, a drone that can be patrol-reversed; Mission 13's shells from each side
+  (`ev_both_sides`), the burial (`ev_witness_cause`), the roll-call wall, a patrol, and a charge cap of 10 s after it.
+  Mission 10's troopers remember: after a catch they start their rounds elsewhere and look further ("They moved.").
+  Rook is in his office in Mission 8, young Kai on Mission 11's bench. The length model (§9.8, main + side minutes):
+  M4 29 + 7 = 36, M5 30 + 10 = 40, M6 26 + 10 = 36, M7 32 + 6 = 38, M8 33 + 8 = 41 (Act I 191); M9 33 + 8 = 41, M10
+  30 + 6 = 36, M11 32 + 8 = 40, M12 34 + 5 = 39, M13 32 + 10 = 42 (Act II 198); every main path is 72–87% of its
+  mission. **Missions 4–13 walked by the bot** (`tests/lastversion.mjs`, 2026-10-22: real movement where a straight walk gets there, Kai placed past stairs,
+  terraces and walls, every line at its own length, one or two side stories a mission), in minutes of game time
+  against the model: M4 8.6 of 36, M5 10.8 of 40, M6 6.0 of 36, M7 7.3 of 38, M8 8.8 of 41 (Act I 41.5 of 191); M9
+  9.2 of 41, M10 4.9 of 36, M11 7.9 of 40, M12 7.0 of 39, M13 7.8 of 42 (Act II 36.8 of 198), a fifth of the model.
+  The bot knows every coordinate, reads nothing twice, never looks around or gets lost, asks for no hint, plays 0.3–3.5
+  minutes of side stories where the model counts 5–10, and was placed 66 times over 1,796 m a straight walk could not
+  take; the model, not the bot, is the estimate of a player's time, and neither has been measured with a player.
+  Speech: 516–1,000 words a mission (the budget is 1,000: M4 1,000, M5 948, M6 927, M7 778, M8 973, M9 734, M10 516,
+  M11 856, M12 557, M13 832). The packs were recorded for it (`tools/voice-lv.sh`): `act1` 739 recordings (2.80 MB),
+  `act2` 655 (2.29 MB), `common` 605 (2.43 MB), and the other groups re-packed for lines that moved; the edition's
+  voice is 11.8 MB (budgets: 12 MB a pack, 22 MB in all), the Station Zero pack unchanged. An audition page of 40 of
+  the new clips was written (`tools/voice-audition.py`, machine-checked: 1 flagged, a mural-cliff line that peaks at
+  full scale); nobody has listened to it.
 - **The Prologue, fully authored** (before U6; rewritten above): Mission 1 The Last Normal Day (Rain City, the anomalies,
   Rook's call, the checkpoint, the Zero Second, the rescue, the voice, Mira), Mission 2 Helix Goes
   Dark (emergency light, the drone, three cells, the trustworthy officer, the unit that rewinds
@@ -114,7 +145,7 @@ story beats. How it works: [`DESIGN.md`](DESIGN.md).
   or the evidence) and **quest chain D** (Iven Marr, The Technician's Key: shift notes, the
   past-state service panel, the 2049-only drone Iven keeps busy, the lock that resets on every
   switch, the raw log or the trapped team), each with both outcomes and a later consequence.
-- **The story spine of Acts I–IV and the Finale**: for all 20 missions, the bible's setup, three
+- **The story spine of Acts I–IV and the Finale** (Acts I and II rewritten above, U7): for all 20 missions, the bible's setup, three
   beats with goals, its quoted lines, scenes and choices, and its mission ending; the Mission 10
   Echo Step unlock; the Mission 13 faction choice (destroy the stabilizer / free the people); the
   Mission 15 city choice; the Mission 21 ally (Sera, Anja, Iven, or nobody); the three endings
@@ -189,6 +220,24 @@ story beats. How it works: [`DESIGN.md`](DESIGN.md).
   but one crowd child's line at 25). An earlier automatic pass caught "KAI + MIRA" spelled out as letters and "-3"
   read without its minus (both fixed and re-rendered). The audition page for a human listen stays in the
   session's scratchpad (not shipped).
+- **Tests** (U7, 2026-10-22): `tests/lastversion.test.mjs` has 79 tests (`npm test`: 107, all pass), the new ones:
+  Acts I and II as threads with the length model (each mission 25–42 minutes, its main path 70% or more, its declared
+  minutes the model's, no empty quarter); a mission started from the chapter menu has none of its threads done (its
+  PRIMES, `faction` neutral: Mission 13 once ended on arrival); a staged moment kept in the load, not the save; Act I's
+  and Act II's sheet moments and kept choices. The ledgers (clues planted before their payoff, every consequence read
+  later), the bible's quoted lines, the speech budget and the voice coverage (0 misses) now run over Missions 1–13. The
+  browser bot (`node tests/lastversion.mjs`) plays Acts I and II thread by thread from the Prologue's end to Act III
+  (LVP: real movement where a straight walk gets there, Kai placed where stairs, terraces or a wall are in the way and
+  the metres counted, every line at its own length, one or two side stories a mission), with the unit's checks: Mission
+  5's river diverted, then the abandoned village's why, the gate and `machine_buried`; Mission 8's confrontation
+  setting `rook_fate` and VERSION 17; Mission 9's two loops with the patrols on other rounds, then the transmitter,
+  Rhea and the tower; Mission 11's U1 sequence, the music box's gain falling toward its source and a returning gurney's
+  setback; Mission 12's chase with no setback and the Witness's stair before Kai's REVERSE; Mission 13's shells from
+  each side (`ev_both_sides`) and `faction`. The whole bot (the Prologue, Acts I and II, Missions 14, 16 and 19,
+  the Finale to Ending C, and the survey of all 23 places) passes 273 checks with no page error, every line said (963)
+  in the packs and `speechSynthesis` never asked (U6's run: 226); in it Mission 1 took 9.7 minutes. Its Mission 1
+  relay check now looks for 8:13 while lines play (the seven-second minute could pass inside one talk-out once a
+  passer-by spoke after the announcement). U7 changed no shared file.
 - **Tests** (U6, 2026-10-21): `tests/lastversion.test.mjs` has 74 tests (`npm test`: 102, all pass), the new
   ones: the Prologue as threads (one map each, quarters, a cold open and a hook, every thread a known kind and
   three hint tiers); the length model (Prologue 75–100 minutes, each mission in range, the main path ≥ 70%); the
@@ -265,24 +314,26 @@ story beats. How it works: [`DESIGN.md`](DESIGN.md).
 ## Planned / not done
 
 - **Scale.** The bible's campaign is 25–30 hours. A first playthrough of this edition is a few
-  hours: the Prologue's length model says 97 minutes (74 main, 23 side), and the bot walks Mission 1 in
-  10.4 minutes of its model's 35; each later mission is still 10–20 minutes until U7–U8 rewrite it. Not
-  measured with players.
+  hours: the Prologue's length model says 97 minutes (74 main, 23 side), Act I's 191 and Act II's 198 (U7), and
+  the bot walks Mission 1 in 10.4 minutes of its model's 35 and Missions 4–13 in 78 minutes of game time against the model's 389; Acts III and IV and the
+  Finale are still 10–20 minutes a mission until U8 rewrites them. Not measured with players.
 - **Bespoke set pieces for Acts I–IV.** The Mission 9 "reach the tower before the reset" is a
   watcher reset, not a fail state; Mission 12's chase is a route with the Witness at its end, not
   a pursuit; Mission 13's battle and Mission 18's storms are watchers and weather; Mission 17's
   "security that mimics Kai" and Mission 21's elites are ordinary watchers; Mission 20's three
   memories are three years of one plot rather than an alignment puzzle; Mission 22's final causal
   puzzle is read from evidence rather than assembled. (Their places, landmarks and years exist since
-  U3; the mechanisms come with U6–U8.)
+  U3; the mechanisms come with U6–U8. U7 built Mission 9's loop (still a reset, as its sheet has it, never a fail),
+  Mission 12's pursuit across the roofs and Mission 13's shells and patrols; the rest are U8's.)
 - **The ten optional missions** of the bible's list (The Child in Three Photographs, The Train
   That Arrives Yesterday, …) are not built; the Child in the Station appears in Mission 1 only.
 - **Rook as a person after Mission 2.** He speaks on the radio and in recordings; the
   supplement's exposure / persuasion confrontation is only in his dialogue lines.
 - **People cast but not yet placed** (U4 gave them a face; U6 placed Rook at Mission 2's chamber door and the
-  three officers' recordings; U7–U8 the rest): Rook in person in Mission 8, the receptionist, the District
-  Warden and the Gardener (M14, M15), young Kai (M11, M17, M20), Tomas (M15), the Director of
-  Continuity (M10, M21). Missions 22 and 23 still carry watchers from their v2.0 beats (the fragment's
+  three officers' recordings; U7 Rook in his Mission 8 office, young Kai on Mission 11's bench, Rook in Mission 10's
+  cells and Mission 12's corridor as `rook_fate` has it; U8 the rest): the receptionist, the District Warden and the
+  Gardener (M14, M15), young Kai (M17, M20), Tomas (M15), the Director of Continuity in person (M10 has the
+  Director's voice and office, as `rook_fate` made them; M21). Missions 22 and 23 still carry watchers from their v2.0 beats (the fragment's
   drone or scavenger), where the spec has none.
 - **The settlement's wardrobe** (Rocketbox's robe, kurta and head-cloth avatars recoloured in ochre,
   indigo, madder and undyed linen) waits for a human review of its render sheet.
@@ -295,8 +346,10 @@ story beats. How it works: [`DESIGN.md`](DESIGN.md).
   stands in for it.
 - **The score** is procedural (Synth's oscillators and noise, 0 bytes of assets): the bible's cues are
   there by name and shape, not as composed music; the crowd walla is the crowds' own barks far off.
-- **Cold opens** of the Prologue are authored (U6: shots, lines, hooks); every later mission's are still its
-  intro staged with a default camera (behind and over Kai's shoulder) until U7–U8.
-- **A human playtest** of the rewritten Prologue (does the deduction read fairly, does the chase feel like a
-  pursuit, is 97 minutes what a player takes) has not been done; the bot and the length model stand in for it.
+- **Cold opens** of the Prologue (U6) and of Acts I and II (U7) are authored (shots, lines, hooks); every later
+  mission's are still its intro staged with a default camera (behind and over Kai's shoulder) until U8.
+- **A human playtest** of the rewritten Prologue and Acts I and II (do the deductions read fairly, do the chases
+  feel like pursuits, does Mission 9's loop read as a loop, are 97, 191 and 198 minutes what a player takes) has not
+  been done; the bot and the length model stand in for it, and the bot takes a quarter of the model's time (it knows
+  every coordinate, reads nothing twice and plays one or two side stories a mission).
 - **Device testing** of the Android build on phones has not been done in this session.

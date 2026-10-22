@@ -19,7 +19,7 @@ export default {
   key: 'valley_river', style: 'river', sameAs: null, name: 'THE RIVER BEND',
   bounds: [-100, -150, 100, 70],
   edges: { N: 'cliff', E: 'cliff', W: 'water', S: 'slope' },
-  killY: -1.6,
+  killY: -3.4, // (U7: under the drained basin's floor at -2.5, which a stair walks down into; the river's deep channel drowns)
   primary: 'headStone',
   ancientYears: ['PAST', 'PRESENT', 'FUTURE'],
   backdrop: { notch: 'clear', ringHill: 'NE' },
@@ -52,6 +52,8 @@ export default {
   crowd: [
     { era: 'ancient', years: ['PAST'], region: 'settlement', role: 'waterKeeper', path: [[-60, -20], [-20, -30], [-10, -10]], n: 6 },
     { era: 'ancient', years: ['PAST'], region: 'settlement', role: 'fisher', path: [[-70, 18], [-20, 18]], n: 3 },
+    // (U7) in ABANDONED the same villagers walk their old rounds as echoes (§5 M5)
+    { era: 'ancient', years: ['PRESENT'], region: 'settlement', role: 'waterKeeper', path: [[-58, -22], [-22, -30], [-12, -12]], n: 3, echo: true },
   ],
 
   build(P) {
@@ -61,6 +63,7 @@ export default {
     P.vbox([9.6, -0.6, -150, 10, 2, -1], 'riverStone');
     for (const s of [-1, 1]) P.vbox([-30 + s * 1.6 - 0.2, -0.6, -7, -30 + s * 1.6 + 0.2, 2, -1], 'riverStone');
     for (const [x0, z0, x1, z1] of RIVER) water(P, [x0, z0, x1, z1], -1.0, 'riverWater', { depth: 2.0, bedMat: 'riverBed' });
+    for (const r of RIVER) P.drown(r, -1.6); // (the current takes Kai back, where the place's killY did before the basin was walkable)
     // the channel's banks
     P.vbox([-100, -3.2, -0.4, 48, 0, 0], 'riverStone');
     P.vbox([-100, -3.2, 14, -25.5, 0, 14.4], 'riverStone');

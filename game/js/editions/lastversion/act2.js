@@ -35,6 +35,9 @@ function spotAt(P, name, [dx, dy, dz] = [0, 0, 0]) {
 function person(P, o) {
   const { at, off, turn = 0, ...n } = o;
   const [x, y, z, yaw] = spotAt(P, at, off);
+  // (a passer-by cast by role who can be talked to: DeckWorld offers a talk only to a passer-by with lines of their own;
+  // what they say is the mission's talks for them)
+  if (n.ambient && n.prompt && !n.lines) n.lines = [];
   P.npcs.push({ room: P.rid, ...n, pos: [x, n.y ?? y, z], yaw: yaw + turn });
 }
 // the three notes (the Child's song), from a place in the world, at a gain (score.js's motif)
@@ -91,7 +94,7 @@ export const M09 = {
   coldOpen: {
     first: true, minutes: 1, cue: 'card',
     shots: [{ cam: 'quayBench', look: 'marketGate', t: 9 }],
-    lines: [N('08:05:00. A woman drops her coffee.'), N('08:05:00 again. She catches it.'), N('Again. She does not.'), K('It\'s the same morning. It\'s that morning.')],
+    lines: [N('08:05. A woman drops her coffee.'), N('08:05 again. She catches it.'), N('Again. She does not.'), K('It\'s the same morning. It\'s that morning.')],
   },
   quarters: [
     {
@@ -197,8 +200,15 @@ export const M09 = {
     childSong: (rt) => song(rt, 0.8),
   },
   overlay(P) {
+    // the loop decays: every reset burns one more shopfront along the quay (in 2049 only; the street goes back, the soot
+    // does not)
+    [[-28, -10], [10, 28], [30, 46], [-48, -30]].forEach(([x0, x1], k) => P.W(`loops_m09 >= ${k + 1}`, () => P.E('PRESENT', () => {
+      P.vbox([x0 + 1, 0, 61.55, x1 - 1, 4.4, 61.9], 'ash');
+      P.vbox([x0 + 3, 4.4, 61.5, x1 - 3, 6.4, 61.85], 'ash');
+      P.vbox([x0 + 0.5, 0, 57.5, x1 - 0.5, 0.06, 61.5], 'ashGround');
+    })));
     person(P, { id: 'engineer', crew: 'engineer', at: 'towerBase', off: [1.6, 0, 1.4], turn: Math.PI, prompt: 'TALK TO RHEA' });
-    person(P, { id: 'brask9', crew: 'soldier', at: 'funicularStation', off: [-2.4, 0, -2], turn: 0.6, silent: true, barks: ['You did that already. No - you\'re about to do it. I hate that I know the difference.'] });
+    person(P, { id: 'brask9', crew: 'soldier', at: 'funicularStation', off: [-2.4, 0, -2], turn: 0.6, silent: true, barks: ['You did that already. No—you\'re about to do it. I hate that I know the difference.'] });
     person(P, { id: 'm9_evac', crew: 'm9_evac', first: 'Evacuee', seed: 901, ambient: true, at: 'headlandStair', off: [2.2, 0, 2.4], turn: Math.PI, when: '!warned_evacuees', prompt: 'TALK TO THE EVACUEES' });
     person(P, { id: 'm9_evac_safe', crew: 'm9_evac', first: 'Evacuee', seed: 901, ambient: true, at: 'ferryQuay', off: [-6, 0, -2], when: 'warned_evacuees', prompt: 'TALK TO THE EVACUEES' });
     person(P, { id: 'child9', crew: 'child', at: 'loopEdge', off: [0, 0, -0.6], turn: Math.PI, hologram: true, silent: true, when: '!child_step2' });
@@ -340,6 +350,8 @@ export const M10 = {
   adjust(level, rt) {
     if (rt?.g?.facts?.get('power_cut')) for (const s of level.sentinels) s.range = Math.min(s.range, 3.5);
   },
+  spoken: { remember: [K('They moved. They remember where I went.')] },
+  step: m10Step,
   overlay(P) {
     person(P, { id: 'm10_guard', crew: 'm10_guard', first: 'Guard', seed: 1001, ambient: true, at: 'guardPost', off: [1.4, 0, 1.6], turn: Math.PI, when: '!t_m10_power', prompt: 'TALK TO THE GUARD' });
     person(P, { id: 'sera', crew: 'sera', at: 'seraSkiff', off: [-1.6, 0, 1.2], turn: Math.PI, silent: true });
@@ -353,6 +365,31 @@ export const M10 = {
   done: 't_m10_yard',
 };
 M10.outro = M10.hook.lines;
+
+// the Continuum's watchers remember Kai's last attempt (§5 M10): after each catch (a setback with a watcher at his
+// shoulder) every patrol starts its round further along, and looks a metre further, up to three
+function m10Step(rt) {
+  const g = rt.g, f = g.facts, p = g.player?.pos;
+  const S = (rt.m10 ||= { catching: false, caught: false });
+  if (!p) return;
+  if (g.catching && !S.catching) S.caught = (g.deckWorld?.sentinels || []).some((s) => Math.hypot(s.pos.x - p.x, s.pos.z - p.z) < 1.8);
+  const ended = S.catching && !g.catching;
+  S.catching = !!g.catching;
+  if (!ended || !S.caught) return;
+  S.caught = false;
+  f.inc('m10_caught');
+  const n = f.get('m10_caught');
+  for (const s of g.deckWorld.sentinels) {
+    const path = s.def.path;
+    s.def.baseRange ??= s.def.range;
+    s.def.range = Math.min(s.def.baseRange + Math.min(3, n), f.get('power_cut') ? 3.5 : Infinity);
+    if (path.length < 2) continue;
+    const j = (s.wp + n) % path.length;
+    s.pos.set(path[j][0], 0, path[j][1]);
+    s.wp = (j + 1) % path.length;
+  }
+  if (n === 1) g.hud.say(rt.deck.spoken.remember, f);
+}
 
 // =============================================================================================================
 // Mission 11: THE INVERTED HOSPITAL (REVERSE is taught here: the processes at the hospital's landmarks)
@@ -708,6 +745,9 @@ const M12_PROCESSES = [
     clip: { who: 'NONE', text: 'His steps, forwards: the roof, the glass, the gangway, the glass, the stair. At every pane, he stops.' },
     hints: ['His steps, backwards.', 'A recording runs forwards once.', 'REVERSE his footsteps.'],
   },
+  // a Helix drone over the court: held, it walks its last seconds backwards and forgets it saw Kai
+  { id: 'droneCourt', kind: 'patrol', target: 'm12_helix_q0s0', label: 'THE DRONE', weight: 1,
+    hints: ['A drone has seen me.', 'A patrol walks back its last few seconds.', 'REVERSE the drone. It forgets me.'] },
 ];
 
 export const M12 = {
@@ -718,7 +758,8 @@ export const M12 = {
   named: ['witness', 'rook'],
   minutes: { main: 34, optional: 5 }, autoExit: 1.2,
   processes: M12_PROCESSES,
-  zones: [{ at: 'collapsedStair', box: [-9, -1, -6, 9, 8, 9], set: { m12_at_stair: true } }],
+  // (Kai at the top of the fallen stair in 2196, once he knows the route: the Witness shows him the way down)
+  zones: [{ at: 'collapsedStair', box: [-9, -5, -6, 9, 8, 9], set: { m12_at_stair: true }, when: 't_m12_route && @FUTURE' }],
   spoken: M12_SAY,
   fragSpots: [['northRoofs'], ['lunchRoom2026'], ['sinkTerraces']],
   fragments: [[
@@ -736,7 +777,7 @@ export const M12 = {
     {
       name: 'THE CHASE — 2049',
       threads: [
-        { id: 'chase', kind: 'chase', npc: 'witness_chase', path: ['plantDecks', 'glassPanes'], at: 'northRoofs', goal: 'Chase the figure across the roofs.', because: 'He has my walk.', hints: M12_HINTS.chase, minutes: 5 },
+        { id: 'chase', kind: 'chase', npc: 'witness_chase', path: [[-24, 13.5, -41], [-8, 13.5, -42], 'northWing', 'plantDecks', 'glassPanes'], at: 'northRoofs', goal: 'Chase the figure across the roofs.', because: 'He has my walk.', hints: M12_HINTS.chase, minutes: 5 },
         { id: 'follow', kind: 'go', at: 'gangway2026', r: 4, after: ['chase'], goal: 'He stepped off the roof into 2026. Follow.', because: 'In 2026 there was a way across.', hints: M12_HINTS.follow, minutes: 3 },
       ],
     },
@@ -750,7 +791,7 @@ export const M12 = {
           threads: [{ id: 'rookGate', kind: 'scene', scene: 'rook_corridor', at: 'gangway2026', spot: { prompt: 'THE GANGWAY GATE', offset: [2.2, 1.2, 1], r: 2.8, model: NO_MODEL, when: '@PAST' },
             goal: 'Corridor B has a gate.', because: 'Somebody locked it in 2026.', done: 'ev_corridor_b', hints: M12_HINTS.rook, minutes: 2 }] },
         { id: 'flowers', name: 'THE DROPPED BOUQUET', done: 'ev_bouquet', minutes: 1,
-          threads: [{ id: 'bouquetLook', kind: 'scene', scene: 'bouquet', at: 'bouquet', spot: { prompt: 'FLORIST\'S PAPER', offset: [0.8, 0.2, 0], r: 2.4, model: NO_MODEL },
+          threads: [{ id: 'bouquetLook', kind: 'scene', scene: 'bouquet', at: 'bouquet', spot: { prompt: 'FLORIST\'S PAPER', offset: [0, 0.2, 0.8], r: 2.4, model: NO_MODEL, when: '@PAST' },
             goal: 'Something dropped on the gangway.', because: 'He was carrying it.', done: 'ev_bouquet', hints: M12_HINTS.bouquet, minutes: 1 }] },
         { id: 'board', name: 'THE LUNCH-ROOM WHITEBOARD', done: 'ev_junior_tour', minutes: 2,
           threads: [{ id: 'boardRead', kind: 'scene', scene: 'whiteboard', at: 'lunchRoom2026', spot: { prompt: 'THE WHITEBOARD', offset: [0, 1.4, 0.6], r: 2.6, model: NO_MODEL, when: '@PAST' },
@@ -843,7 +884,8 @@ export const M12 = {
     if (d < 30) song(rt, 1 - d / 30, 'witness');
   },
   overlay(P) {
-    person(P, { id: 'witness_chase', crew: 'witness', at: 'northRoofs', off: [0, 0, 4], turn: -Math.PI / 2 });
+    // (he starts south of the lift's overrun, along the parapet, and leads Kai east across the roof)
+    person(P, { id: 'witness_chase', crew: 'witness', at: 'northRoofs', off: [-6, 0, 8], turn: -Math.PI / 2 });
     person(P, { id: 'witness_ruin', crew: 'witness', at: 'collapsedStair', off: [0, 3, 5.5], silent: true, when: 't_m12_route && !m12_stair_shown' });
     person(P, { id: 'witness_face', crew: 'witness', at: 'secondRing', off: [0, 0, 4], turn: Math.PI, when: 't_m12_voicemail && !t_m12_escape', prompt: 'TALK TO HIM' });
     person(P, { id: 'rook_b', crew: 'rook', variant: 'old', at: 'gangway2026', off: [3.2, 0, 1.4], turn: -Math.PI / 2, silent: true, when: 'rook_fate == "persuade" && @PAST' });
@@ -860,6 +902,7 @@ const M13_HINTS = {
   cross: ['Through the fire.', 'The gaps between the shells.', 'Reach the canyon gate unseen.'],
   orders: ['Field orders.', 'By the quay trench.', 'Read them.'],
   shells: ['A shell in flight.', 'One from each side.', 'REVERSE one shell, then one of the other side\'s.'],
+  first: ['Who started it?', 'The orders, and where each shell went.', 'Nobody. Each answers its own last shot.'],
   sera: ['Sera is at the gate.', 'The canyon gate.', 'Talk to Sera.'],
   devices: ['Three devices, three years.', 'Rail yard, crane, crater.', '2026, 2049, 2196.'],
   stabilizer: ['The stabilizer.', 'In the silos.', 'Decide.'],
@@ -894,7 +937,32 @@ const M13_PROCESSES = [
     aim: [0, 1.2, 0],
     hints: ['The wall is coming down.', 'On the roll-call door.', 'REVERSE it and hold.'],
   },
+  // a Continuum patrol between the devices: held, it walks back its last seconds and forgets it saw Kai
+  { id: 'patrolYard', kind: 'patrol', target: 'm13_warport_q1s0', label: 'A CONTINUUM PATROL', weight: 1, when: '@PRESENT',
+    hints: ['A patrol has seen me.', 'It can walk back its last few seconds.', 'REVERSE the patrol. It forgets me.'] },
 ];
+// the Continuum's "inverted" patrol on the quay walks its round backwards (its eyes on the way it came), and the music
+// drops out for a breath when it first comes into view
+const M13_INVERTED = ['m13_warport_q0s0'];
+const _fwd = new THREE.Vector3();
+function m13Step(rt) {
+  const g = rt.g;
+  if (!g.camera || g.engine.state(g.room) !== 'PRESENT') return;
+  const S = (rt.m13 ||= { seen: new Set() });
+  for (const s of g.deckWorld?.sentinels || []) {
+    if (!M13_INVERTED.includes(s.def.id) || s.model?.visible === false || s.mode !== 'patrol') continue;
+    const w = s.def.path[s.wp], dx = w[0] - s.pos.x, dz = w[1] - s.pos.z, d = Math.hypot(dx, dz);
+    if (d > 0.05) s.dir.set(-dx / d, 0, -dz / d); // (it moonwalks: its cone faces the way it came)
+    if (S.seen.has(s.def.id)) continue;
+    const c = g.camera.position, f = g.camera.getWorldDirection(_fwd), fl = Math.hypot(f.x, f.z) || 1;
+    const tx = s.pos.x - c.x, tz = s.pos.z - c.z, tl = Math.hypot(tx, tz) || 1;
+    if (tl < 22 && (tx * f.x + tz * f.z) / (tl * fl) > 0.8) {
+      S.seen.add(s.def.id);
+      rt.inv?.snd?.mute?.(0.4);
+      rt.score?.capText('a patrol walking backwards');
+    }
+  }
+}
 const LISTENER = AMB('CROWD_M');
 
 export const M13 = {
@@ -903,7 +971,7 @@ export const M13 = {
   place: 'warport', sectors: 1, states: ['PRESENT', 'PAST', 'FUTURE'], drones: [2, 2, 3], unstable: true, ambience: 'wind', ambient: 'loop',
   motto: 'THE FUTURE THAT SURVIVES LONG ENOUGH TO REMEMBER US', gate: 'THE DISTRICT', crew: C('soldier'),
   named: ['sera', 'soldier'],
-  minutes: { main: 30, optional: 10 }, autoExit: 1.2,
+  minutes: { main: 32, optional: 10 }, autoExit: 1.2,
   processes: M13_PROCESSES,
   fragSpots: [['helmetPile', 'flagPost'], ['craterRim'], ['rollCallDoor']],
   fragments: [[
@@ -922,11 +990,13 @@ export const M13 = {
     {
       name: 'THE BATTLEFIELD',
       threads: [
-        { id: 'cross', kind: 'stealth', at: 'canyonGate', r: 4, goal: 'Cross the battlefield to the container canyon.', because: 'The fire comes round on a loop. So do the patrols.', hints: M13_HINTS.cross, minutes: 6 },
         { id: 'orders', kind: 'scene', scene: 'orders', at: 'fieldOrders', spot: { prompt: 'THE FIELD ORDERS', offset: [0, 1.1, 0.8], r: 2.8, model: makeLogbook },
           goal: 'Read the field orders.', because: 'Both sides say the other fired first.', done: 'ev_field_orders', hints: M13_HINTS.orders, minutes: 2 },
         { id: 'shells', kind: 'tasks', of: ['inv_shellA_done', 'inv_shellB_done'], at: 'shellZone', after: ['orders'], goal: 'Hold a shell in flight. Then one from the other side.', because: 'Where do they come from? Run one back and see.',
           set: { ev_both_sides: true }, say: [K('Both of them go home. Each side is firing at its own last shot.')], hints: M13_HINTS.shells, minutes: 4 },
+        { id: 'firstShot', kind: 'deduce', deduction: 'firstShot', at: 'shellZone', after: ['shells'], spotOpts: { offset: [0, 1.2, 6], r: 3 },
+          goal: 'Who fired first?', because: 'Two shells, two guns, two sets of orders.', hints: M13_HINTS.first, minutes: 2 },
+        { id: 'cross', kind: 'stealth', at: 'canyonGate', r: 4, after: ['firstShot'], goal: 'Cross the battlefield to the container canyon.', because: 'The fire comes round on a loop. So do the patrols.', hints: M13_HINTS.cross, minutes: 6 },
       ],
       sides: [
         { id: 'listeners', name: 'THE PEOPLE WHO LISTENED', giver: 'm13_listener', start: 'warned_evacuees', done: 'listeners_route', minutes: 2,
@@ -936,7 +1006,7 @@ export const M13 = {
     {
       name: 'THE THREE DEVICES',
       threads: [
-        { id: 'sera', kind: 'talk', npc: 'sera', at: 'canyonGate', after: ['shells'], goal: 'Sera is at the canyon gate.', because: 'She said both sides were asking for me.', done: 'sera_war', hints: M13_HINTS.sera, minutes: 2 },
+        { id: 'sera', kind: 'talk', npc: 'sera', at: 'canyonGate', after: ['cross'], goal: 'Sera is at the canyon gate.', because: 'She said both sides were asking for me.', done: 'sera_war', hints: M13_HINTS.sera, minutes: 2 },
         { id: 'devices', kind: 'tasks', of: ['dev_rail', 'dev_crane', 'dev_crater'], after: ['sera'],
           spots: [
             { id: 'dev_rail', scene: 'dev_rail', at: 'deviceRail', prompt: 'DEVICE ONE', offset: [0, 1.1, 1.2], r: 2.8, kit: 'deviceCase' },
@@ -960,7 +1030,7 @@ export const M13 = {
       name: 'THE STABILIZER',
       threads: [
         { id: 'stabilizer', kind: 'choice', scene: 'stabilizer', at: 'stabilizer', after: ['devices'], spot: { prompt: 'THE STABILIZER', offset: [0, 1.2, 2.2], r: 3.4, model: NO_MODEL },
-          goal: 'The stabilizer: destroy it, or free the people in the frozen block.', because: 'It is what both sides are fighting for.', done: 'faction', hints: M13_HINTS.stabilizer, minutes: 4 },
+          goal: 'The stabilizer: destroy it, or free the people in the frozen block.', because: 'It is what both sides are fighting for.', done: 'stabilizer_destroyed || civilians_freed', hints: M13_HINTS.stabilizer, minutes: 4 },
         { id: 'district', kind: 'cinema', after: ['stabilizer'],
           lines: [N('The frozen block stays frozen. Around it, the war goes quiet.', 'faction == "unwritten"'), N('The block thaws. Two hundred and twelve people walk out into the smoke.', 'faction == "continuum"')],
           goal: 'Watch the district.', because: 'It will remember what I chose.', hints: M13_HINTS.district, minutes: 2 },
@@ -1010,6 +1080,20 @@ export const M13 = {
       ],
     },
   },
+  deductions: {
+    firstShot: {
+      question: [K('Two shells, two guns, two sets of orders. Who fired first?')],
+      answers: [
+        { intent: 'challenge', label: 'The Continuum.', lines: [K('Their shell went home to a Continuum gun. It was answering something too.')] },
+        { intent: 'comfort', label: 'The Unwritten.', lines: [K('Theirs went home as well. Answering a shot that came before it.')] },
+        { intent: 'investigate', label: 'Neither. Each side answers its own last shot.', correct: true, needs: 'ev_both_sides && ev_field_orders',
+          lines: [K('Each order answers the other, and each shell goes home. Nobody started it. It keeps starting.')] },
+      ],
+      unproven: [K('One shell is not enough. I need one from each side, and their orders.')],
+      set: { ev_nobody_first: true }, log: 'Nobody fired first. Each side answers its own last attack.',
+    },
+  },
+  step: m13Step,
   rules: [
     { id: 'shellA', when: 'inv_shellA_done', say: [N('It climbs. Not south. North, over the Continuum line, back into a Continuum gun.')] },
     { id: 'shellB', when: 'inv_shellB_done', say: [N('It climbs south, over the Unwritten line, back into an Unwritten gun.')] },
