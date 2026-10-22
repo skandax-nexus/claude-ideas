@@ -59,9 +59,9 @@ export default {
   frags: { m09: [['quayBench', 'loggiaStall', 'marketFountain'], ['funicularTrack', 'midStation', 'skyways']] },
   // the Continuum's patrols walk the lower town (a watcher's eye stays at street level)
   watch: { m09: [
-    [[[-20, 66], [40, 66], [40, 78], [-20, 78]]],
-    [[[24, 30], [66, 30], [66, 54], [24, 54]], [[-48, 62], [-12, 62], [-12, 70], [-48, 70]]],
-    [[[-50, 24], [-12, 24], [-12, 56], [-50, 56]], [[20, 70], [60, 70]]],
+    [[[-20, 79], [40, 79], [40, 86], [-20, 86]]],
+    [[[32, 30], [66, 30], [66, 54], [32, 54]], [[-54, 22], [-48, 22], [-48, 58], [-20, 58]]],
+    [[[-50, 24], [-12, 24], [-12, 56], [-50, 56]], [[20, 79], [60, 79]]],
   ] },
   crowd: [
     { era: 'present', years: ['PRESENT'], region: 'northbank', role: 'evacuee', path: [[-4, 90], [-4, 34], [4, 30]], n: 6 },

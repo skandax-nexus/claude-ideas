@@ -44,7 +44,7 @@ export default {
   beatAt: { m18: [null, 'lampPosts', 'towerDeck'] },
   exits: { m18: 'transmissionScreen' },
   frags: { m18: [['anchorMast', 'canyonArch', 'highwaySign'], ['verge', 'tollBooth', 'surge']] },
-  watch: { m18: [[], [[[-40, -30], [40, -30]], [[-30, -96], [30, -96]]], [[[-36, 110], [36, 110]], [[-40, 150], [-40, 120]], [[30, 160], [30, 130]]]] },
+  watch: { m18: [[], [[[-40, -30], [40, -30]], [[-30, -96], [30, -96]]], [[[-36, 92], [36, 92]], [[-55, 150], [-55, 120]], [[30, 160], [30, 130]]]] },
   crowd: [
     { era: 'future', years: ['FUTURE'], region: 'fracture', role: 'evacuee', path: [[-20, -152], [8, -152], [8, -132]], n: 6 }, // (on the road, short of the ramp)
     { era: 'present', years: ['PRESENT'], region: 'fracture', role: 'driver', path: [[-6, 20], [-6, 80]], n: 2,

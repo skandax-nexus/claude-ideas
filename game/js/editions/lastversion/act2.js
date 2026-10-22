@@ -66,10 +66,11 @@ const M09_HINTS = {
 };
 const EVAC = AMB('CROWD_F2');
 // each reset moves the patrols (the watchers of quarters 1 and 2: their ids end _q1s0, _q2s0)
+// (each round's paths keep to open ground: the square round the loggia, the street east of its houses)
 const M09_PATROLS = [
-  { q1s0: [[-50, 24], [-12, 24], [-12, 56], [-50, 56]], q2s0: [[24, 30], [66, 30], [66, 54], [24, 54]] },
-  { q1s0: [[-56, 30], [-20, 30], [-20, 50], [-56, 50]], q2s0: [[30, 36], [70, 36], [70, 58], [30, 58]] },
-  { q1s0: [[-40, 22], [0, 22], [0, 40], [-40, 40]], q2s0: [[24, 44], [62, 44]] },
+  { q1s0: [[-50, 24], [-12, 24], [-12, 56], [-50, 56]], q2s0: [[32, 30], [66, 30], [66, 54], [32, 54]] },
+  { q1s0: [[-54, 22], [-10, 22], [-10, 58], [-54, 58]], q2s0: [[32, 36], [68, 36], [68, 58], [32, 58]] },
+  { q1s0: [[-54, 22], [-48, 22], [-48, 58], [-20, 58]], q2s0: [[32, 44], [62, 44]] },
 ];
 
 export const M09 = {
@@ -82,7 +83,7 @@ export const M09 = {
   // the loop: every ninety seconds the street goes back to 08:05 (the patrols to their next round, the rain upward for a
   // second); it stops when the carrier is cut
   loop: { period: 90, upward: true, until: 'transmitter_cut', variants: M09_PATROLS.map((watch) => ({ watch })) },
-  watch: [[[[-20, 66], [40, 66], [40, 78], [-20, 78]]], [M09_PATROLS[0].q1s0], [M09_PATROLS[0].q2s0, [[20, 70], [60, 70]]]],
+  watch: [[[[-20, 79], [40, 79], [40, 86], [-20, 86]]], [M09_PATROLS[0].q1s0], [M09_PATROLS[0].q2s0, [[20, 79], [60, 79]]]], // (the quay's promenade, not its houses)
   fragSpots: [['quayBench', 'loggiaStall'], ['marketFountain', 'midStation']],
   fragments: [[
     'A clock at nine to zero. Then eight. Then nine again.',

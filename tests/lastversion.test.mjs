@@ -1046,6 +1046,23 @@ test('every quarter holds its own spawn, and its main threads stand in it (or at
 });
 
 test('places are big enough to explore: a short side of 120 m or more (a linear place: 100-120 × 360-420 m), quarters of 2,500 m² or more', () => {
+// (U3 review) a watcher patrols open ground: a path through a house is a guard walking through its walls, blind half
+// its loop (its eye cannot see out of a box). Each path's samples, in the year that suits it best, are at most 15% in
+// solids at body height (a post or a bench in passing), Mission 9's rounds after each reset as well
+test('watchers patrol open ground, not through the places\' buildings', () => {
+  for (const { deck, level } of LEVELS) {
+    const paths = [...level.sentinels.map((sn) => sn.path), ...(deck.loop?.variants || []).flatMap((v) => (v.watch ? Object.values(v.watch) : []))];
+    const solid = deck.states.map((st) => level.elements.filter((e) => e.solid && (!e.when || [false, true].every((v) => compileCondition(e.when)({ fact: () => v, state: st })))));
+    for (const path of paths) {
+      if (!path || path.length < 2) continue;
+      const loop = path.length > 2 ? [...path, path[0]] : path, pts = [];
+      for (let i = 0; i < loop.length - 1; i++) for (let k = 0; k < 10; k++) pts.push([loop[i][0] + ((loop[i + 1][0] - loop[i][0]) * k) / 10, loop[i][1] + ((loop[i + 1][1] - loop[i][1]) * k) / 10]);
+      const inside = Math.min(...solid.map((sol) => pts.filter(([x, z]) => sol.some((e) => x > e.box[0] && x < e.box[3] && z > e.box[2] && z < e.box[5] && e.box[1] < 1.6 && e.box[4] > 0.3)).length));
+      assert.ok(inside <= pts.length * 0.15, `${deck.mkey}: a watcher's path ${JSON.stringify(path)} is ${inside} of ${pts.length} samples inside solids`);
+    }
+  }
+});
+
   for (const [key, spec] of Object.entries(PLACES)) {
     const [x0, z0, x1, z1] = spec.bounds;
     const short = Math.min(x1 - x0, z1 - z0), long = Math.max(x1 - x0, z1 - z0);

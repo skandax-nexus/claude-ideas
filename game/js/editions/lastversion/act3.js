@@ -943,7 +943,7 @@ export const M18 = {
   motto: 'THE ONE BEFORE YOU TRIED TO SAVE ME', gate: 'THE TRANSMISSION TOWER', crew: C('sera'),
   named: ['sera', 'mira', 'iven'],
   minutes: { main: 32, optional: 8 }, autoExit: 1.2, gateAfter: true,
-  watch: [[], [[[-30, -96], [30, -96]]], [], [[[-36, 110], [36, 110]], [[-40, 150], [-40, 120]], [[30, 160], [30, 130]]]],
+  watch: [[], [[[-30, -96], [30, -96]]], [], [[[-36, 92], [36, 92]], [[-55, 150], [-55, 120]], [[30, 160], [30, 130]]]], // (round the skyscraper, not through it)
   processes: M18_PROCESSES,
   zones: [{ at: 'towerDeck', box: [-8, -1, -8, 8, 4, 8], set: { m18_on_deck: true }, when: 'm18_stabilized' }],
   fragSpots: [['anchorMast', 'garden'], ['canyonArch', 'highwaySign'], ['verge', 'tollBooth']],
