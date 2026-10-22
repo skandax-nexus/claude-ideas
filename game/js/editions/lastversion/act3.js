@@ -104,7 +104,7 @@ const M14_PROCESSES = [
     hints: ['Footprints in the moss.', 'They walk backwards.', 'REVERSE them.'],
   },
   // R6: the memorial is not a process
-  { id: 'memorialRefusal', kind: 'refusal', refuse: 'NOT A PROCESS', at: 'memorial', label: 'THE MEMORIAL', line: 'It isn\'t something that happened. It\'s something they decided.', aim: [0, 2.6, -0.8] },
+  { id: 'memorialRefusal', kind: 'refusal', refuse: 'NOT A PROCESS', at: 'memorial', label: 'THE MEMORIAL', when: '@FUTURE', line: 'It isn\'t something that happened. It\'s something they decided.', aim: [0, 2.6, -0.8] },
 ];
 
 // the statue of Kai on its plinth: his own body in weathered stone, still (it takes its pose, then holds it)
@@ -192,9 +192,9 @@ export const M14 = {
       threads: [
         { id: 'memorial', kind: 'tasks', of: ['ev_memorial', 'ev_fresh_flowers', 'm14_core'], after: ['antenna'],
           spots: [
-            { id: 'memorialStone', scene: 'memorial', at: 'memorial', prompt: 'THE MEMORIAL', offset: [0, 1.4, 1.2], r: 2.8, model: NO_MODEL },
-            { id: 'memorialFlowers', scene: 'flowers', at: 'flowers', prompt: 'THE FLOWERS', offset: [0, 0.6, 0.6], r: 2.2, model: NO_MODEL },
-            { id: 'memorialCore', scene: 'core', at: 'memorial', prompt: 'THE CORE', offset: [6.5, 1.0, 1.4], r: 2.4, kit: 'memorialCore' },
+            { id: 'memorialStone', scene: 'memorial', at: 'memorial', prompt: 'THE MEMORIAL', offset: [0, 1.4, 1.2], r: 2.8, model: NO_MODEL, when: '@FUTURE' },
+            { id: 'memorialFlowers', scene: 'flowers', at: 'flowers', prompt: 'THE FLOWERS', offset: [0, 0.6, 0.6], r: 2.2, model: NO_MODEL, when: '@FUTURE' },
+            { id: 'memorialCore', scene: 'core', at: 'memorial', prompt: 'THE CORE', offset: [6.5, 1.0, 1.4], r: 2.4, kit: 'memorialCore', when: '@FUTURE' },
           ],
           goal: 'The memorial on the old Helix Plaza.', because: 'The last part is in its foot. My name is on its face.', hints: M14_HINTS.memorial, minutes: 3 },
         { id: 'sera', kind: 'talk', npc: 'sera', at: 'seraSteps', after: ['memorial'], goal: 'Sera is waiting by the steps.', because: 'She watched me read it.', done: 'trust_sera', hints: M14_HINTS.sera, minutes: 4 },
@@ -217,7 +217,7 @@ export const M14 = {
         { id: 'school', name: 'THE SCHOOLROOM', done: 'ev_rhyme && ev_schoolbook', minutes: 1,
           threads: [
             { id: 'rhyme', kind: 'talk', npc: 'm14_pupil', at: 'seraSchool', goal: 'A child is reciting something.', because: 'It has my name in it.', done: 'ev_rhyme', hints: M14_HINTS.rhyme, minutes: 0.5 },
-            { id: 'book', kind: 'scene', scene: 'schoolbook', at: 'seraSchool', spot: { prompt: 'THE SCHOOLBOOK', offset: [-4, 1.0, 2.5], r: 2.4, model: NO_MODEL },
+            { id: 'book', kind: 'scene', scene: 'schoolbook', at: 'seraSchool', spot: { prompt: 'THE SCHOOLBOOK', offset: [-4, 1.0, 2.5], r: 2.4, model: NO_MODEL, when: '@FUTURE' },
               goal: 'A schoolbook on a desk.', because: 'The lesson before the names.', done: 'ev_schoolbook', hints: M14_HINTS.book, minutes: 0.5 },
           ] },
       ],
@@ -278,7 +278,7 @@ export const M14 = {
   overlay(P) {
     person(P, { id: 'sera', crew: 'sera', at: 'seraSteps', off: [0, 0, 1.6], turn: Math.PI, prompt: 'TALK TO SERA' });
     person(P, { id: 'gardener', crew: 'gardener', at: 'gardenChannel', off: [1.6, 0, 1.0], turn: -Math.PI / 2, prompt: 'TALK TO THE GARDENER', when: '@FUTURE' });
-    person(P, { id: 'kai_statue', crew: 'kai', at: 'kaiStatue', off: [0, 1.6, 0], turn: 0, silent: true, statue: true, freezeWhen: 'm14_statue', temporal: ['PRESENT', 'PAST', 'FUTURE'] });
+    person(P, { id: 'kai_statue', crew: 'kai', at: 'kaiStatue', off: [0, 1.6, 0], turn: 0, silent: true, statue: true, freezeWhen: 'm14_statue', temporal: ['PRESENT', 'PAST', 'FUTURE'], when: '@FUTURE' }); // (the memorial is 2196's)
     person(P, { id: 'warden', crew: 'warden', at: 'unstableZones', off: [3, 0, 2], turn: Math.PI, silent: true, when: '@FUTURE', barks: ['Do not cross before noon. It is always before noon.'] });
     person(P, { id: 'm14_pupil', crew: 'm14_pupil', first: 'A child', seed: 1401, ambient: true, at: 'seraSchool', off: [2, 0, 3], turn: Math.PI, when: '@FUTURE', prompt: 'TALK TO THE CHILD' });
     person(P, { id: 'm14_pupilA', crew: 'm14_pupilA', first: 'A child', seed: 1402, ambient: true, at: 'seraSchool', off: [-2, 0, 1.5], turn: Math.PI, when: '@FUTURE', silent: true });

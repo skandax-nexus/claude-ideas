@@ -191,17 +191,29 @@ export default {
     P.land('seraSchool', 0, 1.6, -96, Math.PI);
     P.land('gardenChannel', -40, 1.6, -64, 0);
     P.land('mossPrints', 4, 1.6, -66, 0);
-    // the memorial: a long black stone with the name; the statue of Kai in stone on a plinth
-    P.box([-27, 1.6, -84, -11, 4.6, -82.6], 'basalt');
-    sign(P, 'KAI VAREN', -19, 4.0, -82.5, 0, { size: 0.5, board: 0, color: '#e8e4dc' });
-    sign(P, 'ARCHITECT OF THE FRACTURE', -19, 3.3, -82.5, 0, { size: 0.32, board: 0, color: '#c8c4bc' });
-    P.box([-35.5, 1.6, -83.5, -32.5, 3.2, -80.5], 'statueStone'); // (the statue on it is Kai himself, in stone: M14's overlay)
-    P.E('FUTURE', () => { P.box([-17, 1.6, -79, -15, 1.9, -78], 'flowersStall', { solid: false }); for (let i = 0; i < 6; i++) P.tree('fern', -44 + i * 8, -102, 1.2, { y: 1.6, solid: false }); });
-    // Sera's school: an open schoolroom under a canopy at the back of the plaza
-    P.box([-12, 1.6, -104, 8, 5.4, -100], 'concreteStained');
-    P.vbox([-14, 5.4, -104, 10, 5.7, -92], 'pontoonWood');
-    for (const x of [-12, 8]) P.cyl(x, 1.6, -92, 0.15, 3.8, 'pontoonWood', { seg: 6, solid: true });
-    for (let i = 0; i < 4; i++) P.box([-8 + i * 4, 1.6, -97, -6 + i * 4, 2.3, -96], 'pontoonWood');
+    // 2196: the memorial, a long black stone with the name, and the statue of Kai in stone on a plinth; Sera's school,
+    // an open schoolroom under a canopy at the back of the plaza. (The plaza becomes the memorial only in 2196: in 2026
+    // and 2049 it is the old Helix Plaza, its fountain and its name.)
+    P.E('FUTURE', () => {
+      P.box([-27, 1.6, -84, -11, 4.6, -82.6], 'basalt');
+      P.box([-35.5, 1.6, -83.5, -32.5, 3.2, -80.5], 'statueStone'); // (the statue on it is Kai himself, in stone: M14's overlay)
+      P.box([-17, 1.6, -79, -15, 1.9, -78], 'flowersStall', { solid: false });
+      for (let i = 0; i < 6; i++) P.tree('fern', -44 + i * 8, -102, 1.2, { y: 1.6, solid: false });
+      P.box([-12, 1.6, -104, 8, 5.4, -100], 'concreteStained');
+      P.vbox([-14, 5.4, -104, 10, 5.7, -92], 'pontoonWood');
+      for (const x of [-12, 8]) P.cyl(x, 1.6, -92, 0.15, 3.8, 'pontoonWood', { seg: 6, solid: true });
+      for (let i = 0; i < 4; i++) P.box([-8 + i * 4, 1.6, -97, -6 + i * 4, 2.3, -96], 'pontoonWood');
+    });
+    sign(P, 'KAI VAREN', -19, 4.0, -82.5, 0, { size: 0.5, board: 0, color: '#e8e4dc', e: ['FUTURE'] });
+    sign(P, 'ARCHITECT OF THE FRACTURE', -19, 3.3, -82.5, 0, { size: 0.32, board: 0, color: '#c8c4bc', e: ['FUTURE'] });
+    P.E(['PRESENT', 'PAST'], () => {
+      // the Helix Plaza: the fountain where the memorial will stand, the company's name over the steps, planters
+      P.cyl(-19, 1.6, -84, 3.4, 0.7, 'limestoneBlock', { seg: 20, solid: true });
+      P.disc(-19, 2.25, -84, 3.1, 'fountainWater', { noShadow: 1 });
+      P.cyl(-19, 2.3, -84, 0.35, 2.4, 'limestoneBlock', { seg: 10 });
+      for (const x of [-40, -30, 0, 6]) P.box([x - 1.2, 1.6, -100, x + 1.2, 2.3, -98], 'limestoneBlock');
+    });
+    sign(P, 'HELIX PLAZA', -19, 1.95, -80.55, 0, { size: 0.32, board: 0, color: '#3a4450', e: ['PRESENT', 'PAST'] }); // (cut in the fountain's rim)
     // the garden channel: dry in 2049, running in 2196 when it has been opened
     P.vbox([-42, 1.5, -100, -38, 1.62, -64], 'riverStone', { noShadow: 1 });
     P.E('FUTURE', () => P.vbox([-41.6, 1.62, -100, -38.4, 1.66, -64], 'lagoonWater', { noShadow: 1, w: 'water_route || garden_restored' }));
