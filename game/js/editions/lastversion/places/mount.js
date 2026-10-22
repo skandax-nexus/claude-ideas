@@ -27,6 +27,17 @@ export function mountPlace(rt) {
   const scenery = new Scenery(level, root, ctx);
   const sky = new Sky(root, level);
   const horizon = new Horizon(root, level);
+  // the first switch into each year neither paints its horizon nor fetches and filters its light probe on its frame:
+  // every year's band is painted and uploaded now, and every year's probe is on its way (a probe not yet asked
+  // for is asked for, and the one in use asked for again, so the scene keeps its light meanwhile)
+  horizon.prepare(g.renderer);
+  const pf = g.postfx;
+  if (pf?.q?.env) {
+    const want = pf.envName, k = pf.envIntensity;
+    const fresh = [...new Set(Object.values(level.years).map((y) => y.ibl).filter((n) => n && n !== want && !pf.skies?.[n] && !pf.loading?.has(n)))];
+    for (const n of fresh) pf.setEnvironment(n, k);
+    if (fresh.length) pf.setEnvironment(want, k);
+  }
   // DeckWorld's meshes: the place's own conditional pieces are drawn by the scenery
   for (const d of dw.dynamic) {
     if (d.el.ghost) {

@@ -232,6 +232,15 @@ export class Horizon {
     root.add(this.skirt);
   }
 
+  // every year's band painted and uploaded at once, at the place's load (behind its fade): the first switch into a
+  // year, the game's core verb, paints and uploads nothing on its frame
+  prepare(renderer) {
+    for (const [s, y] of Object.entries(this.level.years || {})) {
+      this.cache[s] ||= paint(this.level.place, y.era || '2049', y, this.level.backdrop || {});
+      renderer?.initTexture?.(this.cache[s]);
+    }
+  }
+
   setYear(state, y) {
     const era = y.era || '2049';
     const k = `${state}`;
