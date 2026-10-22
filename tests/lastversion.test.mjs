@@ -716,6 +716,47 @@ test('moving colliders: the edition\'s temps entries never expire and the editio
   run(bridge, 2);
   bridge.dispose();
   assert.equal(env.deckWorld.temps.length, 0, 'unloaded, the edition takes its own entries out');
+  // a process out of its year (`when` false) is not stepped: nothing of it stays solid there, and a hold or a
+  // release under way ends at once (no invisible bridge in the other years, no fall resumed on the way back)
+  const yearBridge = () => {
+    const e = fakeEnv();
+    return [e, new Process(makeRecord({ id: 'yb', kind: 'collapse', when: '@FUTURE', span: { from: [-2, 2, -5], to: [-2, 2, -15], pieces: 6 }, hints: ['a', 'b', 'c'] }, { pos: [0, 0, -5], yaw: 0, room: 'r' }, level), e)];
+  };
+  for (const how of ['held', 'creaking']) {
+    const [e, b] = yearBridge();
+    b.reverse();
+    run(b, 2);
+    assert.equal(e.deckWorld.temps.length, 6, `${how}: seated`);
+    if (how === 'creaking') {
+      b.release();
+      run(b, 0.2);
+      assert.ok(b.creakT > 0 && e.deckWorld.temps.length === 6, 'the creak before the fall');
+    }
+    b.setVisible(false);
+    assert.equal(e.deckWorld.temps.length, 0, `${how}: out of its year, nothing of it is solid`);
+    assert.deepEqual([b.P, b.dir, b.creakT, b.hiddenByWhen, b.group.visible], [0, 0, 0, true, false], `${how}: it is back at rest`);
+    b.setVisible(true);
+    run(b, 1);
+    assert.equal(e.deckWorld.temps.length, 0, `${how}: back in its year it is rubble`);
+    b.reverse();
+    run(b, 2);
+    assert.equal(e.deckWorld.temps.length, 6, `${how}: and can be held again`);
+    b.dispose();
+  }
+  // a lift car is solid all along its shaft, in its own year only
+  {
+    const e = fakeEnv();
+    const car = new Process(makeRecord({ id: 'car', kind: 'fall', when: '@FUTURE', parts: [{ shape: 'box', size: [2, 0.3, 2], at: [0, 4, 0], rest: { at: [0, 0.15, 0] }, solid: true }], hints: ['a', 'b', 'c'] }, { pos: [0, 0, -10], yaw: 0, room: 'r' }, level), e);
+    assert.equal(e.deckWorld.temps.length, 1);
+    car.setVisible(false);
+    car.setVisible(false);
+    assert.equal(e.deckWorld.temps.length, 0, 'not in the other years');
+    car.setVisible(true);
+    run(car, 0.1);
+    assert.equal(e.deckWorld.temps.length, 1, 'back in its year');
+    car.dispose();
+    assert.equal(e.deckWorld.temps.length, 0);
+  }
   // and the only thing the edition ever pushes into temps is a colliderEntry
   const src = ['processes.js', 'inversion.js'].map((f) => fs.readFileSync(new URL(`../game/js/editions/lastversion/${f}`, import.meta.url), 'utf8')).join('\n');
   const pushes = [...src.matchAll(/temps\.push\(([^)]*)\)/g)].map((m) => m[1]);

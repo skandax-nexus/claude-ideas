@@ -931,9 +931,28 @@ export class Process {
     }
   }
 
+  // `when` decides where a process is (its year, a fact). Out of it, it is not stepped (inversion.js), so on the
+  // way out nothing of it stays solid (a seated bridge, a lift car) and a release under way finishes at once
+  // (its creak and fall would wait for steps that never come). Back in it, the next step seats its colliders again.
   setVisible(v) {
+    const was = !this.hiddenByWhen;
     this.group.visible = v;
     this.hiddenByWhen = !v;
+    if (was && !v) this.hide();
+  }
+
+  hide() {
+    if (!this.settled && this.rec.kind !== 'lock' && (this.dir !== 0 || this.creakT > 0)) {
+      this.P = 0;
+      this.dir = 0;
+      this.creakT = 0;
+    }
+    if (this.entries.some(Boolean)) {
+      const dw = this.env.deckWorld;
+      dw.temps = dw.temps.filter((x) => !this.entries.includes(x));
+      dw.refresh();
+    }
+    this.entries = [];
   }
 
   dispose() {

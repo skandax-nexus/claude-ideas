@@ -152,6 +152,7 @@ export class Inversion {
     st.cap = this.cap;
     this.recordHistory(dt);
     for (const p of this.procs) p.setVisible(!!p.cond(g.deckWorld.ctx(p.rec.room)));
+    if (this.active?.p.hiddenByWhen) this.release('gone'); // (its fact changed: what is not here is not held)
     if (this.active) this.stepActive(dt);
     else {
       this.idleT += dt;
