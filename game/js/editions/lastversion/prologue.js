@@ -162,9 +162,11 @@ export const M01 = {
     P.inter.push({ id: 'clock', kind: 'scene', scene: 'clock', pos: [cx, cy + 6.15, cz + 0.95], yaw: 0, r: 7, prompt: 'LOOK AT THE CLOCK', model: () => { const m = makeClock({ mode: 'backwards' }); m.scale.setScalar(2.4); return m; }, once: true, room: rid });
     const [lx, ly, lz] = L('laundromat');
     P.inter.push({ id: 'camera', kind: 'scene', scene: 'camera', pos: [lx - 0.1, ly + 1.7, lz], yaw: -Math.PI / 2, r: 3.2, prompt: 'WATCH THE FEED', model: () => makeScreen(0xbfe4ff), once: true, room: rid });
-    // --- Rook's call, on the way into the plaza ----------------------------------------
-    const [rx, , rz] = L('rookCall');
-    P.triggers.push({ box: [rx - 46, -1, rz - 3, rx + 46, 5, rz + 3], set: { rook_message: true }, once: true, room: rid });
+    // --- Rook's call, on the way into the plaza: across the whole street, wall to wall and roofs too (the Zero Second
+    // waits for it; a strip narrower than the place could be walked round, and the platform would wait for ever)
+    const [, , rz] = L('rookCall');
+    const [wx0, , wx1] = P.spec.bounds;
+    P.triggers.push({ box: [wx0, -1, rz - 3, wx1, 30, rz + 3], set: { rook_message: true }, once: true, room: rid });
     // --- the checkpoint at the bridge: Officer Pryce, Helix security (her conversation is this mission's talks.guard)
     const [bx, by, bz] = L('checkpointBooth');
     A.prop(P, 'booth', bx, bz, 0, { y: by, m: 'helixWhite' });

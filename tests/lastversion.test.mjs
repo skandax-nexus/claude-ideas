@@ -1230,6 +1230,18 @@ test('Helix: no wing storey hangs in the air; every raised panel block stands on
   assert.ok(n >= 10, `${n} raised blocks`);
 });
 
+// the Zero Second waits for Rook's call (checkpoint_passed && rook_message): no way into the plaza may miss the call
+test('Mission 1: Rook\'s call spans the whole street between home and the plaza, wall to wall and up to the roofs', () => {
+  const l = PLACED.find((p) => p.deck.mkey === 'm01').level;
+  const [bx0, , bx1] = l.bounds;
+  const call = l.triggers.find((t) => t.set?.rook_message);
+  const [home, plaza] = l.quarters;
+  assert.ok(call.box[0] <= bx0 && call.box[3] >= bx1, `x ${call.box[0]}..${call.box[3]} covers the place's ${bx0}..${bx1}`);
+  assert.ok(call.box[1] <= 0 && call.box[4] >= 25, 'from the street up past the roofs');
+  assert.ok(call.box[2] < home.area[1] && call.box[5] > home.area[1] && plaza.area[3] === home.area[1], 'on the line between the two quarters');
+  assert.ok(l.triggers.find((t) => t.set?.zero_second).when.includes('rook_message'));
+});
+
 test('Mission 4: the pictograms are carved on standing stones, in both years; the carved lintel stands only in the village', () => {
   const l = PLACED.find((p) => p.deck.mkey === 'm04').level;
   for (const m of ['pictoFire', 'pictoWater', 'pictoRing']) {
