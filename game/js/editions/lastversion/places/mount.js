@@ -18,6 +18,35 @@ import { underWater } from './Place.js';
 
 // how far above the ground a kind of interactable floats (Place.stageBeat, fragments)
 const KIND_Y = { terminal: 1.15, plaque: 1.6, fragment: 1.1, scene: 1.3 };
+const _pc = new THREE.Vector3(), _pinv = new THREE.Matrix4();
+
+// The people of a place are culled again. world/Actors.js (shared) draws every person unculled ("skinned bounds don't
+// follow the animation"), so in a place with crowds every person was drawn in every pass, behind the camera and far
+// outside the shadows' 36 m box: in Mission 1 60 skinned meshes, 145k of the 161k triangles of the shadow pass and
+// most of the scene pass's. Each of a person's skinned meshes gets a sphere round the whole body, fixed in its own
+// frame (from the feet, a metre up, 1.6 m round: a standing, walking or reaching person, generously), and is culled
+// against it: the camera draws the people in front of it, the shadow pass the ones in its box. (Station Zero is untouched.)
+function cullPeople(dw, seen) {
+  for (const a of dw.npcs || []) {
+    for (const m of [a.body, a.model, a.echo]) {
+      if (!m || seen.has(m)) continue;
+      let fresh = false;
+      m.traverse((o) => { if (o.isSkinnedMesh && !seen.has(o)) fresh = true; });
+      if (!fresh) continue; // (a model still loading: looked at again in half a second)
+      seen.add(m);
+      m.updateMatrixWorld(true);
+      _pc.setFromMatrixPosition(m.matrixWorld);
+      _pc.y += 1.0;
+      m.traverse((o) => {
+        if (!o.isSkinnedMesh || seen.has(o)) return;
+        seen.add(o);
+        _pinv.copy(o.matrixWorld).invert();
+        o.boundingSphere = new THREE.Sphere(_pc.clone().applyMatrix4(_pinv), 1.6 / Math.max(1e-6, o.matrixWorld.getMaxScaleOnAxis()));
+        o.frustumCulled = true;
+      });
+    }
+  }
+}
 
 export function mountPlace(rt) {
   const g = rt.g, level = rt.level, dw = g.deckWorld, root = dw.root;
@@ -84,6 +113,9 @@ export function mountPlace(rt) {
     return false;
   };
   const so = { time: 0, flash: 0, ctx: null }, at = [0, 0, 0];
+  const people = new WeakSet();
+  let peopleT = 0;
+  cullPeople(dw, people);
   let state = null;
   const api = {
     scenery, sky, horizon,
@@ -114,6 +146,11 @@ export function mountPlace(rt) {
       sky.update(dt, cam, so);
       horizon.update(cam);
       scenery.update(dt, cam);
+      // (a person whose model arrives or is dressed after the load is culled from the next half second)
+      if ((peopleT += dt) > 0.5) {
+        peopleT = 0;
+        cullPeople(dw, people);
+      }
       // a hazard still in this year (the arm rusted solid in 2196) does not move
       for (const h of dw.hazards) if (h.hz.stillIn && h.hz.stillIn === state) h.stasisT = 0.25;
       // deep water: the current takes Kai back to the last anchor. An anchor under the same water (M5's village gate

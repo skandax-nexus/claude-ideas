@@ -7,7 +7,8 @@
 //     instanced vegetation), the sky and the horizon, and everything else (people, props, texts)
 //   - JS time per frame (step, worlds, theme, render submission) over PLACES_FRAMES frames, rendered at
 //     PLACES_TINY of the pixel ratio so SwiftShader's rasterisation does not count (as tests/perf.mjs)
-// Budgets checked (§4.7): visible static draw calls ≤ 70, sky 1, horizon ≤ 4, triangles ≤ 300k.
+// Budgets checked (§4.7): visible static draw calls ≤ 70, sky 1, horizon ≤ 4, triangles ≤ 300k in the scene pass and in
+// the whole frame (the shadow passes too).
 //   NODE_PATH=$(npm root -g) node tests/lastversion-perf.mjs
 //   env: PLACES=m01,m04 (missions; any of m01 .. m23)  PLACES_FRAMES=120  PLACES_TINY=0.1  PLACES_QUALITY=medium
 // CAST_LOAD=act3 (any chapter, or a comma list): before the places, with the game running in real time in Mission 1
@@ -185,6 +186,7 @@ for (const r of results.filter((x) => !x.cast)) {
   if (r.skyDraws !== 1) bad.push(`sky ${r.skyDraws}`);
   if (r.horizonDraws > 4) bad.push(`horizon ${r.horizonDraws}`);
   if (r.scene.triangles > 300000) bad.push(`${r.scene.triangles} triangles`);
+  if (r.full.triangles > 300000) bad.push(`${r.full.triangles} triangles in the whole frame (its shadow passes too)`); // (§4.7 counts the whole frame)
   if (bad.length) { fail++; console.log(`FAIL ${r.key} ${r.year}: ${bad.join(', ')}`); }
 }
 if (errors.length) console.log('page errors:', [...new Set(errors)].join(' | '));
