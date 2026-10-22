@@ -194,12 +194,14 @@ await az(() => {
   B.exit = () => { const ex = g.level.exit.box; B.place((ex[0] + ex[3]) / 2, (ex[2] + ex[5]) / 2, ex[1] + 1 + 0.86); g.simulate(0.3); B.skip(); };
   // walk a list of [x, z] waypoints with real movement, the watchers held still (they are another check's business)
   B.route = (pts, secs = 20) => {
+    if (g.menu === 'pause') g.closeMenu();
     const held = g.deckWorld.sentinels.splice(0);
     const start = B.setbacks;
     let left = 0, n = 0;
     for (const [x, z] of pts) { left = B.walkTo(x, z, secs); if (left > 0.6 || B.setbacks > start) break; n++; }
     g.deckWorld.sentinels.push(...held);
-    return { n, of: pts.length, left: +left.toFixed(2), at: g.player.pos.toArray().map((v) => +v.toFixed(2)), setbacks: B.setbacks - start, why: B.setbacks > start ? B.lastSetback : null };
+    return { n, of: pts.length, left: +left.toFixed(2), at: g.player.pos.toArray().map((v) => +v.toFixed(2)), setbacks: B.setbacks - start, why: B.setbacks > start ? B.lastSetback : null,
+      ...(n ? {} : { stopped: { menu: g.menu, talking: !!g.hud.talking, cinema: !!g.edition?.cinema?.active, playerCinema: !!g.player.cinema, catching: !!g.catching, transitioning: !!g.transitioning, paused: !!g.paused } }) };
   };
   B.f = (...ks) => Object.fromEntries(ks.map((k) => [k, g.deckWorld.flags[k] ?? g.facts.get(k)]));
   B.where = () => ({ chapter: g.campaign?.chapter, deck: g.campaign?.deck, sector: g.campaign?.sector, room: g.room, done: !!g.deckWorld.flags.beat_done });
@@ -992,12 +994,16 @@ const playMission = async (mkey, { sides = [], before = null, at = {} } = {}) =>
       for (const s of sides) {
         if (sidesDone.has(s)) continue;
         sidesDone.add(s);
+        await page.waitForFunction(() => !AZ.catching && !AZ.transitioning, null, { timeout: 30000 }).catch(() => {});
         const r = await az((s) => { const a = AZ.time; const out = LVP.side(s); return { out, secs: AZ.time - a }; }, s);
         if (ok(r)) sideSecs += r.secs;
         steps.push({ side: s, r: ok(r) ? r.out : r });
       }
     }
     if (at[cur.id]) await at[cur.id]();
+    // (a setback's fade ends on the page's own timer, which cannot run inside one evaluate: let it finish first, or
+    // the player stands frozen through the next step and is put back at the checkpoint after it)
+    await page.waitForFunction(() => !AZ.catching && !AZ.transitioning, null, { timeout: 30000 }).catch(() => {});
     const r = await az(() => LVP.step());
     if (!ok(r) || !r.id) { if (!ok(r)) steps.push(r); break; }
     steps.push(r);
@@ -1440,6 +1446,13 @@ await az(() => {
     P.checks.hold = { done: P.done(t), anchored, far, prog: g.facts.get(`hold_${P.mk()}_${t.id}`), posts: T.holds[t.id]?.posts.map((q) => q.st) };
   };
   // hold a process with REVERSE from where Kai stands (no stepping round it to aim)
+  // (before a measured walk: nothing staged or said still playing, no menu, no setback's fade under way)
+  P.ready = () => {
+    if (g.menu === 'pause') g.closeMenu();
+    P.out();
+    P.wait(() => !g.edition.cinema?.active && !g.hud.talking && g.menu !== 'choice', 30, 0.2);
+    if (g.menu === 'pause') g.closeMenu();
+  };
   P.holdHere = (id) => {
     const p = B.proc(id);
     if (!p) return `no ${id}`;
@@ -1451,6 +1464,7 @@ await az(() => {
   P.own.m14 = {
     // the bank's lift car: Kai stands in it, REVERSEs it, and it carries him up the shaft to the roof's landing
     lift: (t) => {
+      P.ready();
       P.year('FUTURE');
       g.edition.stability = 1;
       g.edition.inv.state.charge = g.edition.inv.cap;
@@ -1482,6 +1496,7 @@ await az(() => {
   P.own.m18 = {
     // the core's slabs: from the stump, hold them (they come back last fallen first) and climb the stair while it holds
     slabStair: (t) => {
+      P.ready();
       P.year('FUTURE');
       g.edition.stability = 1;
       g.edition.inv.state.charge = g.edition.inv.cap;
@@ -1499,6 +1514,7 @@ await az(() => {
     },
     // up the tilted floors to the tower's deck, walked
     climb: (t) => {
+      P.ready();
       P.year('FUTURE');
       const r = B.route([[10, 112], [10, 138], [14, 144], [26, 146], [26, 176], [30, 180], [24, 186]], 20);
       P.checks.climb = { ...r, y: +(g.player.pos.y - 0.86).toFixed(1) };
@@ -1508,6 +1524,7 @@ await az(() => {
   P.own.m19 = {
     // the bridge in the reflection, walked in 2026 (where it was)
     bridge: (t) => {
+      P.ready();
       g.edition.stability = 1;
       P.year('PAST');
       B.place(0, -18);
@@ -1568,6 +1585,7 @@ await az(() => {
     },
     // the first gap: hold the fallen slab and cross on it
     gapOne: (t) => {
+      P.ready();
       g.edition.stability = 1;
       g.edition.inv.state.charge = g.edition.inv.cap;
       const a = lm('arenaGap1');
@@ -1584,6 +1602,7 @@ await az(() => {
     },
     // the second gap: in 2196 a frozen girder lies across it
     gapTwo: (t) => {
+      P.ready();
       P.year('FUTURE');
       g.edition.stability = 1;
       const route = B.route([[-15.1, -42.6], [-19.2, -41], [-23.2, -39.3], [-26.2, -37.3], [lm('summitStair')[0], lm('summitStair')[2]]], 8);
@@ -1622,6 +1641,7 @@ await az(() => {
   P.own.m23 = {
     // the street that fell: he holds its far half; in 2026 its near half still stands
     street: (t) => {
+      P.ready();
       g.edition.stability = 1;
       const p = B.proc('streetCollapse');
       P.wait(() => p.P > 0.98, 6, 0.2);
@@ -1635,6 +1655,7 @@ await az(() => {
     },
     // the swap: Kai holds the settlement's bridge; the Witness crosses first, then Kai
     bridge: (t) => {
+      P.ready();
       g.edition.stability = 1;
       g.edition.inv.state.charge = g.edition.inv.cap;
       P.present();
@@ -1791,7 +1812,7 @@ await finish();
 
 // --- the Finale ------------------------------------------------------------------------------------------------------
 console.log('The Finale: Afterzero');
-const fin = await az(() => ({ ...LVB.where(), name: AZ.edition.deck.name, drones: AZ.deckWorld.sentinels.length, jun: AZ.facts.get('jun_line') }));
+const fin = await az(() => ({ ...LVB.where(), name: AZ.edition.deck.name, drones: AZ.deckWorld.sentinels.filter((s) => /_q0s\d$/.test(s.def.id)).length, jun: AZ.facts.get('jun_line') }));
 check(fin.chapter === 'finale' && fin.name === 'AFTERZERO' && (!fin.jun || fin.drones === 0), 'Act IV ends; the Finale begins (the passengers Kai got off the 41 have cleared the opening streets)', JSON.stringify(fin));
 const m23 = await playMission('m23', { sides: ['gallery'], before: 'mira' });
 const m23f = await az(() => ({ street: LVP.checks.street, bridge: LVP.checks.bridge, ...LVB.f('m23_asked'), ask: LVB.said.includes('MIRA: Ask me.'), time: LVB.said.includes('WITNESS: And, Kai. For once, you are on time.') }));

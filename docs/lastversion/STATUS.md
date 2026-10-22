@@ -6,17 +6,17 @@ AFTERZERO engine, all 23 missions written by hand on threads (the Prologue in U6
 and the Finale in U8), with the CASE FILES after an ending. How it works: [`DESIGN.md`](DESIGN.md).
 
 **Each chapter's length** (minutes; the model is the length model of §9.8, main path + side stories, which is each
-sheet's target; the bot's is the game's own telemetry for the full run of `tests/lastversion.mjs` on «DATE»):
+sheet's target; the bot's is the game's own telemetry for the full run of `tests/lastversion.mjs` on 2026-10-22, 312 checks, all pass):
 
 | Chapter | Target (model) | The bot |
 | --- | --- | --- |
-| Prologue | 97 (74 + 23) | «CH_prologue» |
-| Act I | 191 (150 + 41) | «CH_act1» |
-| Act II | 198 (161 + 37) | «CH_act2» |
-| Act III | 194 (154 + 40) | «CH_act3» |
-| Act IV | 156 (124 + 32) | «CH_act4» |
-| Finale | 50 (40 + 10; the sheet allows 90) | «CH_finale» |
-| The campaign | 886 (703 + 183), about 15 hours | «CH_total» |
+| Prologue | 97 (74 + 23) | 12.1 (Mission 1 walked in 9.7; Missions 2 and 3 by the Prologue's own checks, which place Kai beat to beat) |
+| Act I | 191 (150 + 41) | 42.8 |
+| Act II | 198 (161 + 37) | 34.0 |
+| Act III | 194 (154 + 40) | 43.0 |
+| Act IV | 156 (124 + 32) | 28.1 |
+| Finale | 50 (40 + 10; the sheet allows 90) | 7.5 |
+| The campaign | 886 (703 + 183), about 15 hours | 167.5, under 3 hours |
 
 The bot knows every coordinate, reads nothing twice, never looks around or gets lost, asks for no hint and plays one
 or two side stories a mission; the model, not the bot, is the estimate of a player's time, and neither has been
@@ -164,8 +164,10 @@ measured with a player.
   switch, the raw log or the trapped team), each with both outcomes and a later consequence.
 - **Acts III and IV and the Finale, rewritten on threads** (v2.1, U8, 2026-10-22; DESIGN.md "Acts III and IV and the
   Finale as written"; OVERHAUL.md §5 M14–M23 and its "As built (U8)" notes): `act3.js` (Missions 14–18), `act4.js` (19–22)
-  and `finale.js` (23, the endings, the post-credit voice), re-exported by `acts.js`; the shim of legacy beats now serves
-  only the two old cases. `Threads.js` gained `hold` (Mission 18's pylons: two minutes in phase, one pylon drifting at a
+  and `finale.js` (23, the endings, the post-credit voice), re-exported by `acts.js`; no mission or case runs on the shim
+  of legacy beats any more. Nothing that ends one of these missions answers before its story gets there (`gateAfter`: a
+  thread's own spot, trigger, deduction, record or playback waits for the threads it comes after; Mission 18's slabs are
+  in sight from the start but answer REVERSE only once the stabilizer holds, `arm`). `Threads.js` gained `hold` (Mission 18's pylons: two minutes in phase, one pylon drifting at a
   time, re-anchored in its own year; the Unwritten hold one, the freed city slows the drift). Missions may have a home
   year (2196 for 14–16 and 18, 2026 for 20), scenes built when used (Mission 20's board), watchers that answer an
   afterimage (Mission 21's elites snap back five seconds) and talks by a person's own id. REVERSE's new set pieces: the
@@ -176,13 +178,24 @@ measured with a player.
   thirty-second hold (M21); the clockmaker's arm on its beat, the seals last fitted first, the two logs (M22); the street
   the Witness holds and the bridge Kai holds (the Finale). The choices the sheets keep are set and read later:
   `trust_sera`, `garden_restored`, `city_freed` / `city_stabilized`, `photo_taken`, `letter`, `last_signal`, `m20_lead`,
-  `ally`, `ending`; the epilogue has 19 lines, one per fact set (Ending C adds the letter to a brother Mira never had).
+  `ally`, `ending`; the epilogue has 21 lines, one per fact set (Ending C adds the letter to a brother Mira never had;
+  Rook's testimony is said only where Kai exposed him). Three cold opens stage their people while they play (the
+  children at Mission 20's fridge, the Director's broadcast in 21, the Witness at the station's microphone in 22);
+  Mission 14's statue is Kai's own body in stone; the people on the Finale's road stand in every year, never as echoes;
+  and the crowds of the lock city, the quarry, the array, the drowned city's 2026 builders, the fracture's drivers,
+  Mira's street and the Spire speak their own lines instead of another mission's.
   The length model (main + side minutes): M14 30 + 8, M15 30 + 10, M16 30 + 8, M17 32 + 6, M18 32 + 8 (Act III 194);
   M19 30 + 8, M20 30 + 10, M21 34 + 6, M22 30 + 8 (Act IV 156); the Finale 40 + 10 = 50. **Missions 14–23 walked by the
-  bot** (the full run, «DATE»), in minutes of game time against the model: «BOT_M14_M23». Speech: 564–992 words a
-  mission (the budget is 1,000: M14 992, M15 980, M16 748, M17 615, M18 747, M19 674, M20 683, M21 564, M22 663; the
-  Finale «W_finale» of 1,800 with its endings and epilogue). The packs were recorded for it (`tools/voice-lv.sh`):
-  «PACKS».
+  bot** (the full run, 2026-10-22), in minutes of game time against the model's 38–40 (the Finale's 50): M14 7.2, M15
+  9.3, M16 10.0, M17 6.1, M18 10.4, M19 8.6, M20 6.6, M21 4.8, M22 8.1, the Finale 7.5, with one or two side stories each
+  (0.2–1.9 minutes of them a mission). Speech: 612–1,000 words a
+  mission (the budget is 1,000: M14 1,000, M15 986, M16 774, M17 657, M18 779, M19 674, M20 712, M21 612, M22 663; the
+  Finale 965 of 1,800 with its endings and epilogue). The packs were recorded for it (`tools/voice-lv.sh`, every group
+  checked byte for byte against its script, 2026-10-22; voice.ogg + voice.json): `common` 2.52 MB (636 recordings, 18.7
+  min), `prologue` 2.39 MB (593, 18.4 min), `act1` 2.82 MB (740, 22.1 min), `act2` 2.27 MB (650, 18.0 min), `act3`
+  2.72 MB (767, 21.4 min), `act4` 1.64 MB (456, 12.9 min), `finale` 0.67 MB (163, 5.1 min): 15.0 MB and 117 minutes of
+  speech in 4,005 recordings (budgets: 12 MB a pack, 22 MB in all). `cases` is an empty pack now: every replay speaks from
+  its own mission's pack.
 - **Casting, crowds and watchers** (v2.1, U4; DESIGN.md "Casting, crowds and watchers"): every
   person is cast by role, gender, age and era. Mission 1's checkpoint officer is Officer Pryce, a
   security officer in Helix black (`rb_security_f`), no longer a doctor; Dr. Lin and Mira share one face
@@ -211,8 +224,10 @@ measured with a player.
   Three Photographs, the Train That Arrives Yesterday, the Unsent Letter, the House with No Owner, the Last Signal, the
   Names Beneath the City, the Clockmaker's Debt, the Ninth Minute: Evidence, the Survivor's Garden, the Unwritten
   Record) with their bible state (not started, active, resolved, consequence observed). Chains B and C keep their
-  replays (`c_b`, `c_c`, at their old index, so old saves load); the ten side stories replay from their places
-  (`c_child` … `c_record`): the mission's place and people, the story's threads in the quarter it lives in, the facts
+  keys (`c_b`, `c_c`, at their old index, so old saves load) and since U8's last step replay their missions: chain B in
+  Mission 5's gorge (Tala's gates low, high, middle, as in the mission), chain C in Mission 15's archive (Mara, the
+  card's forged layer, the dual archive); an older save in either starts its replay where the story lives. The ten side
+  stories replay from their places (`c_child` … `c_record`): the mission's place and people, the story's threads in the quarter it lives in, the facts
   the player had with the story's own cleared, and the mission's own voice pack (no new lines). THE CASES after an
   ending and the chapter menu's CASE FILES card open the screen; a replay ends back on it.
 - **Stealth and evasion stand in for combat** (watchers, cones, the lure, Echo Step decoys);
@@ -259,6 +274,29 @@ measured with a player.
   but one crowd child's line at 25). An earlier automatic pass caught "KAI + MIRA" spelled out as letters and "-3"
   read without its minus (both fixed and re-rendered). The audition page for a human listen stays in the
   session's scratchpad (not shipped).
+- **Tests** (U8, 2026-10-22): `tests/lastversion.test.mjs` has 88 tests (`npm test`: 116, all pass), the new ones: Acts
+  III and IV and the Finale as threads with the length model (each Act mission 25–42 minutes, the Finale 90 or less, the
+  main path 70% or more, declared minutes the model's); the global ledgers (every question answered in its mission with
+  some of its evidence findable by then, every piece of evidence a deduction needs set earlier or on its own main path, no
+  main thread waiting on a side story, and every fact a choice sets read later in the campaign); nothing that ends a
+  mission of Acts III, IV or the Finale answering at its start (checked from each chapter's PRIMES, and shown to fail on a
+  mission left ungated); every line authored in the missions' files walked by `spokenLines()` (so a line said from code is
+  recorded); the hold; the moments of Acts III and IV; the Finale's holds, endings, epilogue and post-credit voice; the
+  CASE FILES (fourteen stories and their states, twelve replays, `c_b` and `c_c` among them, each building from its
+  place with nothing of its story done once its facts are cleared); and the voice coverage over all 23 missions (0
+  misses). The whole browser bot (`node tests/lastversion.mjs`, 28.7 minutes on this box) passes 312 checks with no page
+  error: the Prologue from NEW GAME, Acts I to IV and the Finale thread by thread to Ending C (Mission 14's lift ride
+  with real movement, Mission 15's `ev_dual_archive`, Mission 18's hold and slab stair, Mission 19's reflection bridge,
+  Mission 20's refusal and accepted alignment, Mission 21's elites and arena, Mission 22's deduction, the Finale's two
+  holds, Ending C's added lines and an epilogue line for a fact the run set, the post-credit VOICE), THE CASES opening
+  the CASE FILES (14 entries, 12 replays) and one replayed from its place after a reload, and the survey of all 23 places
+  (1,657 pairs of views in different places, the closest 26 bits apart); over the run 1,583 lines were said, every one
+  from the packs, `speechSynthesis` never asked, and the cues card, chapter, zero and ending:C all played. Between its
+  steps the bot now waits out a setback's fade (it ends on the page's own timer). `c_b` and `c_c` were also replayed
+  from the CASE FILES screen with no game behind them (chain B's gates, chain C's dual archive). Station Zero:
+  `tests/cradle.mjs` 167/0 (U8 changed no shared file). The edition's APK (`EDITION=lastversion bash
+  android/build-apk.sh`, 2026-10-22) is 46,680,143 bytes (budget 50 MB), with `voice/lv/**` (eight groups, 15 MB) and no
+  other voice; its preview is 54.5 MB with no file over 10 MB.
 - **Tests** (U7, 2026-10-22): `tests/lastversion.test.mjs` has 79 tests (`npm test`: 107, all pass), the new ones:
   Acts I and II as threads with the length model (each mission 25–42 minutes, its main path 70% or more, its declared
   minutes the model's, no empty quarter); a mission started from the chapter menu has none of its threads done (its
@@ -350,7 +388,7 @@ measured with a player.
 ## Planned / not done
 
 - **Scale.** The bible's campaign is 25–30 hours. The length model of this edition is 886 minutes (about 15
-  hours, 703 of them the main path), the bot plays it in «CH_total» minutes of game time (the table at the top), and
+  hours, 703 of them the main path), the bot plays it in 167.5 minutes of game time (the table at the top), and
   no player has been measured.
 - **What the set pieces are not.** The game has no combat and no fail states: Mission 9's reset, Mission 18's hold
   and Mission 21's arena never fail (a lapse or a fall is a setback to the last anchor); Mission 13's battle and
@@ -358,8 +396,9 @@ measured with a player.
   18's surge REVERSE was not built (the hold and the slab stair carry the tower). The bible's ten optional missions
   are side stories of their missions (§5's table), each a few minutes rather than the bible's half hour, and the
   CASE FILES replay them.
-- **Rook as a person after Mission 2.** He speaks on the radio and in recordings; the
-  supplement's exposure / persuasion confrontation is only in his dialogue lines.
+- **Rook after Mission 8** is what `rook_fate` made him: in Corridor B (Mission 12), the Director or an empty chair
+  (Missions 10 and 21), an ally at the Spire if persuaded, and a last transmission on the Finale's road; he is never
+  fought.
 - **People** are all placed since U8 (the Warden and the Gardener in Missions 14 and 15, Tomas and Jun's echo in 15,
   young Kai and the Child in 17 and 20, the Director as `rook_fate` made them in 21, the Elder's, Ezra's and Odile's
   echoes in 22, the people Kai's choices changed along the Finale's road). Missions 22 and 23 still carry a few
@@ -375,7 +414,12 @@ measured with a player.
   stands in for it.
 - **The score** is procedural (Synth's oscillators and noise, 0 bytes of assets): the bible's cues are
   there by name and shape, not as composed music; the crowd walla is the crowds' own barks far off.
-- **Cold opens** of every mission are authored (shots, lines, hooks); the case files' replays have none of their own.
+- **Cold opens** of every mission are authored (shots, lines, hooks); three of Act IV's stage their own people
+  (`coldOpen.cast`), the others use whoever already stands in the shot; the case files' replays have none of their own.
+- **Acts I and II are not gated yet.** `gateAfter` (U8) is on for Acts III, IV and the Finale only; in Acts I and II a
+  thread's own spot or trigger still answers before the threads it comes after (U7's review found missions that one
+  interaction out of order ends: 6, 7, 8, 9, 10 and 13). Turning it on there, and checking each mission's bot route, is
+  U7's fix.
 - **A human playtest** of the rewritten campaign (do the deductions read fairly, do the chases feel like pursuits,
   does Mission 18's hold read as a defence and Mission 20's board as an alignment, are the model's minutes what a
   player takes) has not been done; the bot and the length model stand in for it.

@@ -19,4 +19,9 @@ places. The code is in `game/js/editions/lastversion/` (`prologue.js`, `act1.js`
 `cases.js`, `Threads.js`, `ledger.js`, `Runtime.js`, `places/`).
 
 Build: `EDITION=lastversion bash android/build-apk.sh` (app "AFTERZERO: Last Version",
-its own saves); the default build stays the Station Zero game.
+its own saves; 46.7 MB on 2026-10-22, with the eight voice packs under `assets/voice/lv/`); the default build stays
+the Station Zero game.
+
+Tests: `npm test` (the edition's 88 unit tests among 116) and `NODE_PATH=$(npm root -g) node tests/lastversion.mjs`
+(the browser bot: NEW GAME to Ending C, the CASE FILES and a survey of the 23 places, 312 checks on 2026-10-22).
+Recording the voices: `VOICE_WORK=<dir> bash tools/voice-lv.sh <group>` (DESIGN.md "Voice and score").
