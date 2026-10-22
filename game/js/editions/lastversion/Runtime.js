@@ -101,7 +101,7 @@ export const PRIMES = {
   // (Act III's main choices, as a player who walked them would have them: Sera trusted, the city freed, the photograph left)
   act4: ['ev_memorial', 'ev_anja_lock', 'ev_version17', ['inv_cap', 12], ['trust_sera', 'accept'], 'city_freed', ['photo_taken', false], 'ev_dual_archive', 'ev_i_pressed', 'ev_mira_message', 'm18_done'],
   finale: [['ally', 'none'], ['m20_lead', 'mira'], 'child_resolved', 'ev_second_early', 'm22_done'],
-  cases: ['has_chronolith', 'echo_step', 'zero_second', 'after_zero', 'has_inversion'],
+  cases: ['has_chronolith', 'echo_step', 'zero_second', 'after_zero', 'has_inversion', ['inv_cap', 12]], // (after the Finale: its 12 s)
 };
 
 // the generators' challenge hints, said in Kai's voice and in the edition's verbs: three tiers each,
@@ -1401,13 +1401,15 @@ export class LastVersion {
       }
     });
     // Chronolith stability: drains in unstable places outside the mission's home year (the present, but for the
-    // missions that belong to another year: 2196's city, Mira's memory), comes back in it
+    // missions that belong to another year: 2196's city, Mira's memory), comes back in it; but not while a REVERSE hold
+    // in an unstable place is draining it (inversion.js, OVERHAUL.md §7.5), or the hold would gain stability on balance
     const state = g.engine.state(g.room);
     const out = state !== this.home();
     const outdoors = this.deck?.stableOutdoors && g.room === this.level.outdoorRoom;
     const draining = out && this.unstable && !outdoors;
+    const holding = this.unstable && !!this.inv?.active && !this.inv.active.lock;
     if (draining) this.stability = Math.max(0, this.stability - dt * 0.045);
-    else if (!out) this.stability = Math.min(1, this.stability + dt * 0.1);
+    else if (!out && !holding) this.stability = Math.min(1, this.stability + dt * 0.1);
     g.hud.setStability(this.stability, !!facts.get('has_chronolith') && (out || this.stability < 1), draining);
     if (draining && this.stability <= 0 && !g.catching) this.snapBack();
     g.campaign.stability = this.stability;

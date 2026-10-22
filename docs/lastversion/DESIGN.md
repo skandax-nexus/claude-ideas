@@ -144,8 +144,9 @@ flip, no law device, law tokens or "MEMORY KEY" labels (keys from the past read 
 placed by the landmark names of OVERHAUL.md §5 through room-relative anchors, `deck.anchors`, so
 the open hospital of U3 can re-place it through `level.landmarks` / `level.sites`):
 
-- Triage, the colonnade and the annex corridor run backwards on their own (reversed wards: a
-  shimmer at the door, the intercom's "Temporal discontinuity." played backwards inside).
+- The quiet colonnade, the annex behind the burnt door and the twin of Ward 32 (THE REVERSED WARD)
+  run backwards on their own (reversed wards: a shimmer at the door, the intercom's "Temporal
+  discontinuity." played backwards inside).
 - In the records hall the charred third file un-burns three seconds in every ten, too short to
   read; standing by it, the Chronolith catches the rhythm: `has_inversion`, Kai's line, the R1/R2
   toast. The tutorial: the tray that fell off its trolley (fall), a spilled glass (flow), the

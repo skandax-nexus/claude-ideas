@@ -607,6 +607,7 @@ test('REVERSE is never required before Mission 11, and the menu primes it from A
   const primed = (ch) => ORDER.slice(0, ORDER.indexOf(ch) + 1).flatMap((c) => PRIMES[c]).some((k) => (Array.isArray(k) ? k[0] : k) === 'has_inversion');
   assert.deepEqual(ORDER.map(primed), [false, false, false, true, true, true], 'Act II reaches REVERSE by playing Mission 11');
   assert.ok(PRIMES.cases.includes('has_inversion'));
+  assert.ok(PRIMES.cases.some((k) => Array.isArray(k) && k[0] === 'inv_cap' && k[1] === 12), 'the case files come after the Finale: 12 s');
   const cap = (ch) => Math.max(0, ...ORDER.slice(0, ORDER.indexOf(ch) + 1).flatMap((c) => PRIMES[c]).filter((k) => Array.isArray(k) && k[0] === 'inv_cap').map((k) => k[1]));
   assert.deepEqual([cap('act3'), cap('act4'), cap('finale')], [10, 12, 12], 'the charge cap: 10 s after Mission 13, 12 s after Mission 18');
 });
