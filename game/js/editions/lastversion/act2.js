@@ -566,12 +566,12 @@ export const M11 = {
   // the wards that run backwards on their own (not a year: engine.setOverride timeReverse)
   reversed: [{ room: 'h_colonnade' }, { room: 'h_annex' }, { room: 'h_twin' }],
   processes: M11_PROCESSES,
-  // Ward 32's figure stands by the nurse: silent, a hologram that flickers (npcs.js 'patient')
+  // Ward 32's figure: silent, a hologram that flickers (npcs.js 'patient'), at the head of the bed that puts itself back
+  // together, inside the ward, once the lock is open, and in 2049 only (in 2026 Mira was nine, and in this bed)
   adjust(level) {
-    const nurse = level.npcs.find((n) => n.crew === 'odile' && !n.hologram);
-    if (!nurse) return;
-    const [x, y, z] = nurse.pos;
-    level.npcs.push({ id: 'ward32_figure', crew: 'patient', pos: [x + Math.cos(nurse.yaw) * 1.6, y, z - Math.sin(nurse.yaw) * 1.6], yaw: nurse.yaw + 0.3, silent: true, hologram: true, room: nurse.room });
+    const bed = level.landmarks?.ward32;
+    if (!bed) return;
+    level.npcs.push({ id: 'ward32_figure', crew: 'patient', pos: [bed[0] + 4.2, bed[1], bed[2] - 3.4], yaw: -0.45, silent: true, hologram: true, room: 'h_ward32', when: 'lock_open && @PRESENT' });
   },
   spots: [
     { id: 'maintTag', at: 'ward32Door', scene: 'maintTag', prompt: 'THE MAINTENANCE TAG', model: 'tag', offset: [2.05, 1.5, 0.02], r: 2.2,

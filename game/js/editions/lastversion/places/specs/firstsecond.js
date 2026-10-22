@@ -62,7 +62,6 @@ export default {
   beatAt: { m22: ['chainWall', 'clockArm', 'finalSeals'] },
   exits: { m22: 'finalSeals' },
   frags: { m22: [['villageGate', 'roundhouse1', 'chainWall'], ['hospitalLock', 'paMic', 'memoryCards']] },
-  watch: { m22: [[], [[[-62, -2], [-34, -2]]], [[[30, -6], [62, -6]]]] },
   crowd: [
     { era: 'ancient', years: ['PAST'], region: 'firstsecond', role: 'villager', path: [[-14, 41], [14, 41]], n: 3 },
     { era: 'present', years: ['PRESENT'], region: 'firstsecond', role: 'commuter', path: [[18, -39], [36, -39]], n: 3 },

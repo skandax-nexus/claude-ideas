@@ -301,7 +301,7 @@ export function spokenLines({ levels = true } = {}) {
   if (!levels) {
     for (const [k, a] of Object.entries(AMBIENT)) {
       const ids = [...new Set(Object.values(a.voices || {}).flat())];
-      for (const id of ids) a.barks.forEach((t, j) => add('common', `AMBIENT.${k}.bark${j}(${id})`, 'CREW', t, { id }));
+      for (const id of ids) a.barks.forEach((t, j) => t && add('common', `AMBIENT.${k}.bark${j}(${id})`, 'CREW', t, { id }));
     }
   }
   for (const [k, tiers] of Object.entries(HINTS)) tiers.forEach((t, j) => add('common', `HINTS.${k}.${j}`, 'KAI', t));

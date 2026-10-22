@@ -1587,6 +1587,12 @@ test('the checkpoint officer is Officer Pryce on rb_security_f; the renames and 
   const m11 = LEVELS.find((l) => l.deck.mkey === 'm11' && l.level.npcs.some((n) => n.crew === 'patient')).level;
   assert.ok(m11.npcs.find((n) => n.crew === 'patient').silent && m11.npcs.some((n) => n.crew === 'odile' && !n.silent) && main.find((m) => m.n === 11).talks.odile.some((d) => d.lines.length >= 6),
     'M11: Odile speaks for Ward 32; its figure is silent');
+  // (U4 review) the figure is in the ward, by its bed, once the lock is open, and in 2049 only (Mira was nine in 2026)
+  const fig = m11.npcs.find((n) => n.crew === 'patient');
+  const ward = m11.rooms.h_ward32.bounds[0];
+  assert.ok(fig.room === 'h_ward32' && fig.pos[0] > ward[0] && fig.pos[0] < ward[3] && fig.pos[2] > ward[2] && fig.pos[2] < ward[5], `Ward 32's figure stands in the ward: ${fig.pos}`);
+  const shows = (facts, st) => compileCondition(fig.when)({ fact: (k) => !!facts[k], state: st });
+  assert.ok(!shows({}, 'PRESENT') && shows({ lock_open: true }, 'PRESENT') && !shows({ lock_open: true }, 'PAST'), `Ward 32's figure waits for the lock, in 2049: ${fig.when}`);
 });
 
 test('Lin and Mira share one mesh, in different wardrobes; the Witness wears Kai\'s', () => {

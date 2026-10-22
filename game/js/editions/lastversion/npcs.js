@@ -156,7 +156,9 @@ export const AMBIENT = {
     roles: { villager: 'Villager', waterKeeper: 'Water keeper', fisher: 'Fisher', skywatcher: 'Sky-watcher', child: 'Child', elder: 'Elder', craftsperson: 'Craftsperson', storyteller: 'Storyteller' },
     voices: { f: ['CROWD_F', 'CROWD_F2'], m: ['CROWD_M', 'CROWD_M2'], old_f: ['CROWD_OLD_F'], old_m: ['CROWD_OLD_M'], child: ['CROWD_CHILD'] },
     names: ['Water keeper', 'Craftsperson', 'Child', 'Elder', 'Sentry', 'Storyteller'],
-    barks: ['You wear no dust, but the old story knows your face.', 'The water goes where it is told. We only ask politely.', 'The sky changed last night. The elders will not say how.', 'We cook at the first fire. Everyone. Nobody eats alone here.'],
+    // (the first is no longer Niko's 'You wear no dust...': the keeper's recognition is his to say first. Its place is
+    // kept empty, so each villager still says the lines recorded in their voice: crowds.js deals every other line)
+    barks: [null, 'The water goes where it is told. We only ask politely.', 'The sky changed last night. The elders will not say how.', 'We cook at the first fire. Everyone. Nobody eats alone here.'],
   },
   loop: {
     roles: { evacuee: 'Evacuee', responder: 'Responder', shopper: 'Shopper', prisoner: 'Prisoner', builder: 'Builder', staffEcho: 'Staff', visitor: 'Visitor', trapped: 'Civilian', docker: 'Docker', officer: 'Officer', unwritten: 'Irregular', fan: 'Fan' },

@@ -14,14 +14,15 @@ import { dress, attach, WARDROBE } from './wardrobe.js';
 
 const WARDROBE_PROPS = (model, variant) => WARDROBE[model]?.[variant]?.props || [];
 
-// mission -> watcher kind, or per year (the fragments of M18; M22 and M23 quote other places)
+// mission -> watcher kind, or per year (the fragments of M18; the Finale quotes other places, and keeps the ones the
+// passengers of the 41 clear from its opening streets: finale.js adjust; M22 has none, §6.4)
 const FRAGMENTS = { PRESENT: 'drone', PAST: 'drone', FUTURE: 'scav' };
 export const WATCHERS = {
   m02: 'drone', m03: 'drone', m08: 'drone', m12: 'drone',
   m07: 'scavBadge', m14: 'scav', m15: 'scav',
   m09: 'trooper', m10: 'trooper', m13: ['trooper', 'unwritten'],
   m17: 'mimic', m21: 'elite',
-  m18: FRAGMENTS, m22: FRAGMENTS, m23: FRAGMENTS,
+  m18: FRAGMENTS, m23: FRAGMENTS,
 };
 // a person who watches: [model, variant]
 export const HUMAN = {
@@ -163,7 +164,9 @@ export class Watchers {
       const eyeMat = eyes[0];
       for (const e of eyes.slice(1)) e.color = eyeMat.color;
       g.userData = { eyeMat, coneMat, legs: [], arms: [], head: null, lvWatcher: true };
-      const rec = { s, g, bodies, kinds, last: g.position.clone(), speed: 0, t: Math.random() * 6, mkey, byYear: w && typeof w === 'object' && !Array.isArray(w) ? w : null, stateOf };
+      // (a rewinding unit is the heavy drone in every year: it carries no other body to change into)
+      const byYear = !s.def.conduit && w && typeof w === 'object' && !Array.isArray(w) ? w : null;
+      const rec = { s, g, bodies, entries: Object.entries(bodies), kinds, last: g.position.clone(), speed: 0, t: Math.random() * 6, mkey, byYear, stateOf };
       this.show(rec);
       this.list.push(rec);
     });
@@ -173,8 +176,8 @@ export class Watchers {
   show(rec) {
     const state = rec.stateOf?.(rec.s.def.room);
     const want = rec.byYear ? rec.byYear[state] || rec.byYear.PRESENT : rec.kinds[0];
-    for (const [k, b] of Object.entries(rec.bodies)) b.body.visible = k === want;
-    rec.current = rec.bodies[want] || Object.values(rec.bodies)[0];
+    for (const [k, b] of rec.entries) b.body.visible = k === want;
+    rec.current = rec.bodies[want] || rec.entries[0][1];
   }
 
   // each frame: the year's body, a person's walk from how far the sentinel moved, a drone's hover

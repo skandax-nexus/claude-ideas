@@ -599,7 +599,7 @@ const M22_PROCESSES = [
 export const M22 = {
   key: 'm22', n: 22, chapter: 'act4', name: 'THE FIRST SECOND', title: 'The original activation point', subtitle: 'Previous locations appear around you.',
   logline: 'Five places round one room, at the first second.',
-  place: 'firstsecond', sectors: 1, states: ['PRESENT', 'PAST', 'FUTURE'], drones: [0, 1, 1], unstable: true, ambience: null, ambient: 'liminal',
+  place: 'firstsecond', sectors: 1, states: ['PRESENT', 'PAST', 'FUTURE'], drones: [0, 0, 0], unstable: true, ambience: null, ambient: 'liminal', // (no watchers: §6.4)
   motto: 'YOU WERE TRYING TO STOP ME FROM BECOMING YOU', gate: 'THE FINAL CHAMBER', crew: C('witness'),
   named: ['witness', 'elder', 'clockmaker', 'odile', 'orren'], // (their echoes are quoted here: no crowd wears their faces)
   minutes: { main: 30, optional: 8 }, autoExit: 1.2, gateAfter: true,

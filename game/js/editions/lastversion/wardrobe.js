@@ -447,6 +447,30 @@ export function skinOf(model, headMap, bodyMap) {
   return out;
 }
 
+// A recolour's source map is uploaded to the GPU to be drawn from. Nobody wears it once its recolours are made (unless
+// a variant leaves that part as it is), so DeckWorld.freeLeft, which frees the maps on the people who leave, would never
+// find it: after the recolours of this task it is let go, unless someone wears it plain (worn()), and uploaded again
+// the next time a recolour needs it. So only the people in play hold GPU memory (1.1.1's rule).
+const toFree = new Set();
+function letGo(src) {
+  if (!toFree.size) {
+    setTimeout(() => {
+      for (const t of toFree) if (!t.userData.lvWorn) t.dispose();
+      toFree.clear();
+    }, 0);
+  }
+  toFree.add(src);
+}
+// a source map on someone's material (a part their variant leaves as it is): kept until DeckWorld frees it with them
+function worn(map) {
+  if (map.userData.lvWorn) return;
+  map.userData.lvWorn = true;
+  if (!map.userData.lvWornHook) {
+    map.userData.lvWornHook = true;
+    map.addEventListener('dispose', () => { map.userData.lvWorn = false; });
+  }
+}
+
 const cache = new Map(); // `${model}|${variant}|${part}` -> texture
 export const stats = { made: 0, ms: 0 };
 export function recoloured(renderer, src, key, rules, skin, px = 512, corners = [0, 0]) {
@@ -477,6 +501,7 @@ export function recoloured(renderer, src, key, rules, skin, px = 512, corners = 
   renderer.render(q.scene, q.cam);
   renderer.setRenderTarget(prev);
   q.uniforms.map.value = null;
+  letGo(src);
   // when the people who wore it have left (DeckWorld.freeLeft disposes it), the copy goes too
   rt.texture.addEventListener('dispose', () => { cache.delete(key); rt.dispose(); });
   cache.set(key, rt.texture);
@@ -544,12 +569,15 @@ export function dress(actor, crew, opts = {}) {
   for (const m of mats) {
     const part = m.name;
     if (v.hide?.includes(part)) m.visible = false;
-    if (holo) continue;
+    if (holo) {
+      if (m.map && !m.map.isRenderTargetTexture) worn(m.map); // (a hologram keeps its hair cards' own map)
+      continue;
+    }
     const rules = v[part];
     if (Array.isArray(rules) && rules.length && src[part] && opts.renderer) {
       const sk = skinOf(model, src.head, src.body);
       m.map = recoloured(opts.renderer, src[part], `${model}|${variant}|${part}`, rules, sk.rgb, opts.px?.(model) || 512, part === 'body' ? sk.corners : [0, 0]);
-    }
+    } else if (m.map && m.map === src[part]) worn(m.map);
     // crowds: tinted hair; Rain City's wet clothes read darker
     if (crew.hairTint && (part === 'hair') && m.color) m.color.multiply(new THREE.Color(crew.hairTint));
     if (crew.dark && part !== 'eye' && part !== 'head' && m.color) m.color.multiplyScalar(crew.dark);
