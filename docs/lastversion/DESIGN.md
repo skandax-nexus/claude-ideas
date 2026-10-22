@@ -103,7 +103,10 @@ must stay under it; for the same reason the Spire's walkable terraces stop at 24
 citadel's ring rise above), and Mission 18's tower deck is at 26 m. Mission 20's plot is 130 m square
 (the sheet's 90 m plot in the middle, the white memory boundary round it), so the place keeps §4.7's
 short side. The two traverses (Missions 18 and 23) are `linear`: exempt from the 120 m short side,
-held to 100 × 300 m instead.
+held to §4.7's 100-120 × 360-420 m instead. The shared engine's vertical range (main.js respawns below
+y -14 and above y 30) also compresses two drops: the dam stands 36 m from its turbine hall (-12 m) to
+its crest (24 m), not the sheet's 60 m, and the Mission 16 sinkhole is 38 m deep (its rim at 26 m, its
+floor at -12 m), not 45 m.
 
 ## The bible → the engine
 

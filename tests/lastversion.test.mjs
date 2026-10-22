@@ -346,7 +346,7 @@ test('every level is a place, and any route a level carries only uses states its
       }
     }
   }
-  assert.ok(steps >= 0, `${steps} route steps`); // (the generators' routes went with them: U3)
+  // (the generators' routes went with them in U3: a route a level still carries is checked above)
 });
 
 test('every beat has something that completes it', () => {
@@ -993,7 +993,8 @@ test('every mission\'s default sky is its own (the M22 and M23 composites except
   const seen = {};
   for (const key of Object.keys(SHEETS).filter((k) => /^m\d\d$/.test(k))) {
     const { deck, level } = PLACED.find((l) => l.deck.mkey === key);
-    const y = level.years.PRESENT || level.years[deck.states[0]];
+    // (the year the mission opens in: its home year, 2196 for Missions 14-16 and 18 and 2026 for 20, else 2049)
+    const y = level.years[deck.home || 'PRESENT'];
     assert.ok(SKIES[y.sky], `${key}: ${y.sky}`);
     if (['m22', 'm23'].includes(key)) continue;
     assert.ok(!seen[y.sky], `${key} shares its default sky ${y.sky} with ${seen[y.sky]}`);
@@ -1045,7 +1046,6 @@ test('every quarter holds its own spawn, and its main threads stand in it (or at
   }
 });
 
-test('places are big enough to explore: a short side of 120 m or more (a linear place: 100-120 × 360-420 m), quarters of 2,500 m² or more', () => {
 // (U3 review) a watcher patrols open ground: a path through a house is a guard walking through its walls, blind half
 // its loop (its eye cannot see out of a box). Each path's samples, in the year that suits it best, are at most 15% in
 // solids at body height (a post or a bench in passing), Mission 9's rounds after each reset as well
@@ -1063,10 +1063,11 @@ test('watchers patrol open ground, not through the places\' buildings', () => {
   }
 });
 
+test('places are big enough to explore: a short side of 120 m or more (a linear place: 100-120 × 360-420 m), quarters of 2,500 m² or more', () => {
   for (const [key, spec] of Object.entries(PLACES)) {
     const [x0, z0, x1, z1] = spec.bounds;
     const short = Math.min(x1 - x0, z1 - z0), long = Math.max(x1 - x0, z1 - z0);
-    if (spec.linear) assert.ok(short >= 100 && long >= 300, `${key} (linear): ${x1 - x0} × ${z1 - z0}`);
+    if (spec.linear) assert.ok(short >= 100 && short <= 120 && long >= 360 && long <= 420, `${key} (linear, §4.7's 100-120 × 360-420 m): ${x1 - x0} × ${z1 - z0}`);
     else assert.ok(short >= 120, `${key}: ${x1 - x0} × ${z1 - z0}`);
   }
   assert.deepEqual(Object.keys(PLACES).filter((k) => PLACES[k].linear).sort(), ['afterzero', 'fracture'], 'the two traverses are the linear places');
@@ -1211,7 +1212,7 @@ test('the places can be walked: their stairs, terraces, ramps and bridges carry 
     ['m08', 'PRESENT', () => [0, 0, -22], [[0, -18.4], [-0.3, -17], [0.4, -15.6], [-0.2, -14.2], [0.3, -12.8], [0, -11]], 0.4, {}],
     // (U3) the stone arch over the 2026 canyon; the lamp-post heads over the 2049 flood; the 2196 tilted floors up to the tower's deck
     ['m18', 'PAST', () => [0, 0, -80], [[0, -66], [0, -54], [0, -40]], 0, {}],
-    ['m18', 'PRESENT', () => [6, 1.9, 2], [[6, 30], [6, 60]], 1.9, {}],
+    ['m18', 'PRESENT', () => [0, 0, -8], [[6, -12], [6, -9.5], [6, 1], [6, 30], [6, 60]], 1.9, {}], // (from the sign, up the fallen lamp post onto the heads)
     // (U8: up onto the stump; from the slab stair's head at 9 m, the tilted floors to the tower's deck)
     ['m18', 'FUTURE', () => [-20, 0, 92], [[-20, 96], [-20, 104.5], [-16, 108]], 6, {}],
     ['m18', 'FUTURE', () => [-3.4, 9, 108], [[6, 108], [10, 112], [10, 138], [14, 144], [26, 146], [26, 176], [30, 180], [24, 186]], 26, {}],

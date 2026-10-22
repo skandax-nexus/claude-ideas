@@ -78,7 +78,7 @@ export default {
   quarters: [
     { name: 'THE STATION', area: [-110, -110, 110, -62], spawnAt: 'northGate', threshold: { at: 'gateTunnel', kind: 'gate' } },
     { name: 'THE SCHOOL & MARKET', area: [-110, -62, 40, 110], spawnAt: 'market', threshold: { at: 'pressFoot', kind: 'stair' } },
-    { name: 'THE ARCHIVE / THE LOCK', area: [40, -62, 110, 110], spawnAt: 'pressFoot', threshold: null },
+    { name: 'THE ARCHIVE / THE LOCK', area: [40, -62, 110, 110], spawnAt: 'pressStairTop', threshold: null }, // (beside the tower on the east concourse, clear of the gate at its foot)
   ],
   // (Case C, TWO RECORDS, ONE DISASTER, replays Mission 15's archive: cases.js; this map, its quarters)
   beatAt: { m15: ['departureBoard', 'floodLine', 'lockConsole'] },

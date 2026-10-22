@@ -79,7 +79,7 @@ export default {
         P.obox(d.x - 8, 0, d.z - 6, 1.2, 26, 1.2, 0, 'craneYellow', { solid: true });
         P.obox(d.x - 8, 26, d.z + 4, 1, 1, 22, 0, 'craneYellow');
       });
-      sign(P, `${d.n} OF 117`, d.x, 1.5, d.z + 1.62, 0, { size: 0.32, color: '#ff6a48', board: 0 });
+      sign(P, `${d.n} OF 117`, d.x, 1.5, d.z + 1.62, 0, { size: 0.32, color: '#ff6a48', board: 0, e: ['PRESENT', 'FUTURE'] }); // (the Witness's archive is not tagged while the array is being built)
     });
     // --- Q0: the arrival, the cable trenches and the drum-rack corridors (a different maze each year) ----------------
     P.land('arrival', 0, 0, 122, Math.PI);

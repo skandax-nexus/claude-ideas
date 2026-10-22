@@ -1278,7 +1278,8 @@ export class LastVersion {
       const r = this.level.rooms[g.room];
       const p = g.player.pos;
       const inside = (b) => p.x >= b[0] && p.x < b[3] && p.z >= b[2] && p.z < b[5];
-      const ch = r.challenges?.find((c) => inside(c.box)) || r.challenges?.[0];
+      // (only the crossing Kai stands in: a place's challenges span the whole map, and the first of them is rarely here)
+      const ch = r.challenges?.find((c) => inside(c.box)) || (this.level.place ? null : r.challenges?.[0]);
       const tiers = ch && ((g.facts.get('has_inversion') && HINTS_REVERSE[ch.key]) || HINTS[ch.key] || ch.hints);
       if (tiers) {
         key = ch.key + g.room;

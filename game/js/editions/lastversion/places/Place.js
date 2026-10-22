@@ -356,7 +356,8 @@ export function stageBeat(P, story, deck, si, beat, rid) {
     P.inter.push(it);
     if (beat.npc) {
       const [nx, nz] = [x + Math.cos(yaw) * 2.2, z - Math.sin(yaw) * 2.2];
-      P.npcs.push({ id: `npc_${rid}`, crew: beat.npc, pos: [nx, P.heightAt(nx, nz), nz], yaw: yaw + 0.4, hologram: !!beat.hologram, lines: beat.lines || [], choices: beat.choices, after: beat.after, when: beat.npcWhen, room: rid });
+      // (on the scene's own floor: heightAt is the highest terrain there, a roof garden over a ward's station)
+      P.npcs.push({ id: `npc_${rid}`, crew: beat.npc, pos: [nx, y, nz], yaw: yaw + 0.4, hologram: !!beat.hologram, lines: beat.lines || [], choices: beat.choices, after: beat.after, when: beat.npcWhen, room: rid });
     }
     return it;
   }
@@ -453,9 +454,10 @@ export function yearsFor(spec, deck) {
 }
 
 // the uniqueness signature (§4.8): [style, default sky preset, hour bucket, weather, primary landmark]
+// (the default year is the one the mission opens in: its home year, else 2049)
 export function signature(spec, deck) {
   const ys = yearsFor(spec, deck);
-  const d = ys.PRESENT || Object.values(ys)[0] || {};
+  const d = ys[deck.home] || ys.PRESENT || Object.values(ys)[0] || {};
   const primary = spec.variants?.[deck.mkey]?.primary || spec.primary;
   return [spec.style, d.sky, hourBucket(d.hour ?? 12), d.weather || 'clear', primary].join('|');
 }

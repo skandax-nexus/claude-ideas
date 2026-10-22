@@ -142,6 +142,20 @@ level.sites     = { processId: { at, parts: [...] } }   // geometry anchors for 
 - `Runtime.buildLevel` calls `buildPlace` when `deck.place` is set, and never calls ZoneGen or LevelGen for the edition after U3.
 - Interactables are kind `'scene'` with an edition `model` (records are kit props, never Station Zero terminals). NPCs stand at landmarks. Tasks have authored positions.
 - Landmark names are camelCase and unique per place. Missions may only reference names in their sheet.
+- As built in U3 (documented in the U3 review): a quarter may name a height box, `cp: [x0, y0, z0, x1, y1, z1]`
+  (y of Kai's centre), which replaces its `area` both for the quarter Kai is in and for its checkpoint: a pit or a
+  wing whose quarters overlap in plan (Mission 16's rim, spiral, hall and photograph; Mission 12's chamber under the
+  roofs; Mission 10's crown). `Threads.quarters()` takes the last quarter whose room, `cp` or `area` holds Kai, and
+  moves the save's quarter on only once every main thread of the quarters before it is done, walked past or not up.
+  Every quarter's spawn stands in its own quarter, and a main thread's landmark in its quarter, an earlier one or at
+  the next one's threshold (unit-tested). `spec.sectors[mkey]` maps a multi-sector mission's sectors to quarters
+  (unused since U6-U8 made every mission one map). `spec.outdoorFirst` + `P.room(...)` give a place interior rooms of
+  its own (the hospital's wards), the outdoor room first. A trigger with `wrap: [dx, dz]` carries Kai across a wrapping
+  edge (Mission 19), one with `to: [x, y, z, yaw]` somewhere else (Helix's glass lift). A mission may name a home
+  year, `home: 'FUTURE'` (Missions 14-16 and 18; `'PAST'` for 20): its rooms start in it, stability drains outside
+  it, a snap back returns to it. `level.heightAt(x, z)` is the highest terrain under a point (a tiered place sets
+  each tier as its own ring). Every place is walked by `tests/lastversion-reach.mjs` (a flood fill from the spawn
+  over its colliders, years and REVERSE parts) in the unit tests.
 
 ### 3.2 Processes (U1 provides; U6–U8 author)
 
@@ -156,7 +170,9 @@ processes: [{ id: 'm11lock', kind: 'lock', at: 'ward32Door', label: 'THE LOCK', 
 - A REVERSE thread is `{ kind: 'invert', target: '<processId>' }` (§3.3).
 - Refusals (R6) are processes with `kind: 'refusal'`, `refuse: 'NOT A PROCESS' | 'A MEMORY'` (the label reads "✕ " plus it) and a `line`.
 - As built in U1: `parts` entries are `{ name?, order?, shape, size, mat, at, rot?, rest: { at, rot }, solid?, text? }` in the anchor's frame (a lock may give `bolts: ['RING', ...]` instead); `props` are static boxes placed with the process; `scene` + `prompt` add a scene interactable at the aim; `ambient: { period, on }` runs a held-style process on its own rhythm; `required: true` marks a use the story needs (n ≥ 11 only).
-- Until U3, a mission maps its §5 landmark names to rooms with `anchors: { name: { sector, room: 'story'|'before'|'after'|index, at: [x, y, z] | (room) => [...], yaw } | { sector, room, door: 'exit' } }`; `level.landmarks` / `level.sites` take precedence when a place provides them. The same names place `spots` (scenes with texts), `doors` (`when`-gated doorways), `zones` (trigger boxes), `displays` (the twin lock's loop) and `reversed` (rooms with `timeReverse`).
+- Until U3, a mission maps its §5 landmark names to rooms with `anchors: { name: { sector, room: 'story'|'before'|'after'|index, at: [x, y, z] | (room) => [...], yaw } | { sector, room, door: 'exit' } }`; `level.landmarks` / `level.sites` take precedence when a place provides them. The same names place `spots` (scenes with texts), `doors` (`when`-gated doorways), `zones` (trigger boxes), `displays` (the twin lock's loop) and `reversed` (rooms with `timeReverse`). Since U3 a piece of the place
+  (a process, a spot, a door, a zone or a display) may carry `sector: i`: it is that sector's only (the whole place
+  loads for every sector); with every mission one map since U6-U8, none does.
 
 ### 3.3 Threads (U6 provides; U6–U8 author)
 

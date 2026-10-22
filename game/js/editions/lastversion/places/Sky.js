@@ -216,9 +216,10 @@ function target(y, sky) {
 }
 
 // a blend of two targets into out (out keeps its arrays: no allocation per frame)
+const VECS = [...DIRS, 'cl1', 'cl2'];
 function blend(out, a, b, k) {
   for (const key of COLORS) out[key] = _c.setHex(a[key]).lerp(_c2.setHex(b[key]), k).getHex();
-  for (const key of [...DIRS, 'cl1', 'cl2']) {
+  for (const key of VECS) {
     const o = (out[key] ||= [0, 0, 0]);
     for (let i = 0; i < 3; i++) o[i] = a[key][i] + (b[key][i] - a[key][i]) * k;
   }
@@ -378,6 +379,7 @@ export class Sky {
     this.year = null;
     this.cloudT = 0;
     this.routeGoal = {};
+    this.routeMix = {};
     this.targets = {};
   }
 
@@ -450,7 +452,7 @@ export class Sky {
       } else if (f.kind === 'reverse') {
         const [x0, z0, x1, z1] = f.box;
         if (on && cam.x > x0 && cam.x < x1 && cam.z > z0 && cam.z < z1) drift = -1;
-      } else if (f.kind === 'route' && on && goal) goal = this.routeAt(f, cam.z);
+      } else if (f.kind === 'route' && on && goal) goal = blend(this.routeMix, this.routeAt(f, cam.z), goal, f.year ?? 0.35); // (the light along the road, with a third of the year's own: a year switch still reads overhead)
       else if (f.kind === 'preset' && on) goal = this.targetOf(f.sky);
       if (f.mesh) {
         f.mesh.visible = f.k > 0.02;
