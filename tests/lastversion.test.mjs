@@ -22,7 +22,7 @@ import { LastVersion, MISSIONS, CHAPTERS, ORDER, HINTS, HINTS_REVERSE, PRIMES, m
 import { RULES, INV_LINES } from '../game/js/editions/lastversion/inversion.js';
 import { checkRecord, makeRecord, colliderEntry, Process, MAX_PROCESSES, MAX_PARTS, WEIGHTS, KINDS } from '../game/js/editions/lastversion/processes.js';
 import * as THREE from '../game/vendor/three.module.min.js';
-import { ENDINGS, LOCK_ORDER } from '../game/js/editions/lastversion/acts.js';
+import { ENDINGS, LOCK_ORDER, CASE_FILES, CASE_STATES, caseState } from '../game/js/editions/lastversion/acts.js';
 import { hazardAt, musicGain } from '../game/js/editions/lastversion/act2.js';
 import { NPCS, DIALOGUE, AMBIENT, npcState, JUN_HOOK, WATER_HOOK, MARA_HOOK, IVEN_HOOK } from '../game/js/editions/lastversion/npcs.js';
 import { PLACES, signature, quartersOf } from '../game/js/editions/lastversion/places/index.js';
@@ -190,7 +190,9 @@ test('the 23 missions of the bible, in order, in their acts', () => {
   assert.deepEqual(ORDER.map((ch) => MISSIONS[ch].length), [3, 5, 5, 5, 4, 1]);
   for (const ch of ORDER) assert.ok(CHAPTERS[ch].name && CHAPTERS[ch].question, ch);
   for (const m of main) assert.ok(m.outro?.length, `Mission ${m.n} has its mission ending`);
-  assert.deepEqual(MISSIONS.cases.map((m) => m.n), ['B', 'C'], 'quest chains B and C are optional cases (A and D are in the Prologue)');
+  // the case files: quest chains B and C kept at their old index (A and D are in the Prologue), then the ten replays
+  assert.deepEqual(MISSIONS.cases.map((m) => m.key), ['c_b', 'c_c', 'c_child', 'c_train', 'c_letter', 'c_house', 'c_signal', 'c_names', 'c_debt', 'c_ninth', 'c_garden', 'c_record']);
+  assert.deepEqual(MISSIONS.cases.slice(0, 2).map((m) => m.n), ['B', 'C']);
 });
 
 // every string a mission can show or say
@@ -245,7 +247,7 @@ test('Mission 10 unlocks Echo Step, Mission 13 sets the faction, the Finale has 
   assert.deepEqual(Object.values(ENDINGS).map((e) => e.title), ['THE FIXED WORLD', 'THE INFINITE WAR', 'AFTERZERO']);
   // later support follows from earlier choices, and going alone always works
   const ally = main.find((m) => m.n === 21).scenes.ally.choices;
-  assert.ok(ally.some((c) => !c.when && c.beatDone), 'an ally is never required');
+  assert.ok(ally.some((c) => c.when === '!ally' && c.set?.ally === 'none'), 'an ally is never required: going alone is always offered');
 });
 
 test('every choice expresses an intent, every condition compiles, every scene a beat names exists', () => {
@@ -1071,22 +1073,30 @@ test('the places can be walked: their stairs, terraces, ramps and bridges carry 
     // (U3) the stone arch over the 2026 canyon; the lamp-post heads over the 2049 flood; the 2196 tilted floors up to the tower's deck
     ['m18', 'PAST', () => [0, 0, -80], [[0, -66], [0, -54], [0, -40]], 0, {}],
     ['m18', 'PRESENT', () => [6, 1.9, 2], [[6, 30], [6, 60]], 1.9, {}],
-    ['m18', 'FUTURE', () => [-20, 0, 92], [[-20, 96], [-20, 104.5], [-16, 108], [6, 108], [10, 112], [10, 138], [14, 144], [26, 146], [26, 176], [30, 180], [24, 186]], 26, {}],
+    // (U8: up onto the stump; from the slab stair's head at 9 m, the tilted floors to the tower's deck)
+    ['m18', 'FUTURE', () => [-20, 0, 92], [[-20, 96], [-20, 104.5], [-16, 108]], 6, {}],
+    ['m18', 'FUTURE', () => [-3.4, 9, 108], [[6, 108], [10, 112], [10, 138], [14, 144], [26, 146], [26, 176], [30, 180], [24, 186]], 26, {}],
     // the bridge in the reflection holds in 2026, and once the reflection is in step; the stair to the fifth door
     ['m19', 'PAST', () => [0, 0, -18], [[0, -30], [0, -42]], 0, {}],
     ['m19', 'PRESENT', () => [0, 0, -18], [[0, -30], [0, -42]], 0, { m19_synced: true }],
     ['m19', 'PRESENT', () => [86, 0, -42], [[86, -60], [86, -79], [86, -81]], 12, {}],
     ['m19', 'PAST', () => [-55, 0, 98], [[-55, 79], [-55, 76], [-49, 76], [-49, 64]], 6, {}],
     // the Spire: the kitchen door's stair, the halls, the elite ramps, the cells' terrace, the bridge to the arena; the summit
-    ['m21', 'PRESENT', () => [48, 0, 30], [[48, 27], [48, 21], [48, 10], [48, -30], [46, -38], [46, -62], [30, -68], [21, -68], [6, -68], [6, -44], [6, -38]], 18, {}],
+    ['m21', 'PRESENT', () => [48, 0, 30], [[48, 27], [48, 21], [48, 10], [48, -30], [46, -38], [46, -62], [30, -68], [21, -68], [6, -68], [6, -44], [6, -38]], 18, { warned_evacuees: true }], // (the kitchen door opens for the people who listened)
     ['m21', 'PRESENT', () => [-32.7, 18, -36], [[-32.7, -44], [-32.7, -55], [-36, -60]], 24, {}],
     ['m21', 'PRESENT', () => [-30, 0, 26], [[-30, 20], [-30, 6], [-30, 0], [10, 0], [30, 0]], 6, {}],
     // the Museum: the sinkhole's spiral, one and a half turns from the rim (26 m) to the floor (-12 m), into the Comparison Hall
     ['m16', 'FUTURE', (l) => lm(l, 'rimGate'), [[0, 58], [0, 55], ...Array.from({ length: 89 }, (_, i) => { const a = 96 + i * 6, r = 55 - (18 * (a - 90)) / 540; return [Math.cos((a * Math.PI) / 180) * r, Math.sin((a * Math.PI) / 180) * r]; }), [0, -33], [0, -30], [3, -20], [3, -12], [1, -6]], -12, {}],
     // the First Second: down the village terraces, round the twin chamber to the clockmaker's wedge
     ['m22', 'PRESENT', (l) => lm(l, 'wedgeVillage'), [[0, 60], [0, 53], [0, 48], [0, 41], [0, 36], [0, 24], [-12, 14], [-30, 14], [-40, 14]], 0, {}],
-    // Afterzero: the whole road, from the 41's shelter over the stream's bridge and up the Ring Hill to the ring
-    ['m23', 'PRESENT', (l) => lm(l, 'platform41'), [[2, 150], [2, 112], [0, 90], [0, 66], [0, 54], [0, 30], [0, -20], [0, -100], [0, -110], [0, -124], [0, -140]], 4, {}],
+    // (U8) the Spire's arena once it has fallen: in 2196 the frozen girder spans the second gap
+    ['m21', 'FUTURE', (l) => lm(l, 'arenaMid'), [[-15.1, -42.6], [-19.2, -41], [-23.2, -39.3], [-26.2, -37.3]], 18, { arena_fallen: true }],
+    // Afterzero: from the 41's shelter to the fallen street; in 2026 its south half still stands
+    ['m23', 'PRESENT', (l) => lm(l, 'platform41'), [[2, 150], [2, 140]], 0, {}],
+    ['m23', 'PAST', () => [2, 0, 140], [[2, 134], [2, 129]], 0, {}],
+    // past the street (the Witness holds it) to the stream; past the stream (Kai holds it) up the Ring Hill to the ring
+    ['m23', 'PRESENT', () => [2, 0, 116], [[2, 112], [0, 90], [0, 68]], 0, {}],
+    ['m23', 'PRESENT', () => [0, 0, 52], [[0, 30], [0, -20], [0, -100], [0, -110], [0, -124], [0, -140]], 4, {}],
   ];
   for (const [key, st, start, route, y, facts] of routes) {
     const l = lv(key);
@@ -1096,7 +1106,14 @@ test('the places can be walked: their stairs, terraces, ramps and bridges carry 
   // where the year is the answer, the wrong year does not carry Kai: the lab's glass in 2049, the 2049 chasm, the reflection out of step
   assert.ok(walkRoute(lv('m03'), 'PRESENT', [40.8, 0, -6], [[40.8, -1]]).stuck, 'M3: in 2049 the lab\'s south wall is glass');
   assert.ok((walkRoute(lv('m18'), 'PRESENT', [0, 0, -80], [[0, -66], [0, -54], [0, -40]]).at?.[1] ?? -99) < -1, 'M18: no way over the chasm in 2049');
+  assert.ok((walkRoute(lv('m18'), 'FUTURE', [-16, 6, 108], [[-6, 108]]).at?.[1] ?? -99) < 1, 'M18: from the stump the first tilted floor is out of reach (its slabs are in the street)');
   assert.ok((walkRoute(lv('m19'), 'PRESENT', [0, 0, -18], [[0, -30], [0, -42]]).at?.[1] ?? -99) < -1, 'M19: the bridge is only a reflection');
+  // (U8) the kitchen door is shut to those who did not warn anyone; the arena's gaps, once fallen; the street, the stream
+  assert.ok(walkRoute(lv('m21'), 'PRESENT', [48, 0, 30], [[48, 27], [48, 21]]).stuck, 'M21: the kitchen door is shut');
+  assert.ok((walkRoute(lv('m21'), 'PRESENT', lv('m21').landmarks.arenaMid, [[-15.1, -42.6], [-19.2, -41], [-23.2, -39.3], [-26.2, -37.3]], { arena_fallen: true }).at?.[1] ?? -99) < 10, 'M21: in 2049 the second gap is open air');
+  assert.ok((walkRoute(lv('m23'), 'PRESENT', [2, 0, 140], [[2, 134], [2, 129], [2, 118]]).at?.[1] ?? -99) < -3, 'M23: the street has fallen in 2049');
+  assert.ok((walkRoute(lv('m23'), 'PAST', [2, 0, 140], [[2, 129], [2, 124], [2, 118]]).at?.[1] ?? -99) < -3, 'M23: in 2026 only its south half stands');
+  assert.ok((walkRoute(lv('m23'), 'PRESENT', [0, 0, 68], [[0, 60], [0, 52]]).at?.[1] ?? -99) < -0.5, 'M23: the settlement bridge is in the stream');
   // the river in Mission 5: in the abandoned year its footbridge is gone, in the thriving year it carries Kai over
   const m5 = lv('m05');
   const [sx, , sz] = m5.landmarks.footbridgeS, n = m5.landmarks.footbridgeN;
@@ -1400,7 +1417,8 @@ test('the spoken text is clean: no tags, key names, design notes or digits the v
     seen.add(e.text);
     const t = e.text;
     assert.ok(!/\[[^\]]*\]/.test(t), `a [tag] in "${t}"`);
-    assert.ok(!/\bpress(es|ed)?\b|\sQ\s|(?<!Case)\sC\./i.test(t), `a key name in "${t}" (${e.path})`);
+    // (a key to press: "press E", "press the R key"; a press tower or "I pressed it" is not one)
+    assert.ok(!/\b[Pp]ress(?:es)?\s+(?:the\s+)?(?:[A-Z]\b|[Ss]pace|[Ss]hift|[Ee]nter|[Ee]sc|[Tt]ab)|\sQ\s|(?<!Case)\sC\./.test(t), `a key name in "${t}" (${e.path})`);
     assert.ok(!/post-credit|the player|Mission \d+ ends|does not block|Access shortcut/i.test(t), `a design note in "${t}" (${e.path})`);
     assert.ok(!/\d/.test(lexicon(t)), `digits the lexicon does not read: "${t}" -> "${lexicon(t)}"`);
     assert.ok(!/\$\{/.test(t), `a template in "${t}"`);
@@ -1731,6 +1749,15 @@ test('the bible\'s quoted exchanges are spoken verbatim by the bible\'s speakers
     ['KAI', 'It sealed it.'], ['KAI', 'Remember what?'], ['KAI', 'She died twenty-three years ago. I was at the funeral. I was twelve.'],
     // D16 in the generic conversations
     ['KAI', 'You were trying to stop me from becoming you.'], ['WITNESS', 'I was trying to find a version of me that didn\'t have to.'],
+    // (U8) Acts III-IV and the Finale: the bible's lines, its speakers; in Mission 22 the speakers are fixed (the Witness)
+    ['ORREN', 'Don\'t follow the footsteps. Follow what they refuse to step on.'], ['MIRA', 'You\'ve been trying to reach the version of me that would forgive you.'],
+    ['MIRA', 'Saving me is not the same as understanding me, Kai. You keep solving the wrong puzzle.'],
+    ['MIRA', 'I remember being your sister.'], ['KAI', 'That\'s not the same thing.'], ['MIRA', 'Would it be enough if I said it was?'],
+    ['MIRA', 'You let me. I asked, and you let me. I was nine, Kai, not nothing.'], ['WITNESS', 'No.'], ['KAI', 'And did you?'],
+    ['WITNESS', 'Kai Varen. Do not build the machine.'], ['KAI', 'It turned before I pressed it. I was a second late.'], ['WITNESS', '…No. I was a second early.'],
+    ['WITNESS', 'I will hold the route. Go to her.'], ['KAI', 'Why now?'], ['WITNESS', 'Because this is the version where I ask.'], ['WITNESS', 'And, Kai. For once, you are on time.'],
+    ['MIRA', 'Ask me.'], ['KAI', 'I thought the answer was to find the right world.'], ['MIRA', 'And now?'], ['KAI', 'Now I think we kept asking the world to pay for our answer.'],
+    ['VOICE', 'Version one hundred and eighteen.'],
   ];
   for (const [who, text] of pairs) assert.ok(said(who, text), `${who}: "${text}"`);
   // design-note words, in anything said or shown as an objective
@@ -1862,15 +1889,18 @@ test('the save format: a pre-U6 save in the middle of a rewritten mission restar
   const now = { lv: true, chapter: 'prologue', deck: 0, sector: 0, quarter: 2, pos: [1, 2, 3, 0], flags: { beat_done: false }, lvFormat: SAVE_FORMAT };
   migrateSave(engine(), now, LV);
   assert.deepEqual([now.quarter, now.pos], [2, [1, 2, 3, 0]]);
-  // a mission not rewritten keeps its sector
-  const act = { lv: true, chapter: 'act3', deck: 2, sector: 1, flags: {}, lvFormat: 21 };
+  // a case kept as it was (c_b, two sectors) keeps its sector; a U7 save in Act IV restarts its mission (format 24)
+  const cb = { lv: true, chapter: 'cases', deck: 0, sector: 1, flags: {}, lvFormat: 21 };
+  migrateSave(engine(), cb, LV);
+  assert.equal(cb.sector, 1);
+  const act = { lv: true, chapter: 'act4', deck: 2, sector: 1, quarter: 1, pos: [1, 2, 3, 0], flags: { beat_done: false }, lvFormat: 23 };
   migrateSave(engine(), act, LV);
-  assert.equal(act.sector, 1);
+  assert.deepEqual([act.sector, act.quarter, act.pos, act.lvFormat], [0, 0, null, 24]);
 });
 
 // --- story part 2: Acts I and II (OVERHAUL.md §5 M4-M13; U7) ------------------------------------------------------------
 test('Acts I and II are rewritten as threads; the length model: each mission 25-42 minutes, the main path 70% or more', () => {
-  assert.deepEqual(REWRITTEN.map((m) => m.key), MISSION_ORDER.slice(0, 13), 'Missions 1-13 are rewritten');
+  assert.deepEqual(REWRITTEN.map((m) => m.key), MISSION_ORDER, 'Missions 1-23 are rewritten (U8: Acts III-IV and the Finale)');
   for (const ch of ['act1', 'act2']) {
     for (const m of MISSIONS[ch]) {
       const e = estimate(m);
@@ -1885,7 +1915,7 @@ test('Acts I and II are rewritten as threads; the length model: each mission 25-
 });
 
 test('a rewritten mission starts with none of its threads done (a chapter started from the menu: its PRIMES, faction neutral)', () => {
-  for (const ch of ['prologue', 'act1', 'act2']) {
+  for (const ch of ['prologue', 'act1', 'act2', 'act3', 'act4', 'finale']) {
     const facts = new FactStore();
     for (const c of ORDER.slice(0, ORDER.indexOf(ch) + 1)) for (const k of PRIMES[c] || []) (Array.isArray(k) ? facts.set(k[0], k[1]) : facts.set(k));
     if (ch !== 'prologue') facts.set('faction', 'neutral');
@@ -1987,4 +2017,203 @@ test('Act II: the loop, the Director, the hospital\'s sound and hazards, the cha
   assert.ok(thr('m13', 'shells').set.ev_both_sides);
   assert.deepEqual(lv('m13').processes.filter((p) => p.kind === 'projectile').map((p) => p.id).sort(), ['shellA', 'shellB']);
   assert.ok(m('m13').scenes.stabilizer.choices.every((c) => c.set.inv_cap === 10 && c.set.faction));
+});
+
+// --- story part 3: Acts III and IV, the Finale, the CASE FILES (OVERHAUL.md §5 M14-M23; U8) ----------------------------
+// the facts a mission can set (its talks, scenes, choices, threads, rules, scripted moments, processes)
+function factsSetBy(mm, { sides = true } = {}) {
+  const out = new Set();
+  const d = asDeck(mm);
+  let obj = mm;
+  if (!sides) {
+    // (without its side stories, and the scenes and talks only they use)
+    const sideList = sidesOf(mm);
+    const only = new Set(sideList.flatMap((sd) => sd.threads.flatMap((t) => [t.scene, t.npc, ...(t.spots || []).map((x) => x.scene || x.id)]).filter(Boolean)));
+    const mainUse = new Set(threadsOf(d).filter((t) => !t.side).flatMap((t) => [t.scene, t.npc, ...(t.spots || []).map((x) => x.scene || x.id)]).filter(Boolean));
+    const keep = (o) => Object.fromEntries(Object.entries(o || {}).filter(([k]) => !only.has(k.replace(/_no$/, '')) || mainUse.has(k.replace(/_no$/, ''))));
+    obj = { ...mm, quarters: mm.quarters.map((q) => ({ ...q, sides: [] })), talks: keep(mm.talks), scenes: keep(mm.scenes) };
+  }
+  walkObj(obj, (o) => {
+    if (o.set && typeof o.set === 'object') Object.keys(o.set).forEach((k) => out.add(k));
+    if (typeof o.ev === 'string') out.add(`ev_${o.ev}`);
+  });
+  for (const t of threadsOf({ ...obj, mkey: mm.key })) out.add(factOf(d, t));
+  for (const p of mm.processes || []) { out.add(`inv_${p.id}_done`); out.add(`rev_${p.id}`); out.add(`stuck_${p.id}`); }
+  for (const f of [...Object.values(mm.fx || {}), mm.step, mm.onEcho, ...Object.values(mm.nodes || {})].filter(Boolean)) for (const x of String(f).matchAll(/\.set\('([a-z0-9_]+)'/g)) out.add(x[1]);
+  if (mm.nodes?.align) for (const id of ['h1', 'h2', 'e1', 'e2', 'w1', 'w2', 'aligned', 'tidy']) out.add(`m20_${id}`);
+  for (const z of mm.zones || []) Object.keys(z.set || {}).forEach((k) => out.add(k));
+  for (const r of mm.rules || []) Object.keys(r.set || {}).forEach((k) => out.add(k));
+  out.add(`${mm.key}_done`);
+  return out;
+}
+const IDS = (c) => (typeof c === 'string' ? c.replace(/"[^"]*"/g, '').match(/\b[a-z_][a-z0-9_]*\b/g) || [] : []).filter((k) => !['true', 'false'].includes(k));
+
+test('Acts III and IV and the Finale are rewritten as threads; the length model: each Act mission 25-42 minutes, the Finale 90 or less', () => {
+  for (const ch of ['act3', 'act4', 'finale']) {
+    for (const m of MISSIONS[ch]) {
+      const e = estimate(m);
+      if (ch === 'finale') assert.ok(e.total <= 90 && e.total >= 40, `${m.key}: ${e.total} min (the Finale is 90 or less)`);
+      else assert.ok(e.total >= 25 && e.total <= 42, `${m.key}: ${e.total} min`);
+      assert.ok(e.main / e.total >= 0.7, `${m.key}: main ${e.main} of ${e.total}`);
+      assert.deepEqual([e.main, e.optional], [m.minutes.main, m.minutes.optional], `${m.key}: its declared minutes are the model's`);
+      assert.ok(m.done && (m.autoExit != null || ch === 'finale'), `${m.key}: it ends on its last thread (the Finale on its ending)`);
+      assert.ok(m.quarters.every((q) => (q.threads || []).length + (q.sides || []).length > 0), `${m.key}: no empty quarter`);
+    }
+  }
+  const total = (ch) => MISSIONS[ch].reduce((a, m) => a + estimate(m).total, 0);
+  assert.ok(total('act3') >= 170 && total('act3') <= 210, `Act III: ${total('act3')} min`);
+  assert.ok(total('act4') >= 140 && total('act4') <= 175, `Act IV: ${total('act4')} min`);
+});
+
+test('the global ledgers: every question is answered in its mission, a deduction\'s evidence can be had before it, no main thread waits on a side story', () => {
+  const idx = (k) => main.findIndex((x) => x.key === k);
+  const SET = main.map((mm) => factsSetBy(mm));
+  const MAIN = main.map((mm) => factsSetBy(mm, { sides: false }));
+  const setBy = (k, upTo) => SET.slice(0, upTo + 1).some((f) => f.has(k));
+  // every question: its answer is a rewritten mission, and some of the evidence pinned under it can be found by then
+  for (const q of QUESTIONS) {
+    const a = idx(q.answer);
+    assert.ok(a >= 0 && isRewritten(main[a]), `${q.id}: answered in ${q.answer}`);
+    for (const p of q.partly || []) assert.ok(idx(p) >= 0 && idx(p) <= a, `${q.id}: partly in ${p}`);
+    if (q.clues.length) assert.ok(q.clues.some((k) => setBy(`ev_${k}`, a)), `${q.id}: none of its evidence (${q.clues}) can be found by ${q.answer}`);
+    for (const k of q.clues) assert.ok(EV_KEYS.has(k), `${q.id}: ev_${k} is set somewhere`);
+  }
+  // a deduction's right answer needs only what can be had before it: in an earlier mission, or this one's own threads
+  let ded = 0;
+  for (const [i, mm] of main.entries()) {
+    for (const [id, d] of Object.entries(mm.deductions || {})) {
+      const right = d.answers.find((x) => x.correct);
+      for (const k of IDS(right.needs)) {
+        ded++;
+        assert.ok(MAIN[i].has(k) || SET.slice(0, i).some((f) => f.has(k)), `${mm.key}/${id}: needs ${k}, which nothing before it sets on the main path`);
+      }
+    }
+  }
+  assert.ok(ded >= 20, `${ded} pieces of evidence checked`);
+  // no main thread waits on something only a side story sets (in its own mission)
+  for (const [i, mm] of main.entries()) {
+    const sideOnly = new Set([...SET[i]].filter((k) => !MAIN[i].has(k) && !SET.slice(0, i).some((f) => f.has(k))));
+    for (const t of threadsOf(asDeck(mm)).filter((x) => !x.side)) {
+      for (const k of [...IDS(t.when), ...IDS(t.done), ...(t.of || [])]) assert.ok(!sideOnly.has(k), `${mm.key}/${t.id} waits on ${k}, which only a side story sets`);
+      for (const a of t.after || []) assert.ok(!threadsOf(asDeck(mm)).find((x) => x.id === a)?.side, `${mm.key}/${t.id} comes after a side thread (${a})`);
+    }
+    for (const k of IDS(mm.done)) assert.ok(!sideOnly.has(k), `${mm.key}: its end waits on ${k}, a side story's`);
+  }
+});
+
+test('the hold (Mission 18): posts at the place\'s landmarks, each re-anchored in its own year; allies and the lock city change it', () => {
+  const m18 = main.find((x) => x.key === 'm18');
+  const t = threadsOf(asDeck(m18)).find((x) => x.kind === 'hold');
+  const level = LEVELS.find((l) => l.deck.mkey === 'm18').level;
+  assert.ok(THREAD_KINDS.includes('hold') && MINUTES.hold > 0);
+  assert.ok(t && t.secs >= 60 && t.posts.length === 3, 'two minutes, three pylons');
+  assert.deepEqual(t.posts.map((p) => p.year).sort(), ['FUTURE', 'PAST', 'PRESENT'], 'one pylon in each year');
+  for (const [i, p] of t.posts.entries()) assert.ok(level.landmarks[p.at] && level.interactables.some((x) => x.scene === `hold:${t.id}:${i}`), `a post at ${p.at}`);
+  assert.ok(Object.keys(t.allies).some((c) => /unwritten/.test(c)) && /city_freed/.test(t.slow), 'the Unwritten hold a pylon; the freed city slows the drift');
+  assert.equal(t.set.inv_cap, 12, 'the repaired Chronolith holds twelve seconds');
+  // the slab stair is the way up, and only after the hold
+  assert.deepEqual(threadsOf(asDeck(m18)).find((x) => x.id === 'slabStair').after, ['hold']);
+});
+
+test('Act III: the lift ride, the dual archive, the museum\'s memories, the archive\'s confession, the slab stair', () => {
+  const m = (k) => main.find((x) => x.key === k);
+  const sets = (o, k) => { const out = []; walkObj(o, (x) => { if (x.set && k in x.set) out.push(x.set[k]); }); return out; };
+  const thr = (k, id) => threadsOf(asDeck(m(k))).find((t) => t.id === id);
+  const proc = (k, id) => m(k).processes.find((p) => p.id === id);
+  assert.ok(proc('m14', 'liftCar').kind === 'fall' && proc('m14', 'transitBridge').kind === 'collapse', 'M14: a lift car that rises, a span that comes back');
+  assert.deepEqual(sets(m('m14').talks, 'trust_sera').sort(), ['accept', 'ask', 'deny']);
+  assert.deepEqual(thr('m15', 'ink').of, ['inv_card14_done', 'inv_archiveA_done', 'inv_archiveB_done']);
+  assert.ok(thr('m15', 'ink').set.ev_dual_archive && thr('m15', 'ink').set.quest_mara === 'resolved', 'chain C resolves on the main path');
+  assert.deepEqual(m('m15').scenes.lock.choices.map((c) => Object.keys(c.set)[0]).sort(), ['city_freed', 'city_stabilized'], 'Anja\'s two facts');
+  assert.ok(m('m16').deductions.museum.answers.find((a) => a.correct).needs.includes('ev_memory_three'));
+  assert.deepEqual(sets(m('m16').scenes, 'photo_taken').sort(), [false, true]);
+  assert.ok(thr('m17', 'memory').set.ev_i_pressed && thr('m17', 'reconstruct').of.includes('ev_two_logs'));
+  assert.ok(proc('m18', 'slabs').span.pieces >= 8 && thr('m18', 'slabStair').of[0] === 'rev_slabs', 'M18: the slab stair is REVERSE, last fallen first');
+});
+
+test('Act IV: the shadowless door, the memories that refuse, the elites\' rewind and the arena, the first second', () => {
+  const m = (k) => main.find((x) => x.key === k);
+  const thr = (k, id) => threadsOf(asDeck(m(k))).find((t) => t.id === id);
+  // M19: the bridge in the reflection; the real door has no shadow (C9); who leads into Mira's memory
+  assert.ok(m('m19').rules.some((r) => r.when === 'inv_reflectionLag_done' && r.set.m19_synced), 'the lag, reversed, brings the bridge into step');
+  assert.ok(m('m19').deductions.door.answers.find((a) => a.correct).label.includes('no shadow'));
+  assert.deepEqual(m('m19').talks.mira19[0].choices.map((c) => c.set.m20_lead).sort(), ['kai', 'mira']);
+  // M20: every target refuses (A MEMORY), Mira answers the first try; the alignment keeps each memory's own order
+  assert.ok(m('m20').processes.every((p) => p.kind === 'refusal' && p.refuse === 'A MEMORY' && p.lineWho === 'MIRA'));
+  const facts = new FactStore();
+  facts.set('m20_lead', 'kai');
+  const rt = { g: { facts } };
+  const node = () => m('m20').nodes.align(rt);
+  const pick = (label) => { const c = node().choices.find((x) => x.label === label); for (const [k, v] of Object.entries(c.set || {})) facts.set(k, v); return c; };
+  assert.ok(pick('One line. Mine first.').lines.some((l) => l.who === 'MIRA'), 'Kai leading: his tidy version is refused');
+  assert.ok(!pick('The ring turns.').set, 'a moment before its own memory\'s first is refused');
+  for (const label of ['She asks to see the ring turn.', 'The 41 is late.', 'The drawing goes on the fridge.', 'The ring turns.', 'She plants the garden.']) pick(label);
+  assert.ok(!facts.get('m20_aligned'));
+  pick('The song, in the kitchen.');
+  assert.ok(facts.get('m20_aligned'), 'an interleaving that keeps each memory\'s order is hers');
+  assert.ok(m('m20').scenes.align && m('m20').spoken.align.length >= 5, 'the board\'s lines are walked for the voice');
+  // M21: elites rewind (Echo Step snaps them back; REVERSE leaves them stuck); the arena's gaps; going alone works
+  assert.ok(m('m21').processes.filter((p) => p.mode === 'rewind').every((p) => p.stuck === 6 && /_q0s\d$/.test(p.target)));
+  assert.equal(typeof m('m21').onEcho, 'function');
+  assert.ok(['arenaGap1', 'arenaGap2'].every((id) => m('m21').processes.find((p) => p.id === id)?.when === 'arena_fallen'));
+  assert.ok(thr('m21', 'arena').set.arena_fallen && thr('m21', 'prisoners').when === 'prisoners_held');
+  // M22: the seals come out in reverse causal order; the logs are evidence, the memory cards refuse
+  assert.deepEqual(m('m22').processes.find((p) => p.id === 'finalSeals').bolts, ['RIVER', 'WALL', 'GATE', 'MACHINE']);
+  assert.ok(m('m22').processes.find((p) => p.id === 'clockArm').beat, 'the arm answers on its counted beat');
+  assert.equal(m('m22').processes.find((p) => p.id === 'memoryCards').refuse, 'A MEMORY');
+  const ev = m('m22').deductions.evidence.answers.find((a) => a.correct);
+  assert.ok(/inv_twoLogs_done/.test(ev.needs) && ev.lines.some((l) => l.who === 'WITNESS' && l.text === '…No. I was a second early.'));
+  assert.equal(lexicon('RING: 16:02:00. CONSOLE BUTTON: 16:02:01.'), 'Ring: sixteen oh two exactly. Console Button: sixteen oh two and one second.');
+});
+
+test('the Finale: two holds at once, Mira asks, the three endings with what they add, the epilogue and the voice in every speaker', () => {
+  const m23 = main.find((x) => x.key === 'm23');
+  assert.deepEqual(m23.processes.map((p) => p.id).sort(), ['settlementBridge', 'streetCollapse'], 'the street he holds, the bridge Kai holds');
+  assert.ok(/heldBy/.test(String(m23.step)) && /rev_settlementBridge/.test(String(m23.step)));
+  assert.ok(m23.talks.mira23[0].lines.some((l) => l.who === 'MIRA' && l.text === 'Ask me.'));
+  const f = new FactStore();
+  for (const [k, v] of [['ending', 'C'], ['ev_no_owner', true], ['jun_line', true], ['city_freed', true]]) f.set(k, v);
+  const c = endingLines('C', f);
+  const texts = c.map((l) => l.text);
+  assert.ok(texts.includes('Rain City, a Tuesday. The 41 is late.') && texts.includes('A woman plants something in a window box and hums three notes: up, up, and then down.'));
+  assert.ok(c.some((l) => l.who === 'KAI' && l.text === 'Live.' && l.voice?.fx === 'echo'), 'C: Kai, faintly, through the echo');
+  assert.ok(texts.includes('There\'s a letter in my desk to a brother I never had. I keep meaning to send it.'), 'C: the house with no owner');
+  assert.ok(texts.includes('They all got off. I stopped apologizing.') && texts.includes('We planted things.'), 'one epilogue line per fact set');
+  f.set('ending', 'A');
+  assert.ok(!endingLines('A', f).some((l) => l.text.startsWith('There\'s a letter')), 'the letter is Ending C\'s');
+  assert.deepEqual([POSTCREDIT[0].who, POSTCREDIT[0].text, POSTCREDIT[0].voice.fx], ['VOICE', 'Version one hundred and eighteen.', 'pa']);
+  assert.ok(EPILOGUE.length >= 18 && EPILOGUE.every((l) => { compileCondition(l.when); return true; }));
+});
+
+test('CASE FILES: fourteen stories with their bible state; twelve replays, each a side story from its place with the facts the player had', () => {
+  assert.equal(CASE_FILES.length, 14);
+  const keys = CASE_FILES.map((c) => c.key).filter(Boolean);
+  assert.deepEqual(keys.sort(), MISSIONS.cases.map((m) => m.key).sort(), 'every replay key is an entry');
+  assert.equal(new Set(CASE_FILES.map((c) => c.id)).size, 14);
+  for (const c of CASE_FILES) for (const k of ['start', 'resolved', 'observed']) compileCondition(c[k]);
+  const empty = new FactStore();
+  assert.ok(CASE_FILES.every((c) => caseState(empty, c) === 'open') && Object.keys(CASE_STATES).length === 4);
+  const done = new FactStore();
+  for (const k of ['quest_tala', 'water_route']) done.set(k);
+  assert.equal(caseState(done, CASE_FILES.find((c) => c.id === 'chainB')), 'resolved');
+  done.set('ev_tala23');
+  assert.equal(caseState(done, CASE_FILES.find((c) => c.id === 'chainB')), 'observed');
+  for (const r of MISSIONS.cases.slice(2)) {
+    const origin = main.find((x) => x.key === r.origin);
+    assert.ok(origin && isRewritten(origin) && r.voiceGroup === origin.chapter, `${r.key}: from ${r.origin}, in its voice`);
+    const q = r.quarters[r.startQuarter];
+    assert.ok(q.threads.length && r.quarters.every((x, i) => i === r.startQuarter || !x.threads.length), `${r.key}: its threads, in the quarter it lives in`);
+    assert.ok(r.clear.length && IDS(r.done).every((k) => r.clear.includes(k)), `${r.key}: what it waits for is cleared`);
+    const level = LEVELS.find((l) => l.deck.mkey === r.key)?.level;
+    assert.ok(level?.exit && level.quarters[r.startQuarter]?.spawn, `${r.key}: it builds, with a spawn where its story lives`);
+    // after a whole game, with the story's own facts cleared, nothing of it is done yet
+    const f = new FactStore();
+    for (const k of factsSetBy(origin)) f.set(k, true);
+    for (const k of r.clear) f.set(k, false);
+    for (const t of threadsOf(asDeck(r))) assert.ok(!isDone(f, asDeck(r), t), `${r.key}/${t.id} is done before it is replayed`);
+    assert.ok(!f.test(r.done), `${r.key}: its end holds before it is replayed`);
+  }
+  // the old saves' cases load where they were
+  assert.deepEqual([MISSIONS.cases[0].key, MISSIONS.cases[1].key], ['c_b', 'c_c']);
+  assert.ok(CHAPTERS.cases.name === 'CASE FILES');
 });

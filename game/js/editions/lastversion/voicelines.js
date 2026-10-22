@@ -14,7 +14,7 @@
 // tests check every one of them is in the packs, and index.js allLines() is a thin wrapper over it.
 // Nothing here is a template: a line is recorded as written, and its subtitle is the same text.
 import { MISSIONS, CHAPTERS, ORDER, HINTS, HINTS_REVERSE, LINES, LINE_SPEAKERS, LastVersion } from './Runtime.js';
-import { ENDINGS, EPILOGUE } from './acts.js';
+import { ENDINGS, EPILOGUE, POSTCREDIT } from './acts.js';
 import { NPCS, CAST, DIALOGUE, AMBIENT } from './npcs.js';
 import { INV_LINES, INV_SPEAKERS, RULES } from './inversion.js';
 import { QUESTIONS, PREVIOUSLY } from './ledger.js';
@@ -68,8 +68,8 @@ export function endingLines(key, facts = null) {
   const quote = { who: 'KAI', text: e.text[1], ...(key === 'C' ? { voice: { fx: 'echo' } } : {}) };
   return [{ who: 'NONE', text: e.text[0] }, ...(e.after || []), quote, ...EPILOGUE.filter((l) => !facts || facts.test(l.when))];
 }
-// after the epilogue: four clock ticks, then the voice in every speaker
-export const POSTCREDIT = [{ who: 'VOICE', text: 'Version one hundred and eighteen.', voice: { fx: 'pa' } }];
+// after the epilogue: four clock ticks, then the voice in every speaker (finale.js)
+export { POSTCREDIT };
 
 // --- the pronunciation lexicon (§8.5): what the recording says; the subtitle (and the key) keep the digits --------
 const YEARS = { 2049: 'twenty forty-nine', 2026: 'twenty twenty-six', 2196: 'twenty-one ninety-six', 2017: 'twenty seventeen', 2031: 'twenty thirty-one', 2061: 'twenty sixty-one' };
@@ -87,6 +87,7 @@ export const yearWords = (y) => YEARS[y] || (y % 100 === 0 ? `${numberWords(y / 
 const clockWords = (h, mm) => `${h.length === 2 && h[0] === '0' ? `oh ${ONES[+h]}` : numberWords(+h)} ${+mm === 0 ? (h[0] === '0' ? 'hundred' : "o'clock") : +mm < 10 ? `oh ${ONES[+mm]}` : numberWords(+mm)}`;
 export const LEXICON = [
   [/\bV\.\s?(\d+)\b/gi, (m, n) => `Version ${numberWords(+n)}`],
+  [/\b(\d{1,2}):(\d{2}):(\d{2})\b/g, (m, h, mm, ss) => `${clockWords(h, mm)}${+ss ? ` and ${numberWords(+ss)} second${+ss === 1 ? '' : 's'}` : ' exactly'}`],
   [/\b(\d{1,2}):(\d{2})\b/g, (m, h, mm) => clockWords(h, mm)],
   [/\b(\d{1,2})-(\d{1,2})-(\d{4})\b/g, (m, d, mo, y) => `the ${ordinalWords(+d)} of ${MONTHS[+mo] || numberWords(+mo)}, ${yearWords(+y)}`],
   [/\bact (iv|iii|ii|i)\b/gi, (m, r) => `Act ${ROMAN[r.toUpperCase()]}`],
@@ -179,8 +180,9 @@ export function spokenLines({ levels = true } = {}) {
   };
 
   // --- the missions -------------------------------------------------------------------------------------
-  for (const ch of Object.keys(MISSIONS)) {
-    for (const m of MISSIONS[ch]) {
+  for (const ch0 of Object.keys(MISSIONS)) {
+    for (const m of MISSIONS[ch0]) {
+      const ch = m.voiceGroup || ch0; // (a case file replaying a side story speaks from its mission's pack)
       const P = m.key;
       const mvid = castVid(m.crew);
       lines(ch, `${P}.intro`, m.intro);
@@ -213,7 +215,8 @@ export function spokenLines({ levels = true } = {}) {
       });
       for (const p of m.processes || []) {
         (p.hints || []).forEach((t, j) => add(ch, `${P}.process:${p.id}.hint${j}`, 'KAI', t));
-        if (p.line) add(ch, `${P}.process:${p.id}.line`, 'KAI', p.line);
+        if (p.line) add(ch, `${P}.process:${p.id}.line`, p.lineWho || 'KAI', p.line);
+        if (p.offBeat) add(ch, `${P}.process:${p.id}.offBeat`, 'KAI', p.offBeat);
         if (p.clip?.text) add(ch, `${P}.process:${p.id}.clip`, p.clip.who || 'NONE', p.clip.text, { ...(p.clip.voice || {}), fx: 'recording' });
       }
       // threads, sides, talks and deductions (U6 on): the shape §3.3 gives them
@@ -260,7 +263,8 @@ export function spokenLines({ levels = true } = {}) {
   // --- every built level: the people, the records, the fragments, the challenges ------------------------
   if (levels) {
     const once = new Set();
-    for (const { ch, deck, s, level } of buildLevels()) {
+    for (const { ch: ch0, deck, s, level } of buildLevels()) {
+      const ch = deck.voiceGroup || ch0;
       const P = `${deck.mkey}#${s}`;
       for (const n of level.npcs) {
         const def = NPCS[n.crew];

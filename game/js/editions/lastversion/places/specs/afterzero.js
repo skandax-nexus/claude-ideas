@@ -62,16 +62,17 @@ export default {
 
   build(P) {
     P.setTerrain(-50, -180, 50, 180, 0);
-    P.box([-50, -0.6, 64, 50, 0, 180], 'meadow', { noShadow: 1, vis: false });
+    // (the ground, except where the avenue has collapsed: x -14 .. 14, z 120 .. 136)
+    for (const b of [[-50, 64, 50, 120], [-50, 136, 50, 180], [-50, 120, -14, 136], [14, 120, 50, 136]]) P.box([b[0], -0.6, b[1], b[2], 0, b[3]], 'meadow', { noShadow: 1, vis: false });
     // --- Q0: M1's South Square, quoted: the avenue, its blocks and shopfronts, the 41's shelter ---------------------
-    P.vbox([-50, 0, 112, 50, 0.04, 180], 'pavement', { noShadow: 1 });
-    P.vbox([-9, 0.04, 112, 9, 0.07, 180], 'asphalt', { noShadow: 1 });
-    for (let z = 116; z < 180; z += 9) P.vbox([-0.1, 0.07, z, 0.1, 0.09, z + 4], 'marking', { noShadow: 1 });
+    for (const b of [[-50, 112, 50, 120], [-50, 136, 50, 180], [-50, 120, -14, 136], [14, 120, 50, 136]]) P.vbox([b[0], 0, b[1], b[2], 0.04, b[3]], 'pavement', { noShadow: 1 });
+    for (const [z0, z1] of [[112, 120], [136, 180]]) P.vbox([-9, 0.04, z0, 9, 0.07, z1], 'asphalt', { noShadow: 1 });
+    for (let z = 116; z < 180; z += 9) if (z + 4 < 120 || z > 136) P.vbox([-0.1, 0.07, z, 0.1, 0.09, z + 4], 'marking', { noShadow: 1 });
     block(P, { rect: [14, 154, 46, 180], floors: 7, tint: 0x9a5a48, cornice: true, shop: { side: 'W', color: 0xffd9a8 } });
     block(P, { rect: [14, 118, 46, 148], floors: 9, tint: 0xc89a7a, cornice: true, shop: { side: 'W', color: 0xcfe4ff, awning: 'awningBlue' } });
     block(P, { rect: [-40, 156, -14, 180], floors: 6, tint: 0xb06a52, shop: { side: ['E'] }, cornice: true });
     block(P, { rect: [-40, 120, -14, 136], floors: 4, tint: 0xd8c8b0, shop: { side: ['E'] } });
-    for (let z = 118; z < 178; z += 14) for (const x of [-8.6, 8.6]) prop(P, 'tramPole', x, z);
+    for (let z = 118; z < 178; z += 14) if (z < 118 || z > 136) for (const x of [-8.6, 8.6]) prop(P, 'tramPole', x, z);
     prop(P, 'busShelter', -11, 160, Math.PI / 2);
     sign(P, '41', -12.2, 2.9, 163.4, Math.PI / 2, { size: 0.5, color: '#ffffff', boardMat: 'busStopGreen' });
     P.land('platform41', -5, 0, 166, Math.PI);
@@ -81,13 +82,18 @@ export default {
       for (let i = 0; i < 8; i++) P.disc(P.rng.float(-8, 8), 0.09, P.rng.float(116, 176), P.rng.float(0.6, 1.8), 'puddleWater', { seg: 12 });
       for (const [x, z] of [[-6, 140], [5, 172]]) prop(P, 'car', x, z, x < 0 ? 0 : Math.PI);
     });
-    P.E('PRESENT', () => { for (const z of [124, 150]) prop(P, 'adScreen', 12, z, -Math.PI / 2); for (const x of [-4, 4]) prop(P, 'barrier', x, 132, 0); });
+    P.E('PRESENT', () => { for (const z of [114, 150]) prop(P, 'adScreen', 12, z, -Math.PI / 2); for (const x of [-4, 4]) prop(P, 'barrier', x, 138, 0); });
     P.E('FUTURE', () => {
-      for (let i = 0; i < 26; i++) P.tree(P.rng.pick(['grass', 'shrub', 'fern']), P.rng.float(-12, 12), P.rng.float(114, 178), P.rng.float(0.8, 1.4), { solid: false });
-      for (let i = 0; i < 6; i++) P.obox(P.rng.float(-8, 8), -0.2, P.rng.float(116, 176), P.rng.float(2, 4), 0.4, P.rng.float(2, 4), P.rng.float(0, 3), 'asphalt', { rx: P.rng.float(-0.1, 0.1) });
+      for (let i = 0; i < 26; i++) { const z = P.rng.float(114, 178); if (z < 119 || z > 137) P.tree(P.rng.pick(['grass', 'shrub', 'fern']), P.rng.float(-12, 12), z, P.rng.float(0.8, 1.4), { solid: false }); }
+      for (let i = 0; i < 6; i++) P.obox(P.rng.float(-8, 8), -0.2, P.rng.float(140, 176), P.rng.float(2, 4), 0.4, P.rng.float(2, 4), P.rng.float(0, 3), 'asphalt', { rx: P.rng.float(-0.1, 0.1) });
     });
-    // the street that collapses (the Witness holds it): a sunken slab across the avenue, the hole under it
-    P.E(['PAST', 'FUTURE'], () => P.obox(0, -1.4, 128, 16, 1.4, 6, 0, 'asphalt', { rx: 0.08 }));
+    // the street that collapsed (Mission 23): a pit across the avenue, 6 m deep, a stair back up on its south side.
+    // In 2026 its south half is still the old street; its north half the Witness holds up (REVERSE, his, scripted)
+    P.box([-14, -6.6, 120, 14, -6, 136], 'concreteStained');
+    for (const [x0, z0, x1, z1] of [[-14.3, 119.7, 14.3, 120], [-14.3, 136, 14.3, 136.3], [-14.3, 120, -14, 136], [14, 120, 14.3, 136]]) P.box([x0, -6, z0, x1, 0, z1], 'concreteStained');
+    stair(P, 12, 121, -6, 12, 135.6, 0, 1.8, 'concreteStained');
+    for (let i = 0; i < 10; i++) P.obox(P.rng.float(-12, 9), -6, P.rng.float(121, 135), P.rng.float(1.5, 3.5), P.rng.float(0.3, 1.2), P.rng.float(1.5, 3), P.rng.float(0, 3), 'asphalt', { rx: P.rng.float(-0.3, 0.3), solid: false });
+    P.E('PAST', () => P.box([-14, -0.6, 128, 14, 0, 136], 'asphalt'));
     // --- the seam: the asphalt ends mid-street; the 41 stands in the field beyond -------------------------------------
     P.land('seam41', 0, 0, 108, Math.PI);
     P.land('busField', 9.4, 0, 102, -Math.PI / 2);
@@ -114,7 +120,8 @@ export default {
     water(P, [-50, 56, 50, 64], -1.2, 'riverWater', { depth: 2.2 });
     P.drown([-50, 56, 50, 64], -1.6);
     for (const z of [56, 64]) P.vbox([-50, -3.6, z - 0.3, 50, 0.02, z + 0.3], 'riverStone');
-    bridge(P, 0, 54.6, 0, 65.4, 4, 0.3, 'timber', { parapetMat: 'timber', parapetH: 0.9, thick: 0.4 });
+    // (its timber bridge has fallen into the stream: Mission 23's REVERSE holds it up; the abutments stand)
+    for (const z of [53.4, 64.2]) P.box([-2.6, -0.6, z, 2.6, 0.3, z + 2.4], 'drystone');
     P.land('settlementBridge', 0, 0.3, 60, Math.PI);
     // --- the corridor of still air the Witness holds: the storm's walls of rain either side of the road ----------------
     for (const x of [-15, 15]) P.vbox([x - 0.2, 0, -100, x + 0.2, 14, 40], 'smoke', { noShadow: 1 });

@@ -107,6 +107,16 @@ export const AMBIENT_CAST = {
   m10_guard: { model: 'rb_juno', variant: 'guard', height: 1.7, pronoun: 'f' },
   m13_listener: { model: 'rb_civ_m1', variant: 'dust', height: 1.78, pronoun: 'm' },
   m13_freed: { model: 'rb_civ_m2', variant: 'detention', height: 1.76, pronoun: 'm' },
+  // Act III (U8): Sera's schoolchildren (M14), an Unwritten fighter and a lock-city volunteer at the pylons (M18)
+  m14_pupil: { model: 'rb_child_m2', variant: 'patched2', height: 1.3, pronoun: 'm' },
+  m14_pupilA: { model: 'rb_child_m2', variant: 'green', height: 1.24, pronoun: 'm' },
+  m14_pupilB: { model: 'rb_child_m2', variant: 'blue', height: 1.34, pronoun: 'm' },
+  m18_fighter: { model: 'rb_scav', variant: 'unwritten', height: 1.78, pronoun: 'm' },
+  m18_citizen: { model: 'rb_civ_f3', variant: 'moss', height: 1.66, pronoun: 'f' },
+  m21_cook: { model: 'rb_civ_f2', variant: 'home', height: 1.67, pronoun: 'f' },
+  m21_listener: { model: 'rb_civ_f1', variant: 'teal', height: 1.66, pronoun: 'f' },
+  m23_listener: { model: 'rb_civ_f2', variant: 'rose', height: 1.67, pronoun: 'f' },
+  m23_passenger: { model: 'rb_courier', variant: 'blue', height: 1.78, pronoun: 'm' },
 };
 
 // the crowd models' base heights

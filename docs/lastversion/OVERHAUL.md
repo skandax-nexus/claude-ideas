@@ -252,6 +252,27 @@ authors against, beyond U6's:
 - Saves are `lvFormat` 23 (`REWRITTEN_IN`: a chapter's missions became one map in that format); an older save inside a
   mission of Act I or II restarts it at quarter 0 with its facts.
 
+**As built (U8).** Missions 14–23 are written to it in `act3.js`, `act4.js` and `finale.js`, the case files in `cases.js`
+(all re-exported by `acts.js`). Beyond U7's:
+
+- `hold`: `{ at, r, secs, posts: [{ at, name, year, drift, anchor, wrongYear, steady }], drift, window, allies: { cond:
+  postIndex }, slow: cond, lapse, while? }`. Progress (`hold_<mkey>_<id>`, seconds, saved) counts while Kai is within
+  `r` of `at` and no post has lapsed; one post at a time drifts every `drift` s (half as long again when `slow` holds)
+  and lapses after `window` s unless re-anchored by its scene (`hold:<id>:<i>`) in its own year; an ally's post never
+  drifts. The HUD chip `#lvHold` shows it. Never a fail (M18's pylons).
+- A mission's `home` year: its rooms start in it, and stability drains (and snaps back) away from it (M14–M16, M18:
+  2196; M20: 2026).
+- `nodes: { <scene>: (rt) => node }`: a scene built when it is used (M20's alignment board); its lines are listed in
+  the mission's `spoken` so the packs record them. `onEcho(rt, pos)`: the watchers answer an afterimage (M21).
+- Processes may carry `heldBy` (someone else holds it, scripted: the Witness, an ally; Kai cannot aim at it), `beat:
+  { period, on }` with `offBeat` (M22's arm jams off its counted beat), `mode: 'rewind'` with `stuck` on a patrol
+  (M21's elites: reversing the rewind leaves one stuck forward), and a refusal's `lineWho` and `once` (M20: Mira
+  answers the first try). An `ink` process of one layer is an original: trying it settles it, and nothing comes off.
+- A case file is `replay(mission, sideId, o)`: the mission's place, people and what the side story uses, its threads
+  in the quarter it lives in (`startQuarter`, where the replay spawns), `voiceGroup` (it speaks from the mission's pack:
+  no new lines), and `clear` (the facts the story sets or waits for, unset when it starts, over the facts the player
+  had). Saves are `lvFormat` 24; a U7 save inside a mission of Acts III, IV or the Finale restarts it at quarter 0.
+
 ### 3.4 People (U4 provides; U5 voices; U6–U8 write lines)
 
 An NPC entry (`npcs.js`) is:
@@ -2580,6 +2601,34 @@ At the end the charge cap rises to 12 s.
 - The optional total is about 5 h 15 min, as the bible budgets.
 
 ---
+
+### As built (U8): where Missions 14–23 and the case files differ from the sheets
+
+- **M14:** the lift car is medium weight (1, at 3 m/s: a 24 m ride fits the 10 s charge, aimable from inside the car);
+  the roof garden landmark is on the bank's terrace, west of the lift's landing.
+- **M18:** the storm stands across the highway in 2026 and 2196, so 2049's lamp-post heads are the way; the slab stair
+  replaces the first tilted floor (from the stump at 6 m there is no other way up), after the hold; the surge REVERSE
+  is not built.
+- **M19:** a second side story, THE CLOCKMAKER'S MARK (4 min: the gallery's arm reads `ezra_debt`), makes the optional 8.
+  The reflection's lag is a mechanism that settles once reversed (R4), and the bridge then holds in every year.
+- **M20:** the alignment is a board of six moments (two per memory), one placed a use; any interleaving that keeps each
+  memory's order is accepted. Kai leading offers his tidy line first, which is refused; Mira leading, she speaks of the
+  hospital bench (the place has no bench).
+- **M21:** the elites walk the arrival deck (watchers patrol ground level). The arena drops three slabs: 270–285° and
+  240–255° between the bridge and the summit stair, and 300–315°, which nothing spans, so the long way round is gone.
+  The first gap is Kai's REVERSE; the second the earned ally's (a scripted 30 s hold) or 2196's frozen girder, or Kai's
+  own REVERSE again. The kitchen door is a collider that lifts for `warned_evacuees`. Mara's radio (2) and the
+  Director's office (4) are the optional 6.
+- **M22:** the evidence table carries Iven's statement and the museum's card, so the deduction needs nothing from a
+  side story (`inv_twoLogs_done && ev_iven_statement && ev_memory_card`); the arm's beat is 3 s with a 0.9 s window.
+  The lexicon reads `16:02:00` as "sixteen oh two exactly".
+- **M23:** the street that fell is a 6 m pit across the avenue (a stair out on its south side). In 2026 its south half
+  is still the old street; the Witness holds the north half (his REVERSE, scripted, released once Kai is past). The
+  settlement's timber bridge lies in the stream: Kai holds it while the Witness crosses, then crosses himself. The
+  consequences gallery asks for three of its five people. The Finale's hook is the voice in every speaker; the
+  epilogue has 19 lines (`ledger.EPILOGUE`), one per fact set.
+- **CASE FILES:** the replays have no cold open or hook of their own (no new lines) and are lettered E–N after chains B
+  and C; the chapters menu's card and THE CASES after an ending open the screen; a case ends back on it.
 
 ## 6. Casting
 

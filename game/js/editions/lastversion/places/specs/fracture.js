@@ -140,6 +140,13 @@ export default {
         P.cyl(6, 0, z, 0.08, 1.6, 'ironDark', { seg: 5, prop: 1 });
         P.box([5.2, 1.6, z - 0.8, 6.8, 1.9, z + 0.8], 'lampGlow');
       }
+      // a lamp post fallen across the verge at the water's edge: the way up onto the heads
+      ramp(P, [5.2, -9, 6.8, 1.2], 0, 1.9, 'S', 'ironDark', { terrain: false });
+    });
+    // the storm stands across the highway in 2196 and in 2026 (pillars of other times: only 2049's flood is a way through)
+    P.E(['FUTURE', 'PAST'], () => {
+      P.col([-60, 0, 44, 60, 12, 47]);
+      for (let x = -56; x <= 56; x += 8) P.cyl(x, 0, 45.5, 3.4, 30, 'stormGlow', { seg: 10, noShadow: 1 });
     });
     P.E('FUTURE', () => {
       // dry and buckled: the slabs heaved up, weeds in the cracks
@@ -156,7 +163,7 @@ export default {
     P.land('pylon1', -20, 0, 156, 0);
     P.land('pylon2', 30, 0, 148, 0);
     P.land('pylon3', 6, 0, 186, 0);
-    P.land('slabs', -26, 6, 128, Math.PI / 2);
+    P.land('slabs', -14, 6, 108, 0); // (the slab stair's foot, at the stump's edge: it climbs east to the ramp at 9 m)
     P.land('floorFragment', -30, 0, 112, 0);
     P.land('pocket', 40, 0, 116, 0);
     P.land('towerDeck', 24, TOP, 186, Math.PI);
@@ -171,7 +178,10 @@ export default {
     P.E('FUTURE', () => {
       P.box([-50, 0, 104, -14, 6, 140], 'slabConcrete');
       // tilted floors, each a ramp from the last: the climb (6 m to 26 m) eastward toward the tower
-      ramp(P, [-14, 104, 6, 112], 6, 12, 'E', 'slabConcrete', { terrain: false });
+      // (from the stump at 6 m the first tilted floor is out of reach: its fallen slabs lie in the street, and come back
+      // as a stair, last fallen first, to the ramp's foot at 9 m: Mission 18's REVERSE)
+      ramp(P, [-4, 104, 6, 112], 9, 12, 'E', 'slabConcrete', { terrain: false });
+      P.box([-4.4, 8.6, 104, -4, 9, 112], 'slabConcrete');
       P.box([6, 11.6, 104, 14, 12, 120], 'slabConcrete');
       ramp(P, [6, 120, 14, 140], 12, 19, 'S', 'slabConcrete', { terrain: false });
       P.box([6, 18.6, 140, 30, 19, 148], 'slabConcrete');

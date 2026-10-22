@@ -25,17 +25,18 @@ export const QUESTIONS = [
   { id: 'q_card', chapter: 'prologue', text: 'Who used my card at 05:40, and whose is the voice?', partly: ['m06', 'm09', 'm12'], answer: 'm22',
     clues: ['card_0540', 'empty_corridor', 'florist', 'rook_log', 'junior_pass', 'raw_log', 'door_log'] },
   { id: 'q_prologue', chapter: 'prologue', bible: true, text: 'What happened, and why does the voice know Kai?', partly: ['m03'], answer: 'm12',
-    clues: ['minute_814', 'stopped_clock', 'drawing', 'mira_archive'] },
+    clues: ['minute_814', 'stopped_clock', 'drawing'] },
   { id: 'q_predate', chapter: 'act1', bible: true, text: 'How can the machine predate its inventors?', answer: 'm08',
     clues: ['site_zero_print', 'site_zero', 'found_not_built', 'others_before', 'clock_question'] },
   { id: 'q_woman', chapter: 'act1', text: 'Who is the woman with Mira\'s face?', partly: ['m08'], answer: 'm11',
     clues: ['mira_photo', 'lin_peg', 'lin_badge', 'three_notes', 'three_photos'] },
   { id: 'q_witness', chapter: 'act2', bible: true, text: 'Is the Witness protecting Kai or controlling him?', partly: ['m13'], answer: 'm22',
     clues: ['witness_recording', 'version17', 'prisoners', 'stabilizer', 'admitted_by'] },
-  { id: 'q_cost', chapter: 'act3', bible: true, text: 'What did the previous attempts cost?', answer: 'm17',
-    clues: ['memorial', 'anja_lock', 'dual_archive', 'mira_memory'] },
-  { id: 'q_saved', chapter: 'act4', bible: true, text: 'Can Mira be saved without repeating the catastrophe?', answer: 'm22', clues: [] },
-  { id: 'q_accept', chapter: 'finale', bible: true, text: 'What must be accepted rather than fixed?', answer: 'm23', clues: [] },
+  { id: 'q_cost', chapter: 'act3', bible: true, text: 'What did the previous attempts cost?', partly: ['m15', 'm16'], answer: 'm17',
+    clues: ['memorial', 'anja_lock', 'dual_archive', 'museum_his', 'two_logs', 'i_pressed'] },
+  { id: 'q_saved', chapter: 'act4', bible: true, text: 'Can Mira be saved without repeating the catastrophe?', partly: ['m20'], answer: 'm22',
+    clues: ['real_door', 'her_side', 'chain', 'second_early'] },
+  { id: 'q_accept', chapter: 'finale', bible: true, text: 'What must be accepted rather than fixed?', answer: 'm23', clues: ['unwritten_record'] },
 ];
 
 // --- the clue ledger (§9.4) ----------------------------------------------------------------------------------
@@ -176,8 +177,8 @@ export const PREVIOUSLY = {
   act2: ['A village three thousand years old knew his face.', 'In a Helix that should not exist, a screen said VERSION 17.', 'Someone older keeps leaving him instructions.'],
   act3: ['For nine minutes the war repeated, and Kai learned to hold things backwards.', 'The man behind the glass had his face, thirty years older.', 'The next door opened onto the future.'],
   act4: ['In the future, Kai\'s name is on a memorial.', 'A museum keeps every attempt at one world.', 'In the archive, he heard himself confess.'],
-  finale: ['Outside time, Mira refused the door he opened.', 'She told him whose idea it was.', 'The first second is still waiting.'],
-  cases: ['Two stories the main road walked past.', 'A river that was taught to stay.', 'Two archives that disagree about who was first.'],
+  finale: ['Outside time, Mira walked through a blue door alone.', 'She told him whose idea it was.', 'At the first second, the logs said who was early.'],
+  cases: ['The stories the main road walked past.', 'Each one waits in its own place.', 'Some of them are still open.'],
 };
 
 // --- EPILOGUE (§5 M23): one line per fact the player set, after an ending's quote ------------------------------------
@@ -190,4 +191,16 @@ export const EPILOGUE = [
   { when: 'ezra_debt == "release"', who: 'CREW', name: 'EZRA MOLL', color: '#8a6a3a', voice: { id: 'CLOCKMAKER' }, text: 'Wednesday. Imagine that.' },
   { when: 'city_freed', who: 'ANJA', text: 'We planted things.' },
   { when: 'ev_raw_log', who: 'IVEN', text: 'Elias Rook testified for nine days. The log said I refused to sign, forty-one times.' },
+  // Acts III and IV (U8)
+  { when: 'ezra_debt == "finish"', who: 'CREW', name: 'EZRA MOLL', color: '#8a6a3a', voice: { id: 'CLOCKMAKER' }, text: 'The clock keeps its own time. So do I.' },
+  { when: 'odile_released', who: 'CREW', name: 'NURSE ODILE', color: '#7aa6c8', voice: { id: 'ODILE' }, text: 'My shift finished. Thirty-two went home.' },
+  { when: 'warned_evacuees', who: 'CREW', name: 'ONE WHO LISTENED', color: '#4f6170', voice: { id: 'CROWD_F2' }, text: 'You said get out of the tower. We did. We never said thank you.' },
+  { when: 'prisoners_freed || m21_cells', who: 'NONE', text: 'Twelve people walked out of the dam\'s loops. They meet once a year, and nobody can say why.' },
+  { when: 'garden_restored', who: 'SERA', text: 'The garden has water. The children named the channel after nobody.' },
+  { when: 'trust_sera == "accept"', who: 'SERA', text: 'I cut it into the memorial myself. AND HE CAME BACK.' },
+  { when: 'city_stabilized', who: 'ANJA', text: 'The lock holds. I check it at noon, and now I remember why.' },
+  { when: 'last_signal', who: 'IVEN', text: 'I came out of the pocket. Some nights I still hear it folding.' },
+  { when: 'photo_taken', who: 'NONE', text: 'A photograph lies on a kitchen table in Rain City. Nobody remembers taking it.' },
+  { when: 'letter == "delivered"', who: 'NONE', text: 'A letter, opened at last, in the pocket of a coat nobody claims.' },
+  { when: 'ev_no_owner && ending == "C"', who: 'MIRA', text: 'There\'s a letter in my desk to a brother I never had. I keep meaning to send it.' },
 ];

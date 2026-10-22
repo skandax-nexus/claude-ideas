@@ -31,6 +31,12 @@
 //   playback echoes re-enact what a place kept (`echoes`: people placed as holograms that show only while it plays,
 //            `lines`): at `at`, a scene `playback:<id>`; with `entries` the recovered pieces are put in order first,
 //            one a use (a wrong one is said and stays out), then the re-enactment plays and the thread is done
+//   hold     defend for a time (U8: Mission 18's pylons): `secs` of progress while Kai stays within `r` (30 m) of `at`;
+//            its `posts` (landmarks, each answering in its own `year`) drift out of phase one at a time, every `drift`
+//            seconds, and a drifting post that is not re-anchored (a scene at the post, in its year) within `window`
+//            seconds lapses: the progress waits until it is anchored again. Never a fail. `allies: { cond: postIndex }`
+//            hold a post themselves (it never drifts); `slow: cond` gives every drift half as long again. Its progress
+//            is kept in hold_<mkey>_<id> (seconds), so a save keeps it; `while: cond` instead counts while that holds
 // A thread's fact is t_<mkey>_<id>; it is set the first time the thread counts as done, with its `set`, `ev`
 // and `log`, and its `say` lines are said (once: t_<mkey>_<id>_paid marks it, as kinds that complete themselves
 // set the thread's fact directly). A thread whose `until` holds before it is done was walked past (a
@@ -38,9 +44,9 @@
 import { compileCondition } from '../../core/conditions.js';
 import { resolveAnchor, toWorld, spotModel } from './processes.js';
 
-export const KINDS = ['go', 'talk', 'clue', 'residue', 'deduce', 'scene', 'choice', 'tasks', 'stealth', 'chase', 'cinema', 'invert', 'loop', 'playback'];
+export const KINDS = ['go', 'talk', 'clue', 'residue', 'deduce', 'scene', 'choice', 'tasks', 'stealth', 'chase', 'cinema', 'invert', 'loop', 'playback', 'hold'];
 // the length model's minutes when a thread does not give its own (§9.8)
-export const MINUTES = { go: 2, talk: 2, clue: 1, residue: 3, deduce: 3, scene: 1, choice: 2, tasks: 3, stealth: 5, chase: 5, cinema: 2, invert: 5, loop: 4, playback: 5, side: 8, coldOpen: 2, hook: 1 };
+export const MINUTES = { go: 2, talk: 2, clue: 1, residue: 3, deduce: 3, scene: 1, choice: 2, tasks: 3, stealth: 5, chase: 5, cinema: 2, invert: 5, loop: 4, playback: 5, hold: 6, side: 8, coldOpen: 2, hook: 1 };
 // a legacy beat's kind as a thread
 const SHIM_KIND = { arrival: 'scene', log: 'scene', contradiction: 'residue', encounter: 'talk', scene: 'scene', choice: 'choice', tasks: 'tasks', custom: 'scene' };
 const SHIM_MIN = { arrival: 3, log: 3, contradiction: 4, encounter: 4, scene: 4, choice: 4, tasks: 6, custom: 8 };
@@ -51,6 +57,8 @@ export const sideFact = (m, s) => `side_${m.mkey || m.key}_${s.id}`;
 // a playback's echoes show while this holds; its recovered pieces put in order so far
 export const playFact = (m, t) => `pb_${m.mkey || m.key}_${t.id}`;
 export const placedFact = (m, t) => `pb_${m.mkey || m.key}_${t.id}_n`;
+// a hold's progress so far (seconds)
+export const holdFact = (m, t) => `hold_${m.mkey || m.key}_${t.id}`;
 
 // a mission's quarters: its own, or the shim's (each legacy beat a thread in quarter i)
 export function quartersOf(m) {
@@ -146,6 +154,8 @@ export function placeThreads(deck, level) {
           hologram: true, silent: true, when: playFact(deck, t), ...(path.length > 1 ? { path, speed: e.speed ?? 0.9 } : {}), room: a?.room || roomAt(level, p) || level.outdoorRoom });
       }
     }
+    // a hold's posts: a scene at each (re-anchor it, in its year)
+    if (t.kind === 'hold') for (const [i, po] of (t.posts || []).entries()) spot({ id: `hold_${t.id}_${i}`, scene: `hold:${t.id}:${i}`, at: po.at, prompt: po.prompt || `RE-ANCHOR ${po.name}`, offset: po.offset || [0, 1.3, 1.4], r: po.r ?? 3, model: po.model, kit: po.kit }, t);
     if (t.kind === 'chase' && t.npc) {
       const n = level.npcs.find((x) => x.id === t.npc);
       if (n) {
@@ -207,6 +217,8 @@ export class Threads {
     // plays loads with its thread not done, and the moment plays again)
     this.staged = new Set();
     this.tick = 0;
+    this.holds = {}; // (a hold's posts and progress, this load)
+    this.holdHud(null);
   }
 
   done(t) {
@@ -277,6 +289,7 @@ export class Threads {
     this.quarters();
     this.chase(dt);
     this.stage();
+    this.holdStep(dt);
     // (a thread whose done reads a count, or a condition no fact change re-tested; a fact change updates at once)
     if ((this.tick -= dt) <= 0) {
       this.tick = 0.25;
@@ -361,6 +374,102 @@ export class Threads {
       });
       return;
     }
+  }
+
+  // --- a hold: defend for a time (Mission 18's pylons) ---------------------------------------------------------------
+  // the current thread's progress counts while Kai stays near and no post has lapsed; one post drifts at a time
+  holdStep(dt) {
+    const g = this.g, f = g.facts, t = this.current();
+    if (t?.kind !== 'hold' || this.done(t)) {
+      if (this.holdShown) this.holdHud(null);
+      return;
+    }
+    const rt = this.rt;
+    if (rt.opening || rt.cinema?.active || g.hud?.talking || g.menu || g.catching) return;
+    const k = holdFact(this.deck, t);
+    const S = (this.holds[t.id] ||= { prog: f.get(k) || 0, posts: (t.posts || []).map(() => ({ st: 'ok', t: 0 })), next: (t.drift ?? 22) * 0.5, k: 0 });
+    const slow = t.slow && f.test(t.slow) ? 1.5 : 1;
+    const allied = new Set(Object.entries(t.allies || {}).filter(([c]) => f.test(c)).map(([, i]) => i));
+    let lapsed = false;
+    S.posts.forEach((p, i) => {
+      if (allied.has(i)) {
+        p.st = 'ok';
+        return;
+      }
+      if (p.st === 'drift' && (p.t -= dt) <= 0) {
+        p.st = 'lapsed';
+        if (t.lapse?.length) g.hud.say(t.lapse, f);
+      }
+      if (p.st === 'lapsed') lapsed = true;
+    });
+    const lm = this.level?.landmarks?.[t.at];
+    const pp = g.player?.pos;
+    const near = !lm || !pp || Math.hypot(pp.x - lm[0], pp.z - lm[2]) <= (t.r ?? 30);
+    if (t.while ? f.test(t.while) : near && !lapsed) S.prog += dt;
+    // one post at a time drifts out of phase, every `drift` seconds while Kai is at the hold
+    if (S.posts.length && near && (S.next -= dt) <= 0) {
+      S.next = (t.drift ?? 22) * slow;
+      const free = S.posts.map((q, i) => i).filter((i) => !allied.has(i));
+      if (free.length && !S.posts.some((q) => q.st !== 'ok')) {
+        const i = free[S.k++ % free.length];
+        S.posts[i].st = 'drift';
+        S.posts[i].t = (t.window ?? 18) * slow;
+        g.audio?.deny?.();
+        if (t.posts[i].drift?.length) g.hud.say(t.posts[i].drift, f);
+      }
+    }
+    if (Math.floor(S.prog) !== (f.get(k) || 0)) f.set(k, Math.floor(S.prog));
+    this.holdHud(t, S, allied);
+    if (S.prog >= (t.secs || 60)) {
+      f.set(factOf(this.deck, t));
+      this.holdHud(null);
+      this.update();
+    }
+  }
+
+  // a post's scene: re-anchor it, in its year
+  holdUse(id, i, state) {
+    const t = this.byId[id], po = t?.posts?.[i];
+    if (!po) return null;
+    const p = this.holds[id]?.posts[i];
+    if (!p || p.st === 'ok' || this.done(t)) return { lines: po.steady || t.steady || [] };
+    if (po.year && state !== po.year) return { lines: po.wrongYear || [] };
+    p.st = 'ok';
+    this.g.audio?.chime?.();
+    return { lines: po.anchor || [] };
+  }
+
+  // the hold's chip under the objective: the label and progress, and the post that needs Kai
+  holdHud(t, S, allied) {
+    if (typeof document === 'undefined') return;
+    let el = document.querySelector('#lvHold');
+    if (!t) {
+      if (el) el.classList.remove('on');
+      this.holdShown = false;
+      return;
+    }
+    if (!el) {
+      const st = document.createElement('style');
+      st.id = 'lvHoldCss';
+      st.textContent = `body.lastversion #lvHold { position: absolute; left: 50%; top: 14px; transform: translateX(-50%); display: none; gap: 10px; align-items: center; padding: 7px 14px;
+        border-radius: 999px; background: rgba(30, 24, 40, 0.5); color: #fff; font: 700 12px Inter, sans-serif; letter-spacing: 0.08em; pointer-events: none; white-space: nowrap; z-index: 8; }
+        body.lastversion #lvHold.on { display: flex; }
+        body.lastversion #lvHold i { display: block; width: 90px; height: 6px; border-radius: 3px; background: linear-gradient(90deg, #ffd27a var(--hp, 0%), rgba(255,255,255,0.25) 0); }
+        body.lastversion #lvHold.alert { background: rgba(120, 30, 30, 0.6); }`;
+      document.head.appendChild(st);
+      el = document.createElement('div');
+      el.id = 'lvHold';
+      el.innerHTML = '<b></b><i></i><span></span>';
+      (document.querySelector('#ui') || document.body).appendChild(el);
+    }
+    const pct = Math.min(100, Math.round((S.prog / (t.secs || 60)) * 100));
+    const bad = S.posts.map((p, i) => [p, i]).find(([p]) => p.st !== 'ok');
+    el.querySelector('b').textContent = `${t.label || 'HOLD'} ${pct}%`;
+    el.style.setProperty('--hp', `${pct}%`);
+    el.querySelector('span').textContent = bad ? `${t.posts[bad[1]].name} ${bad[0].st === 'lapsed' ? 'LAPSED' : `DRIFTING ${Math.ceil(bad[0].t)}`}` : allied?.size ? 'HELD WITH HELP' : 'HOLDING';
+    el.classList.toggle('alert', !!bad);
+    el.classList.add('on');
+    this.holdShown = true;
   }
 
   // --- the scenes threads own: a deduction, a record with a residue --------------------------------------------------

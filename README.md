@@ -16,7 +16,7 @@ Each version is kept separately. It has its own git commit, its own Android app 
 
 | Version | Status | Commit | Android app | Web preview |
 | --- | --- | --- | --- | --- |
-| **v2.0** | in development (separate edition) | this branch | `AFTERZERO-LastVersion-v2.0.apk`, app "AFTERZERO: Last Version" (`com.afterzero.lastversion`); build with `EDITION=lastversion bash android/build-apk.sh` | [claude.ai/artifact/GDpG6YCybK2cj8P3gPXRrr](https://claude.ai/artifact/GDpG6YCybK2cj8P3gPXRrr) |
+| **v2.0** | the v2.1 overhaul (U1–U8) done; separate edition | this branch | `AFTERZERO-LastVersion-v2.0.apk`, app "AFTERZERO: Last Version" (`com.afterzero.lastversion`); build with `EDITION=lastversion bash android/build-apk.sh` | [claude.ai/artifact/GDpG6YCybK2cj8P3gPXRrr](https://claude.ai/artifact/GDpG6YCybK2cj8P3gPXRrr) |
 | **v1.1** | 1.1.1 update (smoother play, full game check) | this branch | `AFTERZERO-v1.1.apk`, app "AFTERZERO 1.1" (`com.afterzero.v1_1`) | [claude.ai/artifact/UoHrkWc9QD6USztzpRLcSg](https://claude.ai/artifact/UoHrkWc9QD6USztzpRLcSg) |
 | **v1.0** | saved | `c6b8682` (tag `v1.0.0`) | `AFTERZERO-v1.0.apk`, app "AFTERZERO 1.0" (`com.afterzero.v1_0`) | [claude.ai/artifact/8Vz91NGuA5NzYydryybv8q](https://claude.ai/artifact/8Vz91NGuA5NzYydryybv8q) |
 | **v0.9** | saved | `293d857` (tag `v0.9.0`) | `AFTERZERO-v0.9.apk`, app "AFTERZERO" (`com.afterzero.preview`) | [claude.ai/artifact/6m2ucDKS4hUW5bE818FZQz](https://claude.ai/artifact/6m2ucDKS4hUW5bE818FZQz) |
@@ -26,6 +26,8 @@ Each version is kept separately. It has its own git commit, its own Android app 
 To rebuild a saved version, check out its commit and run the script.
 
 **v2.0 is "AFTERZERO: The Last Version of Earth"**, a separate edition built from the same sources: Kai Varen, the Chronolith, three years of one world (2026, 2049, 2196) and, from Mission 11, REVERSE (the bible's inversion: hold one process backwards for a few seconds), the Witness, Mira, 23 missions and three endings, from the creator's gameplay bible in [`docs/lastversion/`](docs/lastversion/). `EDITION=lastversion bash android/build-apk.sh` builds it as its own app with its own saves (`com.afterzero.lastversion`, versionName 2.0.0); without `EDITION` the script builds the Station Zero game exactly as before. In a browser, `index.html?edition=lastversion` opens it. How the bible maps onto the engine: [`docs/lastversion/DESIGN.md`](docs/lastversion/DESIGN.md); what is built, generated and planned: [`docs/lastversion/STATUS.md`](docs/lastversion/STATUS.md).
+
+**The v2.1 overhaul** ([`docs/lastversion/OVERHAUL.md`](docs/lastversion/OVERHAUL.md), units U1–U8; the app keeps versionName 2.0.0) rebuilt the edition from player feedback: every mission stands in its own authored open place under a real sky, with three years on one layout (U2, U3); the bible's inversion is REVERSE, a local verb that holds one process backwards while the Chronolith's charge lasts (U1); 31 Rocketbox people are cast by role, era and age, with crowds and watchers per place (U4); every line is spoken from the edition's own recorded packs, with a procedural score and staged cinematics (U5); and all 23 missions are written by hand as one map each with soft quarters, main threads and side stories, a cold open and a hook (U6–U8), with the campaign's questions, clues and consequences held to the missions by tests. After an ending, THE CASES opens the CASE FILES: fourteen stories, each replayable from its place with the facts the player had. The length model, in minutes of main path plus side stories: the Prologue 74 + 23, Act I 150 + 41, Act II 161 + 37, Act III 154 + 40, Act IV 124 + 32, the Finale 40 + 10 (about 15 hours with every side story; the bible's campaign is 25–30). `npm test` runs the edition's unit tests; `NODE_PATH=$(npm root -g) node tests/lastversion.mjs` plays the whole campaign from NEW GAME to Ending C and the CASE FILES in headless Chromium.
 
 ## v1.1: WORLD FORGE
 
@@ -272,7 +274,7 @@ docs/
   REALITY_ENGINE.md      engine spec: law language, conditions, Observer AI, UE5 port
   ART_AND_AUDIO.md       the calm look and the soundtrack (v0.2)
   PRODUCTION.md          phases, Android test checklist, team, risks
-  lastversion/ unity/    v2.0's bible and design; the Unity version
+  lastversion/ unity/    v2.0's bible, the v2.1 overhaul spec, design and status; the Unity version
 tests/
   *.test.mjs             unit tests: core systems, generators, the Forge, v2.0 (npm test)
   smoke.mjs qa.mjs ...   headless browser playthroughs (see Tests)

@@ -113,8 +113,9 @@ export default {
     P.E('FUTURE', () => P.vbox([VX - 4.9, VY + 3.2, 81.5, VX - 3.9, VY + 6.6, 82.5], 'ivy', { noShadow: 1 }));
     P.land('partsList', VX - 1.6, VY, 84, Math.PI / 2);
     P.land('bankTower', -60, 0, 64, 0);
-    P.land('liftCar', -56, 0, 70, Math.PI / 2);
-    P.land('roofGarden', -40, 24, 80, 0);
+    // the bank's outside lift on its east face: in 2196 its car lies at the foot of the shaft (Mission 14 reverses it)
+    P.land('liftCar', -41.6, 0.15, 69.5, -Math.PI / 2);
+    P.land('roofGarden', -56, 24, 76, 0); // (on the bank's roof terrace, west of the lift's landing)
     P.land('fallenTower', -92, 0, 40, -Math.PI / 2);
     // the bank: six storeys to a roof terrace at 24 m, its tower set back above
     P.box([-106, 0, 60, -44, 24, 106], 'concreteStained', { t: 0xe8e0d8 });
@@ -129,7 +130,10 @@ export default {
       for (let i = 0; i < 10; i++) P.tree(i % 2 ? 'birch' : 'willow', P.rng.float(-100, -50), P.rng.float(64, 80), P.rng.float(0.9, 1.3), { y: 24 });
     });
     railing(P, -106, 60, -44, 60, 1.1, 'rust', { y: 24, openings: [[54, 62]] });
-    railing(P, -44, 60, -44, 106, 1.1, 'rust', { y: 24 });
+    railing(P, -44, 60, -44, 106, 1.1, 'rust', { y: 24, openings: [[7.6, 11.4]] }); // (the lift's landing)
+    // the lift's shaft: two guide rails up the bank's east face, and the landing's sill at the roof
+    for (const z of [67.7, 71.3]) P.vbox([-40.2, 0, z - 0.12, -39.96, 26, z + 0.12], 'rust', { noShadow: 1 });
+    P.box([-44, 23.6, 67.8, -43.2, 24, 71.2], 'concreteStained');
     sign(P, 'RAIN CITY SAVINGS', -75, 23, 59.7, Math.PI, { size: 0.9, board: 0, color: '#d8c8a0', e: ['PRESENT', 'PAST'] });
     // the fallen tower: in 2196 a tower lies across the block like a ramp onto the bank's terrace
     P.E(['PRESENT', 'PAST'], () => tower(P, [-106, 4, -64, 42], 70, { tint: 0xd8e0e8 }));

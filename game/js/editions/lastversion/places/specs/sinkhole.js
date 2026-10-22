@@ -141,7 +141,7 @@ export default {
     P.box([-4.4, RIM + 5.6, 61.1, 4.4, RIM + 6.9, 62.9], 'quarryCut', { solid: false });
     P.E('FUTURE', () => sign(P, 'THE MUSEUM OF FAILED WORLDS', 0, RIM + 6.25, 62.95, 0, { size: 0.32, color: '#ffc27a', board: 0 }));
     P.land('rimBench', 18, RIM, 64, Math.PI);
-    P.land('entranceHall', -22, RIM, 68, Math.PI);
+    P.land('entranceHall', -22, RIM, 63.4, Math.PI); // (before the hall's north face, between its cases and the rim)
     P.land('spiralBend', ...pt(220).slice(0, 1), yAt(220), pt(220)[1], (-220 + 90) * deg);
     P.land('spiralLow', ...pt(560).slice(0, 1), yAt(560), pt(560)[1], (-560 + 90) * deg);
     for (const [name, a] of ALCOVES) {
@@ -198,8 +198,9 @@ export default {
     const [cx, cz] = pt(627, rAt(627) + W / 2 + 3.4), cy = yAt(627);
     P.land('waterfall', 0, FLOOR, -28, Math.PI);
     P.land('photoAlcove', cx, cy, cz, (-627 + 90) * deg + Math.PI);
-    const [kx, kz] = pt(623, rAt(623) + W / 2 + 5);
-    P.land('catacomb', kx, yAt(623), kz, (-623 + 90) * deg + Math.PI);
+    // (the catacomb's door is in the deepest cave's floor, beside the photograph: Mission 16's Names beneath the city)
+    const [kx, kz] = pt(625, rAt(625) + W / 2 + 4.4);
+    P.land('catacomb', kx, cy, kz, (-625 + 90) * deg + Math.PI);
     P.E(['FUTURE', 'PRESENT'], () => {
       const [wx, wz] = pt(627, rAt(627) + W / 2 + 0.5);
       P.obox(wx, cy + 4.4, wz, 0.5, RIM - cy - 4, 9, -627 * deg, 'waterfallWater', { noShadow: 1 });

@@ -6,10 +6,10 @@
 // Kai's verbs are. Three years switch (Q, 1 2 3); nothing flips gravity, and
 // there are no laws.
 import * as THREE from '../../../vendor/three.module.min.js';
-import { setChapters, latestFor, describeSave, listSaves } from '../../ui/Saves.js';
+import { setChapters, latestFor, describeSave, listSaves, latestSave } from '../../ui/Saves.js';
 import { makeCastModel, setCrewDresser } from '../../world/People.js';
 import { PROLOGUE } from './prologue.js';
-import { ACTS, ENDINGS } from './acts.js';
+import { ACTS, ENDINGS, CASE_FILES, CASE_STATES, caseState } from './acts.js';
 import { CAST, DIALOGUE, NPCS, TRUST, KNOWLEDGE, AMBIENT, npcState } from './npcs.js';
 import { Inversion } from './inversion.js';
 import { placeAuthored } from './processes.js';
@@ -34,7 +34,7 @@ export const CHAPTERS = {
   act3: { name: 'ACT III', sub: 'The Last Version of Earth', question: 'What did the previous attempts cost?', say: 'Act Three. The Last Version of Earth.' },
   act4: { name: 'ACT IV', sub: 'The Unwritten Second', question: 'Can Mira be saved without repeating the catastrophe?', say: 'Act Four. The Unwritten Second.' },
   finale: { name: 'FINALE', sub: 'Afterzero', question: 'What must be accepted rather than fixed?', say: 'The Finale. Afterzero.' },
-  cases: { name: 'CASES', sub: 'Two optional quest chains: Tala\'s river, Mara\'s two records', question: 'Whose record do you believe, and what does it cost them?', say: 'The Cases. Tala\'s river, and Mara\'s two records.' },
+  cases: { name: 'CASE FILES', sub: 'The stories the main road walked past, replayed from their places', question: 'Whose record do you believe, and what does it cost them?', say: 'The Case Files. The stories the main road walked past.' },
 };
 export const ORDER = ['prologue', 'act1', 'act2', 'act3', 'act4', 'finale'];
 export const MISSIONS = { prologue: PROLOGUE, ...ACTS };
@@ -48,10 +48,11 @@ function mechsFor(m, fits) {
 }
 
 // the save format (campaign.lvFormat): 21 = three years and REVERSE (U1); 22 = missions as one map with soft quarters (U6:
-// the Prologue); 23 = Acts I and II as one map each (U7)
-export const SAVE_FORMAT = 23;
+// the Prologue); 23 = Acts I and II as one map each (U7); 24 = Acts III, IV and the Finale too, and the CASE FILES (U8)
+export const SAVE_FORMAT = 24;
 // the format in which each chapter's missions became one map: a save from before it restarts that mission
-const REWRITTEN_IN = { prologue: 22, act1: 23, act2: 23 };
+// (the cases' c_b and c_c are what they were: their saves load as they are)
+export const REWRITTEN_IN = { prologue: 22, act1: 23, act2: 23, act3: 24, act4: 24, finale: 24 };
 
 // v2.0 saves came from a four-state engine (INVERTED flipped gravity): the room states it no longer
 // has go back to the baseline, rooms lose a state they cannot have, and REVERSE gets its charge. A save
@@ -84,8 +85,9 @@ export const PRIMES = {
   act1: ['has_chronolith', 'chronolith_seen', 'drawing_seen', 'fractured', 'mira_gone', 'wrist_cut', 'wrist_mark', 'raincoat', ['trust_rook', 0], 'ev_site_zero_print', 'ev_site_zero', 'lin_met'],
   act2: ['version_17', 'ev_witness_recording', 'found_not_built', ['rook_fate', 'record'], ['machine_buried', 'clay'], ['mira_tape', 'kept'], 'ev_ninth_minute'], // Act II reaches REVERSE by playing Mission 11
   act3: ['echo_step', 'ev_prisoners', 'ev_stabilizer', 'has_inversion', ['inv_cap', 10]],
-  act4: ['ev_memorial', 'ev_anja_lock', 'ev_version17', ['inv_cap', 12]],
-  finale: ['ally'],
+  // (Act III's main choices, as a player who walked them would have them: Sera trusted, the city freed, the photograph left)
+  act4: ['ev_memorial', 'ev_anja_lock', 'ev_version17', ['inv_cap', 12], ['trust_sera', 'accept'], 'city_freed', ['photo_taken', false], 'ev_dual_archive', 'ev_i_pressed', 'ev_mira_message', 'm18_done'],
+  finale: [['ally', 'none'], ['m20_lead', 'mira'], 'child_resolved', 'ev_second_early', 'm22_done'],
   cases: ['has_chronolith', 'echo_step', 'zero_second', 'after_zero', 'has_inversion'],
 };
 
@@ -174,9 +176,17 @@ const EV_LABELS = {
   echo_step: 'Echo Step: an afterimage a step ahead', missing_patient: 'VAREN, M., 9, admitted to Ward 32 in 2026', young_kai: 'Me at twelve, on the bench',
   steps: 'His route: every pane of glass', both_sides: 'Both sides fire at their own last attack', witness_cause: 'A scarred wrist buried the first device',
   field_orders: 'The field orders answer each other', nobody_first: 'Nobody fired first: each side answers its own last attack', casing: 'HELIX. PROPERTY OF K. VAREN', corridor_b: 'Corridor B, in 2026', junior_tour: 'SITE ZERO JUNIOR TOUR, 14 MARCH',
+  // Acts III and IV, the Finale (U8)
+  fresh_flowers: 'Fresh white chrysanthemums at my memorial', receipt_0804: 'The flowers came out of the air, at 08:04', river_14: 'The fourteenth was a flood', memory_one: 'Memory one: me at the console',
+  memory_two: 'Memory two: Mira at the console', memory_three: 'Memory three: nobody at the console', museum_his: 'The museum is the Witness\'s', erased: 'The names no world kept',
+  two_logs: 'Two sealed logs: the ring, the button', i_pressed: 'I pressed it. I was twelve.', mira_message: 'Mira: the one before you tried to save me', fall_order: 'Floors numbered in the order they fell',
+  real_door: 'The real door casts no shadow', her_side: 'She asked. I let her.', no_owner: 'A letter to a brother she never had', chain: 'River, wall, gate, machine: every cause was me',
+  iven_statement: 'Iven: the ring turned before the button', memory_card: 'Memory three, filed SUBJECTIVE', second_early: 'He turned it a second early', unwritten_record: 'What each ending costs',
 };
 
 const _v = new THREE.Vector3();
+// the facts a replay starts from, handed over the page reload (sessionStorage)
+const CASE_FACTS = 'afterzero.lv.caseFacts';
 
 export class LastVersion {
   constructor(game, def) {
@@ -381,9 +391,9 @@ export class LastVersion {
       const d = last && describeSave(last.data);
       const ms = MISSIONS[ch];
       const list = ms.map((m) => `${typeof m.n === 'number' ? m.n : 'Case ' + m.n}. ${m.name}`).join(' · ');
-      return `<div class="chapcard"><h3>${c.name}</h3><p>${c.sub}</p><p class="dim" style="font-size:11px">${list}</p><div class="acts">
+      return `<div class="chapcard"><h3>${c.name}</h3><p>${c.sub}</p><p class="dim" style="font-size:11px">${ch === 'cases' ? `${CASE_FILES.length} stories` : list}</p><div class="acts">
         ${last ? `<button class="cont" data-cont="${last.slot}">CONTINUE<small>${d.title} · ${d.sub}</small></button>` : ''}
-        <button data-newch="${ch}">NEW GAME</button></div></div>`;
+        ${ch === 'cases' ? '<button data-casefiles="1">CASE FILES</button>' : `<button data-newch="${ch}">NEW GAME</button>`}</div></div>`;
     }).join('');
     document.querySelector('#chapters .body').innerHTML = html;
     for (const b of document.querySelectorAll('#chapters [data-cont]')) {
@@ -393,6 +403,7 @@ export class LastVersion {
       };
     }
     for (const b of document.querySelectorAll('#chapters [data-newch]')) b.onclick = () => g.openSaves('new', 'chapters', { action: `lv:${b.dataset.newch}` });
+    for (const b of document.querySelectorAll('#chapters [data-casefiles]')) b.onclick = () => this.caseFiles();
     g.hud.show('chapters');
   }
 
@@ -419,17 +430,25 @@ export class LastVersion {
 
   start(chapter, saved = null, waited = false) {
     const g = this.g;
+    // a story replayed from the CASE FILES screen: 'cases/<key>' (cases.js), with the facts the player had
+    const asked = chapter;
+    let replay = null;
+    if (typeof chapter === 'string' && chapter.startsWith('cases/')) {
+      replay = chapter.slice(6);
+      chapter = 'cases';
+    }
     if (!CHAPTERS[chapter]) chapter = 'prologue';
+    const di = replay ? Math.max(0, MISSIONS.cases.findIndex((m) => m.key === replay)) : saved?.deck ?? 0;
     this.ownLook();
     // the chapter's voices load with its people (a new game opens on the chapter's card)
     if (!waited) {
-      g.voice?.usePacks?.([voicePack('common'), voicePack(chapter)]);
+      g.voice?.usePacks?.(this.packsFor(chapter, di));
       this.chapterStart = !saved;
     }
     this.quietPins = true; // (what a chapter counts as already found is not news)
     // the chapter's people load behind its card first (one model at a time); then the chapter starts.
     // (Once waited for, it starts whatever arrived: a model that could not load has a stand-in.)
-    if (!waited && !castReady(chapter)) return this.waitForCast(chapter, () => this.start(chapter, saved, true));
+    if (!waited && !castReady(chapter)) return this.waitForCast(chapter, () => this.start(asked, saved, true));
     g.mode = 'deck';
     g.run = chapter;
     this.chapter = chapter;
@@ -441,12 +460,13 @@ export class LastVersion {
       // everything before this chapter counts as played
       const upTo = chapter === 'cases' ? ['cases'] : ORDER.slice(0, ORDER.indexOf(chapter) + 1);
       for (const c of upTo) for (const k of PRIMES[c] || []) (Array.isArray(k) ? g.facts.set(k[0], k[1]) : g.facts.set(k));
+      if (replay) this.replayFacts(MISSIONS.cases[di]);
     }
     if (!saved && chapter !== 'prologue' && !g.facts.get('faction')) g.facts.set('faction', 'neutral');
     g.world.root.visible = false;
     g.observer.mesh.visible = false;
     g.npcs.juno.visible = false;
-    g.campaign = saved || { lv: true, chapter, deck: 0, sector: 0, quarter: 0, flags: {}, visited: [], stability: 1, inv: { cap: 8, charge: 8 }, lvFormat: SAVE_FORMAT };
+    g.campaign = saved || { lv: true, chapter, deck: di, sector: 0, quarter: 0, flags: {}, visited: [], stability: 1, inv: { cap: 8, charge: 8 }, lvFormat: SAVE_FORMAT };
     g.campaign.lv = true;
     g.campaign.quarter ??= 0;
     g.campaign.inv ||= { cap: 8, charge: 8 };
@@ -455,6 +475,66 @@ export class LastVersion {
     this.anchored = null;
     g.engine.setGlobal('heldPersists', false);
     g.loadSector(!saved, saved?.room, saved?.pos);
+  }
+
+  // the voice packs a mission speaks from: the common pack, its chapter's, and for a case file that replays a
+  // side story, the pack of the mission it lives in (voiceGroup)
+  packsFor(chapter, di = 0) {
+    const vg = MISSIONS[chapter]?.[di]?.voiceGroup;
+    return [voicePack('common'), voicePack(chapter), ...(vg && vg !== chapter ? [voicePack(vg)] : [])];
+  }
+
+  // a replay starts from the facts the player had (the CASE FILES screen hands them over; else the latest save's),
+  // with the story's own facts cleared (cases.js), so that it can happen again
+  replayFacts(deck) {
+    const g = this.g;
+    let facts = null;
+    try {
+      facts = JSON.parse(window.sessionStorage.getItem(CASE_FACTS) || 'null');
+      window.sessionStorage.removeItem(CASE_FACTS);
+    } catch { /* storage blocked: the latest save, then */ }
+    if (!facts) facts = latestSave()?.data?.facts?.facts || null;
+    if (facts) for (const [k, v] of Object.entries(facts)) g.facts.set(k, v);
+    for (const k of Object.keys(g.facts.facts)) if (k.startsWith(`t_${deck.key}_`) || k.startsWith(`side_${deck.key}_`) || k === `${deck.key}_done`) g.facts.set(k, false);
+    for (const k of deck.clear || []) g.facts.set(k, false);
+    g.facts.set('lv_replay', deck.key);
+  }
+
+  // --- CASE FILES (cases.js): the fourteen stories, their state, a replay of each from its place ------------------
+  caseFiles(facts = null) {
+    const g = this.g;
+    const $ = (sel) => document.querySelector(sel);
+    // (in a game, its facts; from the title, the latest save's)
+    let f = facts || (g.campaign?.lv ? g.facts : null);
+    if (!f) {
+      const d = latestSave()?.data?.facts?.facts || {};
+      f = new g.facts.constructor();
+      f.facts = { ...d };
+    }
+    const rows = CASE_FILES.map((c) => {
+      const st = caseState(f, c);
+      return `<div class="caseFile" data-state="${st}"><b>${c.name}</b><small>${c.where} · ${CASE_STATES[st]}</small>${c.key ? `<button data-case="${c.key}">REPLAY</button>` : '<small class="dim">part of the main story</small>'}</div>`;
+    }).join('');
+    $('#ending .body').innerHTML = `<h2>CASE FILES</h2><p class="dim">The stories the main road walked past. A replay starts from its place, with the facts you had.</p>
+      <div class="caseFiles">${rows}</div>
+      <button id="lvTitle">BACK TO THE TITLE</button>`;
+    if (!$('#lvCaseCss')) {
+      const st = document.createElement('style');
+      st.id = 'lvCaseCss';
+      st.textContent = '.caseFiles{display:grid;gap:6px;margin:10px 0;max-height:52vh;overflow:auto}.caseFile{display:grid;grid-template-columns:1fr auto;gap:2px 10px;align-items:center;padding:6px 8px;border:1px solid rgba(255,255,255,.12);border-radius:6px;text-align:left}.caseFile b{font-size:13px}.caseFile small{grid-column:1;font-size:11px;opacity:.75}.caseFile button{grid-row:1/span 2;grid-column:2;margin:0;padding:6px 10px;font-size:12px}.caseFile[data-state=open]{opacity:.7}';
+      document.head.appendChild(st);
+    }
+    for (const b of document.querySelectorAll('#ending [data-case]')) {
+      b.onclick = () => {
+        try {
+          window.sessionStorage.setItem(CASE_FACTS, JSON.stringify(f.facts || {}));
+        } catch { /* storage blocked: the replay reads the latest save */ }
+        g.begin(`lv:cases/${b.dataset.case}`, null, g.slot ?? null);
+      };
+    }
+    $('#lvTitle').onclick = () => location.reload();
+    if (g.campaign?.lv && g.started) g.saveTo('auto');
+    g.openMenu('ending');
   }
 
   // the edition offers Kai's own look only (LV.looks): an older save's look is put back to his
@@ -543,8 +623,9 @@ export class LastVersion {
       const room = level.rooms[id];
       g.engine.setAvailable(id, (room.states || states).filter((s) => this.def.states.includes(s)));
       for (const ch of room.challenges || []) ch.hints = HINTS[ch.key] || ch.hints;
-      // a room keeps the baseline until the player switches it (saves restore the rest)
-      if (!c.flags || !Object.keys(c.flags).length || !this.def.states.includes(g.engine.state(id))) g.engine.setState(id, g.engine.baseline, { force: true });
+      // a room starts in the mission's home year until the player switches it (saves restore the rest)
+      const home = (room.states || states).includes(deck.home) ? deck.home : g.engine.baseline;
+      if (!c.flags || !Object.keys(c.flags).length || !this.def.states.includes(g.engine.state(id))) g.engine.setState(id, home, { force: true });
     }
     // nothing of Station Zero: no law tokens, no gravity effects
     level.tokens = [];
@@ -626,6 +707,15 @@ export class LastVersion {
         opening = kicker;
         c.mStart = g.playTime || 0; // (time_<mkey>: how long the mission took, stored when it ends)
         c.quarter = 0;
+        // (a case file starts where its story lives: that quarter's spawn)
+        const sq = deck.startQuarter ? this.level.quarters?.[deck.startQuarter] : null;
+        if (sq?.spawn) {
+          c.quarter = deck.startQuarter;
+          const sp = [sq.spawn[0], sq.spawn[1] + 0.86, sq.spawn[2], sq.spawn[3] || 0];
+          if (sq.room && sq.room !== g.room) g.enterRoom(sq.room, true);
+          g.player.place(sp);
+          g.checkpoint = sp;
+        }
       } else g.hud.card(kicker, this.level.rooms[start].name, deck.subtitle || '', 2600);
     }
     c.mStart ??= g.playTime || 0;
@@ -651,7 +741,7 @@ export class LastVersion {
     this.score.enter(deck, this.placeYear || g.engine.state(start) || 'PRESENT', this.level);
     this.inv?.load(this.level);
     // the next chapter's people start loading in this chapter's last mission, so its card does not wait
-    const next = ORDER[ORDER.indexOf(this.chapter) + 1];
+    const next = this.chapter === 'cases' ? null : ORDER[ORDER.indexOf(this.chapter) + 1];
     if (next && c.deck === g.story.decks.length - 1) {
       loadCast(next);
       g.voice?.usePacks?.([voicePack('common'), voicePack(this.chapter)], [voicePack(next)]); // and its voices
@@ -945,7 +1035,8 @@ export class LastVersion {
       if (sc) this.playNode(sc, n, `npc_${n.n.id}`);
       return;
     }
-    const dialogue = this.deck?.talks?.[n.crew.id] || n.n.dialogue || (n.n.lines?.length ? null : DIALOGUE[n.crew.id]);
+    // (a mission's talks by the person's own id first: one person in several places, Orren's three, Sera at the anchor)
+    const dialogue = this.deck?.talks?.[n.n.id] || this.deck?.talks?.[n.crew.id] || n.n.dialogue || (n.n.lines?.length ? null : DIALOGUE[n.crew.id]);
     if (dialogue) {
       const node = dialogue.find((d) => g.facts.test(d.when || 'true'));
       if (node) {
@@ -967,7 +1058,9 @@ export class LastVersion {
     if (it.task !== undefined) return this.task(it);
     const own = it.scene?.startsWith('deduce:') ? this.threads.deduction(it.scene.slice(7))
       : it.scene?.startsWith('residue:') ? this.threads.residue(it.scene.slice(8), g.engine.state(g.room))
-        : it.scene?.startsWith('playback:') ? this.threads.playback(it.scene.slice(9)) : null;
+        : it.scene?.startsWith('playback:') ? this.threads.playback(it.scene.slice(9))
+          : it.scene?.startsWith('hold:') ? this.threads.holdUse(...((a) => [a[1], +a[2]])(it.scene.split(':')), g.engine.state(g.room))
+            : deck.nodes?.[it.scene] ? deck.nodes[it.scene](this) : null; // (a mission's own node, built when used: M20's alignment)
     if (own) {
       g.audio.terminal();
       g.fx.burst(it.pos, it.color ?? 0xffc04a, 24, 1.4);
@@ -1200,7 +1293,7 @@ export class LastVersion {
           c.quarter = 0;
           c.track = null;
           c.sector = 0;
-          if (c.deck + 1 < g.story.decks.length) c.deck++;
+          if (c.deck + 1 < g.story.decks.length && this.chapter !== 'cases') c.deck++;
           else {
             // the chapter is done
             const next = ORDER[ORDER.indexOf(this.chapter) + 1];
@@ -1239,14 +1332,9 @@ export class LastVersion {
     } else go();
   }
 
+  // a case is closed: back to the CASE FILES, with what it changed
   casesDone() {
-    const g = this.g;
-    const $ = (s) => document.querySelector(s);
-    $('#ending .body').innerHTML = `<h2>THE CASES ARE CLOSED</h2><p>Tala's river and Mara's two records: each chain has an outcome, and the main story remains completable either way.</p>
-      <button class="big" id="lvTitle">BACK TO THE TITLE</button>`;
-    $('#lvTitle').onclick = () => location.reload();
-    g.saveTo('auto');
-    g.openMenu('ending');
+    this.caseFiles();
   }
 
   // --- each frame ----------------------------------------------------------------------------------------
@@ -1288,9 +1376,10 @@ export class LastVersion {
         }
       }
     });
-    // Chronolith stability: drains in unstable places outside the present, comes back in it
+    // Chronolith stability: drains in unstable places outside the mission's home year (the present, but for the
+    // missions that belong to another year: 2196's city, Mira's memory), comes back in it
     const state = g.engine.state(g.room);
-    const out = state !== g.engine.baseline;
+    const out = state !== this.home();
     const outdoors = this.deck?.stableOutdoors && g.room === this.level.outdoorRoom;
     const draining = out && this.unstable && !outdoors;
     if (draining) this.stability = Math.max(0, this.stability - dt * 0.045);
@@ -1410,7 +1499,7 @@ export class LastVersion {
     g.hud.fade(true);
     g.audio.deny();
     setTimeout(() => {
-      g.engine.setState(g.room, g.engine.baseline, { force: true });
+      g.engine.setState(g.room, this.home(), { force: true });
       g.player.place(g.checkpoint);
       this.stability = 0.5;
       g.hud.fade(false);
@@ -1418,6 +1507,13 @@ export class LastVersion {
       g.deckWorld.refresh();
       this.say(LINES.snap);
     }, 700);
+  }
+
+  // the year a mission belongs to (its states' first, when it says so: deck.home): where it starts, where stability
+  // comes back, where a snap back takes Kai (the engine's baseline, 2049, for every other mission)
+  home() {
+    const h = this.deck?.home, g = this.g;
+    return h && (!g.room || g.engine.statesOf(g.room).includes(h)) ? h : g.engine.baseline;
   }
 
   // --- the verbs -----------------------------------------------------------------------------------------
@@ -1449,7 +1545,7 @@ export class LastVersion {
     if (!ok) return g.audio.deny();
     const s = engine.state(g.room);
     this.inv?.release('year'); // a process belongs to its year
-    g.audio.sweep(s !== engine.baseline);
+    g.audio.sweep(s !== this.home());
     if (!g.settings.comfort) g.hud.flash({ PAST: 'rgba(255,200,120,0.35)', FUTURE: 'rgba(120,230,170,0.35)' }[s] || 'rgba(255,255,255,0.3)');
     facts.inc('switches');
     this.deck?.onShift?.(this, s);
@@ -1490,6 +1586,7 @@ export class LastVersion {
     this.ghost.userData.setOpacity?.(0.55);
     this.ghostT = 4;
     g.deckWorld.setDecoy(p, 4);
+    this.deck?.onEcho?.(this, p); // (a mission whose watchers answer an afterimage: M21's elites snap back)
     // and you step: forward, up to five metres, as far as the air is clear and the ground will take you
     const eye = g.player.eye(new THREE.Vector3());
     const fwd = g.player.forward(new THREE.Vector3()).setY(0).normalize();
@@ -1706,9 +1803,9 @@ export class LastVersion {
         <p class="dim">A post-credit clock begins ticking. A voice confirms: “Version one hundred and eighteen.”</p>
         <div class="stats"><span>${Math.floor(mins / 60)} h ${mins % 60} min</span><span>${evs} pieces of evidence</span><span>standing: ${g.facts.get('faction') || 'neutral'}</span><span>ally: ${g.facts.get('ally') || 'none'}</span></div>
         ${times ? `<div class="stats">${times}</div>` : ''}
-        <button class="big" id="lvCases">THE CASES<small>Two optional quest chains: Tala's river, Mara's two records</small></button>
+        <button class="big" id="lvCases">THE CASES<small>The case files: fourteen stories, each replayed from its place</small></button>
         <button id="lvTitle">BACK TO THE TITLE</button>`;
-      $('#lvCases').onclick = () => g.begin('lv:cases', null, g.slot ?? null);
+      $('#lvCases').onclick = () => this.caseFiles();
       $('#lvTitle').onclick = () => location.reload();
       g.saveTo('auto');
       g.openMenu('ending');

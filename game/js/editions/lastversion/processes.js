@@ -220,6 +220,7 @@ export function makeRecord(def, anchor, level) {
     refuse: def.refuse || null, line: def.line || null, hints: def.hints || null, grain: def.grain || K.grain, required: !!def.required,
     ambient: def.ambient || null, target: def.target || null, layers: def.layers || null, volume: def.volume || null, mode: def.mode || null,
     cycle: def.cycle || null, clip: def.clip || null, spin: def.spin || null, hazard: def.hazard ?? null, tones: def.tones || null, carry: !!def.carry,
+    beat: def.beat || null, offBeat: def.offBeat || null, stuck: def.stuck ?? null, lineWho: def.lineWho || null, once: def.once || null,
   };
 }
 
@@ -626,7 +627,8 @@ export class Process {
       this.settled = this.partOut.every((v) => v === true);
     } else if (r.kind === 'ink') {
       this.removed = flags[`${r.done.replace(/_done$/, '')}_n`] || 0;
-      this.settled = this.removed >= (r.layers?.length || 1) - 1;
+      // (one layer: an original record; reversing it un-writes nothing, and once tried it is settled)
+      this.settled = (r.layers?.length || 1) === 1 ? !!flags[r.done] : this.removed >= (r.layers?.length || 1) - 1;
     } else if (r.settle === 'settled' && flags[r.done]) {
       this.settled = true;
       this.P = 1;
@@ -669,7 +671,16 @@ export class Process {
     } else if (r.kind === 'projectile') {
       this.stepProjectile(dt, ctx, ev);
     } else if (r.kind === 'ink') {
-      if (this.dir > 0) {
+      if (this.dir > 0 && (r.layers?.length || 1) === 1) {
+        // an original: the ink trembles and stays; nothing was written over it
+        this.P = Math.min(1, this.P + dt * r.rate);
+        if (this.P >= 1) {
+          this.P = 0;
+          this.dir = 0;
+          this.settled = true;
+          ev.push({ type: 'settled' });
+        }
+      } else if (this.dir > 0) {
         this.P = Math.min(1, this.P + dt * r.rate);
         if (this.P >= 1) {
           this.removed++;
@@ -822,6 +833,14 @@ export class Process {
 
   applyInk() {
     const n = this.inkPlanes?.length || 0;
+    if (n === 1) {
+      // an original record: it shivers while it is tried, and keeps every letter
+      const pl = this.inkPlanes[0];
+      pl.visible = true;
+      pl.material.opacity = 1 - 0.3 * Math.sin(Math.PI * this.P);
+      pl.scale.x = 1;
+      return;
+    }
     this.inkPlanes?.forEach((pl, i) => {
       // layer 0 is the newest; removed layers are gone, the one being reversed un-writes from the right
       if (i < this.removed) pl.visible = false;

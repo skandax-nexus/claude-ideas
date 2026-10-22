@@ -204,7 +204,7 @@ export class Inversion {
     const cands = [];
     for (const p of this.procs) {
       const r = p.rec;
-      if (p.hiddenByWhen || r.room !== g.room) continue;
+      if (p.hiddenByWhen || r.room !== g.room || p.heldBy) continue; // (one someone else holds: the Witness, an ally)
       if (p.settled && r.kind !== 'recording') continue;
       const pts = r.kind === 'lock' ? r.parts.map((pt, i) => (p.partOut[i] ? null : { pos: pt.rest.p, part: i })) : [{ pos: this.aimOf(p), part: -1 }];
       for (const pt of pts) {
@@ -276,7 +276,13 @@ export class Inversion {
     if (rec.refuse) {
       // R6: never a person, never a memory
       this.snd.refuse();
-      if (this.once(`refuse_${rec.id}`, 6)) this.say(rec.line || (rec.refuse === 'A MEMORY' ? INV_LINES.memory : INV_LINES.person));
+      // (a refusal may be answered by someone else the first time: M20's memories, by Mira; `once` names the fact)
+      const first = !rec.once || !g.facts.get(rec.once);
+      if (this.once(`refuse_${rec.id}`, 6)) {
+        if (rec.lineWho && first) g.hud.say([{ who: rec.lineWho, text: rec.line }], g.facts);
+        else this.say(rec.lineWho ? (rec.refuse === 'A MEMORY' ? INV_LINES.memory : INV_LINES.person) : rec.line || (rec.refuse === 'A MEMORY' ? INV_LINES.memory : INV_LINES.person));
+      }
+      if (rec.once) g.facts.set(rec.once, true);
       g.facts.set('inv_refused');
       return;
     }
@@ -294,6 +300,16 @@ export class Inversion {
         if (this.once('jam', 20)) this.say(INV_LINES.jam);
         return;
       }
+    }
+    // a mechanism with a beat (M22's clock arm) answers only on its counted beat; off it, it jams like a wrong bolt
+    if (rec.beat && (this.time % rec.beat.period) > rec.beat.on) {
+      if (st.charge < 1 || rt.stability < 0.2) return this.refuseCharge();
+      st.charge = Math.max(0, st.charge - 1);
+      this.idleT = 0;
+      this.snd.jam();
+      g.facts.inc('inv_jams');
+      if (this.once('beat', 12) && rec.offBeat) this.g.hud.say([{ who: 'KAI', text: rec.offBeat }], g.facts);
+      return;
     }
     if (st.charge < 1 || rt.stability < 0.2) return this.refuseCharge();
     st.charge -= 0.5;
@@ -319,6 +335,16 @@ export class Inversion {
       });
       return;
     }
+    // R5 on a watcher that rewinds itself (M21's elites): its rewind runs forwards, and it is stuck where it is for six seconds
+    if (rec.kind === 'patrol' && rec.mode === 'rewind' && p.sentinel) {
+      const s = p.sentinel;
+      s.suspicion = 0;
+      if (s.mode === 'chase') s.mode = 'patrol';
+      this.active = { p, part: -1, t: 0, lock: true, stuck: rec.stuck ?? 6 };
+      g.facts.set(rec.fact, true);
+      g.facts.inc(`stuck_${rec.id}`);
+      return;
+    }
     p.reverse();
     if (rec.kind === 'patrol' && p.sentinel) {
       const h = this.hist.get(p.sentinel.def.id) || [];
@@ -341,6 +367,19 @@ export class Inversion {
   stepActive(dt) {
     const g = this.g, a = this.active, rec = a.p.rec, st = this.state;
     a.t += dt;
+    if (a.stuck) {
+      // an elite's rewind, run forwards: it stands where it is, seeing nothing, for its seconds
+      const s = a.p.sentinel;
+      if (s) {
+        s.stasisT = 0.25;
+        s.suspicion = 0;
+      }
+      if (a.t > a.stuck) {
+        this.active = null;
+        g.facts.set(rec.fact, false);
+      }
+      return;
+    }
     if (a.lock) {
       // a bolt or a recording: paid at the start, it finishes by itself
       st.charge = Math.max(0, st.charge - rec.weight * dt);

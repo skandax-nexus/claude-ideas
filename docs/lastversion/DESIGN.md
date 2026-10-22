@@ -248,20 +248,19 @@ scratchpad before a pack is committed. The same person shares a base voice:
 Kai, the Witness (and the VOICE, recorded as him) and young Kai on `am_eric`; Mira, Dr. Lin and the
 Child on `af_river`. Every tier-2 person and each crowd voice (by sex and age) has a voice of its own.
 
-### Threads and ledgers (v2.1, U6–U7; OVERHAUL.md §3.3, §9)
+### Threads and ledgers (v2.1, U6–U8; OVERHAUL.md §3.3, §9)
 
 A rewritten mission is one map with soft quarters, not a chain of sectors behind gates. Each quarter holds
 main threads (the story's way through) and side stories; the objective on the HUD is the first main thread not
 yet done, with its *because* line under it, and THINK reads that thread's three hint tiers (a nudge, the place,
-the answer). Missions 1–13 are written this way (the Prologue in U6, Acts I and II in U7); every later mission
-runs through a shim that makes each of its legacy beats one thread in quarter *i*, so the case board, hints and
-save format are the same everywhere.
+the answer). All 23 missions are written this way (the Prologue in U6, Acts I and II in U7, Acts III and IV and the
+Finale in U8); the shim that made each legacy beat one thread in quarter *i* is kept for the two old cases (B and C).
 
 | Module | What it does |
 | --- | --- |
-| `Threads.js` | The fourteen kinds (`go`, `talk`, `clue`, `residue`, `deduce`, `scene`, `choice`, `tasks`, `stealth`, `chase`, `cinema`, `invert`, and since U7 `loop` and `playback`) and their default minutes (`MINUTES`); `quartersOf` (the mission's quarters or the shim's), `threadsOf`, `sidesOf`, `estimate` (the length model: cold open + main threads + hook = main; side stories = optional); `placeThreads` (what a kind needs at its landmark: triggers, spots, deduction and record scenes, the chase's path); and the runtime class: the objective and its because line, the tracked side story, completion (each thread's fact `t_<mkey>_<id>`; what the thread carries is paid out once, `_paid`, even when its kind sets the fact itself), the year carried out of a room into the open place (`carryOut`), THINK's tiers, the furthest quarter (a toast and an autosave at each new one), the chase (DeckWorld's own path walker, paced so she keeps 10 m ahead and waits beyond 14 m; it never fails), staged `cinema` moments (each started once per load, never marked in the saved flags: a save taken while one plays loads with it still to come), deductions (a wrong answer is said and the question stays open; a right one without its evidence is not yet provable) and residue records (what a record says now, and in the past what it said first); `loop` (done once its resets happen while it is the objective) and `playback` (the recovered pieces put in order, one a use, then echoes that stand only while it plays re-enact the scene). A thread's completion is re-tested on every fact change and four times a second. |
-| `ledger.js` | The campaign's ledgers in one place (§9.3–§9.7): `QUESTIONS` (each with the mission that opens it and the one that answers it; the case board shows the open ones as THE QUESTIONS), `CLUES` (C1–C12: plant, reinforce, payoff, each step a fact or a line of text in a named mission), `CONSEQUENCES` (every consequence fact, where it is set and where it is read), `CHOSEN` (what WHAT YOU CHOSE says for each), `PREVIOUSLY` (three lines per chapter, for a chapter's start and a loaded save), `EPILOGUE` (a line per consequence, read by the ending: Pryce, Dale and Iven's team since U6). Unit tests hold them to the missions: every clue planted before its payoff, every consequence read later or listed as an epilogue line. |
-| `Runtime.js` | A rewritten mission loads once (all its quarters), opens on its `coldOpen` (with `first` before the mission's card, the rest after), offers SKIP for the whole opening (the button, or Enter while the pointer is locked), and ends on its hook (`autoExit` where the story ends the mission rather than a gate). A load spawns at the furthest quarter after a PREVIOUSLY card. The case board has THE QUESTIONS, SIDE STORIES (a TRACK button puts that story's next thread under the objective), WHAT YOU CHOSE and ABILITIES. `time_<mkey>` stores each mission's play time (the ending sums them per chapter). Save format 23 (`campaign.lvFormat`; 22 for the Prologue's rewrite, 23 for Acts I and II): an older save inside a mission rewritten since restarts it at its first quarter with its facts. Starting a chapter from the menu primes the facts a player would carry into it (`PRIMES`). A loop (`deck.loop: { period, variants, upward, until }`) resets the place every `period` seconds until `until` holds: the patrols walk the next variant's rounds, the crowds restart further along their routes, the rain falls upward for a second. While an opening or a staged moment plays, the watchers walk their rounds but see nobody. Authored triggers may ask for a year (`@FUTURE`). |
+| `Threads.js` | The fifteen kinds (`go`, `talk`, `clue`, `residue`, `deduce`, `scene`, `choice`, `tasks`, `stealth`, `chase`, `cinema`, `invert`, since U7 `loop` and `playback`, and since U8 `hold`) and their default minutes (`MINUTES`); `quartersOf` (the mission's quarters or the shim's), `threadsOf`, `sidesOf`, `estimate` (the length model: cold open + main threads + hook = main; side stories = optional); `placeThreads` (what a kind needs at its landmark: triggers, spots, deduction and record scenes, the chase's path); and the runtime class: the objective and its because line, the tracked side story, completion (each thread's fact `t_<mkey>_<id>`; what the thread carries is paid out once, `_paid`, even when its kind sets the fact itself), the year carried out of a room into the open place (`carryOut`), THINK's tiers, the furthest quarter (a toast and an autosave at each new one), the chase (DeckWorld's own path walker, paced so she keeps 10 m ahead and waits beyond 14 m; it never fails), staged `cinema` moments (each started once per load, never marked in the saved flags: a save taken while one plays loads with it still to come), deductions (a wrong answer is said and the question stays open; a right one without its evidence is not yet provable) and residue records (what a record says now, and in the past what it said first); `loop` (done once its resets happen while it is the objective) and `playback` (the recovered pieces put in order, one a use, then echoes that stand only while it plays re-enact the scene); `hold` (Mission 18's pylons: progress while Kai stays by it, one post at a time drifting out of phase and lapsing unless re-anchored in its own year, allies holding a post, a slower drift for the freed city; a chip under the objective; its seconds saved). A thread's completion is re-tested on every fact change and four times a second. |
+| `ledger.js` | The campaign's ledgers in one place (§9.3–§9.7): `QUESTIONS` (each with the mission that opens it and the one that answers it; the case board shows the open ones as THE QUESTIONS), `CLUES` (C1–C12: plant, reinforce, payoff, each step a fact or a line of text in a named mission), `CONSEQUENCES` (every consequence fact, where it is set and where it is read), `CHOSEN` (what WHAT YOU CHOSE says for each), `PREVIOUSLY` (three lines per chapter, for a chapter's start and a loaded save), `EPILOGUE` (a line per consequence, read by the ending: Pryce, Dale and Iven's team since U6; nineteen lines since U8, Ending C's own letter among them). Unit tests hold them to the missions: every clue planted before its payoff, every consequence read later or listed as an epilogue line. |
+| `Runtime.js` | A rewritten mission loads once (all its quarters), opens on its `coldOpen` (with `first` before the mission's card, the rest after), offers SKIP for the whole opening (the button, or Enter while the pointer is locked), and ends on its hook (`autoExit` where the story ends the mission rather than a gate). A load spawns at the furthest quarter after a PREVIOUSLY card. The case board has THE QUESTIONS, SIDE STORIES (a TRACK button puts that story's next thread under the objective), WHAT YOU CHOSE and ABILITIES. `time_<mkey>` stores each mission's play time (the ending sums them per chapter). Save format 24 (`campaign.lvFormat`; 22 for the Prologue's rewrite, 23 for Acts I and II, 24 for Acts III, IV, the Finale and the case files): an older save inside a mission rewritten since restarts it at its first quarter with its facts. A mission may have a home year (`home`: its rooms start in it, and stability drains away from it), scenes built when used (`nodes`), watchers that answer an afterimage (`onEcho`), and talks keyed by a person's own id (one person standing in several places). The CASE FILES screen (`caseFiles`) lists the fourteen stories with their state and replays one: `cases/<key>` starts the cases chapter at that replay, with the facts the player had (handed over the reload in `sessionStorage`, else the latest save's) and the story's own facts cleared, in the quarter it lives in, speaking from its mission's pack. Starting a chapter from the menu primes the facts a player would carry into it (`PRIMES`). A loop (`deck.loop: { period, variants, upward, until }`) resets the place every `period` seconds until `until` holds: the patrols walk the next variant's rounds, the crowds restart further along their routes, the rain falls upward for a second. While an opening or a staged moment plays, the watchers walk their rounds but see nobody. Authored triggers may ask for a year (`@FUTURE`). |
 
 The Prologue as written (OVERHAUL.md §5, M1–M3): Mission 1 opens before its title on Helix at 05:40 (a card
 opens Chamber One while Kai sleeps; his phone lights once), then 08:02 at door 4B; the avenue's anomalies read
@@ -312,6 +311,46 @@ battlefield (one Continuum patrol walks its round backwards), Sera and Brask, th
 stabilizer (`faction`, with `stabilizer_destroyed` or `civilians_freed`), the district thawing or not, REVERSE's cap at
 10 s; the burial reversed (a scarred wrist, `ev_witness_cause`), the people who listened, the roll-call wall.
 
+Acts III and IV and the Finale as written (OVERHAUL.md §5, M14–M23; `act3.js`, `act4.js`, `finale.js`): Mission 14
+opens in 2196 at home: the beacon's parts list, the bank's fallen lift car that carries Kai 24 m up its shaft when he
+REVERSEs it from inside (or the tower that fell beside it, as a ramp), the capacitor, three stacked stones, the warning
+and its residue (Sera's safe path), the transit bridge's span held up out of the lagoon, the memorial with Kai's name,
+fresh white chrysanthemums and the core, Sera's question (`trust_sera`: deny, accept, ask) and the beacon; the
+Survivor's Garden (the culvert in 2049, `garden_restored`), whose flowers (moss prints run forwards to a tear in the air,
+a receipt for 08:04), the schoolroom's rhyme. Mission 15: the departure board, the station's noon reset (a loop), the
+school and the market reliving the fourteenth (a flood, deduced from the silt and the well), Mara, the card whose
+forged layer comes off under REVERSE while both archives stay original (`ev_dual_archive`, chain C), Anja's lock
+(`city_freed` or `city_stabilized`); the Train That Arrives Yesterday (Jun's echo, the flaps, the next carriage).
+Mission 16: three memories of one event (the second on a reel run backwards), the cases compared with the world they
+came from, the Witness's museum deduced, the photograph (`photo_taken`); the Names beneath the City. Mission 17: the
+recordings matched to Kai's own route, red copies of him replaying it (a counter-reverse), the earlier rooms in 2026, the
+shredded sheet (RECORDING 117 OF 117), the reconstruction and its two sealed logs, "They became the price.", and the
+memory at the console ("I pressed it."); the Unsent Letter (`letter`). Mission 18: Sera at the failing anchor, three
+houses evacuated, the canyon in 2026, the flooded highway in 2049, the floor plan numbered in the order of the fall,
+the stabilizer's three pylons held in phase for two minutes (the `hold`: REVERSE's cap rises to 12 s), the core's slabs
+reversed last fallen first into a stair, the tilted floors, Mira's message; the potter's kiln, the Last Signal (Iven
+out of a folding pocket of time). Mission 19: Orren's road, the clockmaker's mark where the road is real, the stones,
+the badge, the bridge only in the reflection (in 2026, or the reflection's lag reversed into step), five blue doors
+and the one with no shadow, Mira in person and who opens the door (`m20_lead`); Orren's three conversations, the
+clockmaker's mark on his gallery. Mission 20: the kitchen in 2026, the drawing, the boots, the night badge, the song,
+the experiment from the chair ("I was that kind of nine."), the world without Kai (the late 41, a memorial for nobody,
+Mira planting), three memories aligned on a board (any order that keeps each memory's own; Kai's tidy line refused),
+the Child singing it down with Mira, "I remember being your sister."; every target refuses REVERSE (A MEMORY), Mira
+answering the first try; the House with No Owner. Mission 21: the Director (by `rook_fate`), elites that snap back
+five seconds when an afterimage reaches them and stand stuck when their rewind is reversed, the kitchen door (for
+`warned_evacuees`) or the stair alone, the cells (for `prisoners_held`), the arena falling, the first gap held by
+REVERSE, the second by the ally Kai earned for thirty seconds or by 2196's frozen girder (`ally`), the wrists side by
+side and the hesitations the tape, the photograph and the letter bring; Mara on the radio, the Director's office.
+Mission 22: the Witness at the station's microphone ("Kai Varen. Do not build the machine."), the village's chain put
+in order, the clockmaker's arm reversed on its beat, Odile's rule, the seals out last fitted first (MACHINE, GATE,
+WALL, RIVER), Iven's statement and the museum's card, the two logs run forwards ("RING: 16:02:00. CONSOLE BUTTON:
+16:02:01."), the deduction ("I was a second late." "…No. I was a second early."), the reveal, the final chamber; the
+Unwritten Record (what each ending costs). The Finale: the 41 on time, the opening streets (cleared by Jun's passengers
+for `jun_line`), the street that fell held by the Witness while Kai crosses its 2026 half, the telling-stone (HE CAME
+BACK) and Tala, the swap at the settlement's bridge (Kai holds it, the Witness crosses: "For once, you are on time."),
+Rook's last transmission and Iven, the memorial, Sera and Anja, Mira ("Ask me."), the choice of three endings with
+what each adds, the epilogue (a line per fact set) and the voice in every speaker; the consequences gallery.
+
 ## Authored and generated
 
 **Written by hand**
@@ -328,10 +367,10 @@ stabilizer (`faction`, with `stabilizer_destroyed` or `civilians_freed`), the di
   machine hall crossed in 2196, Iven's maintenance route (quest chain D) and the control room.
   Every bible line of these missions is spoken verbatim.
 - Acts I and II, all of them, rewritten for U7 as threads in quarters (above).
-- For every mission of Acts III–IV and the Finale: its setup (intro), its three beats with their
-  goals, the bible's quoted lines, the scenes and choices, the memory fragments, and its mission
-  ending (outro); the Mission 13 faction choice; the Mission 10 Echo Step unlock; the ally call in
-  Mission 21; the three endings and the post-credit "Version one hundred and eighteen."
+- Acts III and IV and the Finale, all of them, rewritten for U8 as threads in quarters (above), with the three
+  endings, the epilogue and the post-credit "Version one hundred and eighteen."
+- The CASE FILES (`cases.js`): the fourteen stories and their states, chains B and C kept as replays, and ten side
+  stories replayed from their places.
 - The people: roster, wants and fears, temporal states, dialogue with intents, echoes, barks.
 - The open places of every mission (`places/specs/`): every building, terrace, bridge, tree and
   year piece, and the sky, horizon and light of every year.
@@ -360,22 +399,29 @@ stabilizer (`faction`, with `stabilizer_destroyed` or `civilians_freed`), the di
 | 11 | The Inverted Hospital | II | Rain City General (`hospital`) | 2049 2026 (+ reversed wards) | The quieter sound, returning hazards, REVERSE taught, the records compared, Odile, the lock; Mira's file |
 | 12 | The Man Behind the Glass | II | Helix, north wing (`helix`) | all three | The chase, Corridor B, the route, his stair then Kai's, the voicemail, the second Chronolith |
 | 13 | The Nine-Minute War | II | The delta port (`warport`) | all three | Field orders, shells reversed (`ev_both_sides`), who fired first, three devices, the stabilizer (faction) |
-| 14 | Welcome to 2196 | III | Downtown (`drowned`) | all three | The beacon's parts, Sera's safe path, the memorial |
-| 15 | The City That Forgot Tomorrow | III | The lock city (`lockcity`) | 2196 2026 2049 | Loop (120 s), the fabricated record, Anja's lock (stabilize / free) |
-| 16 | The Museum of Failed Worlds | III | The sinkhole (`sinkhole`) | 2196 2026 2049 | Three memories, comparison, the photograph |
-| 17 | The Witness's Archive | III | The array (`array`) | all three | Recording 17 of 117, body lost / pattern persists, "They became the price." |
-| 18 | The Fracture | III | The traverse to the coast (`fracture`) | all three | Evacuate three houses, the canyon in the past, Mira's message |
-| 19 | The Place Outside Time | IV | The salt mirror (`unwritten`) | all three | Symbols not markers, the bridge in the reflection, Mira |
-| 20 | Mira's Memory | IV | One plot, three memories (`memory`) | 2026 2049 2196 | The blue door, the first experiment, "I remember being your sister." |
-| 21 | The Last Battle of the Continuum | IV | The Continuum Spire (`spire`) | all three | Standing order, the ally you earned, the Witness |
-| 22 | The First Second | IV | The Ring Hill's wedges (`firstsecond`) | all three | The village's chain, evidence over memory, the final chamber |
-| 23 | Afterzero | Finale | The road to the ring (`afterzero`) | all three | The Witness holds the route; Mira; Endings A, B, C |
-| B | The Water That Remembers | Cases | The gorge (`valley_river`, `c_b`) | 2049 2026 2196 | The mural, three stone gates (optional) |
-| C | Two Records, One Disaster | Cases | The press tower (`lockcity`, `c_c`) | 2196 2026 2049 | Two first operators, both true (optional) |
+| 14 | Welcome to 2196 | III | Downtown (`drowned`) | 2196 (home) 2049 2026 | The lift car ridden up the bank, the beacon's parts, the warning's residue, the transit bridge held, the memorial (`trust_sera`); the Survivor's Garden |
+| 15 | The City That Forgot Tomorrow | III | The lock city (`lockcity`) | 2196 (home) 2026 2049 | Noon resets (120 s), the fourteenth's flood, the card un-written and the dual archive (chain C), Anja's lock; the Train That Arrives Yesterday |
+| 16 | The Museum of Failed Worlds | III | The sinkhole (`sinkhole`) | 2196 (home) 2026 2049 | The spiral, three memories (one reversed on its reel), the Witness's museum, the photograph; the Names beneath the City |
+| 17 | The Witness's Archive | III | The array (`array`) | all three | Recordings matched to Kai's route, red copies of him, Recording 117 of 117, the two logs, "They became the price.", "I pressed it."; the Unsent Letter |
+| 18 | The Fracture | III | The traverse to the coast (`fracture`) | 2196 (home) 2026 2049 | Three houses, the canyon in 2026, the highway in 2049, the pylons held (12 s), the slab stair, Mira's message; the Last Signal |
+| 19 | The Place Outside Time | IV | The salt mirror (`unwritten`) | all three | The marks, the bridge in the reflection, the door with no shadow, Mira (`m20_lead`); Orren's three conversations |
+| 20 | Mira's Memory | IV | One plot, three memories (`memory`) | 2026 (home) 2049 2196 | Nothing reversible; her side of the experiment, the world without Kai, three memories aligned, the Child, "I remember being your sister."; the House with No Owner |
+| 21 | The Last Battle of the Continuum | IV | The Continuum Spire (`spire`) | all three | Elites who rewind, the arena's gaps, the ally you earned (`ally`), the wrists side by side |
+| 22 | The First Second | IV | The Ring Hill's wedges (`firstsecond`) | all three | The chain, the arm's beat, the seals, the logs' second, "I was a second early.", the final chamber; the Unwritten Record |
+| 23 | Afterzero | Finale | The road to the ring (`afterzero`) | all three | Two holds (his street, Kai's bridge), the people Kai changed, "Ask me.", Endings A, B, C, the epilogue |
+| B, C | The Water That Remembers; Two Records, One Disaster | CASE FILES | The gorge (`c_b`); the press tower (`c_c`) | their missions' years | Chains B and C, kept as replays (old saves load into them) |
+| E–N | Ten side stories | CASE FILES | their missions' places | their missions' years | The Child, the Train, the Letter, the House, the Signal, the Names, the Debt, the Ninth Minute, the Garden, the Record, each replayed from its place with the facts the player had |
 
 ## Tests
 
-- `tests/lastversion.test.mjs` (in `npm test`): the state engine on three years (states per
+- `tests/lastversion.test.mjs` (in `npm test`), since U8 also: Acts III and IV and the Finale on threads (each Act
+  mission 25–42 minutes, the Finale 90 or less, the main path 70% or more, declared minutes the model's), the global
+  ledgers (every question answered in its mission with some of its evidence findable by then; every piece of evidence
+  a deduction's right answer needs set earlier or on its own mission's main path; no main thread waiting on something
+  only a side story sets), the hold, the moments of Acts III and IV (the alignment simulated: Kai's tidy line refused,
+  an interleaving accepted), the Finale's holds, endings, epilogue and post-credit voice, and the CASE FILES (fourteen
+  entries and their states, twelve replays each building from its place, nothing of a story done after a whole game
+  once its facts are cleared); before U8: the state engine on three years (states per
   room, effects, no laws or law slots, gravity that never changes, anchors, save/restore, the
   v2.0 INVERTED save migration), no INVERTED, gravity or ceiling anywhere in the missions or their
   built levels, no law tokens or MEMORY KEY labels, the two tiers of hints, every REVERSE process
@@ -444,11 +490,15 @@ stabilizer (`faction`, with `stabilizer_destroyed` or `civilians_freed`), the di
   source, a returning gurney's setback, the unlock in the records, R and the touch ⟲ button start and release a hold,
   a year switch releases it, the refusal, the file readable only while held, a jammed bolt, a settled bolt through
   a save and a load, the lock opening Ward 32); Mission 12's chase that never fails and the Witness's stair before
-  Kai's REVERSE; Mission 13's shells from each side (`ev_both_sides`) and the faction; then 14 and 19 and the
-  Finale to an ending, real walks through the places (Mission 13's quay to the container canyons,
-  Mission 14's viaduct, the Museum's spiral from the rim to the Comparison Hall, Mission 19's
-  reflection bridge in 2026 and the water under it in 2049, its wrapping edge, the Finale's road and
-  the settlement's bridge), the save namespace, and the sound (with Chromium's autoplay policy on: the
+  Kai's REVERSE; Mission 13's shells from each side (`ev_both_sides`) and the faction; then Acts III and IV and the Finale played
+  thread by thread too (U8): Mission 14's lift car ridden 24 m up the bank with real movement, Mission 15's dual
+  archive, the Museum's spiral walked from the rim to the floor, Mission 17's confession, Mission 18's pylons held and
+  the slab stair climbed while it holds, Mission 19's bridge walked in 2026 (the water under it in 2049) and its
+  wrapping edge, Mission 20's refusal (Mira's line) and the board's alignment (Kai's tidy line refused), Mission 21's
+  elites thrown back and stuck, the arena's first gap crossed on its held slab and the second on 2196's girder,
+  Mission 22's arm on its beat, the seals and the logs' second, the Finale's two holds to Ending C, its epilogue and
+  the voice in every speaker; THE CASES opening the CASE FILES (fourteen stories, twelve replays) and one replayed
+  from its place after the page reloads (Mission 14's garden, with the facts the run had), the save namespace, and the sound (with Chromium's autoplay policy on: the
   AudioContext runs after the first tap, a new game opens on the Prologue's and Mission 1's cards (cues
   `chapter`, `card`), the Zero Second ducks the music while the voice bus stays at 1, Ending C plays its
   cue, Kai's quote and the post-credit voice; over the whole run every line said plans from the packs,

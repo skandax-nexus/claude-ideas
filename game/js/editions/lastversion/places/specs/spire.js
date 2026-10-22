@@ -111,6 +111,7 @@ export default {
       P.box([49.3, 0, 20, 58, 5.4, 26], 'basalt');
       P.box([46.7, 2.6, 20, 49.3, 5.4, 26], 'basalt');
       P.vbox([46.7, 0, 26, 49.3, 2.6, 26.06], 'helixDoor', { noShadow: 1 });
+      P.W('!warned_evacuees', () => P.col([46.7, 0, 25.6, 49.3, 2.6, 26.1])); // (the kitchen door opens for the people who listened)
       stair(P, 48, 19.8, 0, 48, 10.2, T1, 2.6, 'basaltPave');
       // the stair you climb alone (west), up to the walkway to the halls
       stair(P, -30, 20.2, 0, -30, 6.2, T1, 3, 'basaltPave');
@@ -136,23 +137,39 @@ export default {
       P.box([68, T2, -66, 72, T2 + 0.9, -64.6], 'eliteGraphite');
       // Q2: the arena ring at y 18 round the mast, in twenty-four slabs (the collapse takes them in a known order)
       const n = 24, rm = (AR0 + AR1) / 2, wR = AR1 - AR0;
+      // (Mission 21: when the arena collapses, two of the slabs between the bridge (295°) and the summit (225°) fall into
+      // the clouds, 270-285° and 240-255°: their gaps are spanned by REVERSE, an ally, or 2196's frozen girder; and
+      // one the other way round, 300-315°, which nothing spans: the long way round is gone)
+      const FALLS = [18, 16, 20];
+      const fallen = (deg) => FALLS.some((k) => deg > k * 15 - 0.5 && deg < (k + 1) * 15 + 0.5);
       for (let i = 0; i < n; i++) {
         const am = ((i + 0.5) / n) * Math.PI * 2, len = ((2 * Math.PI * AR1) / n) * 1.02, deg = (am * 180) / Math.PI;
         const [cx, cz] = at(deg, rm);
-        P.obox(cx, TA - 0.6, cz, wR, 0.6, len, -am, 'basaltPave');
-        P.obox(cx, TA - 2.4, cz, wR - 1, 1.8, len * 0.8, -am, 'blackGlass');
-        for (const r of [25.6, 29.5, 33.4]) for (const f of [-0.33, 0, 0.33]) {
-          const [x, z] = at(deg + (f * 360) / n, r);
-          P.col([x - 2.4, TA - 0.6, z - 2.4, x + 2.4, TA, z + 2.4]);
-        }
-        if (!SKIP.some((d) => Math.abs(((deg - d + 540) % 360) - 180) < 8)) { const [wx, wz] = at(deg, AR1); P.obox(wx, TA, wz, 0.12, 1.3, len, -am, 'windbreakGlass'); }
+        P.W(FALLS.includes(i) ? '!arena_fallen' : null, () => {
+          P.obox(cx, TA - 0.6, cz, wR, 0.6, len, -am, 'basaltPave');
+          P.obox(cx, TA - 2.4, cz, wR - 1, 1.8, len * 0.8, -am, 'blackGlass');
+          for (const r of [25.6, 29.5, 33.4]) for (const f of [-0.33, 0, 0.33]) {
+            const [x, z] = at(deg + (f * 360) / n, r);
+            P.col([x - 2.4, TA - 0.6, z - 2.4, x + 2.4, TA, z + 2.4]);
+          }
+          if (!SKIP.some((d) => Math.abs(((deg - d + 540) % 360) - 180) < 8)) { const [wx, wz] = at(deg, AR1); P.obox(wx, TA, wz, 0.12, 1.3, len, -am, 'windbreakGlass'); }
+        });
       }
       for (let i = 0; i < 60; i++) { // the outer windbreak's collider, open at the bridges; the inner edge round the drop
         const deg = ((i + 0.5) / 60) * 360;
-        if (!SKIP.some((d) => Math.abs(((deg - d + 540) % 360) - 180) < 6)) { const [x, z] = at(deg, AR1 + 0.4); P.col([x - 1.2, TA, z - 1.2, x + 1.2, TA + 1.6, z + 1.2]); }
-        const [x, z] = at(deg, AR0 - 0.6);
-        P.col([x - 1.1, TA, z - 1.1, x + 1.1, TA + 1.6, z + 1.1]);
+        P.W(fallen(deg) ? '!arena_fallen' : null, () => {
+          if (!SKIP.some((d) => Math.abs(((deg - d + 540) % 360) - 180) < 6)) { const [x, z] = at(deg, AR1 + 0.4); P.col([x - 1.2, TA, z - 1.2, x + 1.2, TA + 1.6, z + 1.2]); }
+          const [x, z] = at(deg, AR0 - 0.6);
+          P.col([x - 1.1, TA, z - 1.1, x + 1.1, TA + 1.6, z + 1.1]);
+        });
       }
+      // 2196's ruin: a frozen girder lies across the second gap (going alone, the year is the answer)
+      P.E('FUTURE', () => P.W('arena_fallen', () => {
+        const [x0, z0] = at(256, rm), [x1, z1] = at(239, rm);
+        const len = Math.hypot(x1 - x0, z1 - z0);
+        P.obox((x0 + x1) / 2, TA - 0.5, (z0 + z1) / 2, 2.6, 0.5, len + 1, Math.atan2(x1 - x0, z1 - z0), 'frozenGlass', { solid: false });
+        for (let k = 0; k <= 8; k++) { const x = x0 + ((x1 - x0) * k) / 8, z = z0 + ((z1 - z0) * k) / 8; P.col([x - 1.2, TA - 0.5, z - 1.2, x + 1.2, TA, z + 1.2]); }
+      }));
       // the arena bridge from the cells' terrace: up from 12 m going west, then north along to the ring at 295°
       ramp(P, [9, -71, 20, -65], T2, TA, 'W', 'basaltPave');
       deck(P, [3, -71, 9, -44], TA, { gaps: { E: [[-71, -65]], S: [[3, 9]] }, wind: 'NES' });
@@ -183,6 +200,11 @@ export default {
     P.land('arenaGate', 21.5, T2, -68, -Math.PI / 2);
     P.land('arenaRing', ...((p) => [p[0], TA, p[1]])(at(295, rm())), Math.PI);
     P.land('arenaBridges', 6, TA, -50, Math.PI);
+    // the arena's gaps once it has fallen (Mission 21): each stands at its near edge, facing across it
+    const gapAt = (name, d0, d1) => { const [x0, z0] = at(d0, rm()), [x1, z1] = at(d1, rm()); P.land(name, x0, TA, z0, Math.atan2(x1 - x0, z1 - z0)); };
+    gapAt('arenaGap1', 285, 270);
+    gapAt('arenaGap2', 255, 240);
+    P.land('arenaMid', ...((p) => [p[0], TA, p[1]])(at(262.5, rm())), 0);
     P.land('mast', MX, TA, MZ, 0);
     P.land('summitStair', ax, TA, az + 3, Math.PI);
     P.land('witnessStand', -36, T3, -60, Math.PI / 2);

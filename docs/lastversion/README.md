@@ -8,7 +8,15 @@ bible's inversion: hold one process backwards for a few seconds), the Witness, M
 - `BIBLE.txt`: its text, for tools and agents.
 - `DESIGN.md`: how the bible maps onto the engine (written during the build).
 - `STATUS.md`: what is built, what is generated, what is still planned.
-- `OVERHAUL.md`: the v2.1 overhaul spec that answers the player's feedback on v2.0.
+- `OVERHAUL.md`: the v2.1 overhaul spec that answers the player's feedback on v2.0 (U1–U8, all built; its
+  "As built" notes say where the build differs).
+
+v2.1 in one paragraph: 23 missions in 23 authored open places, each one map with soft quarters, threads and
+side stories, a cold open and a hook; REVERSE, three years, Echo Step; 31 cast people, crowds and watchers;
+every line spoken from the edition's own packs, with a procedural score; three endings with an epilogue line
+per choice that mattered; and the CASE FILES, fourteen side stories and quest chains replayable from their
+places. The code is in `game/js/editions/lastversion/` (`prologue.js`, `act1.js` … `act4.js`, `finale.js`,
+`cases.js`, `Threads.js`, `ledger.js`, `Runtime.js`, `places/`).
 
 Build: `EDITION=lastversion bash android/build-apk.sh` (app "AFTERZERO: Last Version",
 its own saves); the default build stays the Station Zero game.
