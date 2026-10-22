@@ -1,7 +1,9 @@
 // Helix in VERSION 17 (Mission 8, THE FIRST DEATH; OVERHAUL.md §5 M8). The same campus on the same
-// hill (sameAs helix), altered: a full ring of wings instead of the crescent, and the river Kai
-// diverted three thousand years ago (Mission 5) running straight through the court as a water
-// garden with stepping stones. The old west wing with its lobby is gone; the staff come in through a
+// hill (sameAs helix), altered: a full ring of wings instead of the crescent, and the river running
+// straight through the court as a water garden with stepping stones: the river Kai drained three
+// thousand years ago (Mission 5), its bed the dig the ring came out of (Mission 3's Site Zero), led
+// back into that bed by this version's Helix once the ring was out (a plaque on the north quay says
+// so, so Rook's "a riverbed somebody drained" in Mission 8 is a clue here, not a contradiction). The old west wing with its lobby is gone; the staff come in through a
 // glass atrium on the riverbank where the river enters the ring. The oculus is capped by a glass
 // containment cube. A still, grey-violet pre-storm afternoon: no wind, no birds, the flags hang.
 // 2026 (this version): the ring just finished, a young garden, the junior programme's marquee.
@@ -57,6 +59,12 @@ export default {
     P.E('PAST', () => P.disc(0, 0.012, -36, 15, 'gravel', { seg: 40, noShadow: 1 }));
     // --- the court's water garden: the river widens into a pool round the island with the cube on it -----------
     P.land('riverCourt', -14, 0, -20, Math.PI);
+    // the quay's plaque, facing the north walk: the river was drained, dug, and given back its bed
+    P.box([-12.2, 0, -19.9, -7.8, 0.55, -19.5], 'quayStone');
+    P.obox(-10, 0.55, -19.69, 4.2, 1.35, 0.08, Math.PI, 'signBoard');
+    P.text('THE RIVER GARDEN', [-10, 1.6, -19.78], Math.PI, { size: 0.3, color: '#f4ead8' });
+    P.text('THE OLD RIVER, DRAINED THREE THOUSAND YEARS AGO,', [-10, 1.15, -19.78], Math.PI, { size: 0.13, color: '#f4ead8' });
+    P.text('LED BACK INTO ITS BED WHEN THE RING WAS DUG OUT', [-10, 0.92, -19.78], Math.PI, { size: 0.13, color: '#f4ead8' });
     terrace(P, [-12, -12, 12, 12], 0.4, 'courtStone', { wall: 'quayStone', base: -2.6 });
     P.reserve(...POND);
     // stepping stones from the north and south banks to the island, and the bridges at the wing arches

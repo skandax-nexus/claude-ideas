@@ -1,6 +1,7 @@
 // The Ring Hill three thousand years ago (Mission 4, THE MAN FROM THE LAST DAY; OVERHAUL.md §5 M4).
-// Four terraces (0 / 3 / 6 / 10 m) climb the knoll to the standing-stone ring on its summit, which
-// stands exactly where Helix's oculus will be. Stone footings, timber and wattle walls, conical
+// Four terraces (0 / 3 / 6 / 10 m) climb the knoll to the standing-stone ring on its summit, 20 m
+// north of where Helix's oculus will be (the atlas puts both places at the same origin: the oculus
+// at 0, 0; the ring at 0, -20, under what will be Helix's north court). Stone footings, timber and wattle walls, conical
 // thatch, a longhouse, stilt granaries, dry-stone terrace walls, looms and drying racks, cypress,
 // olive and barley. No lamps and no letters: records are carved stones. BEFORE THE FIRE there are no
 // houses at all: the ring in tall grass, hide tents, the first campfire, and meadow slopes that

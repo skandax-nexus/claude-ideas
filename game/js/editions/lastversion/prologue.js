@@ -889,7 +889,8 @@ function firstSwitchRooms(P, story, si, rt) {
 
 const M03_SAY = {
   past: [N('2026. Scaffolding. The ring is half built, and someone has left a thermos on it.')],
-  future: [N('2196. The ceiling is gone. Rain falls on the ring, and the ring is still here.')],
+  // (2196 is a dry green dawn: no rain falls; a linden has grown up through the broken lens)
+  future: [N('2196. The ceiling is gone. A tree grows where the glass was, and the ring is still here.')],
   present: [R('Kai? The chamber is reading three dates at once.'), K('Which one is real?'), R('All of them. That\'s why this is dangerous.'),
     N('Stability drains while you are out of 2049.')],
   // the fracture: Rook reads the chamber's number, and the year lets go of Kai
