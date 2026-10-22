@@ -35,7 +35,7 @@ export default {
     { name: 'THE HEAD-STONE', area: [10, -40, 100, 14], spawnAt: 'weir', threshold: { at: 'villageGate', kind: 'path' } },
     { name: 'THE RETAINING WALL', area: [-100, -60, 10, 0], spawnAt: 'villageGate', threshold: { at: 'riverLanding', kind: 'stair' } },
     { name: 'THE PRESSURE GATE', area: [-100, 14, 10, 70], spawnAt: 'southBank', threshold: { at: 'gateTower', kind: 'tower' } },
-    { name: 'THE UPPER GORGE', area: [10, -150, 100, -40], spawnAt: 'gorgeMouth', threshold: null },
+    { name: 'THE UPPER GORGE', area: [10, -150, 100, -34], spawnAt: 'gorgeMouth', threshold: null },
   ],
   // (Case B, THE WATER THAT REMEMBERS, replays Mission 5's upper gorge: cases.js; this map, its quarters)
   beatAt: { m05: ['headStone', 'wallBrace', 'gateTop'] },

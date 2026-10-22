@@ -56,8 +56,8 @@ export default {
   ] },
   quarters: [
     { name: 'THE VILLAGE\'S CHAIN', area: [-40, 30, 40, 80], spawnAt: 'wedgeVillage', threshold: { at: 'villageGate', kind: 'seam' } },
-    { name: 'THE CLOCKMAKER\'S PATTERN & THE HOSPITAL\'S LOCK', area: [-80, -60, -30, 30], spawnAt: 'wedgeClock', threshold: { at: 'chamberGate', kind: 'door' } },
-    { name: 'THE FINAL CHAMBER', area: [-30, -80, 80, 30], spawnAt: 'chamberGate', threshold: null },
+    { name: 'THE CLOCKMAKER\'S PATTERN & THE HOSPITAL\'S LOCK', area: [-80, -60, -29, 30], spawnAt: 'wedgeClock', threshold: { at: 'chamberGate', kind: 'door' } },
+    { name: 'THE FINAL CHAMBER', area: [-29, -80, 80, 30], spawnAt: 'chamberGate', threshold: null },
   ],
   beatAt: { m22: ['chainWall', 'clockArm', 'finalSeals'] },
   exits: { m22: 'finalSeals' },

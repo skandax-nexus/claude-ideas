@@ -82,7 +82,7 @@ export default {
     // the Star Tube to the right, the turntables to the left; the gnomon and the lower ring behind him
     { name: 'THE LOWER RING', area: [-90, 20, 90, 90], spawn: [-4, 0, 22, 0.3], threshold: { at: 'rotatingPlatforms', kind: 'roof' } },
     { name: 'THE INSTRUMENT STAIR', area: [-90, -30, 90, 20], spawnAt: 'instrumentFoot', threshold: { at: 'ringFoot', kind: 'stair' } },
-    { name: 'THE OUTER RING', area: [-90, -90, 90, -30], spawnAt: 'ringFoot', threshold: { at: 'horizonRing', kind: 'summit' } },
+    { name: 'THE OUTER RING', area: [-90, -90, 90, -18], spawnAt: 'ringFoot', threshold: { at: 'horizonRing', kind: 'summit' } },
   ],
   beatAt: { m07: ['gnomon', 'datesRing', 'tinSpot'] },
   exits: { m07: 'horizonRing' },

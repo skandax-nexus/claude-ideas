@@ -32,7 +32,7 @@ export default {
   quarters: [
     // (U7: Kai wakes in his cell, its bars bent open: out of the gallery patrol's sight until he steps out)
     { name: 'THE DETENTION BLOCK', area: [-70, -24, 70, 0], spawn: [-24, 0, -19.5, Math.PI], threshold: { at: 'gallStair', kind: 'stair' } },
-    { name: 'POWER SYSTEMS', area: [-70, -60, 70, -24], spawnAt: 'crownLanding', threshold: { at: 'hallStair', kind: 'stair' } },
+    { name: 'POWER SYSTEMS', cp: [-70, 8, -60, 70, 40, -16], area: [-70, -60, 70, -24], spawnAt: 'crownLanding', threshold: { at: 'hallStair', kind: 'stair' } },
     { name: 'THE TESTING CHAMBER', area: [-60, 0, 60, 30], spawnAt: 'turbineHall', threshold: { at: 'spillwayTunnel', kind: 'tunnel' } },
     { name: 'THE YARD', area: [-70, 30, 70, 60], spawnAt: 'gorgeFloor', threshold: null },
   ],

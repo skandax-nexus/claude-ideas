@@ -351,6 +351,10 @@ export class Threads {
     if (at < 0) return;
     this.here = at;
     if (at <= (c.quarter ?? 0)) return;
+    // (a quarter is reached once the story is there: every main thread of the quarters before it done, walked past or
+    // not up. Ground walked ahead of the story, or quarters that overlap in plan (a roof over a pit), never move the
+    // save's quarter on: a save would load past the threads still to play)
+    if (this.list.some((t) => !t.side && t.q < at && this.available(t) && !this.done(t) && !this.passed(t))) return;
     c.quarter = at;
     g.hud.toast(`<small>${this.deck.name}</small><br>${lv.quarters[at].name}`, 2400);
     g.after(0.4, () => g.campaign === c && g.saveTo('auto'));

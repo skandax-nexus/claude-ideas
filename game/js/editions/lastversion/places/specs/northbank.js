@@ -51,7 +51,7 @@ export default {
     { name: 'START', area: [-40, 60, 60, 100], spawn: [0, 0, 87, 0.05], threshold: { at: 'funicularStation', kind: 'street' } },
     { name: 'CLOCK A — OBSERVATION', area: [-60, 20, 20, 60], spawnAt: 'marketGate', threshold: { at: 'cathedralFoot', kind: 'stair' } },
     { name: 'CLOCK B — THE ENEMY ROUTE', area: [20, -100, 100, 60], spawnAt: 'funicularStation', threshold: { at: 'towerBase', kind: 'tower' } },
-    { name: 'CLOCK C — THE LOOP TRIGGER', area: [-40, -100, 20, 20], spawnAt: 'cathedralFoot', threshold: null },
+    { name: 'CLOCK C — THE LOOP TRIGGER', area: [-40, -100, 20, 20], spawnAt: 'cathedralSteps', threshold: null }, // (spawns at the steps' first landing, in its quarter)
     { name: 'THE CONTROL TOWER', area: [-100, -40, -40, 80], spawnAt: 'headlandStair', threshold: null },
   ],
   beatAt: { m09: ['clockA', 'orderBoard', 'towerBase'] },

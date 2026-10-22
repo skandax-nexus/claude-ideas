@@ -37,7 +37,7 @@ import { ERAS, EXCEPTIONS, ANCIENT_WOMEN, AMBIENT_CAST, eraModels, MAX_PEOPLE } 
 import { WATCHERS, HUMAN, watcherModels, kindsOf } from '../game/js/editions/lastversion/watchers.js';
 import { spokenLines, voiceOf, lexicon, GROUPS, chapterCardLines, missionCardLines, endingLines, POSTCREDIT, choiceLine, numberWords } from '../game/js/editions/lastversion/voicelines.js';
 import { voicePieces } from '../game/js/audio/voiceKey.js';
-import { KINDS as THREAD_KINDS, MINUTES, threadsOf, sidesOf, quartersOf as threadQuarters, factOf, isRewritten, estimate, doneCond, sideState, isDone } from '../game/js/editions/lastversion/Threads.js';
+import { KINDS as THREAD_KINDS, MINUTES, threadsOf, sidesOf, quartersOf as threadQuarters, factOf, isRewritten, estimate, doneCond, sideState, isDone, roomAt } from '../game/js/editions/lastversion/Threads.js';
 import { QUESTIONS, CLUES, CONSEQUENCES, PREVIOUSLY, EPILOGUE, MISSION_ORDER, missionIndex } from '../game/js/editions/lastversion/ledger.js';
 import { SAVE_FORMAT } from '../game/js/editions/lastversion/Runtime.js';
 
@@ -1017,7 +1017,35 @@ test('the edition no longer runs the generators: no edition file imports gen/Zon
   }
 });
 
-test('places are big enough to explore: a short side of 120 m or more (a linear place: 100 × 300 m or more), quarters of 2,500 m² or more', () => {
+// (U3 review) a quarter is where it says: Threads.quarters() takes the last quarter whose room, height box (cp) or area
+// holds Kai, so each quarter's spawn is its own (never a later quarter's: the save would jump ahead, and a setback there
+// would carry Kai forward), and the threads of a quarter stand in it, at most at the next quarter's door
+test('every quarter holds its own spawn, and its main threads stand in it (or at the next quarter\'s threshold)', () => {
+  for (const { deck, level } of LEVELS) {
+    const qs = level.quarters || [];
+    if (!qs.length) continue;
+    const claim = (p) => {
+      const room = roomAt(level, p) || level.outdoorRoom;
+      for (let i = qs.length - 1; i >= 0; i--) {
+        const q = qs[i], b = q.cp, y = p[1] + 0.86;
+        const here = q.room && q.room !== level.outdoorRoom ? room === q.room
+          : room === level.outdoorRoom && (b ? p[0] >= b[0] && p[0] < b[3] && y >= b[1] && y < b[4] && p[2] >= b[2] && p[2] < b[5] : p[0] >= q.area[0] && p[0] < q.area[2] && p[2] >= q.area[1] && p[2] < q.area[3]);
+        if (here) return i;
+      }
+      return -1;
+    };
+    qs.forEach((q, i) => assert.equal(claim(q.spawn), i, `${deck.mkey}: the spawn of ${q.name} (${q.spawn.map((v) => +(+v).toFixed(1))}) is in quarter ${claim(q.spawn)}`));
+    for (const t of threadsOf(deck)) {
+      const l = typeof t.at === 'string' && level.landmarks[t.at];
+      if (!l || t.side) continue;
+      // (ground no quarter claims, Mission 2's staff lounge off the court, changes nothing)
+      const c = claim(l);
+      assert.ok(c <= t.q + 1, `${deck.mkey}: ${t.id} (quarter ${t.q}) at ${t.at} stands in quarter ${c}`);
+    }
+  }
+});
+
+test('places are big enough to explore: a short side of 120 m or more (a linear place: 100-120 × 360-420 m), quarters of 2,500 m² or more', () => {
   for (const [key, spec] of Object.entries(PLACES)) {
     const [x0, z0, x1, z1] = spec.bounds;
     const short = Math.min(x1 - x0, z1 - z0), long = Math.max(x1 - x0, z1 - z0);

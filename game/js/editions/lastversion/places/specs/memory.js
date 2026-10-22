@@ -49,7 +49,7 @@ export default {
   },
   quarters: [
     { name: 'THE HOUSE', area: [-B, LANE, 10, B], spawnAt: 'kitchen', threshold: { at: 'gardenGate', kind: 'gate' } },
-    { name: 'THE EXPERIMENT', area: [-B, -B, B, LANE], spawnAt: 'gardenGate', threshold: { at: 'laneEnd', kind: 'lane' } },
+    { name: 'THE EXPERIMENT', area: [-B, -B, B, LANE + 6], spawnAt: 'gardenGate', threshold: { at: 'laneEnd', kind: 'lane' } },
     { name: 'THE WORLD WITHOUT KAI', area: [10, LANE, B, B], spawnAt: 'laneEnd', threshold: null },
   ],
   beatAt: { m20: ['fridgeDrawing', 'console', 'miraPlanting'] },

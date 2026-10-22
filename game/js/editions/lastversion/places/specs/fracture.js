@@ -35,7 +35,7 @@ export default {
   skyFeatures: { all: [{ kind: 'storm', az: 175, bands: 1, eye: 1, band: 0x0a0e24 }] },
   quarters: [
     { name: 'THE ANCHOR SETTLEMENT', area: [-60, -210, 60, -110], spawnAt: 'chronolithBench', threshold: { at: 'settlementGate', kind: 'ramp' } },
-    { name: 'THE CANYON', area: [-60, -110, 60, -10], spawnAt: 'settlementGate', threshold: { at: 'highwaySign', kind: 'road' } },
+    { name: 'THE CANYON', area: [-60, -114, 60, -10], spawnAt: 'settlementGate', threshold: { at: 'highwaySign', kind: 'road' } },
     { name: 'THE FLOODED HIGHWAY', area: [-60, -10, 60, 90], spawnAt: 'highwaySign', threshold: { at: 'towerFoot', kind: 'tower' } },
     { name: 'THE COLLAPSING SKYSCRAPER', area: [-60, 90, 60, 210], spawnAt: 'towerFoot', threshold: null },
   ],

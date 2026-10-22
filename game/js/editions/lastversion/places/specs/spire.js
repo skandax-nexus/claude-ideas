@@ -59,8 +59,8 @@ export default {
   ] },
   quarters: [
     { name: 'THE ALLY / ARRIVAL', area: [-80, 20, 80, 80], spawnAt: 'arrival', threshold: { at: 'kitchenDoor', kind: 'door' } },
-    { name: 'THE COMMAND STRUCTURE', area: [20, -80, 80, 20], spawnAt: 'kitchenDoor', threshold: { at: 'arenaGate', kind: 'bridge' } },
-    { name: 'THE ARENA', area: [-50, -60, 20, 20], spawnAt: 'arenaGate', threshold: { at: 'summitStair', kind: 'stair' } },
+    { name: 'THE COMMAND STRUCTURE', area: [20, -80, 80, 30], spawnAt: 'kitchenDoor', threshold: { at: 'arenaGate', kind: 'bridge' } },
+    { name: 'THE ARENA', area: [-50, -70, 22, 20], spawnAt: 'arenaGate', threshold: { at: 'summitStair', kind: 'stair' } },
     { name: 'THE WITNESS', area: [-80, -80, -20, -20], spawnAt: 'summitStair', threshold: null },
   ],
   sectors: { m21: [0, 2, 3] },

@@ -39,7 +39,7 @@ export default {
   },
   quarters: [
     { name: 'THE SHIFTING CORRIDOR', area: [-130, 50, 130, 130], spawnAt: 'arrival', threshold: { at: 'corridorEnd', kind: 'gap' } },
-    { name: 'THE RECORDINGS', area: [-20, -60, 130, 50], spawnAt: 'corridorEnd', threshold: { at: 'echoGate', kind: 'gate' } },
+    { name: 'THE RECORDINGS', area: [-20, -60, 130, 54], spawnAt: 'corridorEnd', threshold: { at: 'echoGate', kind: 'gate' } },
     { name: 'THE EARLIER ROOMS', area: [-130, -80, -20, 50], spawnAt: 'echoGate', threshold: { at: 'hallDoor', kind: 'door' } },
     { name: 'THE ORIGINAL EXPERIMENT', area: [-130, -130, 130, -60], spawnAt: 'hallDoor', threshold: null },
   ],

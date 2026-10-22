@@ -95,10 +95,11 @@ export default {
       hemi: { sky: 0xc4d0d6, ground: 0x4a5a60, k: 0.9 }, sunColor: 0xe8eef4, sunK: 0.7, grade: { shadowTint: 0x1c2a34, highlightTint: 0xe8f0f4, toning: 0.1, contrast: 1.06, saturation: 0.86 } },
   },
   quarters: [
-    { name: 'THE RIM & THE FIRST MEMORY', area: [-75, 30, 75, 75], spawnAt: 'rimGate', threshold: { at: 'spiralBend', kind: 'ramp' } },
-    { name: 'THE SPIRAL', area: [0, -75, 75, 30], spawnAt: 'spiralBend', threshold: { at: 'spiralLow', kind: 'ramp' } },
-    { name: 'THE COMPARISON HALL', area: [-34, -34, 34, 34], spawnAt: 'spiralLow', threshold: { at: 'waterfall', kind: 'water' } },
-    { name: 'THE PHOTOGRAPH', area: [-75, -75, 0, 0], spawnAt: 'waterfall', threshold: null },
+    // (the quarters of a pit are its heights: the rim, the spiral's turns, the floor's hall, and the floor's south end)
+    { name: 'THE RIM & THE FIRST MEMORY', area: [-75, 30, 75, 75], cp: [-75, 24, -75, 75, 40, 75], spawnAt: 'rimGate', threshold: { at: 'spiralBend', kind: 'ramp' } },
+    { name: 'THE SPIRAL', area: [0, -75, 75, 30], cp: [-75, -4, -75, 75, 24, 75], spawnAt: 'spiralBend', threshold: { at: 'spiralLow', kind: 'ramp' } },
+    { name: 'THE COMPARISON HALL', area: [-34, -34, 34, 34], cp: [-75, -16, -24, 75, -4, 75], spawnAt: 'spiralLow', threshold: { at: 'waterfall', kind: 'water' } },
+    { name: 'THE PHOTOGRAPH', area: [-75, -75, 0, 0], cp: [-75, -16, -75, 75, -4, -24], spawnAt: 'waterfall', threshold: null },
   ],
   beatAt: { m16: ['alcove1', 'reel', 'deductionBoard'] },
   exits: { m16: 'photoAlcove' },

@@ -176,7 +176,8 @@ export default {
         { name: 'THE CHASE — 2049', area: [-70, -90, 70, -38], spawn: [-40, WING_H, -44, -Math.PI / 2], threshold: { at: 'gangway2026', kind: 'gangway' } },
         { name: 'THE CORRIDOR THAT WAS — 2026', area: [-38, -38, 38, 38], spawn: [0, 0, 26, 3.1416], threshold: { at: 'eastRuin', kind: 'ruin' } },
         { name: 'THE RUIN — 2196', area: [20, -38, 70, 44], spawn: [30, 0, 4, -0.6], threshold: { at: 'sinkTerraces', kind: 'stair' } },
-        { name: 'THE SECOND CHAMBER', area: [-46, -70, 46, -38], spawnAt: 'sinkTerraces', threshold: null },
+        // (the second chamber is the sinkhole under the north wing's roofs: below the court's level, as a box)
+        { name: 'THE SECOND CHAMBER', area: [-46, -70, 46, -38], cp: [-46, -14, -70, 46, 2, -36], spawnAt: 'sinkTerraces', threshold: null },
       ],
       crowd: [{ era: 'present', years: ['PAST'], region: 'helix', role: 'builder', path: [[-20, -30], [20, -30], [20, -20]], n: 4, echo: true }],
     },
