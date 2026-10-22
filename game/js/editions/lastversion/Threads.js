@@ -341,8 +341,11 @@ export class Threads {
     let at = -1;
     for (let i = lv.quarters.length - 1; i >= 0; i--) {
       const q = lv.quarters[i];
+      // (a quarter that is floors of a house is its own box, cp: M6's galleries and clock room stand over the shop floor)
+      const b = q.cp;
       const here = q.room && q.room !== lv.outdoorRoom ? g.room === q.room
-        : g.room === lv.outdoorRoom && p.x >= q.area[0] && p.x < q.area[2] && p.z >= q.area[1] && p.z < q.area[3];
+        : g.room === lv.outdoorRoom && (b ? p.x >= b[0] && p.x < b[3] && p.y >= b[1] && p.y < b[4] && p.z >= b[2] && p.z < b[5]
+          : p.x >= q.area[0] && p.x < q.area[2] && p.z >= q.area[1] && p.z < q.area[3]);
       if (here) { at = i; break; }
     }
     if (at < 0) return;

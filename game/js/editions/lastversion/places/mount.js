@@ -14,6 +14,7 @@ import { Sky } from './Sky.js';
 import { Horizon } from './Horizon.js';
 import { makeKit, makeGlint } from './kits.js';
 import { namedMaterial, setLit } from './materials.js';
+import { underWater } from './Place.js';
 
 // how far above the ground a kind of interactable floats (Place.stageBeat, fragments)
 const KIND_Y = { terminal: 1.15, plaque: 1.6, fragment: 1.1, scene: 1.3 };
@@ -95,15 +96,22 @@ export function mountPlace(rt) {
       scenery.update(dt, cam);
       // a hazard still in this year (the arm rusted solid in 2196) does not move
       for (const h of dw.hazards) if (h.hz.stillIn && h.hz.stillIn === state) h.stasisT = 0.25;
-      // deep water: the current takes Kai back to the last anchor
+      // deep water: the current takes Kai back to the last anchor. An anchor under the same water (M5's village gate
+      // and low bank while FLOODED) would take him straight back in, a setback every frame: then the place goes back,
+      // in the fade, to a year that leaves the anchor dry (the mission's own first, as a snap back does)
       if (!g.catching && drowns.length) {
-        const p = g.player.pos;
-        for (const d of drowns) {
-          const b = d.box;
-          if (p.x < b[0] || p.x > b[3] || p.z < b[2] || p.z > b[5] || p.y > b[4]) continue;
-          if (d.cond && !d.cond(ctx())) continue;
+        const p = g.player.pos, c = ctx();
+        if (underWater(drowns, [p.x, p.y, p.z], c)) {
+          const cp = g.checkpoint;
+          const dry = cp && underWater(drowns, cp, c) ? [rt.home(), ...g.engine.statesOf(rid)].find((s) => !underWater(drowns, cp, { ...c, state: s })) : null;
           g.deckSetback('fall');
-          break;
+          if (dry) {
+            setTimeout(() => {
+              if (rt.level !== level || g.engine.state(rid) === dry) return;
+              g.engine.setState(rid, dry, { force: true });
+              dw.refresh();
+            }, 340); // (main.js puts him back at 350 ms)
+          }
         }
       }
     },

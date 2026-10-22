@@ -368,7 +368,7 @@ export function assemble(P, { story, deck, si, beat, years, name, extraRooms = [
   const spec = P.spec;
   const [bx0, bz0, bx1, bz1] = spec.bounds;
   const rid = P.rid;
-  const quarters = quartersOf(spec, deck).map((q, i) => ({ name: q.name, area: q.area, spawn: P.quarterSpawns?.[i] || q.spawn, threshold: q.threshold || null }));
+  const quarters = quartersOf(spec, deck).map((q, i) => ({ name: q.name, area: q.area, ...(q.cp ? { cp: q.cp } : {}), spawn: P.quarterSpawns?.[i] || q.spawn, threshold: q.threshold || null }));
   const qi = spec.sectors?.[deck.mkey]?.[si] ?? Math.min(si, Math.max(0, quarters.length - 1));
   const q = quarters[qi];
   const spawn = P.spawn || (q ? [q.spawn[0], q.spawn[1] + 0.86, q.spawn[2], q.spawn[3] || 0] : [0, 0.86, 0, 0]);
@@ -418,6 +418,18 @@ function cut(B, H) {
   if (H[1] > y0) out.push([x0, y0, z0, x1, H[1], z1]);
   if (H[4] < y1) out.push([x0, H[4], z0, x1, y1, z1]);
   return out;
+}
+
+// deep water (level.drowns, each with its condition compiled as `cond`): is a point (Kai's centre, or a
+// checkpoint's spawn, which is a centre too) under water that runs in this context ({ fact, state })?
+export function underWater(drowns, pt, c) {
+  for (const d of drowns) {
+    const b = d.box;
+    if (pt[0] < b[0] || pt[0] > b[3] || pt[2] < b[2] || pt[2] > b[5] || pt[1] > b[4]) continue;
+    if (d.cond && !d.cond(c)) continue;
+    return true;
+  }
+  return false;
 }
 
 // a place's quarters as a mission sees them (Helix: each wing's missions have their own)

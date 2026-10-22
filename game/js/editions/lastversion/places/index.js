@@ -63,11 +63,15 @@ export function buildPlace(key, story, si, rt, opts = {}) {
   // (a quarter's spawn is a landmark: Kai faces the way the landmark faces)
   const quarters = quartersOf(spec, deck);
   P.quarterSpawns = quarters.map((q) => (q.spawn ? q.spawn : ((l) => [l[0], l[1], l[2], l[3] + Math.PI])(P.at(q.spawnAt))));
+  // (main.js keeps the last checkpoint Kai stands in. A quarter that is floors of a house names its own box, `cp`:
+  // its area alone would be every floor at once (M6). After the quarters, a pad round each quarter's spawn, so that
+  // standing at a quarter's spawn its spawn is the checkpoint, whichever quarter's area covers it)
+  const anchor = (s) => [s[0], s[1] + 0.86, s[2], s[3] || 0];
   quarters.forEach((q, i) => {
-    const s = P.quarterSpawns[i];
     const [x0, z0, x1, z1] = q.area;
-    P.checkpoints.push({ box: [x0, -12, z0, x1, 30, z1], spawn: [s[0], s[1] + 0.86, s[2], s[3] || 0], room: rid });
+    P.checkpoints.push({ box: q.cp ? [...q.cp] : [x0, -12, z0, x1, 30, z1], spawn: anchor(P.quarterSpawns[i]), room: rid });
   });
+  for (const s of P.quarterSpawns) P.checkpoints.push({ box: [s[0] - 2.5, s[1] - 0.5, s[2] - 2.5, s[0] + 2.5, s[1] + 2.5, s[2] + 2.5], spawn: anchor(s), room: rid });
   // this sector's beat, at its landmark (a one-map mission's only beat is its own: nothing staged)
   const beat = Array.isArray(deck.quarters) && deck.quarters.length ? null : deck.beats?.[si];
   if (beat) stageBeat(P, story, deck, si, beat, rid);

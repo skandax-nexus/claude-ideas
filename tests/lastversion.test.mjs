@@ -1164,6 +1164,68 @@ test('the places can be walked: their stairs, terraces, ramps and bridges carry 
   assert.ok(walkRoute(m5, 'PRESENT', [sx, 0, sz], [[n[0], n[2]]]).at?.[1] === undefined || walkRoute(m5, 'PRESENT', [sx, 0, sz], [[n[0], n[2]]]).at[1] < -1, 'ABANDONED: into the river');
 });
 
+// main.js keeps the last checkpoint Kai stands in (stepDeck); Threads.quarters names the quarter he is in
+test('every quarter is somewhere to come back to: at its spawn, its spawn is the checkpoint; M6\'s floors are quarters of their own', async () => {
+  const { Threads } = await import('../game/js/editions/lastversion/Threads.js');
+  const inB = (b, p) => p[0] >= b[0] && p[0] < b[3] && p[1] >= b[1] && p[1] < b[4] && p[2] >= b[2] && p[2] < b[5];
+  const checkpoint = (level, p) => { let r = null; for (const c of level.checkpoints) if (c.room === level.outdoorRoom && inB(c.box, p)) r = c; return r?.spawn.slice(0, 3); };
+  const quarter = (level, p) => {
+    const t = Object.assign(new Threads({ g: { campaign: { quarter: 99 }, player: { pos: { x: p[0], y: p[1], z: p[2] } }, room: level.outdoorRoom } }), { level, deck: { name: 'M' } });
+    t.quarters();
+    return t.here;
+  };
+  for (const { deck, level } of PLACED) {
+    for (const q of level.quarters) {
+      const a = [q.spawn[0], q.spawn[1] + 0.86, q.spawn[2]];
+      assert.deepEqual(checkpoint(level, a), a, `${deck.mkey}: standing at ${q.name}'s spawn`);
+    }
+  }
+  // Mission 6: the shop floor, the galleries and the clock room stand one over another. The brass arm's setback on the
+  // shop floor goes back to the cellar stair, not up to the clock room; reaching the shop floor is not reaching the roof
+  const m6 = PLACED.find((l) => l.deck.mkey === 'm06').level;
+  const at = (n) => [m6.landmarks[n][0], m6.landmarks[n][1] + 0.86, m6.landmarks[n][2]];
+  const sp = m6.quarters.map((q) => [q.spawn[0], q.spawn[1] + 0.86, q.spawn[2]]);
+  for (const [n, qi] of [['shopFloor', 0], ['shopWindows', 0], ['floorboards', 1], ['galleries', 1], ['ezraBench', 1], ['clockRoom', 2], ['roofTerrace', 2]]) {
+    const p = n === 'shopWindows' ? [12, 0.86, -17] : at(n);
+    assert.deepEqual(checkpoint(m6, p), sp[qi], `M6 ${n}: the checkpoint of quarter ${qi}`);
+    assert.equal(quarter(m6, p), qi, `M6 ${n}: in quarter ${qi}`);
+  }
+  assert.equal(quarter(m6, [0, 0.86, 30]), 0, 'M6: the canal street is the first quarter');
+});
+
+// deep water takes Kai back to the last checkpoint (places/mount.js); one under the same water would take him back in
+test('deep water never returns Kai into deep water: every checkpoint has a year of its mission that leaves it dry, the mission\'s own first in M5', async () => {
+  const { underWater } = await import('../game/js/editions/lastversion/places/Place.js');
+  let wet = 0;
+  for (const { deck, level } of PLACED) {
+    const drowns = (level.drowns || []).map((d) => ({ ...d, cond: d.when ? compileCondition(d.when) : null }));
+    if (!drowns.length) continue;
+    const facts = [...new Set(drowns.flatMap((d) => (d.when || '').match(/\b[a-z_][a-z0-9_]*\b/g) || []))];
+    for (const all of [false, true]) {
+      const fact = (k) => (facts.includes(k) ? all : undefined);
+      for (const c of level.checkpoints.filter((k) => k.room === level.outdoorRoom)) {
+        const wetIn = deck.states.filter((s) => underWater(drowns, c.spawn, { fact, state: s }));
+        wet += wetIn.length;
+        assert.ok(wetIn.length < deck.states.length, `${deck.mkey}: the checkpoint ${JSON.stringify(c.spawn)} is under water in every year`);
+      }
+    }
+  }
+  assert.ok(wet > 0, 'some checkpoints are under water in some year (M5 FLOODED)');
+  // Mission 5: FLOODED covers the village gate (before the wall is braced) and the low bank (before the gate is released);
+  // the drown setback takes the place back to ABANDONED there, the mission's own year
+  const m5 = PLACED.find((l) => l.deck.mkey === 'm05').level;
+  const drowns = m5.drowns.map((d) => ({ ...d, cond: d.when ? compileCondition(d.when) : null }));
+  const gate = m5.quarters[1].spawn, bank = m5.quarters[2].spawn;
+  for (const s of [gate, bank]) {
+    const a = [s[0], s[1] + 0.86, s[2]];
+    assert.ok(underWater(drowns, a, { fact: () => false, state: 'FUTURE' }), 'FLOODED: under water');
+    assert.ok(!underWater(drowns, a, { fact: () => false, state: 'PRESENT' }), 'ABANDONED: dry');
+  }
+  assert.ok(!underWater(drowns, [gate[0], gate[1] + 0.86, gate[2]], { fact: (k) => k === 'wall_braced', state: 'FUTURE' }), 'the braced wall holds the flood off the gate');
+  const src = fs.readFileSync('game/js/editions/lastversion/places/mount.js', 'utf8');
+  assert.ok(/underWater\(drowns, cp, c\)/.test(src) && /rt\.home\(\)/.test(src), 'mount.js checks the checkpoint and goes back to a dry year');
+});
+
 // what main.js takes from a place's year: the light (edition.themeFor) and where the sun shines from (edition.sunDir)
 test('every year of a place lights main.js: a full theme and a sun direction, the same objects every frame', async () => {
   const { themeFor, sunDir } = await import('../game/js/editions/lastversion/places/index.js');
