@@ -5,7 +5,7 @@
 // from the place, hazed toward the year's horizon. A ground skirt runs from the place's edges out to
 // the band, in the year's ground colour under the scene's fog. Two draw calls; fog off on the band.
 import * as THREE from '../../../../vendor/three.module.min.js';
-import { horizonFor } from './atlas.js';
+import { horizonFor, NOTCH_FLOOR } from './atlas.js';
 import { SKIES } from './years.js';
 
 const R = 380, LO = -4, HI = 18; // the band's radius and its elevation range (degrees)
@@ -66,8 +66,8 @@ function paint(key, era, y, backdrop = {}) {
         g.beginPath();
         g.moveTo(x0, base0);
         g.lineTo(xm - (x1 - x0) * 0.16, top);
-        g.lineTo(xm - (x1 - x0) * 0.05, py(f.h * 0.72));
-        g.lineTo(xm + (x1 - x0) * 0.05, py(f.h * 0.72));
+        g.lineTo(xm - (x1 - x0) * 0.05, py(f.h * NOTCH_FLOOR));
+        g.lineTo(xm + (x1 - x0) * 0.05, py(f.h * NOTCH_FLOOR));
         g.lineTo(xm + (x1 - x0) * 0.14, py(f.h * 0.96));
         g.lineTo(x1, base0);
         g.fill();

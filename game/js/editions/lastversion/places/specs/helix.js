@@ -137,7 +137,7 @@ export default {
     m03: {
       primary: 'controlRoom',
       years: {
-        PRESENT: { sky: 'washedDawn', era: '2049', hour: 6.1, sun: { elev: 4, az: 'notch' }, fog: 0xc8c0bc, density: 1.0, night: 0.1, weather: null, ibl: 'dusk', lit: 0.3,
+        PRESENT: { sky: 'washedDawn', era: '2049', hour: 6.1, sun: { elev: 9.6, az: 'notch' }, fog: 0xc8c0bc, density: 1.0, night: 0.1, weather: null, ibl: 'dusk', lit: 0.3,
           hemi: { sky: 0xb8c8e0, ground: 0x6a7480, k: 0.8 }, sunColor: 0xffcf9a, sunK: 0.9, grade: { shadowTint: 0x2a3a5a, highlightTint: 0xffe0c8, toning: 0.14, contrast: 1.1, saturation: 0.96 } },
         PAST: { sky: 'hazyNoon', era: '2026', hour: 12.4, sun: { elev: 70, az: 180 }, fog: 0xdfe6ea, density: 1.6, night: 0, weather: 'motes', ibl: 'plant', lit: 0,
           hemi: { sky: 0xf0f4f6, ground: 0xb0aaa0, k: 0.95 }, sunColor: 0xffffff, sunK: 1.25, grade: { shadowTint: 0x3a3428, highlightTint: 0xfff4e0, toning: 0.12, contrast: 1.12, saturation: 0.86 } },

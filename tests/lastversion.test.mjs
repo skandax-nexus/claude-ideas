@@ -923,6 +923,22 @@ test('every year a mission is authored with has a sky, a light and an hour', () 
   for (const [k, p] of Object.entries(SKIES)) for (const f of ['zenith', 'horizon', 'ground', 'sun']) assert.ok(Number.isFinite(p[f]), `${k}.${f}`);
 });
 
+// Horizon.js paints the Notch opaque over the sky: a sunrise "in the Notch" below its V's floor is behind the mountain
+test('a sun that rises in the Notch shows in its gap: above the painted V\'s floor, no higher than its peaks', async () => {
+  const { notchFloor, NOTCH_FLOOR } = await import('../game/js/editions/lastversion/places/atlas.js');
+  let n = 0;
+  for (const [key, spec] of Object.entries(PLACES)) {
+    const years = [spec.years || {}, ...Object.values(spec.variants || {}).map((v) => v.years || {})].flatMap((ys) => Object.entries(ys));
+    for (const [st, y] of years) {
+      if (y.sun?.az !== 'notch' || !(SKIES[y.sky]?.sunSize > 0)) continue;
+      const floor = notchFloor(key, spec.backdrop), peak = floor / NOTCH_FLOOR;
+      assert.ok(floor > 1 && y.sun.elev >= floor + 1 && y.sun.elev <= peak + 1, `${key} ${st}: the sun at ${y.sun.elev}°, the Notch's floor at ${floor.toFixed(1)}°, its peaks at ${peak.toFixed(1)}°`);
+      n++;
+    }
+  }
+  assert.ok(n >= 4, `${n} sunrises in the Notch (M3 2049, M7 THE FIRST SKY, M23 2026 and 2196)`);
+});
+
 test('no two missions look alike: the signature is unique unless the place is the same in another year', () => {
   const sig = {};
   for (const key of Object.keys(SHEETS)) {

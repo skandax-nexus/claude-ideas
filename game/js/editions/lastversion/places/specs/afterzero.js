@@ -26,9 +26,9 @@ export default {
   years: {
     PRESENT: { sky: 'routePreDawn', era: '2049', hour: 5.6, sun: { elev: 1, az: 'notch' }, fog: 0x2a3048, density: 1.0, night: 0.6, weather: 'rain', ibl: 'night', lit: 0.7,
       hemi: { sky: 0x6a7aa8, ground: 0x181a24, k: 0.8 }, sunColor: 0xffc890, sunK: 0.6, grade: { shadowTint: 0x101a3a, highlightTint: 0xffe0c0, toning: 0.24, contrast: 1.14, saturation: 1.0 } },
-    PAST: { sky: 'routeDusk', era: '2026', hour: 19.4, sun: { elev: 4, az: 'notch' }, fog: 0x4a3a48, density: 1.0, night: 0.4, weather: 'rain', ibl: 'dusk', lit: 0.6,
+    PAST: { sky: 'routeDusk', era: '2026', hour: 19.4, sun: { elev: 9.2, az: 'notch' }, fog: 0x4a3a48, density: 1.0, night: 0.4, weather: 'rain', ibl: 'dusk', lit: 0.6,
       hemi: { sky: 0xb8907a, ground: 0x2a2224, k: 0.85 }, sunColor: 0xffb070, sunK: 0.8, grade: { shadowTint: 0x2a1430, highlightTint: 0xffd8b0, toning: 0.24, contrast: 1.12, saturation: 1.04 } },
-    FUTURE: { sky: 'firstSunrise', era: '2196', hour: 6.3, sun: { elev: 3, az: 'notch' }, fog: 0x5a5068, density: 0.9, night: 0.3, weather: 'motes', ibl: 'dusk', lit: 0.3,
+    FUTURE: { sky: 'firstSunrise', era: '2196', hour: 6.3, sun: { elev: 9.2, az: 'notch' }, fog: 0x5a5068, density: 0.9, night: 0.3, weather: 'motes', ibl: 'dusk', lit: 0.3,
       hemi: { sky: 0xd8a888, ground: 0x2a2830, k: 0.9 }, sunColor: 0xffc080, sunK: 1.0, grade: { shadowTint: 0x2a1a3a, highlightTint: 0xffe0b8, toning: 0.24, contrast: 1.1, saturation: 1.06 } },
   },
   skyFeatures: { all: [

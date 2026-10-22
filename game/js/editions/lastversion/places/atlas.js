@@ -133,3 +133,11 @@ export function horizonFor(key, era, opts = {}) {
 export function notchBearing(key) {
   return bearing(ATLAS[key] || [0, 0], FEATURES.notch.at);
 }
+
+// the floor of the Notch's V, as a share of its peak (Horizon.js paints it so), and its elevation in degrees from a
+// place: a sun that rises in the Notch shows in the gap only above it (below, the painted mountain hides its disc)
+export const NOTCH_FLOOR = 0.72;
+export function notchFloor(key, backdrop = {}) {
+  const n = horizonFor(key, '2049', backdrop).find((f) => f.kind === 'notch');
+  return n ? n.h * NOTCH_FLOOR : 0;
+}
