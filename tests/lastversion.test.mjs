@@ -2119,6 +2119,7 @@ test('the cinematic lines: chapter and mission cards, the choices Kai says, the 
   const m4 = main.find((m) => m.n === 4);
   assert.equal(missionCardLines(m4)[0].text, 'Mission four. The Man from the Last Day.');
   assert.equal(missionCardLines(main.find((m) => m.n === 23))[0].text, 'Mission twenty-three. Afterzero.');
+  assert.equal(missionCardLines(main.find((m) => m.n === 13))[0].text, 'Mission thirteen. The Nine-Minute War.', 'the mission\'s card names it as the chapter\'s does (U5 review)');
   assert.deepEqual(choiceLine({ intent: 'comfort', label: 'Run the line. Get them home.' }), { who: 'KAI', text: 'Run the line. Get them home.' });
   assert.equal(choiceLine({ label: 'x', mute: true }), null);
   for (const k of ['A', 'B', 'C']) {

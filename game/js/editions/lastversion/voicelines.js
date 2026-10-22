@@ -42,7 +42,8 @@ export function numberWords(n) {
   return String(n);
 }
 const SMALL = new Set(['a', 'an', 'and', 'as', 'at', 'but', 'by', 'for', 'from', 'in', 'into', 'of', 'on', 'or', 'the', 'to', 'with']);
-export const titleCase = (s) => String(s).toLowerCase().split(' ').map((w, i) => (i && SMALL.has(w) ? w : w.replace(/^(\W*)(\w)/, (m, a, b) => a + b.toUpperCase()))).join(' ');
+// (a hyphenated word keeps each part capitalised, as the chapter's own name has it: The Nine-Minute War)
+export const titleCase = (s) => String(s).toLowerCase().split(' ').map((w, i) => (i && SMALL.has(w) ? w : w.replace(/^(\W*)(\w)/, (m, a, b) => a + b.toUpperCase()).replace(/-(\w)/g, (m, b) => '-' + b.toUpperCase()))).join(' ');
 
 // a chapter's card, spoken by the narrator: its name, then the bible's question
 export function chapterCardLines(chapter) {
