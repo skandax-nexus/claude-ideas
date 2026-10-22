@@ -233,7 +233,8 @@ const onward = async () => {
   const from = await az(() => JSON.stringify([AZ.campaign.chapter, AZ.campaign.deck, AZ.campaign.sector]));
   await az(() => LVB.exit());
   await az(() => { AZ.simulate(0.3); LVB.skip(); });
-  await page.waitForFunction((f) => !AZ.transitioning && JSON.stringify([AZ.campaign.chapter, AZ.campaign.deck, AZ.campaign.sector]) !== f, from, { timeout: 20000 }).catch(() => {});
+  const moved = await page.waitForFunction((f) => !AZ.transitioning && JSON.stringify([AZ.campaign.chapter, AZ.campaign.deck, AZ.campaign.sector]) !== f, from, { timeout: 20000 }).then(() => true, () => false);
+  if (!moved) check(false, `the campaign moved on from ${from} (it did not within 20 s)`); // (said here, not as a later mission's failure)
   await az(() => { AZ.simulate(0.3); LVB.skip(); });
   await opening();
 };

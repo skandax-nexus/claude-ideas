@@ -79,6 +79,11 @@ export function mountPlace(rt) {
     h.g.add(makeKit(h.hz.lvKit, h.hz.radius));
   }
   const drowns = (level.drowns || []).map((d) => ({ ...d, cond: d.when ? compileCondition(d.when) : null }));
+  const nearWater = (pt) => {
+    for (const { box: b } of drowns) if (pt[0] >= b[0] && pt[0] <= b[3] && pt[2] >= b[2] && pt[2] <= b[5] && pt[1] <= b[4]) return true;
+    return false;
+  };
+  const so = { time: 0, flash: 0, ctx: null }, at = [0, 0, 0];
   let state = null;
   const api = {
     scenery, sky, horizon,
@@ -102,7 +107,11 @@ export function mountPlace(rt) {
     },
     update(dt) {
       const cam = g.camera;
-      sky.update(dt, cam, { time: g.time || 0, flash: g.weather?.flash || 0, ctx: ctx() });
+      // (no allocation in a frame: one options object, and the year's context only when a sky feature asks for it)
+      so.time = g.time || 0;
+      so.flash = g.weather?.flash || 0;
+      so.ctx = sky.features.length ? ctx() : null;
+      sky.update(dt, cam, so);
       horizon.update(cam);
       scenery.update(dt, cam);
       // a hazard still in this year (the arm rusted solid in 2196) does not move
@@ -111,8 +120,12 @@ export function mountPlace(rt) {
       // and low bank while FLOODED) would take him straight back in, a setback every frame: then the place goes back,
       // in the fade, to a year that leaves the anchor dry (the mission's own first, as a snap back does)
       if (!g.catching && drowns.length) {
-        const p = g.player.pos, c = ctx();
-        if (underWater(drowns, [p.x, p.y, p.z], c)) {
+        const p = g.player.pos;
+        at[0] = p.x;
+        at[1] = p.y;
+        at[2] = p.z;
+        const c = nearWater(at) ? so.ctx || ctx() : null; // (the conditions only once he is in a drown box)
+        if (c && underWater(drowns, at, c)) {
           const cp = g.checkpoint;
           const dry = cp && underWater(drowns, cp, c) ? [rt.home(), ...g.engine.statesOf(rid)].find((s) => !underWater(drowns, cp, { ...c, state: s })) : null;
           g.deckSetback('fall');

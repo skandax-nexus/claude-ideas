@@ -189,6 +189,12 @@ void main() {
 }`;
 
 const _c = new THREE.Color(), _c2 = new THREE.Color(), _v = new THREE.Vector3();
+// a cloud layer's (cover, speed, scale) eased toward its goal, in place
+const easeW = (w, t, k) => {
+  w.x += (t[0] - w.x) * k;
+  w.y += (t[1] - w.y) * k;
+  w.z += (t[2] - w.z) * k;
+};
 const COLORS = ['uZenith', 'uHorizon', 'uGround', 'uGlow', 'uSun', 'uC1', 'uC1s', 'uC2', 'uC2s', 'uFlashCol'];
 const DIRS = ['uSunDir', 'uMoonDir', 'uStarDir'];
 const SCALARS = ['uGlowK', 'uSunSize', 'uSunGlow', 'uStars', 'uMoon', 'uStar', 'uMilky'];
@@ -398,12 +404,8 @@ export class Sky {
     for (const key of COLORS) u[key].value.lerp(c.setHex(g[key]), k);
     for (const key of DIRS) u[key].value.lerp(v.set(g[key][0], g[key][1], g[key][2]), k).normalize();
     for (const key of SCALARS) u[key].value += (g[key] - u[key].value) * k;
-    for (const [key, w8] of [['uCl1', g.cl1], ['uCl2', g.cl2]]) {
-      const w = u[key].value;
-      w.x += (w8[0] - w.x) * k;
-      w.y += (w8[1] - w.y) * k;
-      w.z += (w8[2] - w.z) * k;
-    }
+    easeW(u.uCl1.value, g.cl1, k);
+    easeW(u.uCl2.value, g.cl2, k);
   }
 
   // the light along a route: the two stops either side of z, blended
@@ -438,13 +440,13 @@ export class Sky {
         this.u.uRingDir.value.set(f.at[0] - cam.x, H, f.at[1] - cam.z).normalize();
       } else if (f.kind === 'storm') {
         this.u.uStorm.value.set(f.k, f.bands ?? 1, f.eye ?? 1, time);
-        this.u.uStormDir.value.set(...dirOf(f.az ?? 0, 0)).normalize();
+        this.u.uStormDir.value.set(...(f.dir ||= dirOf(f.az ?? 0, 0))).normalize(); // (a feature's bearing is fixed: worked out once)
         if (f.band) this.u.uBandCol.value.setHex(f.band);
       } else if (f.kind === 'wedges') {
         this.u.uWedge.value.set(f.k, f.n || 5, (f.turn || 0) + time * (f.spin || 0), f.mix ?? 0.6);
       } else if (f.kind === 'eclipse') {
         this.u.uEclipse.value.set(f.k, (f.size || 3) * deg, f.corona ?? 1.2, 0);
-        this.u.uEclipseDir.value.set(...dirOf(f.az ?? 180, f.elev ?? 40));
+        this.u.uEclipseDir.value.set(...(f.dir ||= dirOf(f.az ?? 180, f.elev ?? 40)));
       } else if (f.kind === 'reverse') {
         const [x0, z0, x1, z1] = f.box;
         if (on && cam.x > x0 && cam.x < x1 && cam.z > z0 && cam.z < z1) drift = -1;

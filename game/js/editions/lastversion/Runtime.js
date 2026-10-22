@@ -654,8 +654,15 @@ export class LastVersion {
     if (beat?.kind === 'tasks') {
       const rid = level.outdoorRoom || level.order[0];
       const spots = [[-3.6, -18], [3.6, -34], [-3.6, -68]];
-      // (in a place, a task stands at its landmark: `at: 'landmarkName'`)
-      const where = (at, i) => (typeof at === 'string' && level.landmarks?.[at] ? level.landmarks[at] : at ? [at[0], 0, at[1]] : [spots[i % spots.length][0], 0, spots[i % spots.length][1]]);
+      // (in a place, a task stands at its landmark: `at: 'landmarkName'`; a name the place does not have is an error, as
+      // in Place.at(), never a task at NaN that nobody can reach)
+      const where = (at, i) => {
+        if (typeof at === 'string') {
+          if (!level.landmarks?.[at]) throw new Error(`${deck.mkey}: no landmark ${at} for a task`);
+          return level.landmarks[at];
+        }
+        return at ? [at[0], 0, at[1]] : [spots[i % spots.length][0], 0, spots[i % spots.length][1]];
+      };
       beat.tasks.forEach((t, i) => {
         const [x, y, z] = where(t.at, i);
         level.elements.push({ box: [x - 0.5, y, z - 0.4, x + 0.5, y + 1.0, z + 0.4], mat: 'prop', solid: true, room: rid, ...(level.place ? { invisible: true } : {}) });

@@ -3,7 +3,7 @@
 // per fact condition. Every vertex carries its tint (a vertex colour), a world-projected UV (pieces of
 // every size share one texture scale) and the years it stands in (aEra): the vertex shader drops the
 // other years and small props beyond 90 m, so a year switch is one uniform and a place costs one draw
-// call per surface. Vegetation is instanced: one draw call per kind, the instances of other years
+// call per surface (per surface and 100 m cell for one that casts shadows: those are frustum-culled). Vegetation is instanced: one draw call per kind, the instances of other years
 // scaled to nothing. setEra(state) switches the year; refresh() re-reads the fact conditions.
 import * as THREE from '../../../../vendor/three.module.min.js';
 import { compileCondition } from '../../../core/conditions.js';
@@ -11,6 +11,7 @@ import { MATS, surfaceOf, surfaceMaterial, setEraBit, eraDepthMaterial } from '.
 
 const _m = new THREE.Matrix4(), _e = new THREE.Euler(), _q = new THREE.Quaternion(), _p = new THREE.Vector3(), _s = new THREE.Vector3(), _c = new THREE.Color(), _t = new THREE.Color();
 const PROP_RANGE = 90;
+const CELL = 100; // (m) the cells a shadow-casting surface is merged in
 
 // --- the geometry of one piece, in world coordinates ------------------------------------------------------------
 function prism(w, d, h, tw, td) {
@@ -221,14 +222,26 @@ export class Scenery {
     this.veg = [];
     this.state = null;
     const groups = new Map();
+    // a surface that casts shadows is merged per cell of about 100 m, not over the whole place, and each cell is
+    // frustum-culled: the shadow pass (a 36 m box round Kai) draws the one or two cells it reaches instead of the
+    // whole place in every year (§4.7 counts the whole frame), and the camera only the cells in front of it; a
+    // place has 18-46 scenery meshes so (a surface that casts nothing spans the place, as before)
+    const [bx0, bz0, bx1, bz1] = level.bounds || [0, 0, 1, 1];
+    const nx = Math.max(1, Math.round((bx1 - bx0) / CELL)), nz = Math.max(1, Math.round((bz1 - bz0) / CELL));
+    const cellOf = (v) => {
+      const cx = v.b ? (v.b[0] + v.b[3]) / 2 : v.x, cz = v.b ? (v.b[2] + v.b[5]) / 2 : v.z;
+      const ix = Math.min(nx - 1, Math.max(0, Math.floor(((cx - bx0) / (bx1 - bx0)) * nx)));
+      return `${ix},${Math.min(nz - 1, Math.max(0, Math.floor(((cz - bz0) / (bz1 - bz0)) * nz)))}`;
+    };
     for (const v of level.vis) {
       const s = surfaceOf(v.m);
-      const key = `${s}|${v.when || ''}`;
-      if (!groups.has(key)) groups.set(key, { s, when: v.when || null, geos: [], mask: 0 });
+      const mat = surfaceMaterial(s);
+      const tiled = !!mat.userData.cast && nx * nz > 1;
+      const key = `${s}|${v.when || ''}${tiled ? `|${cellOf(v)}` : ''}`;
+      if (!groups.has(key)) groups.set(key, { s, when: v.when || null, geos: [], mask: 0, tiled });
       const grp = groups.get(key);
       let g = pieceGeometry(v);
       if (!g) continue;
-      const mat = surfaceMaterial(s);
       _c.setHex(MATS[v.m]?.c ?? 0x888888);
       if (v.t !== undefined) _c.multiply(_t.setHex(v.t));
       g = finish(g, v, mat, _c);
@@ -245,7 +258,8 @@ export class Scenery {
       if (mat.transparent) mesh.renderOrder = 2;
       mesh.matrixAutoUpdate = false;
       mesh.updateMatrix();
-      mesh.frustumCulled = false; // (its vertices are culled per year in the shader; the place is round you)
+      // (its vertices are culled per year in the shader; a surface over the whole place is round you, a cell is not)
+      mesh.frustumCulled = grp.tiled;
       this.root.add(mesh);
       this.meshes.push({ mesh, mask: grp.mask, cond: grp.when ? compileCondition(grp.when) : null });
     }
@@ -303,6 +317,7 @@ export class Scenery {
   dispose() {
     this.root.parent?.remove(this.root);
     this.root.traverse((o) => o.geometry?.dispose());
+    for (const v of this.veg) v.inst.dispose(); // (an InstancedMesh's own instance buffers: three frees them only here)
   }
 }
 
