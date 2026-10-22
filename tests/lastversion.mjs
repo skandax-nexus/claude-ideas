@@ -357,11 +357,15 @@ const station = await az(() => {
   r.use = LVB.use('jun');
   return r;
 });
-// (Jun's lines play out, but the duck is checked at the minute itself: the Zero Second may come while he talks)
-await az(() => { for (let t = 0; AZ.hud.talking && !AZ.facts.get('zero_second') && t < 60; t += 0.1) AZ.simulate(0.1); });
-for (let i = 0; i < 40 && !(await az(() => AZ.facts.get('zero_second'))); i++) await az(() => { AZ.simulate(0.1); });
-await page.waitForTimeout(300); // (the duck is in the sound's own time)
-const duck = await az(() => ({ voice: +AZ.audio.voiceBus.gain.value.toFixed(3), music: +AZ.audio.music.gain.value.toFixed(4), amb: +AZ.audio.amb.gain.value.toFixed(4), heard: AZ.edition.score.heard.includes('zero') }));
+// (Jun's lines play out, but the duck is checked at the minute itself: the Zero Second may come while he talks. The duck
+// is one second of the sound's own time, so it is sampled 0.3 s after the cue inside the page: sampled after two round
+// trips to the page, a busy machine took the bot past the second (the music already coming back, 0.11-0.19))
+const duck = await az(async () => {
+  for (let t = 0; AZ.hud.talking && !AZ.facts.get('zero_second') && t < 60; t += 0.1) AZ.simulate(0.1);
+  for (let i = 0; i < 40 && !AZ.facts.get('zero_second'); i++) AZ.simulate(0.1);
+  await new Promise((r) => setTimeout(r, 300));
+  return { voice: +AZ.audio.voiceBus.gain.value.toFixed(3), music: +AZ.audio.music.gain.value.toFixed(4), amb: +AZ.audio.amb.gain.value.toFixed(4), heard: AZ.edition.score.heard.includes('zero') };
+});
 check(station.quarter === 2 && (await az(() => AZ.facts.get('jun_board'))), 'Jun Park: the board says the 41 arrives yesterday (LINE 41, the third quarter)', JSON.stringify(station));
 check(duck.heard && duck.voice === 1 && duck.music < 0.05, 'the Zero Second\'s cue: the music ducks for a second while the voices stay at full level', JSON.stringify(duck));
 const zero = await az(() => { LVB.talkOut(); AZ.simulate(4); LVB.talkOut(); return { ...LVB.f('zero_second', 'after_zero'), said: LVB.said.includes('NONE: All the clocks stop.'), train: AZ.deckWorld.dynamic.some((d) => d.el.mat === 'car' && d.mesh.visible) }; });
@@ -1103,10 +1107,12 @@ const turning = await az(() => {
   g.edition.shift('PAST'); g.simulate(0.1);
   const a0 = gw.grp.rotation.y;
   let waited = 0;
-  // (the Chronolith is held steady while the bot waits: the year is what is tested here, not stability)
-  while (gw.entries && waited < 25) { g.edition.stability = 1; g.simulate(0.1); waited += 0.1; } // (past this dwell, if it is in one)
+  // (the Chronolith is held steady while the bot waits: the year is what is tested here, not stability.) A whole turn
+  // first (20 s): the angles it passes through; then past any dwell it is in, and on until it bridges again
   const swept = new Set();
-  while (!gw.entries && waited < 50) { g.edition.stability = 1; g.simulate(0.1); waited += 0.1; swept.add(Math.round(gw.grp.rotation.y * 4)); }
+  for (let t = 0; t < 20; t += 0.1) { g.edition.stability = 1; g.simulate(0.1); swept.add(Math.round(gw.grp.rotation.y * 4)); }
+  while (gw.entries && waited < 25) { g.edition.stability = 1; g.simulate(0.1); waited += 0.1; }
+  while (!gw.entries && waited < 50) { g.edition.stability = 1; g.simulate(0.1); waited += 0.1; }
   const bridged = !!gw.entries;
   LVB.place(-47, -4, 2.9);
   const left = LVB.walkTo(-38, -4, 6);

@@ -67,6 +67,35 @@ measured with a player.
   p95). Both are within §4.7 (≤ 70 static draw calls, a sky of 1, a horizon of ≤ 4, ≤ 300k
   triangles). The JavaScript times are SwiftShader's, at a tenth of the pixel ratio, for
   comparison between places rather than a phone's frame time.
+- **The places after the U2 review** (2026-10-22; `git log 1ad80e4^..`): quarter checkpoints keep to their quarter
+  (a quarter's `cp` box, a pad at every spawn; a quarter that is one of Helix's rooms gets no outdoor checkpoint), and
+  deep water never sends Kai back under water (Mission 5's FLOODED: the setback also takes the place back to a dry
+  year). The sun that rises in the Notch stands in its gap (Missions 3, 7 and 23); Missions 4, 6 and 7 have their own
+  light (no shared golden sun or twilight; a unit test compares every year of Missions 1–8 with every other place's).
+  Mission 4's pictograms stand on stones and its lintel is a doorway of THE VILLAGE only; Helix's wing storeys stand on
+  the rooms, and a raised room stands on the wing's own storeys. Helix Court is Mission 2's hub (the lobby, the dark
+  gallery and the staff lounge open onto it), the plant terrace is on the first-floor roof (4.5 m) and Mission 3's
+  control room on the north wing's top floor (9 m); the conduit hall stays a ground-floor glass hall (its unit is a
+  DeckWorld Sentinel, which the shared engine keeps on the ground). Mission 7's turntables turn: at the first sky each
+  gangway stops across its gap 6 s in every 20 (`places/turntables.js`), in 2049 they are seized, by 2196 fallen, and
+  the astronomers' roofs come down to the first. Mission 6's scissor stair stops at the third floor; the clock room is
+  up the servants' stair, which stands in 2026 only (the deduced hidden stair is the way up). Mission 1's Rook's call
+  spans the street wall to wall; Mission 8's second quarter spawns at the foot of the office stair, and a plaque on its
+  river garden says the river was drained and led back (Rook's "drained riverbed" is a clue there). Mission 3's 2196
+  line says what the year shows (re-recorded). The first switch into a year paints and fetches nothing on its frame
+  (every year's horizon painted and every probe asked for at the load). **What a place costs now**, the whole frame
+  counted (§4.7; `tests/lastversion-perf.mjs` checks it too): a place's people are culled again (world/Actors.js draws
+  them unculled; they were 145k of Mission 1's 161k shadow triangles), so Mission 1 is 235–239 draw calls and 229k
+  triangles for the whole frame (was 286 and 345–352k; 175k in the scene pass, 27 static draws), Mission 4 191 and
+  197k (THE VILLAGE) and 71 and 37k (BEFORE THE FIRE), Mission 8 165–169 and 141k. Merging the scenery per 100 m cell
+  was measured (22 more draw calls for 9k fewer triangles) and not kept. Not done: walk-in shop interiors in Mission 1
+  (the shopfronts are facades) and colliders for the "8:13" tram (a flicker of the past Kai may be standing in).
+  Checked: `npm test` 128/128; the whole browser bot (`node tests/lastversion.mjs`, 2026-10-22) 313 passed, 0 failed,
+  with no page error (Mission 7's gangway ridden at the first sky with real movement, 2 m up to 4 m, and seized in
+  2049; the survey's 1,657 pairs of views in different places, the closest 32 bits apart). Two earlier runs each
+  failed one check that is now sampled right: the Zero Second's duck was read after two round trips to the page (on a
+  busy machine past its one second; a page-side probe showed the music at 0.0001 from 0.1 to 0.9 s and back at 0.11
+  by 1.1 s), and the gangway's sweep was counted from wherever its turn happened to be. No shared file changed.
 - **Open places for Acts II–IV, the Finale and the cases** (v2.1, U3; DESIGN.md "Places under an
   open sky"): Missions 9–23 stand in fourteen more authored places and Helix's north wing:
   Northbank (the loop's river terraces, funicular and transmitter), the dam (cells cut into its face
