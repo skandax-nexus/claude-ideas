@@ -169,6 +169,29 @@ measured with a player.
   `android/build-apk.sh`; `tools/rocketbox-textures.py` gained TRANSPLANT, used only for `Male_Child_02`, which
   Station Zero does not carry). Still open: the settlement's wardrobe (below), and the cast-load check of
   `tests/lastversion-perf.mjs`, which counts only tasks over 50 ms and ran on a desktop CPU.
+- **The voice and score after the U5 review** (2026-10-22; `git log ff12d75..`): a staged moment holds Kai and only a
+  deliberate input skips its lines (a tap on the view, a click, Space or E; Enter or SKIP the whole moment): movement
+  keys, the touch stick and the dock never skip, the stick no longer walks Kai out of the shot (the poll reads no
+  movement while a moment plays), and the actions that act in the world (use, the year, echo-step, the anchor, THINK,
+  REVERSE) wait; the bot holds the stick, presses W and the year key in one and checks nothing moved or was skipped.
+  The Zero Second is staged as the bible's central cinematic (the stopped clock's face, then the wreck of the 41 from
+  the platform's east end), and so are the voice in every speaker, the woman at the far end (from the track bed) and
+  Mission 3's fracture. The line walk builds each mission that adjusts its place after a choice with its facts
+  granted, so a consequence's lines are recorded (U8 had already moved Jun's Finale payoff into Mission 23's scenes;
+  the records, calls and statements the review heard narrated are in their speakers' voices since U6-U8, and a test
+  keeps them so). A host that compresses the packs no longer silences the edition (the loader's buffer grows); a line
+  passed over while its pack loads is still a miss if the packs lack it; the pa and echo reverb sends follow the
+  Dialogue row; the music cues follow the Music row; percussion and the fire's crackle are on their own buses; the
+  noise is made once per audio context (no buffer per bed, line or flute note); the station chime sounds before the
+  announcement; the fracture's swell is heard before its silence; Mission 13's card reads 'The Nine-Minute War'. An
+  opening cut short hides its card and a dropped outro leaves no gate shut (a player's load reloads the page first, so
+  only an in-page load, the bots', reached either). Shared: `game/js/audio/Voice.js` (two edition-only paths; Station
+  Zero: `node tests/smoke.mjs` passed, `node tests/qa.mjs` 26/26). No line changed, so no pack was re-recorded
+  (`voice-lv.sh check`: all up to date). Checked: `npm test` 135/135; the whole browser bot (`node
+  tests/lastversion.mjs`, 2026-10-22) 317 passed, 0 failed, with no page error: NEW GAME to Ending C, every line
+  said (1,596) from the packs (those said while a pack loaded judged once it came), `speechSynthesis` never asked,
+  and the survey's 1,657 pairs of views in different places (the closest 25 bits apart). Still open: the human ear
+  check (below).
 - **The NPC system** of the supplement: trust, knowledge, quest state, temporal state, faction
   standing and evidence flags in the save; dialogue choices by intent (challenge / comfort /
   investigate / withdraw); barks; echoes standing in for people absent from a state; the case
@@ -496,7 +519,12 @@ measured with a player.
   patrol responses or open safe routes elsewhere (Jun's line in the Finale is the one safe route).
 - **A human ear check** of the U5 voices (the audition page above), and of the score's regions and cues,
   has not been done: nothing in this container can play sound to a listener. The machine check above
-  stands in for it.
+  stands in for it. Both U5 reviews ask for it before the preview or the APK is published again: at least the 9
+  clips the machine flagged (one heard 'seventeen' as 'seventy', which the Version 17 and 17/117 reveals rest on),
+  the clips the review found peaking at full scale once decoded (23 of U5's 1,026; each is levelled to -1 dB before
+  Opus, and the playback chain has headroom, so one the voice model clipped would need re-rendering, not a limiter),
+  the Zero Second,
+  the card and ending cues, and one region of each kind.
 - **The score** is procedural (Synth's oscillators and noise, 0 bytes of assets): the bible's cues are
   there by name and shape, not as composed music; the crowd walla is the crowds' own barks far off.
 - **Cold opens** of every mission are authored (shots, lines, hooks); three of Act IV's stage their own people
