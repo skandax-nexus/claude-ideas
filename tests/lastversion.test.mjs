@@ -34,6 +34,7 @@ import { Player } from '../game/js/entities/Player.js';
 import { LV_MODELS, SHARED_MODELS, MANIFEST, CHAPTER_CAST, COMMON, sexOf, isChild, castOf } from '../game/js/editions/lastversion/casting.js';
 import { WARDROBE, hasVariant, packRules } from '../game/js/editions/lastversion/wardrobe.js';
 import { ERAS, EXCEPTIONS, ANCIENT_WOMEN, AMBIENT_CAST, eraModels, MAX_PEOPLE, MET, CAP } from '../game/js/editions/lastversion/crowds.js';
+import { M01 } from '../game/js/editions/lastversion/prologue.js';
 import { WATCHERS, HUMAN, watcherModels, kindsOf } from '../game/js/editions/lastversion/watchers.js';
 import { spokenLines, voiceOf, lexicon, GROUPS, chapterCardLines, missionCardLines, endingLines, POSTCREDIT, choiceLine, numberWords } from '../game/js/editions/lastversion/voicelines.js';
 import { voicePieces } from '../game/js/audio/voiceKey.js';
@@ -1572,6 +1573,10 @@ test('pronouns match the body: every NPC, every hand-placed passer-by, every per
       assert.equal(SEX[(n.pronoun || c.pronoun)?.their], sexOf(c.model), `${deck.mkey}/${s}: ${n.id} on ${c.model}`);
     }
   }
+  // (U4 review) and what is said of them: Mission 1's toy child is a boy on screen, so the narrator says "his hand"
+  const toy = M01.scenes.toy.lines.map((l) => l.text).join(' ');
+  const [own, other] = AMBIENT_CAST.amb_child.pronoun === 'm' ? ['his', 'her'] : ['her', 'his'];
+  assert.ok(new RegExp(`\\b${own}\\b`).test(toy) && !new RegExp(`\\b${other}\\b`).test(toy), `the toy scene says ${own}: ${toy}`);
 });
 
 test('the checkpoint officer is Officer Pryce on rb_security_f; the renames and the new people', () => {
