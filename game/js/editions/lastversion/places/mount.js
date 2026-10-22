@@ -152,11 +152,13 @@ export function mountPlace(rt) {
   });
   const turn = (t) => {
     let changed = false;
+    // (the room's year as the engine has it: a switch counts at once, before the place's look has caught up with it)
+    const now = level.years[g.engine.state(rid)] ? g.engine.state(rid) : state;
     for (const gw of gangways) {
-      const a = armAngle(gw.tt, state, t);
+      const a = armAngle(gw.tt, now, t);
       gw.grp.visible = a !== null;
       if (a !== null) gw.grp.rotation.y = a;
-      const want = a !== null && bridging(gw.tt, state, t);
+      const want = a !== null && bridging(gw.tt, now, t);
       if (want && !gw.entries) {
         gw.entries = armSteps(gw.tt).map((b) => colliderEntry({ min: b.slice(0, 3), max: b.slice(3) }));
         dw.temps.push(...gw.entries);
@@ -207,7 +209,6 @@ export function mountPlace(rt) {
       sky.update(dt, cam, so);
       horizon.update(cam);
       scenery.update(dt, cam);
-      if (gangways.length) turn(g.time || 0);
       // (a person whose model arrives or is dressed after the load is culled from the next half second)
       if ((peopleT += dt) > 0.5) {
         peopleT = 0;
@@ -237,6 +238,11 @@ export function mountPlace(rt) {
           }
         }
       }
+    },
+    // every simulation step (Runtime.step): the gangways turn and their steps come and go with the game's time, so
+    // they carry Kai the same whether or not a frame is drawn
+    step() {
+      if (gangways.length) turn(g.time || 0);
     },
     stats() {
       return scenery.stats();

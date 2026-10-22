@@ -1376,6 +1376,7 @@ export class LastVersion {
     const g = this.g;
     if (!g.campaign?.lv || !this.level) return;
     this.cinema.step(dt);
+    this.mounted?.step?.(dt); // (what moves in a place and carries Kai, Mission 7's gangways: every step, drawn or not)
     const facts = g.facts;
     const flags = g.deckWorld.flags;
     const p = g.player.pos;
