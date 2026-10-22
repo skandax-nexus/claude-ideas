@@ -21,11 +21,9 @@ const RAIN_DARK = 0.85; // Rain City's crowds: wet clothes read about 15% darker
 
 // shorthands for the variant table
 const ROSE = 0.965; // Mira's colour, #c4566a
-// rb_child_m2's jersey number, painted into the jersey's own orange (the variant's hue rule then dyes it with the rest)
-const NO38 = [{ band: [0.395, 0.555, 0.6, 0.725], sset: 0, lset: 0.4, skin: false }, { band: [0.395, 0.555, 0.6, 0.725], to: 0.047, sset: 0.82, lset: 0.4, skin: false }];
-// (two steps: grey first, then the jersey's orange, so the white digits and the orange cloth come out the same: a set
-// saturation is scaled by the texel's own)
-
+// rb_child_m2's jersey: the middle of the map and the short sleeves on its sides (a jersey's hue is the boy's skin's
+// too: a rule over the whole map dyed his shins)
+const JERSEY = (rule) => [[0.32, 0, 0.68, 1], [0, 0.43, 0.32, 0.62], [0.68, 0.43, 1, 0.62]].map((band) => ({ band, ...rule }));
 // ---------------------------------------------------------------------------------------------------
 // The variants, per model. `default` is the model as converted. Colours follow OVERHAUL.md §6.2/§6.3.
 // part names are the converted materials: body, head, hair, hat, helmet, equipment, keffiyeh, stetoskop
@@ -88,12 +86,15 @@ export const WARDROBE = {
       hair: [{ to: 0.12, sset: 0.45, lrange: [0.45, 0.78] }],
       head: [{ band: [0, 0, 1, 0.3], lmax: 0.3, to: 0.12, sset: 0.4, lrange: [0.4, 0.6] }],
     },
-    // M1: the woman in the rain: a yellow hooded raincoat over a yellow tunic, darkened by the rain
+    // M1: the woman in the rain: a yellow rain jacket and boots, darkened by the rain: the tunic and its sleeves to the
+    // wrist dyed one yellow (the forearms are the band across the map at v 0.29-0.47; the shoes, rain boots now, the
+    // map's upper sides), dark trousers, and the jacket's hood up
     raincoat: {
-      props: ['raincoat', 'raincoatHood'],
+      hide: ['hair'], props: ['raincoatHood'], // (her bun under the hood)
       body: [{ band: [0.33, 0, 0.67, 0.8], lmin: 0.45, to: 0.14, sset: 0.85, lrange: [0.34, 0.56] },
+        { band: [0, 0, 0.33, 0.29], lmin: 0.45, to: 0.14, sset: 0.85, lrange: [0.34, 0.56] }, { band: [0.67, 0, 1, 0.29], lmin: 0.45, to: 0.14, sset: 0.85, lrange: [0.34, 0.56] },
+        { band: [0, 0.29, 1, 0.47], to: 0.14, sset: 0.85, lrange: [0.3, 0.54], skin: false },
         { band: [0, 0.6, 0.3, 1], lmin: 0.4, to: 0.6, sset: 0.3, lrange: [0.16, 0.34] }, { band: [0.7, 0.6, 1, 1], lmin: 0.4, to: 0.6, sset: 0.3, lrange: [0.16, 0.34] }],
-      hair: [{ to: 0.12, sset: 0.4, lrange: [0.36, 0.62] }],
       head: [{ band: [0, 0, 1, 0.3], lmax: 0.3, to: 0.12, sset: 0.4, lrange: [0.36, 0.56] }],
     },
     // M11, Ward 32: a pale hospital-blue gown
@@ -211,15 +212,17 @@ export const WARDROBE = {
     detention: { hide: ['helmet'], body: [{ to: 0.58, sset: 0.05, lrange: [0.34, 0.56] }] },
   },
   rb_medic_f: { default: {}, dust: { body: [{ sat: 0.6, light: 1.08 }] } },
-  // (every variant first paints the jersey's #38 out into the jersey: a number shared by the toy boy, Tomas and 2196's
-  // children would read as a clue the story does not have)
+  // (the jersey's #38 is painted out of the map itself, tools/rocketbox-textures.py TRANSPLANT: a number shared by the toy
+  // boy, Tomas and 2196's children would read as a clue the story does not have)
   rb_child_m2: {
-    default: { body: [...NO38] }, blue: { body: [...NO38, { hue: [0.07, 0.07], smin: 0.3, to: 0.58 }] }, green: { body: [...NO38, { hue: [0.07, 0.07], smin: 0.3, to: 0.33, sat: 0.8 }] },
-    // M1's toy child: a red hooded raincoat (yellow is Mira's) over a red top
-    redcoat: { body: [...NO38, { hue: [0.07, 0.07], smin: 0.3, to: 0.99, sset: 0.75, light: 0.9 }], props: ['raincoatChild', 'raincoatChildHood'] },
+    default: {}, blue: { body: JERSEY({ hue: [0.07, 0.07], smin: 0.3, to: 0.58 }) }, green: { body: JERSEY({ hue: [0.07, 0.07], smin: 0.3, to: 0.33, sat: 0.8 }) },
+    // M1's toy child: a red rain jacket (yellow is Mira's): the jersey dyed red, its sleeves to the wrist (the arms are
+    // the map's sides at v 0.43-0.8), the hood up
+    redcoat: { body: [JERSEY({ hue: [0.07, 0.07], smin: 0.3, to: 0.99, sset: 0.75, light: 0.9 })[0],
+      { band: [0, 0.43, 0.32, 0.8], to: 0.99, sset: 0.75, lrange: [0.22, 0.42], skin: false }, { band: [0.68, 0.43, 1, 0.8], to: 0.99, sset: 0.75, lrange: [0.22, 0.42], skin: false }], props: ['raincoatChildHood'] },
     // 2196 children: patched, faded
-    patched: { body: [...NO38, { hue: [0.07, 0.07], smin: 0.3, to: 0.12, sat: 0.4, light: 1.05 }, { band: [0.4, 0.45, 0.6, 0.6], lmin: 0.5, light: 0.6 }] },
-    patched2: { body: [...NO38, { hue: [0.07, 0.07], smin: 0.3, to: 0.42, sat: 0.35 }] },
+    patched: { body: [...JERSEY({ hue: [0.07, 0.07], smin: 0.3, to: 0.12, sat: 0.4, light: 1.05 }), { band: [0.4, 0.45, 0.6, 0.6], lmin: 0.5, light: 0.6 }] },
+    patched2: { body: JERSEY({ hue: [0.07, 0.07], smin: 0.3, to: 0.42, sat: 0.35 }) },
   },
   rb_child_f2: {
     // the settlement's girls in linen (the head cloth plain)
@@ -290,18 +293,14 @@ function propKit() {
     visor: keepMat(new THREE.MeshBasicMaterial({ color: 0x8fd8ff })), badge: M({ color: 0xc8ccd2, metalness: 0.6, roughness: 0.3 }), board: M({ color: 0x5a4a3a }), paper: M({ color: 0xe8e4d8 }),
     // rain gear (wet: low roughness), the troopers' slate kit
     rainYellow: M({ color: 0xc99a12, roughness: 0.32, side: THREE.DoubleSide }), rainRed: M({ color: 0x9c1c22, roughness: 0.32, side: THREE.DoubleSide }),
-    slate: M({ color: 0x3c4652, roughness: 0.55 }), plate: M({ color: 0x4a5664, roughness: 0.7, side: THREE.DoubleSide }),
+    slate: M({ color: 0x3c4652, roughness: 0.55, side: THREE.DoubleSide }), plate: M({ color: 0x4a5664, roughness: 0.7 }),
+    lens: M({ color: 0x141a22, metalness: 0.4, roughness: 0.12, side: THREE.DoubleSide }),
   };
-  // a hooded raincoat's cape, from the collar over the shoulders and arms to mid-thigh (a lathe about the chest bone,
-  // open, both sides drawn), and its hood over the top and back of the head; k scales it to a child
-  const cape = (mat, kr = 1, ky = kr) => {
-    const c = mesh(new THREE.LatheGeometry([[0.075, 0.17], [0.12, 0.15], [0.18, 0.11], [0.22, 0.04], [0.24, -0.08], [0.26, -0.3], [0.28, -0.55]].map(([r, y]) => new THREE.Vector2(r * kr, y * ky)), 20), mat);
-    c.scale.set(1, 1, 0.78); // (shallower front to back than across the shoulders)
-    return c;
-  };
-  const hood = (mat, k = 1) => {
-    const h = mesh(new THREE.SphereGeometry(0.15 * k, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2), mat, 0, 0.055 * k, -0.03 * k, -0.55, 0, 0);
-    h.scale.set(1.04, 1, 1.15);
+  // a raincoat's hood, up: a shell round the top, sides and back of the head down to the jaw, open at the face (a sphere
+  // less a wedge about +Z), about the middle of the wearer's head ([x, y, z] in the head bone's frame) with its radii
+  const hood = (mat, [x, y, z], [rx, ry, rz]) => {
+    const h = mesh(new THREE.SphereGeometry(1, 18, 10, Math.PI / 2 + 0.78, Math.PI * 2 - 1.56, 0, 2.15), mat, x, y, z);
+    h.scale.set(rx, ry, rz);
     return h;
   };
   const mesh = (geo, mat, x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0) => {
@@ -330,15 +329,25 @@ function propKit() {
     beret: { at: 'head', make: () => { const b = mesh(new THREE.SphereGeometry(0.115, 12, 6), mats.beret, 0.018, 0.17, 0.0); b.scale.set(1.05, 0.34, 1.05); b.rotation.z = -0.18; return group(b); } },
     visor: { at: 'head', make: () => group(mesh(new THREE.BoxGeometry(0.17, 0.035, 0.02), mats.visor, 0, 0.085, 0.115)) },
     badge: { at: 'chest', make: () => group(mesh(new THREE.TorusGeometry(0.03, 0.008, 6, 16), mats.badge, -0.08, 0.02, 0.13)) },
-    // Mira's yellow raincoat (M1), and the toy boy's red one, child-sized
-    raincoat: { at: 'chest', make: () => group(cape(mats.rainYellow)) },
-    raincoatHood: { at: 'head', make: () => group(hood(mats.rainYellow)) },
-    raincoatChild: { at: 'chest', make: () => group(cape(mats.rainRed, 0.9, 0.74)) },
-    raincoatChildHood: { at: 'head', make: () => group(hood(mats.rainRed, 0.8)) },
-    // a Continuum trooper's helmet and plate carrier (Sera's disguise, M10)
-    helmet: { at: 'head', make: () => { const h = mesh(new THREE.SphereGeometry(0.128, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), mats.slate, 0, 0.08, -0.005, -0.12, 0, 0); h.scale.set(1, 0.9, 1.1); return group(h); } },
-    // (a plate carrier: a sleeve round the chest, under the arms)
-    vest: { at: 'chest', make: () => { const v = mesh(new THREE.LatheGeometry([[0.12, 0.1], [0.165, 0.06], [0.172, -0.1], [0.168, -0.25]].map(([r, y]) => new THREE.Vector2(r, y)), 18), mats.plate); v.scale.set(1, 1, 0.82); return group(v); } },
+    // the hoods of Mira's yellow raincoat (M1) and the toy boy's red one, child-sized (the coats are recolours)
+    raincoatHood: { at: 'head', make: () => group(hood(mats.rainYellow, [0, 0.1, -0.03], [0.118, 0.128, 0.166])) }, // (rb_mira)
+    raincoatChildHood: { at: 'head', make: () => group(hood(mats.rainRed, [0, 0.095, 0.015], [0.116, 0.124, 0.142])) }, // (rb_child_m2)
+    // a Continuum trooper's helmet, its dark visor raised, and a plate carrier (Sera's disguise, M10). In the frames of the
+    // head bone (the head reaches +0.2 m, the forehead +0.1 m forward) and the chest bone (the chest +0.13 m forward, the
+    // back -0.14 m, from +0.06 m to -0.25 m)
+    helmet: { at: 'head', make: () => {
+      const h = mesh(new THREE.SphereGeometry(0.12, 18, 9, 0, Math.PI * 2, 0, Math.PI / 2), mats.slate, 0, 0.09, -0.02, -0.15, 0, 0);
+      h.scale.set(1, 1, 1.12);
+      const v = mesh(new THREE.SphereGeometry(0.126, 14, 4, Math.PI / 2 - 0.85, 1.7, 0.62, 0.5), mats.lens, 0, 0.09, -0.02, -0.15, 0, 0);
+      v.scale.set(1, 1, 1.12);
+      return group(h, v);
+    } },
+    vest: { at: 'chest', make: () => {
+      const plate = (z) => mesh(new THREE.BoxGeometry(0.25, 0.27, 0.03), mats.plate, 0, -0.09, z);
+      const side = (x) => mesh(new THREE.BoxGeometry(0.03, 0.13, 0.25), mats.plate, x, -0.16, -0.005);
+      const strap = (x) => mesh(new THREE.TorusGeometry(0.13, 0.014, 4, 12, Math.PI), mats.plate, x, 0.05, -0.005, 0, Math.PI / 2, 0);
+      return group(plate(0.138), plate(-0.15), side(0.165), side(-0.165), strap(0.085), strap(-0.085));
+    } },
   };
   return PROPS;
 }

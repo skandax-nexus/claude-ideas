@@ -9,7 +9,7 @@
 
 ## Microsoft Rocketbox avatars
 
-Each file is one avatar from `Assets/Avatars/` of the library, converted from its FBX and TGA textures: metres, welded vertices, colour textures 1024 px JPEG, normal and roughness maps 512 px, hair and lashes 1024 px PNG with alpha, accessories at half size. THE LAST VERSION OF EARTH's people (`node tools/rocketbox-to-glb.mjs --edition lastversion`) are converted the same way, its named characters at those sizes and its crowds at half (colour 512 px, normal and roughness 256 px); no one carries a gun (the pistols are left out), and the soldiers' sleeve flags are painted out as blank patches.
+Each file is one avatar from `Assets/Avatars/` of the library, converted from its FBX and TGA textures: metres, welded vertices, colour textures 1024 px JPEG, normal and roughness maps 512 px, hair and lashes 1024 px PNG with alpha, accessories at half size. THE LAST VERSION OF EARTH's people (`node tools/rocketbox-to-glb.mjs --edition lastversion`) are converted the same way, its named characters at those sizes and its crowds at half (colour 512 px, normal and roughness 256 px); no one carries a gun (the pistols are left out), the soldiers' sleeve flags are painted out as blank patches, and the number 38 on `Male_Child_02`'s jersey is covered with plain cloth from the same map (`tools/rocketbox-textures.py` TRANSPLANT).
 
 | File | Rocketbox avatar | Used for |
 | --- | --- | --- |
@@ -51,7 +51,7 @@ Each file is one avatar from `Assets/Avatars/` of the library, converted from it
 | `rb_courier.glb` | `Professions/Delivery_Male_01` | THE LAST VERSION: couriers (2026/2049); the trapped man |
 | `rb_contractor.glb` | `Professions/Construction_Male_07` | THE LAST VERSION: contractors, 2026 builders, Helix technicians |
 | `rb_medic_f.glb` | `Professions/Medical_Female_03` | THE LAST VERSION: paramedics and responders |
-| `rb_child_m2.glb` | `Children/Male_Child_02` | THE LAST VERSION: children (2049 and 2196); the toy child; Tomas |
+| `rb_child_m2.glb` | `Children/Male_Child_02` | THE LAST VERSION: children (2049 and 2196); the toy child; Tomas (the jersey's number painted out) |
 | `rb_child_f2.glb` | `Children/Female_Child_02` | THE LAST VERSION: the settlement's children |
 | `rb_trooper.glb` | `Professions/Military_Male_04` | THE LAST VERSION: Continuum troops and patrols (the sleeve flag is painted out) |
 | `rb_robe_m.glb` | `Adults/Male_Adult_19` | THE LAST VERSION: the settlement's men (recoloured homespun, a plain head cloth) |

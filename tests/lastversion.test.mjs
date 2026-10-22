@@ -1840,7 +1840,7 @@ test('every wardrobe variant is a valid recolour: at most 8 rules, numbers in ra
           assert.ok(r.band[0] < r.band[2] && r.band[1] < r.band[3] && r.win[0] < r.win[1], `${model}/${name}.${k}: band and window`);
         }
       }
-      for (const p of v.props || []) assert.ok(['umbrella', 'lantern', 'staff', 'trowel', 'clipboard', 'loupe', 'lanyard', 'beret', 'visor', 'badge', 'raincoat', 'raincoatHood', 'raincoatChild', 'raincoatChildHood', 'helmet', 'vest'].includes(p), `${model}/${name}: prop ${p}`);
+      for (const p of v.props || []) assert.ok(['umbrella', 'lantern', 'staff', 'trowel', 'clipboard', 'loupe', 'lanyard', 'beret', 'visor', 'badge', 'raincoatHood', 'raincoatChildHood', 'helmet', 'vest'].includes(p), `${model}/${name}: prop ${p}`);
     }
   }
 });
