@@ -17,30 +17,33 @@ import { RAIN_DARK } from './wardrobe.js';
 
 export const MAX_PEOPLE = 24; // §4.7: NPCs (named + crowd) per place
 
-// role -> [[model, [variants]], ...] per era (the wardrobe table, §6.3)
-const commuters = [['rb_civ_f1', ['default', 'plum', 'teal']], ['rb_civ_m1', ['default', 'navy', 'olive']], ['rb_civ_f2', ['default', 'rose', 'sand']], ['rb_courier', ['default', 'green', 'blue']], ['rb_civ_m2', ['default', 'brown']]];
-const civilians = [['rb_civ_f2', ['default', 'sand']], ['rb_civ_m1', ['default', 'olive']], ['rb_civ_f1', ['default', 'teal']], ['rb_civ_m2', ['default', 'brown']], ['rb_courier', ['default', 'blue']]];
+// role -> [[model, [variants]], ...] per era (the wardrobe table, §6.3). (U4 review) Every working role draws on more
+// than one face, and castLevel caps any one face at CAP a year in a place: a crowd is never copies of one or two.
+const commuters = [['rb_civ_f1', ['default', 'plum', 'teal']], ['rb_civ_m1', ['default', 'navy', 'olive']], ['rb_civ_f2', ['default', 'rose', 'sand']], ['rb_courier', ['default', 'green', 'blue']], ['rb_civ_m2', ['default', 'brown']], ['rb_civ_m3', ['default', 'blue']], ['rb_civ_f4', ['default', 'plum']]];
+const civilians = [['rb_civ_f2', ['default', 'sand']], ['rb_civ_m1', ['default', 'olive']], ['rb_civ_f1', ['default', 'teal']], ['rb_civ_m2', ['default', 'brown']], ['rb_courier', ['default', 'blue']], ['rb_civ_m3', ['default', 'blue']], ['rb_civ_f4', ['default', 'plum']]];
+const dusty = [['rb_civ_f2', ['dust']], ['rb_civ_m1', ['dust']], ['rb_civ_m2', ['dust']], ['rb_civ_f1', ['dust']], ['rb_courier', ['dust']], ['rb_civ_m3', ['dust']], ['rb_civ_f4', ['dust']]];
 export const ERAS = {
   present: {
-    commuter: commuters, civilian: civilians, shopper: commuters, visitor: commuters, fan: commuters, neighbour: civilians, evacuee: civilians, driver: [['rb_civ_m1', ['default', 'navy']], ['rb_courier', ['default', 'green']]],
-    courier: [['rb_courier', ['default', 'green', 'blue']]],
-    shopkeeper: [['rb_civ_m2', ['default', 'brown']]],
-    contractor: [['rb_contractor', ['default', 'yellow']], ['rb_courier', ['default']]],
-    builder: [['rb_contractor', ['default', 'yellow']]],
-    quarryman: [['rb_contractor', ['default', 'yellow']], ['rb_courier', ['default', 'green']]],
-    docker: [['rb_contractor', ['default', 'yellow']], ['rb_courier', ['default', 'green', 'blue']]],
-    ems: [['rb_medic_f', ['default', 'dust']]],
-    responder: [['rb_medic_f', ['default']], ['rb_contractor', ['utility']]],
-    staff: [['rb_captain_m', ['transit', 'default']]],
-    researcher: [['rb_doctor_m', ['default', 'tan']]],
+    commuter: commuters, civilian: civilians, shopper: commuters, visitor: commuters, fan: commuters, neighbour: civilians, evacuee: dusty, driver: [['rb_civ_m1', ['default', 'navy']], ['rb_courier', ['default', 'green']], ['rb_civ_m3', ['default']]],
+    courier: [['rb_courier', ['default', 'green', 'blue']], ['rb_civ_m1', ['navy', 'olive']], ['rb_civ_f4', ['default']]],
+    shopkeeper: [['rb_civ_m2', ['default', 'brown']], ['rb_civ_m3', ['default']], ['rb_civ_f4', ['default']]],
+    contractor: [['rb_contractor', ['default', 'yellow']], ['rb_courier', ['default']], ['rb_civ_m2', ['overall']]],
+    builder: [['rb_contractor', ['default', 'yellow']], ['rb_civ_m2', ['overall']], ['rb_civ_m1', ['dust']], ['rb_civ_m3', ['dust']]],
+    quarryman: [['rb_contractor', ['default', 'yellow']], ['rb_courier', ['default', 'green']], ['rb_civ_m2', ['overall']]],
+    docker: [['rb_contractor', ['default', 'yellow']], ['rb_courier', ['default', 'green', 'blue']], ['rb_civ_m2', ['overall']], ['rb_civ_m3', ['dust']]],
+    ems: [['rb_medic_f', ['default', 'dust']], ['rb_contractor', ['utility']]],
+    responder: [['rb_medic_f', ['default']], ['rb_contractor', ['utility']], ['rb_civ_m3', ['dust']]],
+    // transit staff in navy (no airline captain's cap and stripes)
+    staff: [['rb_civ_m3', ['transit']], ['rb_civ_f4', ['transit']], ['rb_civ_f1', ['helix desk']]],
+    researcher: [['rb_doctor_m', ['default', 'tan']], ['rb_civ_f4', ['lab']], ['rb_civ_m3', ['lab']], ['rb_civ_f2', ['coverall slate']]],
     staffEcho: [['rb_doctor_m', ['ward']], ['rb_medic_f', ['default']]],
     recording: [['rb_doctor_m', ['default']], ['rb_contractor', ['helix slate']]],
-    technician: [['rb_contractor', ['helix slate']], ['rb_civ_f2', ['coverall slate']]],
-    surveyor: [['rb_contractor', ['helix slate']], ['rb_civ_f2', ['coverall slate']]],
+    technician: [['rb_contractor', ['helix slate']], ['rb_civ_f2', ['coverall slate']], ['rb_civ_m2', ['overall']], ['rb_civ_f4', ['lab']]],
+    surveyor: [['rb_contractor', ['helix slate']], ['rb_civ_f2', ['coverall slate']], ['rb_civ_m3', ['lab']]],
     cleaner: [['rb_civ_m2', ['overall']]],
     child: [['rb_child_m2', ['default', 'blue', 'green']]],
-    prisoner: [['rb_civ_m1', ['detention']], ['rb_civ_f1', ['detention']], ['rb_civ_m2', ['detention']], ['rb_civ_f2', ['detention']], ['rb_courier', ['detention']]],
-    trapped: [['rb_civ_f2', ['dust']], ['rb_civ_m1', ['dust']], ['rb_civ_m2', ['dust']], ['rb_civ_f1', ['dust']], ['rb_courier', ['dust']]],
+    prisoner: [['rb_civ_m1', ['detention']], ['rb_civ_f1', ['detention']], ['rb_civ_m2', ['detention']], ['rb_civ_f2', ['detention']], ['rb_courier', ['detention']], ['rb_civ_m3', ['detention']], ['rb_civ_f4', ['detention']], ['rb_contractor', ['detention']]],
+    trapped: dusty,
     officer: [['rb_trooper', ['continuum', 'elite']]],
     patrol: [['rb_trooper', ['continuum', 'elite']]],
     echo: civilians,
@@ -76,6 +79,12 @@ const FALLBACK = { present: 'civilian', ancient: 'villager', future: 'survivor' 
 // only where that woman is not in the mission): the only overlap between named and crowd faces
 export const EXCEPTIONS = ['rb_civ_f1', 'rb_civ_f2', 'rb_child_m2', 'rb_tala', 'rb_elder'];
 export const ANCIENT_WOMEN = ['rb_tala', 'rb_elder'];
+// (U4 review) one face at most CAP times a year in a place's crowds; holograms (echoes) aside, and the helmeted troopers
+// (a uniform is the point of them)
+export const CAP = 2;
+const UNCAPPED = ['rb_trooper'];
+// the people Kai has met by the Place Outside Time (M19), its echoes (§6.3): their own faces, as holograms, and their names
+export const MET = ['guard', 'iven', 'odile', 'clockmaker', 'elder'];
 
 // every model a table can put in a crowd, per era (tests: eras are disjoint but for rb_child_m2)
 export function eraModels(era) {
@@ -105,7 +114,7 @@ export const AMBIENT_CAST = {
   m8_tech: { model: 'rb_contractor', variant: 'helix slate', height: 1.79, pronoun: 'm' },
   // Act II (U7): an evacuee in Loop City, Sera disguised as a Continuum guard, the people who listened, a freed prisoner
   m9_evac: { model: 'rb_civ_f2', variant: 'dust', height: 1.66, pronoun: 'f' },
-  m10_guard: { model: 'rb_juno', variant: 'guard', height: 1.7, pronoun: 'f' },
+  m10_guard: { model: 'rb_sera', variant: 'guard', height: 1.7, pronoun: 'f' },
   m13_listener: { model: 'rb_civ_m1', variant: 'dust', height: 1.78, pronoun: 'm' },
   m13_freed: { model: 'rb_civ_m2', variant: 'detention', height: 1.76, pronoun: 'm' },
   // Act III (U8): Sera's schoolchildren (M14), an Unwritten fighter and a lock-city volunteer at the pylons (M18)
@@ -170,11 +179,17 @@ function along(path, f) {
 
 // pick the people of one crowd: a weighted cycle through the role's models (a table row may carry a
 // weight: [model, variants, weight]), each model's variants in turn, never two neighbours alike
-function pickPeople(c, n, named, r, turn) {
+function pickPeople(c, n, named, r, turn, fits = () => true, last = null) {
+  // the Place Outside Time's echoes are the people Kai has met (MET), each once, in their own face and wardrobe
+  if (c.role === 'met') {
+    const met = MET.filter((id) => NPCS[id] && !named.has(NPCS[id].model));
+    const at = Math.floor(r() * met.length);
+    return [...met.slice(at), ...met.slice(0, at)].slice(0, n).map((id) => [NPCS[id].model, NPCS[id].variant, id]);
+  }
   const table = ERAS[c.era]?.[c.role] || ERAS[c.era]?.[FALLBACK[c.era]] || ERAS.present.civilian;
   const cycle = [];
   for (const [m, vs, w = 1] of table) {
-    const models = (m === 'WOMAN' ? ANCIENT_WOMEN : [m]).filter((model) => !named.has(model) || (model === 'rb_child_m2' && c.era !== 'ancient'));
+    const models = (m === 'WOMAN' ? c.women || ANCIENT_WOMEN : [m]).filter((model) => !named.has(model) || (model === 'rb_child_m2' && c.era !== 'ancient'));
     for (const model of models) for (let k = 0; k < w; k++) cycle.push([model, vs]);
   }
   if (!cycle.length) return [];
@@ -183,11 +198,13 @@ function pickPeople(c, n, named, r, turn) {
   let guard = 0;
   while (out.length < n && guard++ < n * 8) {
     const [m, vs] = cycle[i % cycle.length];
-    const v = vs[(turn[m] = (turn[m] ?? Math.floor(r() * vs.length)) + 1) % vs.length];
     i++;
-    const prev = out[out.length - 1];
+    if (!fits(m)) continue; // (this face is already in the place as often as it may be)
+    const v = vs[(turn[m] = (turn[m] ?? Math.floor(r() * vs.length)) + 1) % vs.length];
+    const prev = out[out.length - 1] || last; // (the last of the crowd before is a neighbour too)
     if (prev && prev[0] === m && prev[1] === v && cycle.length > 1) continue;
     out.push([m, v]);
+    fits(m, true);
   }
   return out;
 }
@@ -201,7 +218,7 @@ function pickPeople(c, n, named, r, turn) {
 // carries the ground's height ([x, z, y]), with one either side of each step, and Runtime.step sets a walker's height
 // from the two it walks between.
 export const STEP_UP = 0.4, BODY_R = 0.3, MIN_RUN = 4;
-const SAMPLE = 0.25, CELL = 2, HEAD = 1.7;
+const SAMPLE = 0.2, CELL = 2, HEAD = 1.7;
 const cellKey = (i, j) => (i + 4096) * 8192 + (j + 4096);
 export function groundOf(level, deck) {
   const states = (level.states || deck.states || ['PRESENT']).filter((st) => !level.years || level.years[st]);
@@ -351,6 +368,11 @@ export function castLevel(level, deck, { facts = null } = {}) {
   }
   // the crowds
   const named = missionNamed(deck, level, cast);
+  // (a face a hand-placed person wears here, the trapped woman or Sera in her disguise, is not also in the crowd:
+  // children aside, who have one crowd face)
+  const placed = new Set(levelCast.map((c) => c.model).filter((m) => !isChild(m)));
+  const faces = new Map(); // `${model}@${year}` -> how many of the crowd wear it
+  const yearsOf = (c) => (c.years?.length ? c.years : level.states || deck.states || ['PRESENT']);
   // within §4.7's 24: each crowd keeps its share, the places left over going to the largest remainders
   const crowds = (level.crowd || []).filter((c) => c.n > 0 && c.path?.length);
   const budget = Math.max(0, MAX_PEOPLE - level.npcs.length);
@@ -362,21 +384,35 @@ export function castLevel(level, deck, { facts = null } = {}) {
   const r = rng(hash(`${deck.mkey}:${level.id}`));
   const turn = {};
   const route = crowds.length ? groundOf(level, deck) : null;
+  let lastPick = null;
   const wet = ['rain', 'storm'].includes(level.years?.PRESENT?.weather);
   let k = 0;
   crowds.forEach((c, ci) => {
     const n = counts[ci];
     if (!n) return;
-    const people = pickPeople(c, n, named, r, turn);
+    // (the settlement has three crowd faces, its hand-placed people among them, and its wardrobe waits for a person's
+    // review: there a hand-placed face may also walk in the crowd, still within the cap)
+    const ancient = c.era === 'ancient';
+    const ys = yearsOf(c);
+    const capped = !c.echo && c.role !== 'met';
+    const fits = (m, take) => {
+      if (!capped || UNCAPPED.includes(m)) return true;
+      if (take) { for (const y of ys) faces.set(`${m}@${y}`, (faces.get(`${m}@${y}`) || 0) + 1); return true; }
+      return (ancient || !placed.has(m)) && ys.every((y) => (faces.get(`${m}@${y}`) || 0) < CAP);
+    };
+    const people = pickPeople(c, n, named, r, turn, fits, lastPick);
+    if (people.length) lastPick = people[people.length - 1];
     const pool = AMBIENT[poolOf(c, deck)] || AMBIENT.rain;
     const when = whenOf(c);
     const rainy = wet && ['rain', 'northbank', 'south'].includes(c.region);
-    people.forEach(([model, variant], j) => {
+    people.forEach(([model, variant, metId], j) => {
+      const met = metId ? NPCS[metId] : null;
       const sex = sexOf(model) || 'm';
       const child = isChild(model);
       const old = variant === 'elder';
       const base = (CAST_HEIGHT[model] || 1.72);
-      const height = Math.round(base * (1 + (r() - 0.5) * 0.072) * 100) / 100; // within ±4% (after rounding)
+      const varied = Math.round(base * (1 + (r() - 0.5) * 0.072) * 100) / 100; // within ±4% (after rounding)
+      const height = met ? met.height : varied;
       const walk = (old ? 0.8 : 1) * (1 + (r() - 0.5) * 0.16); // ±8%
       // where along the path, which way, a step to one side
       const f = (j + 0.5) / people.length;
@@ -412,16 +448,18 @@ export function castLevel(level, deck, { facts = null } = {}) {
       if (['researcher', 'surveyor', 'technician'].includes(c.role) && j % 2 === 0) props.push('clipboard');
       if (c.role === 'gardener' && j % 2 === 0) props.push('trowel');
       if (c.role === 'skywatcher' && j % 3 === 0) props.push('lantern');
-      const first = pool.roles?.[c.role] || pool.names?.[k % pool.names.length] || 'Someone';
+      const first = met ? met.first : pool.roles?.[c.role] || pool.names?.[k % pool.names.length] || 'Someone';
       levelCast.push({
         id, first, name: first.toUpperCase(), color: c.echo ? ECHO_GLOW[c.era] : '#4f6170', seed: 300 + k, pronoun: PRONOUN[sex] || PRONOUN.m, model, variant, height, walk,
-        hairTint: HAIR_TINTS[k % HAIR_TINTS.length], dark: rainy ? RAIN_DARK : null, props, crowd: true, era: c.era, crowdRole: c.role,
+        hairTint: met ? null : HAIR_TINTS[k % HAIR_TINTS.length], dark: rainy ? RAIN_DARK : null, props, crowd: true, era: c.era, crowdRole: c.role, ...(met ? { met: metId } : {}),
       });
       level.npcs.push({
         id, crew: id, first, ambient: true, crowd: true, seed: 300 + k, pronoun: PRONOUN[sex] || PRONOUN.m, pos: [x, y, z], yaw: r() * 6.28, height,
         path: path?.length > 1 ? path : undefined, speed: Math.round(1.05 * walk * 100) / 100, when, silent: true, room: level.outdoorRoom || level.order[0],
-        hologram: !!c.echo, ...(c.echo ? {} : { barks: c.barks || pool.barks.filter((b, i) => b && i % 2 === k % 2), barkEvery: 24 + (k % 4) * 3 }), // (a crowd may say its own;
-        // else every other line of its pool: neighbours share the walla between them, and the speech budget holds)
+        hologram: !!c.echo, ...(c.echo && !c.barks ? {} : { barks: c.barks || pool.barks.filter((b, i) => b && i % 2 === k % 2), barkEvery: 24 + (k % 4) * 3 }), // (a crowd may
+        // say its own, an echo only its own; else every other line of its pool: neighbours share the walla, and the speech
+        // budget holds)
+        ...(c.flicker ? { flicker: true } : {}), // (between solid and hologram: Runtime.step)
         ...(deck.crowdFreeze ? { freezeWhen: deck.crowdFreeze } : {}),
         voiceExtra: { id: vlist?.[k % vlist.length] || null, gender: sex },
       });

@@ -29,7 +29,7 @@ export const NPCS = {
     echo: [{ who: 'NONE', text: 'The Witness does not exist in this state. What stands here is the shape he left behind on his way through.' }, { who: 'WITNESS', text: 'You are early. You are always early.' }],
   },
   sera: {
-    id: 'sera', first: 'Sera', name: 'Sera Voss', role: 'Resistance leader, 2196', pronoun: HER, color: '#c0762a', voice: 'SERA', era: 'future', seed: 4, model: 'rb_juno', variant: 'resistance', height: 1.7, vid: 'SERA', walk: 1,
+    id: 'sera', first: 'Sera', name: 'Sera Voss', role: 'Resistance leader, 2196', pronoun: HER, color: '#c0762a', voice: 'SERA', era: 'future', seed: 4, model: 'rb_sera', variant: 'resistance', height: 1.7, vid: 'SERA', walk: 1,
     temporal: ['FUTURE'], faction: 'unwritten', want: 'To protect a fragile district.', fear: 'Another timeline disaster.',
     barks: ['Stay off the glass. It remembers weight.', 'If you are who they say, keep walking.', 'We teach children your name before they learn the names of the dead.'],
     echo: [{ who: 'NONE', text: 'Sera Voss belongs to 2196. In this year she is an echo, walking a perimeter that has not been built yet.' }, { who: 'SERA', text: 'Stay off the glass. It remembers weight.' }],
@@ -53,7 +53,7 @@ export const NPCS = {
     echo: [{ who: 'NONE', text: 'Anja Vale lives in 2196. Here she is an echo, checking a lock at noon.' }, { who: 'ANJA', text: 'The lock holds. I have stopped asking what it holds out.' }],
   },
   iven: {
-    id: 'iven', first: 'Iven', name: 'Iven Marr', role: 'Helix technician', pronoun: HIS, color: '#a8862a', voice: 'IVEN', era: 'present', seed: 8, model: 'rb_engineer_m', variant: 'default', height: 1.8, vid: 'IVEN', walk: 1,
+    id: 'iven', first: 'Iven', name: 'Iven Marr', role: 'Helix technician', pronoun: HIS, color: '#a8862a', voice: 'IVEN', era: 'present', seed: 8, model: 'rb_iven', variant: 'helix', height: 1.8, vid: 'IVEN', walk: 1,
     temporal: ['PRESENT'], want: 'To get his team out safely.', fear: 'Being blamed for a test he did not approve.',
     barks: ['I signed nothing. Remember that when they ask.', 'Maintenance route runs behind the conduit. Nobody uses it. Nobody is supposed to.'],
     echo: [{ who: 'NONE', text: 'Iven Marr is not here in this year. His echo is: a man at a panel, writing NOT SIGNED BY ME on a sheet, again and again.' }, { who: 'IVEN', text: 'Panel was installed before the drone was. Remember that.' }],
@@ -71,7 +71,7 @@ export const NPCS = {
     echo: [{ who: 'NONE', text: 'Tala belongs to the year the river was alive. Here she is an echo, lifting a stone gate that is not there.' }, { who: 'TALA', text: 'Left, right, centre. Stone does not argue.' }],
   },
   mara: {
-    id: 'mara', first: 'Mara', name: 'Mara Quill', role: 'Archivist, 2196', pronoun: HER, color: '#8a6a9a', voice: 'MARA', era: 'future', seed: 11, model: 'rb_office_f', variant: 'faded', height: 1.68, vid: 'MARA', walk: 1,
+    id: 'mara', first: 'Mara', name: 'Mara Quill', role: 'Archivist, 2196', pronoun: HER, color: '#8a6a9a', voice: 'MARA', era: 'future', seed: 11, model: 'rb_mara', variant: 'faded', height: 1.68, vid: 'MARA', walk: 1,
     temporal: ['FUTURE'], want: 'To preserve conflicting records.', fear: 'One official history.',
     barks: ['Two records. Both true. Start there.', 'A clean history is usually a history someone has cleaned.'],
     echo: [{ who: 'NONE', text: 'Mara Quill keeps her archive in 2196. Her echo files the same two records, side by side, again.' }, { who: 'MARA', text: 'Two records. Both true. Start there.' }],
@@ -99,7 +99,7 @@ export const NPCS = {
   // Ward 32's bed (M11): a silent, flickering figure of adult Mira in a gown (Nurse Odile speaks for the ward)
   patient: { id: 'patient', first: 'The Patient', name: 'Ward 32', role: 'Rain City General, Ward 32', pronoun: HER, color: '#9fc8e8', voice: 'CREW', era: 'present', seed: 30, model: 'rb_mira', variant: 'gown', height: 1.68, vid: null, walk: 1, silent: true, hologram: true, flicker: true },
   warden: { id: 'warden', first: 'Warden', name: 'District Warden', role: 'Warden, 2196', pronoun: HIS, color: '#4f6170', voice: 'CREW', era: 'future', seed: 31, model: 'rb_warden', variant: 'warden', height: 1.8, vid: 'WARDEN', walk: 1 },
-  gardener: { id: 'gardener', first: 'Gardener', name: 'The Gardener', role: 'Gardener, 2196', pronoun: HER, color: '#4f6170', voice: 'CREW', era: 'future', seed: 32, model: 'rb_ren_f', variant: 'moss', height: 1.68, vid: 'GARDENER', walk: 1 },
+  gardener: { id: 'gardener', first: 'Gardener', name: 'The Gardener', role: 'Gardener, 2196', pronoun: HER, color: '#4f6170', voice: 'CREW', era: 'future', seed: 32, model: 'rb_gardener_f', variant: 'moss', height: 1.68, vid: 'GARDENER', walk: 1 },
   // new in v2.1 (no lines yet beyond today's)
   odile: { id: 'odile', first: 'Odile', name: 'Nurse Odile', role: 'Night nurse, Ward 32, since 2026', pronoun: HER, color: '#7aa6c8', voice: 'CREW', era: 'present', seed: 33, model: 'rb_odile', variant: 'ward', height: 1.66, vid: 'ODILE', walk: 0.95 },
   florist: { id: 'florist', first: 'Florist', name: 'The Florist', role: 'Florist, Rain City South', pronoun: HER, color: '#5f8a5a', voice: 'CREW', era: 'present', seed: 34, model: 'rb_florist', variant: 'florist', height: 1.64, vid: 'FLORIST', walk: 1 },

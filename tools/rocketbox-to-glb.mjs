@@ -72,6 +72,11 @@ export const LV_AVATARS = {
   rb_odile: { src: 'Adults/Female_Adult_02', px: 1024 }, // Nurse Odile
   rb_florist: { src: 'Adults/Female_Adult_14', px: 1024 }, // the Florist
   rb_warden: { src: 'Professions/Police_Male_04', px: 1024 }, // the District Warden
+  // (U4 review) the named who wore Station Zero's faces: Juno's, Varga's, Kade's, Ren's FIELD JACKET
+  rb_sera: { src: 'Adults/Female_Adult_07', px: 1024 }, // Sera Voss: a belted leather jacket, boots
+  rb_mara: { src: 'Professions/Business_Female_03', px: 1024 }, // Mara Quill: a worn skirt suit
+  rb_iven: { src: 'Professions/Construction_Male_02', px: 1024 }, // Iven Marr: overalls, a hard hat
+  rb_gardener_f: { src: 'Adults/Female_Adult_01', px: 1024 }, // the Gardener of 2196: shirtsleeves, jeans
   // crowd (15)
   rb_civ_f1: { src: 'Adults/Female_Adult_15', px: 512 }, // commuter: blouse, skirt, boots
   rb_civ_f2: { src: 'Adults/Female_Adult_08', px: 512 }, // commuter: tee, jeans
@@ -88,6 +93,9 @@ export const LV_AVATARS = {
   rb_scav: { src: 'Adults/Male_Adult_18', px: 512 }, // 2196 scavengers, hood up
   rb_trader: { src: 'Professions/Wood_Male_01', px: 512 }, // 2196 traders and engineers
   rb_villager_f: { src: 'Adults/Female_Adult_09', px: 512 }, // 2196 gardeners, medics, archivists
+  // (U4 review) more faces for 2026/2049, so a crowd is not copies of a few
+  rb_civ_m3: { src: 'Adults/Male_Adult_14', px: 512 }, // an older man: shirt, khakis
+  rb_civ_f4: { src: 'Adults/Female_Adult_13', px: 512 }, // a woman in a waistcoat and jeans
 };
 // parts left out of a conversion: nobody in the game carries a gun
 export const RB_DROP = { rb_security_f: ['pistol'], rb_warden: ['pistol'] };

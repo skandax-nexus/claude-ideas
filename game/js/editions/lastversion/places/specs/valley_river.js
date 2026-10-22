@@ -46,6 +46,8 @@ export default {
     { era: 'ancient', years: ['PAST'], region: 'settlement', role: 'fisher', path: [[-77, 18], [-27, 18]], n: 3 },
     // (U7) in ABANDONED the same villagers walk their old rounds as echoes (§5 M5)
     { era: 'ancient', years: ['PRESENT'], region: 'settlement', role: 'waterKeeper', path: [[-58, -22], [-22, -30], [-12, -12]], n: 3, echo: true },
+    // (U4 review) and in FLOODED too, the fishers along what is left of the bank (§5 M5: echoes in both later years)
+    { era: 'ancient', years: ['FUTURE'], region: 'settlement', role: 'fisher', path: [[-77, 18], [-27, 18]], n: 3, echo: true },
   ],
 
   build(P) {

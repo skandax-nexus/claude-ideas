@@ -21,6 +21,10 @@ const RAIN_DARK = 0.85; // Rain City's crowds: wet clothes read about 15% darker
 
 // shorthands for the variant table
 const ROSE = 0.965; // Mira's colour, #c4566a
+// rb_child_m2's jersey number, painted into the jersey's own orange (the variant's hue rule then dyes it with the rest)
+const NO38 = [{ band: [0.395, 0.555, 0.6, 0.725], sset: 0, lset: 0.4, skin: false }, { band: [0.395, 0.555, 0.6, 0.725], to: 0.047, sset: 0.82, lset: 0.4, skin: false }];
+// (two steps: grey first, then the jersey's orange, so the white digits and the orange cloth come out the same: a set
+// saturation is scaled by the texel's own)
 
 // ---------------------------------------------------------------------------------------------------
 // The variants, per model. `default` is the model as converted. Colours follow OVERHAUL.md §6.2/§6.3.
@@ -40,17 +44,29 @@ export const WARDROBE = {
       hair: [{ sset: 0.04, lrange: [0.34, 0.6], to: 0.1 }],
     },
   },
-  rb_ren_f: {
+  // (U4 review) Sera, Mara, Iven and the Gardener no longer wear Station Zero's faces (Juno's, Varga's, Kade's, Ren's
+  // FIELD JACKET): their own avatars
+  rb_sera: {
     default: {},
-    // the Gardener of 2196: moss field trousers, a trowel
-    moss: { body: [{ band: [0, 0.5, 1, 1], hue: [0.13, 0.1], to: 0.24, sset: 0.3, light: 0.85 }], props: ['trowel'] },
+    // Sera: the belted leather jacket over a red scarf; jeans worn to dust and olive, boots
+    resistance: { body: [{ band: [0, 0.55, 0.32, 0.92], lmin: 0.12, to: 0.16, sset: 0.16, light: 0.92 }, { band: [0.68, 0.55, 1, 0.92], lmin: 0.12, to: 0.16, sset: 0.16, light: 0.92 }] },
+    // Sera disguised as a Continuum guard (M10): slate from collar to boots, the troopers' helmet and plate carrier
+    guard: { body: [{ to: 0.6, sset: 0.14, lrange: [0.14, 0.4] }], hair: [{ lrange: [0.08, 0.2], sset: 0.1 }], props: ['helmet', 'vest'] },
   },
-  rb_juno: {
+  rb_mara: {
     default: {},
-    // Sera: a vest top and cargo trousers in olive and dust
-    resistance: { body: [{ hue: [0.6, 0.25], smin: 0.05, lmax: 0.6, to: 0.2, sset: 0.3, light: 1.15 }, { lmin: 0.55, sset: 0.18, to: 0.11, light: 0.92 }] },
-    // Sera disguised as a Continuum guard (M10)
-    guard: { body: [{ to: 0.6, sset: 0.16, lrange: [0.16, 0.42] }] },
+    // Mara Quill: the archivist's suit, faded and patched by 2196
+    faded: { body: [{ lmin: 0.15, sat: 0.55, light: 1.08 }] },
+  },
+  rb_iven: {
+    default: {},
+    // Iven Marr: Helix's slate overalls, a pale hard hat
+    helix: { body: [{ hue: [0.6, 0.12], smin: 0.2, to: 0.58, sset: 0.12, lrange: [0.18, 0.4] }], helmet: [{ sset: 0.06, lrange: [0.62, 0.84], skin: false }] },
+  },
+  rb_gardener_f: {
+    default: {},
+    // the Gardener of 2196: a shirt dyed moss, jeans worn to earth, a trowel
+    moss: { body: [{ hue: [0.97, 0.08], smin: 0.2, to: 0.25, sset: 0.3, light: 0.78 }, { hue: [0.6, 0.1], smin: 0.1, to: 0.09, sset: 0.18, light: 0.95 }], props: ['trowel'] },
   },
   rb_doctor_f: {
     default: { hide: ['stetoskop'] },
@@ -58,13 +74,6 @@ export const WARDROBE = {
     anja: { hide: ['stetoskop'], body: [{ lmin: 0.55, to: 0.25, sset: 0.12, light: 0.9 }] },
   },
   rb_doctor_m: { default: { hide: ['stetoskop'] }, tan: { hide: ['stetoskop'], body: [{ hue: [0.6, 0.12], smin: 0.12, to: 0.09, sat: 0.7, light: 0.95 }] }, ward: {} },
-  rb_engineer_m: { default: {}, helix: { body: [{ hue: [0.6, 0.15], smin: 0.3, to: 0.6, sset: 0.12, light: 0.7 }] } },
-  rb_office_f: {
-    default: {},
-    // Mara Quill: a blazer faded brown, glasses
-    faded: { body: [{ hue: [0.98, 0.1], smin: 0.15, to: 0.08, sset: 0.28, light: 1.12 }] },
-  },
-  rb_captain_m: { default: {}, transit: { body: [{ lmax: 0.25, to: 0.62, sset: 0.3, light: 1.3 }] } },
   // --- the new named people ---------------------------------------------------------------------
   rb_child_m: {
     // young Kai at twelve: brown hair, a faded tee
@@ -79,8 +88,9 @@ export const WARDROBE = {
       hair: [{ to: 0.12, sset: 0.45, lrange: [0.45, 0.78] }],
       head: [{ band: [0, 0, 1, 0.3], lmax: 0.3, to: 0.12, sset: 0.4, lrange: [0.4, 0.6] }],
     },
-    // M1: the woman in the rain: a yellow coat, darkened by the rain
+    // M1: the woman in the rain: a yellow hooded raincoat over a yellow tunic, darkened by the rain
     raincoat: {
+      props: ['raincoat', 'raincoatHood'],
       body: [{ band: [0.33, 0, 0.67, 0.8], lmin: 0.45, to: 0.14, sset: 0.85, lrange: [0.34, 0.56] },
         { band: [0, 0.6, 0.3, 1], lmin: 0.4, to: 0.6, sset: 0.3, lrange: [0.16, 0.34] }, { band: [0.7, 0.6, 1, 1], lmin: 0.4, to: 0.6, sset: 0.3, lrange: [0.16, 0.34] }],
       hair: [{ to: 0.12, sset: 0.4, lrange: [0.36, 0.62] }],
@@ -153,8 +163,10 @@ export const WARDROBE = {
     continuum: { body: [{ hue: [0.2, 0.25], smin: 0, lmin: 0.08, to: 0.6, sset: 0.14, light: 0.82 }], head: [{ band: [0, 0.5, 0.9, 0.92], hue: [0.2, 0.25], lmin: 0.08, to: 0.6, sset: 0.14, light: 0.82 }] },
   },
   rb_odile: {
-    // Nurse Odile: a pale-blue sweater over white
-    ward: { body: [{ band: [0, 0.3, 1, 0.75], lmin: 0.5, smin: 0, to: 0.57, sset: 0.32, lrange: [0.62, 0.8] }] },
+    // Nurse Odile: a pale-blue sweater over white, a navy scrub skirt, white shoes (not the denim and black heels)
+    ward: { body: [{ band: [0, 0.3, 1, 0.75], lmin: 0.5, smin: 0, to: 0.57, sset: 0.32, lrange: [0.62, 0.8] },
+      { band: [0, 0.55, 0.32, 0.8], lmax: 0.55, to: 0.61, sset: 0.34, lrange: [0.13, 0.24] }, { band: [0.68, 0.55, 1, 0.8], lmax: 0.55, to: 0.61, sset: 0.34, lrange: [0.13, 0.24] },
+      { band: [0.15, 0, 0.34, 0.16], lmax: 0.35, sset: 0.03, lrange: [0.76, 0.9], skin: false }, { band: [0.66, 0, 0.85, 0.16], lmax: 0.35, sset: 0.03, lrange: [0.76, 0.9], skin: false }] },
   },
   rb_florist: {
     // the Florist: a wrap cardigan, a green apron
@@ -195,15 +207,19 @@ export const WARDROBE = {
     // Helix technicians and the utility crews: slate
     'helix slate': { body: [{ hue: [0.06, 0.06], smin: 0.4, to: 0.6, sset: 0.12, light: 0.7 }, { hue: [0.6, 0.12], smin: 0.3, to: 0.6, sset: 0.14, light: 0.7 }], helmet: [{ to: 0.6, sset: 0.1, lrange: [0.6, 0.85] }] },
     utility: { body: [{ hue: [0.06, 0.06], smin: 0.4, to: 0.14 }, { hue: [0.6, 0.12], smin: 0.3, to: 0.6, sset: 0.2, light: 0.5 }] },
+    // a prisoner of the dam's loop cells (M10): the hard hat gone, the detention grey
+    detention: { hide: ['helmet'], body: [{ to: 0.58, sset: 0.05, lrange: [0.34, 0.56] }] },
   },
   rb_medic_f: { default: {}, dust: { body: [{ sat: 0.6, light: 1.08 }] } },
+  // (every variant first paints the jersey's #38 out into the jersey: a number shared by the toy boy, Tomas and 2196's
+  // children would read as a clue the story does not have)
   rb_child_m2: {
-    default: {}, blue: { body: [{ hue: [0.07, 0.07], smin: 0.3, to: 0.58 }] }, green: { body: [{ hue: [0.07, 0.07], smin: 0.3, to: 0.33, sat: 0.8 }] },
-    // M1's toy child: a red raincoat (yellow is Mira's)
-    redcoat: { body: [{ hue: [0.07, 0.07], smin: 0.3, to: 0.99, sset: 0.75, light: 0.9 }] },
+    default: { body: [...NO38] }, blue: { body: [...NO38, { hue: [0.07, 0.07], smin: 0.3, to: 0.58 }] }, green: { body: [...NO38, { hue: [0.07, 0.07], smin: 0.3, to: 0.33, sat: 0.8 }] },
+    // M1's toy child: a red hooded raincoat (yellow is Mira's) over a red top
+    redcoat: { body: [...NO38, { hue: [0.07, 0.07], smin: 0.3, to: 0.99, sset: 0.75, light: 0.9 }], props: ['raincoatChild', 'raincoatChildHood'] },
     // 2196 children: patched, faded
-    patched: { body: [{ hue: [0.07, 0.07], smin: 0.3, to: 0.12, sat: 0.4, light: 1.05 }, { band: [0.4, 0.45, 0.6, 0.6], lmin: 0.5, light: 0.6 }] },
-    patched2: { body: [{ hue: [0.07, 0.07], smin: 0.3, to: 0.42, sat: 0.35 }] },
+    patched: { body: [...NO38, { hue: [0.07, 0.07], smin: 0.3, to: 0.12, sat: 0.4, light: 1.05 }, { band: [0.4, 0.45, 0.6, 0.6], lmin: 0.5, light: 0.6 }] },
+    patched2: { body: [...NO38, { hue: [0.07, 0.07], smin: 0.3, to: 0.42, sat: 0.35 }] },
   },
   rb_child_f2: {
     // the settlement's girls in linen (the head cloth plain)
@@ -238,6 +254,22 @@ export const WARDROBE = {
     warden: { body: [{ to: 0.6, sset: 0.06, lrange: [0.12, 0.3] }], props: ['beret'] },
   },
   rb_trader: { default: {}, earth: { body: [{ hue: [0.58, 0.12], smin: 0.1, to: 0.08, sat: 0.9 }] }, faded: { body: [{ sat: 0.45, light: 1.05 }] } },
+  // (U4 review) more 2026/2049 faces: an older man in a shirt and khakis, a woman in a waistcoat and jeans; each has the
+  // crowds' working wardrobes (a transit uniform, a lab white, the detention grey, dust)
+  rb_civ_m3: {
+    default: {}, blue: { body: [{ band: [0.3, 0.15, 0.7, 0.84], to: 0.58, sset: 0.3, lrange: [0.45, 0.68] }, { band: [0, 0.42, 0.32, 0.84], to: 0.58, sset: 0.3, lrange: [0.45, 0.68] }, { band: [0.68, 0.42, 1, 0.84], to: 0.58, sset: 0.3, lrange: [0.45, 0.68] }],
+    },
+    transit: { body: [{ band: [0.3, 0.15, 0.7, 0.84], to: 0.62, sset: 0.45, lrange: [0.16, 0.3] }, { band: [0, 0.42, 0.32, 0.84], to: 0.62, sset: 0.45, lrange: [0.16, 0.3] }, { band: [0.68, 0.42, 1, 0.84], to: 0.62, sset: 0.45, lrange: [0.16, 0.3] },
+      { band: [0, 0, 0.3, 0.42], to: 0.62, sset: 0.2, lrange: [0.1, 0.2] }, { band: [0.7, 0, 1, 0.42], to: 0.62, sset: 0.2, lrange: [0.1, 0.2] }] },
+    lab: { body: [{ band: [0.3, 0.15, 0.7, 0.84], sset: 0.03, lrange: [0.74, 0.9] }, { band: [0, 0.42, 0.32, 0.84], sset: 0.03, lrange: [0.74, 0.9] }, { band: [0.68, 0.42, 1, 0.84], sset: 0.03, lrange: [0.74, 0.9] }] },
+    detention: { body: [{ to: 0.58, sset: 0.05, lrange: [0.34, 0.56] }] }, dust: { body: [{ sat: 0.45, light: 1.12 }] },
+  },
+  rb_civ_f4: {
+    default: {}, plum: { body: [{ band: [0.3, 0.1, 0.7, 0.62], lmin: 0.2, to: 0.86, sset: 0.3 }] },
+    transit: { body: [{ band: [0.3, 0.1, 0.7, 0.62], to: 0.62, sset: 0.45, lrange: [0.14, 0.3] }, { band: [0, 0.55, 0.3, 1], to: 0.62, sset: 0.2, lrange: [0.1, 0.2] }, { band: [0.7, 0.55, 1, 1], to: 0.62, sset: 0.2, lrange: [0.1, 0.2] }] },
+    lab: { body: [{ band: [0.3, 0.1, 0.7, 0.62], sset: 0.03, lrange: [0.72, 0.9] }] },
+    detention: { body: [{ to: 0.58, sset: 0.05, lrange: [0.34, 0.56] }] }, dust: { body: [{ sat: 0.45, light: 1.12 }] },
+  },
   rb_villager_f: { default: {}, sage: { body: [{ hue: [0.09, 0.1], smin: 0.1, to: 0.27, sat: 0.9 }] }, rust: { body: [{ hue: [0.09, 0.1], smin: 0.1, to: 0.04, sat: 1.1 }] } },
   xbot: { default: {}, hologram: {} },
 };
@@ -256,6 +288,21 @@ function propKit() {
     steel: M({ color: 0x9aa2aa, metalness: 0.7, roughness: 0.35 }), wood: M({ color: 0x6a4a2c, roughness: 0.8 }), brass: M({ color: 0xb08a3a, metalness: 0.8, roughness: 0.35 }),
     glow: keepMat(new THREE.MeshBasicMaterial({ color: 0xffd08a })), card: M({ color: 0xf4f4f0 }), strap: M({ color: 0x2a4a8a }), beret: M({ color: 0x9a1c1c, roughness: 0.9 }),
     visor: keepMat(new THREE.MeshBasicMaterial({ color: 0x8fd8ff })), badge: M({ color: 0xc8ccd2, metalness: 0.6, roughness: 0.3 }), board: M({ color: 0x5a4a3a }), paper: M({ color: 0xe8e4d8 }),
+    // rain gear (wet: low roughness), the troopers' slate kit
+    rainYellow: M({ color: 0xc99a12, roughness: 0.32, side: THREE.DoubleSide }), rainRed: M({ color: 0x9c1c22, roughness: 0.32, side: THREE.DoubleSide }),
+    slate: M({ color: 0x3c4652, roughness: 0.55 }), plate: M({ color: 0x4a5664, roughness: 0.7, side: THREE.DoubleSide }),
+  };
+  // a hooded raincoat's cape, from the collar over the shoulders and arms to mid-thigh (a lathe about the chest bone,
+  // open, both sides drawn), and its hood over the top and back of the head; k scales it to a child
+  const cape = (mat, kr = 1, ky = kr) => {
+    const c = mesh(new THREE.LatheGeometry([[0.075, 0.17], [0.12, 0.15], [0.18, 0.11], [0.22, 0.04], [0.24, -0.08], [0.26, -0.3], [0.28, -0.55]].map(([r, y]) => new THREE.Vector2(r * kr, y * ky)), 20), mat);
+    c.scale.set(1, 1, 0.78); // (shallower front to back than across the shoulders)
+    return c;
+  };
+  const hood = (mat, k = 1) => {
+    const h = mesh(new THREE.SphereGeometry(0.15 * k, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2), mat, 0, 0.055 * k, -0.03 * k, -0.55, 0, 0);
+    h.scale.set(1.04, 1, 1.15);
+    return h;
   };
   const mesh = (geo, mat, x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0) => {
     const m = new THREE.Mesh(keepGeo(geo), mat);
@@ -283,6 +330,15 @@ function propKit() {
     beret: { at: 'head', make: () => { const b = mesh(new THREE.SphereGeometry(0.115, 12, 6), mats.beret, 0.018, 0.17, 0.0); b.scale.set(1.05, 0.34, 1.05); b.rotation.z = -0.18; return group(b); } },
     visor: { at: 'head', make: () => group(mesh(new THREE.BoxGeometry(0.17, 0.035, 0.02), mats.visor, 0, 0.085, 0.115)) },
     badge: { at: 'chest', make: () => group(mesh(new THREE.TorusGeometry(0.03, 0.008, 6, 16), mats.badge, -0.08, 0.02, 0.13)) },
+    // Mira's yellow raincoat (M1), and the toy boy's red one, child-sized
+    raincoat: { at: 'chest', make: () => group(cape(mats.rainYellow)) },
+    raincoatHood: { at: 'head', make: () => group(hood(mats.rainYellow)) },
+    raincoatChild: { at: 'chest', make: () => group(cape(mats.rainRed, 0.9, 0.74)) },
+    raincoatChildHood: { at: 'head', make: () => group(hood(mats.rainRed, 0.8)) },
+    // a Continuum trooper's helmet and plate carrier (Sera's disguise, M10)
+    helmet: { at: 'head', make: () => { const h = mesh(new THREE.SphereGeometry(0.128, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), mats.slate, 0, 0.08, -0.005, -0.12, 0, 0); h.scale.set(1, 0.9, 1.1); return group(h); } },
+    // (a plate carrier: a sleeve round the chest, under the arms)
+    vest: { at: 'chest', make: () => { const v = mesh(new THREE.LatheGeometry([[0.12, 0.1], [0.165, 0.06], [0.172, -0.1], [0.168, -0.25]].map(([r, y]) => new THREE.Vector2(r, y)), 18), mats.plate); v.scale.set(1, 1, 0.82); return group(v); } },
   };
   return PROPS;
 }

@@ -39,6 +39,10 @@ Each file is one avatar from `Assets/Avatars/` of the library, converted from it
 | `rb_odile.glb` | `Adults/Female_Adult_02` | THE LAST VERSION: Nurse Odile |
 | `rb_florist.glb` | `Adults/Female_Adult_14` | THE LAST VERSION: the Florist |
 | `rb_warden.glb` | `Professions/Police_Male_04` | THE LAST VERSION: the District Warden (the pistol is left out) |
+| `rb_sera.glb` | `Adults/Female_Adult_07` | THE LAST VERSION: Sera Voss (and her Continuum guard disguise) |
+| `rb_mara.glb` | `Professions/Business_Female_03` | THE LAST VERSION: Mara Quill, the archivist |
+| `rb_iven.glb` | `Professions/Construction_Male_02` | THE LAST VERSION: Iven Marr |
+| `rb_gardener_f.glb` | `Adults/Female_Adult_01` | THE LAST VERSION: the Gardener of 2196 |
 | `rb_civ_f1.glb` | `Adults/Female_Adult_15` | THE LAST VERSION: commuters (2026/2049); the Helix receptionist; the trapped woman |
 | `rb_civ_f2.glb` | `Adults/Female_Adult_08` | THE LAST VERSION: commuters, Helix technicians (2026/2049); Officer Haig's recording |
 | `rb_civ_f3.glb` | `Adults/Female_Adult_12` | THE LAST VERSION: gardeners, medics, archivists (2196) |
@@ -54,6 +58,8 @@ Each file is one avatar from `Assets/Avatars/` of the library, converted from it
 | `rb_scav.glb` | `Adults/Male_Adult_18` | THE LAST VERSION: scavengers (2196) |
 | `rb_trader.glb` | `Professions/Wood_Male_01` | THE LAST VERSION: traders and engineers (2196) |
 | `rb_villager_f.glb` | `Adults/Female_Adult_09` | THE LAST VERSION: gardeners, medics, archivists (2196) |
+| `rb_civ_m3.glb` | `Adults/Male_Adult_14` | THE LAST VERSION: commuters, shopkeepers, transit staff, researchers, prisoners (2026/2049) |
+| `rb_civ_f4.glb` | `Adults/Female_Adult_13` | THE LAST VERSION: commuters, couriers, transit staff, researchers, prisoners (2026/2049) |
 
 The crew never wear the model Ren is wearing.
 

@@ -8,11 +8,11 @@
 import { MODELS, loadActors, actorLoaded, makeActor } from '../../world/Actors.js';
 import { dress, afterPose } from './wardrobe.js';
 
-// the 31 new people: named characters at 1024 px, crowds at 512 px (tools/rocketbox-to-glb.mjs LV_AVATARS)
+// the 37 new people: named characters at 1024 px, crowds at 512 px (tools/rocketbox-to-glb.mjs LV_AVATARS)
 // sex: the model's, for pronouns; child: a child's body; px: the size of its colour maps
 const rb = (height, sex, o = {}) => ({ rig: 'rb', height, sex, px: 1024, ...o });
 export const LV_MODELS = {
-  // named (16)
+  // named (20)
   rb_child_m: rb(1.42, 'm', { child: true }),
   rb_mira: rb(1.68, 'f'),
   rb_child_f: rb(1.24, 'f', { child: true }),
@@ -29,7 +29,12 @@ export const LV_MODELS = {
   rb_odile: rb(1.66, 'f'),
   rb_florist: rb(1.64, 'f'),
   rb_warden: rb(1.8, 'm'),
-  // crowd (15)
+  // (U4 review) the named who wore Station Zero's faces (Juno's, Varga's, Kade's, Ren's FIELD JACKET) have their own
+  rb_sera: rb(1.7, 'f'),
+  rb_mara: rb(1.68, 'f'),
+  rb_iven: rb(1.8, 'm'),
+  rb_gardener_f: rb(1.68, 'f'),
+  // crowd (17)
   rb_civ_f1: rb(1.66, 'f', { px: 512, crowd: true }),
   rb_civ_f2: rb(1.67, 'f', { px: 512, crowd: true }),
   rb_civ_f3: rb(1.66, 'f', { px: 512, crowd: true }),
@@ -45,20 +50,18 @@ export const LV_MODELS = {
   rb_scav: rb(1.78, 'm', { px: 512, crowd: true }),
   rb_trader: rb(1.78, 'm', { px: 512, crowd: true }),
   rb_villager_f: rb(1.66, 'f', { px: 512, crowd: true }),
+  // (U4 review) more faces for 2026/2049's crowds
+  rb_civ_m3: rb(1.78, 'm', { px: 512, crowd: true }),
+  rb_civ_f4: rb(1.68, 'f', { px: 512, crowd: true }),
 };
 for (const [k, m] of Object.entries(LV_MODELS)) m.file = `${k}.glb`;
 
-// the models Station Zero already has that the edition uses
+// the models Station Zero already has that the edition uses (none of its named crew's faces: U4 review)
 export const SHARED_MODELS = {
   xbot: { sex: 'n', file: 'Xbot.glb' }, // the motion library (and Orren's hologram)
   rb_ren_m: { sex: 'm', file: 'rb_ren_m.glb', px: 1024 }, // Kai (and the Witness)
-  rb_ren_f: { sex: 'f', file: 'rb_ren_f.glb', px: 1024 }, // the Gardener of 2196
-  rb_juno: { sex: 'f', file: 'rb_juno.glb', px: 1024 }, // Sera Voss
   rb_doctor_f: { sex: 'f', file: 'rb_doctor_f.glb', px: 1024 }, // Dr. Anja Vale
   rb_doctor_m: { sex: 'm', file: 'rb_doctor_m.glb', px: 1024, crowd: true, height: 1.78 }, // Helix researchers, hospital staff
-  rb_engineer_m: { sex: 'm', file: 'rb_engineer_m.glb', px: 1024 }, // Iven Marr
-  rb_office_f: { sex: 'f', file: 'rb_office_f.glb', px: 1024 }, // Mara Quill
-  rb_captain_m: { sex: 'm', file: 'rb_captain_m.glb', px: 1024, crowd: true, height: 1.8 }, // transit staff
 };
 
 export const sexOf = (key) => LV_MODELS[key]?.sex || SHARED_MODELS[key]?.sex || null;
@@ -75,13 +78,13 @@ export const MANIFEST = [...new Set([...Object.values(SHARED_MODELS).map((m) => 
 export const COMMON = ['xbot', 'rb_ren_m'];
 // (exactly the models the chapter's levels cast today; the story units add the people they place)
 export const CHAPTER_CAST = {
-  prologue: ['rb_child_m2', 'rb_florist', 'rb_security_f', 'rb_jun', 'rb_civ_f1', 'rb_courier', 'rb_child_f', 'rb_mira', 'rb_civ_m2', 'rb_civ_m1', 'rb_civ_f2', 'rb_contractor', 'rb_captain_m', 'rb_medic_f', 'rb_engineer_m', 'rb_rook', 'rb_security_m'],
-  act1: ['rb_tala', 'rb_child_f2', 'rb_robe_m', 'rb_elder', 'rb_niko', 'rb_civ_f1', 'rb_civ_m2', 'rb_courier', 'rb_civ_f2', 'rb_civ_m1', 'rb_ezra', 'rb_scav', 'rb_contractor', 'rb_mira', 'rb_doctor_m', 'rb_rook', 'rb_security_f', 'rb_security_m', 'rb_engineer_m'],
-  act2: ['rb_trooper', 'rb_courier', 'rb_civ_f2', 'rb_civ_m1', 'rb_civ_f1', 'rb_civ_m2', 'rb_medic_f', 'rb_contractor', 'rb_engineer_f', 'rb_juno', 'rb_doctor_m', 'rb_odile', 'rb_mira', 'rb_scav', 'rb_trader', 'rb_soldier_m', 'rb_child_f', 'rb_child_m', 'rb_rook', 'rb_security_f', 'rb_security_m'],
-  act3: ['rb_scav', 'rb_villager_f', 'rb_civ_f3', 'rb_civ_m2', 'rb_civ_f1', 'rb_civ_m1', 'rb_civ_f2', 'rb_courier', 'rb_contractor', 'rb_juno', 'rb_child_m2', 'rb_trader', 'rb_doctor_f', 'rb_office_f', 'rb_doctor_m', 'rb_mira', 'rb_ren_f', 'rb_warden', 'rb_jun', 'rb_child_m', 'rb_child_f', 'rb_engineer_m'],
-  act4: ['rb_civ_m2', 'rb_courier', 'rb_civ_f2', 'rb_mira', 'rb_civ_m1', 'rb_civ_f1', 'rb_trader', 'rb_villager_f', 'rb_civ_f3', 'rb_child_m2', 'rb_trooper', 'rb_scav', 'rb_child_f2', 'rb_robe_m', 'rb_child_f', 'rb_child_m', 'rb_juno', 'rb_doctor_f', 'rb_engineer_m', 'rb_rook', 'rb_security_f', 'rb_ezra', 'rb_odile', 'rb_elder'],
-  finale: ['rb_scav', 'rb_civ_m1', 'rb_civ_f2', 'rb_courier', 'rb_civ_m2', 'rb_elder', 'rb_civ_f3', 'rb_trader', 'rb_villager_f', 'rb_robe_m', 'rb_mira', 'rb_child_f2', 'rb_jun', 'rb_tala', 'rb_ezra', 'rb_odile', 'rb_engineer_m', 'rb_juno', 'rb_doctor_f'],
-  cases: ['rb_child_f2', 'rb_robe_m', 'rb_elder', 'rb_tala', 'rb_trader', 'rb_villager_f', 'rb_scav', 'rb_civ_f3', 'rb_child_m2', 'rb_courier', 'rb_civ_m2', 'rb_civ_f1', 'rb_civ_m1', 'rb_civ_f2', 'rb_office_f', 'rb_florist', 'rb_security_f', 'rb_jun', 'rb_child_f', 'rb_mira', 'rb_contractor', 'rb_captain_m', 'rb_medic_f', 'rb_doctor_f', 'rb_warden', 'rb_doctor_m', 'rb_juno', 'rb_engineer_m', 'rb_ezra', 'rb_soldier_m', 'rb_ren_f', 'rb_odile', 'rb_child_m', 'rb_niko'],
+  prologue: ['rb_civ_m3', 'rb_civ_f4', 'rb_child_m2', 'rb_florist', 'rb_security_f', 'rb_jun', 'rb_civ_f1', 'rb_courier', 'rb_child_f', 'rb_mira', 'rb_civ_m2', 'rb_civ_m1', 'rb_civ_f2', 'rb_contractor', 'rb_medic_f', 'rb_iven', 'rb_rook', 'rb_security_m'],
+  act1: ['rb_civ_m3', 'rb_civ_f4', 'rb_tala', 'rb_child_f2', 'rb_robe_m', 'rb_elder', 'rb_niko', 'rb_civ_f1', 'rb_civ_m2', 'rb_courier', 'rb_civ_f2', 'rb_civ_m1', 'rb_ezra', 'rb_scav', 'rb_contractor', 'rb_mira', 'rb_doctor_m', 'rb_rook', 'rb_security_f', 'rb_security_m', 'rb_iven'],
+  act2: ['rb_civ_m3', 'rb_civ_f4', 'rb_trooper', 'rb_courier', 'rb_civ_f2', 'rb_civ_m1', 'rb_civ_f1', 'rb_civ_m2', 'rb_medic_f', 'rb_contractor', 'rb_engineer_f', 'rb_sera', 'rb_doctor_m', 'rb_odile', 'rb_mira', 'rb_scav', 'rb_trader', 'rb_soldier_m', 'rb_child_f', 'rb_child_m', 'rb_rook', 'rb_security_f', 'rb_security_m'],
+  act3: ['rb_civ_m3', 'rb_civ_f4', 'rb_scav', 'rb_villager_f', 'rb_civ_f3', 'rb_civ_m2', 'rb_civ_f1', 'rb_civ_m1', 'rb_civ_f2', 'rb_courier', 'rb_contractor', 'rb_sera', 'rb_child_m2', 'rb_trader', 'rb_doctor_f', 'rb_mara', 'rb_doctor_m', 'rb_mira', 'rb_gardener_f', 'rb_warden', 'rb_jun', 'rb_child_m', 'rb_child_f', 'rb_iven'],
+  act4: ['rb_civ_m3', 'rb_civ_f4', 'rb_civ_m2', 'rb_courier', 'rb_civ_f2', 'rb_mira', 'rb_civ_m1', 'rb_civ_f1', 'rb_trader', 'rb_villager_f', 'rb_civ_f3', 'rb_child_m2', 'rb_trooper', 'rb_scav', 'rb_child_f2', 'rb_robe_m', 'rb_child_f', 'rb_child_m', 'rb_sera', 'rb_doctor_f', 'rb_iven', 'rb_rook', 'rb_security_f', 'rb_ezra', 'rb_odile', 'rb_elder'],
+  finale: ['rb_civ_m3', 'rb_civ_f4', 'rb_scav', 'rb_civ_m1', 'rb_civ_f2', 'rb_courier', 'rb_civ_m2', 'rb_elder', 'rb_civ_f3', 'rb_trader', 'rb_villager_f', 'rb_robe_m', 'rb_mira', 'rb_child_f2', 'rb_jun', 'rb_tala', 'rb_ezra', 'rb_odile', 'rb_iven', 'rb_sera', 'rb_doctor_f'],
+  cases: ['rb_civ_m3', 'rb_civ_f4', 'rb_child_f2', 'rb_robe_m', 'rb_elder', 'rb_tala', 'rb_trader', 'rb_villager_f', 'rb_scav', 'rb_civ_f3', 'rb_child_m2', 'rb_courier', 'rb_civ_m2', 'rb_civ_f1', 'rb_civ_m1', 'rb_civ_f2', 'rb_mara', 'rb_florist', 'rb_security_f', 'rb_jun', 'rb_child_f', 'rb_mira', 'rb_contractor', 'rb_medic_f', 'rb_doctor_f', 'rb_warden', 'rb_doctor_m', 'rb_sera', 'rb_iven', 'rb_ezra', 'rb_soldier_m', 'rb_gardener_f', 'rb_odile', 'rb_child_m', 'rb_niko'],
 };
 for (const k of Object.keys(CHAPTER_CAST)) CHAPTER_CAST[k] = [...new Set(CHAPTER_CAST[k])];
 export const castOf = (chapter) => [...new Set([...COMMON, ...(CHAPTER_CAST[chapter] || [])])];

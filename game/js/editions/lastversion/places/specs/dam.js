@@ -46,7 +46,9 @@ export default {
     [],
   ] },
   crowd: [
-    { era: 'present', years: ['PRESENT'], region: 'dam', role: 'prisoner', path: [[-30, 12], [-30, 24], [-16, 24]], y: HALL, n: 6 },
+    // (U4 review) the twelve prisoners of §5 M10: two to each loop cell of the testing chamber, pacing their four seconds,
+    // flickering between solid and hologram; gone once Kai releases them
+    ...[-48, -41.6, -35.2, -28.8, -22.4, -16].map((x) => ({ era: 'present', years: ['PRESENT'], region: 'dam', role: 'prisoner', path: [[x - 1.6, 23], [x + 1.6, 25.6]], y: HALL, n: 2, flicker: true, when: '!prisoners_freed' })),
     { era: 'present', years: ['PAST'], region: 'dam', role: 'builder', path: [[-40, -9], [40, -9]], n: 4 },
   ],
 

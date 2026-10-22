@@ -89,7 +89,7 @@ export default {
   frags: { m07: [['lowerRing', 'astronomerRoofs', 'gnomonFoot'], ['starTube', 'scavengerCamp', 'cache'], ['outerRingWalk', 'summitStair', 'horizonRing']] },
   watch: { m07: [[], [[[38, -16], [62, -16], [62, 4], [38, 4]]], [[[-46, -40], [-44, -66], [-28, -82], [-4, -84]], [[-20, -56], [-4, -56], [-4, -46], [-20, -46]]]] },
   crowd: [
-    { era: 'ancient', years: ['PAST'], region: 'settlement', role: 'skywatcher', path: [[-40, 60], [0, 60], [0, 40]], n: 5 },
+    { era: 'ancient', years: ['PAST'], region: 'settlement', role: 'skywatcher', path: [[-40, 60], [0, 60], [0, 40]], n: 5, women: ['rb_elder'] }, // (§5 M7: the women on the Elder's mesh; Tala was met a mission ago)
     { era: 'present', years: ['PRESENT'], region: 'helix', role: 'surveyor', path: [[-30, -20], [10, -20]], n: 3 },
   ],
 

@@ -33,7 +33,7 @@ import { STYLES } from '../game/js/editions/lastversion/places/styles.js';
 import { Player } from '../game/js/entities/Player.js';
 import { LV_MODELS, SHARED_MODELS, MANIFEST, CHAPTER_CAST, COMMON, sexOf, isChild, castOf } from '../game/js/editions/lastversion/casting.js';
 import { WARDROBE, hasVariant, packRules } from '../game/js/editions/lastversion/wardrobe.js';
-import { ERAS, EXCEPTIONS, ANCIENT_WOMEN, AMBIENT_CAST, eraModels, MAX_PEOPLE } from '../game/js/editions/lastversion/crowds.js';
+import { ERAS, EXCEPTIONS, ANCIENT_WOMEN, AMBIENT_CAST, eraModels, MAX_PEOPLE, MET, CAP } from '../game/js/editions/lastversion/crowds.js';
 import { WATCHERS, HUMAN, watcherModels, kindsOf } from '../game/js/editions/lastversion/watchers.js';
 import { spokenLines, voiceOf, lexicon, GROUPS, chapterCardLines, missionCardLines, endingLines, POSTCREDIT, choiceLine, numberWords } from '../game/js/editions/lastversion/voicelines.js';
 import { voicePieces } from '../game/js/audio/voiceKey.js';
@@ -1144,7 +1144,9 @@ test('a place keeps to its budgets: colliders, texts, people, vegetation kinds, 
     const crowdN = level.crowd.reduce((a, c) => a + c.n, 0);
     const named = level.npcs.filter((n) => !n.crowd).length;
     const crowd = level.npcs.filter((n) => n.crowd).length;
-    assert.ok(level.npcs.length <= 24 && crowd === Math.min(crowdN, 24 - named), `${here}: ${level.npcs.length} people, ${named} named + ${crowd} of ${crowdN} in the crowd`);
+    // (U4 review: a crowd may come out smaller than its share, where its faces run out: crowds.js CAP)
+    const share = Math.min(crowdN, 24 - named);
+    assert.ok(level.npcs.length <= 24 && crowd <= share && crowd >= Math.floor(share * 0.6), `${here}: ${level.npcs.length} people, ${named} named + ${crowd} of ${crowdN} in the crowd`);
     const [bx0, bz0, bx1, bz1] = level.bounds;
     assert.ok(level.crowd.length, `${here}: crowd paths for U4`);
     for (const c of level.crowd) {
@@ -1648,6 +1650,11 @@ test('named faces stay out of crowds (but for the listed exceptions), and crowd 
     const here = new Set(level.npcs.filter((n) => !n.crowd && NPCS[n.crew]).map((n) => level.cast.find((c) => c.id === n.crew)?.model));
     for (const n of level.npcs.filter((x) => x.crowd)) {
       const c = level.cast.find((x) => x.id === n.crew);
+      // (the Place Outside Time's echoes are people Kai has met: their own faces, as holograms, by their names)
+      if (c.met) {
+        assert.ok(n.hologram && MET.includes(c.met) && c.model === NPCS[c.met].model && c.first === NPCS[c.met].first, `${deck.mkey}/${s}: ${n.id} is an echo of ${c.met}`);
+        continue;
+      }
       assert.ok(!here.has(c.model) || c.model === 'rb_child_m2' && c.era !== 'ancient', `${deck.mkey}/${s}: ${c.model} is in the crowd and among the named`);
       assert.ok(eraModels(c.era).has(c.model), `${deck.mkey}/${s}: ${c.model} is not of the ${c.era} era`);
     }
@@ -1682,6 +1689,35 @@ test('crowds walk every mission\'s place: neighbours differ, heights and paces v
 
 // (U4 review) DeckWorld walks a crowd in x and z only; Runtime.step sets each walker's height from the two waypoints it
 // walks between (crowds.js groundOf). Walked here leg by leg, as the game walks them, in every year each one shows in.
+// (U4 review) a crowd is not copies of a few faces: at most CAP of one face a year in a place (the helmeted troopers and
+// holograms aside), and in 2026/2049 and 2196 no crowd wears the face of someone placed by hand in the same place
+test('crowds are not clones: one face at most twice a year in a place, and never a hand-placed person\'s', () => {
+  for (const { deck, s, level } of LEVELS) {
+    const states = level.states || deck.states || ['PRESENT'];
+    const placed = new Set(level.npcs.filter((n) => n.ambient && !n.crowd).map((n) => level.cast.find((c) => c.id === n.crew)?.model).filter((m) => m && !isChild(m)));
+    const count = {};
+    for (const n of level.npcs.filter((x) => x.crowd && !x.hologram)) {
+      const c = level.cast.find((x) => x.id === n.crew);
+      if (c.model === 'rb_trooper') continue;
+      if (c.era !== 'ancient') assert.ok(!placed.has(c.model), `${deck.mkey}/${s}: ${n.id} wears ${c.model}, a face placed by hand here`);
+      const ys = (n.when || '').match(/@(PRESENT|PAST|FUTURE)/g)?.map((y) => y.slice(1)) || states;
+      for (const y of ys) {
+        const k = `${c.model}@${y}`;
+        count[k] = (count[k] || 0) + 1;
+        assert.ok(count[k] <= CAP, `${deck.mkey}/${s}: ${count[k]} crowd people wear ${c.model} in ${y}`);
+      }
+    }
+  }
+  // the Place Outside Time's echoes are people Kai has met
+  const m19 = LEVELS.find((l) => l.deck.mkey === 'm19').level;
+  const echoes = m19.npcs.filter((n) => n.crowd).map((n) => m19.cast.find((c) => c.id === n.crew));
+  assert.ok(echoes.length >= 3 && echoes.every((c) => c.met), `M19's echoes: ${echoes.map((c) => c.first)}`);
+  // Mission 10's twelve prisoners in the loop cells, flickering, until Kai releases them
+  const m10 = LEVELS.find((l) => l.deck.mkey === 'm10').level;
+  const pris = m10.npcs.filter((n) => n.crowd && m10.cast.find((c) => c.id === n.crew).crowdRole === 'prisoner');
+  assert.ok(pris.length === 12 && pris.every((n) => n.flicker && /!prisoners_freed/.test(n.when) && n.pos[2] > 21 && n.pos[2] < 27), `M10: ${pris.length} prisoners in the cells`);
+});
+
 test('crowd walkers keep to the ground: no floating off a terrace, no sinking into a plaza, no walking through a wall', () => {
   const holds = (when, st, v) => !when || !!compileCondition(when)({ fact: () => v, state: st });
   let walkers = 0, metres = 0;
@@ -1720,7 +1756,8 @@ test('crowd walkers keep to the ground: no floating off a terrace, no sinking in
           for (let k = 0; k <= steps; k++) {
             const x = a[0] + ((b[0] - a[0]) * k) / steps, z = a[1] + ((b[1] - a[1]) * k) / steps, y = a[2] + ((b[2] - a[2]) * k) / steps;
             const here = near(x, z);
-            const ground = here.some((e) => holds(e.when, st, false) && holds(e.when, st, true) && x >= e.box[0] && x <= e.box[3] && z >= e.box[2] && z <= e.box[5] && Math.abs(e.box[4] - y) <= Math.max(0.03, dy + 0.01));
+            // (a seam or a crack narrower than a foot between two surfaces is stepped over)
+            const ground = here.some((e) => holds(e.when, st, false) && holds(e.when, st, true) && x >= e.box[0] - 0.12 && x <= e.box[3] + 0.12 && z >= e.box[2] - 0.12 && z <= e.box[5] + 0.12 && Math.abs(e.box[4] - y) <= Math.max(0.03, dy + 0.01));
             assert.ok(ground, `${deck.mkey}/${s} (${st}): ${n.id} leaves the ground at (${x.toFixed(1)}, ${y.toFixed(2)}, ${z.toFixed(1)})`);
             const wall = here.find((e) => (holds(e.when, st, false) || holds(e.when, st, true)) && x > e.box[0] - 0.25 && x < e.box[3] + 0.25 && z > e.box[2] - 0.25 && z < e.box[5] + 0.25 && e.box[1] < y + 1.6 && e.box[4] > y + 0.45);
             assert.ok(!wall, `${deck.mkey}/${s} (${st}): ${n.id} walks into [${wall?.box}] at (${x.toFixed(1)}, ${y.toFixed(2)}, ${z.toFixed(1)})`);
@@ -1762,9 +1799,12 @@ test('each chapter loads the people it casts; the edition offers Kai\'s look onl
 
 test('the manifest carries only the edition\'s models, each with a credit and a conversion entry', () => {
   const lvFiles = Object.values(LV_MODELS).map((m) => m.file);
-  assert.equal(Object.keys(LV_MODELS).length, 31, '31 new people');
-  assert.equal(Object.values(LV_MODELS).filter((m) => m.px === 1024).length, 16, '16 named at 1024 px');
-  assert.equal(Object.values(LV_MODELS).filter((m) => m.px === 512).length, 15, '15 crowd at 512 px');
+  assert.equal(Object.keys(LV_MODELS).length, 37, '37 new people');
+  assert.equal(Object.values(LV_MODELS).filter((m) => m.px === 1024).length, 20, '20 named at 1024 px');
+  assert.equal(Object.values(LV_MODELS).filter((m) => m.px === 512).length, 17, '17 crowd at 512 px');
+  // (U4 review) no one in the edition wears a Station Zero character's face: Juno, Varga, Kade, Ren's FIELD JACKET, the
+  // captain (Kai keeps Ren's SHIRTSLEEVES: he is the player)
+  for (const f of ['rb_juno.glb', 'rb_office_f.glb', 'rb_engineer_m.glb', 'rb_ren_f.glb', 'rb_captain_m.glb']) assert.ok(!MANIFEST.includes(f), `${f} is a Station Zero face`);
   assert.deepEqual([...MANIFEST].sort(), [...new Set([...Object.values(SHARED_MODELS).map((m) => m.file), ...lvFiles])].sort());
   for (const f of MANIFEST) assert.ok(fs.existsSync(`game/assets/characters/${f}`), f);
   for (const f of ['Michelle.glb', 'Nova.glb', 'rb_pilot_f.glb', 'rb_gardener_m.glb']) assert.ok(!MANIFEST.includes(f), `${f} is Station Zero's`);
@@ -1800,7 +1840,7 @@ test('every wardrobe variant is a valid recolour: at most 8 rules, numbers in ra
           assert.ok(r.band[0] < r.band[2] && r.band[1] < r.band[3] && r.win[0] < r.win[1], `${model}/${name}.${k}: band and window`);
         }
       }
-      for (const p of v.props || []) assert.ok(['umbrella', 'lantern', 'staff', 'trowel', 'clipboard', 'loupe', 'lanyard', 'beret', 'visor', 'badge'].includes(p), `${model}/${name}: prop ${p}`);
+      for (const p of v.props || []) assert.ok(['umbrella', 'lantern', 'staff', 'trowel', 'clipboard', 'loupe', 'lanyard', 'beret', 'visor', 'badge', 'raincoat', 'raincoatHood', 'raincoatChild', 'raincoatChildHood', 'helmet', 'vest'].includes(p), `${model}/${name}: prop ${p}`);
     }
   }
 });

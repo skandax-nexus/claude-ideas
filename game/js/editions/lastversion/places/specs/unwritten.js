@@ -79,7 +79,8 @@ export default {
   frags: { m19: [['clockGallery', 'stonePattern', 'helixBadge'], ['lagSite', 'door2', 'miraMeet']] },
   watch: { m19: [[], [], []] },
   crowd: [
-    { era: 'present', years: ['PRESENT', 'PAST', 'FUTURE'], region: 'unwritten', role: 'echo', path: [[-30, 60], [30, 60]], n: 3, echo: true },
+    // (U4 review) the echoes are people Kai has met (crowds.js MET: Pryce, Iven, Odile, Ezra, the Elder), not strangers
+    { era: 'present', years: ['PRESENT', 'PAST', 'FUTURE'], region: 'unwritten', role: 'met', path: [[-30, 60], [30, 60]], n: 5, echo: true },
   ],
 
   build(P) {
