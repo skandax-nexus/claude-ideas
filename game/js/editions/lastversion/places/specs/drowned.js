@@ -212,6 +212,13 @@ export default {
       for (const x of [-12, 8]) P.cyl(x, 1.6, -92, 0.15, 3.8, 'pontoonWood', { seg: 6, solid: true });
       for (let i = 0; i < 4; i++) P.box([-8 + i * 4, 1.6, -97, -6 + i * 4, 2.3, -96], 'pontoonWood');
     });
+    // (the school is the Helix entrance canopy at the back of the plaza, patched with timber: in 2026 and 2049 it is
+    // still the company's, steel over the glass front of the lobby)
+    P.E(['PRESENT', 'PAST'], () => {
+      P.box([-12, 1.6, -104, 8, 5.4, -100], 'rainGlass');
+      P.vbox([-14, 5.4, -104, 10, 5.7, -92], 'steel');
+      for (const x of [-12, 8]) P.cyl(x, 1.6, -92, 0.15, 3.8, 'steel', { seg: 6, solid: true });
+    });
     sign(P, 'KAI VAREN', -19, 4.0, -82.5, 0, { size: 0.5, board: 0, color: '#e8e4dc', e: ['FUTURE'] });
     sign(P, 'ARCHITECT OF THE FRACTURE', -19, 3.3, -82.5, 0, { size: 0.32, board: 0, color: '#c8c4bc', e: ['FUTURE'] });
     P.E(['PRESENT', 'PAST'], () => {
