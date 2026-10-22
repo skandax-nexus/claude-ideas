@@ -66,7 +66,7 @@ export default {
       ramp(P, [40, 6, 48, 18], 6, 10, 'N', 'meadowLong', { terrain: false });
       ramp(P, [-44, 6, -36, 18], 6, 10, 'N', 'meadowLong', { terrain: false });
     });
-    P.challenge('meadow', [-60, -46, 60, 72], ['PAST', 'PRESENT'], ['The terraces only meet at their stairs.', 'Before the fire there were no walls here. The meadow ran straight up the hill.', 'Switch to before the fire and walk up the meadow slopes, or take the stone stairs.'], { optional: true });
+    P.challenge('meadow', [-60, -46, 60, 72], ['PAST', 'PRESENT'], ['The terraces meet only at stairs.', 'Before the fire, the meadow ran straight up.', 'Go before the fire. Walk up the meadow.'], { optional: true });
     // --- Q2: the ring on the summit; the under-chamber inside it -------------------------------------------
     ringStones(P, rx, 10, rz, 12, 14, 9, { band: 'bronze', w: 2.4, d: 1.4 });
     P.land('ring', rx, 10, rz - 12, 0);

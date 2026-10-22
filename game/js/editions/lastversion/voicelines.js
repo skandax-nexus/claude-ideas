@@ -214,7 +214,7 @@ export function spokenLines({ levels = true } = {}) {
       for (const p of m.processes || []) {
         (p.hints || []).forEach((t, j) => add(ch, `${P}.process:${p.id}.hint${j}`, 'KAI', t));
         if (p.line) add(ch, `${P}.process:${p.id}.line`, 'KAI', p.line);
-        if (p.clip?.text) add(ch, `${P}.process:${p.id}.clip`, p.clip.who || 'NONE', p.clip.text, { fx: 'recording' });
+        if (p.clip?.text) add(ch, `${P}.process:${p.id}.clip`, p.clip.who || 'NONE', p.clip.text, { ...(p.clip.voice || {}), fx: 'recording' });
       }
       // threads, sides, talks and deductions (U6 on): the shape §3.3 gives them
       const thread = (t, tp) => {

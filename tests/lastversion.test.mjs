@@ -23,6 +23,7 @@ import { RULES, INV_LINES } from '../game/js/editions/lastversion/inversion.js';
 import { checkRecord, makeRecord, colliderEntry, Process, MAX_PROCESSES, MAX_PARTS, WEIGHTS, KINDS } from '../game/js/editions/lastversion/processes.js';
 import * as THREE from '../game/vendor/three.module.min.js';
 import { ENDINGS, LOCK_ORDER } from '../game/js/editions/lastversion/acts.js';
+import { hazardAt, musicGain } from '../game/js/editions/lastversion/act2.js';
 import { NPCS, DIALOGUE, AMBIENT, npcState, JUN_HOOK, WATER_HOOK, MARA_HOOK, IVEN_HOOK } from '../game/js/editions/lastversion/npcs.js';
 import { PLACES, signature, quartersOf } from '../game/js/editions/lastversion/places/index.js';
 import { SKIES } from '../game/js/editions/lastversion/places/years.js';
@@ -292,7 +293,7 @@ const PRODUCE = (states) => new Set(['heldPersists', ...states.flatMap((s) => Ob
 test('all the mission levels build', () => {
   const sectors = Object.values(MISSIONS).flat().reduce((a, m) => a + m.sectors, 0);
   assert.equal(LEVELS.length, sectors, `${LEVELS.length} levels`);
-  assert.ok(sectors >= 60, `${sectors} sectors`);
+  assert.ok(sectors >= main.length, `${sectors} sectors`); // (a mission rewritten as one map is one sector)
   for (const { deck, level } of LEVELS) {
     assert.ok(level.exit && level.spawn && level.order.length, deck.mkey);
     assert.ok(level.checkpoints.length, `${deck.mkey}: somewhere to come back to`);
@@ -325,7 +326,7 @@ test('every obstacle has a state (or the anchor) that gets past it', () => {
       }
     }
   }
-  assert.ok(rooms >= 30, `${rooms} challenges checked`); // (the places' crossings, in every sector of every mission)
+  assert.ok(rooms >= 20, `${rooms} challenges checked`); // (the places' crossings, in every mission: since U7 most are one load)
 });
 
 test('every level is a place, and any route a level carries only uses states its room was authored with', () => {
@@ -501,7 +502,7 @@ test('three years and nothing else: no INVERTED, no gravity, no ceiling in any m
       for (const w of [...(room.route || []), ...(room.keyRoute || [])]) if (w.state) assert.ok(LV.states.includes(w.state), `${here} ${rid}: route ${w.state}`);
     }
   }
-  assert.ok(checked >= 30, `${checked} challenges`);
+  assert.ok(checked >= 20, `${checked} challenges`);
 });
 
 test('no laws, no law tokens, no memory keys, and Kai thinks without ceilings or domes', () => {
@@ -536,6 +537,8 @@ const run = (p, secs, ctx = { time: 0, player: null }) => {
   return ev;
 };
 const M11 = () => LEVELS.filter((l) => l.deck.mkey === 'm11');
+// (since U7 Mission 11 is one map: a process belongs to the quarter whose area holds its landmark)
+const inQuarter = (p, qi) => { const [x0, z0, x1, z1] = p.level.quarters[qi].area; const [x, , z] = p.rec.anchor.pos; return x >= x0 && x <= x1 && z >= z0 && z <= z1; };
 const procOf = (id) => {
   for (const l of M11()) {
     const p = l.level.processes.find((x) => x.id === id);
@@ -608,15 +611,15 @@ test('REVERSE is never required before Mission 11, and the menu primes it from A
 test('Mission 11 teaches REVERSE: three tutorial objects, the charred file, a refusal, and a lock with three clues', () => {
   const m11 = main.find((m) => m.n === 11);
   assert.deepEqual(m11.states, ['PRESENT', 'PAST'], 'the hospital has two years; its reversed wards are not a year');
-  for (const l of M11()) assert.ok(l.level.reversedRooms.length >= 1, `sector ${l.s} has a reversed ward`);
+  for (const l of M11()) assert.ok(l.level.reversedRooms.length >= 3, 'the colonnade, the annex and the twin ward run backwards');
   // the unlock comes in the records quarter, from the file that keeps un-burning
   const file = procOf('charredFile');
-  assert.equal(file.s, 1, 'records');
+  assert.ok(inQuarter(file, 1), 'records');
   assert.ok(m11.rules.some((r) => r.then === 'unlock' && /!has_inversion/.test(r.when)) && typeof m11.fx.unlock === 'function');
   assert.ok(file.level.triggers.some((t) => t.set?.m11_saw_file && t.room === file.rec.room), 'watching the file catches the rhythm');
   for (const [id, kind] of [['tray', 'fall'], ['waterGlass', 'flow'], ['burntDoor', 'burn']]) {
     const p = procOf(id);
-    assert.ok(p && p.rec.kind === kind && p.s === 1 && p.rec.room === file.rec.room, `the tutorial ${id} (${kind}) is in the records hall`);
+    assert.ok(p && p.rec.kind === kind && inQuarter(p, 1) && p.rec.room === file.rec.room, `the tutorial ${id} (${kind}) is in the records hall`);
   }
   // the file is readable only while it is held, and says who admitted her
   assert.equal(file.rec.kind, 'burn');
@@ -633,7 +636,7 @@ test('Mission 11 teaches REVERSE: three tutorial objects, the charred file, a re
   // the lock: four bolts fitted RING, BAR, STAR, CRESCENT; it opens Ward 32
   assert.deepEqual(LOCK_ORDER, ['RING', 'BAR', 'STAR', 'CRESCENT']);
   const lock = procOf('m11lock');
-  assert.equal(lock.s, 2);
+  assert.ok(inQuarter(lock, 2), 'Ward 32');
   assert.equal(lock.rec.kind, 'lock');
   assert.equal(lock.rec.settle, 'settled');
   assert.ok(lock.rec.required);
@@ -1062,7 +1065,7 @@ test('the places can be walked: their stairs, terraces, ramps and bridges carry 
     ['m07', 'PRESENT', () => [30, 0, -18], [[30, -37], [26, -70], [41, -70], [46.5, -52], [40, -52], [14, -52], [12, -52]], 18, {}],
     ['m07', 'PAST', () => [46, 16, -70], [[44, -74], [66, -74], [74, -77]], 27.5, {}],
     ['m07', 'FUTURE', () => [-80, 0, -52], [[-78, -52], [-37, -52], [-35, -52]], 18, {}],
-    ['m08', 'PRESENT', (l) => lm(l, 'atriumDoors'), [[-40, -20], [-30, -24], [30, -20], [30, -21], [30, -37.5], [30, -38.6]], 9, {}],
+    ['m08', 'PRESENT', (l) => lm(l, 'atriumDoors'), [[-40, -20], [-30, -24], [30, -20], [30, -21], [30, -37.5], [30, -38.6]], 9, { staff_door_open: true }], // (an officer who trusts Kai opens it)
     ['m08', 'PRESENT', () => [40, 0, -28], [[40, -24.5], [40, -14.3], [44, -10]], 6, {}],
     ['m08', 'PRESENT', () => [0, 0, -22], [[0, -18.4], [-0.3, -17], [0.4, -15.6], [-0.2, -14.2], [0.3, -12.8], [0, -11]], 0.4, {}],
     // (U3) the stone arch over the 2026 canyon; the lamp-post heads over the 2049 flood; the 2196 tilted floors up to the tower's deck
@@ -1203,7 +1206,8 @@ test('the checkpoint officer is Officer Pryce on rb_security_f; the renames and 
   assert.equal(m1.cast.find((c) => c.id === 'guard').model, 'rb_security_f');
   assert.equal(m1.cast.find((c) => c.id === 'mira').variant, 'raincoat', 'M1: the woman in the rain');
   const m11 = LEVELS.find((l) => l.deck.mkey === 'm11' && l.level.npcs.some((n) => n.crew === 'patient')).level;
-  assert.ok(m11.npcs.find((n) => n.crew === 'patient').silent && m11.npcs.some((n) => n.crew === 'odile' && n.lines?.length), 'M11: Odile speaks for Ward 32; its figure is silent');
+  assert.ok(m11.npcs.find((n) => n.crew === 'patient').silent && m11.npcs.some((n) => n.crew === 'odile' && !n.silent) && main.find((m) => m.n === 11).talks.odile.some((d) => d.lines.length >= 6),
+    'M11: Odile speaks for Ward 32; its figure is silent');
 });
 
 test('Lin and Mira share one mesh, in different wardrobes; the Witness wears Kai\'s', () => {
@@ -1858,7 +1862,91 @@ test('the save format: a pre-U6 save in the middle of a rewritten mission restar
   migrateSave(engine(), now, LV);
   assert.deepEqual([now.quarter, now.pos], [2, [1, 2, 3, 0]]);
   // a mission not rewritten keeps its sector
-  const act = { lv: true, chapter: 'act2', deck: 2, sector: 1, flags: {}, lvFormat: 21 };
+  const act = { lv: true, chapter: 'act3', deck: 2, sector: 1, flags: {}, lvFormat: 21 };
   migrateSave(engine(), act, LV);
   assert.equal(act.sector, 1);
+});
+
+// --- story part 2: Acts I and II (OVERHAUL.md §5 M4-M13; U7) ------------------------------------------------------------
+test('Acts I and II are rewritten as threads; the length model: each mission 25-42 minutes, the main path 70% or more', () => {
+  assert.deepEqual(REWRITTEN.map((m) => m.key), MISSION_ORDER.slice(0, 13), 'Missions 1-13 are rewritten');
+  for (const ch of ['act1', 'act2']) {
+    for (const m of MISSIONS[ch]) {
+      const e = estimate(m);
+      assert.ok(e.total >= 25 && e.total <= 42, `${m.key}: ${e.total} min`);
+      assert.ok(e.main / e.total >= 0.7, `${m.key}: main ${e.main} of ${e.total}`);
+      assert.deepEqual([e.main, e.optional], [m.minutes.main, m.minutes.optional], `${m.key}: its declared minutes are the model's`);
+      assert.ok(m.done && m.autoExit != null, `${m.key}: it ends on its last thread`);
+      // every quarter of the place has something to do in it
+      assert.ok(m.quarters.every((q) => (q.threads || []).length + (q.sides || []).length > 0), `${m.key}: no empty quarter`);
+    }
+  }
+});
+
+test('Act I: the moments the sheets name, and the choices they keep (machine_buried, water_route, ezra_debt, mira_tape, rook_fate)', () => {
+  const m = (k) => main.find((x) => x.key === k);
+  const thr = (k, id) => threadsOf(asDeck(m(k))).find((t) => t.id === id);
+  const lv = (k) => LEVELS.find((l) => l.deck.mkey === k).level;
+  const sets = (o, k) => { const out = []; walkObj(o, (x) => { if (x.set && k in x.set) out.push(x.set[k]); }); return out; };
+  // M4: three pictograms, the meal at the first fire (the grey one), the panels read from the ash, the card
+  assert.deepEqual(thr('m04', 'picto').of, ['ev_picto_fire', 'ev_picto_water', 'ev_picto_ring']);
+  assert.ok(m('m04').scenes.meal.lines.some((l) => l.text === 'One came grey, and would not speak, and sat by the ring until it took him.'));
+  assert.ok(m('m04').deductions.panels.answers.some((a) => a.correct && a.needs === 'ev_ash_layers'));
+  assert.ok(m('m04').scenes.card.set.card_found && m('m04').done === 'card_found');
+  // M5: divert -> the abandoned village investigated -> the gate -> the machine buried or left; chain B in the gorge
+  assert.deepEqual([...thr('m05', 'gate').after].sort(), ['wall', 'why']);
+  assert.deepEqual([thr('m05', 'why').after, thr('m05', 'machine').after, thr('m05', 'bury').after], [['divert'], ['gate'], ['machine']]);
+  assert.deepEqual(sets(m('m05').talks, 'machine_buried').sort(), ['cairn', 'clay']);
+  assert.equal(thr('m05', 'leave').kind, 'playback', 'the villagers\' leaving, played back by its echoes');
+  assert.ok(lv('m05').npcs.filter((n) => /^pb_leave_/.test(n.id)).length >= 2 && lv('m05').npcs.every((n) => !/^pb_/.test(n.id) || n.hologram), 'its echoes are cast, as holograms');
+  assert.ok(['gate1', 'gate2', 'gate3'].every((k) => typeof m('m05').fx[k] === 'function') && thr('m05', 'gates').done === 'water_route', 'the gorge gates open the water route');
+  // M6: Ezra Moll, the hidden stair, the escapement, the Clockmaker's Debt
+  assert.ok(m('m06').deductions.stair && thr('m06', 'clocks').done === 'clock_set');
+  assert.deepEqual(sets(m('m06').talks, 'ezra_debt').sort(), ['finish', 'release']);
+  // M7: the instruments, the scavengers' stones that come back, Mira's tape
+  assert.ok(m('m07').processes.some((p) => p.kind === 'projectile' && !p.required), 'a thrown stone snaps back (never required before M11)');
+  assert.deepEqual(sets(m('m07').scenes, 'mira_tape').sort(), ['kept', 'left']);
+  // M8: the confrontation sets rook_fate; the boot print; the last ten minutes played back; VERSION 17
+  assert.deepEqual(sets(m('m08').talks.rook, 'rook_fate').sort(), ['expose', 'persuade', 'record']);
+  assert.equal(thr('m08', 'reconstruct').entries.length, 4);
+  assert.ok(m('m08').scenes.version.set.version_17 && m('m08').done === 'version_17');
+  assert.ok(m('m08').talks.rook[0].lines.some((l) => l.text.includes('boot prints in the clay') && /machine_buried/.test(l.when || '')), 'Rook\'s words follow machine_buried');
+});
+
+test('Act II: the loop, the Director, the hospital\'s sound and hazards, the chase, the shells, the charge cap', () => {
+  const m = (k) => main.find((x) => x.key === k);
+  const thr = (k, id) => threadsOf(asDeck(m(k))).find((t) => t.id === id);
+  const lv = (k) => LEVELS.find((l) => l.deck.mkey === k).level;
+  // M9: two loops, each reset moving the patrols to another round, rain upward; then the transmitter, Rhea, the tower
+  const m9 = m('m09');
+  assert.deepEqual([thr('m09', 'loop1').kind, thr('m09', 'loop2').kind], ['loop', 'loop']);
+  assert.ok(m9.loop.upward && m9.loop.period > 0 && m9.loop.until === 'transmitter_cut');
+  const v = m9.loop.variants.map((x) => JSON.stringify(x.watch.q1s0) + JSON.stringify(x.watch.q2s0));
+  assert.equal(new Set(v).size, v.length, 'every loop walks its own patrols');
+  const ids = lv('m09').sentinels.map((s) => s.id);
+  assert.ok(['q1s0', 'q2s0'].every((k) => ids.some((id) => id.endsWith(`_${k}`))), `the patrols a reset moves are in the level: ${ids}`);
+  assert.deepEqual(['transmitter', 'rhea', 'tower'].map((id) => thr('m09', id).after[0]), ['clockC', 'transmitter', 'rhea']);
+  assert.ok(m9.scenes.tower.lines.some((l) => l.who === 'WITNESS' && l.text === 'To become me.'));
+  // M10: the Director is whoever rook_fate made them; the captured projector teaches Echo Step
+  assert.equal(m('m10').coldOpen.lines.filter((l) => /rook_fate/.test(l.when || '')).length, 3);
+  assert.ok(m('m10').scenes.projector.set.echo_step && thr('m10', 'projector').done === 'echo_step');
+  // M11: the music box is quieter the nearer you are; three hazards go back where they were, and hit only then
+  assert.ok(musicGain(2) < musicGain(12) && musicGain(12) < musicGain(30) && musicGain(30) === 1);
+  const lm = [0, 0, 0, 0];
+  const h = { origin: [0, 0, -10], rest: [0, 0, 8], period: 7, phase: 0 };
+  const a = hazardAt(h, lm, 0.2), b = hazardAt(h, lm, 3), c = hazardAt(h, lm, 6);
+  assert.ok(a.returning && !b.returning && !c.returning && b.pos[2] === -10 && c.pos[2] > b.pos[2], 'it returns fast, holds, then drifts out again');
+  assert.ok(lv('m11').landmarks.musicBox && ['gurneyRun', 'ivStand', 'glassWindow'].every((k) => lv('m11').landmarks[k]));
+  assert.equal(typeof m('m11').step, 'function');
+  assert.ok(m('m11').talks.odile[0].choices.every((c) => 'odile_released' in c.set));
+  // M12: the chase never fails (a leash, no fail state); the Witness holds the stair first, then Kai follows by REVERSE
+  assert.equal(thr('m12', 'chase').kind, 'chase');
+  assert.deepEqual([thr('m12', 'stair').after, thr('m12', 'stair').of], [['witnessStair'], ['rev_collapsedStair']]);
+  assert.ok(lv('m12').processes.some((p) => p.id === 'collapsedStair' && p.kind === 'collapse'));
+  assert.ok(m('m12').rules.some((r) => r.then === 'witnessStair') && typeof m('m12').fx.witnessStair === 'function');
+  // M13: a shell from each side, reversed, pins ev_both_sides; the stabilizer sets the faction; the charge cap rises to 10 s
+  assert.deepEqual(thr('m13', 'shells').of, ['inv_shellA_done', 'inv_shellB_done']);
+  assert.ok(thr('m13', 'shells').set.ev_both_sides);
+  assert.deepEqual(lv('m13').processes.filter((p) => p.kind === 'projectile').map((p) => p.id).sort(), ['shellA', 'shellB']);
+  assert.ok(m('m13').scenes.stabilizer.choices.every((c) => c.set.inv_cap === 10 && c.set.faction));
 });

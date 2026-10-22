@@ -54,6 +54,7 @@ export const LV = {
     MARA: { name: 'MARA QUILL', color: '#8a6a9a' },
     ORREN: { name: 'ORREN', color: '#7a5fd0' },
     CHILD: { name: 'THE CHILD', color: '#d06a9a' },
+    MIRA9: { name: 'MIRA, NINE', color: '#d06a9a' }, // (Mira at nine, on a tape: the Child's voice, through the recording chain)
     PA: { name: 'ANNOUNCEMENT', color: '#5a6a78' }, // the station speakers, the ward intercom (fx 'pa')
   },
   chapters: CHAPTERS,

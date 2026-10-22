@@ -47,8 +47,11 @@ function mechsFor(m, fits) {
   return list.length ? list : ['sentinel', 'time']; // never an empty list (the generator would fall back to gravity)
 }
 
-// the save format (campaign.lvFormat): 21 = three years and REVERSE (U1); 22 = missions as one map with soft quarters (U6)
-export const SAVE_FORMAT = 22;
+// the save format (campaign.lvFormat): 21 = three years and REVERSE (U1); 22 = missions as one map with soft quarters (U6:
+// the Prologue); 23 = Acts I and II as one map each (U7)
+export const SAVE_FORMAT = 23;
+// the format in which each chapter's missions became one map: a save from before it restarts that mission
+const REWRITTEN_IN = { prologue: 22, act1: 23, act2: 23 };
 
 // v2.0 saves came from a four-state engine (INVERTED flipped gravity): the room states it no longer
 // has go back to the baseline, rooms lose a state they cannot have, and REVERSE gets its charge. A save
@@ -65,7 +68,7 @@ export function migrateSave(engine, campaign, def) {
   if (campaign) {
     campaign.inv = { cap: 8, charge: 8, ...(campaign.inv || {}) };
     const deck = MISSIONS[campaign.chapter]?.[campaign.deck ?? 0];
-    if ((campaign.lvFormat ?? 20) < 22 && isRewritten(deck)) {
+    if ((campaign.lvFormat ?? 20) < (REWRITTEN_IN[campaign.chapter] ?? 22) && isRewritten(deck)) {
       Object.assign(campaign, { sector: 0, quarter: 0, room: null, pos: null, flags: {}, visited: [], restarted: true });
     }
     campaign.quarter ??= 0;
@@ -79,7 +82,7 @@ export const PRIMES = {
   prologue: [],
   // (the Prologue's cross-mission facts, as a player who walked its main threads would have them)
   act1: ['has_chronolith', 'chronolith_seen', 'drawing_seen', 'fractured', 'mira_gone', 'wrist_cut', 'wrist_mark', 'raincoat', ['trust_rook', 0], 'ev_site_zero_print', 'ev_site_zero', 'lin_met'],
-  act2: ['version_17', 'ev_witness_recording', 'found_not_built'], // Act II reaches REVERSE by playing Mission 11
+  act2: ['version_17', 'ev_witness_recording', 'found_not_built', ['rook_fate', 'record'], ['machine_buried', 'clay'], ['mira_tape', 'kept'], 'ev_ninth_minute'], // Act II reaches REVERSE by playing Mission 11
   act3: ['echo_step', 'ev_prisoners', 'ev_stabilizer', 'has_inversion', ['inv_cap', 10]],
   act4: ['ev_memorial', 'ev_anja_lock', 'ev_version17', ['inv_cap', 12]],
   finale: ['ally'],
@@ -162,6 +165,15 @@ const EV_LABELS = {
   door_log: 'The door log: my card at 05:40, edited at 06:10', junior_pass: 'My junior pass: OVERRIDE 14-03-2026 16:02', site_zero: 'Site Zero: the ring was found, not built',
   thermos_er: 'A thermos marked E.R. at the 2026 dig', footprints: 'Two children\'s footprints at the dig, one with a star tread', polaroid: 'The ring, half dug out of the clay',
   plaque2196: 'HELIX. WHERE THE FRACTURE BEGAN. WE REMEMBER.',
+  // Acts I and II (U7)
+  he_is_early: 'HE IS NOT LYING. HE IS EARLY.', village_mark: 'My mark is cut over every door', ash_layers: 'The ash: cooking, feasting, nothing, cooking',
+  card_ancient: 'My Helix card, three thousand years old', ring_took: 'They left because the ring kept taking people', arm_count: 'The arm has turned 2,609 times',
+  rook_gauge: 'Ezra mended a gauge for Dr. Rook', ninth_minute: 'At the ninth minute a man turns the ring', rook_confession: 'Rook moved the test, and signed "fever"',
+  river_court: 'Helix was rebuilt round my river', v17_records: 'VAREN, M.: deceased 2026', boot_mine: 'The Site Zero print is my boot', second_late: 'Iven: the ring turned a second early',
+  order_cancelled: 'The tower order was cancelled at 08:09', ninth_view: 'From the tower: a man at the console, looking at me', intakes: 'Four earlier intakes of Varen, one grey',
+  echo_step: 'Echo Step: an afterimage a step ahead', missing_patient: 'VAREN, M., 9, admitted to Ward 32 in 2026', young_kai: 'Me at twelve, on the bench',
+  steps: 'His route: every pane of glass', both_sides: 'Both sides fire at their own last attack', witness_cause: 'A scarred wrist buried the first device',
+  field_orders: 'The field orders answer each other', casing: 'HELIX. PROPERTY OF K. VAREN', corridor_b: 'Corridor B, in 2026', junior_tour: 'SITE ZERO JUNIOR TOUR, 14 MARCH',
 };
 
 const _v = new THREE.Vector3();
@@ -563,6 +575,11 @@ export class LastVersion {
       if (real.length && here.some((s) => real.includes(s)) && here.some((s) => !real.includes(s))) n.temporal = real;
     }
     deck.adjust?.(level, this); // a consequence of an earlier choice can change the place
+    // REVERSE processes, scenes, doors and reversed wards at the mission's landmarks (§5); a rewritten mission's
+    // threads: their triggers, scenes, records, deductions, a playback's echoes and the chase's path (Threads.js)
+    // (before the casting, so the people they place are cast with everyone else)
+    placeAuthored(deck, level);
+    placeThreads(deck, level);
     // the people: the named cast in this mission's wardrobe, the hand-placed passers-by cast by role, and
     // the crowds that walk the place's paths (crowds.js; story.cast = CAST's copies, then the level's own)
     story.cast = level.cast = castLevel(level, deck, { facts: g.facts });
@@ -578,10 +595,6 @@ export class LastVersion {
     }
     // the records (said through the recording chain)
     this.recordTexts = new Set(level.interactables.filter((i) => i.kind === 'terminal' && i.log?.text).map((i) => i.log.text));
-    // REVERSE processes, scenes, doors and reversed wards at the mission's landmarks (§5); a rewritten mission's
-    // threads: their triggers, scenes, records, deductions and the chase's path (Threads.js)
-    placeAuthored(deck, level);
-    placeThreads(deck, level);
     this.threads.attach(deck, level);
     for (const k of Object.keys(g.engine.overrides)) g.engine.setOverride(k, null);
     for (const rid of level.reversedRooms) g.engine.setOverride(rid, { timeReverse: true });
@@ -1313,15 +1326,18 @@ export class LastVersion {
   }
 
   // --- loops (M9's nine minutes, M15's one day) ------------------------------------------------------------------
-  // deck.loop: seconds, or { period, variants: [{ watch: { 'q0s0': path, ... } }], upward } (each reset moves the
-  // patrols to the next variant; with upward, the rain falls upward for a second as the place jumps back)
+  // deck.loop: seconds, or { period, variants: [{ watch: { 'q0s0': path, ... } }], upward, until } (each reset moves the
+  // patrols to the next variant; with upward, the rain falls upward for a second as the place jumps back; once `until`
+  // holds, the loop is broken and resets no more)
   loopPeriod() {
     const l = this.deck?.loop;
+    if (l?.until && this.g.facts.test(l.until)) return 0; // (the loop is broken: M9's carrier cut)
     return (typeof l === 'object' && l ? l.period : l) || 0;
   }
 
   loopReset() {
     const g = this.g, deck = this.deck, L = deck.loop;
+    if (L?.until && g.facts.test(L.until)) return (this.loopT = 0); // (a broken loop resets no more)
     this.loopT = this.loopPeriod();
     g.facts.inc('loops_seen');
     g.facts.inc(`loops_${deck.mkey}`);

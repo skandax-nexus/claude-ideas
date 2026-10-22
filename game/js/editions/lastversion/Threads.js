@@ -133,10 +133,10 @@ export function placeThreads(deck, level) {
     }
     if (t.kind === 'deduce' && t.at && deck.deductions?.[t.deduction]) spot({ id: `deduce_${t.id}`, scene: `deduce:${t.deduction || t.id}`, prompt: t.prompt || 'PIECE IT TOGETHER', ...(t.spotOpts || {}) }, t);
     if (t.kind === 'residue' && t.at && t.record) {
-      spot({ id: `residue_${t.id}`, scene: `residue:${t.id}`, prompt: t.record.prompt || 'READ IT', kit: t.record.kit, offset: t.record.offset }, t);
+      spot({ id: `residue_${t.id}`, scene: `residue:${t.id}`, prompt: t.record.prompt || 'READ IT', kit: t.record.kit, model: t.record.model, offset: t.record.offset, when: t.record.when }, t);
     }
     if (t.kind === 'playback' && t.at) {
-      spot({ id: `playback_${t.id}`, scene: `playback:${t.id}`, prompt: t.prompt || 'WATCH WHAT IT KEPT', model: t.model, kit: t.kit, offset: t.offset, r: t.r }, t);
+      spot({ id: `playback_${t.id}`, scene: `playback:${t.id}`, prompt: t.prompt || 'WATCH WHAT IT KEPT', model: t.model, kit: t.kit, offset: t.offset, r: t.r, when: t.spotWhen }, t);
       // the echoes: holograms that stand (and walk) only while it plays (the fact pb_<mkey>_<id>)
       const a = anchor(t.at);
       for (const [k, e] of (t.echoes || []).entries()) {

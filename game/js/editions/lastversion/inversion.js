@@ -313,7 +313,7 @@ export class Inversion {
       // R5: a recording running backwards runs forwards once, and says what it says
       this.snd.stopLoop(rec.id);
       this.active = { p, part: -1, t: 0, lock: true };
-      g.hud.say([{ who: rec.clip?.who || 'NONE', text: rec.clip?.text || '', voice: { fx: 'recording' } }].filter((l) => l.text), g.facts, () => {
+      g.hud.say([{ who: rec.clip?.who || 'NONE', ...(rec.clip?.name ? { name: rec.clip.name } : {}), text: rec.clip?.text || '', voice: { ...(rec.clip?.voice || {}), fx: 'recording' } }].filter((l) => l.text), g.facts, () => {
         this.settle(p);
         if (this.active?.p === p) this.active = null;
       });

@@ -1,7 +1,9 @@
 // THE LAST VERSION OF EARTH: the campaign spine after the Prologue.
 //
-// Acts I-IV and the Finale stand in open places of their own (places/specs/*.js, one
-// map per mission whose sector i activates quarter i), and carry the bible's mission setup as authored beats:
+// Acts I and II live in act1.js and act2.js (U7): each mission one map with soft quarters, threads and side stories,
+// a cold open and a hook (Threads.js), re-exported from here. Acts III-IV and the Finale (below) stand in open places
+// of their own (places/specs/*.js, one map per mission whose sector i activates quarter i), and carry the bible's
+// mission setup as authored beats:
 // arrival / log / contradiction / encounter / choice / scene, each with its quoted
 // dialogue, its goal and its mission ending. The four quest chains are optional
 // cases. The bible's combat is readable stealth and evasion here: the game has no

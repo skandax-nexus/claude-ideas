@@ -91,6 +91,22 @@ export const AMBIENT_CAST = {
   tech_0: { model: 'rb_contractor', variant: 'helix slate', height: 1.8, pronoun: 'm' },
   tech_1: { model: 'rb_civ_f2', variant: 'coverall slate', height: 1.67, pronoun: 'f' },
   tech_2: { model: 'rb_contractor', variant: 'helix slate', height: 1.76, pronoun: 'm' },
+  // Act I (U7): the settlement's people at the first fire (M4: the women on Tala's mesh), the villagers who left (M5's
+  // echoes: the women on the Elder's mesh), M8's altered staff
+  m4_craft: { model: 'rb_tala', variant: 'umber', height: 1.66, pronoun: 'f' },
+  m4_teller: { model: 'rb_robe_m', variant: 'elder', height: 1.74, pronoun: 'm' },
+  m4_girl: { model: 'rb_child_f2', variant: 'linen', height: 1.3, pronoun: 'f' },
+  m5_potter: { model: 'rb_robe_m', variant: 'ochre', height: 1.76, pronoun: 'm' },
+  m5_mother: { model: 'rb_elder', variant: 'indigo', height: 1.62, pronoun: 'f' },
+  m5_child: { model: 'rb_child_f2', variant: 'ochre', height: 1.28, pronoun: 'f' },
+  m5_keeper: { model: 'rb_robe_m', variant: 'undyed', height: 1.78, pronoun: 'm' },
+  m7_astro: { model: 'rb_robe_m', variant: 'astronomer', height: 1.75, pronoun: 'm' },
+  m8_tech: { model: 'rb_contractor', variant: 'helix slate', height: 1.79, pronoun: 'm' },
+  // Act II (U7): an evacuee in Loop City, Sera disguised as a Continuum guard, the people who listened, a freed prisoner
+  m9_evac: { model: 'rb_civ_f2', variant: 'dust', height: 1.66, pronoun: 'f' },
+  m10_guard: { model: 'rb_juno', variant: 'guard', height: 1.7, pronoun: 'f' },
+  m13_listener: { model: 'rb_civ_m1', variant: 'dust', height: 1.78, pronoun: 'm' },
+  m13_freed: { model: 'rb_civ_m2', variant: 'detention', height: 1.76, pronoun: 'm' },
 };
 
 // the crowd models' base heights
@@ -271,7 +287,8 @@ export function castLevel(level, deck, { facts = null } = {}) {
       level.npcs.push({
         id, crew: id, first, ambient: true, crowd: true, seed: 300 + k, pronoun: PRONOUN[sex] || PRONOUN.m, pos: [x, y, z], yaw: r() * 6.28, height,
         path: path.length > 1 ? path : undefined, speed: Math.round(1.05 * walk * 100) / 100, when, silent: true, room: level.outdoorRoom || level.order[0],
-        hologram: !!c.echo, ...(c.echo ? {} : { barks: c.barks || pool.barks, barkEvery: 24 + (k % 4) * 3 }), // (a crowd may say its own)
+        hologram: !!c.echo, ...(c.echo ? {} : { barks: c.barks || pool.barks.filter((b, i) => i % 2 === k % 2), barkEvery: 24 + (k % 4) * 3 }), // (a crowd may say its own;
+        // else every other line of its pool: neighbours share the walla between them, and the speech budget holds)
         ...(deck.crowdFreeze ? { freezeWhen: deck.crowdFreeze } : {}),
         voiceExtra: { id: vlist?.[k % vlist.length] || null, gender: sex },
       });
