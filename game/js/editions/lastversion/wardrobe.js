@@ -105,7 +105,6 @@ export const WARDROBE = {
         { band: [0, 0, 0.33, 0.29], lmin: 0.45, to: 0.14, sset: 0.85, lrange: [0.34, 0.56] }, { band: [0.67, 0, 1, 0.29], lmin: 0.45, to: 0.14, sset: 0.85, lrange: [0.34, 0.56] },
         { band: [0, 0.29, 1, 0.47], to: 0.14, sset: 0.85, lrange: [0.3, 0.54], skin: false },
         { band: [0, 0.6, 0.3, 1], lmin: 0.4, to: 0.6, sset: 0.3, lrange: [0.16, 0.34] }, { band: [0.7, 0.6, 1, 1], lmin: 0.4, to: 0.6, sset: 0.3, lrange: [0.16, 0.34] }],
-      head: [{ band: [0, 0, 1, 0.3], lmax: 0.3, to: 0.12, sset: 0.4, lrange: [0.36, 0.56] }],
     },
     // M11, Ward 32: a pale hospital-blue gown
     gown: { body: [{ band: [0.3, 0, 1, 1], lmin: 0.4, to: 0.55, sset: 0.3, lrange: [0.62, 0.84] }, { band: [0, 0.3, 0.3, 1], lmin: 0.4, to: 0.55, sset: 0.3, lrange: [0.62, 0.84] }], hair: [{ to: 0.12, sset: 0.4, lrange: [0.45, 0.78] }] },
