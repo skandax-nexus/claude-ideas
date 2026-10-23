@@ -152,7 +152,7 @@ test('the edition keeps its own saves and settings, and the default edition is u
   assert.equal(LV.subtitle, 'THE LAST VERSION OF EARTH');
   assert.deepEqual(Object.values(LV.labels), ['2049', '2026', '2196']);
   const build = fs.readFileSync(new URL('../android/build-apk.sh', import.meta.url), 'utf8');
-  for (const s of ['com.afterzero.lastversion', 'versionName="2.0.0"', 'AFTERZERO-LastVersion-v$VER.apk', 'AFTERZERO: Last Version', "window.AZ_EDITION='lastversion'"]) assert.ok(build.includes(s), `build-apk.sh: ${s}`);
+  for (const s of ['com.afterzero.lastversion', 'versionName="2.1.0"', 'versionCode="210"', 'AFTERZERO-LastVersion-v$VER.apk', 'AFTERZERO: Last Version', "window.AZ_EDITION='lastversion'"]) assert.ok(build.includes(s), `build-apk.sh: ${s}`);
 });
 
 // tools/voice-pack.py's VOICES: { speaker: [spec, speed, pitch] } (a spec may blend voices: 'a*w+b*w')
@@ -3496,6 +3496,28 @@ test('a cold open is shot in its own year, with its people, and the place\'s yea
   assert.ok(!facts.get('co_m12'), 'and its cast has left');
 });
 
+// closing: SKIP (or Enter) ends the part of a mission's opening being played, not the whole of it: a player who skips
+// Mission 12's cold open (it comes before the title) still hears the mission's spoken card, and a second SKIP ends the card
+test('SKIP ends the part of an opening being played: the cold open skipped, the mission\'s card is still said', () => {
+  const m12 = MISSIONS.act2.find((m) => m.key === 'm12');
+  const { level } = LEVELS.find((l) => l.deck.mkey === 'm12');
+  const e = engine();
+  for (const r of level.order) { e.setAvailable(r, level.rooms[r].states || m12.states); e.setState(r, 'PRESENT', { force: true }); }
+  const played = [];
+  let pending = null;
+  const game = { engine: e, facts: new FactStore(), campaign: { lv: true, deck: 3 }, story: { decks: MISSIONS.act2 }, hud: { card() {} }, deckWorld: { refresh() {} } };
+  // a stand-in cinema: each part waits until it is skipped (Runtime.skipOpening asks the cinema to end its moment)
+  const cinema = { play: (o, done) => { played.push(o.shots ? 'shots' : (o.lines?.[0]?.text || 'card')); pending = done; }, skipAll() { const d = pending; pending = null; d?.(); } };
+  const rt = Object.assign(Object.create(LastVersion.prototype), { g: game, def: LV, level, chapter: 'act2', chapterStart: false, whenVoices: (then) => then(), hideCard() {}, cinema });
+  rt.openMission(m12, 'MISSION 12');
+  assert.deepEqual(played, ['shots'], 'the cold open plays first (Mission 12 opens before its title)');
+  rt.skipOpening();
+  assert.equal(played[1], 'Mission twelve. The Man Behind the Glass.', 'one SKIP: the cold open ends and the mission\'s card is said');
+  assert.ok(rt.opening, 'the opening goes on');
+  rt.skipOpening();
+  assert.ok(!rt.opening, 'a second SKIP ends the card, and with it the opening');
+});
+
 // tour: a bark still being said in the place left behind is not said over the next mission's card; a conversation is
 test('tour: a mission opens without the last place\'s bark over its card (a conversation with an end still runs out)', () => {
   const m12 = MISSIONS.act2.find((m) => m.key === 'm12');
@@ -3538,7 +3560,7 @@ test('tour: a staged moment cuts a line said in passing and holds the crowd\'s o
 
 // tour: 'A woman in the crowd at the far end turns. For one second she has Mira's face' was a yellow dot thirty metres off,
 // her back turned (the chase had turned her to her path), against a canopy post
-test('tour: the woman with Mira\'s face is seen: she looks back at Kai while she waits, clear of the posts, in a close-up', () => {
+test('tour: the woman with Mira\'s face is seen: she looks back at Kai while she waits, clear of the posts, distant and in rain', () => {
   const { level } = LEVELS.find((l) => l.deck.mkey === 'm01');
   const mira = level.npcs.find((n) => n.id === 'mira');
   const [x, y, z] = mira.pos;
@@ -3546,9 +3568,14 @@ test('tour: the woman with Mira\'s face is seen: she looks back at Kai while she
     && Math.hypot(Math.max(e.box[0] - x, 0, x - e.box[3]), Math.max(e.box[2] - z, 0, z - e.box[5])) < 1.2);
   assert.deepEqual(posts.map((e) => e.box), [], 'nothing solid within 1.2 m of her');
   const shots = m01Shots({ level }, 'face');
-  const close = shots[shots.length - 1];
-  for (const p of [close.cam, close.to]) assert.ok(Math.hypot(p[0] - x, p[2] - z) < 1.4 && p[1] > y + 1.4, `the last shot is close on her face: ${p}`);
-  assert.ok(Math.abs(close.look[0] - x) < 0.1 && Math.abs(close.look[2] - z) < 0.1 && close.look[1] > y + 1.4, 'and looks at it');
+  // (OVERHAUL §9.5: the glimpse stays distant and in rain; Dr. Lin wears this face in Mission 2, so a close-up here would
+  // give away Mission 11's reveal. The closing engineer put back the distance a tour had closed to a close-up)
+  const near = shots[shots.length - 1];
+  for (const p of [near.cam, near.to]) {
+    const d = Math.hypot(p[0] - x, p[2] - z);
+    assert.ok(d > 8 && d < 16 && p[1] > y + 1.2 && p[1] < y + 2.2, `the last shot keeps its distance, at eye height: ${d.toFixed(1)} m`);
+  }
+  assert.ok(Math.abs(near.look[0] - x) < 0.1 && Math.abs(near.look[2] - z) < 0.1, 'and looks at her');
   // waiting (Kai beyond the leash), she turns from her path to look back at him; walking, the path has her again
   const model = { visible: true, position: new THREE.Vector3(x, y, z), rotation: { y: Math.PI }, userData: { lookAt(v) { this.at = v; } } };
   const npc = { n: { id: 'mira', chase: { path: [mira.pos, [x, y, z - 20]], leash: 14, ahead: 10, speed: 1.7, fact: 'mira_gone', thread: 'chase' }, path: [[x, z, y], [x, z - 20, y]] }, model, wp: 0 };

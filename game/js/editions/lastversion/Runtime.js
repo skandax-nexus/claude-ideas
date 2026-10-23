@@ -322,7 +322,7 @@ export class LastVersion {
     }
     sub.textContent = this.def.subtitle;
     $('#title .tag').textContent = this.def.tagline;
-    $('#title .ver').textContent = 'v2.0 · The Last Version of Earth';
+    $('#title .ver').textContent = 'v2.1 · The Last Version of Earth';
     // the menus opened from the title (the chapters, the saves, the settings, the CASE FILES) stand in front of the
     // title's own backdrop, not of Station Zero's antechamber, which the 3D view keeps drifting round behind the title
     if (!$('#lvTitleMenus')) {
@@ -928,9 +928,10 @@ export class LastVersion {
     }, () => {});
   }
 
-  // a tap on SKIP: the whole opening (or the staged moment) ends; what it sets is still set
+  // a tap on SKIP (or Enter): the part of the opening being played ends (the PREVIOUSLY card, the chapter's card, the
+  // mission's card, the cold open, the title's shots) and the next part plays, so a player who skips a cold open still
+  // hears the mission's card; outside an opening, the staged moment ends. What a skipped part sets is still set
   skipOpening() {
-    if (this.opening) this.opening.skipped = true;
     this.cinema.skipAll();
     return true;
   }
@@ -993,7 +994,7 @@ export class LastVersion {
     };
     const next = (i) => {
       if (!alive()) return;
-      if (i >= steps.length || token.skipped) return finish();
+      if (i >= steps.length) return finish();
       const k = steps[i];
       if (co?.year) toYear(k.year || null); // (the cold open in its year; the cards and what follows in the place's own)
       if (k.card) {

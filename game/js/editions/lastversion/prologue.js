@@ -52,13 +52,16 @@ export function m01Shots(rt, which) {
       { cam: [cd[0] + 20, cd[1] + 4.5, cd[2] + 12.5], to: [cd[0] + 16, cd[1] + 3.8, cd[2] + 11], look: [cd[0] - 8, cd[1] + 0.8, cd[2] - 3], t: 6 },
     ];
   }
-  // the woman at the far end, from high over the wreck; then her face, close, for Kai's line (the tour: from the wreck
-  // she was a yellow dot thirty metres off while the narrator said she had Mira's face). She stands at the platform's
-  // far end (pl + [1, 0, -30]), turned back toward the wreck; her close-up is from her left
+  // the woman at the far end, from high over the wreck; then nearer, down the platform through the rain, for Kai's line
+  // (the tour: from the wreck she was a yellow dot thirty metres off). OVERHAUL §9.5 keeps the glimpse distant and in
+  // rain: Dr. Lin wears this face in Mission 2, and Mission 11's reveal that the photograph is Lin must not be given
+  // away here, so the second shot stops about nine metres short of her, at Kai's eye height: a woman in a yellow
+  // raincoat looking back, her face a few pixels under the hood. She stands at the platform's far end
+  // (pl + [1, 0, -30]), turned back toward the wreck
   const m = [pl[0] + 1, pl[1], pl[2] - 30];
   return [
     { cam: [cd[0] + 13, cd[1] + 0.8, cd[2] - 7.5], to: [cd[0] + 10, cd[1] + 1, cd[2] - 9], look: [m[0], m[1] + 1.5, m[2]], t: 3.4 },
-    { cam: [m[0] - 0.35, m[1] + 1.6, m[2] + 0.95], to: [m[0] - 0.15, m[1] + 1.58, m[2] + 0.62], look: [m[0], m[1] + 1.53, m[2]], t: 5 },
+    { cam: [m[0] + 2.4, m[1] + 1.7, m[2] + 13], to: [m[0] + 1.6, m[1] + 1.65, m[2] + 9.2], look: [m[0], m[1] + 1.3, m[2]], t: 5 },
   ];
 }
 

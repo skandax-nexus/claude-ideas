@@ -96,6 +96,10 @@ export const LV_AVATARS = {
   // (U4 review) more faces for 2026/2049, so a crowd is not copies of a few
   rb_civ_m3: { src: 'Adults/Male_Adult_14', px: 512 }, // an older man: shirt, khakis
   rb_civ_f4: { src: 'Adults/Female_Adult_13', px: 512 }, // a woman in a waistcoat and jeans
+  // (closing) the settlement's own crowd, so the named women's and Niko's faces leave it, and an old man for its elders
+  rb_robe_m2: { src: 'Adults/Male_Adult_21', px: 512 }, // a second man in a long robe (the head cloth hidden: wardrobe.js)
+  rb_elder_m: { src: 'Adults/Male_Adult_05', px: 512 }, // an old man, grey-bearded: the settlement's elders and storyteller
+  rb_villager_f2: { src: 'Adults/Female_Adult_11', px: 512 }, // a woman in a plain knee-length dress: the settlement's women
 };
 // parts left out of a conversion: nobody in the game carries a gun
 export const RB_DROP = { rb_security_f: ['pistol'], rb_warden: ['pistol'] };

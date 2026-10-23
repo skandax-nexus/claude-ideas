@@ -53,6 +53,10 @@ export const LV_MODELS = {
   // (U4 review) more faces for 2026/2049's crowds
   rb_civ_m3: rb(1.78, 'm', { px: 512, crowd: true }),
   rb_civ_f4: rb(1.68, 'f', { px: 512, crowd: true }),
+  // (closing) the settlement's own crowd faces: a second robed man, an old man for its elders, a woman in a plain dress
+  rb_robe_m2: rb(1.78, 'm', { px: 512, crowd: true }),
+  rb_elder_m: rb(1.72, 'm', { px: 512, crowd: true }),
+  rb_villager_f2: rb(1.64, 'f', { px: 512, crowd: true }),
 };
 for (const [k, m] of Object.entries(LV_MODELS)) m.file = `${k}.glb`;
 

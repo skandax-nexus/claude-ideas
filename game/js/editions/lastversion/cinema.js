@@ -7,7 +7,8 @@
 // the shoulder; null keeps the game's camera (letterbox and lines only). The camera runs through the
 // existing Player.cinema hook; Kai is held meanwhile (keys, the touch stick, the actions that act in the world);
 // the lines are said through hud.say (the voice packs). A tap on the view, a click, Space or E skips the line being
-// said and the shot it is in (Enter, or SKIP, the whole moment); the moment ends with its last line.
+// said and the shot it is in (Enter, or SKIP, the whole moment: in a mission's opening, the part of it being played,
+// Runtime.skipOpening); the moment ends with its last line.
 import * as THREE from '../../../vendor/three.module.min.js';
 
 const STYLE = `
@@ -54,7 +55,7 @@ export class Cinema {
       const bars = document.createElement('div');
       bars.id = 'lvBars';
       document.body.appendChild(bars);
-      // SKIP: the whole moment (a mission's whole opening), not just the line being said
+      // SKIP: the whole moment (in a mission's opening, the part being played: a card, the cold open), not just the line
       const skipBtn = document.createElement('button');
       skipBtn.id = 'lvSkip';
       skipBtn.innerHTML = 'SKIP › <small>ENTER</small>';

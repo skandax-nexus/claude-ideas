@@ -280,7 +280,7 @@ const title = await az(() => ({
   ver: document.querySelector('#title .ver').textContent, edition: !!AZ.edition, hero: AZ.settings.hero?.id,
 }));
 check(title.h1 === 'AFTERZERO' && title.sub === 'THE LAST VERSION OF EARTH', 'the title reads AFTERZERO / THE LAST VERSION OF EARTH', JSON.stringify(title));
-check(/v2\.0/.test(title.ver) && title.edition && title.hero === 'real_m', 'v2.0, the edition is on, and you are Kai (a realistic man)', JSON.stringify(title));
+check(/v2\.1/.test(title.ver) && title.edition && title.hero === 'real_m', 'v2.1, the edition is on, and you are Kai (a realistic man)', JSON.stringify(title));
 // --- sound: the first tap (Chromium's autoplay policy: no sound before a user gesture) -----------------------
 const before = await az(() => AZ.audio.ctx?.state || 'none');
 await page.mouse.click(480, 120);
@@ -531,15 +531,19 @@ await page.waitForFunction(() => { LVB.talkOut(1); return !AZ.edition.opening &&
 const back = await az(() => { const lm = LVB.lm('platform'); return { quarter: AZ.campaign.quarter, room: AZ.room, at: AZ.player.pos.toArray().map((v) => +v.toFixed(1)), d: Math.hypot(AZ.player.pos.x - lm[0], AZ.player.pos.z - lm[2]), prev: LVB.said.includes('NONE: Rain City, 2049.'), done: !!AZ.deckWorld.flags.beat_done, raincoat: AZ.facts.get('raincoat') }; });
 check(resume === 2 && back.quarter === 2 && back.d < 1 && back.prev && back.done && back.raincoat, 'an M1 save loads where it was taken (LINE 41, its quarter\'s spawn), after a PREVIOUSLY card; its facts and flags kept', JSON.stringify({ resume, back }));
 await az(() => { LVB.walk([[26, -158], [29.5, -165], [29.5, -177.5], [3, -185], [1, -192], [0.5, -205], [0.5, -225]]); LVB.skip(); }); // (the exit is past the staff gate, z < -222)
-// Mission 2's opening: its cold open plays before its card; SKIP ends the whole opening at once
+// Mission 2's opening: its cold open plays before its card; SKIP ends the part being played (the cold open), and the
+// mission's card is still said (closing: SKIP once used to end the whole opening, its spoken card with it)
 await page.waitForFunction(() => { LVB.step(0.1); return AZ.campaign.deck === 1 && !AZ.transitioning && AZ.edition.cinema.active && LVB.said.some((l) => l.startsWith('IVEN: Test')); }, null, { timeout: 180000, polling: 250 }).catch(() => {});
 const skipBefore = await az(() => ({ deck: AZ.campaign.deck, opening: !!AZ.edition.opening, cine: !!AZ.edition.cinema.active, btn: getComputedStyle(document.querySelector('#lvSkip')).display }));
 // (at play on a desktop the pointer is locked and the button cannot be clicked: Enter is SKIP's key)
 await press('Enter');
 await az(() => { AZ.simulate(0.3); });
-const skipAfter = await az(() => ({ opening: !!AZ.edition.opening, cine: !!AZ.edition.cinema.active, card: document.querySelector('#card').classList.contains('on'), card2: LVB.said.includes('NONE: Mission two. Helix Goes Dark.') }));
-check(skipBefore.deck === 1 && skipBefore.opening && skipBefore.cine && skipBefore.btn !== 'none' && !skipAfter.opening && !skipAfter.cine && !skipAfter.card && !skipAfter.card2,
-  'the cold-open skip: SKIP (Enter) ends Mission 2\'s opening at once (its cold open and its card), and the mission starts', JSON.stringify({ skipBefore, skipAfter }));
+const skipMid = await az(() => ({ opening: !!AZ.edition.opening, cine: !!AZ.edition.cinema.active, card: document.querySelector('#card').classList.contains('on'), card2: LVB.said.includes('NONE: Mission two. Helix Goes Dark.') }));
+await press('Enter');
+await az(() => { AZ.simulate(0.3); });
+const skipAfter = await az(() => ({ opening: !!AZ.edition.opening, cine: !!AZ.edition.cinema.active, card: document.querySelector('#card').classList.contains('on') }));
+check(skipBefore.deck === 1 && skipBefore.opening && skipBefore.cine && skipBefore.btn !== 'none' && skipMid.opening && skipMid.card && skipMid.card2 && !skipAfter.opening && !skipAfter.cine && !skipAfter.card,
+  'SKIP (Enter) ends the part of Mission 2\'s opening being played: the cold open, then its card is said; a second SKIP ends the card, and the mission starts', JSON.stringify({ skipBefore, skipMid, skipAfter }));
 await az(() => { AZ.simulate(0.3); LVB.skip(); });
 check((await az(() => LVB.where())).deck === 1, 'through the staff gate, after the hook: Mission 2');
 const hook1 = await az(() => LVB.said.includes('KAI: She died twenty-three years ago. I was at the funeral. I was twelve.') && LVB.said.includes('NONE: One voicemail. Received 05:40. Caller unknown.'));
