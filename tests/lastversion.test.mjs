@@ -2961,13 +2961,15 @@ test('Acts I to IV and the Finale: nothing that ends a mission answers before th
 // answers, until nothing new happens. Withholding what completes one main thread must leave the mission unfinished: no
 // interaction done out of order, and no thread paid out of order, opens what ends it.
 const YEARS3 = ['PRESENT', 'PAST', 'FUTURE'];
-function freePlay(m, level, facts0, withhold = null) {
+function freePlay(m, level0, facts0, withhold = null) {
   const deck = { ...m, mkey: m.key };
   const f = new FactStore({ ...facts0 });
   const game = { facts: f, hud: { say() {}, toast() {} }, log: [], deckWorld: { flags: {}, npcs: [] }, campaign: {} };
   const th = new Threads({ g: game });
+  // (the level's people copied: who is offered as a talk changes with the story, Threads.gateTalks)
+  const level = { ...level0, npcs: level0.npcs.map((p) => ({ ...p })) };
   th.attach(deck, level);
-  const people = level.npcs.map((p) => ({ n: { ...p }, crew: { id: p.crew } }));
+  const people = level.npcs.map((p) => ({ n: p, crew: { id: p.crew } }));
   game.deckWorld.npcs = people;
   // what the withheld thread's completion would set: the player never does anything that sets it
   const held = withhold ? new Set([factOf(deck, withhold), ...IDS(doneCond(deck, withhold) || ''), ...(withhold.of || [])]) : new Set();
@@ -3197,8 +3199,9 @@ test('U8 review: a talk the story has not reached is not offered, a REVERSE it h
   const said = [];
   const game = { facts: f, hud: { say: (l) => said.push(...l.map((x) => x.text)) }, log: [], deckWorld: { flags: {}, npcs: [] } };
   const th = new Threads({ g: game });
-  th.attach(deck, lv('m14'));
-  const sera = { n: { ...lv('m14').npcs.find((p) => p.id === 'sera') }, crew: { id: 'sera' } };
+  const level = { ...lv('m14'), npcs: lv('m14').npcs.map((p) => ({ ...p })) };
+  th.attach(deck, level);
+  const sera = { n: level.npcs.find((p) => p.id === 'sera'), crew: { id: 'sera' } };
   game.deckWorld.npcs = [sera];
   th.update();
   assert.equal(th.talkNode(sera), null, 'nothing of hers is open at the start');

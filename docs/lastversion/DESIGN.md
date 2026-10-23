@@ -324,8 +324,14 @@ stabilizer (`faction`, with `stabilizer_destroyed` or `civilians_freed`), the di
 10 s; the burial reversed (a scarred wrist, `ev_witness_cause`), the people who listened, the roll-call wall.
 
 Acts III and IV and the Finale as written (OVERHAUL.md §5, M14–M23; `act3.js`, `act4.js`, `finale.js`). Nothing that
-ends one of these missions answers before its story gets there (`gateAfter`; Mission 18's slabs are in sight from the
-start but `arm`ed only once the stabilizer holds). Mission 14
+ends one of these missions answers before its story gets there (`gateAfter`, Threads.js, since the U8 review: a thread's
+own spot, trigger, deduction, record or playback, the spots a tasks thread is finished at, the conversation nodes that
+would complete a talk thread (a person with none open is not offered as a talk) and a REVERSE thread's process (its
+`arm`) all wait on every thread before it; a thread whose condition holds early, a talk or evidence found first, is paid
+(its fact, its lines, what it sets) only once every thread before it is, and a staged moment, a loop, a hold or a chase
+starts only then; Mission 18's slabs are in sight from the start but `arm`ed only once the stabilizer holds; a test has
+a free player do everything open, in any order and year, but one thread, and the mission never ends). A kit stands
+whatever the story has reached; a kit whose spot belongs to one year (`@FUTURE`) stands only in it. Mission 14
 opens in 2196 at home (Kai's own statue, in stone, on the memorial's plinth): the beacon's parts list, the bank's fallen lift car that carries Kai 24 m up its shaft when he
 REVERSEs it from inside (or the tower that fell beside it, as a ramp), the capacitor, three stacked stones, the warning
 and its residue (Sera's safe path), the transit bridge's span held up out of the lagoon, the memorial with Kai's name,
@@ -354,7 +360,11 @@ answering the first try; the House with No Owner. Mission 21: the Director (by `
 five seconds when an afterimage reaches them and stand stuck when their rewind is reversed, the kitchen door (for
 `warned_evacuees`) or the stair alone, the cells (for `prisoners_held`), the arena falling, the first gap held by
 REVERSE, the second by the ally Kai earned for thirty seconds or by 2196's frozen girder (`ally`), the wrists side by
-side and the hesitations the tape, the photograph and the letter bring; Mara on the radio, the Director's office.
+side and the hesitations the tape, the photograph and the letter bring; Mara on the radio. Since the U8 review the
+command structure is read before the arena (the timeline wall, the elites' field orders, the Director's desk with
+whoever sits there by `rook_fate`, and the Witness's requisition: a 2026 console, a step stool, a child's chair) and
+deduced (he is building Chamber One again, and needs Kai at its console, `ev_witness_plan`), and an elite walks across
+the cells' terrace to the arena's bridge until its rewind is run forwards (`m21_door`).
 Mission 22: the Witness standing at the station's microphone ("Kai Varen. Do not build the machine."), the village's chain put
 in order, the clockmaker's arm reversed on its beat, Odile's rule, the seals out last fitted first (MACHINE, GATE,
 WALL, RIVER), Iven's statement and the museum's card, the two logs run forwards ("RING: 16:02:00. CONSOLE BUTTON:
@@ -362,8 +372,14 @@ WALL, RIVER), Iven's statement and the museum's card, the two logs run forwards 
 Unwritten Record (what each ending costs). The Finale: the 41 on time, the opening streets (cleared by Jun's passengers
 for `jun_line`), the street that fell held by the Witness while Kai crosses its 2026 half, the telling-stone (HE CAME
 BACK) and Tala, the swap at the settlement's bridge (Kai holds it, the Witness crosses: "For once, you are on time."),
-Rook's last transmission and Iven, the memorial, Sera and Anja, Mira ("Ask me."), the choice of three endings with
-what each adds, the epilogue (a line per fact set) and the voice in every speaker; the consequences gallery.
+Rook's last transmission and Iven, the memorial, Sera and Anja, Mira ("Ask me."; "You kept my letter." if Kai kept it),
+the choice of three endings with what each adds, the epilogue (a line per fact set; in Ending C, Mira's own line, then
+"In the worlds he passed through, what he did stayed done." before the rest) and the voice in every speaker; the
+consequences gallery. The opening streets' trigger spans the avenue, the strips beside the fallen street are closed by
+fallen facades, and the street answers Kai's REVERSE only once the Witness has it. The endings are staged
+(`finale.js` `ENDING_SHOTS`, Runtime.ending): the ring, each added line where it happens (A: the 41's board and Kai
+under it; B: Sera at the seam where one world ends, someone on the other side; C: the 41's stop, Mira at a window box
+on the South Square's shopfront), then the road for the quote and the epilogue; Kai himself is never on screen.
 
 ## Authored and generated
 
@@ -384,7 +400,11 @@ what each adds, the epilogue (a line per fact set) and the voice in every speake
 - Acts III and IV and the Finale, all of them, rewritten for U8 as threads in quarters (above), with the three
   endings, the epilogue and the post-credit "Version one hundred and eighteen."
 - The CASE FILES (`cases.js`): the fourteen stories and their states; chains B and C replayed from Missions 5 and 15
-  (their old keys, so old saves load), and ten side stories replayed from their places.
+  (their old keys, so old saves load), and ten side stories replayed from their places. Since the U8 review a replay is
+  gated as its mission is (`gateAfter`), keeps the mission rules that set what its threads wait for (the train's board),
+  clears only what the story waits for and sets (not a shared conversation's first meeting; chain B's gate count), saves
+  in a slot of its own (`case`, never listed: the finished campaign's slot and the autosave are never written), loads its
+  own mission's chapter's people (its crowd wears only those faces) and does not fetch the empty cases pack.
 - The people: roster, wants and fears, temporal states, dialogue with intents, echoes, barks.
 - The open places of every mission (`places/specs/`): every building, terrace, bridge, tree and
   year piece, and the sky, horizon and light of every year.

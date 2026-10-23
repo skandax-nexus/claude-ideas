@@ -260,7 +260,8 @@ export class Inversion {
   }
 
   aimOf(p) {
-    if (p.rec.kind === 'patrol' && p.sentinel) return [p.sentinel.pos.x, 1.2, p.sentinel.pos.z];
+    // (a watcher on a floor of its own, def.y, is aimed at on that floor: M21's elite on the cells' terrace, M10's chamber)
+    if (p.rec.kind === 'patrol' && p.sentinel) return [p.sentinel.pos.x, (p.sentinel.pos.y || 0) + 1.2, p.sentinel.pos.z];
     return p.rec.aim;
   }
 

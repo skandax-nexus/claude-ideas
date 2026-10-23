@@ -115,7 +115,8 @@ await page.waitForFunction(() => window.AZ, null, { timeout: 400000 });
 await az(() => { AZ.changeSetting('quality', 'low'); AZ.changeSetting('smart', false); });
 
 // --- the bot's hands, in the page ------------------------------------------------------------
-await az(() => {
+// (a named function: a CASE FILES replay reloads the page, and the hands are put back after it)
+const HANDS = () => {
   const g = AZ;
   const B = (window.LVB = {});
   B.said = [];
@@ -236,7 +237,8 @@ await az(() => {
     return Math.hypot(x - g.player.pos.x, z - g.player.pos.z);
   };
   return 'ok';
-});
+};
+await az(HANDS);
 // through the gate to the next place: the exit, then wait (up to 20 s) until the campaign has moved on and the
 // transition's 900 ms fade is over, rather than for a fixed time a busy page can overrun
 const onward = async () => {
@@ -1755,7 +1757,7 @@ await az(() => {
         P.year('PRESENT');
         g.edition.stability = Math.max(g.edition.stability, 0.8);
         const l = Math.hypot(s.dir.x, s.dir.z) || 1;
-        B.place(s.pos.x - (s.dir.x / l) * 4, s.pos.z - (s.dir.z / l) * 4, 12.86);
+        B.place(s.pos.x - (s.dir.z / l) * 4, Math.max(-68, Math.min(-62, s.pos.z + (s.dir.x / l) * 4)), 12.86); // (beside it, on the terrace)
         g.simulate(0.2);
         out.rev = P.holdHere('eliteC');
         const p0 = s.pos.clone();
@@ -2025,23 +2027,29 @@ await finish();
 console.log('The Finale: Afterzero');
 const fin = await az(() => ({ ...LVB.where(), name: AZ.edition.deck.name, drones: AZ.deckWorld.sentinels.filter((s) => /_q0s\d$/.test(s.def.id)).length, jun: AZ.facts.get('jun_line') }));
 check(fin.chapter === 'finale' && fin.name === 'AFTERZERO' && (!fin.jun || fin.drones === 0), 'Act IV ends; the Finale begins (the passengers Kai got off the 41 have cleared the opening streets)', JSON.stringify(fin));
+// (U8 review: the ending is staged: its own shots, Kai off screen, Mira at the window box in C; sampled each step while it
+// plays, as the choice's lines play it through)
+await az(() => {
+  const c = AZ.edition.cinema, step = c.step.bind(c);
+  window.__stage = null;
+  c.step = (dt) => {
+    step(dt);
+    const a = c.active;
+    if (!a?.shots || !AZ.facts.get('ending')) return;
+    const m = AZ.deckWorld.npcs.find((n) => n.n.id === 'mira_end');
+    const st = (window.__stage ||= { shots: a.shots.length, maxI: 0, playerSeen: false, mira: false });
+    st.maxI = Math.max(st.maxI, a.i);
+    st.playerSeen ||= AZ.player.model.visible;
+    st.mira ||= !!m?.model.visible;
+  };
+});
 const m23 = await playMission('m23', { sides: ['gallery'], before: 'mira' });
 const m23f = await az(() => ({ street: LVP.checks.street, bridge: LVP.checks.bridge, ...LVB.f('m23_asked'), ask: LVB.said.includes('MIRA: Ask me.'), time: LVB.said.includes('WITNESS: And, Kai. For once, you are on time.') }));
 check(m23f.street?.held === 'witness' && m23f.street.route.n === m23f.street.route.of && m23f.street.y > -0.5, 'the street that fell: he holds its far half; in 2026 Kai walks the near half and steps onto what he holds', JSON.stringify(m23f.street));
 check(m23f.bridge?.held === 'held' && m23f.bridge.witness && m23f.bridge.route.n === m23f.bridge.route.of && m23f.time, 'the swap: Kai holds the settlement\'s bridge, the Witness crosses, then Kai: "For once, you are on time."', JSON.stringify(m23f.bridge));
 check(m23f.m23_asked && m23f.ask, 'Mira: "Ask me."', JSON.stringify(m23f));
-// (U8 review: the ending is staged: its own shots, Kai off screen, Mira at the window box in C)
-let staged = null;
-for (let i = 0; i < 60 && !(await az(() => AZ.menu === 'ending')); i++) {
-  const r = await az(() => {
-    const a = AZ.edition.cinema.active, m = AZ.deckWorld.npcs.find((n) => n.n.id === 'mira_end');
-    const out = a?.shots ? { shots: a.shots.length, i: a.i, player: AZ.player.model.visible, mira: !!m?.model.visible } : null;
-    LVB.talkOut(30);
-    AZ.simulate(0.5);
-    return out;
-  });
-  if (ok(r) && r) staged = { ...(staged || r), maxI: Math.max(staged?.maxI ?? 0, r.i), playerSeen: !!(staged?.playerSeen || r.player), mira: !!(staged?.mira || r.mira) };
-}
+for (let i = 0; i < 60 && !(await az(() => AZ.menu === 'ending')); i++) await az(() => { LVB.talkOut(30); AZ.simulate(0.5); });
+const staged = await az(() => window.__stage);
 check(staged?.shots === 5 && staged.maxI >= 3 && !staged.playerSeen && staged.mira, 'Ending C is staged: the ring, the 41\'s stop, Mira at a window box, then the road; Kai is never on screen', JSON.stringify(staged));
 const ending = await az(() => ({ menu: AZ.menu, text: document.querySelector('#ending .body')?.textContent || '', ending: AZ.facts.get('ending') }));
 const endSaid = await az(() => ({ heard: AZ.edition.score.heard.filter((c) => /ending|postcredit/.test(c)), said: LVB.said.slice(-40) }));
@@ -2244,6 +2252,7 @@ const playReplay = async (key, boot) => {
     await page.waitForFunction((k) => AZ.started && AZ.mode === 'deck' && AZ.level?.place && AZ.edition.deck?.mkey === k, key, { timeout: 300000 });
     await az(() => { AZ.renderer.setAnimationLoop(null); });
   }
+  await az(HANDS);
   await az(PLAYER);
   await opening();
   const before = await az(() => ({ slot: AZ.slot, gates: AZ.facts.get('gates_n') || 0 }));

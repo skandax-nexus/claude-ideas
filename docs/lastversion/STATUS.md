@@ -340,9 +340,11 @@ measured with a player.
 - **Acts III and IV and the Finale, rewritten on threads** (v2.1, U8, 2026-10-22; DESIGN.md "Acts III and IV and the
   Finale as written"; OVERHAUL.md §5 M14–M23 and its "As built (U8)" notes): `act3.js` (Missions 14–18), `act4.js` (19–22)
   and `finale.js` (23, the endings, the post-credit voice), re-exported by `acts.js`; no mission or case runs on the shim
-  of legacy beats any more. Nothing that ends one of these missions answers before its story gets there (`gateAfter`: a
-  thread's own spot, trigger, deduction, record or playback waits for the threads it comes after; Mission 18's slabs are
-  in sight from the start but answer REVERSE only once the stabilizer holds, `arm`). `Threads.js` gained `hold` (Mission 18's pylons: two minutes in phase, one pylon drifting at a
+  of legacy beats any more. Nothing that ends one of these missions answers before its story gets there (`gateAfter`; as
+  U8 left it, a thread's own spot, trigger, deduction, record or playback waited only for the threads it named, and a
+  talk or a REVERSE done early paid its thread at once: the U8 review found that false, and since its fixes, below, the
+  whole chain gates own interactions, talks and REVERSE, and threads are paid in the story's order; Mission 18's slabs
+  are in sight from the start but answer REVERSE only once the stabilizer holds, `arm`). `Threads.js` gained `hold` (Mission 18's pylons: two minutes in phase, one pylon drifting at a
   time, re-anchored in its own year; the Unwritten hold one, the freed city slows the drift). Missions may have a home
   year (2196 for 14–16 and 18, 2026 for 20), scenes built when used (Mission 20's board), watchers that answer an
   afterimage (Mission 21's elites snap back five seconds) and talks by a person's own id. REVERSE's new set pieces: the

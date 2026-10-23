@@ -393,10 +393,14 @@ export class Threads {
       const k = sideFact(this.deck, s);
       if (!f.get(k) && sideState(f, this.deck, s) !== 'open') f.set(k, true);
     }
-    // a person whose conversation waits on the story is not offered as a talk until a node of it is open
-    if (this.level?.talkGates && Object.keys(this.level.talkGates).length) {
-      for (const n of g.deckWorld?.npcs || []) if (n.n.gatedTalk) n.n.silent = !this.talkNode(n);
-    }
+    this.gateTalks();
+  }
+
+  // a person whose conversation waits on the story is not offered as a talk until a node of it is open (the level's own
+  // person, which is DeckWorld's: the first step's update sets it, as every fact change does)
+  gateTalks() {
+    if (!this.level?.talkGates || !Object.keys(this.level.talkGates).length) return;
+    for (const d of this.level.npcs || []) if (d.gatedTalk) d.silent = !this.talkNode({ n: d, crew: { id: d.crew } });
   }
 
   // THINK: the current thread's tiers (the tracked side's when every main thread is done or not up)
