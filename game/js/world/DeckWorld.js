@@ -769,7 +769,14 @@ export class Sentinel {
     this.suspicion = 0;
   }
 
+  // a watcher on a floor of its own (def.y: THE LAST VERSION's chamber under a yard) sees and catches only on that
+  // floor, not through it; one without def.y (Station Zero's, every one at 0) is not asked
+  onFloor(player) {
+    return this.def.y == null || Math.abs(player.pos.y - 0.85 - this.pos.y) < 3;
+  }
+
   sees(player) {
+    if (!this.onFloor(player)) return false;
     const to = _v.copy(player.pos).sub(this.pos);
     to.y = 0;
     const d = to.length();
@@ -865,7 +872,7 @@ export class Sentinel {
     U.coneMat.opacity = this.mode === 'chase' ? 0.16 : 0.09;
     this.sync(dt, speed);
     // no catch through the air: on the ceiling you are out of its reach (unless it learned to look up)
-    if (this.mode === 'chase' && here && !hidden && player.pos.distanceTo(_v.set(this.pos.x, player.pos.y, this.pos.z)) < 1.15) {
+    if (this.mode === 'chase' && here && !hidden && this.onFloor(player) && player.pos.distanceTo(_v.set(this.pos.x, player.pos.y, this.pos.z)) < 1.15) {
       this.mode = 'patrol';
       this.suspicion = 0;
       return 'caught';

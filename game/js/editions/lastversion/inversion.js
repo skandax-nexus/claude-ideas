@@ -417,7 +417,7 @@ export class Inversion {
     }
     const h = a.hist[Math.max(0, a.idx)];
     if (h) {
-      s.pos.set(h[0], 0, h[1]);
+      s.pos.set(h[0], s.pos.y, h[1]); // (on its own floor)
       s.dir.set(h[2], 0, h[3]).normalize();
     }
   }

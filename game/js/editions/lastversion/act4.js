@@ -393,7 +393,7 @@ function m21Echo(rt, p) {
     const h = rt.inv?.hist.get(s.def.id) || [];
     const back = h[Math.max(0, h.length - 50)];
     if (!back) continue;
-    s.pos.set(back[0], 0, back[1]);
+    s.pos.set(back[0], s.pos.y, back[1]);
     if (Math.hypot(back[2], back[3]) > 1e-3) s.dir.set(back[2], 0, back[3]).normalize();
     s.mode = 'patrol';
     s.suspicion = 0;
