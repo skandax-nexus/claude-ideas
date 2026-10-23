@@ -192,6 +192,31 @@ measured with a player.
   said (1,596) from the packs (those said while a pack loaded judged once it came), `speechSynthesis` never asked,
   and the survey's 1,657 pairs of views in different places (the closest 25 bits apart). Still open: the human ear
   check (below).
+- **The Prologue after the U6 review** (2026-10-22/23; `git log 54a6a06..`): a load in a rewritten mission puts Kai at
+  the checkpoint he saved at, in its room (the furthest quarter's spawn alone could strand him: Mission 3 saved in the
+  lab after the power loaded on the court with the lab's 2026 frame shut; only a save the format restarted, with no
+  position, starts there now). A moment that sets its facts in callbacks and that a save cut off plays again once
+  the load's card is over (a mission's `resumes`): Mission 1's Zero Second and its rescue (the wrist, Rook, the voice
+  in every speaker; without it Mira never appeared), Mission 3's first cycle and fracture; a pre-U6 save past the
+  pursuit gets `wrist_cut` and its objective is the raincoat. The auto exit lives on the runtime, not in the saved
+  flags. A thread a player can skip is walked past once the story moves on (Mission 1's photo, Mission 2's lobby,
+  Mission 3's excavation office, which no longer pins SITE ZERO without its log); a unit test walks Missions 1-3 with
+  each left undone. A load in Missions 2 and 3 recaps its own mission. The story: the plaza deduction names only the
+  anomalies Kai found (the roof's pulsing window is a sight, not one of them) and opens on Kai's "There's a cause.
+  There's always a cause."; Pryce's 05:52 statement read a door log the director's office had cleaned at 05:50, and
+  at 08:14 her own badge record had his card (Kai notices; her code fails for the cleaned log); in 2026 the chamber's
+  cradle stands empty and the ring is in the ground at the dig, as its log says; the pursuit runs about 180 m (down
+  the stair, across the concourse, through the bus depot, back along the fence) and ends in the knot of Helix's people
+  waiting at the staff gate, where she is gone (Rain City's faces allow 13 walkers: the knot is cast first); the cold open is 05:40 (the rain before dawn, one
+  window pulsing in Helix's crescent across the river, no commuters yet; its first shots, which had looked into the
+  Ring Hill's foot, look at the crescent from high over the plaza and the canal) and the title 08:02 again; THINK at the
+  checkpoint no longer says any answer will do; the card names no weekday. The prologue, common and act1 packs were
+  recorded for the changed lines (31 new recordings; `voice-lv.sh check`: all up to date). Already fixed by U7 and
+  U8 when the review was read: the case board's SIDE STORIES and TRACK (by mission key; the bot tracks one in
+  Mission 4), the because line on touch screens (smaller, two lines), the epilogue keyed to `rook_fate`, Kai's birth
+  year, the per-chapter save format (`REWRITTEN_IN`), staged moments kept out of the saved flags, and the thread pass
+  four times a second rather than every frame. Not done: the length the model claims (below, under Scale). Checked: `npm test` 139/139;
+  the whole browser bot BOTRESULT. No shared engine file changed.
 - **The NPC system** of the supplement: trust, knowledge, quest state, temporal state, faction
   standing and evidence flags in the save; dialogue choices by intent (challenge / comfort /
   investigate / withdraw); barks; echoes standing in for people absent from a state; the case
@@ -201,8 +226,8 @@ measured with a player.
   objective with its *because* line, THINK's three tiers per thread, the chase, staged moments, deductions and
   residue records; every mission not yet rewritten runs through the legacy-beat shim) and `ledger.js` (the
   campaign's questions, clues C1–C12, consequences, what WHAT YOU CHOSE says, PREVIOUSLY and the epilogue lines).
-  Missions 1–3 are one map each with soft quarters (3, 5 and 5), a cold open and a hook; a save loads at the
-  furthest quarter after a PREVIOUSLY card, each new quarter autosaves, and the case board has THE QUESTIONS, SIDE
+  Missions 1–3 are one map each with soft quarters (3, 5 and 5), a cold open and a hook; a save loads where it was
+  taken (since the U6 review; its furthest quarter before) after a PREVIOUSLY card, each new quarter autosaves, and the case board has THE QUESTIONS, SIDE
   STORIES (TRACK), WHAT YOU CHOSE and ABILITIES. Mission 1: the 05:40 cold open before the title, the photo, the
   avenue's anomalies read together at the plaza clock, the florist's older Kai, the photo booth, Officer Pryce's
   05:40 line, Jun and the board, the Zero Second, the rescue that cuts Kai's wrist (`wrist_cut`), the voice, the
@@ -428,7 +453,7 @@ measured with a player.
   ones: the cold open before the title, the objective with its because line, the three anomalies and the
   deduction (a wrong answer leaves it open), the florist, Officer Pryce's 05:40 line in her own recorded voice,
   `wrist_cut` and "Your wrist—" in the man's voice, the chase and the raincoat, an M1 save that loads at its
-  furthest quarter after a PREVIOUSLY card (a tap on SKIP ends that card), SKIP (Enter) ending Mission 2's
+  furthest quarter (since the U6 review: where it was taken) after a PREVIOUSLY card (a tap on SKIP ends that card), SKIP (Enter) ending Mission 2's
   whole opening, Mission 2's cold open, Lin with no shadow, Dale's statement in his voice with his hologram, the
   junior pass, Rook at the chamber door setting `trust_rook`, `wrist_mark`, the lab's 2026 frame and the
   excavation office (`ev_site_zero`), the 2196 plaque, `time_<mkey>` stored as each mission ends, Act I's
@@ -487,7 +512,10 @@ measured with a player.
 
 - **Scale.** The bible's campaign is 25–30 hours. The length model of this edition is 886 minutes (about 15
   hours, 703 of them the main path), the bot plays it in 167.5 minutes of game time (the table at the top), and
-  no player has been measured.
+  no player has been measured. The model's minutes are each thread's own, set by its author (the U6 review: Mission
+  1 walked by the bot in 10.4 minutes against 35); the bot now fails Mission 1 if its walk falls under a third of the
+  model's main path (0.40 on 2026-10-22, after the pursuit grew to 180 m), but making the chapters as long as the
+  model says is content still to write, mission by mission, and a player's time still to measure.
 - **What the set pieces are not.** The game has no combat and no fail states: Mission 9's reset, Mission 18's hold
   and Mission 21's arena never fail (a lapse or a fall is a setback to the last anchor); Mission 13's battle and
   Mission 18's storms are watchers and weather; Mission 21's elites are watchers that rewind, not fighters; Mission

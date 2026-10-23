@@ -40,8 +40,8 @@ export default {
   frags: { m01: [['towpath', 'laundromat', 'carriageDoor']] }, // (a fragment is read within 2.4 m: never up on the pigeons' ledge)
   crowd: [
     // (21 asked for, with the eight named and tier-2 people; Rain City's faces walk at most twice a year in a place, so
-    // crowds.js casts 13, in this order: the knot at the staff gate first (the pursuit ends in it: 3), then the station
-    // staff (2), the avenue's commuters (5), the checkpoint queue (2), the EMS (1): twelve walk the morning)
+    // crowds.js casts 14, in this order: the knot at the staff gate first (the pursuit ends in it: 3), then the station
+    // staff (2), the avenue's commuters (5), the checkpoint queue (2), the EMS (2): twelve walk the morning)
     // Helix's people at the staff gate, waiting to badge in all morning (the crowd where the woman with Mira's face is
     // lost, after the Zero Second); the morning's people are not out yet at 05:40, while the cold open plays (co_m01)
     { era: 'present', years: ['PRESENT', 'PAST'], region: 'rain', role: 'commuter', path: [[-9, -217.5], [9, -217.5], [7, -221], [-7, -221]], n: 4, when: '!co_m01' },
