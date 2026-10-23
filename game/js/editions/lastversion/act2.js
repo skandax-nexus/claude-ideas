@@ -1129,6 +1129,8 @@ export const M13 = {
     },
   },
   step: m13Step,
+  // (a load while they lead the way: the flare is lit again, its patrol drawn off; a lure is not in the save)
+  resumes: [{ when: 'listeners_route', until: 't_m13_cross', fx: 'listenersRoute' }],
   fx: {
     // the people who listened draw the canyon lane's patrol off with a flare (the way the signal flares lure a watcher):
     // for a minute and a half the lane through the canyons is clear
