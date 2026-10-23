@@ -216,8 +216,8 @@ export default {
     P.E('PRESENT', () => {
       lattice(P, tx, tz, HEAD + 0.4, 45, 4.4, 1.0, 'mastRed', { beacon: 'redBeacon', solid: false });
       for (let i = 0; i < 4; i++) P.cyl(tx, HEAD + 26 + i * 5, tz, 0.8, 0.5, 'mastWhite', { seg: 8 });
-      // the Continuum's fence round the base
-      for (const [x0, z0, x1, z1] of [[-9, -9, 9, -9], [9, -9, 9, 9], [-9, 9, -4, 9], [4, 9, 9, 9], [-9, -9, -9, 9]]) P.vbox([tx + Math.min(x0, x1) - 0.04, HEAD, tz + Math.min(z0, z1) - 0.04, tx + Math.max(x0, x1) + 0.04, HEAD + 2.6, tz + Math.max(z0, z1) + 0.04], 'siteFence', { noShadow: 1 });
+      // the Continuum's fence round the base (solid: Kai walked through its panels; the way in is its gap on the north side)
+      for (const [x0, z0, x1, z1] of [[-9, -9, 9, -9], [9, -9, 9, 9], [-9, 9, -4, 9], [4, 9, 9, 9], [-9, -9, -9, 9]]) P.box([tx + Math.min(x0, x1) - 0.04, HEAD, tz + Math.min(z0, z1) - 0.04, tx + Math.max(x0, x1) + 0.04, HEAD + 2.6, tz + Math.max(z0, z1) + 0.04], 'siteFence', { noShadow: 1 });
     });
     P.E('PAST', () => {
       // the old lighthouse, scaffolded for the conversion that will make it a transmitter

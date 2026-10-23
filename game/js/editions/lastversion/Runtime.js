@@ -323,6 +323,19 @@ export class LastVersion {
     sub.textContent = this.def.subtitle;
     $('#title .tag').textContent = this.def.tagline;
     $('#title .ver').textContent = 'v2.0 · The Last Version of Earth';
+    // the menus opened from the title (the chapters, the saves, the settings, the CASE FILES) stand in front of the
+    // title's own backdrop, not of Station Zero's antechamber, which the 3D view keeps drifting round behind the title
+    if (!$('#lvTitleMenus')) {
+      const st = document.createElement('style');
+      st.id = 'lvTitleMenus';
+      st.textContent = `body.lastversion:not(.playing) #chapters.overlay, body.lastversion:not(.playing) #saves.overlay,
+        body.lastversion:not(.playing) #settings.overlay, body.lastversion:not(.playing) #ending.overlay {
+        background: radial-gradient(circle at 70% 47%, rgba(80, 140, 225, 0.28) 0 22vmin, transparent 46vmin),
+          repeating-linear-gradient(104deg, rgba(210, 225, 255, 0.07) 0 1px, transparent 1px 11px),
+          radial-gradient(ellipse at 62% 112%, rgba(255, 186, 104, 0.42), transparent 58%),
+          linear-gradient(180deg, #0b111c 0%, #182434 58%, #2b2c34 100%); backdrop-filter: none; }`;
+      document.head.appendChild(st);
+    }
     $('#begin small').textContent = 'Choose a chapter: the Prologue, Acts I to IV, the Finale, or the Cases';
     const dim = $('#title p.dim');
     if (dim) dim.textContent = 'A temporal thriller about a machine that lets you stand in different years of the same place. Twenty-three missions, three years of one world, three endings.';
@@ -344,6 +357,13 @@ export class LastVersion {
     }
     const mapLegend = $('#map .legend .npc');
     if (mapLegend) mapLegend.textContent = 'People';
+    // (no law tokens and no save beacons here, and the watchers are people and drones: the map's key says so)
+    const watcherKey = $('#map .legend .sentinel');
+    if (watcherKey) watcherKey.textContent = 'Watcher';
+    for (const sel of ['#map .legend .token', '#map .legend .beacon']) {
+      const el = $(sel);
+      if (el) el.style.display = 'none';
+    }
     const vt = $('#verdict .dim');
     if (vt) vt.textContent = '';
     // the people of the chapter most likely to be played next start loading on the title screen, with its voices
@@ -1596,6 +1616,17 @@ export class LastVersion {
     this.deck.step?.(this, dt);
     this.threads.step(dt);
     this.inv?.step(dt);
+    // the watchers' meter: an open place is one room, so the shared rule (a watcher in the room) showed it empty all
+    // mission long; here it shows only with a watcher within 30 m, or one that has noticed Kai
+    let eye = false;
+    for (const s of g.deckWorld.sentinels) {
+      if (s.dead || s.def.room !== g.room || s.model?.visible === false) continue;
+      if (s.suspicion > 0 || s.mode === 'chase' || Math.hypot(s.pos.x - p.x, s.pos.z - p.z) < 30) { eye = true; break; }
+    }
+    if (eye !== this.eyeShown && typeof document !== 'undefined') {
+      this.eyeShown = eye;
+      document.body.classList.toggle('lvnoeye', !eye);
+    }
     // the YEAR button wears the colour of the year it will switch to
     if (typeof document !== 'undefined') {
       const list = g.engine.statesOf(g.room);

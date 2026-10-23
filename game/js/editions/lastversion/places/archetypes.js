@@ -548,7 +548,12 @@ export function prop(P, kind, x, z, ry = 0, o = {}) {
       ob(0, 0.9, 0, 2.2, 1.0, 0.04, o.goods || 'cloth');
       break;
     case 'pots':
-      for (let i = 0; i < 4; i++) P.cyl(x + Math.cos(i * 1.7) * 0.6, y, z + Math.sin(i * 1.7) * 0.6, 0.28 + (i % 2) * 0.08, 0.5 + (i % 3) * 0.12, 'terracottaPot', { seg: 8, prop: 1 });
+      // clay pots: a round belly, a neck and a flared lip (eight-sided drums read as plastic barrels)
+      for (let i = 0; i < 4; i++) {
+        const r = 0.24 + (i % 2) * 0.07 + (i % 3) * 0.03, px = x + Math.cos(i * 1.7) * 0.6, pz = z + Math.sin(i * 1.7) * 0.6;
+        P.sphere(px, y + r * 0.88, pz, r, 'terracottaPot', { sy: 0.9, prop: 1 });
+        P.cyl(px, y + r * 1.5, pz, r * 0.4, r * 0.5, 'terracottaPot', { seg: 10, r2: r * 0.56, prop: 1 });
+      }
       break;
     case 'cart':
       ob(0, 0.5, 0, 1.4, 0.5, 2.2, 'timber');

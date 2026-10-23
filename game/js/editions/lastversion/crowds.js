@@ -50,11 +50,11 @@ export const ERAS = {
   },
   ancient: {
     // men in homespun; women on whichever named woman's mesh is not in the mission; girls in linen; elders
-    villager: [['rb_robe_m', ['ochre', 'indigo', 'undyed', 'madder'], 3], ['WOMAN', ['umber', 'ochre', 'indigo'], 3], ['rb_child_f2', ['linen', 'ochre']], ['rb_robe_m', ['elder']]],
+    villager: [['rb_robe_m', ['ochre', 'indigo', 'undyed', 'madder'], 3], ['WOMAN', ['umber', 'ochre', 'indigo'], 3], ['rb_child_f2', ['linen', 'ochre', 'indigo']], ['rb_robe_m', ['elder']]],
     waterKeeper: [['rb_robe_m', ['indigo', 'undyed', 'ochre'], 2], ['WOMAN', ['indigo', 'umber', 'ochre'], 2], ['rb_child_f2', ['linen']]],
     fisher: [['rb_robe_m', ['undyed', 'madder', 'indigo']], ['WOMAN', ['ochre', 'umber']]],
     skywatcher: [['rb_robe_m', ['indigo', 'undyed', 'madder'], 2], ['WOMAN', ['indigo', 'ochre'], 2], ['rb_robe_m', ['elder']]],
-    child: [['rb_child_f2', ['linen', 'ochre']]],
+    child: [['rb_child_f2', ['linen', 'ochre', 'indigo']]],
     elder: [['rb_robe_m', ['elder']]],
   },
   future: {
@@ -129,7 +129,7 @@ export const AMBIENT_CAST = {
   m14_pupilB: { model: 'rb_child_m2', variant: 'patched', height: 1.34, pronoun: 'm' },
   m18_fighter: { model: 'rb_scav', variant: 'unwritten', height: 1.78, pronoun: 'm' },
   m18_citizen: { model: 'rb_civ_f3', variant: 'moss', height: 1.66, pronoun: 'f' },
-  m21_cook: { model: 'rb_civ_f2', variant: 'home', height: 1.67, pronoun: 'f' },
+  m21_cook: { model: 'rb_civ_f2', variant: 'sand', height: 1.67, pronoun: 'f' }, // (the Loop City evacuee, years on; not Officer Haig's at-home look)
   m21_listener: { model: 'rb_civ_f1', variant: 'teal', height: 1.66, pronoun: 'f' },
   m23_listener: { model: 'rb_civ_f2', variant: 'rose', height: 1.67, pronoun: 'f' },
   m23_passenger: { model: 'rb_courier', variant: 'blue', height: 1.78, pronoun: 'm' },
@@ -209,7 +209,7 @@ function pickPeople(c, n, named, r, turn, fits = () => true, last = null, worn =
     i++;
     if (!fits(m)) continue; // (this face is already in the place as often as it may be)
     const v = vs[(turn[m] = (turn[m] ?? Math.floor(r() * vs.length)) + 1) % vs.length];
-    if (worn?.has(`${m}/${v}`)) continue; // (a child placed by hand in this look is not also in the crowd)
+    if (worn?.has(`${m}/${v}`)) continue; // (someone placed by hand in this look is not also in the crowd)
     const prev = out[out.length - 1] || last; // (the last of the crowd before is a neighbour too)
     if (prev && prev[0] === m && prev[1] === v && cycle.length > 1) continue;
     out.push([m, v]);
@@ -380,8 +380,11 @@ export function castLevel(level, deck, { facts = null } = {}) {
   // (a face a hand-placed person wears here, the trapped woman or Sera in her disguise, is not also in the crowd:
   // children aside, who have one crowd face)
   const placed = new Set(levelCast.map((c) => c.model).filter((m) => !isChild(m)));
-  // (a named child placed here is not also a crowd child in the same look: Tomas among the lock city's)
-  const worn = new Set(level.npcs.filter((n) => byId[n.crew] && isChild(byId[n.crew].model)).map((n) => `${byId[n.crew].model}/${n.variant || byId[n.crew].variant}`));
+  // (a named child placed here is not also a crowd child in the same look: Tomas among the lock city's; nor is anyone
+  // placed by hand in the same face and clothes: the settlement's storyteller, craftswoman and girl walked twice in
+  // Mission 4, its crowd sharing their three faces)
+  const worn = new Set([...level.npcs.filter((n) => byId[n.crew] && isChild(byId[n.crew].model)).map((n) => `${byId[n.crew].model}/${n.variant || byId[n.crew].variant}`),
+    ...levelCast.map((c) => `${c.model}/${c.variant || 'default'}`)]);
   const faces = new Map(); // `${model}@${year}` -> how many of the crowd wear it
   const yearsOf = (c) => (c.years?.length ? c.years : level.states || deck.states || ['PRESENT']);
   // within §4.7's 24: each crowd keeps its share, the places left over going to the largest remainders

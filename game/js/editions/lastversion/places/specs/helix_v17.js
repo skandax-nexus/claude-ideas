@@ -149,6 +149,9 @@ export default {
     colonnade(P, 44, -36, 44, -8, 8, 4.5, 0.3, 'steel');
     P.box([44, 4.5, -38, 48, 5.0, -8], 'helixWhite');
     P.land('serverRoom2026', 46, 0, -26, -Math.PI / 2);
+    // (where the second record lies: at the server glass, south of the drive's spot; at the arcade's foot it floated in
+    // front of Iven, who stands there)
+    P.land('serverWindow', 46.4, 0, -31.5, -Math.PI / 2);
     P.vbox([47.9, 0, -32, 48, 4.2, -20], 'serverGlass', { noShadow: 1 });
     for (let i = 0; i < 4; i++) P.vbox([49, 0, -31 + i * 3, 50.2, 2.4, -29.4 + i * 3], 'serverRack');
     // Rook's office: a corner room at 6 m in the east wing, its window over the river; an outside stair up

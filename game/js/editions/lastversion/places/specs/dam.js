@@ -112,7 +112,7 @@ export default {
       const x = -48 + i * 6.4;
       P.vbox([x - 2.6, HALL, 21, x + 2.6, HALL + 3, 21.08], 'glass', { noShadow: 1 });
       P.box([x - 2.7, HALL, 21, x - 2.5, HALL + 3, 27], 'cellBars');
-      P.disc(x, HALL + 0.02, 24, 1.8, 'stormGlow', { noShadow: 1 });
+      P.glow(x, HALL + 0.02, 24, 2.4, 0xc9b8ff); // (the loop's light on the cell floor, soft: a flat lit disc read as a decal)
     }
     P.land('spillwayTunnel', 54, HALL, 4, -Math.PI / 2);
     P.box([60, HALL, -2, 70, HALL + 0.1, 10], 'damConcrete');

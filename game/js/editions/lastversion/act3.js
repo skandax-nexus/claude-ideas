@@ -842,7 +842,8 @@ export const M17 = {
           goal: 'The reconstruction of the original experiment.', because: 'Chamber One, 2026, 16:02, rebuilt to the millimetre.', hints: M17_HINTS.reconstruct, minutes: 3 },
         { id: 'witness', kind: 'talk', npc: 'witness', at: 'controlHall', after: ['reconstruct'], goal: 'His hologram stands in the hall.', because: 'He built this. He wants me to see it.', done: 'm17_price', hints: M17_HINTS.witness, minutes: 2 },
         { id: 'memory', kind: 'playback', at: 'reconstruction', after: ['witness'], prompt: 'THE MEMORY', offset: [-3, 1.2, 0.5],
-          echoes: [{ crew: 'kai12', offset: [0, 0, 1.3] }, { crew: 'child', variant: 'mira9', offset: [0, 0, 10], yaw: 0 }],
+          // (the boy stands on the step stool, 0.35 m: he stood in it)
+          echoes: [{ crew: 'kai12', offset: [0, 0.35, 1.3] }, { crew: 'child', variant: 'mira9', offset: [0, 0, 10], yaw: 0 }],
           lines: [N('Chamber One, 2026, 16:02. A boy on a step stool at a console built for grown men. A girl in yellow boots, in the chair, laughing.'), REV(K('I pressed it.')), L('WITNESS', 'You pressed it.')],
           set: { ev_i_pressed: true }, log: 'I pressed the button. I was twelve.',
           goal: 'The memory, at the console.', because: 'He says I should see it once.', hints: M17_HINTS.memory, minutes: 2 },

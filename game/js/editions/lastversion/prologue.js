@@ -98,7 +98,8 @@ export const M01 = {
     // (Helix's crescent stands due north on the horizon, about 6.5° up, behind the Ring Hill's foot at the district's
     // north edge: the first two shots look at it from high over the plaza and the canal, where the hill is below it;
     // the third finds Kai's door)
-    shots: [{ cam: [0, 20, -104], to: [0, 23, -132], look: [14, 62, -560], t: 9 }, { cam: [-6, 30, -150], to: [-2, 32, -172], look: [12, 66, -560], t: 9 }, { cam: [24, 12, -20], to: [20, 8, -10], look: 'door4B', t: 8 }],
+    // (timed to the lines: at 9 + 9 s the third shot, Kai's door, came after the narration had ended and was never seen)
+    shots: [{ cam: [0, 20, -104], to: [0, 23, -132], look: [14, 62, -560], t: 4 }, { cam: [-6, 30, -150], to: [-2, 32, -172], look: [12, 66, -560], t: 5 }, { cam: [24, 12, -20], to: [20, 8, -10], look: 'door4B', t: 7 }],
     lines: [N('Rain City. 05:40.'), N('At Helix Temporal Research, a card opens Chamber One. The name on the card is KAI VAREN.'), N('Kai Varen is asleep, four kilometres away. His phone lights once on the table. One voicemail. He does not wake.')],
     title: { lines: [N('08:02.'), K('Twenty-three years today.'), K('I\'ll go after work. I always go after work.'), K('The 41 is late. The 41 is never late.')] },
   },

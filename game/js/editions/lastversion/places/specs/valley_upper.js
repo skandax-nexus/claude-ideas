@@ -38,7 +38,8 @@ export default {
   exits: { m04: 'underChamber' },
   frags: { m04: [['lintelHouse', 'granary', 'pictoRing'], ['skyFloor', 'firePit', 'cistern'], ['waterSteps', 'grainStore', 'ringStone']] },
   crowd: [
-    { era: 'ancient', years: ['PRESENT'], region: 'settlement', role: 'villager', path: [[-30, 80], [30, 80], [20, 70]], n: 6 },
+    // (round the first fire, not through it)
+    { era: 'ancient', years: ['PRESENT'], region: 'settlement', role: 'villager', path: [[-30, 80], [-2, 80], [4, 85.5], [10, 80], [30, 80], [20, 70]], n: 6 },
     { era: 'ancient', years: ['PRESENT'], region: 'settlement', role: 'child', path: [[-10, 72], [10, 74]], n: 3 },
   ],
 

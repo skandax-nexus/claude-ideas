@@ -101,12 +101,15 @@ export const M04 = {
   // the cold open, before the title: the villagers' side, at night by the ring
   coldOpen: {
     first: true, minutes: 2, cue: 'card',
-    shots: [{ cam: 'elderSeat', to: 'stairT3Top', look: 'ring', t: 9 }, { cam: 'underStair', look: 'ring', t: 8 }],
+    // (the first shot rises as it backs away from the Elder's seat: at the seat's height it ran into the seat's back wall,
+    // which filled the frame while Niko spoke)
+    shots: [{ cam: [0, 12.3, -4.2], to: [0, 13.9, 1.6], look: 'ring', t: 9 }, { cam: 'underStair', look: 'ring', t: 8 }],
     // (Niko runs up to the Elder at the ring; they stand in the shot only while it plays)
     cast: [{ crew: 'elder', at: 'elderSeat', off: [-1, 0, -2.6], turn: 0.3 }, { crew: 'niko', at: 'elderSeat', off: [2.2, 0, -2.2], turn: -1.2 }],
     lines: [L('NIKO', 'Elder. By the ring. A man. He fell out of the stars.'), ELDER('Is there dust on him?'), L('NIKO', 'None.'),
       ELDER('Then it is him again. Put a blanket over him. And do not tell him he has been here before. He never believes it.')],
-    title: { shots: [{ cam: 'firePit', look: 'blanketHouse', t: 6 }], lines: [N('He has slept through a day.')] },
+    // (beside the fire, over the heads of the people walking round it: in the fire it stood in their way)
+    title: { shots: [{ cam: [7, 2.4, 77.5], look: 'blanketHouse', t: 6 }], lines: [N('He has slept through a day.')] },
   },
   quarters: [
     {
@@ -245,7 +248,8 @@ export const M04 = {
     P.col([x - 2.3, 10, z - 10.3, x + 2.3, 14.2, z - 8.9]);
     P.inter.push({ id: 'chronolith_m04', kind: 'scene', scene: 'chronolith_m04', pos: [x, 12.05, z - 9.6], yaw: 0, r: 0, prompt: '', model: () => makeChronolith(0.5, 'stone'), room: P.rid });
     person(P, { id: 'elder_fire', crew: 'elder', at: 'firePit', off: [-2.6, 0, -1.8], turn: 0.9, when: '@PRESENT && !t_m04_meal', prompt: 'TALK TO THE ELDER' });
-    person(P, { id: 'elder_ring', crew: 'elder', at: 'elderSeat', off: [0, 0, 0.9], turn: Math.PI, when: 't_m04_meal && @PRESENT', prompt: 'TALK TO THE ELDER' });
+    // (in front of her seat, facing the ring: at 0.9 m she stood half inside the seat's stone)
+    person(P, { id: 'elder_ring', crew: 'elder', at: 'elderSeat', off: [0, 0, 0.3], turn: Math.PI, when: 't_m04_meal && @PRESENT', prompt: 'TALK TO THE ELDER' });
     person(P, { id: 'm4_craft', crew: 'm4_craft', first: 'Craftswoman', seed: 401, ambient: true, at: 'firePit', off: [2.4, 0, -1.4], turn: -0.9, silent: true, when: '@PRESENT' });
     person(P, { id: 'm4_teller', crew: 'm4_teller', first: 'Storyteller', seed: 402, ambient: true, at: 'firePit', off: [1.8, 0, 2.2], turn: -2.4, silent: true, when: '@PRESENT' });
     person(P, { id: 'm4_girl', crew: 'm4_girl', first: 'Girl', seed: 403, ambient: true, at: 'firePit', off: [-1.6, 0, 2.6], turn: 2.6, when: '@PRESENT', prompt: 'TALK TO THE GIRL' });
@@ -816,7 +820,7 @@ export const M08 = {
   labels: { PRESENT: '2049 · V17' },
   named: ['receptionist', 'rook', 'guard', 'dale', 'researcher', 'iven'], // (the altered staff never wear their faces)
   minutes: { main: 34, optional: 8 }, autoExit: 1.2, gateAfter: true,
-  fragSpots: [['southBridge'], ['eastArcade']],
+  fragSpots: [['southBridge'], ['serverWindow']],
   fragments: [[
     'A visitor badge printed for VAREN, M., age 9, dated today. Nobody has signed it out.',
     'A 2026 server rack, one second behind every other clock.',
@@ -824,7 +828,9 @@ export const M08 = {
   beats: [{ kind: 'custom', goal: 'Find out what changed.' }],
   coldOpen: {
     first: true, minutes: 1, cue: 'card',
-    shots: [{ cam: 'atriumDoors', look: 'receptionDesk', t: 9 }],
+    // (her call from the visitors' side of the desk, between the canopy's posts; then from the atrium, the doors and Kai in
+    // them. The one shot stood its camera on the doors where Kai spawns, inside his head)
+    shots: [{ cam: [-56.2, 1.72, -22.4], to: [-55.2, 1.68, -22.3], look: [-50.8, 1.5, -22], t: 8 }, { cam: [-54.6, 1.95, -18.2], to: [-55.4, 1.9, -18], look: [-64, 1.3, -16], t: 6 }],
     lines: [RECEPTION('Helix Temporal, good afternoon. No, we have no Kai Varen. There was a Varen in the junior programme. Mira. She died in 2026.'),
       N('The doors open. Kai Varen walks in. Outside, nothing moves. Not even the flags.')],
   },
@@ -981,7 +987,8 @@ export const M08 = {
     if (rt?.g?.facts?.get('lin_gone') && !rt.g.facts.get('t_m08_escape')) lockdown(level.sentinels);
   },
   overlay(P) {
-    person(P, { id: 'receptionist', crew: 'receptionist', at: 'receptionDesk', off: [0, 0, -1.4], turn: 0, prompt: 'TALK TO RECEPTION' });
+    // (behind her desk, facing the doors: she stood on the visitors' side with her back to them)
+    person(P, { id: 'receptionist', crew: 'receptionist', at: 'receptionDesk', off: [0, 0, 1.2], turn: Math.PI, prompt: 'TALK TO RECEPTION' });
     // (Rook in 2049; in 2026 his echo practises a statement at the window: the confrontation is in his own year)
     person(P, { id: 'rook', crew: 'rook', at: 'rookOffice', off: [1.6, 0, 0.4], turn: Math.PI, prompt: 'TALK TO ROOK', temporal: ['PRESENT'] });
     // the staff door: shut, unless an officer who trusts Kai opens it (else the old river wall is the climb)

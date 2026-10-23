@@ -218,7 +218,8 @@ export const M09 = {
       P.vbox([x0 + 3, 4.4, 61.5, x1 - 3, 6.4, 61.85], 'ash');
       P.vbox([x0 + 0.5, 0, 57.5, x1 - 0.5, 0.06, 61.5], 'ashGround');
     })));
-    person(P, { id: 'engineer', crew: 'engineer', at: 'towerBase', off: [1.6, 0, 1.4], turn: Math.PI, prompt: 'TALK TO RHEA' });
+    // (a step clear of the fence round the mast: she stood in its panel)
+    person(P, { id: 'engineer', crew: 'engineer', at: 'towerBase', off: [2.3, 0, 2.1], turn: Math.PI, prompt: 'TALK TO RHEA' });
     person(P, { id: 'brask9', crew: 'soldier', at: 'funicularStation', off: [-2.4, 0, -2], turn: 0.6, silent: true, barks: ['You did that already. No—you\'re about to do it. I hate that I know the difference.'] });
     person(P, { id: 'm9_evac', crew: 'm9_evac', first: 'Evacuee', seed: 901, ambient: true, at: 'headlandStair', off: [2.2, 0, 2.4], turn: Math.PI, when: '!warned_evacuees', prompt: 'TALK TO THE EVACUEES' });
     person(P, { id: 'm9_evac_safe', crew: 'm9_evac', first: 'Evacuee', seed: 901, ambient: true, at: 'ferryQuay', off: [-6, 0, -2], when: 'warned_evacuees', prompt: 'TALK TO THE EVACUEES' });
@@ -473,7 +474,7 @@ const M11_PROCESSES = [
   },
   // R5: Odile's 2026 echo, walking her shift backwards; held, it runs forwards once and says what it says
   {
-    id: 'odileEcho', kind: 'recording', at: 'odileStation', label: 'ODILE\'S ECHO', weight: 0.5, grain: 'pen', aim: [0, 1.3, -1.6],
+    id: 'odileEcho', kind: 'recording', at: 'odileStation', label: 'ODILE\'S ECHO', weight: 0.5, grain: 'pen', aim: [1, 1.3, -3.5], // (her echo, behind the counter)
     clip: { who: 'CREW', name: 'ODILE', voice: { id: 'ODILE' }, text: 'Thirty-two isn\'t missing. She\'s early.' },
     hints: ['Her echo walks backwards.', 'A recording runs forwards once.', 'REVERSE her echo.'],
   },
@@ -717,7 +718,8 @@ export const M11 = {
   step: m11Step,
   overlay(P) {
     person(P, { id: 'odile', crew: 'odile', at: 'odileStation', off: [0, 0, 1.4], turn: Math.PI, prompt: 'TALK TO ODILE' });
-    person(P, { id: 'odile_echo', crew: 'odile', at: 'odileStation', off: [2.2, 0, -1.6], hologram: true, silent: true, when: '!inv_odileEcho_done' });
+    // (behind the station's counter, facing the ward's door: she stood inside the counter)
+    person(P, { id: 'odile_echo', crew: 'odile', at: 'odileStation', off: [1, 0, -3.5], hologram: true, silent: true, when: '!inv_odileEcho_done' });
     person(P, { id: 'kai12', crew: 'kai12', at: 'youngKaiBench', off: [0, 0, 0.4], turn: Math.PI, hologram: true, silent: true, when: '@PRESENT' });
   },
   hook: {

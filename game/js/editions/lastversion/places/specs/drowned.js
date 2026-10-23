@@ -188,7 +188,8 @@ export default {
       for (const z of [80, 20, -40]) prop(P, 'busShelter', -12, z, Math.PI / 2, { y: 0.15 });
     });
     // unstable zones: shimmering patches where the street flickers between years
-    for (const [x, z, r] of [[6, -10, 5], [-30, 8, 4], [56, 30, 4.5], [-6, -30, 3.5]]) P.disc(x, 0.2, z, r, 'stormGlow', { noShadow: 1 });
+    // (a soft pool of light, not a flat lit disc that read as a decal on the street)
+    for (const [x, z, r] of [[6, -10, 5], [-30, 8, 4], [56, 30, 4.5], [-6, -30, 3.5]]) P.glow(x, 0.2, z, r * 1.3, 0xc9b8ff);
     for (const [x, z] of [[VX - 9, 6], [VX - 9, -26], [-12, 9]]) P.E('FUTURE', () => { for (let i = 0; i < 3; i++) P.box([x - 0.3 + i * 0.05, 0.15 + i * 0.25, z - 0.25, x + 0.3 - i * 0.05, 0.4 + i * 0.25, z + 0.25], 'riverStone', { solid: false }); });
     // --- Q2: the memorial on the old Helix Plaza, Sera's school, the statue ------------------------------------------
     terrace(P, [-46, -104, 8, -60], 1.6, 'limestonePave', { wall: 'concreteStained', sides: 'NESW', cap: 'limestoneBlock' });

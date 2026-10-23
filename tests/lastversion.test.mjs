@@ -1710,6 +1710,39 @@ test('crowds walk every mission\'s place: neighbours differ, heights and paces v
 // walks between (crowds.js groundOf). Walked here leg by leg, as the game walks them, in every year each one shows in.
 // (U4 review) a crowd is not copies of a few faces: at most CAP of one face a year in a place (the helmeted troopers and
 // holograms aside), and in 2026/2049 and 2196 no crowd wears the face of someone placed by hand in the same place
+test('tour: people placed by hand stand on the ground, in no wall, seat or counter; the crowd never wears their face and clothes', () => {
+  let people = 0;
+  for (const { deck, s, level } of LEVELS) {
+    const states = level.states || deck.states || ['PRESENT'];
+    for (const n of level.npcs) {
+      if (n.crowd || n.path) continue;
+      const [x, y, z] = n.pos;
+      for (const st of states) {
+        // (a person whose condition names a year stands only in it)
+        if (n.when && /@(PRESENT|PAST|FUTURE)/.test(n.when) && (!new RegExp(`@${st}`).test(n.when) || new RegExp(`!@${st}`).test(n.when))) continue;
+        const live = (e) => {
+          if (!e.solid || !e.box) return false;
+          if (!e.when) return true;
+          try { return !!compileCondition(e.when)({ fact: () => false, state: st }); } catch { return true; }
+        };
+        const under = (level.elements || []).filter((e) => live(e) && x >= e.box[0] - 0.05 && x <= e.box[3] + 0.05 && z >= e.box[2] - 0.05 && z <= e.box[5] + 0.05);
+        const inside = under.find((e) => y + 0.3 > e.box[1] && y + 0.3 < e.box[4]);
+        assert.ok(!inside, `${deck.mkey}/${s} ${st}: ${n.id} stands inside ${JSON.stringify(inside?.box)}`);
+        const ground = Math.max(under.filter((e) => e.box[4] <= y + 0.36).reduce((a, e) => Math.max(a, e.box[4]), -Infinity), level.heightAt ? level.heightAt(x, z) : -Infinity);
+        assert.ok(!Number.isFinite(ground) || y - ground <= 0.3, `${deck.mkey}/${s} ${st}: ${n.id} floats ${(y - ground).toFixed(2)} m`);
+        people++;
+      }
+    }
+    // (Mission 4's storyteller, craftswoman and girl walked twice: in their places and again in the crowd)
+    const placed = new Set(level.npcs.filter((n) => n.ambient && !n.crowd).map((n) => level.cast.find((c) => c.id === n.crew)).filter(Boolean).map((c) => `${c.model}/${c.variant || 'default'}`));
+    for (const n of level.npcs.filter((x) => x.crowd && !x.hologram)) {
+      const c = level.cast.find((x) => x.id === n.crew);
+      assert.ok(!placed.has(`${c.model}/${c.variant || 'default'}`), `${deck.mkey}/${s}: ${n.id} wears ${c.model}/${c.variant}, as someone placed by hand here does`);
+    }
+  }
+  assert.ok(people > 300, `${people} placings checked`);
+});
+
 test('crowds are not clones: one face at most twice a year in a place, and never a hand-placed person\'s', () => {
   for (const { deck, s, level } of LEVELS) {
     const states = level.states || deck.states || ['PRESENT'];
@@ -3215,6 +3248,24 @@ test('U8 review: the endings keep Kai off screen from the first shot to the over
   const src = fs.readFileSync('game/js/editions/lastversion/Runtime.js', 'utf8');
   const end = src.slice(src.indexOf('  ending(key) {'));
   assert.equal((end.match(/hidePlayer: true/g) || []).length, 3);
+});
+
+test('tour: a shot whose camera stands where Kai stands is his point of view: he is not drawn round the lens', () => {
+  const model = { visible: true };
+  const g = {
+    player: { pos: new THREE.Vector3(10, 0.86, 4), H: { x: 0, z: 1 }, model, cinema: null, rayDistance: (o, d, m) => m },
+    input: { keys: new Set(), state: {} }, facts: new FactStore(),
+    hud: { say: () => {} }, after: () => {},
+  };
+  const c = new Cinema({ g, level: { landmarks: { doors: [10, 0, 4, 0] } } });
+  // (Mission 8's cold open stood its camera on the doors where Kai spawns: the inside of his head filled the frame)
+  c.play({ shots: [{ cam: 'doors', look: [20, 1, 4], t: 2 }, { cam: [14, 2.4, 9], look: [10, 1, 4], t: 2 }], lines: [{ who: 'NARRATOR', text: 'The doors open.' }] });
+  assert.ok(!model.visible, 'hidden at once, while the camera is in him');
+  c.step(1);
+  assert.ok(!model.visible);
+  c.step(1.2);
+  c.step(0.1); // (the next shot, from across the atrium)
+  assert.ok(model.visible, 'seen again from a camera away from him');
 });
 
 test('U8 review: a talk the story has not reached is not offered, a REVERSE it has not reached does not answer, and a thread done early is paid in order', () => {

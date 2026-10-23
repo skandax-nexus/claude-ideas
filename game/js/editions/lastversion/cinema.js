@@ -19,6 +19,12 @@ const STYLE = `
   body.lastversion.lvcine #lvBars::before, body.lastversion.lvcine #lvBars::after { height: 9vh; }
   body.lastversion.lvcine #dock, body.lastversion.lvcine #buttons, body.lastversion.lvcine #minimap, body.lastversion.lvcine #objective,
   body.lastversion.lvcine #prompt { opacity: 0; pointer-events: none; transition: opacity 0.4s; }
+  /* (the aiming dot and the touch stick's ring are no part of a shot; the stick's zone still takes the thumb) */
+  body.lastversion.lvcine #crosshair, body.lastversion.lvcine #stickzone #stick { opacity: 0 !important; transition: opacity 0.4s; }
+  /* (nor are the year pips and the REVERSE chip, which sat half on the top bar, the aim label, or the watchers' meter) */
+  body.lastversion.lvcine #lvTop, body.lastversion.lvcine #lvTarget, body.lastversion.lvcine #eye { opacity: 0 !important; pointer-events: none; transition: opacity 0.4s; }
+  /* the watchers' meter only near a watcher (Runtime.step) */
+  body.lastversion.lvnoeye #eye { opacity: 0 !important; }
   body.lastversion #lvSkip { position: fixed; right: max(16px, env(safe-area-inset-right)); bottom: calc(9vh + 12px); z-index: 41; display: none;
     background: rgba(0,0,0,0.42); color: #f4f6f8; border: 1px solid rgba(255,255,255,0.35); border-radius: 999px; padding: 7px 16px;
     font: 600 12px/1 system-ui, sans-serif; letter-spacing: 0.14em; cursor: pointer; }
@@ -157,7 +163,7 @@ export class Cinema {
     };
     if (letterbox && typeof document !== 'undefined') document.body.classList.add('lvcine');
     const mine = this.active;
-    if (mine.hidePlayer) this.step(0);
+    if (mine.shots) this.step(0); // (the first shot at once: no frame of the game camera, nor of Kai round its lens)
     return new Promise((resolve) => {
       mine.resolve = resolve;
       const done = () => this.active === mine && this.end();
@@ -198,7 +204,17 @@ export class Cinema {
     const k = ease(Math.min(1, a.t / Math.max(0.1, s.t)));
     const pos = _a.copy(s.cam).lerp(s.to, k);
     g.player.cinema = { pos: { x: pos.x, y: pos.y, z: pos.z }, target: { x: s.look.x, y: s.look.y, z: s.look.z }, up: { x: 0, y: 1, z: 0 } };
-    if (a.hidePlayer && g.player.model) g.player.model.visible = false;
+    // a shot whose camera stands where Kai stands (a cold open shot from the spawn: Mission 8's doors, the road's start)
+    // is his point of view: he is not drawn round the lens (the inside of his head filled the frame). The game camera
+    // shows him again by its distance once the moment ends
+    const pm = g.player.model;
+    if (pm) {
+      const p = g.player.pos;
+      const inside = Math.hypot(pos.x - p.x, pos.z - p.z) < 0.9 && pos.y > p.y - 1.0 && pos.y < p.y + 1.3;
+      if (a.hidePlayer || inside) pm.visible = false;
+      else if (a.pov) pm.visible = true;
+      a.pov = inside && !a.hidePlayer;
+    }
     if (a.t >= s.t && a.i < a.shots.length - 1) {
       a.i++;
       a.t = 0;

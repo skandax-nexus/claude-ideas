@@ -150,7 +150,8 @@ export const WARDROBE = {
   },
   rb_elder: {
     // the Elder: a madder-red wool robe, a staff, a slow walk
-    elder: { body: [{ lmax: 0.5, to: 0.99, sset: 0.5, lrange: [0.14, 0.46] }], hair: [{ to: 0.06, sset: 0.25, lrange: [0.6, 0.78] }], props: ['staff'] },
+    // (lighter than her robe was: a madder that read as black at dusk made her a figure in a modern abaya)
+    elder: { body: [{ lmax: 0.5, to: 0.99, sset: 0.56, lrange: [0.27, 0.5] }], hair: [{ to: 0.06, sset: 0.25, lrange: [0.6, 0.78] }], props: ['staff'] },
     // the settlement's women where the Elder is absent (M5, M7)
     umber: { body: [{ lmax: 0.5, to: 0.07, sset: 0.42, lrange: [0.14, 0.42] }], hair: [{ to: 0.1, sset: 0.18, lrange: [0.6, 0.8] }] },
     ochre: { body: [{ lmax: 0.5, to: 0.1, sset: 0.55, lrange: [0.24, 0.56] }], hair: [{ to: 0.1, sset: 0.14, lrange: [0.62, 0.82] }] },
@@ -236,6 +237,8 @@ export const WARDROBE = {
     // the settlement's girls in linen (the head cloth plain)
     linen: { body: [{ to: 0.11, sset: 0.16, lrange: [0.5, 0.74] }], head: [{ hue: [0.93, 0.1], smin: 0.15, to: 0.1, sset: 0.14, lrange: [0.5, 0.72] }] },
     ochre: { body: [{ to: 0.1, sset: 0.45, lrange: [0.34, 0.54] }], head: [{ hue: [0.93, 0.1], smin: 0.15, to: 0.1, sset: 0.16, lrange: [0.52, 0.72] }] },
+    // (a third homespun: where a girl in linen is placed by hand, the crowd's children still differ from their neighbours)
+    indigo: { body: [{ to: 0.64, sset: 0.34, lrange: [0.24, 0.44] }], head: [{ hue: [0.93, 0.1], smin: 0.15, to: 0.1, sset: 0.14, lrange: [0.52, 0.72] }] },
     // a 2196 schoolgirl (M14): a faded blue smock, the head cloth a washed grey
     faded: { body: [{ to: 0.58, sset: 0.2, lrange: [0.4, 0.6] }], head: [{ hue: [0.93, 0.1], smin: 0.15, to: 0.6, sset: 0.06, lrange: [0.5, 0.68] }] },
   },
@@ -303,6 +306,9 @@ function propKit() {
     visor: keepMat(new THREE.MeshBasicMaterial({ color: 0x8fd8ff })), badge: M({ color: 0xc8ccd2, metalness: 0.6, roughness: 0.3 }), board: M({ color: 0x5a4a3a }), paper: M({ color: 0xe8e4d8 }),
     // rain gear (wet: low roughness), the troopers' slate kit
     rainYellow: M({ color: 0xc99a12, roughness: 0.32, side: THREE.DoubleSide }), rainRed: M({ color: 0x9c1c22, roughness: 0.32, side: THREE.DoubleSide }),
+    // a hood's outside and its lining, in shadow (the lining lit as brightly as the outside made a disc behind the head)
+    rainYellowOut: M({ color: 0xc99a12, roughness: 0.32 }), rainYellowIn: M({ color: 0x4a3808, roughness: 0.6, side: THREE.BackSide }),
+    rainRedOut: M({ color: 0x9c1c22, roughness: 0.32 }), rainRedIn: M({ color: 0x3a0a0e, roughness: 0.6, side: THREE.BackSide }),
     slate: M({ color: 0x3c4652, roughness: 0.55, side: THREE.DoubleSide }), plate: M({ color: 0x4a5664, roughness: 0.7 }),
     lens: M({ color: 0x141a22, metalness: 0.4, roughness: 0.12, side: THREE.DoubleSide }),
     // the Witness's hood, and the dark inside it where a face would be
@@ -310,10 +316,21 @@ function propKit() {
   };
   // a raincoat's hood, up: a shell round the top, sides and back of the head down to the jaw, open at the face (a sphere
   // less a wedge about +Z), about the middle of the wearer's head ([x, y, z] in the head bone's frame) with its radii
-  const hood = (mat, [x, y, z], [rx, ry, rz]) => {
-    const h = mesh(new THREE.SphereGeometry(1, 18, 10, Math.PI / 2 + 0.78, Math.PI * 2 - 1.56, 0, 2.15), mat, x, y, z);
-    h.scale.set(rx, ry, rz);
-    return h;
+  // cap: a raincoat's hood is closed over the crown down to the hairline (that angle from the top, in radians) and open
+  // only round the face below it; without one the wedge runs up to the crown (the Witness's deep hood, whose opening the
+  // shade fills). (Seen from in front, a hood open to the crown showed its far side as a disc behind the head: a halo)
+  // lining: a second material for the inside (the outside then only on its front faces)
+  const hood = (mat, [x, y, z], [rx, ry, rz], cap = 0, lining = null) => {
+    const shell = (m) => {
+      const h = mesh(new THREE.SphereGeometry(1, 18, 10, Math.PI / 2 + 0.78, Math.PI * 2 - 1.56, cap, 2.15 - cap), m, x, y, z);
+      h.scale.set(rx, ry, rz);
+      if (!cap) return [h];
+      const c = mesh(new THREE.SphereGeometry(1, 18, 4, 0, Math.PI * 2, 0, cap), m, x, y, z);
+      c.scale.set(rx, ry, rz);
+      return [h, c];
+    };
+    const parts = [...shell(mat), ...(lining ? shell(lining) : [])];
+    return parts.length === 1 ? parts[0] : group(...parts);
   };
   const mesh = (geo, mat, x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0) => {
     const m = new THREE.Mesh(keepGeo(geo), mat);
@@ -342,8 +359,9 @@ function propKit() {
     visor: { at: 'head', make: () => group(mesh(new THREE.BoxGeometry(0.17, 0.035, 0.02), mats.visor, 0, 0.085, 0.115)) },
     badge: { at: 'chest', make: () => group(mesh(new THREE.TorusGeometry(0.03, 0.008, 6, 16), mats.badge, -0.08, 0.02, 0.13)) },
     // the hoods of Mira's yellow raincoat (M1) and the toy boy's red one, child-sized (the coats are recolours)
-    raincoatHood: { at: 'head', make: () => group(hood(mats.rainYellow, [0, 0.1, -0.03], [0.118, 0.128, 0.166])) }, // (rb_mira)
-    raincoatChildHood: { at: 'head', make: () => group(hood(mats.rainRed, [0, 0.095, 0.015], [0.116, 0.124, 0.142])) }, // (rb_child_m2)
+    // (close round the head, the brim at the hairline, the lining dark: a looser shell read as a halo or a helmet)
+    raincoatHood: { at: 'head', make: () => group(hood(mats.rainYellowOut, [0, 0.092, -0.022], [0.108, 0.118, 0.142], 0.85, mats.rainYellowIn)) }, // (rb_mira)
+    raincoatChildHood: { at: 'head', make: () => group(hood(mats.rainRedOut, [0, 0.08, 0.004], [0.1, 0.104, 0.12], 0.9, mats.rainRedIn)) }, // (rb_child_m2)
     // the Witness's deep hood (rb_ren_m/hooded): its opening filled by shadow a little inside the rim, so no face shows
     shadowHood: { at: 'head', make: () => {
       const f = mesh(new THREE.SphereGeometry(1, 12, 8, Math.PI / 2 - 0.8, 1.6, 0.25, 1.85), mats.shade, 0, 0.1, -0.01);
@@ -367,7 +385,19 @@ function propKit() {
       return group(plate(0.138), plate(-0.15), side(0.165), side(-0.165), strap(0.085), strap(-0.085));
     } },
   };
+  Object.defineProperty(PROPS, 'shadeMat', { value: mats.shade }); // (a hologram's hood keeps its shadow dark: dress)
   return PROPS;
+}
+// a hologram's prop: its light (as world/Actors.js lights a hologram), or the dark inside a hood; one per colour
+const holoMats = new Map();
+function holoPropMat(color, dark) {
+  const k = `${color}|${dark}`;
+  if (!holoMats.has(k)) {
+    holoMats.set(k, keepMat(dark
+      ? new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.7, depthWrite: false, side: THREE.DoubleSide })
+      : new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 0.55, transparent: true, opacity: 0.5, depthWrite: false, roughness: 0.3, side: THREE.DoubleSide })));
+  }
+  return holoMats.get(k);
 }
 
 // --- the recolour, on the GPU -------------------------------------------------------------------------
@@ -673,6 +703,15 @@ export function dress(actor, crew, opts = {}) {
       const p = kit[name];
       const h = p && attach(actor, p.at, p.make(crew.seed || i), [0, 0, 0], !!p.upright);
       if (h) h.userData.prop = name;
+      // a hologram's things are of its light too: the hooded Witness's hood, cloth black on a figure of light, read as a
+      // solid black helmet on Missions 8's and 20's re-enactments. The hood glows as he does; the shadow in it, where a
+      // face would be, stays dark (translucent)
+      if (h && holo) h.traverse((o) => {
+        if (!o.isMesh) return;
+        const dark = o.material === kit.shadeMat;
+        o.material = holoPropMat(dark ? 0x05070a : U.spec.glow || 0x8fe0ff, dark);
+        o.castShadow = false;
+      });
     });
     if (props.includes('umbrella')) U.umbrella = true;
   }

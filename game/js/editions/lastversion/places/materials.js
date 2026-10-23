@@ -116,7 +116,7 @@ export const SURFACES = {
   mirror: { rough: 0.03, metal: 0.25, opacity: 0.5, cast: false }, // (M19's salt mirror: what stands below it shows through as its reflection)
   asphalt: { scan: 'asphalt', tile: 6, rough: 1, cast: false }, paving: { scan: 'pavement', tile: 3, cast: false }, concrete: { scan: 'concrete', tile: 4 },
   brick: { scan: 'brick', tile: 3 }, stone: { scan: 'stone', tile: 4 }, rock: { scan: 'rock', tile: 8 }, flag: { paint: 'flag', tile: 4, cast: false },
-  tile: { paint: 'tile', tile: 2.4, cast: false }, terrazzo: { paint: 'terrazzo', tile: 3, cast: false }, cobble: { paint: 'cobble', tile: 3, cast: false },
+  tile: { paint: 'tile', tile: 2.4, cast: false }, terrazzo: { paint: 'terrazzo', tile: 3, cast: false }, cobble: { paint: 'cobble', tile: 2, cast: false },
   gravel: { paint: 'gravel', tile: 3, cast: false }, grass: { paint: 'grass', tile: 6, cast: false }, soil: { paint: 'soil', tile: 5, cast: false },
   snow: { paint: 'snow', tile: 6, cast: false }, ice: { paint: 'ice', tile: 8, rough: 0.15, cast: false }, leaves: { paint: 'leaves', tile: 2 },
   brickFacade: { paint: 'brickFacade', tile: [4, 3.4], lit: 0xffd9a8 }, glassFacade: { paint: 'glassFacade', tile: [3, 3.6], lit: 0xcfe4ff, rough: 0.2, metal: 0.4 },
@@ -186,13 +186,22 @@ const PAINT = {
     g.fillStyle = '#e2ded6'; g.fillRect(0, 0, s, s);
     for (let i = 0; i < 2600; i++) { const c = [[90, 90, 96], [160, 140, 120], [60, 70, 80], [200, 196, 190]][(r() * 4) | 0]; g.fillStyle = `rgba(${c},${0.5 + r() * 0.5})`; g.fillRect(r() * s, r() * s, 1 + r() * 4, 1 + r() * 3); }
   },
+  // setts: tight rows of squarish stones with thin joints (round stones with wide dark gaps read as polka dots
+  // underfoot), each of its own tone, a little worn at the edges
   cobble(g, s, r) {
-    g.fillStyle = '#4a4640'; g.fillRect(0, 0, s, s);
-    const n = 9;
-    for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) {
-      const x = ((i + (j % 2) * 0.5) * s) / n, y = (j * s) / n, v = 140 + r() * 50;
-      g.fillStyle = `rgb(${v | 0},${(v * 0.95) | 0},${(v * 0.86) | 0})`;
-      g.beginPath(); g.ellipse(x + s / n / 2, y + s / n / 2, s / n / 2 - 2, s / n / 2 - 3, r(), 0, Math.PI * 2); g.fill();
+    g.fillStyle = '#6a645a'; g.fillRect(0, 0, s, s);
+    const n = 12, c = s / n;
+    for (let j = 0; j < n; j++) for (let i = -1; i < n; i++) {
+      const w = c * (0.82 + r() * 0.3), x = (i + (j % 2) * 0.5) * c + (r() - 0.5) * 2, y = j * c + (r() - 0.5) * 2, v = 128 + r() * 64;
+      g.fillStyle = `rgb(${v | 0},${(v * 0.95) | 0},${(v * 0.87) | 0})`;
+      const x0 = x + 1.5, y0 = y + 1.5, ww = Math.min(w, c * 1.05) - 3, hh = c - 3, k = 3 + r() * 3;
+      g.beginPath();
+      g.moveTo(x0 + k, y0); g.lineTo(x0 + ww - k, y0); g.quadraticCurveTo(x0 + ww, y0, x0 + ww, y0 + k);
+      g.lineTo(x0 + ww, y0 + hh - k); g.quadraticCurveTo(x0 + ww, y0 + hh, x0 + ww - k, y0 + hh);
+      g.lineTo(x0 + k, y0 + hh); g.quadraticCurveTo(x0, y0 + hh, x0, y0 + hh - k); g.lineTo(x0, y0 + k); g.quadraticCurveTo(x0, y0, x0 + k, y0);
+      g.fill();
+      g.fillStyle = `rgba(255,250,240,${0.05 + r() * 0.08})`;
+      g.fillRect(x0 + 2, y0 + 2, ww * 0.6, hh * 0.3);
     }
   },
   gravel(g, s, r) {

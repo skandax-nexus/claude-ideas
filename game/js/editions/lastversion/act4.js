@@ -578,10 +578,11 @@ export const M21 = {
   overlay(P) {
     person(P, { id: 'witness21', crew: 'witness', at: 'witnessStand', off: [-2, 0, 0], turn: Math.PI / 2, prompt: 'TALK TO HIM', when: 't_m21_gapTwo' });
     person(P, { id: 'm21_cook', crew: 'm21_cook', first: 'A cook', seed: 2101, ambient: true, at: 'kitchenDoor', off: [2.2, 0, 1.6], turn: Math.PI, prompt: 'TALK', when: 'warned_evacuees && !t_m21_infiltrate' });
-    for (const [id, crew, when, o] of [['sera21', 'sera', 'ally == "sera"', {}], ['anja21', 'anja', 'ally == "anja"', {}], ['iven21', 'iven', 'ally == "iven"', {}], ['rook21', 'rook', 'ally == "rook"', { variant: 'old' }]]) {
+    // (the ally holds the arena's gap at 18 m, which in 2026 is sky: they stand only in the years the arena stands)
+    for (const [id, crew, when, o] of [['sera21', 'sera', 'ally == "sera" && !@PAST', {}], ['anja21', 'anja', 'ally == "anja" && !@PAST', {}], ['iven21', 'iven', 'ally == "iven" && !@PAST', {}], ['rook21', 'rook', 'ally == "rook" && !@PAST', { variant: 'old' }]]) {
       person(P, { id, crew, at: 'arenaGap2', off: [3.6, 0, 9.4], turn: Math.PI, silent: true, when, ...o });
     }
-    person(P, { id: 'm21_listener', crew: 'm21_listener', first: 'One who listened', seed: 2102, ambient: true, at: 'arenaGap2', off: [3.6, 0, 9.4], turn: Math.PI, silent: true, when: 'ally == "listeners"' });
+    person(P, { id: 'm21_listener', crew: 'm21_listener', first: 'One who listened', seed: 2102, ambient: true, at: 'arenaGap2', off: [3.6, 0, 9.4], turn: Math.PI, silent: true, when: 'ally == "listeners" && !@PAST' });
     person(P, { id: 'rook_office', crew: 'rook', variant: 'old', at: 'directorOffice', off: [0, 0, -1.2], silent: true, when: 'rook_fate == "persuade"' });
     person(P, { id: 'pryce_office', crew: 'guard', at: 'directorOffice', off: [0, 0, -1.2], silent: true, when: 'rook_fate == "expose"' });
   },
@@ -648,7 +649,8 @@ export const M22 = {
   coldOpen: {
     first: true, minutes: 1, cue: 'card',
     shots: [{ cam: 'wedgeStation', look: 'paMic', t: 9 }],
-    cast: [{ crew: 'witness', at: 'paMic', off: [0, -1, 0.7], turn: Math.PI }],
+    // (on the platform, behind the microphone's stand and facing the tracks: a metre down he stood sunk to the waist in it)
+    cast: [{ crew: 'witness', at: 'paMic', off: [2.4, 0, 1.2], turn: Math.PI }],
     lines: [N('The station at 8:14, replayed in a wedge of rain. A man at the public-address microphone.'), REV(FX(L('WITNESS', 'Kai Varen. Do not build the machine.'), 'pa'))],
   },
   quarters: [
@@ -750,7 +752,8 @@ export const M22 = {
     person(P, { id: 'clockmaker', crew: 'clockmaker', at: 'clockArm', off: [2.2, 0, 1.2], turn: Math.PI, hologram: true, prompt: 'LISTEN' });
     person(P, { id: 'odile', crew: 'odile', at: 'hospitalLock', off: [2.2, 0, 1.2], turn: Math.PI, hologram: true, prompt: 'LISTEN' });
     person(P, { id: 'witness22', crew: 'witness', at: 'twinChamber', off: [1.6, 0, 1.2], turn: Math.PI, prompt: 'TALK TO HIM', when: 't_m22_evidence' });
-    person(P, { id: 'orren22', crew: 'orren', at: 'orren', off: [0, 0, 0], turn: 0, prompt: 'TALK TO ORREN' });
+    // (up on the court's round dais, on its moss: at the landmark he stood in the dais's edge to the knee)
+    person(P, { id: 'orren22', crew: 'orren', at: 'orren', off: [1.2, 0.6, 1.4], turn: 0, prompt: 'TALK TO ORREN' });
   },
   hook: {
     cue: 'cliff', minutes: 2,
