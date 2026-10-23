@@ -174,6 +174,11 @@ export default {
     P.vbox([-62.04, 0, -13, -61.96, 7.5, -10], 'helixGlass', { noShadow: 1 });
     P.land('receptionDesk', -52, 0, -22, Math.PI / 2);
     P.box([-53, 0, -25, -51.6, 1.1, -19], 'helixWhite');
+    // (a reception desk, not a white block filling Mission 8's first shot: a dark counter over it, a kick and a band; no
+    // lettering on its front, where the shot's subtitles fall)
+    P.vbox([-53.1, 1.1, -25.1, -51.5, 1.15, -18.9], 'signBoard');
+    P.vbox([-53.03, 0, -24.9, -52.98, 0.12, -19.1], 'signBoard', { noShadow: 1 });
+    P.vbox([-53.03, 0.84, -24.9, -52.98, 0.9, -19.1], 'signBlue', { noShadow: 1 });
     P.land('recordsTerminal', -46, 0, -26, Math.PI);
     P.box([-50.6, 0, -16.6, -49.4, 1.0, -15.4], 'helixWhite');
     P.vbox([-50.7, 1.0, -16.7, -49.3, 1.9, -15.3], 'glass');

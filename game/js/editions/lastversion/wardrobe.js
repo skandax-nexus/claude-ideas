@@ -202,8 +202,14 @@ export const WARDROBE = {
     // Officer Haig's recording: at home, a T-shirt
     home: {},
   },
-  rb_civ_f3: { default: {}, dust: { body: [{ sat: 0.45, light: 1.12 }] }, moss: { body: [{ hue: [0.35, 0.12], smin: 0.3, to: 0.24, sat: 0.6 }] }, rust: { body: [{ hue: [0.35, 0.12], smin: 0.3, to: 0.05, sat: 0.7 }, { lmax: 0.3, to: 0.07, sset: 0.2, light: 1.3 }] } },
-  rb_civ_m1: { default: {}, detention: { body: [{ to: 0.58, sset: 0.05, lrange: [0.34, 0.56] }] }, dust: { body: [{ sat: 0.45, light: 1.12 }] }, navy: { body: [{ hue: [0.1, 0.12], smin: 0.15, to: 0.62, sat: 0.8, light: 0.8 }] }, olive: { body: [{ hue: [0.1, 0.12], smin: 0.15, to: 0.2, sat: 0.9 }] } },
+  // (the tour: rb_civ_f3's and rb_civ_m1's variants dyed only their trims, and two of them walked the same street in the
+  // same black hoodie or jacket, the same face twice: their black is dyed too, a moss or rust hoodie, a navy or olive coat)
+  rb_civ_f3: { default: {}, dust: { body: [{ sat: 0.45, light: 1.12 }] },
+    moss: { body: [{ hue: [0.35, 0.12], smin: 0.3, to: 0.24, sat: 0.6 }, { lmax: 0.3, to: 0.24, sset: 0.3, lrange: [0.12, 0.28] }] },
+    rust: { body: [{ hue: [0.35, 0.12], smin: 0.3, to: 0.05, sat: 0.7 }, { lmax: 0.3, to: 0.05, sset: 0.42, lrange: [0.12, 0.28] }] } },
+  rb_civ_m1: { default: {}, detention: { body: [{ to: 0.58, sset: 0.05, lrange: [0.34, 0.56] }] }, dust: { body: [{ sat: 0.45, light: 1.12 }] },
+    navy: { body: [{ hue: [0.1, 0.12], smin: 0.15, to: 0.62, sat: 0.8, light: 0.8 }, { lmax: 0.3, to: 0.62, sset: 0.45, lrange: [0.12, 0.3] }] },
+    olive: { body: [{ hue: [0.1, 0.12], smin: 0.15, to: 0.2, sat: 0.9 }, { lmax: 0.3, to: 0.2, sset: 0.38, lrange: [0.15, 0.33] }] } },
   rb_civ_m2: {
     detention: { body: [{ to: 0.58, sset: 0.05, lrange: [0.34, 0.56] }] }, dust: { body: [{ sat: 0.45, light: 1.12 }] },
     default: {}, brown: { body: [{ band: [0.3, 0, 0.7, 1], lmin: 0.2, to: 0.08, sset: 0.25 }] },
@@ -269,7 +275,9 @@ export const WARDROBE = {
     // a warden among the crowd: the wardens' charcoal
     warden: { body: [{ to: 0.6, sset: 0.06, lrange: [0.12, 0.3] }], props: ['beret'] },
   },
-  rb_trader: { default: {}, earth: { body: [{ hue: [0.58, 0.12], smin: 0.1, to: 0.08, sat: 0.9 }] }, faded: { body: [{ sat: 0.45, light: 1.05 }] } },
+  // (faded: a khaki shirt over washed-out jeans; only paler, it was the default's blue shirt again on the same street)
+  rb_trader: { default: {}, earth: { body: [{ hue: [0.58, 0.12], smin: 0.1, to: 0.08, sat: 0.9 }] },
+    faded: { body: [{ hue: [0.58, 0.12], smin: 0.1, lmin: 0.45, to: 0.14, sset: 0.28, lrange: [0.5, 0.68] }, { hue: [0.58, 0.12], smin: 0.1, lmax: 0.45, sat: 0.4, light: 1.25 }] } },
   // (U4 review) more 2026/2049 faces: an older man in a shirt and khakis, a woman in a waistcoat and jeans; each has the
   // crowds' working wardrobes (a transit uniform, a lab white, the detention grey, dust)
   rb_civ_m3: {
@@ -359,9 +367,12 @@ function propKit() {
     visor: { at: 'head', make: () => group(mesh(new THREE.BoxGeometry(0.17, 0.035, 0.02), mats.visor, 0, 0.085, 0.115)) },
     badge: { at: 'chest', make: () => group(mesh(new THREE.TorusGeometry(0.03, 0.008, 6, 16), mats.badge, -0.08, 0.02, 0.13)) },
     // the hoods of Mira's yellow raincoat (M1) and the toy boy's red one, child-sized (the coats are recolours)
-    // (close round the head, the brim at the hairline, the lining dark: a looser shell read as a halo or a helmet)
-    raincoatHood: { at: 'head', make: () => group(hood(mats.rainYellowOut, [0, 0.092, -0.022], [0.108, 0.118, 0.142], 0.85, mats.rainYellowIn)) }, // (rb_mira)
-    raincoatChildHood: { at: 'head', make: () => group(hood(mats.rainRedOut, [0, 0.08, 0.004], [0.1, 0.104, 0.12], 0.9, mats.rainRedIn)) }, // (rb_child_m2)
+    // (close round the head, the brim at the hairline, the lining dark: a looser shell read as a halo or a helmet). Fitted to
+    // the heads as measured in the frame a head prop is held in (Mira's with her hair: |x| < 0.1, y < 0.207, z -0.18..0.122;
+    // the boy's: |x| < 0.069, y < 0.151, z -0.07..0.1): the shell clears them by 1.5-2 cm, and the crown closes down to a brim
+    // just in front of the hairline, so no hair or scalp shows over it (the tour saw the crown in front of a ring of hood)
+    raincoatHood: { at: 'head', make: () => group(hood(mats.rainYellowOut, [0, 0.095, -0.03], [0.118, 0.13, 0.165], 1.0, mats.rainYellowIn)) }, // (rb_mira)
+    raincoatChildHood: { at: 'head', make: () => group(hood(mats.rainRedOut, [0, 0.075, 0.008], [0.088, 0.092, 0.11], 1.1, mats.rainRedIn)) }, // (rb_child_m2)
     // the Witness's deep hood (rb_ren_m/hooded): its opening filled by shadow a little inside the rim, so no face shows
     shadowHood: { at: 'head', make: () => {
       const f = mesh(new THREE.SphereGeometry(1, 12, 8, Math.PI / 2 - 0.8, 1.6, 0.25, 1.85), mats.shade, 0, 0.1, -0.01);

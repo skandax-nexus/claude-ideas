@@ -465,6 +465,17 @@ export class LastVersion {
     if (EV_LABELS[key]) this.g.hud.toast(`<small>PINNED TO THE CASE BOARD</small><br>${EV_LABELS[key]}`, 2600);
   }
 
+  // a line said in passing (a crowd's or a person's bark) gives way to a staged moment: the one being said is cut and
+  // none waits in the queue (a conversation's lines, and what waits on their end, are left to run)
+  hushBarks() {
+    const hud = this.g.hud;
+    if (!hud?.talking || !this.level?.npcs) return;
+    const barks = new Set(this.level.npcs.flatMap((n) => n.barks || []));
+    if (!barks.size) return;
+    if (Array.isArray(hud.subs)) hud.subs = hud.subs.filter((s) => s.done || !barks.has(s.text));
+    if (hud.subT > 0 && hud.cur && barks.has(hud.cur.text)) hud.skipSub();
+  }
+
   // the crowd's own barks, for the walla under a place (score.js)
   wallaLines() {
     if (!this.level) return [];
@@ -931,6 +942,10 @@ export class LastVersion {
     const ch = CHAPTERS[this.chapter];
     const first = this.chapterStart && g.campaign.deck === 0;
     this.chapterStart = false;
+    // (a bark from the place left behind, still being said as this one loads, does not run over its cards: a line said
+    // in passing, with nothing waiting on its end, is dropped. The tour found the village's 'We cook at the first fire'
+    // over Mission 6's card)
+    if (g.hud.talking && !(g.hud.subs || []).some((s) => s.done)) g.hud.skipAll();
     const token = (this.opening = { deck });
     const alive = () => this.opening === token && this.deck === deck && g.campaign?.lv;
     const steps = [];
@@ -1967,6 +1982,16 @@ export class LastVersion {
     const rev = game.log.slice().reverse();
     const logs = rev.map((l, i) => `<li>${l}${!/[<>]/.test(l) && can(l, 'KAI') ? play('log', i) : ''}</li>`).join('') || '<li class="dim">Nothing yet.</li>';
     const quarter = this.threads.on ? this.level?.quarters?.[this.threads.here ?? campaign.quarter ?? 0]?.name : null;
+    // (the clues pinned under a question go on a line of their own: the board's rows are flex rows, and on a phone the
+    // tour found them squeezed into a third column beside the question and its OPEN)
+    if (typeof document !== 'undefined' && !document.querySelector('#lvBoardCss')) {
+      const st = document.createElement('style');
+      st.id = 'lvBoardCss';
+      st.textContent = 'body.lastversion .board.questions > li { flex-wrap: wrap; align-items: baseline; } body.lastversion .board.questions > li > b { flex: 1 1 60%; }'
+        + ' body.lastversion .board.questions > li > ul.board { flex: 1 0 100%; margin: 2px 0 0 12px; padding: 0; }'
+        + ' body.lastversion .board.questions > li > ul.board li { border-bottom: 0; padding: 2px 0; justify-content: flex-start; gap: 6px; }';
+      document.head.appendChild(st);
+    }
     el.innerHTML = `
       <h3>WHERE YOU ARE</h3><p><b>${chapter.name} &middot; ${deck?.name || ''}</b><br><span class="dim">${deck?.title || ''}${quarter ? ` &middot; ${quarter}` : deck?.sectors > 1 ? ` &middot; part ${campaign.sector + 1} of ${deck.sectors}` : ''} &middot; stability ${Math.round(this.stability * 100)}%</span></p>
       <h3>THE QUESTIONS</h3><ul class="board questions">${qHtml}</ul>

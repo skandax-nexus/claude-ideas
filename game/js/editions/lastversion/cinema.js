@@ -150,6 +150,7 @@ export class Cinema {
     this.end();
     // (the pointer stays locked: letting it go would open the pause menu on a desktop; held keys are dropped in step)
     if (cue) this.rt.score?.cue(cue);
+    this.rt.hushBarks?.(); // (a line said in passing gives way: the Zero Second's clocks were narrated behind a commuter)
     const len = total ?? Math.max(3, (lines || []).reduce((a, l) => a + (g.hud.durFn?.(l) || Math.max(2.2, l.text.length * 0.055)), 0));
     const list = shots === 'default' ? this.defaultShots(len) : Array.isArray(shots) ? shots : null;
     const share = list ? len / Math.max(1, list.length) : 0;
@@ -198,6 +199,8 @@ export class Cinema {
     const g = this.g;
     g.input.keys?.clear?.();
     if (g.input.state) g.input.state.jump = false;
+    // nobody in the crowd starts a line in passing over a staged moment (DeckWorld waits 9 s after the last one)
+    if (g.deckWorld && typeof g.time === 'number') g.deckWorld.lastBarkT = g.time;
     if (!a.shots) return;
     const s = a.shots[Math.min(a.i, a.shots.length - 1)];
     a.t += dt;

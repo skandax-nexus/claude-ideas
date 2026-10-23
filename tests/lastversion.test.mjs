@@ -3419,6 +3419,46 @@ test('a cold open is shot in its own year, with its people, and the place\'s yea
   assert.ok(!facts.get('co_m12'), 'and its cast has left');
 });
 
+// tour: a bark still being said in the place left behind is not said over the next mission's card; a conversation is
+test('tour: a mission opens without the last place\'s bark over its card (a conversation with an end still runs out)', () => {
+  const m12 = MISSIONS.act2.find((m) => m.key === 'm12');
+  const { level } = LEVELS.find((l) => l.deck.mkey === 'm12');
+  const e = engine();
+  for (const r of level.order) { e.setAvailable(r, level.rooms[r].states || m12.states); e.setState(r, 'PRESENT', { force: true }); }
+  const open = (subs) => {
+    const hud = { card() {}, subs, skipped: 0, get talking() { return this.subs.length > 0; }, skipAll() { this.skipped++; this.subs = this.subs.filter((x) => x.done); } };
+    const game = { engine: e, facts: new FactStore(), campaign: { lv: true, deck: 3 }, story: { decks: MISSIONS.act2 }, hud, deckWorld: { refresh() {} } };
+    const rt = Object.assign(Object.create(LastVersion.prototype), { g: game, def: LV, level, chapter: 'act2', chapterStart: false,
+      whenVoices: (then) => then(), hideCard() {}, cinema: { play: (o, done) => done() } });
+    rt.openMission(m12, 'MISSION 12');
+    return hud;
+  };
+  const bark = open([{ who: 'CROWD_M', text: 'We cook at the first fire. Everyone. Nobody eats alone here.' }]);
+  assert.ok(bark.skipped === 1 && !bark.subs.length, 'the bark is dropped');
+  const talk = open([{ who: 'KAI', text: 'One more line.' }, { done() {} }]);
+  assert.ok(talk.skipped === 0 && talk.subs.length === 2, 'a conversation waiting on its end is left to run out');
+});
+
+test('tour: a staged moment cuts a line said in passing and holds the crowd\'s off while it plays; a conversation is not cut', () => {
+  const COMMUTER = 'Third clock this morning. I stopped checking.';
+  const hud = { subT: 2, cur: { who: 'CROWD_M', text: COMMUTER }, subs: [{ who: 'CROWD_F', text: COMMUTER }], skipped: 0, said: [],
+    get talking() { return this.subT > 0 || this.subs.length > 0; }, skipSub() { this.skipped++; this.subT = 0.01; }, say(lines) { this.said.push(...lines); } };
+  const g = { player: { pos: new THREE.Vector3(0, 0.86, 0), H: { x: 0, z: 1 }, model: { visible: true }, cinema: null, rayDistance: (o, d, m) => m },
+    input: { keys: new Set(), state: {} }, facts: new FactStore(), hud, after: () => {}, time: 40, deckWorld: { lastBarkT: 0 } };
+  const rt = Object.assign(Object.create(LastVersion.prototype), { g, level: { landmarks: {}, npcs: [{ id: 'crowd_1', crowd: true, barks: [COMMUTER] }] } });
+  const c = new Cinema(rt);
+  c.play({ shots: [{ cam: [4, 3, 4], look: [0, 1, 0], t: 3 }], lines: [{ who: 'NARRATOR', text: 'All the clocks stop.' }] });
+  assert.ok(hud.skipped === 1 && !hud.subs.length && hud.said[0].text === 'All the clocks stop.', 'the bark is cut, the narration is next');
+  g.time = 45;
+  c.step(0.5);
+  assert.equal(g.deckWorld.lastBarkT, 45, 'no new bark starts while the moment plays');
+  const talk = { ...hud, subT: 2, cur: { who: 'KAI', text: 'Twelve minutes out.' }, subs: [{ who: 'ROOK', text: 'Just come in.' }, { done() {} }], skipped: 0 };
+  Object.defineProperty(talk, 'talking', { get() { return this.subT > 0 || this.subs.length > 0; } });
+  rt.g = { ...g, hud: talk };
+  rt.hushBarks();
+  assert.ok(talk.skipped === 0 && talk.subs.length === 2, 'a conversation runs out');
+});
+
 test('the hold (Mission 18): posts at the place\'s landmarks, each re-anchored in its own year; allies and the lock city change it', () => {
   const m18 = main.find((x) => x.key === 'm18');
   const t = threadsOf(asDeck(m18)).find((x) => x.kind === 'hold');

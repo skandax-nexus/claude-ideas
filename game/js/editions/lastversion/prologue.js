@@ -236,9 +236,28 @@ export const M01 = {
     P.texts.push({ text: 'HELIX EVIDENCE TERMINAL - ONLINE', pos: [jx - 0.25, jy + 1.8, jz], rotY: Math.PI / 2, size: 0.22, color: '#7fe0a8', when: 'jun_evidence', room: rid });
     // the 41, after the Zero Second: three carriages, the last one up on the platform (DeckWorld draws them; the edition dresses them)
     const [kx, ky, kz] = L('carriageDoor');
-    box([kx - 32, ky - 1, kz - 10.5, kx - 14, ky + 2.4, kz - 6.7], { mat: 'car', when: 'zero_second && !@PAST', lvMat: 'trainBody' });
-    box([kx - 13, ky - 1, kz - 10, kx + 4, ky + 2.4, kz - 6], { mat: 'car', when: 'zero_second && !@PAST', lvMat: 'trainBody' });
-    box([kx - 2, ky + 0.4, kz - 3.2, kx + 14, ky + 3.8, kz + 0.3], { mat: 'car', when: 'zero_second && !@PAST', lvMat: 'trainBody' });
+    // (each a carriage, not a blank box: a dark roof, a band of windows and the line's amber stripe down both sides, and
+    // its doors; the tour found three plain white blocks filling the Zero Second's and the rescue's shots)
+    const carriage = (b) => {
+      box(b, { mat: 'car', when: 'zero_second && !@PAST', lvMat: 'trainBody' });
+      const [x0, y0, z0, x1, y1, z1] = b, h = y1 - y0, len = x1 - x0;
+      const skin = (bb, m) => P.cols.push({ box: bb, mat: 'car', solid: false, room: rid, when: 'zero_second && !@PAST', lvMat: m });
+      for (const [za, zb] of [[z0 - 0.06, z0 + 0.01], [z1 - 0.01, z1 + 0.06]]) {
+        skin([x0 + 0.5, y0 + h * 0.5, za, x1 - 0.5, y0 + h * 0.8, zb], 'carGlass');
+        skin([x0 + 0.1, y0 + h * 0.38, za, x1 - 0.1, y0 + h * 0.45, zb], 'containerOrange');
+        skin([x0 + len * 0.5 - 0.65, y0 + h * 0.12, za - 0.01, x0 + len * 0.5 + 0.65, y0 + h * 0.82, zb + 0.01], 'doorDark');
+      }
+      // (and its ends, which the shots along the track see: a cab window and the stripe; eleven pieces a carriage, 33 draws
+      // once the 41 is in)
+      for (const [xa, xb] of [[x0 - 0.06, x0 + 0.01], [x1 - 0.01, x1 + 0.06]]) {
+        skin([xa, y0 + h * 0.5, z0 + 0.35, xb, y0 + h * 0.8, z1 - 0.35], 'carGlass');
+        skin([xa, y0 + h * 0.38, z0 + 0.1, xb, y0 + h * 0.45, z1 - 0.1], 'containerOrange');
+      }
+      skin([x0 - 0.08, y1, z0 - 0.08, x1 + 0.08, y1 + 0.16, z1 + 0.08], 'roofDark');
+    };
+    carriage([kx - 32, ky - 1, kz - 10.5, kx - 14, ky + 2.4, kz - 6.7]);
+    carriage([kx - 13, ky - 1, kz - 10, kx + 4, ky + 2.4, kz - 6]);
+    carriage([kx - 2, ky + 0.4, kz - 3.2, kx + 14, ky + 3.8, kz + 0.3]);
     box([kx - 4.5, ky, kz + 1.0, kx - 2.2, ky + 1.1, kz + 2.0], { mat: 'crate', when: 'zero_second && !@PAST', lvMat: 'wood' }); // a bench, thrown
     P.glow(kx + 2, ky + 0.02, kz - 2, 4, 0xff6a48);
     P.npcs.push({ id: 'trapped_a', crew: 'trapped_a', first: 'Woman', seed: 201, ambient: true, pronoun: { their: 'her', them: 'her' }, pos: [kx - 3.2, ky, kz + 2.4], yaw: Math.PI, when: 'zero_second && !rescued_a', scene: 'rescue_a', prompt: 'PULL HER FREE', room: rid });
