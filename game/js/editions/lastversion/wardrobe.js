@@ -97,7 +97,10 @@ export const WARDROBE = {
     // wrist dyed one yellow (the forearms are the band across the map at v 0.29-0.47; the shoes, rain boots now, the
     // map's upper sides), dark trousers, and the jacket's hood up
     raincoat: {
-      hide: ['hair'], props: ['raincoatHood'], // (her bun under the hood)
+      // (her hair is under the hood, not hidden: Mira's own fair hair, as she is seen in Acts III-IV, the scalp's painting
+      // dyed with it, should any of it show at the brim)
+      props: ['raincoatHood'], hair: [{ to: 0.12, sset: 0.45, lrange: [0.45, 0.78] }],
+      head: [{ band: [0, 0, 1, 0.3], lmax: 0.3, to: 0.12, sset: 0.4, lrange: [0.4, 0.6] }],
       body: [{ band: [0.33, 0, 0.67, 0.8], lmin: 0.45, to: 0.14, sset: 0.85, lrange: [0.34, 0.56] },
         { band: [0, 0, 0.33, 0.29], lmin: 0.45, to: 0.14, sset: 0.85, lrange: [0.34, 0.56] }, { band: [0.67, 0, 1, 0.29], lmin: 0.45, to: 0.14, sset: 0.85, lrange: [0.34, 0.56] },
         { band: [0, 0.29, 1, 0.47], to: 0.14, sset: 0.85, lrange: [0.3, 0.54], skin: false },
@@ -327,10 +330,11 @@ function propKit() {
   // cap: a raincoat's hood is closed over the crown down to the hairline (that angle from the top, in radians) and open
   // only round the face below it; without one the wedge runs up to the crown (the Witness's deep hood, whose opening the
   // shade fills). (Seen from in front, a hood open to the crown showed its far side as a disc behind the head: a halo)
-  // lining: a second material for the inside (the outside then only on its front faces)
-  const hood = (mat, [x, y, z], [rx, ry, rz], cap = 0, lining = null) => {
+  // lining: a second material for the inside (the outside then only on its front faces); open: half the opening's angle
+  // round the face (radians), its edges as far back as the temples at 0.78
+  const hood = (mat, [x, y, z], [rx, ry, rz], cap = 0, lining = null, open = 0.78) => {
     const shell = (m) => {
-      const h = mesh(new THREE.SphereGeometry(1, 18, 10, Math.PI / 2 + 0.78, Math.PI * 2 - 1.56, cap, 2.15 - cap), m, x, y, z);
+      const h = mesh(new THREE.SphereGeometry(1, 18, 10, Math.PI / 2 + open, Math.PI * 2 - open * 2, cap, 2.15 - cap), m, x, y, z);
       h.scale.set(rx, ry, rz);
       if (!cap) return [h];
       const c = mesh(new THREE.SphereGeometry(1, 18, 4, 0, Math.PI * 2, 0, cap), m, x, y, z);
@@ -371,8 +375,11 @@ function propKit() {
     // the heads as measured in the frame a head prop is held in (Mira's with her hair: |x| < 0.1, y < 0.207, z -0.18..0.122;
     // the boy's: |x| < 0.069, y < 0.151, z -0.07..0.1): the shell clears them by 1.5-2 cm, and the crown closes down to a brim
     // just in front of the hairline, so no hair or scalp shows over it (the tour saw the crown in front of a ring of hood)
-    raincoatHood: { at: 'head', make: () => group(hood(mats.rainYellowOut, [0, 0.095, -0.03], [0.118, 0.13, 0.165], 1.0, mats.rainYellowIn)) }, // (rb_mira)
-    raincoatChildHood: { at: 'head', make: () => group(hood(mats.rainRedOut, [0, 0.075, 0.008], [0.088, 0.092, 0.11], 1.1, mats.rainRedIn)) }, // (rb_child_m2)
+    // (both brims come down to the hairline and the openings' edges forward to the cheekbones: the tour saw a pale band of
+    // Mira's scalp at her forehead and temples, between the brim and her face, and the boy's lining at his temples like
+    // earmuffs)
+    raincoatHood: { at: 'head', make: () => group(hood(mats.rainYellowOut, [0, 0.095, -0.03], [0.118, 0.13, 0.165], 1.25, mats.rainYellowIn, 0.6)) }, // (rb_mira)
+    raincoatChildHood: { at: 'head', make: () => group(hood(mats.rainRedOut, [0, 0.075, 0.008], [0.088, 0.092, 0.11], 1.3, mats.rainRedIn, 0.62)) }, // (rb_child_m2)
     // the Witness's deep hood (rb_ren_m/hooded): its opening filled by shadow a little inside the rim, so no face shows
     shadowHood: { at: 'head', make: () => {
       const f = mesh(new THREE.SphereGeometry(1, 12, 8, Math.PI / 2 - 0.8, 1.6, 0.25, 1.85), mats.shade, 0, 0.1, -0.01);

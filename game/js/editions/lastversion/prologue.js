@@ -42,7 +42,7 @@ const M01_SAY = {
 // stopped clock's face (it hangs on the canopy's first column, facing the plaza stair) with the frozen platform
 // behind it, then from high at the platform's east end down across the wreck; after the rescue, from the track bed
 // east of the 41, the far platform where a woman turns (the overlay's 'mira', at the foot of the north stair)
-function m01Shots(rt, which) {
+export function m01Shots(rt, which) {
   const L = rt.level?.landmarks;
   const pl = L?.platform, cd = L?.carriageDoor;
   if (!pl || !cd) return null;
@@ -52,7 +52,14 @@ function m01Shots(rt, which) {
       { cam: [cd[0] + 20, cd[1] + 4.5, cd[2] + 12.5], to: [cd[0] + 16, cd[1] + 3.8, cd[2] + 11], look: [cd[0] - 8, cd[1] + 0.8, cd[2] - 3], t: 6 },
     ];
   }
-  return [{ cam: [cd[0] + 13, cd[1] + 0.8, cd[2] - 7.5], to: [cd[0] + 10, cd[1] + 1, cd[2] - 9], look: [pl[0] + 3, pl[1] + 1.5, pl[2] - 30], t: 6 }];
+  // the woman at the far end, from high over the wreck; then her face, close, for Kai's line (the tour: from the wreck
+  // she was a yellow dot thirty metres off while the narrator said she had Mira's face). She stands at the platform's
+  // far end (pl + [1, 0, -30]), turned back toward the wreck; her close-up is from her left
+  const m = [pl[0] + 1, pl[1], pl[2] - 30];
+  return [
+    { cam: [cd[0] + 13, cd[1] + 0.8, cd[2] - 7.5], to: [cd[0] + 10, cd[1] + 1, cd[2] - 9], look: [m[0], m[1] + 1.5, m[2]], t: 3.4 },
+    { cam: [m[0] - 0.35, m[1] + 1.6, m[2] + 0.95], to: [m[0] - 0.15, m[1] + 1.58, m[2] + 0.62], look: [m[0], m[1] + 1.53, m[2]], t: 5 },
+  ];
 }
 
 const M01_HINTS = {
@@ -266,7 +273,9 @@ export const M01 = {
     P.npcs.push({ id: 'child', crew: 'child', pos: [px - 31, py, pz - 7], yaw: 0.6, hologram: true, height: 1.22, when: 'zero_second', barks: ['Do you know the song? It goes up and then it goes up again and then it stops.'], room: rid });
     // the woman with Mira's face, at the far end of the platform by the north stair: she walks to the staff gate
     // ahead of Kai (the chase thread), and is gone there
-    P.npcs.push({ id: 'mira', crew: 'mira', variant: 'raincoat', pos: [px + 3, py, pz - 30], yaw: Math.PI, silent: true, when: 'voice_heard && !mira_gone', room: rid });
+    // (she has turned: she looks back down the platform at the wreck, and at Kai; 2 m from the canopy's post, not
+    // against it, where it filled her close-up)
+    P.npcs.push({ id: 'mira', crew: 'mira', variant: 'raincoat', pos: [px + 1, py, pz - 30], yaw: 0, silent: true, when: 'voice_heard && !mira_gone', room: rid });
     // the Zero Second: a moment after Jun has told Kai about the board (the rule below), or as soon as Kai walks on
     // east along the platform toward the 41's track without asking
     P.triggers.push({ box: [px + 4, py - 1, pz - 14, px + 35, py + 6, pz + 8], set: { zero_second: true }, once: true, when: 'checkpoint_passed && rook_message', room: rid });

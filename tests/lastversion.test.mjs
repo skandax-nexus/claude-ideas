@@ -36,7 +36,7 @@ import { Player } from '../game/js/entities/Player.js';
 import { LV_MODELS, SHARED_MODELS, MANIFEST, CHAPTER_CAST, COMMON, sexOf, isChild, castOf } from '../game/js/editions/lastversion/casting.js';
 import { WARDROBE, hasVariant, packRules } from '../game/js/editions/lastversion/wardrobe.js';
 import { ERAS, EXCEPTIONS, ANCIENT_WOMEN, AMBIENT_CAST, eraModels, MAX_PEOPLE, MET, CAP } from '../game/js/editions/lastversion/crowds.js';
-import { M01 } from '../game/js/editions/lastversion/prologue.js';
+import { M01, m01Shots } from '../game/js/editions/lastversion/prologue.js';
 import { WATCHERS, HUMAN, watcherModels, kindsOf } from '../game/js/editions/lastversion/watchers.js';
 import { spokenLines, buildLevels, voiceOf, lexicon, GROUPS, chapterCardLines, missionCardLines, endingLines, POSTCREDIT, choiceLine, numberWords } from '../game/js/editions/lastversion/voicelines.js';
 import { voicePieces } from '../game/js/audio/voiceKey.js';
@@ -3457,6 +3457,33 @@ test('tour: a staged moment cuts a line said in passing and holds the crowd\'s o
   rt.g = { ...g, hud: talk };
   rt.hushBarks();
   assert.ok(talk.skipped === 0 && talk.subs.length === 2, 'a conversation runs out');
+});
+
+// tour: 'A woman in the crowd at the far end turns. For one second she has Mira's face' was a yellow dot thirty metres off,
+// her back turned (the chase had turned her to her path), against a canopy post
+test('tour: the woman with Mira\'s face is seen: she looks back at Kai while she waits, clear of the posts, in a close-up', () => {
+  const { level } = LEVELS.find((l) => l.deck.mkey === 'm01');
+  const mira = level.npcs.find((n) => n.id === 'mira');
+  const [x, y, z] = mira.pos;
+  const posts = level.elements.filter((e) => e.solid && e.box && e.box[1] < y + 1.7 && e.box[4] > y + 0.3
+    && Math.hypot(Math.max(e.box[0] - x, 0, x - e.box[3]), Math.max(e.box[2] - z, 0, z - e.box[5])) < 1.2);
+  assert.deepEqual(posts.map((e) => e.box), [], 'nothing solid within 1.2 m of her');
+  const shots = m01Shots({ level }, 'face');
+  const close = shots[shots.length - 1];
+  for (const p of [close.cam, close.to]) assert.ok(Math.hypot(p[0] - x, p[2] - z) < 1.4 && p[1] > y + 1.4, `the last shot is close on her face: ${p}`);
+  assert.ok(Math.abs(close.look[0] - x) < 0.1 && Math.abs(close.look[2] - z) < 0.1 && close.look[1] > y + 1.4, 'and looks at it');
+  // waiting (Kai beyond the leash), she turns from her path to look back at him; walking, the path has her again
+  const model = { visible: true, position: new THREE.Vector3(x, y, z), rotation: { y: Math.PI }, userData: { lookAt(v) { this.at = v; } } };
+  const npc = { n: { id: 'mira', chase: { path: [mira.pos, [x, y, z - 20]], leash: 14, ahead: 10, speed: 1.7, fact: 'mira_gone', thread: 'chase' }, path: [[x, z, y], [x, z - 20, y]] }, model, wp: 0 };
+  const g = { player: { pos: new THREE.Vector3(x + 3, y + 0.86, z + 30) }, deckWorld: { npcs: [npc] }, facts: new FactStore() };
+  const th = Object.assign(Object.create(Threads.prototype), { rt: { g }, byId: {} });
+  for (let i = 0; i < 90; i++) th.chase(1 / 30);
+  const want = Math.atan2(3, 30);
+  assert.ok(Math.abs(Math.atan2(Math.sin(model.rotation.y - want), Math.cos(model.rotation.y - want))) < 0.05, `she faces Kai: ${model.rotation.y.toFixed(2)}`);
+  assert.ok(npc.n.speed < 1e-3 && model.userData.at?.z > z + 20, 'stands, and looks at him');
+  g.player.pos.set(x, y + 0.86, z + 8);
+  th.chase(1 / 30);
+  assert.ok(npc.n.speed > 1 && npc.n.chase.face === null, 'Kai near: she walks on, her path turning her');
 });
 
 test('the hold (Mission 18): posts at the place\'s landmarks, each re-anchored in its own year; allies and the lock city change it', () => {

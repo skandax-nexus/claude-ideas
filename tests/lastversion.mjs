@@ -472,7 +472,8 @@ const chase = await az(() => {
   const r = { visible: m?.model.visible, start: m && [+m.model.position.x.toFixed(1), +m.model.position.z.toFixed(1)] };
   AZ.simulate(3);
   r.waited = m && Math.hypot(m.model.position.x - r.start[0], m.model.position.z - r.start[1]) < 0.3; // (Kai is 25 m away)
-  LVB.walk([[26, -160], [29.5, -165], [29.5, -177.5], [12, -181]]);
+  // (up to nine and a half metres from her, inside the leash: she stands two metres west of the canopy's post now)
+  LVB.walk([[26, -160], [29.5, -165], [29.5, -177.5], [10, -181]]);
   r.moved = Math.hypot(m.model.position.x - r.start[0], m.model.position.z - r.start[1]) > 1;
   // (the pursuit, about 180 m: down the stair, across the concourse, through the depot, back along the fence; Kai keeps
   // five metres behind her, and she keeps ahead of him)

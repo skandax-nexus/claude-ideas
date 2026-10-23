@@ -468,7 +468,7 @@ export class Threads {
   // the chase: DeckWorld walks her along her path; here she keeps ahead of Kai, never more than the leash (beyond
   // it she waits for him), her height follows the path (a stair down from the platform), and at its end she is gone.
   // It never fails.
-  chase() {
+  chase(dt = 0) {
     const g = this.g;
     for (const n of g.deckWorld.npcs) {
       const ch = n.n.chase;
@@ -477,7 +477,18 @@ export class Threads {
       const d = Math.hypot(g.player.pos.x - m.position.x, g.player.pos.z - m.position.z);
       // (she waits where she stands until the story reaches the chase)
       const up = ch.started || !this.byId[ch.thread] || this.ready(this.byId[ch.thread]);
-      n.n.speed = !up || d > ch.leash ? 1e-6 : d < ch.ahead * 0.5 ? ch.speed * 2.2 : d < ch.ahead ? ch.speed * 1.35 : ch.speed;
+      const waits = !up || d > ch.leash;
+      n.n.speed = waits ? 1e-6 : d < ch.ahead * 0.5 ? ch.speed * 2.2 : d < ch.ahead ? ch.speed * 1.35 : ch.speed;
+      // waiting, she looks back at Kai (DeckWorld, which ran first, turned her to the path she is not yet walking: the
+      // tour found Mission 1's woman with Mira's face showing her back to the close-up of her face). Walking, the path
+      // turns her again from where she looks
+      if (waits) {
+        const want = Math.atan2(g.player.pos.x - m.position.x, g.player.pos.z - m.position.z);
+        const from = ch.face ?? m.rotation.y;
+        ch.face = from + Math.atan2(Math.sin(want - from), Math.cos(want - from)) * Math.min(1, dt * 3);
+        m.rotation.y = ch.face;
+        m.userData.lookAt?.((ch.eye ||= g.player.pos.clone()).copy(g.player.pos).setY(g.player.pos.y + 0.6));
+      } else ch.face = null;
       if (!up) continue;
       if (n.wp > 0 || d <= ch.leash) ch.started = true;
       // DeckWorld wraps her to the path's start once she reaches its end: that is the end of the chase
