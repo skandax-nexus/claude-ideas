@@ -43,8 +43,13 @@ export default {
     [[[-70, -56], [0, -56]], [[10, -60], [100, -60]], [[-100, -96], [-100, -60], [-80, -60]]],
   ] },
   crowd: [
-    { era: 'present', years: ['PRESENT'], region: 'port', role: 'trapped', path: [[40, -61], [80, -61]], n: 5 },
-    { era: 'present', years: ['PAST'], region: 'port', role: 'docker', path: [[-60, 74], [40, 74]], n: 5 },
+    // the people of the frozen block: pacing behind the glass; once the stabilizer is destroyed they stand frozen with it,
+    // once it frees them they walk out past the silos (M13's choice, U7 review)
+    { era: 'present', years: ['PRESENT'], region: 'port', role: 'trapped', path: [[40, -61], [80, -61]], n: 5, when: '!civilians_freed', freezeWhen: 'stabilizer_destroyed',
+      barks: ['Is it still the same minute out there?'] },
+    { era: 'present', years: ['PRESENT'], region: 'port', role: 'trapped', path: [[60, -58], [30, -54], [6, -54]], n: 6, when: 'civilians_freed',
+      barks: ['Two hundred and twelve. We counted ourselves.', 'Is it still the same day?'] },
+    { era: 'present', years: ['PAST'], region: 'port', role: 'docker', path: [[-60, 74], [40, 74]], n: 5, barks: ['Crane two is down again. Load by hand.', 'Wind off the delta. Lash everything twice.'] },
     { era: 'future', years: ['FUTURE'], region: 'port', role: 'unwritten', path: [[60, 84], [100, 84], [100, 60]], n: 3 },
   ],
 
@@ -178,14 +183,21 @@ export default {
     for (const [x0, x1, floors] of [[20, 50, 5], [56, 86, 6], [92, 116, 4]]) {
       P.E(['PRESENT', 'PAST'], () => block(P, { rect: [x0, -96, x1, -62], floors: floors - 2, roof: 'none', facade: 'rainBrick', tint: 0xc8a890, cornice: false }));
       P.E('PAST', () => block(P, { rect: [x0, -96, x1, -62], y: (floors - 2) * 3.4, floors: 2, roof: 'flat', facade: 'rainBrick', tint: 0xc8a890, solid: false }));
-      P.E('PRESENT', () => {
-        // the upper floors hang in the air, broken off and frozen as they fell
-        for (let i = 0; i < 5; i++) P.obox(x0 + 4 + i * ((x1 - x0 - 8) / 4), (floors - 2) * 3.4 + 2 + (i % 3) * 3, -79 + (i % 2) * 6, 6, 3, 10, P.rng.float(-0.4, 0.4), 'rainBrick', { rx: P.rng.float(-0.4, 0.4), rz: P.rng.float(-0.5, 0.5), t: 0xc8a890 });
-        for (let i = 0; i < 8; i++) P.obox(x0 + P.rng.float(2, x1 - x0 - 2), (floors - 2) * 3.4 + P.rng.float(1, 9), -64 + P.rng.float(-2, 4), P.rng.float(0.6, 2), P.rng.float(0.4, 1.4), P.rng.float(0.6, 2), P.rng.float(0, 3), 'concrete', { rx: P.rng.float(0, 3), prop: 1 });
-      });
+      // the upper floors hang in the air, broken off and frozen as they fell; freed (civilians_freed, M13's choice) they
+      // have come down, rubble along the street, the people out
+      const hang = [...Array(5).keys()].map((i) => [x0 + 4 + i * ((x1 - x0 - 8) / 4), (floors - 2) * 3.4 + 2 + (i % 3) * 3, -79 + (i % 2) * 6, P.rng.float(-0.4, 0.4), P.rng.float(-0.4, 0.4), P.rng.float(-0.5, 0.5)]);
+      const bits = [...Array(8).keys()].map(() => [x0 + P.rng.float(2, x1 - x0 - 2), (floors - 2) * 3.4 + P.rng.float(1, 9), -64 + P.rng.float(-2, 4), P.rng.float(0.6, 2), P.rng.float(0.4, 1.4), P.rng.float(0.6, 2), P.rng.float(0, 3), P.rng.float(0, 3)]);
+      P.W('!civilians_freed', () => P.E('PRESENT', () => {
+        for (const [x, y, z, ry, rx, rz] of hang) P.obox(x, y, z, 6, 3, 10, ry, 'rainBrick', { rx, rz, t: 0xc8a890 });
+        for (const [x, y, z, w, h, d, ry, rx] of bits) P.obox(x, y, z, w, h, d, ry, 'concrete', { rx, prop: 1 });
+      }));
+      P.W('civilians_freed', () => P.E('PRESENT', () => {
+        for (const [x, , , ry] of hang) P.obox(x, (floors - 2) * 3.4, -79, 6, 1.4, 10, ry * 0.3, 'rainBrick', { rz: ry * 0.2, t: 0xc8a890 });
+        for (const [x, , z, w, h, d, ry] of bits) P.obox(x, 0, Math.min(z, -60.5) + 1.5, w, h * 0.6, d, ry, 'concrete', { prop: 1 });
+      }));
       P.E('FUTURE', () => P.obox((x0 + x1) / 2, -1, -79, x1 - x0, 6, 30, 0, 'rockGrass', { rx: 0.1, solid: true }));
     }
-    P.E('PRESENT', () => P.vbox([20, 0, -62.4, 116, 12, -62.2], 'frozenGlass', { noShadow: 1 }));
+    P.W('!civilians_freed', () => P.E('PRESENT', () => P.vbox([20, 0, -62.4, 116, 12, -62.2], 'frozenGlass', { noShadow: 1 })));
     P.challenge('drones', [-120, -100, 120, 92], ['PRESENT', 'PAST', 'FUTURE'], null);
   },
 };

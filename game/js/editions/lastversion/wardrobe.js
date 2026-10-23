@@ -36,6 +36,13 @@ export const WARDROBE = {
       hair: [{ sset: 0.03, lrange: [0.6, 0.86] }],
       head: [{ band: [0, 0, 1, 0.3], lmax: 0.32, sset: 0.04, lrange: [0.42, 0.62] }],
     },
+    // the Witness as Mission 8's reconstruction and Mission 6's 1999 keep him: the same charcoal, a deep hood up and his
+    // face in its shadow (Mission 12 is where his face is seen). The hood is worn by his hologram too (holoProps)
+    hooded: {
+      hide: ['hair'], props: ['shadowHood'], holoProps: true,
+      body: [{ hue: [0.58, 0.12], smin: 0.08, lmin: 0.35, sset: 0.04, lrange: [0.2, 0.36] }],
+      head: [{ skin: false, light: 0.25 }],
+    },
     // the memorial statue of Kai (M14): weathered stone
     stone: {
       body: [{ sset: 0.04, lrange: [0.34, 0.62], skin: false, to: 0.1 }], head: [{ sset: 0.04, lrange: [0.36, 0.64], skin: false, to: 0.1 }],
@@ -295,6 +302,8 @@ function propKit() {
     rainYellow: M({ color: 0xc99a12, roughness: 0.32, side: THREE.DoubleSide }), rainRed: M({ color: 0x9c1c22, roughness: 0.32, side: THREE.DoubleSide }),
     slate: M({ color: 0x3c4652, roughness: 0.55, side: THREE.DoubleSide }), plate: M({ color: 0x4a5664, roughness: 0.7 }),
     lens: M({ color: 0x141a22, metalness: 0.4, roughness: 0.12, side: THREE.DoubleSide }),
+    // the Witness's hood, and the dark inside it where a face would be
+    hoodCloth: M({ color: 0x1c2026, roughness: 0.9, side: THREE.DoubleSide }), shade: keepMat(new THREE.MeshBasicMaterial({ color: 0x040405, side: THREE.DoubleSide })),
   };
   // a raincoat's hood, up: a shell round the top, sides and back of the head down to the jaw, open at the face (a sphere
   // less a wedge about +Z), about the middle of the wearer's head ([x, y, z] in the head bone's frame) with its radii
@@ -332,6 +341,12 @@ function propKit() {
     // the hoods of Mira's yellow raincoat (M1) and the toy boy's red one, child-sized (the coats are recolours)
     raincoatHood: { at: 'head', make: () => group(hood(mats.rainYellow, [0, 0.1, -0.03], [0.118, 0.128, 0.166])) }, // (rb_mira)
     raincoatChildHood: { at: 'head', make: () => group(hood(mats.rainRed, [0, 0.095, 0.015], [0.116, 0.124, 0.142])) }, // (rb_child_m2)
+    // the Witness's deep hood (rb_ren_m/hooded): its opening filled by shadow a little inside the rim, so no face shows
+    shadowHood: { at: 'head', make: () => {
+      const f = mesh(new THREE.SphereGeometry(1, 12, 8, Math.PI / 2 - 0.8, 1.6, 0.25, 1.85), mats.shade, 0, 0.1, -0.01);
+      f.scale.set(0.124, 0.134, 0.164);
+      return group(hood(mats.hoodCloth, [0, 0.1, -0.01], [0.134, 0.144, 0.178]), f);
+    } },
     // a Continuum trooper's helmet, its dark visor raised, and a plate carrier (Sera's disguise, M10). In the frames of the
     // head bone (the head reaches +0.2 m, the forehead +0.1 m forward) and the chest bone (the chest +0.13 m forward, the
     // back -0.14 m, from +0.06 m to -0.25 m)
@@ -649,7 +664,7 @@ export function dress(actor, crew, opts = {}) {
   }
   // things carried
   const props = [...(v.props || []), ...(crew.props || [])];
-  if (props.length && !holo) {
+  if (props.length && (!holo || v.holoProps)) {
     const kit = propKit();
     props.forEach((name, i) => {
       const p = kit[name];

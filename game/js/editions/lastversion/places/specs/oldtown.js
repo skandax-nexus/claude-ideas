@@ -40,8 +40,10 @@ export default {
   exits: { m06: 'roofTerrace' },
   frags: { m06: [['canalBridge', 'floorboards', 'loopSpring']] },
   crowd: [
-    { era: 'present', years: ['PRESENT', 'PAST'], region: 'rain', role: 'civilian', path: [[-50, -9], [50, -9]], n: 6 },
-    { era: 'present', years: ['PRESENT', 'PAST'], region: 'rain', role: 'courier', path: [[-50, 9], [50, 9]], n: 4 },
+    // (their own words, U7 review: not Rain City South's morning of the Zero Second)
+    { era: 'present', years: ['PRESENT', 'PAST'], region: 'rain', role: 'civilian', path: [[-50, -9], [50, -9]], n: 6,
+      barks: ['The clockmaker\'s arm is going again. You can hear it from the bridge.', 'They say the canal was a river once. Before anyone.'] },
+    { era: 'present', years: ['PRESENT', 'PAST'], region: 'rain', role: 'courier', path: [[-50, 9], [50, 9]], n: 4, barks: ['Parcel for Moll. He signs for it before I knock.'] },
   ],
 
   build(P) {

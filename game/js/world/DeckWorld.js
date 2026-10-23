@@ -754,7 +754,7 @@ export class Sentinel {
   constructor(def, model) {
     this.def = def;
     this.model = model;
-    this.pos = new THREE.Vector3(def.path[0][0], 0, def.path[0][1]);
+    this.pos = new THREE.Vector3(def.path[0][0], def.y || 0, def.path[0][1]); // (def.y: THE LAST VERSION's floors below ground; else 0)
     this.wp = 1 % def.path.length;
     this.dir = new THREE.Vector3(0, 0, -1);
     this.mode = 'patrol';
@@ -777,8 +777,8 @@ export class Sentinel {
     to.normalize();
     if (to.dot(this.dir) < Math.cos(this.def.fov * 0.6)) return false;
     // line of sight at chest height
-    const eye = new THREE.Vector3(this.pos.x, 1.6, this.pos.z);
-    const target = new THREE.Vector3(player.pos.x, Math.min(player.pos.y, 2.0), player.pos.z);
+    const eye = new THREE.Vector3(this.pos.x, this.pos.y + 1.6, this.pos.z);
+    const target = new THREE.Vector3(player.pos.x, Math.min(player.pos.y, this.pos.y + 2.0), player.pos.z);
     const dir = target.clone().sub(eye);
     const len = dir.length();
     dir.divideScalar(len);
@@ -820,7 +820,7 @@ export class Sentinel {
       this.sync(dt, 0);
       return null;
     }
-    const heard = !!L?.has('runner') && here && player.running && this.pos.distanceTo(_v.set(player.pos.x, 0, player.pos.z)) < 7;
+    const heard = !!L?.has('runner') && here && player.running && this.pos.distanceTo(_v.set(player.pos.x, this.pos.y, player.pos.z)) < 7;
     // a signal flare: it goes to look at the light instead of you
     const lured = !!this.lure;
     if (lured && this.mode === 'chase') { this.mode = 'patrol'; this.suspicion = 0; }

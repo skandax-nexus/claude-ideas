@@ -990,6 +990,29 @@ const PLAYER = () => {
   };
   // missions' own moments the default kinds cannot do: LVP.own[mkey][threadId](t)
   P.own = {
+    // (U7 review) Mission 6's escapement: each clock in the year it answers, set to the hour the window gives that year
+    m06: {
+      clocks: (t) => {
+        const was = P.pick;
+        for (const [id, year, hour] of [['clock26', 'PAST', 'Morning.'], ['clock49', 'PRESENT', 'Evening.'], ['clock96', 'FUTURE', 'Noon.']]) {
+          P.pick = (opts) => opts.findIndex((o) => o.text.includes(hour));
+          for (let i = 0; i < 2 && !P.f(`clk_${id.slice(5)}`); i++) P.use(id, [year], g.level.landmarks?.[t.spots.find((s) => s.id === id).at]?.[1]);
+        }
+        P.pick = was;
+        P.wait(() => P.done(t), 12);
+      },
+    },
+    // (U7 review) Mission 10: the chamber's crossing counts once Kai has stepped ahead of himself
+    m10: {
+      cross: (t) => {
+        g.edition.echoCd = 0;
+        g.edition.stability = Math.max(g.edition.stability, 0.8);
+        g.edition.echoStep();
+        g.simulate(0.3);
+        P.go(P.at(t), 2.6);
+        g.simulate(0.3);
+      },
+    },
     m11: {
       // the file un-burns three seconds in ten: stand by it until the Chronolith catches the rhythm
       rhythm: () => { P.go(g.level.landmarks.charredFile, 1); P.wait(() => P.f('has_inversion'), 30); },
@@ -1149,7 +1172,7 @@ await finish();
 
 // --- Mission 5: the river, the abandoned village's why, the gate, the machine buried or left; chain B in the gorge --
 const niko = await az(() => { AZ.edition.shift('FUTURE'); AZ.simulate(0.1); const e = !!LVB.npc('niko')?.isEcho; AZ.edition.shift('PRESENT'); AZ.simulate(0.1); return [e, !!LVB.npc('niko')?.isEcho]; });
-check(niko[0] && !niko[1], 'Niko is himself in the present, an echo in the flooded future', JSON.stringify(niko));
+check(!niko[0] && !niko[1], 'Niko follows Kai through the years: himself in the present and in the flooded future (U7 review: in person, not an echo)', JSON.stringify(niko));
 // the river cuts the village: in the present the old footbridge is gone (into the water, back to the last anchor)
 const fell = await az(() => { const at = AZ.player.pos.toArray(); const [x, , z] = LVB.lm('footbridgeS'); LVB.place(x, z); const s0 = LVB.setbacks; LVB.walkTo(x, LVB.lm('footbridgeN')[2], 8); const r = LVB.setbacks > s0 || AZ.player.pos.z > 1; LVB.at0 = at; return r; });
 await page.waitForTimeout(1200); // the fall's fade and the walk back to the checkpoint
@@ -1510,7 +1533,12 @@ await finish();
 // --- Mission 13: a shell reversed from each side pins ev_both_sides; nobody fired first; the faction is set --------------
 const quay = await az(() => { const at = AZ.player.pos.toArray(); AZ.edition.shift('PRESENT'); LVB.place(0, 84); const r = LVB.route([[2.6, 80], [2.6, 68], [24, 60], [24, 14]]); LVB.place(at[0], at[2], at[1]); return r; });
 check(quay.n === quay.of && !quay.setbacks, 'Mission 13, walked: from the quay trench through the gap in the sandbags, past the container canyons to their gate', JSON.stringify(quay));
-const m13 = await playMission('m13', { sides: ['evidence'], before: 'stabilizer' });
+// (U7 review) before the devices: each refused in a year not its own
+let m13wrong = null;
+const m13 = await playMission('m13', { sides: ['evidence'], before: 'stabilizer', at: { devices: async () => {
+  m13wrong = await az(() => [['dev_rail', 'PRESENT'], ['dev_crane', 'PAST'], ['dev_crater', 'PRESENT']].map(([id, y]) => ({ id, year: y, use: LVP.use(id, [y]), year2: AZ.engine.state(AZ.room), refused: !AZ.facts.get(id) })));
+} } });
+check(Array.isArray(m13wrong) && m13wrong.every((d) => d.use === 'ok' && d.refused), 'Mission 13: each device is refused in a year not its own (2026, 2049, 2196 each its own)', JSON.stringify(m13wrong));
 const m13f = await az(() => ({ ...LVB.f('inv_shellA_done', 'inv_shellB_done', 'ev_both_sides', 'ev_nobody_first', 'ev_witness_cause'), faction: AZ.facts.get('faction'), cap: AZ.edition.inv.cap,
   north: LVB.said.includes('NONE: It climbs. Not south. North, over the Continuum line, back into a Continuum gun.'), sera: LVB.said.includes('SERA: The future that survives long enough to remember us.') }));
 check(m13f.inv_shellA_done && m13f.inv_shellB_done && m13f.ev_both_sides && m13f.north && order(m13.steps, 'shells', 'firstShot'), 'Mission 13: a Continuum shell and an Unwritten shell reversed in flight, each back into its own gun: ev_both_sides', JSON.stringify(m13f));

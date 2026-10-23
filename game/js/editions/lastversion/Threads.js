@@ -5,11 +5,11 @@
 // legacy beat is one thread in quarter i (its objectives and hints stay the mission's own).
 //
 //   mission  { quarters: [{ name, threads, sides, barks }], talks: { npcId: [nodes] }, deductions: { id: { ... } },
-//              coldOpen: { shots, lines, cue, first?, title?: { shots, lines }, set?, then?, minutes? },
+//              coldOpen: { shots, lines, cue, first?, year?, cast?, stage?, title?: { shots, lines }, set?, then?, minutes? },
 //              hook: { lines, cue, minutes? }, minutes: { main, optional } }
-//   thread   { id, kind, goal, because, at, when?, after?: [ids], until?, done?, set?, ev?, log?, say?: lines,
+//   thread   { id, kind, goal, because, at, when?, trigWhen?, after?: [ids], until?, done?, set?, ev?, log?, say?: lines,
 //              hints: [3 tiers], minutes, ...the kind's own fields }
-//   side     { id, name, giver, start?, done, case?, hook?: lines, threads, minutes? }
+//   side     { id, name, giver, start?, when?, done, case?, hook?: lines, threads, minutes? } (when: offered only while it holds)
 //
 // The kinds (and what placeThreads puts at their landmark):
 //   go       reach a landmark: a trigger of radius r (4 m) at `at`
@@ -156,7 +156,10 @@ export function placeThreads(deck, level) {
     if ((t.kind === 'go' || t.kind === 'stealth') && t.at && !t.done) {
       const a = anchor(t.at);
       const r = t.r ?? 4;
-      if (a) level.triggers.push({ box: [a.pos[0] - r, a.pos[1] - 1.5, a.pos[2] - r, a.pos[0] + r, a.pos[1] + 5, a.pos[2] + r], set: { [factOf(deck, t)]: true }, when: gate(t, t.when), once: true, room: a.room });
+      // (trigWhen: what the arrival itself asks, beyond the thread being up: Mission 10's crossing counts once Kai has
+      // stepped ahead of himself, while the objective shows from the start)
+      const when = [t.when, t.trigWhen].filter(Boolean).map((c) => `(${c})`).join(' && ') || undefined;
+      if (a) level.triggers.push({ box: [a.pos[0] - r, a.pos[1] - 1.5, a.pos[2] - r, a.pos[0] + r, a.pos[1] + 5, a.pos[2] + r], set: { [factOf(deck, t)]: true }, when: gate(t, when), once: true, room: a.room });
     }
     if (t.kind === 'deduce' && t.at && deck.deductions?.[t.deduction]) own({ id: `deduce_${t.id}`, scene: `deduce:${t.deduction || t.id}`, prompt: t.prompt || 'PIECE IT TOGETHER', ...(t.spotOpts || {}) }, t);
     if (t.kind === 'residue' && t.at && t.record) {
@@ -188,12 +191,14 @@ export function placeThreads(deck, level) {
     }
   }
   // the cold open's cast: people who stand in the shot only while the opening plays (coldOpen.cast: { crew, at,
-  // off, turn, variant, hologram }; the fact co_<mkey>, which the runtime holds for the opening and clears at a load)
+  // off, turn, variant, hologram, ambient? (a person cast by who they are, crowds.js AMBIENT_CAST), seed? }; the fact
+  // co_<mkey>, which the runtime holds for the opening and clears at a load)
   for (const [k, c] of (deck.coldOpen?.cast || []).entries()) {
     const a = anchor(c.at);
     if (!a) continue;
     const p = toWorld(a, c.off || [0, 0, 0]);
     level.npcs.push({ id: `co_${k}`, crew: c.crew, first: c.first, variant: c.variant, height: c.height, pos: [p[0], p[1], p[2]], yaw: a.yaw + (c.turn || 0),
+      ...(c.ambient ? { ambient: true, seed: c.seed || 1 } : {}),
       hologram: !!c.hologram, silent: true, temporal: ['PRESENT', 'PAST', 'FUTURE'], when: coldFact(deck), room: a.room || roomAt(level, p) || level.outdoorRoom });
   }
   // the quarters: the room each one's spawn stands in (a quarter of rooms is reached by entering that room;
@@ -278,7 +283,8 @@ export class Threads {
     const [mk, id] = c.track.split(':');
     if (mk !== this.deck.mkey) return null;
     const s = this.sides.find((x) => x.id === id);
-    if (!s || sideState(this.g.facts, this.deck, s) === 'resolved') return null;
+    const st = s && sideState(this.g.facts, this.deck, s);
+    if (!s || st === 'resolved' || (st === 'open' && s.when && !this.g.facts.test(s.when))) return null;
     const t = (s.threads || []).find((x) => this.available(x) && !this.done(x) && !this.passed(x));
     return t ? { side: s, thread: t } : null;
   }
@@ -556,8 +562,9 @@ export class Threads {
     };
   }
 
+  // (its log line is the thread's: update() pays it once, when the thread is first done, not at every replay)
   reenact(t) {
-    return { lines: t.lines || [], show: playFact(this.deck, t), set: { [factOf(this.deck, t)]: true, ...(t.set || {}) }, log: t.log };
+    return { lines: t.lines || [], show: playFact(this.deck, t), set: { [factOf(this.deck, t)]: true, ...(t.set || {}) } };
   }
 
   play(id) {

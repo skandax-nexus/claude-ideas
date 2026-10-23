@@ -93,12 +93,16 @@ export function buildPlace(key, story, si, rt, opts = {}) {
     const [x, y, z, yaw] = P.landmarks[name];
     P.inter.push({ id: `frag_${rid}_${si}_${k}`, kind: 'fragment', pos: [x, y + 1.1, z], yaw, r: 2.4, prompt: P.style.kits?.fragmentPrompt || 'LOOK CLOSER', text, n, room: rid, kit: P.style.kits?.fragment || 'cairn' });
   });
-  // the watchers of this quarter (they patrol ground at y 0: a watcher's eye is fixed at 1.6 m); a mission that
-  // is one map has every quarter's watchers at once (its own `watch`, else the place's per quarter)
+  // the watchers of this quarter (they patrol ground at y 0, or at the floor a path gives as { y, path, when? }: a
+  // watcher's eye is 1.6 m above it; `when`: it stands only while that holds); a mission that is one map has every
+  // quarter's watchers at once (its own `watch`, else the place's per quarter)
   for (const qi of whole ? quarters.map((q, i) => i) : [si]) {
     const nw = deck.drones?.[qi] ?? 0;
     const paths = (whole && deck.watch?.[qi]) || spec.watch?.[deck.mkey]?.[qi] || quarters[qi]?.watch || [];
-    for (let k = 0; k < Math.min(nw, paths.length); k++) P.sentinels.push({ path: paths[k], speed: 2.0 + qi * 0.2, range: 9, fov: 0.75, room: rid, id: whole ? `${rid}_q${qi}s${k}` : `${rid}_s${k}` });
+    for (let k = 0; k < Math.min(nw, paths.length); k++) {
+      const w = paths[k];
+      P.sentinels.push({ path: w.path || w, ...(w.y ? { y: w.y } : {}), ...(w.when ? { when: w.when } : {}), speed: 2.0 + qi * 0.2, range: 9, fov: 0.75, room: rid, id: whole ? `${rid}_q${qi}s${k}` : `${rid}_s${k}` });
+    }
   }
   // the way on: at this quarter's threshold, or for the last sector the mission's exit landmark
   if (!P.exit) {

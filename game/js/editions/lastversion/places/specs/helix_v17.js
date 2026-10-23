@@ -36,10 +36,15 @@ export default {
   beatAt: { m08: ['recordsTerminal', 'serverRoom2026', 'containmentCube'] },
   exits: { m08: 'versionTerminal' },
   frags: { m08: [['printCase', 'photoWall', 'groupPhoto'], ['securityOffice', 'riverWall', 'rookOffice'], ['reconstruction', 'riverCourt', 'southBridge']] },
-  watch: { m08: [[], [[[18, -30], [30, -30], [30, -14], [18, -14]]], [[[-20, 22], [20, 22], [20, 30], [-20, 30]]]] },
+  // (U7 review) at the lockdown the island has a drone of its own, round the cube on its terrace (past the version terminal)
+  watch: { m08: [[], [[[18, -30], [30, -30], [30, -14], [18, -14]]], [[[-20, 22], [20, 22], [20, 30], [-20, 30]],
+    { y: 0.4, when: 'lin_gone && !version_17', path: [[-10.5, 10.5], [10.5, 10.5], [10.5, -10.5], [-10.5, -10.5]] }]] },
   crowd: [
-    { era: 'present', years: ['PRESENT', 'PAST'], region: 'helix', role: 'researcher', path: [[-33, -32], [27, -32]], n: 4 },
-    { era: 'present', years: ['PRESENT', 'PAST'], region: 'helix', role: 'technician', path: [[30, -16], [30, 24]], n: 3 }, // (over the east bridge, not the river)
+    // (their own words in this version, U7 review: not the storm night's lockdown)
+    { era: 'present', years: ['PRESENT', 'PAST'], region: 'helix', role: 'researcher', path: [[-33, -32], [27, -32]], n: 4,
+      barks: ['The court floods every spring. Always has.'] },
+    { era: 'present', years: ['PRESENT', 'PAST'], region: 'helix', role: 'technician', path: [[30, -16], [30, 24]], n: 3, // (over the east bridge, not the river)
+      barks: ['Rack nine is a second behind.'] },
   ],
 
   build(P) {

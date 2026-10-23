@@ -21,7 +21,7 @@ import { Score } from './score.js';
 import { Cinema } from './cinema.js';
 import { VoiceFx } from './voicefx.js';
 import { choiceLine, chapterCardLines, missionCardLines, endingLines, POSTCREDIT } from './voicelines.js';
-import { Threads, placeThreads, isRewritten, sidesOf, sideState, coldFact } from './Threads.js';
+import { Threads, placeThreads, isRewritten, sidesOf, sideState, coldFact, threadsOf, factOf, playFact } from './Threads.js';
 import { QUESTIONS, PREVIOUSLY, CHOSEN } from './ledger.js';
 
 // the edition's voice packs: common to every chapter, then one per chapter (OVERHAUL.md §8.3)
@@ -61,7 +61,7 @@ export const REWRITTEN_IN = { prologue: 22, act1: 23, act2: 23, act3: 24, act4: 
 // has go back to the baseline, rooms lose a state they cannot have, and REVERSE gets its charge. A save
 // from before U6 that stands in the middle of a mission since rewritten (one map, soft quarters) restarts
 // that mission at its first quarter and keeps its facts (Runtime.resume marks the rules already fired)
-export function migrateSave(engine, campaign, def) {
+export function migrateSave(engine, campaign, def, facts = null) {
   const ok = (s) => def.states.includes(s);
   for (const [rid, s] of Object.entries(engine.rooms)) if (!ok(s)) engine.rooms[rid] = engine.baseline;
   for (const [rid, list] of Object.entries(engine.available)) engine.available[rid] = list.filter(ok);
@@ -72,13 +72,50 @@ export function migrateSave(engine, campaign, def) {
   if (campaign) {
     campaign.inv = { cap: 8, charge: 8, ...(campaign.inv || {}) };
     const deck = MISSIONS[campaign.chapter]?.[campaign.deck ?? 0];
-    if ((campaign.lvFormat ?? 20) < (REWRITTEN_IN[campaign.chapter] ?? 22) && isRewritten(deck)) {
+    const from = campaign.lvFormat ?? 20;
+    if (from < (REWRITTEN_IN[campaign.chapter] ?? 22) && isRewritten(deck)) {
       Object.assign(campaign, { sector: 0, quarter: deck.startQuarter || 0, room: null, pos: null, flags: {}, visited: [], restarted: true });
+      // (from Act I on, what the old version of this mission had set, and nothing before it sets, goes: those missions
+      // were reshaped, so the rewritten one plays from its start, not with its threads done and its investigation walked
+      // past (U7 review: Mission 5's old divert, wall and gate). The facts earlier missions set stay. The Prologue's
+      // rewrite kept its beats' events, and keeps their facts: the Zero Second does not happen twice)
+      if (facts && (REWRITTEN_IN[campaign.chapter] ?? 22) >= 23 && campaign.chapter !== 'cases') for (const k of ownFacts(campaign.chapter, campaign.deck ?? 0)) delete facts.facts[k];
     }
+    // water_route: before U7 Mission 5's own divert set it; since, it means side story B played to its end (Tala's gates)
+    if (facts && from < 23 && facts.get('water_route') && facts.get('quest_tala') !== 'resolved') delete facts.facts.water_route;
     campaign.quarter ??= 0;
     campaign.lvFormat = SAVE_FORMAT;
   }
   return campaign;
+}
+
+// the facts a mission sets (its scenes', talks', rules', zones' and threads' own, and what its code sets) that no mission
+// before it in the campaign sets: what an old save restarting it forgets (migrateSave)
+function factsOf(m) {
+  const out = new Set();
+  const seen = new Set();
+  const walk = (o) => {
+    if (!o || typeof o !== 'object' || seen.has(o)) return;
+    seen.add(o);
+    if (o.set && typeof o.set === 'object' && !Array.isArray(o.set)) Object.keys(o.set).forEach((k) => out.add(k));
+    if (typeof o.ev === 'string') out.add(`ev_${o.ev}`);
+    for (const v of Object.values(o)) if (v && typeof v === 'object') walk(v);
+  };
+  walk({ scenes: m.scenes, talks: m.talks, rules: m.rules, zones: m.zones, deductions: m.deductions, quarters: m.quarters, coldOpen: m.coldOpen });
+  if (isRewritten(m)) for (const t of threadsOf(m)) for (const k of ['', '_paid', '_n']) out.add(`${factOf(m, t)}${k}`);
+  for (const p of m.processes || []) out.add(`inv_${p.id}_done`).add(`rev_${p.id}`);
+  for (const f of [...Object.values(m.fx || {}), m.step].filter(Boolean)) for (const x of String(f).matchAll(/\.set\('([a-z0-9_]+)'/g)) out.add(x[1]);
+  return out;
+}
+function ownFacts(chapter, d) {
+  const before = [];
+  for (const ch of ORDER) {
+    if (ch === chapter) { before.push(...MISSIONS[ch].slice(0, d)); break; }
+    before.push(...MISSIONS[ch]);
+  }
+  const earlier = new Set(before.flatMap((m) => [...factsOf(m)]));
+  const m = MISSIONS[chapter][d];
+  return [...factsOf(m)].filter((k) => !earlier.has(k));
 }
 
 // REVERSE is learnt in Mission 11 (has_inversion) and holds longer after Missions 13 and 18. A v2.0 save never
@@ -621,7 +658,7 @@ export class LastVersion {
   }
 
   resume(campaign) {
-    migrateSave(this.g.engine, campaign, this.def); // a v2.0 save may stand in an INVERTED room; a pre-U6 one mid-mission restarts it
+    migrateSave(this.g.engine, campaign, this.def, this.g.facts); // a v2.0 save may stand in an INVERTED room; a pre-U6 one mid-mission restarts it
     if (campaign.restarted) {
       // (its facts stay: what already happened does not happen again)
       const deck = MISSIONS[campaign.chapter]?.[campaign.deck ?? 0];
@@ -701,7 +738,8 @@ export class LastVersion {
     // people who only exist in some of this place's states leave an echo in the others (NPC failure handling)
     for (const n of level.npcs) {
       const def = NPCS[n.crew];
-      if (n.temporal || !def?.temporal || n.hologram) continue;
+      // (inPerson: someone who travels with Kai through the years, as Niko does, is met in person in every year)
+      if (n.temporal || n.inPerson || !def?.temporal || n.hologram) continue;
       if (beat?.kind === 'encounter' && n.id.startsWith('npc_')) continue; // the person a beat is about is always met in person
       const real = def.temporal.filter((s) => this.def.states.includes(s));
       const here = level.rooms[n.room]?.states || states;
@@ -817,6 +855,8 @@ export class LastVersion {
     this.quietPins = false;
     // (the cold open's people, and the place as it stages it, only while it plays: a save taken during it loads without)
     if (deck.coldOpen?.cast || deck.coldOpen?.stage) g.facts.set(coldFact(deck), false);
+    // (and a playback's echoes, which stand only while it plays: a save taken during one loads without them)
+    if (isRewritten(deck)) for (const t of threadsOf(deck)) if (t.kind === 'playback' && g.facts.get(playFact(deck, t))) g.facts.set(playFact(deck, t), false);
     if (opening) this.openMission(deck, opening);
     else if (resumed) this.previously();
   }
@@ -873,19 +913,34 @@ export class LastVersion {
     // pulsing window, its streets before the people are out) holds from the start until the cold open is over
     const staged = !!co?.stage && cold.length > 0;
     if (staged) g.facts.set(coldFact(deck), true);
+    // the year the cold open is shot in (co.year: Mission 12's 2196, Mission 11's 2026), every room of the level in it
+    // that has it, each room's own put back after it
+    const rooms = co?.year ? (this.level?.order || []).filter((r) => g.engine.statesOf(r).includes(co.year)) : [];
+    const home = Object.fromEntries(rooms.map((r) => [r, g.engine.state(r)]));
+    const toYear = (y) => {
+      let moved = false;
+      for (const r of rooms) {
+        const want = y || home[r];
+        if (want && g.engine.state(r) !== want) { g.engine.setState(r, want, { force: true }); moved = true; }
+      }
+      if (!moved) return;
+      this.weatherState = null; // (the place's sky, light and weather change at once, not eased)
+      g.deckWorld.refresh?.();
+    };
     // a cold open may come before the title (co.first: it plays, then the mission's card, then what follows the title)
     if (co?.first) {
-      if (cold.length) steps.push({ shots: co.shots || 'default', lines: cold, cue: co.cue || null, cast: !!co.cast });
+      if (cold.length) steps.push({ shots: co.shots || 'default', lines: cold, cue: co.cue || null, cast: !!co.cast, year: co.year });
       steps.push(staged ? { ...card, unstage: true } : card);
       if (co.title?.lines?.length) steps.push({ shots: co.title.shots || 'default', lines: co.title.lines, cue: co.title.cue || null });
     } else {
       steps.push(card);
-      if (cold.length) steps.push({ shots: co?.shots || 'default', lines: cold, cue: co?.cue || null, cast: !!co?.cast });
+      if (cold.length) steps.push({ shots: co?.shots || 'default', lines: cold, cue: co?.cue || null, cast: !!co?.cast, year: co?.year });
     }
     // the opening is over (played or skipped): what the cold open sets is set, and what it starts starts
     const finish = () => {
       this.hideCard();
       this.opening = null;
+      if (co?.year) toYear(null);
       if (co?.cast || staged) g.facts.set(coldFact(deck), false);
       if (co?.set) for (const [k, v] of Object.entries(co.set)) g.facts.set(k, v);
       if (co?.then) deck.fx?.[co.then]?.(this);
@@ -894,6 +949,7 @@ export class LastVersion {
       if (!alive()) return;
       if (i >= steps.length || token.skipped) return finish();
       const k = steps[i];
+      if (co?.year) toYear(k.year || null); // (the cold open in its year; the cards and what follows in the place's own)
       if (k.card) {
         g.hud.card(k.card[0], k.card[1], k.card[2], 600000);
         if (k.unstage) g.facts.set(coldFact(deck), false); // (behind the title card, the place comes back to its hour)
@@ -1487,7 +1543,7 @@ export class LastVersion {
     const state = g.engine.state(g.room);
     const out = state !== this.home();
     const outdoors = this.deck?.stableOutdoors && g.room === this.level.outdoorRoom;
-    const draining = out && this.unstable && !outdoors;
+    const draining = out && this.unstable && !outdoors && !this.opening; // (a cold open shot in another year costs nothing)
     const holding = this.unstable && !!this.inv?.active && !this.inv.active.lock;
     if (draining) this.stability = Math.max(0, this.stability - dt * 0.045);
     else if (!out && !holding) this.stability = Math.min(1, this.stability + dt * 0.1);
@@ -1583,7 +1639,9 @@ export class LastVersion {
       this.upward = true;
       g.after(1.1, () => {
         this.upward = false;
-        if (this.deck === deck) w.set(was);
+        // (the weather of the year Kai is in now: a switch during the second has set that year's already)
+        const y = this.level?.place && this.level.years?.[this.weatherState];
+        if (this.deck === deck) w.set(y ? y.weather || null : was);
       });
     }
     this.threads.onLoop();
@@ -1846,6 +1904,7 @@ export class LastVersion {
       for (const sd of sidesOf(mk)) {
         const st = sideState(facts, mk, sd);
         if (mi < here && st === 'open') continue;
+        if (st === 'open' && sd.when && !facts.test(sd.when)) continue; // (a side story offered only when it can be played)
         const key = `${m.key}:${sd.id}`;
         const tracked = campaign?.track === key;
         const btn = mi === here && st !== 'resolved' ? ` <button class="lvtrack" data-track="${key}">${tracked ? 'UNTRACK' : 'TRACK'}</button>` : '';

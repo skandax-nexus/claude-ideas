@@ -111,6 +111,10 @@ export const AMBIENT_CAST = {
   m5_child: { model: 'rb_child_f2', variant: 'ochre', height: 1.28, pronoun: 'f' },
   m5_keeper: { model: 'rb_robe_m', variant: 'undyed', height: 1.78, pronoun: 'm' },
   m7_astro: { model: 'rb_robe_m', variant: 'astronomer', height: 1.75, pronoun: 'm' },
+  // (U7 review) Ezra's 2026 echo at sixty-five (M6; and the clockmaker of its 1999 cold open), Niko older at the first sky
+  // (M7's cold open): their own meshes in another wardrobe, apart from the named person the mission also places
+  ezra26: { model: 'rb_ezra', variant: 'ezra65', height: 1.74, pronoun: 'm' },
+  m7_oldniko: { model: 'rb_niko', variant: 'older', height: 1.74, pronoun: 'm' },
   m8_tech: { model: 'rb_contractor', variant: 'helix slate', height: 1.79, pronoun: 'm' },
   // Act II (U7): an evacuee in Loop City, Sera disguised as a Continuum guard, the people who listened, a freed prisoner
   m9_evac: { model: 'rb_civ_f2', variant: 'dust', height: 1.66, pronoun: 'f' },
@@ -460,7 +464,7 @@ export function castLevel(level, deck, { facts = null } = {}) {
         // say its own, an echo only its own; else every other line of its pool: neighbours share the walla, and the speech
         // budget holds)
         ...(c.flicker ? { flicker: true } : {}), // (between solid and hologram: Runtime.step)
-        ...(deck.crowdFreeze ? { freezeWhen: deck.crowdFreeze } : {}),
+        ...(c.freezeWhen || deck.crowdFreeze ? { freezeWhen: c.freezeWhen || deck.crowdFreeze } : {}), // (a crowd may stand still on its own condition)
         voiceExtra: { id: vlist?.[k % vlist.length] || null, gender: sex },
       });
     });

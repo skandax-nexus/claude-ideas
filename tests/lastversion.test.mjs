@@ -329,7 +329,7 @@ test('every obstacle has a state (or the anchor) that gets past it', () => {
       }
     }
   }
-  assert.ok(rooms >= 20, `${rooms} challenges checked`); // (the places' crossings, in every mission: since U7 most are one load)
+  assert.ok(rooms >= 25, `${rooms} challenges checked`); // (the places' crossings, in every mission: since U7 most are one load)
 });
 
 test('every level is a place, and any route a level carries only uses states its room was authored with', () => {
@@ -451,8 +451,10 @@ test('someone absent from a state leaves an echo there', () => {
   assert.deepEqual(route.temporal, ['PRESENT'], 'Iven exists in 2049; in 2026 and 2196 his echo stands in');
   const jun = LEVELS.find((l) => l.deck.mkey === 'm01').level.npcs.find((n) => n.id === 'jun');
   assert.deepEqual(jun.temporal, ['PRESENT'], 'at 8:13 the Jun in the booth is an echo');
-  const sera = LEVELS.find((l) => l.deck.mkey === 'm10' && l.s === 1)?.level.npcs.find((n) => n.crew === 'sera');
-  if (sera) assert.equal(sera.temporal, undefined, 'a person who is simply here is not an echo');
+  // (Mission 10 is one map now: Sera at her skiff, in 2049 and 2026 both, is simply here)
+  const sera = LEVELS.find((l) => l.deck.mkey === 'm10').level.npcs.find((n) => n.crew === 'sera');
+  assert.ok(sera, 'Sera waits at the skiff');
+  assert.equal(sera.temporal, undefined, 'a person who is simply here is not an echo');
   for (const id of ['iven', 'jun', 'niko', 'tala', 'witness']) assert.ok(NPCS[id].echo?.length, `${id} has an echo`);
 });
 
@@ -505,7 +507,7 @@ test('three years and nothing else: no INVERTED, no gravity, no ceiling in any m
       for (const w of [...(room.route || []), ...(room.keyRoute || [])]) if (w.state) assert.ok(LV.states.includes(w.state), `${here} ${rid}: route ${w.state}`);
     }
   }
-  assert.ok(checked >= 20, `${checked} challenges`);
+  assert.ok(checked >= 25, `${checked} challenges`);
 });
 
 test('no laws, no law tokens, no memory keys, and Kai thinks without ceilings or domes', () => {
@@ -1052,13 +1054,14 @@ test('every quarter holds its own spawn, and its main threads stand in it (or at
 // solids at body height (a post or a bench in passing), Mission 9's rounds after each reset as well
 test('watchers patrol open ground, not through the places\' buildings', () => {
   for (const { deck, level } of LEVELS) {
-    const paths = [...level.sentinels.map((sn) => sn.path), ...(deck.loop?.variants || []).flatMap((v) => (v.watch ? Object.values(v.watch) : []))];
+    // (a watcher walks the floor its def gives, y, else the ground at 0: since U7's review the dam's chamber at -12 m)
+    const paths = [...level.sentinels.map((sn) => [sn.path, sn.y || 0]), ...(deck.loop?.variants || []).flatMap((v) => (v.watch ? Object.values(v.watch).map((p) => [p, 0]) : []))];
     const solid = deck.states.map((st) => level.elements.filter((e) => e.solid && (!e.when || [false, true].every((v) => compileCondition(e.when)({ fact: () => v, state: st })))));
-    for (const path of paths) {
+    for (const [path, y] of paths) {
       if (!path || path.length < 2) continue;
       const loop = path.length > 2 ? [...path, path[0]] : path, pts = [];
       for (let i = 0; i < loop.length - 1; i++) for (let k = 0; k < 10; k++) pts.push([loop[i][0] + ((loop[i + 1][0] - loop[i][0]) * k) / 10, loop[i][1] + ((loop[i + 1][1] - loop[i][1]) * k) / 10]);
-      const inside = Math.min(...solid.map((sol) => pts.filter(([x, z]) => sol.some((e) => x > e.box[0] && x < e.box[3] && z > e.box[2] && z < e.box[5] && e.box[1] < 1.6 && e.box[4] > 0.3)).length));
+      const inside = Math.min(...solid.map((sol) => pts.filter(([x, z]) => sol.some((e) => x > e.box[0] && x < e.box[3] && z > e.box[2] && z < e.box[5] && e.box[1] < y + 1.6 && e.box[4] > y + 0.3)).length));
       assert.ok(inside <= pts.length * 0.15, `${deck.mkey}: a watcher's path ${JSON.stringify(path)} is ${inside} of ${pts.length} samples inside solids`);
     }
   }
@@ -1213,6 +1216,10 @@ test('the places can be walked: their stairs, terraces, ramps and bridges carry 
     ['m08', 'PRESENT', (l) => lm(l, 'atriumDoors'), [[-40, -20], [-30, -24], [30, -20], [30, -21], [30, -37.5], [30, -38.6]], 9, { staff_door_open: true }], // (an officer who trusts Kai opens it)
     ['m08', 'PRESENT', () => [40, 0, -28], [[40, -24.5], [40, -14.3], [44, -10]], 6, {}],
     ['m08', 'PRESENT', () => [0, 0, -22], [[0, -18.4], [-0.3, -17], [0.4, -15.6], [-0.2, -14.2], [0.3, -12.8], [0, -11]], 0.4, {}],
+    // (U7 review) Mission 8 without anyone's trust: up the old river wall's nine ledges, a jump each, to the balcony
+    ['m08', 'PRESENT', () => [0, 0, -36], [[0.4, -38.3], ...Array.from({ length: 9 }, (_, i) => [1.6 + i * 1.1, -38.3, true]), [11.5, -38.3, true], [14, -38.3], [22, -38.3]], 9, {}],
+    // (U7 review) Mission 10: Kai wakes in his cell, on its floor, and walks out onto the gallery
+    ['m10', 'PRESENT', () => [-24, 0, -19.5], [[-24, -17], [-24, -12], [-18, -10]], 0, {}],
     // (U3) the stone arch over the 2026 canyon; the lamp-post heads over the 2049 flood; the 2196 tilted floors up to the tower's deck
     ['m18', 'PAST', () => [0, 0, -80], [[0, -66], [0, -54], [0, -40]], 0, {}],
     ['m18', 'PRESENT', () => [0, 0, -8], [[6, -12], [6, -9.5], [6, 1], [6, 30], [6, 60]], 1.9, {}], // (from the sign, up the fallen lamp post onto the heads)
@@ -1722,7 +1729,10 @@ test('crowds are not clones: one face at most twice a year in a place, and never
   // Mission 10's twelve prisoners in the loop cells, flickering, until Kai releases them
   const m10 = LEVELS.find((l) => l.deck.mkey === 'm10').level;
   const pris = m10.npcs.filter((n) => n.crowd && m10.cast.find((c) => c.id === n.crew).crowdRole === 'prisoner');
-  assert.ok(pris.length === 12 && pris.every((n) => n.flicker && /!prisoners_freed/.test(n.when) && n.pos[2] > 21 && n.pos[2] < 27), `M10: ${pris.length} prisoners in the cells`);
+  const looping = pris.filter((n) => /!prisoners_freed/.test(n.when)), freed = pris.filter((n) => !/!prisoners_freed/.test(n.when));
+  assert.ok(looping.length === 12 && looping.every((n) => n.flicker && n.pos[2] > 21 && n.pos[2] < 27), `M10: ${looping.length} prisoners in the cells`);
+  // (U7 review) released, some walk out of the cells toward the yard door; held, they stay
+  assert.ok(freed.length >= 3 && freed.every((n) => /prisoners_freed/.test(n.when) && !n.flicker && n.path?.length > 1), `M10: ${freed.length} walk out once freed`);
 });
 
 test('crowd walkers keep to the ground: no floating off a terrace, no sinking into a plaza, no walking through a wall', () => {
@@ -1839,6 +1849,7 @@ test('every wardrobe variant is a valid recolour: at most 8 rules, numbers in ra
     for (const [name, v] of Object.entries(vs)) {
       for (const [k, rules] of Object.entries(v)) {
         if (k === 'hide' || k === 'props') { assert.ok(Array.isArray(rules), `${model}/${name}.${k}`); continue; }
+        if (k === 'holoProps') { assert.equal(rules, true, `${model}/${name}.holoProps`); assert.ok(v.props?.length, `${model}/${name}: holoProps with props`); continue; }
         assert.ok(PARTS.includes(k), `${model}/${name}: part ${k}`);
         assert.ok(rules.length <= 8, `${model}/${name}.${k}: ${rules.length} rules`);
         for (const r of packRules(rules)) {
@@ -1847,7 +1858,7 @@ test('every wardrobe variant is a valid recolour: at most 8 rules, numbers in ra
           assert.ok(r.band[0] < r.band[2] && r.band[1] < r.band[3] && r.win[0] < r.win[1], `${model}/${name}.${k}: band and window`);
         }
       }
-      for (const p of v.props || []) assert.ok(['umbrella', 'lantern', 'staff', 'trowel', 'clipboard', 'loupe', 'lanyard', 'beret', 'visor', 'badge', 'raincoatHood', 'raincoatChildHood', 'helmet', 'vest'].includes(p), `${model}/${name}: prop ${p}`);
+      for (const p of v.props || []) assert.ok(['umbrella', 'lantern', 'staff', 'trowel', 'clipboard', 'loupe', 'lanyard', 'beret', 'visor', 'badge', 'raincoatHood', 'raincoatChildHood', 'shadowHood', 'helmet', 'vest'].includes(p), `${model}/${name}: prop ${p}`);
     }
   }
 });
@@ -2443,7 +2454,7 @@ test('a thread is paid once, even when its kind sets its own fact (the chase); a
   assert.equal(game.engine.state('cable'), 'PAST', 'a room keeps its own year');
 });
 
-test('the save format: a pre-U6 save in the middle of a rewritten mission restarts it at quarter 0 and keeps its facts', () => {
+test('the save format: an older save in the middle of a rewritten mission restarts it at quarter 0 (the Prologue keeps its facts; from Act I the old mission\'s own are forgotten)', () => {
   const old = { lv: true, chapter: 'prologue', deck: 0, sector: 0, room: 'm01_rain_south', pos: [0, 4.26, -154, 0], flags: { beat_done: false, done_toy: true }, lvFormat: 21 };
   migrateSave(engine(), old, LV);
   assert.equal(old.lvFormat, SAVE_FORMAT);
@@ -2470,6 +2481,25 @@ test('the save format: a pre-U6 save in the middle of a rewritten mission restar
   const act = { lv: true, chapter: 'act4', deck: 2, sector: 1, quarter: 1, pos: [1, 2, 3, 0], flags: { beat_done: false }, lvFormat: 23 };
   migrateSave(engine(), act, LV);
   assert.deepEqual([act.sector, act.quarter, act.pos, act.lvFormat], [0, 0, null, 24]);
+  // U7 review: a format-22 save in the middle of the old Mission 5 (its divert set water_route; its wall and gate done)
+  // restarts Mission 5 with what the old one set forgotten, and the earlier missions' facts kept
+  const m5 = MISSIONS.act1.findIndex((m) => m.key === 'm05');
+  const f5 = new FactStore();
+  for (const k of ['card_found', 'elder_met', 'ev_found_not_built', 'river_diverted', 'water_route', 'wall_braced', 'gate_released', 'niko_follows']) f5.set(k);
+  const s5 = { lv: true, chapter: 'act1', deck: m5, sector: 0, pos: [1, 2, 3, 0], flags: {}, lvFormat: 22 };
+  migrateSave(engine(), s5, LV, f5);
+  assert.ok(s5.restarted && ['card_found', 'elder_met', 'ev_found_not_built'].every((k) => f5.get(k)), 'Mission 4\'s facts are kept');
+  assert.deepEqual(['river_diverted', 'water_route', 'wall_braced', 'gate_released', 'niko_follows'].filter((k) => f5.get(k)), [], 'the old Mission 5 is forgotten');
+  // past Mission 5: water_route meant the old divert; it means Tala's gates now, so it stays only if her story was resolved
+  const f7 = new FactStore();
+  f7.set('water_route');
+  migrateSave(engine(), { lv: true, chapter: 'act1', deck: m5 + 2, sector: 0, flags: {}, lvFormat: 22 }, LV, f7);
+  assert.ok(!f7.get('water_route'), 'water_route without Tala\'s gates is the old divert');
+  const g7 = new FactStore();
+  g7.set('water_route');
+  g7.set('quest_tala', 'resolved');
+  migrateSave(engine(), { lv: true, chapter: 'act1', deck: m5 + 2, sector: 0, flags: {}, lvFormat: 22 }, LV, g7);
+  assert.ok(g7.get('water_route'), 'chain B played to its end keeps it');
 });
 
 // U6 review: a Prologue mission played with every skippable thread left undone, step by step along its main path
@@ -2550,6 +2580,12 @@ test('a save inside a moment that runs in callbacks loads with it played again (
   f.game.engine.setState = () => {};
   f.rt.afterResume(f.deck);
   assert.ok(f.game.facts.get('fracture_done'), 'the fracture ends, and the mission with it');
+  // Mission 12 (U7 review): saved while the Witness shows the stair (the zone and the rule fired, the quarter's autosave)
+  const m12 = MISSIONS.act2.find((m) => m.key === 'm12');
+  const w = { g: { facts: new FactStore(), hud: { say: (l, fct, done) => done?.() }, after: () => {} }, inv: null };
+  for (const k of ['t_m12_route', 'm12_at_stair']) w.g.facts.set(k);
+  for (const r of m12.resumes) if (w.g.facts.test(r.when) && !w.g.facts.test(r.until)) m12.fx[r.fx](w);
+  assert.ok(w.g.facts.get('m12_stair_shown'), 'the stair is shown again, and the thread goes on');
 });
 
 // U6 review: a mission that ends on its own exits once a load, never from a flag kept in the save
@@ -2898,6 +2934,117 @@ test('Acts I to IV and the Finale: nothing that ends a mission answers before th
     }
   }
   assert.ok(n >= 300, `${n} gates checked`);
+});
+
+test('Acts I and II: the people a main conversation needs are met in person, not as echoes (U7 review: Sera, Niko)', () => {
+  // (who is met in one year only, by the story's choice, and where: an echo elsewhere says so)
+  const ONE_YEAR = { 'm08/rook': ['PRESENT'], 'm13/sera': ['PRESENT'] };
+  let n = 0;
+  for (const m of [...MISSIONS.act1, ...MISSIONS.act2]) {
+    const { level } = LEVELS.find((l) => l.deck.mkey === m.key);
+    for (const t of threadsOf(asDeck(m)).filter((x) => x.kind === 'talk' && !x.side)) {
+      const people = level.npcs.filter((p) => (p.id === t.npc || p.crew === t.npc) && !p.silent);
+      assert.ok(people.length, `${m.key}/${t.id}: ${t.npc} is placed`);
+      for (const p of people) {
+        n++;
+        const key = `${m.key}/${p.id}`;
+        if (ONE_YEAR[key]) assert.deepEqual(p.temporal, ONE_YEAR[key], `${key}: in person in ${ONE_YEAR[key]}`);
+        else assert.ok(!p.temporal, `${key}: an echo in some of ${m.states} (${p.temporal}), yet ${t.id} needs them`);
+      }
+    }
+  }
+  assert.ok(n >= 15, `${n} people`);
+  // Sera's echo at the war's gate says where she is; Brask stands only in the war's year
+  const m13 = LEVELS.find((l) => l.deck.mkey === 'm13').level;
+  assert.ok(m13.npcs.find((p) => p.id === 'sera').echoLines?.some((l) => l.who === 'SERA'));
+  assert.equal(m13.npcs.find((p) => p.id === 'brask').when, '@PRESENT');
+});
+
+// U7 review: a crowd says its own lines, not another mission's (Brask's loop bark in a 2026 port, a lockdown in V17)
+test('Acts I and II: crowds say their own lines, never another mission\'s pool (Rain City South\'s, Helix\'s storm night, Loop City\'s)', () => {
+  const HOME = { rain: ['m01'], helix: ['m02', 'm03'], loop: ['m09'] };
+  let n = 0;
+  for (const m of [...MISSIONS.act1, ...MISSIONS.act2, MISSIONS.act3[0]]) {
+    const { level } = LEVELS.find((l) => l.deck.mkey === m.key);
+    for (const p of level.npcs.filter((x) => x.crowd && x.barks?.length)) {
+      for (const [pool, homes] of Object.entries(HOME)) {
+        if (homes.includes(m.key)) continue;
+        n++;
+        const theirs = p.barks.filter((b) => AMBIENT[pool].barks.includes(b));
+        assert.deepEqual(theirs, [], `${m.key}: ${p.id} says ${pool}'s lines`);
+      }
+    }
+  }
+  assert.ok(n >= 60, `${n} crowd voices checked`);
+});
+
+// U7 review: the set pieces the review found built as one press or an empty walk, and the clues that disagreed
+test('Acts I and II (U7 review): the escapement, the morning that agrees, the chamber\'s troopers, the lockdown, the district\'s choice, the cold opens', () => {
+  const m = (k) => main.find((x) => x.key === k);
+  const lv = (k) => LEVELS.find((l) => l.deck.mkey === k).level;
+  const thr = (k, id) => threadsOf(asDeck(m(k))).find((t) => t.id === id);
+  // M6: neutral clocks; each takes only its window hour, in its year, once the window is read
+  const m6 = m('m06');
+  assert.ok(thr('m06', 'clocks').spots.every((sp) => sp.prompt === 'THE BRASS CLOCK') && thr('m06', 'clocks').after.includes('windows') && !thr('m06', 'windows').until);
+  for (const [id, year, hour, fact] of [['clock26', 'PAST', 'Morning.', 'clk_26'], ['clock49', 'PRESENT', 'Evening.', 'clk_49'], ['clock96', 'FUTURE', 'Noon.', 'clk_96']]) {
+    const node = m6.scenes[id];
+    assert.ok(node.when.includes(`@${year}`) && node.when.includes('ev_window_faces'), `${id}: its year, after the window`);
+    assert.deepEqual(node.choices.filter((c) => c.set?.[fact]).map((c) => c.label), [hour], `${id}: only ${hour}`);
+  }
+  // M8: the reconstruction agrees with the Prologue (05:40 the card; 08:13 the ring; 08:14 the missing second)
+  const labels = thr('m08', 'reconstruct').entries.map((e) => e.label).join(' ');
+  assert.ok(/05:40\. Chamber One opens on Varen's card/.test(labels) && /08:13\. The ring turns\. At 08:14/.test(labels) && !/05:30|05:39/.test(labels), labels);
+  assert.equal(thr('m08', 'reconstruct').echoes.find((e) => e.crew === 'witness').variant, 'hooded', 'the man at the console keeps his face out of the light');
+  // M8: at the lockdown the island has a drone of its own, and the court's last quarter hunts further and faster
+  const isl = lv('m08').sentinels.filter((sn) => /_q2s\d+$/.test(sn.id));
+  assert.ok(isl.length === 2 && isl.some((sn) => /lin_gone/.test(sn.when || '') && sn.y === 0.4), JSON.stringify(isl.map((sn) => [sn.id, sn.when])));
+  const defs = isl.map((sn) => ({ ...sn }));
+  const f8 = new FactStore();
+  f8.set('lin_gone');
+  m('m08').adjust({ sentinels: defs }, { g: { facts: f8 } });
+  assert.ok(defs.every((d, i) => d.range === isl[i].range + 4 && d.speed > isl[i].speed), 'a load in the lockdown keeps them hunting');
+  // M10: troopers on the testing chamber's floor and by the skiff; the crossing waits on an Echo Step; the lamps the cut
+  // blinds are the gallery's and the crown's only
+  const dam = lv('m10').sentinels;
+  assert.ok(dam.filter((sn) => sn.y === -12).length === 3, JSON.stringify(dam.map((sn) => [sn.id, sn.y])));
+  // (the arrival asks for the step; the objective shows from the start)
+  assert.ok(thr('m10', 'cross').kind === 'stealth' && !thr('m10', 'cross').when && thr('m10', 'yard').kind === 'stealth');
+  assert.ok(lv('m10').triggers.some((tr) => tr.set.t_m10_cross && /echo_steps >= 1/.test(tr.when) && /t_m10_projector/.test(tr.when)));
+  const lamps = dam.map((sn) => ({ ...sn }));
+  const f10 = new FactStore();
+  f10.set('power_cut');
+  m('m10').adjust({ sentinels: lamps }, { g: { facts: f10 } });
+  assert.ok(lamps.every((sn) => (sn.y === -12 ? sn.range === 9 : sn.range === 3.5)), 'the chamber\'s floodlights are its own');
+  // M13: the choice and the district agree, the district is shot at the block, and the block changes with the choice
+  const st = m('m13').scenes.stabilizer.choices, dist = thr('m13', 'district');
+  assert.ok(!st.some((c) => c.lines.some((l) => /war does not|walk out/.test(l.text))) && dist.shots?.length && dist.lines.length === 2);
+  const w = lv('m13');
+  assert.ok(w.crowd.some((c) => c.when === 'civilians_freed' && c.role === 'trapped') && w.crowd.some((c) => c.freezeWhen === 'stabilizer_destroyed'));
+  assert.ok(m('m13').fx.listenersRoute && m('m13').talks.m13_listener[0].then === 'listenersRoute', 'the people who listened draw the patrol off');
+  // the cold opens: their years and their people
+  assert.deepEqual(['m06', 'm07', 'm11', 'm12'].map((k) => m(k).coldOpen.year), ['PAST', 'PAST', 'PAST', 'FUTURE']);
+  for (const k of ['m04', 'm06', 'm07', 'm09', 'm12']) assert.ok(m(k).coldOpen.cast?.length && lv(k).npcs.some((n) => n.id === 'co_0'), `${k}: its cold open stages its people`);
+  // nits: the ash says they left; Tala's echo keeps the cliff's order to itself
+  assert.ok(m('m04').deductions.panels.answers.find((a) => a.correct).lines[0].text.includes('They left.'));
+  assert.ok(!NPCS.tala.echo.some((l) => /Left, right/.test(l.text)));
+});
+
+// U7 review: a cold open is shot in its own year (Mission 12's 2196), with its own people, and the place gets its year back
+test('a cold open is shot in its own year, with its people, and the place\'s year comes back after it', () => {
+  const m12 = MISSIONS.act2.find((m) => m.key === 'm12');
+  const { level } = LEVELS.find((l) => l.deck.mkey === 'm12');
+  const e = engine();
+  for (const r of level.order) { e.setAvailable(r, level.rooms[r].states || m12.states); e.setState(r, 'PRESENT', { force: true }); }
+  const seen = [];
+  const facts = new FactStore();
+  const game = { engine: e, facts, campaign: { lv: true, deck: 3 }, story: { decks: MISSIONS.act2 }, hud: { card() {} }, deckWorld: { refresh() {} } };
+  const rt = Object.assign(Object.create(LastVersion.prototype), { g: game, def: LV, level, chapter: 'act2', chapterStart: false,
+    whenVoices: (then) => then(), hideCard() {}, cinema: { play: (o, done) => { seen.push([o.shots ? 'shot' : 'card', e.state(level.outdoorRoom), facts.get('co_m12')]); done(); } } });
+  rt.openMission(m12, 'MISSION 12');
+  assert.deepEqual(seen[0], ['shot', 'FUTURE', true], 'the cold open: 2196, the Witness in the shot');
+  assert.ok(seen.slice(1).every(([k, y]) => k === 'card' && y === 'PRESENT'), JSON.stringify(seen));
+  assert.equal(e.state(level.outdoorRoom), 'PRESENT', 'the place is back in its own year');
+  assert.ok(!facts.get('co_m12'), 'and its cast has left');
 });
 
 test('the hold (Mission 18): posts at the place\'s landmarks, each re-anchored in its own year; allies and the lock city change it', () => {

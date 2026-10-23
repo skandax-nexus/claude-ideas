@@ -39,17 +39,22 @@ export default {
   beatAt: { m10: ['guardPost', 'switch2049', 'loopCells'] },
   exits: { m10: 'seraSkiff' },
   frags: { m10: [['cellWall', 'intakeRecords', 'floodPole'], ['switch2026', 'directorOffice', 'crestParapet']] },
-  // the guards walk the gallery and the yard on the turbine hall's roof
+  // the guards walk the gallery and the yard on the turbine hall's roof; (U7 review) troopers on the testing chamber's
+  // floor, between the projector and the spillway (clear of the turbines), and one on the gorge floor by the skiff
   watch: { m10: [
     [[[-60, -10], [60, -10]], [[-20, 6], [20, 6], [20, 20], [-20, 20]]],
     [[[-50, -4], [50, -4], [50, 12], [-50, 12]], [[0, 24], [40, 24]]],
-    [],
+    [{ y: HALL, path: [[14, 4], [48, 4], [48, 24], [14, 24]] }, { y: HALL, path: [[28, 2], [28, 26]] }],
+    [{ y: HALL, path: [[-6, 34], [40, 34]] }],
   ] },
   crowd: [
     // (U4 review) the twelve prisoners of §5 M10: two to each loop cell of the testing chamber, pacing their four seconds,
     // flickering between solid and hologram; gone once Kai releases them
-    ...[-48, -41.6, -35.2, -28.8, -22.4, -16].map((x) => ({ era: 'present', years: ['PRESENT'], region: 'dam', role: 'prisoner', path: [[x - 1.6, 23], [x + 1.6, 25.6]], y: HALL, n: 2, flicker: true, when: '!prisoners_freed' })),
-    { era: 'present', years: ['PAST'], region: 'dam', role: 'builder', path: [[-40, -9], [40, -9]], n: 4 },
+    ...[-48, -41.6, -35.2, -28.8, -22.4, -16].map((x) => ({ era: 'present', years: ['PRESENT'], region: 'dam', role: 'prisoner', path: [[x - 1.6, 23], [x + 1.6, 25.6]], y: HALL, n: 2, flicker: true, when: '!prisoners_freed',
+      barks: ['Four seconds. Four seconds.', 'Is it still the same night?'] })),
+    // (U7 review) released, they walk out of the cells toward the yard door
+    { era: 'present', years: ['PRESENT'], region: 'dam', role: 'prisoner', path: [[-36, 22], [-16, 26], [-4, 28]], y: HALL, n: 4, when: 'prisoners_freed', barks: ['What day is it? Anyone?'] },
+    { era: 'present', years: ['PAST'], region: 'dam', role: 'builder', path: [[-40, -9], [40, -9]], n: 4, barks: ['New switchgear on the crown by Friday.', 'Mind the scaffold. It moves in the wind.'] },
   ],
 
   build(P) {
@@ -130,6 +135,7 @@ export default {
       P.box([cx - 3.2, 3.4, FZ - 8, cx + 3.2, CROWN, FZ], 'damConcrete');
       P.box([cx - 3.2, 0, FZ - 8, cx + 3.2, 3.4, FZ - 6], 'damConcrete');
       P.vbox([cx - 3.2, 0.01, FZ - 6, cx + 3.2, 0.03, FZ], 'yardConcrete', { noShadow: 1 });
+      P.col([cx - 3.2, -0.6, FZ - 6, cx + 3.2, 0, FZ]); // (the cell's floor holds, level with the gallery: Kai wakes in one)
       x = cx + 3.2;
     }
     P.land('cell', CELLS[3], 0, FZ - 3, 0);

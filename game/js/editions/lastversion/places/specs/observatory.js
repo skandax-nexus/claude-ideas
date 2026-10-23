@@ -90,7 +90,9 @@ export default {
   watch: { m07: [[], [[[38, -16], [62, -16], [62, 4], [38, 4]]], [[[-46, -40], [-44, -66], [-28, -82], [-4, -84]], [[-20, -56], [-4, -56], [-4, -46], [-20, -46]]]] },
   crowd: [
     { era: 'ancient', years: ['PAST'], region: 'settlement', role: 'skywatcher', path: [[-40, 60], [0, 60], [0, 40]], n: 5, women: ['rb_elder'] }, // (§5 M7: the women on the Elder's mesh; Tala was met a mission ago)
-    { era: 'present', years: ['PRESENT'], region: 'helix', role: 'surveyor', path: [[-30, -20], [10, -20]], n: 3 },
+    // (Helix's surveyors on the Ridge in 2049's blue hour: their own words, not the storm night's, U7 review)
+    { era: 'present', years: ['PRESENT'], region: 'helix', role: 'surveyor', path: [[-30, -20], [10, -20]], n: 3,
+      barks: ['Grid twelve. Mark it and move on.', 'They want the rings photographed again. Third time this week.'] },
   ],
 
   build(P) {

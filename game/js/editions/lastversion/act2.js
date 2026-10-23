@@ -95,6 +95,7 @@ export const M09 = {
   coldOpen: {
     first: true, minutes: 1, cue: 'card',
     shots: [{ cam: 'quayBench', look: 'marketGate', t: 9 }],
+    cast: [{ crew: 'm9_evac', ambient: true, seed: 902, first: 'A woman', at: 'quayBench', off: [1.6, 0, -6], turn: 0.3 }],
     lines: [N('08:05. A woman drops her coffee.'), N('08:05 again. She catches it.'), N('Again. She does not.'), K('It\'s the same morning. It\'s that morning.')],
   },
   quarters: [
@@ -142,7 +143,7 @@ export const M09 = {
           goal: 'Cut the transmitter\'s carrier.', because: 'The three clocks are stopped. Now the loop has only its voice.', done: 'transmitter_cut', hints: M09_HINTS.transmitter, minutes: 4 },
         { id: 'rhea', kind: 'talk', npc: 'engineer', at: 'towerBase', after: ['transmitter'], goal: 'Someone at the tower is counting resets.', because: 'She was on the radio.', done: 'rhea_freed', hints: M09_HINTS.rhea, minutes: 3 },
         { id: 'tower', kind: 'scene', scene: 'tower', at: 'towerTop', after: ['rhea'], spot: { prompt: 'LOOK ACROSS THE RIVER', offset: [0, 1.4, 1.2], r: 3.2, model: NO_MODEL },
-          goal: 'Climb the tower before 08:13.', because: 'From the top you can see into the chamber.', done: 'ev_ninth_view', hints: M09_HINTS.tower, minutes: 3 },
+          goal: 'Climb the tower. The street runs on to 08:13 now.', because: 'From the top you can see into the chamber.', done: 'ev_ninth_view', hints: M09_HINTS.tower, minutes: 3 },
         { id: 'reset', kind: 'cinema', after: ['tower'], lines: [N('08:14. Light comes off the river like a wave.'), FX(L('WITNESS', 'You are early. You are always early.'), 'radio')], goal: 'The last reset is coming.', because: 'The loop has nothing left to hold it.', hints: M09_HINTS.reset, minutes: 2 },
       ],
       sides: [
@@ -155,10 +156,12 @@ export const M09 = {
     engineer: [
       {
         when: '!rhea_freed',
-        lines: [CREW('You again. You get here earlier every time.'), CREW('My leg is in two loops at once. Pull when it resets.')],
+        // (the carrier is cut: the loop lets go of the street with one last jump, and Rhea's leg with it)
+        lines: [CREW('You again. You get here earlier every time.'), CREW('My leg is in two loops at once. The street jumps once more when it lets go. Pull then.')],
         choices: [
-          intent('comfort', 'Hold on to me.', { lines: [N('The street jumps. Rhea does not.'), CREW('Thirteen. Somebody counted with me.')], set: { rhea_freed: true }, trust: 1 }),
-          intent('investigate', 'How many times?', { lines: [CREW('Twelve. You were here for nine of them.'), N('The street jumps. Rhea comes with it.')], set: { rhea_freed: true } }),
+          intent('comfort', 'Hold on to me.', { lines: [N('The street jumps, one last time. Rhea does not.'), CREW('Thirteen. Somebody counted with me.')], set: { rhea_freed: true }, trust: 1, then: 'lastJump' }),
+          intent('investigate', 'How many times?', { lines: [CREW('Twelve. You were here for the last few.', 'loops_m09 <= 3'), CREW('Twelve. You were here for most of them.', 'loops_m09 > 3'),
+            N('The street jumps, one last time. Rhea comes with it.')], set: { rhea_freed: true }, then: 'lastJump' }),
         ],
       },
       { when: 'rhea_freed', lines: [CREW('Go up. Look across the river at 08:13.')] },
@@ -197,6 +200,13 @@ export const M09 = {
     },
   },
   fx: {
+    // the loop's last jump, as Rhea is pulled out of it: the reset's sound and light, once, with nothing reset
+    lastJump(rt) {
+      const g = rt.g;
+      g.audio.sweep?.(false);
+      rt.score?.cue('loopReset');
+      if (!g.settings?.comfort) g.hud.flash?.('rgba(200,220,255,0.35)');
+    },
     carrier: (rt) => song(rt, 1, 'theme'),
     childSong: (rt) => song(rt, 0.8),
   },
@@ -227,9 +237,9 @@ const M10_HINTS = {
   sera: ['That guard is watching me.', 'The guard post.', 'Talk to the guard.'],
   power: ['Blind them.', 'Two switches, two years.', 'The 2049 run, then the 2026 run.'],
   projector: ['What did they take from me?', 'The testing chamber.', 'Look at the projector.'],
-  cross: ['Across the chamber.', 'A step ahead of myself.', 'Echo Step to the spillway.'],
+  cross: ['Troopers in the chamber.', 'A step ahead of myself. They follow the copy.', 'Echo Step, then go for the spillway.'],
   prisoners: ['Twelve people in loops.', 'The loop cells.', 'Decide.'],
-  yard: ['Out under the sky.', 'Down the spillway.', 'Reach Sera\'s skiff.'],
+  yard: ['Out under the sky.', 'One trooper by the water.', 'Behind him, to Sera\'s skiff.'],
   intake: ['Earlier intakes.', 'The intake desk.', 'Read them.'],
   office: ['The Director\'s office.', 'Up on the crest.', 'Look inside.'],
 };
@@ -237,10 +247,10 @@ const M10_HINTS = {
 export const M10 = {
   key: 'm10', n: 10, chapter: 'act2', name: 'ENEMIES WHO REMEMBER', title: 'The Continuum\'s detention block', subtitle: 'They believe time must be controlled. Sera helps you out.',
   logline: 'A prison in a dam, on a snowy night.',
-  place: 'dam', sectors: 1, states: ['PRESENT', 'PAST'], drones: [2, 2, 0, 0], ambience: 'hum', ambient: 'loop',
+  place: 'dam', sectors: 1, states: ['PRESENT', 'PAST'], drones: [2, 2, 2, 1], ambience: 'hum', ambient: 'loop',
   motto: 'TIME MUST BE CONTROLLED', gate: 'THE SPILLWAY', crew: C('sera'),
   named: ['sera', 'dale', 'rook', 'guard'],
-  minutes: { main: 30, optional: 6 }, autoExit: 1.2, gateAfter: true,
+  minutes: { main: 31, optional: 6 }, autoExit: 1.2, gateAfter: true,
   fragSpots: [['cellWall', 'floodPole'], ['switch2026', 'crestParapet']],
   fragments: [[
     'Scratched by a cell door: 11, 12, 13. Somebody kept count of the resets.',
@@ -294,13 +304,15 @@ export const M10 = {
           goal: 'The testing chamber: what they took from me.', because: 'Sera says they keep captured weapons there.', done: 'echo_step', hints: M10_HINTS.projector, minutes: 2 },
         { id: 'prisoners', kind: 'choice', scene: 'prisoners', at: 'loopCells', after: ['projector'], spot: { prompt: 'THE LOOP CELLS', offset: [0, 1.2, 2], r: 3.4, model: NO_MODEL },
           goal: 'Twelve prisoners in unstable loops.', because: 'Four seconds, over and over.', done: 'ev_prisoners', hints: M10_HINTS.prisoners, minutes: 4 },
-        { id: 'cross', kind: 'go', at: 'spillwayTunnel', r: 4, after: ['projector'], goal: 'Across the chamber to the spillway.', because: 'A step ahead of myself, the watchers follow the copy.', hints: M10_HINTS.cross, minutes: 3 },
+        // (the chamber has troopers of its own: an Echo Step's afterimage draws them off; the crossing counts once Kai has
+        // stepped ahead of himself)
+        { id: 'cross', kind: 'stealth', at: 'spillwayTunnel', r: 4, after: ['projector'], trigWhen: 'echo_steps >= 1', goal: 'Echo Step past the chamber\'s troopers to the spillway.', because: 'A step ahead of myself, the watchers follow the copy.', hints: M10_HINTS.cross, minutes: 4 },
       ],
     },
     {
       name: 'THE YARD',
       threads: [
-        { id: 'yard', kind: 'go', at: 'seraSkiff', r: 4, after: ['cross', 'prisoners'], goal: 'Down the spillway to Sera\'s skiff.', because: 'Under the open sky, for the first time tonight.', hints: M10_HINTS.yard, minutes: 4 },
+        { id: 'yard', kind: 'stealth', at: 'seraSkiff', r: 4, after: ['cross', 'prisoners'], goal: 'Down the spillway to Sera\'s skiff, past the yard\'s trooper.', because: 'Under the open sky, for the first time tonight.', hints: M10_HINTS.yard, minutes: 4 },
       ],
     },
   ],
@@ -344,12 +356,13 @@ export const M10 = {
   },
   rules: [{ id: 'power', when: 'pw_49 && pw_26', set: { power_cut: true }, say: [N('Both runs dark. The guards\' lamps go blind.')], then: 'blind' }],
   fx: {
-    // the lamps are out: every watcher here sees only what is close
-    blind: (rt) => { for (const s of rt.g.deckWorld?.sentinels || []) s.def.range = Math.min(s.def.range, 3.5); },
+    // the lamps are out: the gallery's and the crown's watchers see only what is close (the testing chamber and the yard
+    // have floodlights of their own)
+    blind: (rt) => { for (const s of rt.g.deckWorld?.sentinels || []) if (LAMPS.test(s.def.id)) s.def.range = Math.min(s.def.range, 3.5); },
     echoUnlock: (rt) => rt.score?.cue('echoStep'),
   },
   adjust(level, rt) {
-    if (rt?.g?.facts?.get('power_cut')) for (const s of level.sentinels) s.range = Math.min(s.range, 3.5);
+    if (rt?.g?.facts?.get('power_cut')) for (const s of level.sentinels) if (LAMPS.test(s.id)) s.range = Math.min(s.range, 3.5);
   },
   spoken: { remember: [K('They moved. They remember where I went.')] },
   step: m10Step,
@@ -367,6 +380,8 @@ export const M10 = {
 };
 M10.outro = M10.hook.lines;
 
+// the watchers the gallery's and the crown's lamps light (quarters 0 and 1): the power cut blinds these
+const LAMPS = /_q[01]s\d+$/;
 // the Continuum's watchers remember Kai's last attempt (§5 M10): after each catch (a setback with a watcher at his
 // shoulder) every patrol starts its round further along, and looks a metre further, up to three
 function m10Step(rt) {
@@ -383,10 +398,10 @@ function m10Step(rt) {
   for (const s of g.deckWorld.sentinels) {
     const path = s.def.path;
     s.def.baseRange ??= s.def.range;
-    s.def.range = Math.min(s.def.baseRange + Math.min(3, n), f.get('power_cut') ? 3.5 : Infinity);
+    s.def.range = Math.min(s.def.baseRange + Math.min(3, n), f.get('power_cut') && LAMPS.test(s.def.id) ? 3.5 : Infinity);
     if (path.length < 2) continue;
     const j = (s.wp + n) % path.length;
-    s.pos.set(path[j][0], 0, path[j][1]);
+    s.pos.set(path[j][0], s.pos.y, path[j][1]); // (on its own floor: the chamber's troopers stand at -12 m)
     s.wp = (j + 1) % path.length;
   }
   if (n === 1) g.hud.say(rt.deck.spoken.remember, f);
@@ -490,18 +505,25 @@ const M11_HAZARDS = [
 const RETURN = 1.3; // seconds a hazard takes to go back where it was
 // the music box's gain at d metres from it: the nearer, the quieter (the bible's "the sound that becomes quieter")
 export const musicGain = (d) => Math.max(0.04, Math.min(1, d / 25));
-const lerp3 = (a, b, s) => a.map((v, i) => v + (b[i] - v) * s);
-
-// where each hazard is now (and whether it is returning), at time t
-export function hazardAt(h, lm, t) {
+// a hazard's two ends in the world: where it goes back to (o) and where it drifts to (r), from its landmark
+export function hazardEnds(h, lm) {
   const [x, y, z, yaw] = lm;
   const c = Math.cos(yaw), s = Math.sin(yaw);
   const w = ([dx, dy, dz]) => [x + dx * c + dz * s, y + dy, z - dx * s + dz * c];
-  const o = w(h.origin), r = w(h.rest);
+  return { o: w(h.origin), r: w(h.rest) };
+}
+// where each hazard is now (and whether it is returning), at time t; written into `out` (m11Step keeps one per hazard,
+// and its ends, for the level: nothing is made each frame)
+export function hazardAt(h, lm, t, out = { pos: [0, 0, 0] }, ends = hazardEnds(h, lm)) {
+  const { o, r } = ends;
   const u = (t + h.phase) % h.period, hold = h.period * 0.55;
   let k, returning = false;
   if (u < RETURN) { k = u / RETURN; returning = true; } else if (u < hold) k = 1; else k = 1 - (u - hold) / (h.period - hold);
-  return { pos: lerp3(r, o, k), k, returning, cycle: Math.floor((t + h.phase) / h.period) };
+  for (let i = 0; i < 3; i++) out.pos[i] = r[i] + (o[i] - r[i]) * k;
+  out.k = k;
+  out.returning = returning;
+  out.cycle = Math.floor((t + h.phase) / h.period);
+  return out;
 }
 
 function m11Step(rt, dt) {
@@ -509,7 +531,10 @@ function m11Step(rt, dt) {
   if (!lv?.landmarks || !g.player) return;
   let S = rt.m11;
   if (!S || S.level !== lv) {
-    S = rt.m11 = { level: lv, t: 0, songT: 1, gain: 0, dist: 0, hits: 0, hit: {}, meshes: {}, hazards: [] };
+    // (each hazard's state, ends and half size, made once for the level and written in place each frame)
+    S = rt.m11 = { level: lv, t: 0, songT: 1, gain: 0, dist: 0, hits: 0, hit: {}, meshes: {},
+      hazards: M11_HAZARDS.map((h) => ({ id: h.id, pos: [0, 0, 0], k: 0, returning: false, cycle: 0 })),
+      ends: M11_HAZARDS.map((h) => lv.landmarks[h.at] && hazardEnds(h, lv.landmarks[h.at])), half: M11_HAZARDS.map((h) => h.size.map((v) => v / 2 + 0.35)) };
     const root = g.deckWorld?.root;
     if (root) for (const h of M11_HAZARDS) {
       const m = new THREE.Mesh(new THREE.BoxGeometry(...h.size), new THREE.MeshStandardMaterial({ color: h.color, roughness: 0.4, metalness: h.id === 'glass' ? 0.1 : 0.5, transparent: h.id === 'glass', opacity: h.id === 'glass' ? 0.45 : 1 }));
@@ -522,20 +547,18 @@ function m11Step(rt, dt) {
   const f = g.facts, present = g.engine.state(g.room) === 'PRESENT';
   const p = g.player.pos;
   // the hazards: in the bright 2049 wards only
-  S.hazards = [];
-  for (const h of M11_HAZARDS) {
-    const lm = lv.landmarks[h.at];
+  for (let i = 0; i < M11_HAZARDS.length; i++) {
+    const h = M11_HAZARDS[i], lm = lv.landmarks[h.at];
     if (!lm) continue;
-    const st = hazardAt(h, lm, S.t);
-    S.hazards.push({ id: h.id, ...st });
+    const st = hazardAt(h, lm, S.t, S.hazards[i], S.ends[i]);
     const m = S.meshes[h.id];
     if (m) {
       m.visible = present;
-      m.position.set(...st.pos);
+      m.position.set(st.pos[0], st.pos[1], st.pos[2]);
       m.rotation.set(0, lm[3], h.tilt ? h.tilt * (1 - st.k) : 0);
     }
     if (!present || !st.returning || g.catching || rt.opening || rt.cinema?.active || g.hud?.talking) continue;
-    const [hx, hy, hz] = h.size.map((v) => v / 2 + 0.35);
+    const [hx, hy, hz] = S.half[i];
     if (Math.abs(p.x - st.pos[0]) < hx && Math.abs(p.z - st.pos[2]) < hz && Math.abs(p.y - 0.86 - st.pos[1]) < hy + 0.9 && S.hit[h.id] !== st.cycle) {
       S.hit[h.id] = st.cycle;
       S.hits++;
@@ -597,7 +620,9 @@ export const M11 = {
   beats: [{ kind: 'custom', goal: 'Find Ward 32.' }],
   coldOpen: {
     first: true, minutes: 1, cue: 'card',
-    shots: [{ cam: 'triage', look: 'odileStation', t: 9 }],
+    // (2026, inside the Ward 32 station: Odile at her desk, as the ward kept her)
+    shots: [{ cam: [11, 2.1, -46], to: [9.5, 1.9, -44.5], look: [5.2, 1.3, -39.6], t: 9 }],
+    year: 'PAST',
     lines: [N('2026. A nurse writes on the ward whiteboard: VAREN, M., 9.'), N('The ink lifts off the board, letter by letter, back into the marker.')],
   },
   quarters: [
@@ -631,7 +656,7 @@ export const M11 = {
             ],
             say: [K('Nine, and thirty-two. The years can\'t agree on her age.'), K('The Child. The third photograph.', 'case_c_child')], set: { child_step3: true },
             goal: 'A photo board in the family room.', because: 'One face, at different ages.', hints: M11_HINTS.photo, minutes: 4 }] },
-        { id: 'tape', name: 'THE INTERCOM ROOM', done: 'ev_tape_played', minutes: 2,
+        { id: 'tape', name: 'THE INTERCOM ROOM', when: 'mira_tape == "kept"', done: 'ev_tape_played', minutes: 2,
           threads: [{ id: 'tapePlay', kind: 'scene', scene: 'tape', at: 'intercomRoom', spot: { prompt: 'THE WARD INTERCOM', offset: [0, 1.3, 0.6], r: 2.6, model: NO_MODEL },
             goal: 'The intercom reaches every ward.', because: 'Odile is still on hers.', done: 'ev_tape_played', hints: M11_HINTS.tape, minutes: 2 }] },
       ],
@@ -771,8 +796,10 @@ export const M12 = {
   beats: [{ kind: 'custom', goal: 'Follow the man behind the glass.' }],
   coldOpen: {
     first: true, minutes: 1, cue: 'card',
-    shots: [{ cam: 'secondRing', look: 'sinkTerraces', t: 9 }],
-    lines: [N('2196. At a window, a man holds white chrysanthemums and watches a younger Kai arrive.'), REV(N('He is seen from behind. On his wrist, a scar.')), N('He whistles three notes, slowly.')],
+    // (2196, where the north wing fell: the Witness on the sinkhole's rim, from behind, looking down where Kai will come)
+    year: 'FUTURE', shots: [{ cam: [0.8, 2.6, -29], to: [0.4, 2.2, -30.5], look: [0, -4, -50], t: 9 }],
+    cast: [{ crew: 'witness', at: 'sinkTerraces', off: [0, 0, 2.6], turn: Math.PI }],
+    lines: [N('2196. On the rim where Helix\'s north wing stood, a man holds white chrysanthemums and waits for a younger Kai.'), REV(N('He is seen from behind. On his wrist, a scar.')), N('He whistles three notes, slowly.')],
   },
   quarters: [
     {
@@ -862,6 +889,8 @@ export const M12 = {
     { id: 'steps', when: 'inv_witnessSteps_done', set: { ev_steps: true } },
     { id: 'witnessStair', when: 't_m12_route && m12_at_stair && !m12_stair_shown', then: 'witnessStair' },
   ],
+  // (a save taken while he shows the stair, the zone and the rule fired, m12_stair_shown still to come: it plays again)
+  resumes: [{ when: 't_m12_route && m12_at_stair', until: 'm12_stair_shown', fx: 'witnessStair' }],
   fx: {
     // the Witness holds the fallen stair as Kai would (REVERSE's own colour and sound), goes down, and lets it go
     witnessStair(rt) {
@@ -889,7 +918,8 @@ export const M12 = {
     person(P, { id: 'witness_chase', crew: 'witness', at: 'northRoofs', off: [-6, 0, 8], turn: -Math.PI / 2 });
     person(P, { id: 'witness_ruin', crew: 'witness', at: 'collapsedStair', off: [0, 3, 5.5], silent: true, when: 't_m12_route && !m12_stair_shown' });
     person(P, { id: 'witness_face', crew: 'witness', at: 'secondRing', off: [0, 0, 4], turn: Math.PI, when: 't_m12_voicemail && !t_m12_escape', prompt: 'TALK TO HIM' });
-    person(P, { id: 'rook_b', crew: 'rook', variant: 'old', at: 'gangway2026', off: [3.2, 0, 1.4], turn: -Math.PI / 2, silent: true, when: 'rook_fate == "persuade" && @PAST' });
+    // (Rook, persuaded, holds the 2026 gate himself: in person, not his echo)
+    person(P, { id: 'rook_b', crew: 'rook', variant: 'old', at: 'gangway2026', off: [3.2, 0, 1.4], turn: -Math.PI / 2, silent: true, when: 'rook_fate == "persuade" && @PAST', inPerson: true });
   },
   hook: { cue: 'cliff', minutes: 1, lines: [N('Kai looks at his own wrist.'), FX(L('SERA', 'Varen. The war\'s started. Both sides are asking for you by name.'), 'radio')] },
   done: 't_m12_escape',
@@ -1032,8 +1062,11 @@ export const M13 = {
       threads: [
         { id: 'stabilizer', kind: 'choice', scene: 'stabilizer', at: 'stabilizer', after: ['devices'], spot: { prompt: 'THE STABILIZER', offset: [0, 1.2, 2.2], r: 3.4, model: NO_MODEL },
           goal: 'The stabilizer: destroy it, or free the people in the frozen block.', because: 'It is what both sides are fighting for.', done: 'stabilizer_destroyed || civilians_freed', hints: M13_HINTS.stabilizer, minutes: 4 },
-        { id: 'district', kind: 'cinema', after: ['stabilizer'],
-          lines: [N('The frozen block stays frozen. Around it, the war goes quiet.', 'faction == "unwritten"'), N('The block thaws. Two hundred and twelve people walk out into the smoke.', 'faction == "continuum"')],
+        // (shot from over the channel onto the frozen block: it stays frozen with its people still inside, or it has come
+        // down and they walk out past the silos; warport.js builds both)
+        { id: 'district', kind: 'cinema', after: ['stabilizer'], shots: [{ cam: [30, 7, -45], to: [36, 6, -50], look: [64, 5, -72], t: 9 }],
+          lines: [N('The frozen block stays frozen, its people still inside. Around it the guns go on, but nothing repeats.', 'faction == "unwritten"'),
+            N('The block thaws. Two hundred and twelve people walk out into the smoke. The Continuum holds the district now.', 'faction == "continuum"')],
           goal: 'Watch the district.', because: 'It will remember what I chose.', hints: M13_HINTS.district, minutes: 2 },
       ],
       sides: [
@@ -1054,7 +1087,8 @@ export const M13 = {
       { when: 'sera_war', lines: [L('SERA', 'Three devices. Three years. Go.')] },
     ],
     m13_listener: [
-      { when: '!listeners_route', lines: [LISTENER('You told us not to go up. We didn\'t. There is a way round the guns. Follow us.')], set: { listeners_route: true } },
+      { when: '!listeners_route', lines: [LISTENER('You told us not to go up. We didn\'t. There is a way round the guns. Follow us.'),
+        N('Two of them run west along the canyon lane with a flare. The patrol there turns to follow it.')], set: { listeners_route: true }, then: 'listenersRoute' },
       { when: 'true', lines: [LISTENER('Keep left of the cranes.')] },
     ],
   },
@@ -1074,9 +1108,9 @@ export const M13 = {
     stabilizer: {
       lines: [N('The stabilizer can freeze the district, and the war with it, or spend itself freeing the two hundred and twelve people locked in the frozen block.')],
       choices: [
-        intent('challenge', 'Destroy it. End the loop.', { consequence: true, lines: [N('The stabilizer goes. The district stops repeating. The war does not, but it is only a war now.'), L('SERA', 'My people will take its coil to your Chronolith. It will hold longer.')],
+        intent('challenge', 'Destroy it. End the loop.', { consequence: true, lines: [N('The stabilizer goes dark. The district stops repeating.'), L('SERA', 'My people will take its coil to your Chronolith. It will hold longer.')],
           set: { faction: 'unwritten', stabilizer_destroyed: true, inv_cap: 10 }, ev: 'stabilizer' }),
-        intent('comfort', 'Redirect it. Free the people.', { consequence: true, lines: [N('Two hundred and twelve people walk out into a war that is still repeating. The Continuum holds the district now.'), L('SERA', 'You chose them. I would have chosen the district. I am glad it was you. Give me your Chronolith a moment.')],
+        intent('comfort', 'Redirect it. Free the people.', { consequence: true, lines: [N('The stabilizer spends itself on the block. The hanging floors come down slowly, like a breath let go.'), L('SERA', 'You chose them. I would have chosen the district. I am glad it was you. Give me your Chronolith a moment.')],
           set: { faction: 'continuum', civilians_freed: true, inv_cap: 10 }, ev: 'stabilizer' }),
       ],
     },
@@ -1095,15 +1129,27 @@ export const M13 = {
     },
   },
   step: m13Step,
+  fx: {
+    // the people who listened draw the canyon lane's patrol off with a flare (the way the signal flares lure a watcher):
+    // for a minute and a half the lane through the canyons is clear
+    listenersRoute(rt) {
+      for (const s of rt.g.deckWorld?.sentinels || []) if (/_q0s0$/.test(s.def.id)) { s.lure = { x: -112, z: 30, t: 90 }; s.mode = 'patrol'; s.suspicion = 0; }
+    },
+  },
   rules: [
     { id: 'shellA', when: 'inv_shellA_done', say: [N('It climbs. Not south. North, over the Continuum line, back into a Continuum gun.')] },
     { id: 'shellB', when: 'inv_shellB_done', say: [N('It climbs south, over the Unwritten line, back into an Unwritten gun.')] },
     { id: 'cap', when: 'inv_cap >= 10', say: [N('REVERSE holds for ten seconds now.')] },
   ],
   overlay(P) {
-    person(P, { id: 'sera', crew: 'sera', at: 'canyonGate', off: [-2, 0, 2.4], turn: Math.PI, prompt: 'TALK TO SERA' });
-    person(P, { id: 'brask', crew: 'soldier', at: 'canyonGate', off: [2, 0, 2.6], turn: Math.PI, silent: true, barks: ['Three devices. Three years. Nobody on either side can reach all three.'] });
-    person(P, { id: 'm13_listener', crew: 'm13_listener', first: 'A listener', seed: 1301, ambient: true, at: 'listenersRoute', off: [0, 0, 2], turn: Math.PI, when: 'warned_evacuees', prompt: 'TALK TO THEM' });
+    // Sera came to the war: in person in 2049, where the guns and Brask are; an echo in the port's other two years
+    person(P, { id: 'sera', crew: 'sera', at: 'canyonGate', off: [-2, 0, 2.4], turn: Math.PI, prompt: 'TALK TO SERA', temporal: ['PRESENT'],
+      echoLines: [N('Only an echo of Sera waits at this gate, in a year the war has not reached.'), L('SERA', 'Not here, Varen. Where the guns are.')] });
+    person(P, { id: 'brask', crew: 'soldier', at: 'canyonGate', off: [2, 0, 2.6], turn: Math.PI, silent: true, when: '@PRESENT', barks: ['Three devices. Three years. Nobody on either side can reach all three.'] });
+    person(P, { id: 'm13_listener', crew: 'm13_listener', first: 'A listener', seed: 1301, ambient: true, at: 'listenersRoute', off: [0, 0, 2], turn: Math.PI, when: 'warned_evacuees && !listeners_route', prompt: 'TALK TO THEM' });
+    // (and once they have spoken, one of them leads the way through the canyons to the gate)
+    person(P, { id: 'm13_listener_go', crew: 'm13_listener', first: 'A listener', seed: 1301, ambient: true, at: 'listenersRoute', off: [0, 0, 2], when: 'listeners_route && !t_m13_cross', silent: true,
+      path: [[-50, 40], [-50, 30], [-30, 30], [-10, 20], [16, 12]], speed: 1.3 });
     person(P, { id: 'm13_freed', crew: 'm13_freed', first: 'Freed prisoner', seed: 1302, ambient: true, at: 'fieldOrders', off: [1.8, 0, 1.4], turn: Math.PI, silent: true, when: 'prisoners_freed' });
   },
   hook: { cue: 'cliff', minutes: 1, lines: [N('The stabilizer\'s last pulse tears a fracture open.'), L('SERA', 'You\'re coming with me.'), K('Where?'), L('SERA', '2196. Where they teach your name.')] },

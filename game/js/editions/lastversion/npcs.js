@@ -68,7 +68,7 @@ export const NPCS = {
     id: 'tala', first: 'Tala', name: 'Tala', role: 'Water keeper', pronoun: HER, color: '#2b8f7a', voice: 'TALA', era: 'past', seed: 10, model: 'rb_tala', variant: 'tala', height: 1.66, vid: 'TALA', walk: 1,
     temporal: ['PAST'], want: 'The water system restored.', fear: 'The observatory being weaponized.',
     barks: ['The dry channel remembers being a river.', 'Three gates. Stone does not argue, it only waits.'],
-    echo: [{ who: 'NONE', text: 'Tala belongs to the year the river was alive. Here she is an echo, lifting a stone gate that is not there.' }, { who: 'TALA', text: 'Left, right, centre. Stone does not argue.' }],
+    echo: [{ who: 'NONE', text: 'Tala belongs to the year the river was alive. Here she is an echo, lifting a stone gate that is not there.' }, { who: 'TALA', text: 'The cliff keeps the order. Stone does not argue.' }],
   },
   mara: {
     id: 'mara', first: 'Mara', name: 'Mara Quill', role: 'Archivist, 2196', pronoun: HER, color: '#8a6a9a', voice: 'MARA', era: 'future', seed: 11, model: 'rb_mara', variant: 'faded', height: 1.68, vid: 'MARA', walk: 1,

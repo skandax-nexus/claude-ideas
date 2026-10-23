@@ -76,7 +76,7 @@ export default {
   frags: { m11: [['gurneyRun', 'ivStand', 'glassWindow'], ['photoBoard', 'intercomRoom', 'recordsHall']] },
   crowd: [
     { era: 'present', years: ['PRESENT', 'PAST'], region: 'hospital', role: 'staffEcho', path: [[-6, 38], [-6, 10], [-30, 4]], n: 4, echo: true },
-    { era: 'present', years: ['PAST'], region: 'hospital', role: 'visitor', path: [[24, 40], [52, 40]], n: 3 },
+    { era: 'present', years: ['PAST'], region: 'hospital', role: 'visitor', path: [[24, 40], [52, 40]], n: 3, barks: ['Ward 32 is through there. They won\'t let you in.', 'She sang all night. Nobody minded.'] },
   ],
 
   build(P) {

@@ -102,6 +102,8 @@ export const M04 = {
   coldOpen: {
     first: true, minutes: 2, cue: 'card',
     shots: [{ cam: 'elderSeat', to: 'stairT3Top', look: 'ring', t: 9 }, { cam: 'underStair', look: 'ring', t: 8 }],
+    // (Niko runs up to the Elder at the ring; they stand in the shot only while it plays)
+    cast: [{ crew: 'elder', at: 'elderSeat', off: [-1, 0, -2.6], turn: 0.3 }, { crew: 'niko', at: 'elderSeat', off: [2.2, 0, -2.2], turn: -1.2 }],
     lines: [L('NIKO', 'Elder. By the ring. A man. He fell out of the stars.'), ELDER('Is there dust on him?'), L('NIKO', 'None.'),
       ELDER('Then it is him again. Put a blanket over him. And do not tell him he has been here before. He never believes it.')],
     title: { shots: [{ cam: 'firePit', look: 'blanketHouse', t: 6 }], lines: [N('He has slept through a day.')] },
@@ -203,7 +205,7 @@ export const M04 = {
     panels: {
       question: [K('Building, plenty, burning, leaving. Which order?')],
       answers: [
-        { intent: 'investigate', label: 'Built, plenty, burned, left.', correct: true, needs: 'ev_ash_layers', lines: [K('Cooking, feasting, nothing. The fire went out. Then cooking again: somebody came back.'), N('The fourth panel sinks. The floor opens.')] },
+        { intent: 'investigate', label: 'Built, plenty, burned, left.', correct: true, needs: 'ev_ash_layers', lines: [K('Cooking, feasting, then the burn. Then a cold hearth, swept clean. They left.'), N('The fourth panel sinks. The floor opens.')] },
         { intent: 'challenge', label: 'Built, burned, plenty, left.', lines: [K('No. Nothing grows here after a fire like that.')] },
         { intent: 'comfort', label: 'Left, built, plenty, burned.', lines: [K('They came to the ring first.')] },
       ],
@@ -223,7 +225,7 @@ export const M04 = {
         SAYS('THE STORYTELLER', 'CROWD_OLD_M', 'One came grey, and would not speak, and sat by the ring until it took him.'),
         SAYS('A VILLAGE GIRL', 'CROWD_CHILD', 'One of them cried.'),
         ELDER('Every one of them said: I have never been here.'), K('I\'ve never—'), N('Nobody laughs.'),
-        N('The ash under the pot: cooking, feasting, nothing, cooking.')],
+        N('The ash under the pot: cooking, feasting, a black burn, and on top a hearth swept clean and cold.')],
       set: { ev_others_before: true, ev_ash_layers: true }, log: 'Others came before me. One came grey.',
     },
     frag_door: { lines: [N('On the lintel: WHEN THE ONE WITH NO DUST RETURNS, SHOW HIM THE DOOR.')], set: { ev_frag_door: true } },
@@ -243,11 +245,11 @@ export const M04 = {
     P.col([x - 2.3, 10, z - 10.3, x + 2.3, 14.2, z - 8.9]);
     P.inter.push({ id: 'chronolith_m04', kind: 'scene', scene: 'chronolith_m04', pos: [x, 12.05, z - 9.6], yaw: 0, r: 0, prompt: '', model: () => makeChronolith(0.5, 'stone'), room: P.rid });
     person(P, { id: 'elder_fire', crew: 'elder', at: 'firePit', off: [-2.6, 0, -1.8], turn: 0.9, when: '@PRESENT && !t_m04_meal', prompt: 'TALK TO THE ELDER' });
-    person(P, { id: 'elder_ring', crew: 'elder', at: 'elderSeat', off: [0, 0, 0.9], turn: Math.PI, when: 't_m04_meal', prompt: 'TALK TO THE ELDER' });
+    person(P, { id: 'elder_ring', crew: 'elder', at: 'elderSeat', off: [0, 0, 0.9], turn: Math.PI, when: 't_m04_meal && @PRESENT', prompt: 'TALK TO THE ELDER' });
     person(P, { id: 'm4_craft', crew: 'm4_craft', first: 'Craftswoman', seed: 401, ambient: true, at: 'firePit', off: [2.4, 0, -1.4], turn: -0.9, silent: true, when: '@PRESENT' });
     person(P, { id: 'm4_teller', crew: 'm4_teller', first: 'Storyteller', seed: 402, ambient: true, at: 'firePit', off: [1.8, 0, 2.2], turn: -2.4, silent: true, when: '@PRESENT' });
     person(P, { id: 'm4_girl', crew: 'm4_girl', first: 'Girl', seed: 403, ambient: true, at: 'firePit', off: [-1.6, 0, 2.6], turn: 2.6, when: '@PRESENT', prompt: 'TALK TO THE GIRL' });
-    person(P, { id: 'niko', crew: 'niko', at: 'waterSteps', off: [1.6, 0, 3.2], turn: -Math.PI / 2, prompt: 'TALK TO NIKO' });
+    person(P, { id: 'niko', crew: 'niko', at: 'waterSteps', off: [1.6, 0, 3.2], turn: -Math.PI / 2, when: '@PRESENT', prompt: 'TALK TO NIKO' });
   },
   // the hook (§5 M4): Niko's last word, and the ring wakes
   hook: { cue: 'cliff', minutes: 1, lines: [L('NIKO', 'Now you have read it. Now you are not early any more.'), N('The ring hums.'), L('NIKO', 'It wakes when you come. Tomorrow it will show you the river.')] },
@@ -385,7 +387,7 @@ export const M05 = {
     ],
     tala: [
       { when: '!quest_tala', lines: [...WATER_HOOK, L('TALA', 'Three gates up the gorge. The cliff knows their order. Read it before you lift anything.')], set: { quest_tala: 'active' } },
-      { when: 'quest_tala && !water_route', lines: [L('TALA', 'Low, high, middle, or whatever the cliff says. Stone does not argue, it only waits.')] },
+      { when: 'quest_tala && !water_route', lines: [L('TALA', 'Read the cliff while the river is alive. Stone does not argue, it only waits.')] },
       { when: 'water_route', lines: [L('TALA', 'The channel will run for longer than either of us.')] },
     ],
   },
@@ -416,8 +418,9 @@ export const M05 = {
     gorge_gate3: { lines: [], then: 'gate3' },
   },
   overlay(P) {
-    person(P, { id: 'niko', crew: 'niko', at: 'weir', off: [1.8, 0, 2.6], turn: Math.PI, when: '!machine_found', prompt: 'TALK TO NIKO' });
-    person(P, { id: 'niko_cairn', crew: 'niko', at: 'cairnSite', off: [0, 0, 1.6], turn: Math.PI, when: 'machine_found', prompt: 'TALK TO NIKO' });
+    // (Niko follows Kai through the years, the bible's "through transitions": he is met in person in every one)
+    person(P, { id: 'niko', crew: 'niko', at: 'weir', off: [1.8, 0, 2.6], turn: Math.PI, when: '!machine_found', prompt: 'TALK TO NIKO', inPerson: true });
+    person(P, { id: 'niko_cairn', crew: 'niko', at: 'cairnSite', off: [0, 0, 1.6], turn: Math.PI, when: 'machine_found', prompt: 'TALK TO NIKO', inPerson: true });
     person(P, { id: 'tala', crew: 'tala', at: 'gorgeMouth', off: [1.8, 0, -4], turn: Math.PI / 2, prompt: 'TALK TO TALA' });
     // a water keeper at the head-stone while the river is alive
     person(P, { id: 'm5_keeper', crew: 'm5_keeper', first: 'Water keeper', seed: 501, ambient: true, at: 'headStone', off: [-2.4, 0, 3], turn: -0.6, when: '@PAST', silent: true });
@@ -479,13 +482,23 @@ const M06_HINTS = {
   windows: ['The shop window.', 'From the street.', 'Look at the three faces.'],
   boards: ['A worn line in the floor.', 'Now, and in 2026.', 'Look at the boards in both.'],
   stair: ['The path ends at a wall.', 'What was there in 2026?', 'Piece it together.'],
-  clocks: ['Three clocks, three years.', 'The window gives the hours.', 'Set each in its own year.'],
+  clocks: ['Three clocks, three years.', 'Each answers in one year. The window gives the hours.', 'Morning in 2026, evening in 2049, noon in 2196.'],
   recording: ['Something opened.', 'The case by the wall.', 'Open the case.'],
   spring: ['The loop has a spring.', 'On the roof, in 2196.', 'Find it in the ruin.'],
   debt: ['Ezra owes fifty years.', 'Take him the spring.', 'Talk to Ezra.'],
   gauge: ['Ezra mended something.', 'The 2026 workbench.', 'Look at the bench.'],
 };
 
+// a brass clock of the escapement: in its own year (and once the window has been read), a choice of hour; the right one
+// holds, a wrong one slips back. In another year its hands will not move.
+const HOURS = [['investigate', 'Morning.', 'morning'], ['comfort', 'Evening.', 'evening'], ['challenge', 'Noon.', 'noon']];
+const CLOCK_SLIP = [N('The hands take the hour, and the escapement slips them back. Not that one.')];
+const clockNo = (fact) => ({ lines: [N('It holds its hour.', fact), K('The hands won\'t move. Not in this year.', `!${fact} && ev_window_faces`),
+  K('Which hour would it want? The shop window keeps the hours.', `!${fact} && !ev_window_faces`)] });
+const clockNode = (year, fact, hour, ok) => ({
+  when: `${year} && ev_window_faces && !${fact}`, lines: [N('A brass clock with its hands loose. It waits for an hour.')],
+  choices: HOURS.map(([i, label, h]) => intent(i, label, h === hour ? { lines: ok, set: { [fact]: true } } : { lines: CLOCK_SLIP })),
+});
 export const M06 = {
   key: 'm06', n: 6, chapter: 'act1', name: 'THE CLOCKMAKER\'S HOUSE', title: 'A workshop that repeats itself', subtitle: 'The clockmaker says you visited decades ago.',
   logline: 'A clockmaker\'s house on the old canal, in three years.',
@@ -501,6 +514,8 @@ export const M06 = {
   // the cold open, after the title: what the shop kept of 1999
   coldOpen: {
     minutes: 1, shots: [{ cam: 'shopWindows', to: 'shopFloor', look: 'repeatArm', t: 9 }],
+    // (what the shop kept of 1999, a residue in its oldest year: the hooded man at the counter, Ezra's echo behind it)
+    year: 'PAST', cast: [{ crew: 'witness', variant: 'hooded', hologram: true, at: 'shopFloor', off: [1.4, 0, 0.4], turn: Math.PI }],
     lines: [N('1999. A man in a hood pays the clockmaker in advance. His wrist is scarred.'), FX(L('WITNESS', 'Set the arm to repeat. He\'ll need to learn it.'), 'echo')],
   },
   quarters: [
@@ -512,7 +527,7 @@ export const M06 = {
         { id: 'ezra', kind: 'talk', npc: 'clockmaker', at: 'shopFloor', after: ['cellar'], goal: 'Talk to the clockmaker.', because: 'He looked up as if I were late.', done: 'ezra_met', hints: M06_HINTS.ezra, minutes: 3 },
         { id: 'arm', kind: 'scene', scene: 'arm', at: 'repeatArm', after: ['ezra'], spot: { prompt: 'WATCH THE ARM', offset: [-7.6, 0.8, 4], r: 3, model: NO_MODEL },
           goal: 'Watch the repeating arm.', because: 'He set it repeating for somebody.', done: 'ev_arm_count', hints: M06_HINTS.arm, minutes: 2 },
-        { id: 'windows', kind: 'scene', scene: 'windows', at: 'shopWindows', after: ['ezra'], until: 't_m06_cross', spot: { prompt: 'THE THREE FACES', offset: [0, 0, 1.6], r: 3, model: NO_MODEL },
+        { id: 'windows', kind: 'scene', scene: 'windows', at: 'shopWindows', after: ['ezra'], spot: { prompt: 'THE THREE FACES', offset: [0, 0, 1.6], r: 3, model: NO_MODEL },
           goal: 'Read the three clock faces in the shop window.', because: 'A clockmaker\'s window is his notebook.', done: 'ev_window_faces', hints: M06_HINTS.windows, minutes: 1 },
         { id: 'cross', kind: 'go', at: 'galleryLanding', r: 3, after: ['arm'], when: 'ev_arm_count', goal: 'Get past the arm to the stair.', because: 'It sweeps the whole floor. It always comes back.', hints: M06_HINTS.cross, minutes: 3 },
       ],
@@ -539,13 +554,15 @@ export const M06 = {
     {
       name: 'THE CLOCK ROOM / ROOF',
       threads: [
-        { id: 'clocks', kind: 'tasks', of: ['clk_26', 'clk_49', 'clk_96'], after: ['stair'],
+        // the escapement (the sheet's [6]): three brass clocks, each answering in one year only, each to be set to the hour
+        // the shop window gives that year (2026 morning, 2049 evening, 2196 noon); a wrong hour slips back
+        { id: 'clocks', kind: 'tasks', of: ['clk_26', 'clk_49', 'clk_96'], after: ['stair', 'windows'],
           spots: [
-            { id: 'clock26', scene: 'clock26', at: 'clock2026', prompt: 'SET THE 2026 CLOCK', offset: [0, -0.4, 1.2], r: 2.6, model: NO_MODEL },
-            { id: 'clock49', scene: 'clock49', at: 'clock2049', prompt: 'SET THE 2049 CLOCK', offset: [0, -0.4, 1.2], r: 2.6, model: NO_MODEL },
-            { id: 'clock96', scene: 'clock96', at: 'clock2196', prompt: 'SET THE 2196 CLOCK', offset: [0, -0.4, 1.2], r: 2.6, model: () => makeClock({ mode: 'stopped' }) },
+            { id: 'clock26', scene: 'clock26', at: 'clock2026', prompt: 'THE BRASS CLOCK', offset: [0, -0.4, 1.2], r: 2.6, model: NO_MODEL },
+            { id: 'clock49', scene: 'clock49', at: 'clock2049', prompt: 'THE BRASS CLOCK', offset: [0, -0.4, 1.2], r: 2.6, model: NO_MODEL },
+            { id: 'clock96', scene: 'clock96', at: 'clock2196', prompt: 'THE BRASS CLOCK', offset: [0, -0.4, 1.2], r: 2.6, model: () => makeClock({ mode: 'stopped' }) },
           ],
-          goal: 'Set the three clocks, each in its own year.', because: 'The escapement only runs when all three agree.', done: 'clock_set', hints: M06_HINTS.clocks, minutes: 6 },
+          goal: 'Set the three clocks: each in the year it answers, to that year\'s hour.', because: 'The escapement only runs when all three agree.', done: 'clock_set', hints: M06_HINTS.clocks, minutes: 6 },
         { id: 'recording', kind: 'scene', scene: 'recording', at: 'recordingCase', after: ['clocks'], spot: { prompt: 'OPEN THE CASE', offset: [0.8, 1.2, 0], r: 2.6, model: NO_MODEL },
           goal: 'Something opened when the clocks agreed.', because: 'A case by the wall clicked.', done: 'recording_found', hints: M06_HINTS.recording, minutes: 2 },
       ],
@@ -601,15 +618,16 @@ export const M06 = {
     windows: { lines: [N('Three faces in the window: morning, evening, noon. Under each, a year: 2026, 2049, 2196.')], set: { ev_window_faces: true } },
     boards_now: { lines: [N('The boards are worn in a path toward the north wall, and stop at brick.')], set: { ev_boards_now: true } },
     boards_then: { lines: [N('In 2026 the path runs on, up a stair later years do not have.')], set: { ev_boards_then: true } },
-    clock26: { when: '@PAST', lines: [N('Morning, as the window says. The 2026 clock takes the hour.')], set: { clk_26: true } },
-    clock26_no: { lines: [K('This one belongs to 2026.')] },
-    clock49: { when: '@PRESENT', lines: [N('Evening. The 2049 clock takes it.')], set: { clk_49: true } },
-    clock49_no: { lines: [K('This one belongs to 2049.')] },
-    clock96: { when: '@FUTURE', lines: [N('Noon, under a roofless lantern. The 2196 clock takes it.')], set: { clk_96: true } },
-    clock96_no: { lines: [K('This one belongs to 2196.')] },
+    clock26: clockNode('@PAST', 'clk_26', 'morning', [N('Morning, as the window says. The clock takes the hour, and holds it.')]),
+    clock26_no: clockNo('clk_26'),
+    clock49: clockNode('@PRESENT', 'clk_49', 'evening', [N('Evening. The clock takes the hour, and holds it.')]),
+    clock49_no: clockNo('clk_49'),
+    clock96: clockNode('@FUTURE', 'clk_96', 'noon', [N('Noon, under a roofless lantern. The clock takes the hour, and holds it.')]),
+    clock96_no: clockNo('clk_96'),
     recording: { lines: [N('In the case, a recording cylinder. The label is in a hand that is nearly yours: FOR THE CHILD.')], set: { recording_found: true, ev_witness_recording: true },
       log: 'A recording, labelled in a hand that is nearly mine.' },
     spring: { lines: [N('In the ruin of 2196, the loop\'s spring, rusted into a knot. Fifty years of Tuesdays, wound tight.')], set: { has_spring: true } },
+    ezra_echo: { lines: [N('2026. Ezra at sixty-five, his hair still brown at the edges, oiling the arm.'), EZRA('Twenty-seven years of Tuesdays. Half done, child. Half done.')] },
     gauge: { lines: [N('On the 2026 workbench: a brass ring gauge stamped HELIX, tagged for return.'), EZRA('A Dr. Rook. Very polite. Very frightened.')], set: { ev_rook_gauge: true } },
   },
   rules: [
@@ -624,8 +642,11 @@ export const M06 = {
     },
   },
   overlay(P) {
-    person(P, { id: 'ezra_shop', crew: 'clockmaker', at: 'shopFloor', off: [1.4, 0, -1.6], turn: Math.PI, when: '!t_m06_stair', prompt: 'TALK TO EZRA MOLL' });
-    person(P, { id: 'ezra_room', crew: 'clockmaker', at: 'clockRoom', off: [1.2, 0, -1.6], turn: Math.PI, when: 't_m06_stair', prompt: 'TALK TO EZRA MOLL' });
+    // Ezra in 2049; in 2026 his echo at sixty-five (the sheet's rb_ezra/ezra65); in the 2196 ruin, nobody
+    person(P, { id: 'ezra_shop', crew: 'clockmaker', at: 'shopFloor', off: [1.4, 0, -1.6], turn: Math.PI, when: '!t_m06_stair && @PRESENT', prompt: 'TALK TO EZRA MOLL' });
+    person(P, { id: 'ezra_room', crew: 'clockmaker', at: 'clockRoom', off: [1.2, 0, -1.6], turn: Math.PI, when: 't_m06_stair && @PRESENT', prompt: 'TALK TO EZRA MOLL' });
+    person(P, { id: 'ezra_shop26', crew: 'ezra26', first: 'Ezra Moll', seed: 601, ambient: true, hologram: true, at: 'shopFloor', off: [1.4, 0, -1.6], turn: Math.PI, when: '!t_m06_stair && @PAST', scene: 'ezra_echo', prompt: 'LISTEN TO EZRA\'S ECHO' });
+    person(P, { id: 'ezra_room26', crew: 'ezra26', first: 'Ezra Moll', seed: 601, ambient: true, hologram: true, at: 'clockRoom', off: [1.2, 0, -1.6], turn: Math.PI, when: 't_m06_stair && @PAST', scene: 'ezra_echo', prompt: 'LISTEN TO EZRA\'S ECHO' });
   },
   hook: { cue: 'cliff', minutes: 1, lines: [FX(L('WITNESS', 'When the child returns, do not let him see the ninth minute.'), 'recording'), K('What is the ninth minute?'),
     EZRA('He said you\'d ask. He said not to tell you. It\'s the minute before your sister—'), N('The arm completes its turn. The clockmaker straightens his apron.'), EZRA('Good evening. You\'re early.')] },
@@ -665,7 +686,9 @@ export const M07 = {
   beats: [{ kind: 'custom', goal: 'Align the three instruments.' }],
   coldOpen: {
     first: true, minutes: 1, cue: 'card',
-    shots: [{ cam: 'summitStair', look: 'horizonRing', t: 8 }],
+    // (on the summit drum, at the first sky: the astronomer and Niko, older, under the horizon ring)
+    shots: [{ cam: [74, 29.4, -67.6], to: [74, 29.2, -69.4], look: [74, 29.2, -80.6], t: 8 }],
+    year: 'PAST', cast: [{ crew: 'm7_oldniko', ambient: true, seed: 702, first: 'Niko', at: 'horizonRing', off: [-2.2, 0, 2], turn: Math.PI }],
     lines: [N('Three thousand years ago, an astronomer and an old man turn a bronze ring toward the Notch.'), L('NIKO', 'There. The star that isn\'t up yet.')],
   },
   processes: [
@@ -746,7 +769,7 @@ export const M07 = {
     bell3: (rt) => rt.g.audio.bell?.(698.46, rt.g.audio.ctx?.currentTime || 0, 0.06, rt.g.audio.sfx),
   },
   overlay(P) {
-    person(P, { id: 'niko', crew: 'niko', at: 'nikoGuide', turn: 0, prompt: 'TALK TO NIKO' });
+    person(P, { id: 'niko', crew: 'niko', at: 'nikoGuide', turn: 0, prompt: 'TALK TO NIKO', inPerson: true });
     person(P, { id: 'm7_astro', crew: 'm7_astro', first: 'Astronomer', seed: 701, ambient: true, at: 'horizonRing', off: [2.4, 0, 2], turn: Math.PI, when: '@PAST', silent: true });
   },
   // the hook: Mira's tape (§5 M7), a nine-year-old's voice through the recording chain
@@ -772,17 +795,22 @@ const M08_HINTS = {
   boot: ['Rook said boot prints.', 'The print case.', 'Stand beside it.'],
   reconstruct: ['Four entries, one order.', 'The echoes walk them.', 'Order them at the island.'],
   containment: ['Lin is in the cube.', 'Through the glass.', 'Talk to Lin.'],
-  escape: ['Lockdown.', 'Drones on the island.', 'Reach the terminal unseen.'],
+  escape: ['Lockdown. They hunt further now.', 'The island drone circles the cube.', 'Wait for it to pass the terminal, then go.'],
   version: ['The terminal names this world.', 'On the island.', 'Read it.'],
   iven: ['Iven Marr.', 'The east arcade.', 'Talk to him, or play his record.'],
   door: ['The staff door is locked.', 'An officer who trusts me.', 'Talk to the officer.'],
   photo: ['The 2026 group photo.', 'The photo wall.', 'Look at it.'],
 };
 const RECEPTION = (t) => SAYS('RECEPTION', 'RECEPTIONIST', t);
+// the drones of the court's last quarter (the island and its south bank) and the lockdown that sets them hunting
+const ISLAND = /_q2s\d+$/;
+function lockdown(defs) {
+  for (const d of defs) if (ISLAND.test(d.id) && !d.locked) Object.assign(d, { locked: true, range: d.range + 4, speed: d.speed + 0.6 });
+}
 export const M08 = {
   key: 'm08', n: 8, chapter: 'act1', name: 'THE FIRST DEATH', title: 'Helix, altered', subtitle: 'The facility you return to is not the one you left.',
   logline: 'Helix, rebuilt round a river. Version seventeen.',
-  place: 'helix_v17', sectors: 1, states: ['PRESENT', 'PAST'], drones: [0, 1, 1], unstable: true, motto: 'VERSION 17',
+  place: 'helix_v17', sectors: 1, states: ['PRESENT', 'PAST'], drones: [0, 1, 2], unstable: true, motto: 'VERSION 17',
   ambience: 'hum', ambient: 'helix', crew: C('rook'),
   labels: { PRESENT: '2049 · V17' },
   named: ['receptionist', 'rook', 'guard', 'dale', 'researcher', 'iven'], // (the altered staff never wear their faces)
@@ -842,22 +870,25 @@ export const M08 = {
     {
       name: 'THE LAST TEN MINUTES',
       threads: [
-        { id: 'reconstruct', kind: 'playback', at: 'reconstruction', after: ['boot'], prompt: 'RECONSTRUCT THE LAST TEN MINUTES', offset: [0, 1.2, 0.6], r: 3, model: NO_MODEL,
+        // (the Prologue's morning, in order: the test moved, the card at 05:40 on an empty corridor, then 08:12-08:14,
+        // the ninth minute of Mission 9's loop, when the ring turns and the Zero Second is missing)
+        { id: 'reconstruct', kind: 'playback', at: 'reconstruction', after: ['boot'], prompt: 'RECONSTRUCT THE MORNING', offset: [0, 1.2, 0.6], r: 3, model: NO_MODEL,
           question: [K('Four entries. Put them in order and the echoes walk them.')],
           wrong: [K('Not yet. That one happened later.')],
           entries: [
-            { label: '05:30. Chamber One opens on Varen\'s card.', lines: [N('05:30. The door opens on my card. Nobody walks through it.')] },
-            { label: '05:33. Test moved to 05:40. Director\'s office.', lines: [N('05:33. Rook\'s office moves the test.')] },
-            { label: '05:38. A man at the console. Dr. Lin beside him.', lines: [N('05:38. A man at the console. Lin beside him.')] },
-            { label: '05:39. The ring turns. One second missing.', lines: [N('05:39. The ring turns. Then a second that isn\'t there.')] },
+            { label: '05:33. Test moved to 05:40. Director\'s office.', lines: [N('05:33. Rook\'s office moves the test to 05:40.')] },
+            { label: '05:40. Chamber One opens on Varen\'s card.', lines: [N('05:40. The door opens on my card. Nobody walks through it.')] },
+            { label: '08:12. A man at the console. Dr. Lin beside him.', lines: [N('08:12. A man at the console. Lin beside him.')] },
+            { label: '08:13. The ring turns. At 08:14, one second missing.', lines: [N('08:13. The ring turns. At 08:14, a second that isn\'t there.')] },
           ],
           echoes: [
-            { crew: 'witness', offset: [-1.4, 0, 2.6], turn: Math.PI, path: [[-12, 0.4, 4], [-6, 0.4, 9], [-2, 0.4, 9.4]] },
+            // (the man at the console, hooded: his face never comes into the light; Mission 12 is where it is seen)
+            { crew: 'witness', variant: 'hooded', offset: [-1.4, 0, 2.6], turn: Math.PI, path: [[-12, 0.4, 4], [-6, 0.4, 9], [-2, 0.4, 9.4]] },
             { crew: 'researcher', offset: [0.4, 0, 2.6], path: [[-11, 0.4, 3], [-5, 0.4, 8], [-1, 0.4, 8.6]] },
           ],
           lines: [N('The echoes walk it again: the door, the corridor, the console.'), REV(N('At the ninth minute a man turns the ring. His face never comes into the light. Lin stands beside him.')),
             K('She was there. She was there, and she let him.')],
-          goal: 'Reconstruct the last ten minutes before the Zero Second.', because: 'The cube kept them, backwards. The log has them forwards.', set: { ev_ninth_minute: true }, log: 'At the ninth minute a man turned the ring. Lin stood beside him.', hints: M08_HINTS.reconstruct, minutes: 6 },
+          goal: 'Reconstruct the morning, up to the Zero Second.', because: 'The cube kept it backwards. The log has it forwards.', set: { ev_ninth_minute: true }, log: 'At the ninth minute a man turned the ring. Lin stood beside him.', hints: M08_HINTS.reconstruct, minutes: 6 },
         { id: 'containment', kind: 'talk', npc: 'researcher', at: 'containmentCube', after: ['reconstruct'], goal: 'Lin is inside the containment cube.', because: 'She was in the reconstruction. She is in there now.', done: 'lin_gone', hints: M08_HINTS.containment, minutes: 3 },
         { id: 'escape', kind: 'stealth', at: 'versionTerminal', r: 3, after: ['containment'], when: 'lin_gone', goal: 'The court locks down. Reach the version terminal unseen.', because: 'Whatever took her set every drone on the island looking.', hints: M08_HINTS.escape, minutes: 2 },
         { id: 'version', kind: 'scene', scene: 'version', at: 'versionTerminal', after: ['escape'], spot: { prompt: 'THE VERSION TERMINAL', offset: [0, 1.2, -1], r: 2.8, model: () => makeScreen(0xd8d4ff) },
@@ -913,7 +944,7 @@ export const M08 = {
       K('She had no shadow. In the security room. I saw it and I didn\'t see it.')], set: { ev_lin_desk17: true } },
     drive: { when: '@PAST', lines: [N('A 2026 drive, labelled SECURITY. Nothing here ever overwrote it.')], set: { has_drive: true } },
     drive_no: { lines: [K('In 2049 this rack is empty. In 2026 it wasn\'t.')] },
-    read_log: { when: 'has_drive && @PRESENT', lines: [N('Four entries readable, 05:30 to 05:40. Rook\'s office is in one.')], set: { ev_log_entries: true } },
+    read_log: { when: 'has_drive && @PRESENT', lines: [N('Four entries readable, from 05:33 to 08:14. Rook\'s office is in one.')], set: { ev_log_entries: true } },
     read_log_no: { lines: [K('The drive first. Then read it here, in 2049.')] },
     boot: { lines: [N('Kai sets his boot beside the glass. The same tread. The same worn heel.'), REV(K('Three thousand years. It\'s mine.'))], set: { ev_boot_mine: true }, log: 'The Site Zero print is my boot.' },
     version: { lines: [REV(N('TIMELINE: VERSION 17. PRIOR VERSIONS: NO SURVIVING RECORD.'))], set: { version_17: true, ev_version17: true }, log: 'This is VERSION 17.' },
@@ -931,15 +962,24 @@ export const M08 = {
     { id: 'lockdown', when: 'lin_gone', say: [N('CONTAINMENT BREACH. Every drone on the island turns.')], then: 'lockdown' },
   ],
   fx: {
+    // the lockdown: every drone of the court's last quarter turns and rushes the cube's far side, then hunts the island
+    // further and faster than before; the version terminal is past them (U7 review: the escape is a stealth beat)
     lockdown(rt) {
       const g = rt.g;
       g.audio.alert?.();
       if (!g.settings?.comfort) g.hud.flash('rgba(200,190,255,0.45)');
+      for (const s of g.deckWorld?.sentinels || []) if (ISLAND.test(s.def.id)) { s.lure = { x: 0, z: -11, t: 4 }; s.suspicion = 0; s.mode = 'patrol'; }
+      lockdown(g.deckWorld?.sentinels?.map((s) => s.def) || []);
     },
+  },
+  // (a load during the lockdown keeps the drones hunting)
+  adjust(level, rt) {
+    if (rt?.g?.facts?.get('lin_gone') && !rt.g.facts.get('t_m08_escape')) lockdown(level.sentinels);
   },
   overlay(P) {
     person(P, { id: 'receptionist', crew: 'receptionist', at: 'receptionDesk', off: [0, 0, -1.4], turn: 0, prompt: 'TALK TO RECEPTION' });
-    person(P, { id: 'rook', crew: 'rook', at: 'rookOffice', off: [1.6, 0, 0.4], turn: Math.PI, prompt: 'TALK TO ROOK' });
+    // (Rook in 2049; in 2026 his echo practises a statement at the window: the confrontation is in his own year)
+    person(P, { id: 'rook', crew: 'rook', at: 'rookOffice', off: [1.6, 0, 0.4], turn: Math.PI, prompt: 'TALK TO ROOK', temporal: ['PRESENT'] });
     // the staff door: shut, unless an officer who trusts Kai opens it (else the old river wall is the climb)
     P.cols.push({ box: [28.4, 0, -21.7, 31.6, 3.4, -21.1], mat: 'door', solid: true, when: '!staff_door_open', id: 'door_m08staff', room: P.rid, lvMat: 'gateSteel' });
     person(P, { id: 'door_pryce', crew: 'guard', at: 'staffDoor', off: [2.4, 0, 1.6], turn: Math.PI, when: 'trust_guard >= 1', prompt: 'TALK TO THE OFFICER' });

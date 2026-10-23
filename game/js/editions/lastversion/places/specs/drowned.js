@@ -67,7 +67,9 @@ export default {
   watch: { m14: [[], [[[-50, -2], [50, -2]]], [[[-40, -54], [40, -54], [40, -48], [-40, -48]], [[-60, -20], [-60, 20]]]] }, // (over the avenues, not through the towers)
   crowd: [
     { era: 'future', years: ['FUTURE'], region: 'drowned', role: 'survivor', path: [[VX - 2, 96], [VX - 2, 40]], y: VY, n: 4 },
-    { era: 'present', years: ['PRESENT'], region: 'rain', role: 'commuter', path: [[-4, 90], [-4, -90]], n: 6 },
+    // (they keep their heads down in the drizzle: Rain City South's lines are the Zero Second's morning, Mission 1's,
+    // and the mission's speech budget is spent on its own people; U7 review)
+    { era: 'present', years: ['PRESENT'], region: 'rain', role: 'commuter', path: [[-4, 90], [-4, -90]], n: 6, barks: [] },
     { era: 'present', years: ['PAST'], region: 'rain', role: 'builder', path: [[-70, 57], [-30, 57]], n: 3, // (along the bank's front, not over its roof)
       barks: ['Thirty floors by spring.'] },
   ],
