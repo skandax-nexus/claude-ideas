@@ -89,7 +89,7 @@ export const M04 = {
   place: 'valley_upper', sectors: 1, states: ['PRESENT', 'PAST'], drones: [0, 0, 0], ambience: 'water', ambient: 'settlement',
   labels: { PRESENT: 'THE VILLAGE', PAST: 'BEFORE THE FIRE' }, // three thousand years before Helix: here, now is the village
   motto: 'YOU CAME BEFORE THE FIRST FIRE', gate: 'THE UNDER-CHAMBER', crew: C('elder'),
-  minutes: { main: 29, optional: 7 }, autoExit: 1.2,
+  minutes: { main: 29, optional: 7 }, autoExit: 1.2, gateAfter: true,
   fragSpots: [['granary'], ['skyFloor', 'cistern'], ['ringStone']],
   fragments: [[
     'Grain tallies: built, full, burned. A fourth, scratched out.',
@@ -287,7 +287,7 @@ export const M05 = {
   named: ['tala'], // (met in this mission's cold open: the settlement's women here wear the Elder's mesh, never Tala's face)
   labels: { PAST: 'THRIVING', PRESENT: 'ABANDONED', FUTURE: 'FLOODED' },
   motto: 'THE RIVER WAS TAUGHT TO STAY', gate: 'THE BURIED MACHINE', crew: C('niko'),
-  minutes: { main: 30, optional: 10 }, autoExit: 1.2,
+  minutes: { main: 30, optional: 10 }, autoExit: 1.2, gateAfter: true,
   fragSpots: [['weir'], ['stiltHouses', 'jetties'], ['basin'], ['aqueduct']],
   fragments: [[
     'A river-stone with a hand-print. While the river lives, it is wet.',
@@ -491,7 +491,7 @@ export const M06 = {
   logline: 'A clockmaker\'s house on the old canal, in three years.',
   place: 'oldtown', sectors: 1, states: ['PRESENT', 'PAST', 'FUTURE'], drones: [0, 0, 0], motto: 'YOU ASK WHAT TIME IT IS. WRONG QUESTION',
   ambience: 'hum', ambient: 'rain', crew: C('clockmaker'),
-  minutes: { main: 26, optional: 10 }, autoExit: 1.2,
+  minutes: { main: 26, optional: 10 }, autoExit: 1.2, gateAfter: true,
   fragSpots: [['canalBridge'], ['galleries']],
   fragments: [[
     'A canal where a river was, walled with stones cut like the head-stone.',
@@ -654,7 +654,7 @@ export const M07 = {
   logline: 'Bronze rings on the Ridge, aligned to a birth.',
   place: 'observatory', sectors: 1, states: ['PAST', 'PRESENT', 'FUTURE'], drones: [0, 1, 2], unstable: true, ambience: 'wind', ambient: 'settlement',
   labels: { PAST: 'THE FIRST SKY' }, motto: 'THEY DID NOT KNOW WHEN. THEY KNEW WHO', gate: 'THE HORIZON RING', crew: C('niko'),
-  minutes: { main: 32, optional: 6 }, autoExit: 1.2,
+  minutes: { main: 32, optional: 6 }, autoExit: 1.2, gateAfter: true,
   fragSpots: [['lowerRing', 'astronomerRoofs'], ['cache'], ['summitStair']],
   fragments: [[
     'A rooftop with footprints that go up the wall.',
@@ -786,7 +786,7 @@ export const M08 = {
   ambience: 'hum', ambient: 'helix', crew: C('rook'),
   labels: { PRESENT: '2049 · V17' },
   named: ['receptionist', 'rook', 'guard', 'dale', 'researcher', 'iven'], // (the altered staff never wear their faces)
-  minutes: { main: 33, optional: 8 }, autoExit: 1.2,
+  minutes: { main: 33, optional: 8 }, autoExit: 1.2, gateAfter: true,
   fragSpots: [['southBridge'], ['eastArcade']],
   fragments: [[
     'A visitor badge printed for VAREN, M., age 9, dated today. Nobody has signed it out.',

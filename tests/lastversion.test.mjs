@@ -2852,39 +2852,52 @@ test('the global ledgers: every question is answered in its mission, a deduction
   }
 });
 
-test('Acts III, IV and the Finale: nothing that ends a mission answers before the story reaches it (gateAfter)', () => {
+test('Acts I to IV and the Finale: nothing that ends a mission answers before the story reaches it (gateAfter)', () => {
   let n = 0;
-  for (const ch of ['act3', 'act4', 'finale']) {
+  for (const ch of ['act1', 'act2', 'act3', 'act4', 'finale']) {
     for (const m of MISSIONS[ch]) {
       assert.ok(m.gateAfter, `${m.key}: its threads' own interactions wait on what they come after`);
       const { level } = LEVELS.find((l) => l.deck.mkey === m.key);
       const deck = asDeck(m);
       const thr = threadsOf(deck);
-      // a thread's own spot, trigger, deduction, record or playback names every thread it comes after
+      const byId = Object.fromEntries(thr.map((t) => [t.id, t]));
+      const chain = (t, seen = new Set()) => { for (const a of t.after || []) if (!seen.has(a)) chain(byId[a], seen.add(a)); return seen; };
+      // a thread's own spot, trigger, deduction, record or playback names every thread it comes after, and every thread
+      // those come after (a talk or an evidence spot is free: a thread done early must not open the rest of the chain)
       for (const t of thr.filter((x) => x.after?.length)) {
         const mine = level.interactables.filter((it) => it.id === (t.scene || t.id) && t.spot || [`deduce_${t.id}`, `residue_${t.id}`, `playback_${t.id}`].includes(it.id));
-        for (const it of mine) for (const a of t.after) { n++; assert.ok((it.when || '').includes(`t_${m.key}_${a}`), `${m.key}/${t.id}: ${it.id} waits on ${a}`); }
+        if ((t.kind === 'go' || t.kind === 'stealth') && t.at && !t.done) mine.push(...level.triggers.filter((tr) => Object.keys(tr.set || {}).includes(`t_${m.key}_${t.id}`)));
+        for (const it of mine) for (const a of chain(t)) { n++; assert.ok(new RegExp(`\\bt_${m.key}_${a}\\b`).test(it.when || ''), `${m.key}/${t.id}: ${it.id || 'its trigger'} waits on ${a}`); }
       }
       // as a chapter starts (its PRIMES, faction neutral), nothing that sets what the mission ends on answers, in any year
       const f = new FactStore();
       for (const c of ORDER.slice(0, ORDER.indexOf(ch) + 1)) for (const k of PRIMES[c] || []) (Array.isArray(k) ? f.set(k[0], k[1]) : f.set(k));
       f.set('faction', 'neutral');
+      // (what the mission ends on, and what ends it in turn: a staged moment plays by itself once what it comes after is done)
       const ends = new Set(IDS(m.done));
-      for (const t of thr) if (ends.has(`t_${m.key}_${t.id}`)) IDS(doneCond(deck, t) || '').forEach((k) => ends.add(k));
+      for (let more = true; more;) {
+        more = false;
+        for (const t of thr) {
+          if (!ends.has(`t_${m.key}_${t.id}`)) continue;
+          const add = [...IDS(doneCond(deck, t) || ''), ...(t.kind === 'cinema' && t.lines?.length ? (t.after || []).map((a) => `t_${m.key}_${a}`) : [])];
+          for (const k of add) if (!ends.has(k)) { ends.add(k); more = true; }
+        }
+      }
       const setsEnd = (node) => [node, ...(node?.choices || [])].some((x) => Object.keys(x?.set || {}).some((k) => ends.has(k)));
-      const open = (when) => ['PRESENT', 'PAST', 'FUTURE'].some((st) => f.test(when || 'true', st));
+      // (open in some year: the thing's own condition and the node's, together)
+      const open = (...whens) => ['PRESENT', 'PAST', 'FUTURE'].some((st) => whens.every((w) => f.test(w || 'true', st)));
       for (const it of level.interactables) {
         const node = m.scenes?.[it.scene];
-        if (node && setsEnd(node)) { n++; assert.ok(!open(it.when), `${m.key}: ${it.id} ends the mission from its start`); }
+        if (node && setsEnd(node)) { n++; assert.ok(!open(it.when, node.when), `${m.key}: ${it.id} ends the mission from its start`); }
       }
       for (const tr of level.triggers) if (Object.keys(tr.set || {}).some((k) => ends.has(k))) { n++; assert.ok(!open(tr.when), `${m.key}: a trigger ends the mission from its start`); }
-      for (const p of level.npcs) {
+      for (const p of level.npcs.filter((x) => !x.silent)) { // (DeckWorld offers no talk to a silent one)
         const talk = m.talks?.[p.id] || m.talks?.[p.crew];
-        if (talk?.some(setsEnd)) { n++; assert.ok(!open(p.when), `${m.key}: ${p.id} ends the mission from its start`); }
+        for (const node of (talk || []).filter(setsEnd)) { n++; assert.ok(!open(p.when, node.when), `${m.key}: ${p.id} ends the mission from its start`); }
       }
     }
   }
-  assert.ok(n >= 30, `${n} gates checked`);
+  assert.ok(n >= 300, `${n} gates checked`);
 });
 
 test('the hold (Mission 18): posts at the place\'s landmarks, each re-anchored in its own year; allies and the lock city change it', () => {

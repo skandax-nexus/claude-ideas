@@ -79,7 +79,7 @@ export const M09 = {
   place: 'northbank', sectors: 1, states: ['PRESENT', 'PAST'], drones: [1, 1, 2, 0, 0], ambience: 'rain', ambient: 'loop',
   labels: { PRESENT: '2049 · 08:05' }, motto: 'YOU HAVE NINE MINUTES', gate: 'THE TOWER', crew: C('engineer'),
   named: ['engineer', 'soldier', 'child'],
-  minutes: { main: 33, optional: 8 }, autoExit: 1.2,
+  minutes: { main: 33, optional: 8 }, autoExit: 1.2, gateAfter: true,
   // the loop: every ninety seconds the street goes back to 08:05 (the patrols to their next round, the rain upward for a
   // second); it stops when the carrier is cut
   loop: { period: 90, upward: true, until: 'transmitter_cut', variants: M09_PATROLS.map((watch) => ({ watch })) },
@@ -101,13 +101,13 @@ export const M09 = {
     {
       name: 'START',
       threads: [
-        { id: 'loop1', kind: 'loop', goal: 'Watch the street through one reset.', because: 'Nine minutes, then everything goes back. Almost everything.', hints: M09_HINTS.loop1, minutes: 4 },
+        { id: 'loop1', kind: 'loop', until: 'transmitter_cut', goal: 'Watch the street through one reset.', because: 'Nine minutes, then everything goes back. Almost everything.', hints: M09_HINTS.loop1, minutes: 4 },
       ],
     },
     {
       name: 'CLOCK A — OBSERVATION',
       threads: [
-        { id: 'loop2', kind: 'loop', after: ['loop1'], goal: 'Watch the market\'s patrol through another reset.', because: 'It walked a different round last time.', hints: M09_HINTS.loop2, minutes: 4 },
+        { id: 'loop2', kind: 'loop', after: ['loop1'], until: 'transmitter_cut', goal: 'Watch the market\'s patrol through another reset.', because: 'It walked a different round last time.', hints: M09_HINTS.loop2, minutes: 4 },
         { id: 'clockA', kind: 'scene', scene: 'clockA', at: 'clockA', after: ['loop2'], spot: { prompt: 'CLOCK A', offset: [0, 1.4, 0.6], r: 2.8, model: NO_MODEL },
           goal: 'Stop clock A.', because: 'Three clocks hold the loop to the transmitter.', done: 'clk_a', hints: M09_HINTS.clockA, minutes: 3 },
       ],
@@ -240,7 +240,7 @@ export const M10 = {
   place: 'dam', sectors: 1, states: ['PRESENT', 'PAST'], drones: [2, 2, 0, 0], ambience: 'hum', ambient: 'loop',
   motto: 'TIME MUST BE CONTROLLED', gate: 'THE SPILLWAY', crew: C('sera'),
   named: ['sera', 'dale', 'rook', 'guard'],
-  minutes: { main: 30, optional: 6 }, autoExit: 1.2,
+  minutes: { main: 30, optional: 6 }, autoExit: 1.2, gateAfter: true,
   fragSpots: [['cellWall', 'floodPole'], ['switch2026', 'crestParapet']],
   fragments: [[
     'Scratched by a cell door: 11, 12, 13. Somebody kept count of the resets.',
@@ -562,7 +562,7 @@ export const M11 = {
   place: 'hospital', sectors: 1, states: ['PRESENT', 'PAST'], drones: [0, 0, 0], unstable: true, motto: 'TEMPORAL DISCONTINUITY', gate: 'WARD 32',
   ambience: 'hum', ambient: 'loop', crew: C('odile'),
   named: ['odile', 'patient', 'kai12'],
-  minutes: { main: 32, optional: 8 }, autoExit: 1.2,
+  minutes: { main: 32, optional: 8 }, autoExit: 1.2, gateAfter: true,
   // the wards that run backwards on their own (not a year: engine.setOverride timeReverse)
   reversed: [{ room: 'h_colonnade' }, { room: 'h_annex' }, { room: 'h_twin' }],
   processes: M11_PROCESSES,
@@ -757,7 +757,7 @@ export const M12 = {
   place: 'helix', wing: 'north', sectors: 1, states: ['PRESENT', 'PAST', 'FUTURE'], drones: [1, 1, 0, 0], unstable: true, motto: 'THE PERSON YOU BECOME WHEN YOU REFUSE TO LET GO',
   ambience: 'hum', ambient: 'helix', crew: C('witness'), gate: 'THE SECOND CHAMBER',
   named: ['witness', 'rook'],
-  minutes: { main: 34, optional: 5 }, autoExit: 1.2,
+  minutes: { main: 34, optional: 5 }, autoExit: 1.2, gateAfter: true,
   processes: M12_PROCESSES,
   // (Kai at the top of the fallen stair in 2196, once he knows the route: the Witness shows him the way down)
   zones: [{ at: 'collapsedStair', box: [-9, -5, -6, 9, 8, 9], set: { m12_at_stair: true }, when: 't_m12_route && @FUTURE' }],
@@ -972,7 +972,7 @@ export const M13 = {
   place: 'warport', sectors: 1, states: ['PRESENT', 'PAST', 'FUTURE'], drones: [2, 2, 3], unstable: true, ambience: 'wind', ambient: 'loop',
   motto: 'THE FUTURE THAT SURVIVES LONG ENOUGH TO REMEMBER US', gate: 'THE DISTRICT', crew: C('soldier'),
   named: ['sera', 'soldier'],
-  minutes: { main: 32, optional: 10 }, autoExit: 1.2,
+  minutes: { main: 32, optional: 10 }, autoExit: 1.2, gateAfter: true,
   processes: M13_PROCESSES,
   fragSpots: [['helmetPile', 'flagPost'], ['craterRim'], ['rollCallDoor']],
   fragments: [[

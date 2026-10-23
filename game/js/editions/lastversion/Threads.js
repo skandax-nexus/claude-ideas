@@ -123,14 +123,21 @@ export function sideState(facts, m, s) {
 export function placeThreads(deck, level) {
   if (!isRewritten(deck)) return;
   const anchor = (name) => (Array.isArray(name) ? { pos: name.slice(0, 3), yaw: name[3] || 0, room: roomAt(level, name) } : level.anchorsAt?.[name] ?? resolveAnchor(level, deck, name));
-  // deck.gateAfter (Acts III, IV and the Finale): a thread's own interaction (its spot, its trigger, its deduction,
-  // record or playback) answers only once the threads it comes after are done, so nothing that ends a mission can be
-  // used before the story reaches it. The evidence a clue or tasks thread lists (`spots`) stays free to find.
+  // deck.gateAfter (every rewritten mission from Act I on): a thread's own interaction (its spot, its trigger, its
+  // deduction, record or playback) answers only once every thread it comes after is done, and every thread those come
+  // after in turn (a talk or an evidence spot is free, so a thread done early must not open the rest of the chain), so
+  // nothing that ends a mission can be used before the story reaches it. A thread before it that a player may walk
+  // past (`until`) counts as done once its `until` holds. The evidence a clue or tasks thread lists (`spots`) stays
+  // free to find.
   const all = threadsOf(deck);
   const ids = Object.fromEntries(all.map((t) => [t.id, t]));
+  const before = (t, seen = new Set()) => {
+    for (const id of t.after || []) if (ids[id] && !seen.has(id)) before(ids[id], seen.add(id));
+    return seen;
+  };
   const gate = (t, when) => {
     if (!deck.gateAfter || !t.after?.length) return when;
-    const need = t.after.filter((id) => ids[id]).map((id) => factOf(deck, ids[id])).join(' && ');
+    const need = [...before(t)].map((id) => (ids[id].until ? `(${factOf(deck, ids[id])} || (${ids[id].until}))` : factOf(deck, ids[id]))).join(' && ');
     return need ? (when ? `(${when}) && ${need}` : need) : when;
   };
   const spot = (s, t) => {
