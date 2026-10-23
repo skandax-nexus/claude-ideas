@@ -379,7 +379,9 @@ consequences gallery. The opening streets' trigger spans the avenue, the strips 
 fallen facades, and the street answers Kai's REVERSE only once the Witness has it. The endings are staged
 (`finale.js` `ENDING_SHOTS`, Runtime.ending): the ring, each added line where it happens (A: the 41's board and Kai
 under it; B: Sera at the seam where one world ends, someone on the other side; C: the 41's stop, Mira at a window box
-on the South Square's shopfront), then the road for the quote and the epilogue; Kai himself is never on screen.
+on the South Square's shopfront), then the road for the quote and the epilogue, held over the clock's ticks and the
+voice; Kai himself is never on screen (`cinema` `hidePlayer`: the game camera, which shows him by its distance, does
+not run while a shot holds the view).
 
 ## Authored and generated
 

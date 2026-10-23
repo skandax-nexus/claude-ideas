@@ -84,9 +84,11 @@ mkdir -p "$OUT/assets/assets/textures" && cp ../game/assets/textures/*.jpg ../ga
 copy_voice() {
   if [ "$EDITION" = "lastversion" ]; then
     for d in ../game/assets/voice/lv/*/; do
+      # (an empty pack, 'cases' while every replay speaks from its own mission's pack, is never fetched: not shipped)
+      [ -s "$d/voice.ogg" ] || continue
       g=$(basename "$d"); mkdir -p "$1/lv/$g"; cp "$d/voice.json" "$d/voice.ogg" "$1/lv/$g/"
     done
-    echo "voices: $(ls -d ../game/assets/voice/lv/*/ | wc -l) packs ($(du -ch ../game/assets/voice/lv/*/voice.ogg | tail -1 | cut -f1))"
+    echo "voices: $(for d in ../game/assets/voice/lv/*/; do [ -s "$d/voice.ogg" ] && echo "$d"; done | wc -l) packs ($(du -ch ../game/assets/voice/lv/*/voice.ogg | tail -1 | cut -f1))"
   elif [ -f ../game/assets/voice/voice.ogg ]; then cp ../game/assets/voice/voice.json ../game/assets/voice/voice.ogg "$1/"
   else echo "warning: no voice pack (tools/voice-pack.*); dialogue will use device speech"; fi
 }

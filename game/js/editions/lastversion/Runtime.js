@@ -2004,18 +2004,21 @@ export class LastVersion {
     g.hud.flash('rgba(255,255,255,0.9)');
     g.audio.silence(1.0);
     this.score.cue(`ending:${key}`);
-    if (g.player?.model) g.player.model.visible = false; // (the staged camera leaves it so: Player.updateCamera)
     g.deckWorld?.refresh?.(); // (the ending's people: finale.js, when ending == key)
     // (staged: the ring, then each line the ending adds where it happens, then Kai's quote and the epilogue over the road;
-    // Kai himself is not on screen: in C he was never born, and in A he stands under the 41's board in a body of his own)
+    // Kai himself is not on screen, hidePlayer: in C he was never born, and in A he stands under the 41's board in a body
+    // of his own. The road's last shot is held over the clock's ticks and the voice, so the game camera never comes back
+    // to him before the overlay)
     const lines = endingLines(key, g.facts);
     const dur = (l) => g.hud.durFn?.(l) || Math.max(2.2, l.text.length * 0.055);
     const plan = ENDING_SHOTS[key] || [];
     const n = 1 + (e.after?.length || 0);
     const shots = plan.map((s, i) => ({ ...s, t: Math.max(2.5, (i < n ? [lines[i]] : i === plan.length - 1 ? lines.slice(n) : []).reduce((a, l) => a + (l ? dur(l) : 0), 0)) }));
-    g.after(1.2, () => this.cinema.play({ shots: shots.length ? shots : null, lines }, () => {
+    const last = plan[plan.length - 1];
+    const hold = last ? [{ cam: last.to || last.cam, to: last.to || last.cam, look: last.look }] : null;
+    g.after(1.2, () => this.cinema.play({ shots: shots.length ? shots : null, lines, hidePlayer: true }, () => {
       this.score.cue('postcredit');
-      g.after(4.2, () => g.hud.say(POSTCREDIT, g.facts, show));
+      this.cinema.play({ shots: hold, lines: [], total: 4.2, hidePlayer: true }, () => this.cinema.play({ shots: hold, lines: POSTCREDIT, hidePlayer: true }, show));
     }));
   }
 }

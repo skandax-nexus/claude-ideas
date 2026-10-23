@@ -24,6 +24,7 @@ import { checkRecord, makeRecord, colliderEntry, Process, MAX_PROCESSES, MAX_PAR
 import * as THREE from '../game/vendor/three.module.min.js';
 import { ENDINGS, LOCK_ORDER, CASE_FILES, CASE_STATES, caseState } from '../game/js/editions/lastversion/acts.js';
 import { ENDING_SHOTS } from '../game/js/editions/lastversion/finale.js';
+import { Cinema } from '../game/js/editions/lastversion/cinema.js';
 import { hazardAt, musicGain } from '../game/js/editions/lastversion/act2.js';
 import { NPCS, DIALOGUE, AMBIENT, npcState, JUN_HOOK, WATER_HOOK, MARA_HOOK, IVEN_HOOK } from '../game/js/editions/lastversion/npcs.js';
 import { PLACES, signature, quartersOf } from '../game/js/editions/lastversion/places/index.js';
@@ -1973,6 +1974,8 @@ test('each voice pack is under 12 MB and the edition under 22 MB; Station Zero\'
     total += s;
   }
   assert.ok(total < 22e6, `the edition's voices: ${(total / 1e6).toFixed(2)} MB`);
+  // (U8 review: an empty pack, the cases', is neither fetched, Runtime.packsFor, nor shipped in the APK or the preview)
+  assert.ok(fs.readFileSync('android/build-apk.sh', 'utf8').includes('[ -s "$d/voice.ogg" ] || continue'), 'build-apk.sh skips an empty pack');
   const { createHash } = await import('node:crypto');
   const sha = (f) => createHash('sha256').update(fs.readFileSync(f)).digest('hex');
   assert.equal(sha('game/assets/voice/voice.json'), '4654fc0b03d7d19eef14ee870550a6112137ff3cdc87217a56987ad07917685e', 'Station Zero voice.json');
@@ -3180,6 +3183,38 @@ test('U8 review: the timeline, the years, the letter, the plant in Mira\'s memor
   assert.ok(new Set(pupils).size >= 2, pupils.join());
   const tomas = lv('m15').cast.find((c) => c.id === 'tomas');
   assert.ok(!lv('m15').cast.some((c) => c.crowd && c.model === tomas.model && c.variant === tomas.variant), 'Tomas\'s look is his own');
+});
+
+// (U8 review, the bot's per-step sample: the game camera shows Kai again by its distance in the 1.2 s before the ending's
+// moment, and a shot never runs it, so he stood in every shot of Ending C; the clock and the voice were over his back)
+test('U8 review: the endings keep Kai off screen from the first shot to the overlay (cinema hidePlayer)', () => {
+  const model = { visible: true };
+  const done = [];
+  const g = {
+    player: { pos: new THREE.Vector3(0, 0, 0), H: { x: 0, z: 1 }, model, cinema: null, rayDistance: (o, d, m) => m },
+    input: { keys: new Set(), state: {} }, facts: new FactStore(),
+    hud: { say: (l, f, then) => done.push(then) }, after: (s, fn) => done.push(fn),
+  };
+  const c = new Cinema({ g, level: { landmarks: {} } });
+  c.play({ shots: [{ cam: [0, 5, 5], look: [0, 0, 0] }], lines: [{ who: 'NARRATOR', text: 'Mira wakes.' }], hidePlayer: true }, () => {
+    c.play({ shots: [{ cam: [0, 9, 9], look: [0, 0, 0] }], lines: [], total: 4.2, hidePlayer: true });
+  });
+  assert.ok(!model.visible && g.player.cinema, 'hidden, and the first shot taken, at once');
+  model.visible = true; // (as the game camera would leave him)
+  c.step(0.1);
+  assert.ok(!model.visible, 'and at every step of it');
+  model.visible = true;
+  done.shift()(); // (the lines end: the held shot follows with no frame of the game camera between)
+  assert.ok(!model.visible && g.player.cinema?.pos.y === 9, JSON.stringify(g.player.cinema));
+  // an ordinary moment does not touch him
+  model.visible = true;
+  c.play({ shots: [{ cam: [0, 5, 5], look: [0, 0, 0] }], lines: [{ who: 'NARRATOR', text: 'Rain.' }] });
+  c.step(0.1);
+  assert.ok(model.visible);
+  // Runtime.ending plays all three of its moments (the ending, the clock's ticks, the voice) with him hidden
+  const src = fs.readFileSync('game/js/editions/lastversion/Runtime.js', 'utf8');
+  const end = src.slice(src.indexOf('  ending(key) {'));
+  assert.equal((end.match(/hidePlayer: true/g) || []).length, 3);
 });
 
 test('U8 review: a talk the story has not reached is not offered, a REVERSE it has not reached does not answer, and a thread done early is paid in order', () => {

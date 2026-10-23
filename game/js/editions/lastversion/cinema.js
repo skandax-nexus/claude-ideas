@@ -136,7 +136,10 @@ export class Cinema {
     ];
   }
 
-  play({ shots = 'default', lines = [], cue = null, letterbox = true, total = null } = {}, then = null) {
+  // hidePlayer: Kai is off screen for the whole of it (the endings: in C he was never born). The game camera, which
+  // shows him again by its distance, is not run while a shot holds the view, so he is hidden at each step of it and its
+  // first shot is taken at once (no frame of the game camera between two such moments)
+  play({ shots = 'default', lines = [], cue = null, letterbox = true, total = null, hidePlayer = false } = {}, then = null) {
     const g = this.g;
     this.end();
     // (the pointer stays locked: letting it go would open the pause menu on a desktop; held keys are dropped in step)
@@ -150,10 +153,11 @@ export class Cinema {
         const cam = this.point(s.cam, p0.clone().add(_a.set(0, 4, 8)));
         return { cam, to: s.to ? this.point(s.to, cam) : cam, look: this.point(s.look, p0), t: s.t || share };
       }) : null,
-      i: 0, t: 0, letterbox, then,
+      i: 0, t: 0, letterbox, then, hidePlayer: hidePlayer && !!list,
     };
     if (letterbox && typeof document !== 'undefined') document.body.classList.add('lvcine');
     const mine = this.active;
+    if (mine.hidePlayer) this.step(0);
     return new Promise((resolve) => {
       mine.resolve = resolve;
       const done = () => this.active === mine && this.end();
@@ -194,6 +198,7 @@ export class Cinema {
     const k = ease(Math.min(1, a.t / Math.max(0.1, s.t)));
     const pos = _a.copy(s.cam).lerp(s.to, k);
     g.player.cinema = { pos: { x: pos.x, y: pos.y, z: pos.z }, target: { x: s.look.x, y: s.look.y, z: s.look.z }, up: { x: 0, y: 1, z: 0 } };
+    if (a.hidePlayer && g.player.model) g.player.model.visible = false;
     if (a.t >= s.t && a.i < a.shots.length - 1) {
       a.i++;
       a.t = 0;
