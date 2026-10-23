@@ -42,9 +42,9 @@ export default {
     // (24 asked for, with the seven named and tier-2 people; Rain City's faces walk at most twice a year in a place, so
     // crowds.js casts 13, in this order: the knot at the staff gate first (the pursuit ends in it), then the station
     // staff, the avenue's commuters, the checkpoint queue, the EMS, the concourse)
-    // after the Zero Second, a knot of people at the staff gate, where the woman with Mira's face is lost among them
-    { era: 'present', years: ['PRESENT'], region: 'rain', role: 'commuter', path: [[-9, -217.5], [9, -217.5], [7, -221], [-7, -221]], n: 4, when: 'after_zero' },
-    // (the morning's people are not out yet at 05:40, while the cold open plays: co_m01)
+    // Helix's people at the staff gate, waiting to badge in all morning (the crowd where the woman with Mira's face is
+    // lost, after the Zero Second); the morning's people are not out yet at 05:40, while the cold open plays (co_m01)
+    { era: 'present', years: ['PRESENT', 'PAST'], region: 'rain', role: 'commuter', path: [[-9, -217.5], [9, -217.5], [7, -221], [-7, -221]], n: 4, when: '!co_m01' },
     { era: 'present', years: ['PRESENT', 'PAST'], region: 'rain', role: 'staff', path: [[-30, -153], [28, -153]], y: 3.4, n: 3, when: '!co_m01' },
     { era: 'present', years: ['PRESENT', 'PAST'], region: 'rain', role: 'commuter', path: [[-11, 6], [-11, -64]], n: 4, when: '!co_m01' },
     { era: 'present', years: ['PRESENT', 'PAST'], region: 'rain', role: 'commuter', path: [[11, -8], [11, -66]], n: 4, when: '!co_m01' },

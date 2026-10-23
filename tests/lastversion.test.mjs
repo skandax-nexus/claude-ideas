@@ -2603,14 +2603,18 @@ test('the Prologue reads fairly: the deduction names what Kai found, one ring in
   const len = ch.path.reduce((a, p, i) => a + (i ? Math.hypot(p[0] - ch.path[i - 1][0], p[2] - ch.path[i - 1][2]) : 0), 0);
   assert.ok(len >= 150 && len <= 220, `${len.toFixed(0)} m`);
   const end = ch.path[ch.path.length - 1];
-  assert.ok(rs.crowd.some((c) => c.when === 'after_zero' && c.path.some(([x, z]) => Math.hypot(x - end[0], z - end[2]) < 10)), 'a crowd at the staff gate');
+  assert.ok(rs.crowd.some((c) => c.path.some(([x, z]) => Math.hypot(x - end[0], z - end[2]) < 10)), 'a crowd at the staff gate');
   // (and cast: Rain City's faces run out at 13 walkers, and the knot at the gate is cast first)
   const game = { engine: engine(), facts: new FactStore(), story: null, campaign: { lv: true, chapter: 'prologue', deck: 0, sector: 0, flags: {}, quarter: 0 }, log: [], hud: { say() {} }, deckWorld: { flags: {}, npcs: [] } };
   const rt = Object.assign(Object.create(LastVersion.prototype), { g: game, def: LV });
   game.story = rt.makeStory('prologue');
   const lv = rt.buildLevel(game.campaign);
-  const atGate = lv.npcs.filter((n) => n.crowd && /after_zero/.test(n.when || '') && Math.hypot(n.pos[0] - end[0], n.pos[2] - end[2]) < 12).length;
-  assert.ok(atGate >= 3, `${atGate} people at the staff gate after the Zero Second`);
+  const crowd = lv.npcs.filter((n) => n.crowd);
+  const atGate = crowd.filter((n) => Math.hypot(n.pos[0] - end[0], n.pos[2] - end[2]) < 12).length;
+  assert.ok(atGate >= 3, `${atGate} people at the staff gate`);
+  // (and the morning keeps its people: at least ten walk before the Zero Second, the bot's count at Kai's door)
+  const morning = crowd.filter((n) => !/after_zero/.test(n.when || '')).length;
+  assert.ok(morning >= 10, `${morning} walk the morning`);
   // a load in Missions 2 and 3 recaps its own mission, not the morning before the crash
   for (const k of ['m02', 'm03']) assert.equal(PREVIOUSLY[k]?.length, 3, k);
   assert.ok(!/Tuesday/.test(M01.subtitle), '14 March 2049 is a Sunday');
