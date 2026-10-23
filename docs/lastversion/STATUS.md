@@ -6,17 +6,17 @@ AFTERZERO engine, all 23 missions written by hand on threads (the Prologue in U6
 and the Finale in U8), with the CASE FILES after an ending. How it works: [`DESIGN.md`](DESIGN.md).
 
 **Each chapter's length** (minutes; the model is the length model of §9.8, main path + side stories, which is each
-sheet's target; the bot's is the game's own telemetry for the full run of `tests/lastversion.mjs` on 2026-10-22, 312 checks, all pass):
+sheet's target; the bot's is the game's own telemetry for the full run of `tests/lastversion.mjs` on 2026-10-23, 321 checks, all pass):
 
 | Chapter | Target (model) | The bot |
 | --- | --- | --- |
-| Prologue | 97 (74 + 23) | 12.1 (Mission 1 walked in 9.7; Missions 2 and 3 by the Prologue's own checks, which place Kai beat to beat) |
-| Act I | 191 (150 + 41) | 42.8 |
-| Act II | 198 (161 + 37) | 34.0 |
-| Act III | 194 (154 + 40) | 43.0 |
-| Act IV | 156 (124 + 32) | 28.1 |
-| Finale | 50 (40 + 10; the sheet allows 90) | 7.5 |
-| The campaign | 886 (703 + 183), about 15 hours | 167.5, under 3 hours |
+| Prologue | 97 (74 + 23) | 12.8 (Mission 1 walked in 10.2; Missions 2 and 3 by the Prologue's own checks, which place Kai beat to beat) |
+| Act I | 192 (151 + 41) | 42.5 |
+| Act II | 199 (162 + 37) | 36.1 |
+| Act III | 194 (154 + 40) | 44.8 |
+| Act IV | 156 (124 + 32) | 28.4 |
+| Finale | 50 (40 + 10; the sheet allows 90) | 10.5 |
+| The campaign | 888 (705 + 183), about 15 hours | 175.1, under 3 hours |
 
 The bot knows every coordinate, reads nothing twice, never looks around or gets lost, asks for no hint and plays one
 or two side stories a mission; the model, not the bot, is the estimate of a player's time, and neither has been
@@ -260,7 +260,16 @@ measured with a player.
   (0 when absent: its eye 1.6 m above it) and, when it has one, sees and catches only on its own floor (`onFloor`: Mission
   10's chamber troopers do not see Kai on the yard over their heads), so Station Zero, which never sets it, is unchanged
   (12 lines added, 5 changed); `node tests/smoke.mjs` passed and `node tests/qa.mjs` 26/26 after the last of it. The
-  act1, act2, common, act3 and prologue packs were recorded for the changed lines (`voice-lv.sh check`: all up to date).
+  act1, act2, common, act3 and prologue packs were recorded for the changed lines (`voice-lv.sh check`: all up to date;
+  since a container restart emptied the render cache it reads every clip as not rendered here, with 0 not in a pack, 0
+  from older text and 0 no longer said). The model since: Mission 8 34 + 8 and Mission 10 31 + 6 minutes (Act I 192,
+  Act II 199). The bot's survey lets a mission's opening end before its first view (a cold open shot in its own year
+  puts the place back in its year as it ends, so three views had been taken in the wrong year: Missions 6, 7 and 12).
+  Checked (2026-10-23): `npm test` 143/143; the whole browser bot (`node tests/lastversion.mjs`) 321 passed, 0 failed,
+  with no page error: NEW GAME to Ending C, Missions 4-13 walked in 6.2-9.4 minutes of game time each but Mission 12's
+  4.7 (Act I 42.5, Act II 36.1), every line said (1,648) from the packs, `speechSynthesis` never asked, and the
+  survey's 1,657 pairs of views in different places (the closest 23 bits apart); Station Zero: `node tests/smoke.mjs`
+  passed, `node tests/qa.mjs` 26/26.
 - **The NPC system** of the supplement: trust, knowledge, quest state, temporal state, faction
   standing and evidence flags in the save; dialogue choices by intent (challenge / comfort /
   investigate / withdraw); barks; echoes standing in for people absent from a state; the case
