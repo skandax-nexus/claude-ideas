@@ -320,7 +320,7 @@ measured with a player.
   before (where the one failure was Kai on screen in Ending C, fixed since) and in a Prologue run after (81 passed, 0
   failed); Station Zero: `node tests/smoke.mjs` passed, `node tests/qa.mjs` 26/26.
 - **The play-through and test audit** (2026-10-23; `git log a18e119..`): the campaign played and the packs checked
-  again after the visual and casting tour. The whole browser bot (`node tests/lastversion.mjs`, 39.1 minutes on this
+  again after the visual and casting tour. The whole browser bot on a18e119 (`node tests/lastversion.mjs`, 39.1 minutes on this
   box) passed 335 of 335 with no page error: NEW GAME to Ending C, the CASE FILES and their replays, the survey (1,657
   pairs of views in different places, the closest 22 bits apart); 1,633 lines said, every one from the packs,
   `speechSynthesis` never asked, the cues card, chapter, zero and ending:C played. The voices: the game's own lookup
@@ -341,7 +341,10 @@ measured with a player.
   while held), and no chapter is short (every mission at least 40 lines and 400 words of its own, 2.5 minutes of
   recorded speech, a place of 1.5 ha, six main threads, a side story, a cold open and a hook; the shortest, Mission
   12, says 42 lines, 443 words and 2.6 minutes). Fixed: Mira's raincoat carried two `head` rules, the later and older
-  one silently overriding the rule the tour wrote for her hair under the hood (esbuild warned in both builds). Checked:
+  one silently overriding the rule the tour wrote for her hair under the hood (esbuild warned in both builds); and the
+  bot's Zero Second duck, the check that had failed in earlier full runs, is sampled by the audio clock 0.3 s into the
+  silence (its 300 ms timer fired after the page's other tasks, 602 ms in a probe, and read the music coming back; the
+  game's duck was right): the Prologue run passed 81 of 81 twice after it. Checked:
   `npm test` 156/156; Station Zero: `node tests/smoke.mjs` passed, `node tests/qa.mjs` 26/26; `bash
   android/build-apk.sh` 51,396,546 bytes (Station Zero's voice only, no edition pack); `EDITION=lastversion bash
   android/build-apk.sh` 47,314,930 bytes (seven packs, 41 models; budget 50 MB), its preview 55.1 MB with no file over
