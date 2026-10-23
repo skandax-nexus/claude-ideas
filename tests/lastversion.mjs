@@ -409,16 +409,18 @@ const station = await az(() => {
   return r;
 });
 // (Jun's lines play out, but the duck is checked at the minute itself: the Zero Second may come while he talks. The duck
-// is one second of the sound's own time, so it is sampled 0.3 s after the cue inside the page: sampled after two round
-// trips to the page, a busy machine took the bot past the second (the music already coming back, 0.11-0.19))
-const duck = await az(async () => {
+// is one second of the sound's own clock from the cue, so it is sampled 0.3 s into it by that clock, waited for in the
+// same task: sampled after two round trips to the page, a busy machine took the bot past the second, and so did a 300 ms
+// timer, which fires only after the page's other tasks (the music already coming back, 0.11-0.21))
+const duck = await az(() => {
   for (let t = 0; AZ.hud.talking && !AZ.facts.get('zero_second') && t < 60; t += 0.1) AZ.simulate(0.1);
   for (let i = 0; i < 40 && !AZ.facts.get('zero_second'); i++) AZ.simulate(0.1);
-  await new Promise((r) => setTimeout(r, 300));
-  return { voice: +AZ.audio.voiceBus.gain.value.toFixed(3), music: +AZ.audio.music.gain.value.toFixed(4), amb: +AZ.audio.amb.gain.value.toFixed(4), heard: AZ.edition.score.heard.includes('zero') };
+  const a = AZ.audio, c = a.ctx, cue = (a.silentUntil || 0) - 1, w0 = performance.now();
+  while (c.currentTime < cue + 0.3 && performance.now() - w0 < 3000) { /* the audio thread keeps the clock */ }
+  return { voice: +a.voiceBus.gain.value.toFixed(3), music: +a.music.gain.value.toFixed(4), amb: +a.amb.gain.value.toFixed(4), heard: AZ.edition.score.heard.includes('zero'), into: +(c.currentTime - cue).toFixed(3) };
 });
 check(station.quarter === 2 && (await az(() => AZ.facts.get('jun_board'))), 'Jun Park: the board says the 41 arrives yesterday (LINE 41, the third quarter)', JSON.stringify(station));
-check(duck.heard && duck.voice === 1 && duck.music < 0.05, 'the Zero Second\'s cue: the music ducks for a second while the voices stay at full level', JSON.stringify(duck));
+check(duck.heard && duck.voice === 1 && duck.music < 0.05 && duck.into >= 0.25 && duck.into < 0.9, 'the Zero Second\'s cue: the music ducks for a second while the voices stay at full level', JSON.stringify(duck));
 const zero = await az(() => { LVB.talkOut(); AZ.simulate(4); LVB.talkOut(); return { ...LVB.f('zero_second', 'after_zero'), said: LVB.said.includes('NONE: All the clocks stop.'), train: AZ.deckWorld.dynamic.some((d) => d.el.mat === 'car' && d.mesh.visible) }; });
 check(zero.zero_second && zero.after_zero && zero.said && zero.train, 'the Zero Second: the clocks stop and the 41 comes in', JSON.stringify(zero));
 // quest chain A: Last Train Home
