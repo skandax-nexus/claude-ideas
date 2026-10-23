@@ -234,14 +234,18 @@ measured with a player.
   is where it is seen. A test checks that every main conversation of Acts I and II is with someone met in person. The
   set pieces: Mission 6's escapement is three brass clocks, each answering in one year and only to the hour the shop
   window gives it (the window is required); Mission 8's reconstruction is the Prologue's morning (05:33 the test moved,
-  05:40 the card on an empty corridor, 08:12 the man at the console, 08:13 the ring, 08:14 the missing second), and its
-  lockdown sends the court's last drones round the cube, a drone of the island's own patrolling it, further and faster;
+  05:40 the card on an empty corridor, 08:12 the man at the console, 08:13 the ring, 08:14 the missing second); Lin is
+  spoken to inside the containment cube (its door stands open until then), the breach seals it round Kai, and the escape
+  is a year switch: in 2049 the glass holds, 2026 has no cube, so he walks out through 2026 and comes back to 2049 at the
+  version terminal (the terminal is 2049's), past the court's last drones, which rush to the sealed door and then hunt
+  further and faster, and a drone of the island's own that circles the cube in 2049 (and stands still while Kai is in
+  2026, so he can watch it go round from inside the glass and pick his moment);
   Mission 10's testing chamber and gorge have troopers on their own floors (`watch` paths may give a floor, `y`, and a
   `when`), the crossing waits on an Echo Step, the power cut blinds the gallery's and the crown's lamps only, and the
   released prisoners walk out of the cells; Mission 13's frozen block comes down and its people walk out past the silos
   when they are freed, or stand frozen with it when the stabilizer is destroyed, the choice's lines and the district's
   agree and the district is shot at the block, and the people who listened draw the canyon lane's patrol off with a
-  flare. The cold opens: Missions 4, 6, 7, 9 and 12 stage their people, Missions 6, 7, 11 and 12 are shot in their own
+  flare (lit again after a load). The cold opens: Missions 4, 6, 7, 9 and 12 stage their people, Missions 6, 7, 11 and 12 are shot in their own
   year (`coldOpen.year`: every room that has it, each put back after; the Chronolith does not drain while an opening
   plays), Mission 12's from the rim of the 2196 sinkhole behind the Witness, Mission 11's inside the Ward 32 station.
   Crowds say their own lines (Old Town, V17, the Ridge's surveyors, the dam, the hospital, the port; Mission 14's 2049
@@ -251,10 +255,12 @@ measured with a player.
   cleared at a load and its log line is written once; Mission 10's cells have floors. Nits: Mission 4's ash reads as a
   leaving, Tala's echo and second talk keep the cliff's order to itself, Rhea's rescue is the loop's last jump and her
   count follows the resets Kai saw, Mission 11's intercom story is offered only with the tape kept, the upward rain
-  gives back the current year's weather, Mission 11's hazards make nothing per frame. Shared engine (one change, listed):
-  `world/DeckWorld.js`'s Sentinel stands on `def.y` (0 when absent: its eye 1.6 m above it), so Station Zero, which never
-  sets it, is unchanged; `node tests/smoke.mjs` passed and `node tests/qa.mjs` 26/26. The act1, act2, common and
-  prologue packs were recorded for the changed lines (`voice-lv.sh check`: all up to date).
+  gives back the current year's weather, Mission 11's hazards make nothing per frame; a patrol REVERSE or Mission 21's
+  elites wind back keeps its floor. Shared engine (one change, listed): `world/DeckWorld.js`'s Sentinel stands on `def.y`
+  (0 when absent: its eye 1.6 m above it) and, when it has one, sees and catches only on its own floor (`onFloor`: Mission
+  10's chamber troopers do not see Kai on the yard over their heads), so Station Zero, which never sets it, is unchanged
+  (12 lines added, 5 changed); `node tests/smoke.mjs` passed and `node tests/qa.mjs` 26/26 after the last of it. The
+  act1, act2, common, act3 and prologue packs were recorded for the changed lines (`voice-lv.sh check`: all up to date).
 - **The NPC system** of the supplement: trust, knowledge, quest state, temporal state, faction
   standing and evidence flags in the save; dialogue choices by intent (challenge / comfort /
   investigate / withdraw); barks; echoes standing in for people absent from a state; the case
@@ -598,9 +604,8 @@ measured with a player.
   and three of Act IV's stage their own people (`coldOpen.cast`) and Missions 6, 7, 11 and 12 are shot in their own year
   (`coldOpen.year`); the others use whoever already stands in the shot, in the mission's starting year and light (no
   night or grade of their own: Mission 4's "at night" is the afternoon's); the case files' replays have none of their own.
-- **Mission 8's escape** is a stealth beat since the U7 review (a drone of the island's own at the lockdown, the court's
-  last quarter hunting further and faster), but Kai is never inside the containment cube himself (the sheet's Lin is);
-  Mission 9 has no 08:05-08:14 clock on the HUD (the tower's "08:13" is said, not timed).
+- **Mission 9** has no 08:05-08:14 clock on the HUD (the tower's "08:13" is said, not timed), and Mission 4's cold open
+  has no sleeping Kai in its shot (the edition has no lying pose; he is in the blanket house when the title comes).
 - **A human playtest** of the rewritten campaign (do the deductions read fairly, do the chases feel like pursuits,
   does Mission 18's hold read as a defence and Mission 20's board as an alignment, are the model's minutes what a
   player takes) has not been done; the bot and the length model stand in for it.
