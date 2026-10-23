@@ -37,6 +37,7 @@ import { LV_MODELS, SHARED_MODELS, MANIFEST, CHAPTER_CAST, COMMON, sexOf, isChil
 import { WARDROBE, hasVariant, packRules, SETTLEMENT, PRESENT_PALETTES } from '../game/js/editions/lastversion/wardrobe.js';
 import { ERAS, EXCEPTIONS, AMBIENT_CAST, eraModels, MAX_PEOPLE, MET, CAP, OLD, PALETTE, PALETTE_ROLES, ROLE_NAMES } from '../game/js/editions/lastversion/crowds.js';
 import { PIECES } from '../game/js/editions/lastversion/garments.js';
+import { MISSION_BARKS } from '../game/js/editions/lastversion/barks.js';
 import { M01, m01Shots } from '../game/js/editions/lastversion/prologue.js';
 import { WATCHERS, HUMAN, watcherModels, kindsOf } from '../game/js/editions/lastversion/watchers.js';
 import { spokenLines, buildLevels, voiceOf, lexicon, GROUPS, chapterCardLines, missionCardLines, endingLines, POSTCREDIT, choiceLine, numberWords } from '../game/js/editions/lastversion/voicelines.js';
@@ -1922,6 +1923,35 @@ test('crowds are not clones: one face at most CAP times a year in a place, each 
   assert.ok(freed.length >= 3 && freed.every((n) => /prisoners_freed/.test(n.when) && !n.flicker && n.path?.length > 1), `M10: ${freed.length} walk out once freed`);
 });
 
+// (closing: the player's "don't repeat the same ... again and again": the settlement's 'We cook at the first fire' was
+// said in five missions, Rain City's 'The 41 is late' in three, 2196's 'The memorial has your face' in four)
+test('every mission\'s crowd says its own lines: no line said in passing is heard in two missions (a case replays its own)', () => {
+  const by = new Map();
+  let crowds = 0;
+  for (const { deck, level } of LEVELS) {
+    const mk = deck.origin || deck.mkey;
+    for (const n of level.npcs) {
+      if (!n.crowd || !n.barks?.length) continue;
+      crowds++;
+      for (const b of n.barks) {
+        if (!by.has(b)) by.set(b, new Set());
+        by.get(b).add(mk);
+      }
+    }
+  }
+  const twice = [...by].filter(([, ms]) => ms.size > 1).map(([b, ms]) => `${[...ms].join(', ')}: ${b}`);
+  assert.deepEqual(twice, [], 'a crowd line heard in more than one mission');
+  assert.ok(crowds > 150 && by.size > 80, `${crowds} people of the crowds say ${by.size} lines`);
+  // each pool a mission has of its own replaces a region's pool another mission says, and is said
+  for (const [mk, pools] of Object.entries(MISSION_BARKS)) {
+    for (const [pool, lines] of Object.entries(pools)) {
+      assert.ok(AMBIENT[pool] && lines.length >= 4, `${mk}: its ${pool} pool`);
+      assert.ok(lines.every((t) => !AMBIENT[pool].barks.includes(t)), `${mk}: not the region's lines`);
+      assert.ok(lines.some((t) => by.get(t)?.has(mk)), `${mk}: its ${pool} lines are said`);
+    }
+  }
+});
+
 test('crowd walkers keep to the ground: no floating off a terrace, no sinking into a plaza, no walking through a wall', () => {
   const holds = (when, st, v) => !when || !!compileCondition(when)({ fact: () => v, state: st });
   let walkers = 0, metres = 0;
@@ -2599,18 +2629,21 @@ test('the speech budget (§8.10): the Prologue, common, the Finale and each Act 
   assert.ok(w.prologue <= 4200, `the Prologue: ${w.prologue} words`);
   assert.ok(w.common <= 2500, `common: ${w.common} words`);
   assert.ok(w.finale <= 1800, `the Finale: ${w.finale} words`);
-  // each Act mission (main and optional): 1,000 words
+  // each Act mission (main and optional): 1,600 words (closing: §8.10's 1,000 was set for the build the player found short;
+  // what bounds the speech now is each pack's file, under the preview's 15 MB, and the edition's APK, checked where they
+  // are built)
   const per = {};
   const seen = new Set();
   for (const e of SPOKEN) {
     if (!/^act/.test(e.group)) continue;
-    const k = `${voiceOf(e.who, e.extra)}|${e.text}`;
+    // (a crowd line is counted once, however many of the crowd's voices say it: closing, the missions' own bark pools)
+    const k = /\.bark\d/.test(e.path) ? `bark|${e.text}` : `${voiceOf(e.who, e.extra)}|${e.text}`;
     if (seen.has(k)) continue;
     seen.add(k);
     const mk = e.path.slice(0, 3);
     per[mk] = (per[mk] || 0) + e.text.split(/\s+/).length;
   }
-  for (const [mk, n] of Object.entries(per)) assert.ok(n <= 1000, `${mk}: ${n} words`);
+  for (const [mk, n] of Object.entries(per)) assert.ok(n <= 1600, `${mk}: ${n} words`);
 });
 
 test('PREVIOUSLY and THE QUESTIONS are said from the common pack', () => {

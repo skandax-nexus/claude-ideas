@@ -19,6 +19,7 @@ import { compileCondition } from '../../core/conditions.js';
 import { CAST, NPCS, AMBIENT } from './npcs.js';
 import { sexOf, isChild, LV_MODELS, SHARED_MODELS, castOf } from './casting.js';
 import { RAIN_DARK, WARDROBE } from './wardrobe.js';
+import { missionBarks } from './barks.js';
 
 export const MAX_PEOPLE = 24; // §4.7: NPCs (named + crowd) per place
 
@@ -481,6 +482,9 @@ export function castLevel(level, deck, { facts = null } = {}) {
     const people = pickPeople(c, n, named, r, turn, fits, lastPick, worn, pal);
     if (people.length) lastPick = people[people.length - 1];
     const pool = AMBIENT[poolOf(c, deck)] || AMBIENT.rain;
+    // (closing: a mission whose crowd would say a region's lines another mission says has its own, barks.js)
+    const mine = missionBarks(deck, AMBIENT[poolOf(c, deck)] ? poolOf(c, deck) : 'rain');
+    const says = mine ? { ...pool, barks: mine } : pool;
     const when = whenOf(c);
     const rainy = wet && ['rain', 'northbank', 'south'].includes(c.region);
     people.forEach(([model, variant, metId], j) => {
@@ -536,7 +540,7 @@ export function castLevel(level, deck, { facts = null } = {}) {
         id, crew: id, first, ambient: true, crowd: true, seed: 300 + k, pronoun: PRONOUN[sex] || PRONOUN.m, pos: [x, y, z], height,
         yaw: c.queue ? Math.atan2(c.path[c.path.length - 1][0] - c.path[0][0], c.path[c.path.length - 1][1] - c.path[0][1]) + (r() - 0.5) * 0.5 : r() * 6.28,
         path: path?.length > 1 && !c.queue ? path : undefined, speed: Math.round(1.05 * walk * 100) / 100, when, silent: true, room: level.outdoorRoom || level.order[0],
-        hologram: !!c.echo, ...(c.echo && !c.barks ? {} : { barks: c.barks || barksOf(pool, k, old), barkEvery: 24 + (k % 4) * 3 }), // (a crowd may
+        hologram: !!c.echo, ...(c.echo && !c.barks ? {} : { barks: c.barks || barksOf(says, k, old), barkEvery: 24 + (k % 4) * 3 }), // (a crowd may
         // say its own, an echo only its own; else every other line of its pool: neighbours share the walla, and the speech
         // budget holds)
         ...(c.flicker ? { flicker: true } : {}), // (between solid and hologram: Runtime.step)
