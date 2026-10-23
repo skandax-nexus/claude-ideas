@@ -478,6 +478,43 @@ measured with a player.
   180k triangles in the scene pass (262 draw calls and 343–350k triangles for the whole frame,
   11.4–11.5 ms of JavaScript on average, 15.0–16.4 ms p95), Mission 4's THE VILLAGE 25 and 86k
   (8.0 ms) and BEFORE THE FIRE 20 and 22k (4.1 ms): all within §4.7.
+- **Casting after the closing pass** (2026-10-23; `git log 3587bfb..`; the player's point 3, casting, and the crowd
+  half of point 6): the settlement (Missions 4, 5, 7, 22, 23 and Case B) dresses as people did three thousand years
+  ago. The robe, kurta, hijab and abaya avatars that both U4 reviews and the player read as present-day Gulf and
+  Islamic dress (`rb_robe_m`, `rb_robe_m2`, `rb_villager_f`, `rb_villager_f2`) are gone; its people are six
+  bare-headed bodies of its own (two men, two women, a grey-bearded old man and a bald old sage) and the boy's body
+  for its children (its girls with a woman's hair, moved onto the head), dressed by `garments.js` in undyed and
+  earth-dyed wool and linen: tunics to the shin or the ankle, mantles, cloaks, sashes and belts, built from each
+  body's own outline, skinned to its bones and woven-textured, one draw call a person (a shape about 30 ms once per
+  model and outfit, a dye under a millisecond). Each place dyes them from its own palette (fire, water, sky, ash,
+  festival), so Missions 4, 5, 7, 22 and 23 never dress alike. Tala (Female_Adult_11) and the Elder (Female_Adult_09,
+  greyed) are reconverted with their own hair and dressed the same way, and so is Niko; the storyteller, the
+  astronomer and the elders are old men (`rb_elder_m`, `rb_sage_m`), slower and in old voices. No crowd anywhere
+  wears a named face (`EXCEPTIONS` is empty): the receptionist (`rb_desk_f`) and Officer Haig (`rb_haig`) have faces
+  of their own, and Tomas a body of his own (`rb_tomas`, 1.42 m). Roles fit their bodies and their names: Helix's
+  researchers wear lab coats (a fitted cloak), its technicians slate work clothes (Mission 3's technician no longer a
+  woman in a grey T-shirt), paramedics are the paramedic, Loop City's cook (Mission 21) wears an apron, and a role is
+  named from its own table, never the next name in another region's list (Mission 17's recordings named a man in
+  Helix slate 'Nurse' and a doctor 'Student', Mission 13's Unwritten irregulars 'Gardener' and 'Medic'). Mission 1's
+  checkpoint is crowded: the place holds 30 people (29 cast, 21 of them in its crowds, with two queues at Pryce's
+  booth), and today's casual crowds wear their mission's colours (Rain City's dark wet coats in Mission 1, autumn in
+  6, summer in 9, winter in 15 ...), one face at most four times a year in a place and each time in other clothes. The edition's models: 45 (49 files with the four shared, 29.1 MB; 41 and 27.4 MB
+  before), after the converter learnt to leave out FBXLoader's node extras (a fifth of a model's bytes, read by
+  nothing; the 33 older conversions stripped with `--strip`). The packs the recast crowds changed (common, act1,
+  act2, act4) were recorded again: no misses. Checked: `npm test` 158/158, with two new casting tests (the
+  settlement's people in their own faces and clothes, no head cloths; roles named and dressed for the part, Tomas's
+  own body, the crowded checkpoint, crowds dressed by place); render sheets of every settlement body and outfit, the
+  named settlement people and the recast present-day roles, and shots of Mission 1's checkpoint, Mission 4's fire,
+  Mission 5 and Mission 7's ring, looked at in the pass; the whole browser bot (`node tests/lastversion.mjs`,
+  2026-10-23) 337 passed, 0 failed, with no page error: Mission 1's checkpoint queue and Rain City's coats within the
+  place's 30 people, the settlement's people in Mission 4 in their own faces and made clothes, the campaign to Ending
+  C and the CASE FILES, every line said (1,612) from the packs, `speechSynthesis` never asked, and the survey's 1,657
+  pairs of views in different places (the closest 23 bits apart). The edition's APK (`EDITION=lastversion bash
+  android/build-apk.sh`, 2026-10-23, built to measure it) is 49,040,014 bytes: 49 character files (28 MB) and 7 voice
+  packs (15 MB), 0.96 MB under the 50 MB budget (46,786,715 bytes on 2026-10-22). No shared runtime file
+  changed (the converter and the models' CREDITS are offline; Station Zero's 28 model files are byte for byte as they
+  were): `node tests/qa.mjs` 26/26; `node tests/smoke.mjs` passed on its second run (its first, on this shared
+  machine, waited past its 30 s for HALCYON to build after the vault and stopped there).
 - **The CASE FILES** (v2.1, U8; `cases.js`; replaces the Cases chapter): fourteen stories (chains A–D, the Child in
   Three Photographs, the Train That Arrives Yesterday, the Unsent Letter, the House with No Owner, the Last Signal, the
   Names Beneath the City, the Clockmaker's Debt, the Ninth Minute: Evidence, the Survivor's Garden, the Unwritten
@@ -666,19 +703,13 @@ measured with a player.
   echoes in 22, the people Kai's choices changed along the Finale's road). Mission 22 has no watchers since the U4
   review; the Finale still carries a few of the fragments' kind (a drone or a scavenger), where the spec has none,
   and Jun's line clears them (U8 built the Finale's opening streets on them).
-- **The settlement's wardrobe waits for a person's decision** (OVERHAUL.md §6.3 makes it a condition of U4 being
-  done, and it has not been made). Its people are Rocketbox's robe, kurta and head-cloth avatars recoloured in
-  ochre, indigo, madder and undyed linen; both U4 reviews read them as present-day Islamic and Gulf dress (Tala's
-  lace-fringed hijab, the Elder's khimar and abaya, thobes with ghutras, Niko's kurta and taqiyah) on a fictional
-  settlement 3,000 years old: an anachronism, and a risk of reading as a stereotype of a living religion. Rocketbox
-  has nothing else that reads as ancient (its other avatars wear modern clothes), so the options are a person's to
-  weigh: keep them, hide the men's head cloths (`keffiyeh` is its own part) and accept the rest, or bring other
-  meshes from elsewhere for the Elder, Tala, Niko and the settlement's crowd (and record the choice here). The
-  render sheet is in the U4 review's report. Until then the settlement's crowd also stays on three faces (the men's
-  robe, the girls' linen, and the women on whichever of Tala's or the Elder's meshes the mission does not place),
-  each at most twice a year in a place.
+- **The settlement's wardrobe** no longer waits for a person's decision (U4 left it as one: Rocketbox's robe, kurta,
+  hijab and abaya avatars recoloured, which both U4 reviews read as present-day Gulf and Islamic dress on a settlement
+  3,000 years old). The closing pass decided it (Built, "Casting after the closing pass"): those avatars are gone and
+  the settlement's people wear wool and linen made for bodies of their own. A person's look at the render sheets of
+  the made clothes is still welcome; nothing else of it is open.
 - **Models stay loaded.** Each chapter loads its people behind its card, but Actors has no release, so
-  a long session keeps the models of every chapter it has visited (at most the edition's 41).
+  a long session keeps the models of every chapter it has visited (at most the edition's 45).
 - **Faction support** changes who answers in Mission 21 and what people say; it does not change
   patrol responses or open safe routes elsewhere (Jun's line in the Finale is the one safe route).
 - **A human ear check** of the U5 voices (the audition page above), and of the score's regions and cues,

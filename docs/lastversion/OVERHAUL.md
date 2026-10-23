@@ -911,6 +911,7 @@ Today's total is about 5–7 h.
   - men on `rb_robe_m` (ochre, indigo, undyed, madder, plain head cloth);
   - women on the `rb_tala` mesh, recoloured umber or ochre (Tala does not appear in M4; she is first met in M5's cold open);
   - girls on `rb_child_f2` in linen.
+  - *As built in the closing pass:* the settlement's own faces (§6.3), never a named one: `rb_vill_m`, `rb_vill_m2`, `rb_vill_f`, `rb_vill_f2`, the old `rb_elder_m` (the storyteller) and the boys and girls on `rb_child_m2`, in the `fire` dyes; the Elder (`rb_elder`, Adults/Female_Adult_09, her hair greyed) in a madder-red wool tunic to the ground under a dark cloak, with her staff.
 - In THE VILLAGE: a craftsperson and a storyteller with lines (crowd voices). No watchers.
 
 **Beats.**
@@ -1183,9 +1184,9 @@ Persistent consequences are era swaps:
 **Cast:**
 
 - Niko, and an older Niko in the cold open (`rb_niko/older`).
-- An astronomer (`rb_robe_m/indigo`).
+- An astronomer (`rb_robe_m/indigo`). *As built in the closing pass:* the old sage `rb_sage_m/astronomer`.
 - Mira's recording (MIRA9 voice; `rb_child_f` hologram).
-- Sky-watcher crowd in THE FIRST SKY: `rb_robe_m`, and women on the `rb_elder` mesh (the Elder is absent here).
+- Sky-watcher crowd in THE FIRST SKY: `rb_robe_m`, and women on the `rb_elder` mesh (the Elder is absent here). *As built in the closing pass:* the settlement's own faces in the `sky` dyes (§6.3), never the Elder's.
 - **Watchers:** temporal scavengers on `rb_scav/lantern`, wearing the Continuum's closed-circle badge, the first sight of that faction.
 
 **Beats.**
@@ -1814,7 +1815,7 @@ From here on, watchers can be patrol-reversed.
 **Cast:**
 
 - Sera (`rb_juno/resistance`).
-- Survivors: `rb_trader`, `rb_villager_f`, `rb_civ_f3`, `rb_child_m2/patched`.
+- Survivors: `rb_trader`, `rb_villager_f`, `rb_civ_f3`, `rb_child_m2/patched` (*closing pass:* `rb_surv_f`, Adults/Female_Adult_17, in place of `rb_villager_f`, whose face is the Elder's now).
 - The Warden (`rb_warden`); the Gardener (`rb_ren_f/moss`).
 - The schoolchildren (`CROWD_CHILD` voices).
 - **Watchers:** `rb_scav`.
@@ -1910,8 +1911,8 @@ From here on, watchers can be patrol-reversed.
 **Cast:**
 
 - Anja (`rb_doctor_f`, stethoscope hidden, worn coat); Mara (`rb_office_f/faded`); the Warden (`rb_warden`).
-- Looping residents: `rb_villager_f`, `rb_civ_f3`, `rb_trader`.
-- Schoolchildren: `rb_child_m2`; Tomas is one child echo.
+- Looping residents: `rb_villager_f`, `rb_civ_f3`, `rb_trader` (*closing pass:* `rb_surv_f` in place of `rb_villager_f`).
+- Schoolchildren: `rb_child_m2`; Tomas is one child echo. *As built in the closing pass:* Tomas has a body of his own (`rb_tomas`, Adults/Male_Adult_01 at 1.42 m, `school`), and a schoolgirl (`rb_child_f2/faded`) sits with the boys.
 - Station evacuees as holograms. Jun as an echo driving the evacuation train (side story).
 - No watchers (wardens patrol, non-hostile).
 
@@ -2732,6 +2733,8 @@ Sizes are measured conversions; "~" is an estimate.
 | The Director of Continuity (`director`, new) | — | resolves by `rook_fate`: `rook/old`, `guard` (Pryce), or an empty chair with a recorder | 0 | — | — | ROOK / PRYCE / DIRECTOR | M10, M21 |
 | Tomas, Anja's son | he | `rb_child_m2/patched` echo, silent | 0 | — | 1.30 | — | M15 |
 
+*As built in the closing pass* (the player's casting note; the table above is U4's): Tala is `rb_tala` from Adults/Female_Adult_11 (her own hair, tied up), in an indigo tunic, an undyed mantle (the bible's undyed scarf, worn on the shoulders) and a madder belt; the Elder is `rb_elder` from Adults/Female_Adult_09, her hair greyed, in a madder-red wool tunic to the ground under a dark cloak, with her staff; Niko wears an undyed linen tunic and a woad mantle made by `garments.js` (his `older` greyer); none of them wears a head cloth. The receptionist has a face of her own (`rb_desk_f`, Professions/Business_Female_01, `helix desk`), and so does Officer Haig (`rb_haig`, Adults/Female_Party_02, `home`, a hologram in her recorded statement); Tomas is `rb_tomas` (Adults/Male_Adult_01, 1.42 m, `school`). No crowd wears any of these faces.
+
 ### 6.3 Crowd wardrobe
 
 **Present day** (Rain City, Helix, Northbank, the port, the hospital):
@@ -2759,6 +2762,17 @@ Sizes are measured conversions; "~" is an estimate.
 | Children | `rb_child_f2` (Children/Female_Child_02) in linen |
 | Crowd elders | darker `rb_robe_m` with a staff and a ×0.8 walk |
 
+*As built in the closing pass* (both U4 reviews and the player read the robe, kurta, hijab and abaya avatars as present-day Gulf and Islamic dress; they are gone from the edition). Rocketbox has nothing that reads as ancient, so the settlement's clothes are made: `garments.js` tailors woven wool and linen to bare-headed bodies (a tunic's skirt and bodice, mantles, cloaks, sashes, belts), skinned to their own skeletons. The settlement's people, each in five outfits per palette:
+
+| Role | Model (Rocketbox source) |
+| --- | --- |
+| Men | `rb_vill_m` (Adults/Male_Adult_07), `rb_vill_m2` (Adults/Male_Adult_12) |
+| Women | `rb_vill_f` (Adults/Female_Adult_05), `rb_vill_f2` (Adults/Female_Adult_03); never a named woman's mesh |
+| Elders, the storyteller, the astronomer | `rb_elder_m` (Adults/Male_Adult_05, grey-bearded), `rb_sage_m` (Professions/Business_Male_07, bald), slower, with old voices |
+| Children | `rb_child_m2` (boys, and girls with a woman's hair moved onto the head by `hairdo`) |
+
+Each mission dyes them from its own palette (`PALETTE` in `crowds.js`, `SETTLEMENT` in `wardrobe.js`): M4 `fire` (madder, ochre, undyed), M5 `water` (woad and undyed), M7 `sky` (the night sky-watchers' black wool, woad and plum), M22 `ash` (greyed, as the echo it is), M23 `fest` (the festival's saffron and madder); Case B replays M5's. Today's casual crowds do the same (`PRESENT_PALETTES`: M1 `rain`, M6 `autumn`, M9 `summer`, M11 `ward`, M14 `midday`, M15 `winter`, M20 `memory`, M22 `grey`, M23 `bright`).
+
 **2196** (lagoon city, lock city, the museum, the fracture):
 
 | Role | Model |
@@ -2771,7 +2785,7 @@ Sizes are measured conversions; "~" is an estimate.
 
 **The Unwritten Second:** holograms of people Kai has met, plus Orren.
 
-Never use the burqa avatar (Female_Adult_16). Portray the settlement as sophisticated: it built the observatory and the water system. Someone must review the ancient wardrobe renders before the unit is done.
+Never use the burqa avatar (Female_Adult_16). Portray the settlement as sophisticated: it built the observatory and the water system. Someone must review the ancient wardrobe renders before the unit is done. (*Closing pass:* the robe avatars are gone, so no settlement person wears today's religious or regional dress; the render sheets of the made clothes were reviewed by eye in the pass, and a person's look at them is still welcome.)
 
 ### 6.4 Watchers
 
@@ -2818,6 +2832,7 @@ Clone and build rules:
 
 - existing: `rb_ren_m`, `rb_ren_f`, `rb_juno`, `rb_doctor_f`, `rb_doctor_m`, `rb_engineer_m`, `rb_office_f`, `rb_captain_m`, `Xbot`;
 - 31 new: 16 named (`rb_child_m`, `rb_mira`, `rb_child_f`, `rb_rook`, `rb_niko`, `rb_jun`, `rb_tala`, `rb_security_f`, `rb_security_m`, `rb_elder`, `rb_ezra`, `rb_engineer_f`, `rb_soldier_m`, `rb_odile`, `rb_florist`, `rb_warden`) and 15 crowd (`rb_civ_f1`, `rb_civ_f2`, `rb_civ_f3`, `rb_civ_m1`, `rb_civ_m2`, `rb_courier`, `rb_contractor`, `rb_medic_f`, `rb_child_m2`, `rb_child_f2`, `rb_trooper`, `rb_robe_m`, `rb_scav`, `rb_trader`, `rb_villager_f`).
+- *As built in the closing pass:* 45 edition models (`LV_MODELS`; 49 files with the shared four, 29.1 MB): the robe and villager avatars are gone, and the settlement's six (`rb_vill_m`, `rb_vill_m2`, `rb_vill_f`, `rb_vill_f2`, `rb_elder_m`, `rb_sage_m`), `rb_surv_f`, `rb_tomas`, `rb_desk_f` and `rb_haig` are new. Conversions leave out FBXLoader's node extras (a fifth of a model's bytes, read by nothing; `--strip` rewrote the older ones).
 
 The stylised looks, the women's looks, Michelle, Nova, `rb_pilot_f` and `rb_gardener_m` are not shipped in the edition.
 

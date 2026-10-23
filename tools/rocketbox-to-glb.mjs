@@ -87,8 +87,8 @@ export const LV_AVATARS = {
   rb_courier: { src: 'Professions/Delivery_Male_01', px: 512 }, // courier: flannel, beanie
   rb_contractor: { src: 'Professions/Construction_Male_07', px: 512 }, // contractor: hi-vis, hard hat
   rb_medic_f: { src: 'Professions/Medical_Female_03', px: 512 }, // paramedic
-  rb_child_m2: { src: 'Children/Male_Child_02', px: 512 }, // children (2049 and 2196)
-  rb_child_f2: { src: 'Children/Female_Child_02', px: 512 }, // the settlement's children
+  rb_child_m2: { src: 'Children/Male_Child_02', px: 512 }, // children (2049, 2196, the settlement's boys and girls)
+  rb_child_f2: { src: 'Children/Female_Child_02', px: 512 }, // a schoolgirl of 2196
   rb_trooper: { src: 'Professions/Military_Male_04', px: 512 }, // Continuum troops: helmet, plate carrier
   rb_scav: { src: 'Adults/Male_Adult_18', px: 512 }, // 2196 scavengers, hood up
   rb_trader: { src: 'Professions/Wood_Male_01', px: 512 }, // 2196 traders and engineers

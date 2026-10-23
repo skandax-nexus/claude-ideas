@@ -42,8 +42,8 @@ export default {
   // checkpoint stands in two lines between the tapes, waiting for Officer Pryce to wave each one through
   people: 30,
   crowd: [
-    // (29 asked for, with the eight named and tier-2 people; each face walks at most three times a year in a place, each
-    // time in other clothes, so crowds.js casts 22, in this order: the knot at the staff gate first (the pursuit ends in
+    // (29 asked for, with the eight named and tier-2 people; each face walks at most four times a year in a place, each
+    // time in other clothes, so crowds.js casts 21, in this order: the knot at the staff gate first (the pursuit ends in
     // it), the station staff, the avenue's commuters, the checkpoint's two lines, the EMS)
     // Helix's people at the staff gate, waiting to badge in all morning (the crowd where the woman with Mira's face is
     // lost, after the Zero Second); the morning's people are not out yet at 05:40, while the cold open plays (co_m01)
