@@ -243,12 +243,12 @@ function beaconMesh(f) {
     glowTex = new THREE.DataTexture(d, S, S);
     glowTex.needsUpdate = true;
   }
-  const s = f.size ?? 2.6, color = f.color ?? 0xffd49a;
+  const s = f.size ?? 4.5, color = f.color ?? 0xffb45a; // (a warm window against the crescent's cold glass)
   const g = new THREE.Group();
   const pane = new THREE.Mesh(new THREE.PlaneGeometry(s, s * 0.62), new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }));
   pane.userData.base = 1;
   const glow = new THREE.Mesh(new THREE.PlaneGeometry(s * 5, s * 5), new THREE.MeshBasicMaterial({ color, map: glowTex, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }));
-  glow.userData.base = 0.55;
+  glow.userData.base = 0.8;
   g.add(glow, pane);
   g.renderOrder = 2;
   g.frustumCulled = false;
