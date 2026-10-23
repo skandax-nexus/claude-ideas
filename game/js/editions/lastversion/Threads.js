@@ -37,10 +37,11 @@
 //            seconds lapses: the progress waits until it is anchored again. Never a fail. `allies: { cond: postIndex }`
 //            hold a post themselves (it never drifts); `slow: cond` gives every drift half as long again. Its progress
 //            is kept in hold_<mkey>_<id> (seconds), so a save keeps it; `while: cond` instead counts while that holds
-// A thread's fact is t_<mkey>_<id>; it is set the first time the thread counts as done, with its `set`, `ev`
-// and `log`, and its `say` lines are said (once: t_<mkey>_<id>_paid marks it, as kinds that complete themselves
-// set the thread's fact directly). A thread whose `until` holds before it is done was walked past (a
-// clue not found): it is no longer the objective.
+// A thread's fact is t_<mkey>_<id>; it is set the first time the thread counts as done once every thread it comes
+// after has been (the story's order: a talk or a piece of evidence found early is paid when the story reaches it),
+// with its `set`, `ev` and `log`, and its `say` lines are said (once: t_<mkey>_<id>_paid marks it, as kinds that
+// complete themselves set the thread's fact directly). A thread whose `until` holds before it is done was walked
+// past (a clue not found): it is no longer the objective.
 import { compileCondition } from '../../core/conditions.js';
 import { resolveAnchor, toWorld, spotModel } from './processes.js';
 
@@ -59,6 +60,28 @@ export const playFact = (m, t) => `pb_${m.mkey || m.key}_${t.id}`;
 export const placedFact = (m, t) => `pb_${m.mkey || m.key}_${t.id}_n`;
 // a hold's progress so far (seconds)
 export const holdFact = (m, t) => `hold_${m.mkey || m.key}_${t.id}`;
+
+// the years a condition that names only years holds in ('@FUTURE', '@PAST || @FUTURE'), else null
+export function yearsOf(c) {
+  if (typeof c !== 'string' || !/^\s*@[A-Z]+(\s*\|\|\s*@[A-Z]+)*\s*$/.test(c)) return null;
+  return c.match(/@([A-Z]+)/g).map((y) => y.slice(1));
+}
+// the identifiers a condition reads (not its quoted strings, not true/false)
+// (a fact may be camelCase after its prefix, inv_clockArm_done; a year, @FUTURE, is not a fact)
+export const condIds = (c) => (typeof c === 'string' ? c.replace(/"[^"]*"/g, '').replace(/@[A-Z]+/g, '').match(/\b[A-Za-z_][A-Za-z0-9_]*\b/g) || [] : []).filter((k) => k !== 'true' && k !== 'false');
+
+// deck.gateAfter: what a thread's own interaction waits on: every thread it comes after, and every thread those come
+// after in turn, each paid (its t_ fact) or walked past (its `until`). Null when nothing gates it.
+export function chainGate(deck, t, byId) {
+  if (!deck.gateAfter || !t.after?.length) return null;
+  const seen = new Set();
+  const walk = (x) => {
+    for (const id of x.after || []) if (byId[id] && !seen.has(id)) walk(byId[id], seen.add(id));
+  };
+  walk(t);
+  const need = [...seen].map((id) => (byId[id].until ? `(${factOf(deck, byId[id])} || (${byId[id].until}))` : factOf(deck, byId[id])));
+  return need.length ? need.join(' && ') : null;
+}
 
 // a mission's quarters: its own, or the shim's (each legacy beat a thread in quarter i)
 export function quartersOf(m) {
@@ -131,25 +154,47 @@ export function placeThreads(deck, level) {
   // free to find.
   const all = threadsOf(deck);
   const ids = Object.fromEntries(all.map((t) => [t.id, t]));
-  const before = (t, seen = new Set()) => {
-    for (const id of t.after || []) if (ids[id] && !seen.has(id)) before(ids[id], seen.add(id));
-    return seen;
-  };
   const gate = (t, when) => {
-    if (!deck.gateAfter || !t.after?.length) return when;
-    const need = [...before(t)].map((id) => (ids[id].until ? `(${factOf(deck, ids[id])} || (${ids[id].until}))` : factOf(deck, ids[id]))).join(' && ');
+    const need = chainGate(deck, t, ids);
     return need ? (when ? `(${when}) && ${need}` : need) : when;
   };
+  // A talk the story has not reached yet is not offered either: the nodes of a talk thread's conversation that would
+  // complete it wait on its chain (level.talkGates, read by Runtime.talk; a person with no node open says nothing and
+  // is not offered as a talk, Threads.update), and a REVERSE thread's process answers only then (its `arm`, as Mission
+  // 18's slabs: in plain sight, not yet the story's to reverse)
+  level.talkGates = {};
+  for (const t of all) {
+    const need = chainGate(deck, t, ids);
+    if (!need) continue;
+    if (t.kind === 'talk' && t.npc) {
+      const done = new Set(condIds(doneCond(deck, t) || ''));
+      const sets = (x) => Object.keys(x?.set || {}).some((k) => done.has(k));
+      // (the conversation Runtime.talk plays for that person: their own id's talks, else their crew's)
+      const key = deck.talks?.[t.npc] ? t.npc : level.npcs.find((p) => p.id === t.npc && deck.talks?.[p.crew])?.crew;
+      (deck.talks?.[key] || []).forEach((node, i) => {
+        if (!sets(node) && !(node.choices || []).some(sets)) return;
+        const k = `${key}:${i}`;
+        level.talkGates[k] = level.talkGates[k] ? `(${level.talkGates[k]}) && ${need}` : need;
+      });
+    }
+    if (t.kind === 'invert' && t.target) {
+      for (const rec of level.processes || []) if (rec.id === t.target) rec.arm = rec.arm ? `(${rec.arm}) && ${need}` : need;
+    }
+  }
+
   const spot = (s, t) => {
     const a = anchor(s.at || t.at);
     if (!a) return;
     const pos = toWorld(a, s.offset || [0, 1.2, 0]);
+    // (a kit stands whatever the story has reached, so a gated spot's prop is there before it answers; one that belongs
+    // to a year, '@FUTURE', stands only in that year: places/mount.js, kitYears)
+    const years = s.kitYears ?? yearsOf(s.when);
     level.interactables.push({ id: s.id, kind: 'scene', scene: s.scene || s.id, pos, yaw: a.yaw + (s.turn || 0), r: s.r ?? 2.4, prompt: s.prompt || 'LOOK', room: a.room,
-      ...(s.model ? { model: typeof s.model === 'function' ? s.model : spotModel(s.model) } : {}), ...(s.kit ? { kit: s.kit } : {}), when: s.when, color: s.color, ...(s.once ? { once: true } : {}) });
+      ...(s.model ? { model: typeof s.model === 'function' ? s.model : spotModel(s.model) } : {}), ...(s.kit ? { kit: s.kit, ...(years ? { kitYears: years } : {}) } : {}), when: s.when, color: s.color, ...(s.once ? { once: true } : {}) });
     for (const tx of s.texts || []) level.texts.push({ text: tx.text, pos: toWorld(a, tx.at || [0, 2, 0.05]), rotY: a.yaw + (tx.turn || 0), size: tx.size || 0.2, color: tx.color || '#ffe6c0', when: tx.when, room: a.room });
   };
-  // (the thread's own interaction: gated on what it comes after)
-  const own = (s, t) => spot({ ...s, when: gate(t, s.when) }, t);
+  // (the thread's own interaction: gated on what it comes after; its prop keeps its own year)
+  const own = (s, t) => spot({ ...s, when: gate(t, s.when), kitYears: yearsOf(s.when) }, t);
   for (const t of all) {
     for (const s of t.spots || []) spot(s, t);
     if (t.spot) own({ id: t.scene || t.id, scene: t.scene, ...t.spot }, t);
@@ -204,6 +249,10 @@ export function placeThreads(deck, level) {
   // the quarters: the room each one's spawn stands in (a quarter of rooms is reached by entering that room;
   // one of the open place by standing in its area)
   for (const q of level.quarters || []) q.room = roomAt(level, q.spawn) || level.outdoorRoom;
+  // the people whose conversation waits on the story (Threads.update offers them as a talk once a node is open; a chase's
+  // walker and the silent are never offered)
+  const gatedTalks = new Set(Object.keys(level.talkGates).map((k) => k.slice(0, k.lastIndexOf(':'))));
+  for (const n of level.npcs) if (!n.silent && (gatedTalks.has(n.id) || (!deck.talks?.[n.id] && gatedTalks.has(n.crew)))) n.gatedTalk = true;
 }
 // the cold open's people stand while this holds (Runtime.openMission)
 export const coldFact = (m) => `co_${m.mkey || m.key}`;
@@ -253,6 +302,7 @@ export class Threads {
     this.staged = new Set();
     this.tick = 0;
     this.holds = {}; // (a hold's posts and progress, this load)
+    this.hasHold = undefined;
     this.holdHud(null);
   }
 
@@ -260,13 +310,41 @@ export class Threads {
     return isDone(this.g.facts, this.deck, t);
   }
 
+  // up now: its own condition holds and the story has reached it (every thread it comes after paid or walked past:
+  // a staged moment, a loop, a hold or a chase never starts because something after it in the story was done early)
   available(t) {
     const f = this.g.facts;
-    return (!t.when || f.test(t.when)) && (t.after || []).every((id) => this.byId[id] && this.done(this.byId[id]));
+    return (!t.when || f.test(t.when)) && this.ready(t);
   }
 
   passed(t) {
     return !!t.until && this.g.facts.test(t.until);
+  }
+
+  // the story has reached it: every thread it comes after is paid (its t_ fact) or walked past
+  ready(t) {
+    const f = this.g.facts;
+    return (t.after || []).every((id) => {
+      const a = this.byId[id];
+      return a && (f.get(factOf(this.deck, a)) || this.passed(a));
+    });
+  }
+
+  // a conversation's node is open: it waits on nothing, or on a chain the story has reached (placeThreads' talkGates)
+  nodeOpen(talk, i) {
+    const w = this.level?.talkGates?.[`${talk}:${i}`];
+    return !w || this.g.facts.test(w);
+  }
+
+  // what a person would say now, by Runtime.talk's rule (their own id's talks first, then their crew's): the node and
+  // its talk's key, or null
+  talkNode(n) {
+    const talks = this.deck?.talks;
+    const key = talks?.[n.n.id] ? n.n.id : talks?.[n.crew?.id] ? n.crew.id : null;
+    if (!key) return null;
+    const f = this.g.facts;
+    const node = talks[key].find((d, i) => f.test(d.when || 'true') && this.nodeOpen(key, i));
+    return node ? { key, node } : null;
   }
 
   // the first main thread not yet done (and not walked past) that is up now
@@ -295,9 +373,11 @@ export class Threads {
     const g = this.g, f = g.facts;
     for (const t of this.list) {
       // (a kind that completes itself, a trigger, a chase's end, a staged moment, a deduction, a record, sets the
-      // thread's fact directly: what the thread carries is paid out once, marked by <fact>_paid)
+      // thread's fact directly: what the thread carries is paid out once, marked by <fact>_paid. A thread done before
+      // the story reaches it, a talk or a piece of evidence found early, is paid once every thread before it is: its
+      // lines are said in the story's order, and nothing gated on it opens early)
       const k = factOf(this.deck, t);
-      if (f.get(`${k}_paid`) || !this.done(t)) continue;
+      if (f.get(`${k}_paid`) || !this.done(t) || !this.ready(t)) continue;
       f.set(`${k}_paid`, true);
       f.set(k, true);
       if (t.set) for (const [a, v] of Object.entries(t.set)) f.set(a, v);
@@ -308,6 +388,10 @@ export class Threads {
     for (const s of this.sides) {
       const k = sideFact(this.deck, s);
       if (!f.get(k) && sideState(f, this.deck, s) !== 'open') f.set(k, true);
+    }
+    // a person whose conversation waits on the story is not offered as a talk until a node of it is open
+    if (this.level?.talkGates && Object.keys(this.level.talkGates).length) {
+      for (const n of g.deckWorld?.npcs || []) if (n.n.gatedTalk) n.n.silent = !this.talkNode(n);
     }
   }
 
@@ -383,7 +467,10 @@ export class Threads {
       if (!ch || !n.model.visible || !n.n.path) continue;
       const m = n.model;
       const d = Math.hypot(g.player.pos.x - m.position.x, g.player.pos.z - m.position.z);
-      n.n.speed = d > ch.leash ? 1e-6 : d < ch.ahead * 0.5 ? ch.speed * 2.2 : d < ch.ahead ? ch.speed * 1.35 : ch.speed;
+      // (she waits where she stands until the story reaches the chase)
+      const up = ch.started || !this.byId[ch.thread] || this.ready(this.byId[ch.thread]);
+      n.n.speed = !up || d > ch.leash ? 1e-6 : d < ch.ahead * 0.5 ? ch.speed * 2.2 : d < ch.ahead ? ch.speed * 1.35 : ch.speed;
+      if (!up) continue;
       if (n.wp > 0 || d <= ch.leash) ch.started = true;
       // DeckWorld wraps her to the path's start once she reaches its end: that is the end of the chase
       if (ch.started && n.wp === 0 && ch.last >= n.n.path.length - 1) {
@@ -422,6 +509,8 @@ export class Threads {
   // --- a hold: defend for a time (Mission 18's pylons) ---------------------------------------------------------------
   // the current thread's progress counts while Kai stays near and no post has lapsed; one post drifts at a time
   holdStep(dt) {
+    if (this.hasHold === undefined) this.hasHold = this.list.some((x) => x.kind === 'hold');
+    if (!this.hasHold) return; // (most missions have none: nothing to walk each frame)
     const g = this.g, f = g.facts, t = this.current();
     if (t?.kind !== 'hold' || this.done(t)) {
       if (this.holdShown) this.holdHud(null);
@@ -489,6 +578,7 @@ export class Threads {
     if (!t) {
       if (el) el.classList.remove('on');
       this.holdShown = false;
+      this.holdKey = null;
       return;
     }
     if (!el) {
@@ -506,10 +596,18 @@ export class Threads {
       (document.querySelector('#ui') || document.body).appendChild(el);
     }
     const pct = Math.min(100, Math.round((S.prog / (t.secs || 60)) * 100));
-    const bad = S.posts.map((p, i) => [p, i]).find(([p]) => p.st !== 'ok');
-    el.querySelector('b').textContent = `${t.label || 'HOLD'} ${pct}%`;
+    let bi = -1;
+    for (let i = 0; i < S.posts.length; i++) if (S.posts[i].st !== 'ok') { bi = i; break; }
+    const bad = bi >= 0 ? S.posts[bi] : null;
+    const label = `${t.label || 'HOLD'} ${pct}%`;
+    const note = bad ? `${t.posts[bi].name} ${bad.st === 'lapsed' ? 'LAPSED' : `DRIFTING ${Math.ceil(bad.t)}`}` : allied?.size ? 'HELD WITH HELP' : 'HOLDING';
+    // (the chip is written only when what it says changes: no style work in a frame that changes nothing)
+    const key = `${label}|${note}`;
+    if (this.holdShown && this.holdKey === key) return;
+    this.holdKey = key;
+    el.querySelector('b').textContent = label;
     el.style.setProperty('--hp', `${pct}%`);
-    el.querySelector('span').textContent = bad ? `${t.posts[bad[1]].name} ${bad[0].st === 'lapsed' ? 'LAPSED' : `DRIFTING ${Math.ceil(bad[0].t)}`}` : allied?.size ? 'HELD WITH HELP' : 'HOLDING';
+    el.querySelector('span').textContent = note;
     el.classList.toggle('alert', !!bad);
     el.classList.add('on');
     this.holdShown = true;

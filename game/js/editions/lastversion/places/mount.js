@@ -106,7 +106,8 @@ export function mountPlace(rt) {
       d.mesh = new THREE.Object3D();
     } else if (d.el.lvMat) d.mesh.material = namedMaterial(d.el.lvMat);
   }
-  // the records, fragments and scene props, as things of this place
+  // the records, fragments and scene props, as things of this place (a prop of one year's spot stands in that year)
+  const yearKits = [];
   for (const it of level.interactables) {
     if (!it.kit) continue;
     const y0 = it.ground ?? it.pos[1] - (KIND_Y[it.kind] ?? 1.2);
@@ -124,6 +125,7 @@ export function mountPlace(rt) {
       continue;
     }
     root.add(kit);
+    if (it.kitYears) yearKits.push([kit, it.kitYears]);
     if (p && !it.model) {
       // the crystal or the gem goes; a faint glint marks what is still to read
       p.clear();
@@ -193,6 +195,7 @@ export function mountPlace(rt) {
       if (gangways.length) turn(g.time || 0);
       // a model that has a form per year (the Chronolith: the black ring, broken into a halo by 2196)
       for (const p of Object.values(dw.props)) p.traverse((o) => o.userData.setEra?.(s));
+      for (const [kit, years] of yearKits) kit.visible = years.includes(s);
     },
     setEra(s) {
       api.setYear(s);

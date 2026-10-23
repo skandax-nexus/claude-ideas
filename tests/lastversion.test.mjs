@@ -38,7 +38,7 @@ import { M01 } from '../game/js/editions/lastversion/prologue.js';
 import { WATCHERS, HUMAN, watcherModels, kindsOf } from '../game/js/editions/lastversion/watchers.js';
 import { spokenLines, buildLevels, voiceOf, lexicon, GROUPS, chapterCardLines, missionCardLines, endingLines, POSTCREDIT, choiceLine, numberWords } from '../game/js/editions/lastversion/voicelines.js';
 import { voicePieces } from '../game/js/audio/voiceKey.js';
-import { KINDS as THREAD_KINDS, MINUTES, threadsOf, sidesOf, quartersOf as threadQuarters, factOf, isRewritten, estimate, doneCond, sideState, isDone, roomAt } from '../game/js/editions/lastversion/Threads.js';
+import { KINDS as THREAD_KINDS, MINUTES, threadsOf, sidesOf, quartersOf as threadQuarters, factOf, isRewritten, estimate, doneCond, sideState, isDone, roomAt, Threads, placedFact, playFact } from '../game/js/editions/lastversion/Threads.js';
 import { QUESTIONS, CLUES, CONSEQUENCES, PREVIOUSLY, EPILOGUE, MISSION_ORDER, missionIndex } from '../game/js/editions/lastversion/ledger.js';
 import { SAVE_FORMAT } from '../game/js/editions/lastversion/Runtime.js';
 
@@ -2427,8 +2427,16 @@ test('a thread is paid once, even when its kind sets its own fact (the chase); a
   game.story = rt.makeStory('prologue');
   rt.level = rt.buildLevel(game.campaign);
   const th = rt.threads;
-  // the chase's end sets t_m01_chase itself: what the thread carries (mira_gone, her raincoat line) still follows, once
+  // the chase's end sets t_m01_chase itself: what the thread carries (mira_gone, her raincoat line) still follows, once,
+  // and only when the story has reached it (every thread it comes after paid)
   game.facts.set('t_m01_chase');
+  th.update();
+  assert.ok(!game.facts.get('mira_gone'), 'not before the threads it comes after');
+  const chain = new Set();
+  const walk = (t) => { for (const a of t.after || []) if (!chain.has(a)) { chain.add(a); walk(th.byId[a]); } };
+  walk(th.byId.chase);
+  assert.ok(chain.size > 0);
+  for (const a of chain) game.facts.set(`t_m01_${a}`);
   th.update();
   th.update();
   assert.ok(game.facts.get('mira_gone'), 'the chase\'s set is applied');
@@ -2578,6 +2586,7 @@ test('a save inside a moment that runs in callbacks loads with it played again (
   const c = make(2, ['has_chronolith', 'chronolith_touched', 'wrist_mark']);
   c.rt.afterResume(c.deck);
   assert.ok(c.game.facts.get('first_cycle'), 'the first cycle plays again and ends');
+  c.rt.threads.update(); // (as each fact change does in the game: the threads before it are paid, in order)
   assert.equal(c.rt.threads.current()?.id, 'lab');
   const f = make(2, ['has_chronolith', 'first_cycle', 'power_on', 'crossed', 'open_control', 'fractured']);
   f.game.engine.setState = () => {};
@@ -2836,7 +2845,8 @@ function factsSetBy(mm, { sides = true } = {}) {
   out.add(`${mm.key}_done`);
   return out;
 }
-const IDS = (c) => (typeof c === 'string' ? c.replace(/"[^"]*"/g, '').match(/\b[a-z_][a-z0-9_]*\b/g) || [] : []).filter((k) => !['true', 'false'].includes(k));
+// (a fact may be camelCase after its prefix, inv_clockArm_done, t_m22_courtGo; a year, @FUTURE, is not a fact)
+const IDS = (c) => (typeof c === 'string' ? c.replace(/"[^"]*"/g, '').replace(/@[A-Z]+/g, '').match(/\b[A-Za-z_][A-Za-z0-9_]*\b/g) || [] : []).filter((k) => !['true', 'false'].includes(k));
 
 test('Acts III and IV and the Finale are rewritten as threads; the length model: each Act mission 25-42 minutes, the Finale 90 or less', () => {
   for (const ch of ['act3', 'act4', 'finale']) {
@@ -2937,6 +2947,138 @@ test('Acts I to IV and the Finale: nothing that ends a mission answers before th
     }
   }
   assert.ok(n >= 300, `${n} gates checked`);
+});
+
+// U8 review: a player who does everything open to them, in any order and any year, but one thing. Every interaction
+// the level offers (spots, deductions, records, playbacks, triggers, every conversation node a person would say,
+// every REVERSE that answers, the mission's rules, its staged moments, loops, holds and chases) is done as soon as it
+// answers, until nothing new happens. Withholding what completes one main thread must leave the mission unfinished: no
+// interaction done out of order, and no thread paid out of order, opens what ends it.
+const YEARS3 = ['PRESENT', 'PAST', 'FUTURE'];
+function freePlay(m, level, facts0, withhold = null) {
+  const deck = { ...m, mkey: m.key };
+  const f = new FactStore({ ...facts0 });
+  const game = { facts: f, hud: { say() {}, toast() {} }, log: [], deckWorld: { flags: {}, npcs: [] }, campaign: {} };
+  const th = new Threads({ g: game });
+  th.attach(deck, level);
+  const people = level.npcs.map((p) => ({ n: { ...p }, crew: { id: p.crew } }));
+  game.deckWorld.npcs = people;
+  // what the withheld thread's completion would set: the player never does anything that sets it
+  const held = withhold ? new Set([factOf(deck, withhold), ...IDS(doneCond(deck, withhold) || ''), ...(withhold.of || [])]) : new Set();
+  const open = (...ws) => YEARS3.some((st) => ws.every((w) => f.test(w || 'true', st)));
+  const apply = (set) => {
+    if (!set || Object.keys(set).some((k) => held.has(k))) return false;
+    for (const [k, v] of Object.entries(set)) f.set(k, v);
+    return true;
+  };
+  // a node, its first choice that answers (choices are alternatives: the first one the player is offered)
+  const node = (x) => {
+    if (!x) return;
+    if (x.set && !apply(x.set)) return;
+    const c = (x.choices || []).find((ch) => open(ch.when) && !Object.keys(ch.set || {}).some((k) => held.has(k)));
+    if (c?.set) apply(c.set);
+  };
+  const fired = new Set();
+  for (let round = 0; round < 60; round++) {
+    const before = JSON.stringify(f.facts);
+    for (const it of level.interactables) {
+      if (it.kind !== 'scene' || !open(it.when)) continue;
+      const sc = it.scene || '';
+      if (sc.startsWith('deduce:')) {
+        const d = deck.deductions?.[sc.slice(7)];
+        const t = th.list.find((x) => x.kind === 'deduce' && (x.deduction || x.id) === sc.slice(7));
+        const a = d?.answers.find((x) => x.correct && (!x.needs || f.test(x.needs)));
+        if (a && t) apply({ ...(d.set || {}), [factOf(deck, t)]: true });
+      } else if (sc.startsWith('residue:')) {
+        const t = th.byId[sc.slice(8)];
+        if (t && f.test(it.when || 'true', 'PAST')) apply({ [factOf(deck, t)]: true, ...(t.set || {}) });
+      } else if (sc.startsWith('playback:')) {
+        const t = th.byId[sc.slice(9)];
+        if (t) apply({ [placedFact(deck, t)]: (t.entries || []).length, [factOf(deck, t)]: true, ...(t.set || {}) });
+      } else if (!sc.startsWith('hold:') && !deck.nodes?.[sc]) {
+        const x = deck.scenes?.[sc];
+        if (x && open(it.when, x.when)) node(x);
+      }
+    }
+    for (const tr of level.triggers) if (open(tr.when)) apply(tr.set);
+    th.update();
+    for (const p of people) {
+      if (p.n.silent || !open(p.n.when)) continue;
+      const at = th.talkNode(p);
+      if (at) node(at.node);
+    }
+    for (const rec of level.processes || []) {
+      if (rec.kind === 'refusal' || (rec.arm && !f.test(rec.arm)) || !open(rec.when)) continue;
+      apply({ [`inv_${rec.id}_done`]: true, [`rev_${rec.id}`]: true });
+    }
+    for (const r of deck.rules || []) if (!fired.has(r.id) && f.test(r.when) && apply(r.set || {})) fired.add(r.id);
+    for (const t of th.list) {
+      const self = (t.kind === 'cinema' && t.lines?.length) || t.kind === 'chase' || ((t.kind === 'loop' || t.kind === 'hold') && th.current() === t);
+      if (self && th.available(t) && !th.done(t)) apply({ [factOf(deck, t)]: true, ...(t.kind === 'cinema' ? t.set || {} : {}) });
+    }
+    th.update();
+    if (JSON.stringify(f.facts) === before) break;
+  }
+  return f;
+}
+
+test('Acts I to IV and the Finale: nothing done out of order skips a main thread (a free player withholding one thread never ends the mission)', () => {
+  let checked = 0, finished = 0;
+  for (const ch of ['act1', 'act2', 'act3', 'act4', 'finale']) {
+    const f0 = new FactStore();
+    for (const c of ORDER.slice(0, ORDER.indexOf(ch) + 1)) for (const k of PRIMES[c] || []) (Array.isArray(k) ? f0.set(k[0], k[1]) : f0.set(k));
+    f0.set('faction', 'neutral');
+    for (const m of MISSIONS[ch]) {
+      const { level } = LEVELS.find((l) => l.deck.mkey === m.key && !l.adjusted);
+      const deck = { ...m, mkey: m.key };
+      // (everything open, nothing withheld: how far a player who does everything gets without the mission's code)
+      const all = freePlay(m, level, f0.facts);
+      if (all.test(m.done)) finished++;
+      const ends = new Set(IDS(m.done));
+      for (const t of threadsOf(deck).filter((x) => !x.side && !x.until)) {
+        // (the thread whose completion is the end itself is not a thread before it)
+        if (ends.has(factOf(deck, t)) || IDS(doneCond(deck, t) || '').some((k) => ends.has(k))) continue;
+        checked++;
+        const f = freePlay(m, level, f0.facts, t);
+        assert.ok(!f.test(m.done), `${m.key}: ${t.id} withheld, yet the mission ends (${m.done})`);
+      }
+    }
+  }
+  assert.ok(checked >= 120, `${checked} threads withheld`);
+  assert.ok(finished >= 12, `${finished} missions a free player can finish (the check is not vacuous)`);
+});
+
+test('U8 review: a talk the story has not reached is not offered, a REVERSE it has not reached does not answer, and a thread done early is paid in order', () => {
+  const lv = (k) => LEVELS.find((l) => l.deck.mkey === k && !l.adjusted).level;
+  // the conversations the review found answering from the cold open: each node that completes its thread waits on its chain
+  for (const [k, key, ancestor] of [['m14', 'sera:0', 't_m14_memorial'], ['m15', 'anja:0', 't_m15_ink'], ['m15', 'mara:0', 't_m15_fourteenth'], ['m17', 'witness:0', 't_m17_reconstruct'], ['m12', 'witness:0', 't_m12_voicemail']]) {
+    assert.ok(new RegExp(`\\b${ancestor}\\b`).test(lv(k).talkGates[key] || ''), `${k}: ${key} waits on ${ancestor}`);
+  }
+  for (const [k, id, ancestor] of [['m22', 'clockArm', 't_m22_chain'], ['m22', 'finalSeals', 't_m22_odile'], ['m22', 'twoLogs', 't_m22_table'], ['m16', 'reel', 't_m16_memory1'], ['m17', 'shredded', 't_m17_echoes']]) {
+    assert.ok(new RegExp(`\\b${ancestor}\\b`).test(lv(k).processes.find((p) => p.id === id)?.arm || ''), `${k}: ${id} answers REVERSE only after ${ancestor}`);
+  }
+  assert.ok(lv('m14').npcs.find((p) => p.id === 'sera').gatedTalk, 'Sera is offered as a talk only once a node of hers is open');
+  // M14: Sera talked to before the memorial is read; her thread is paid (and the beacon opens) only once the story is there
+  const m = MISSIONS.act3.find((x) => x.key === 'm14');
+  const deck = { ...m, mkey: 'm14' };
+  const f = new FactStore();
+  const said = [];
+  const game = { facts: f, hud: { say: (l) => said.push(...l.map((x) => x.text)) }, log: [], deckWorld: { flags: {}, npcs: [] } };
+  const th = new Threads({ g: game });
+  th.attach(deck, lv('m14'));
+  const sera = { n: { ...lv('m14').npcs.find((p) => p.id === 'sera') }, crew: { id: 'sera' } };
+  game.deckWorld.npcs = [sera];
+  th.update();
+  assert.equal(th.talkNode(sera), null, 'nothing of hers is open at the start');
+  assert.ok(sera.n.silent, 'so she is not offered as a talk');
+  f.set('trust_sera', 'ask');
+  th.update();
+  assert.ok(!f.get('t_m14_sera'), 'a thread done before the story reaches it is not paid');
+  for (const id of ['parts', 'lift', 'capacitor', 'stones', 'warning', 'antenna']) f.set(`t_m14_${id}`);
+  for (const k of ['ev_memorial', 'ev_fresh_flowers', 'm14_core']) f.set(k);
+  th.update();
+  assert.ok(f.get('t_m14_memorial') && f.get('t_m14_sera'), 'then it is, in order');
+  assert.ok(!sera.n.silent, 'and she can be talked to');
 });
 
 test('Acts I and II: the people a main conversation needs are met in person, not as echoes (U7 review: Sera, Niko)', () => {

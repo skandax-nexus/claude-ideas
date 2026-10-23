@@ -1184,9 +1184,11 @@ export class LastVersion {
       return;
     }
     // (a mission's talks by the person's own id first: one person in several places, Orren's three, Sera at the anchor)
+    // (a node that would complete a talk thread the story has not reached yet waits: Threads.talkNode)
     const dialogue = this.deck?.talks?.[n.n.id] || this.deck?.talks?.[n.crew.id] || n.n.dialogue || (n.n.lines?.length ? null : DIALOGUE[n.crew.id]);
     if (dialogue) {
-      const node = dialogue.find((d) => g.facts.test(d.when || 'true'));
+      const mine = this.threads.on && (this.deck.talks?.[n.n.id] || this.deck.talks?.[n.crew.id]);
+      const node = mine ? this.threads.talkNode(n)?.node : dialogue.find((d) => g.facts.test(d.when || 'true'));
       if (node) {
         this.playNode(node, n);
         return;
