@@ -207,7 +207,7 @@ measured with a player.
   at 08:14 her own badge record had his card (Kai notices; her code fails for the cleaned log); in 2026 the chamber's
   cradle stands empty and the ring is in the ground at the dig, as its log says; the pursuit runs about 180 m (down
   the stair, across the concourse, through the bus depot, back along the fence) and ends in the knot of Helix's people
-  waiting at the staff gate, where she is gone (Rain City's faces allow 13 walkers: the knot is cast first); the cold open is 05:40 (the rain before dawn, one
+  waiting at the staff gate, where she is gone (Rain City's faces walk at most twice a year in a place, 14 walkers in Mission 1: the knot is cast first); the cold open is 05:40 (the rain before dawn, one
   window pulsing in Helix's crescent across the river, no commuters yet; its first shots, which had looked into the
   Ring Hill's foot, look at the crescent from high over the plaza and the canal) and the title 08:02 again; THINK at the
   checkpoint no longer says any answer will do; the card names no weekday. The prologue, common and act1 packs were
@@ -216,7 +216,10 @@ measured with a player.
   Mission 4), the because line on touch screens (smaller, two lines), the epilogue keyed to `rook_fate`, Kai's birth
   year, the per-chapter save format (`REWRITTEN_IN`), staged moments kept out of the saved flags, and the thread pass
   four times a second rather than every frame. Not done: the length the model claims (below, under Scale). Checked: `npm test` 139/139;
-  the whole browser bot BOTRESULT. No shared engine file changed.
+  the whole browser bot 319/319 (2026-10-23; an earlier run that day failed Mission 3's key C: a lock granted and
+  lost after the lab's save and load reopened the pause menu between the key and its frame, and the bot's `press` now
+  closes it again in the frame's own call; that run's Zero Second duck, sampled late on a machine just started, passed
+  in every run since). No shared engine file changed.
 - **The NPC system** of the supplement: trust, knowledge, quest state, temporal state, faction
   standing and evidence flags in the save; dialogue choices by intent (challenge / comfort /
   investigate / withdraw); barks; echoes standing in for people absent from a state; the case
@@ -514,7 +517,8 @@ measured with a player.
   hours, 703 of them the main path), the bot plays it in 167.5 minutes of game time (the table at the top), and
   no player has been measured. The model's minutes are each thread's own, set by its author (the U6 review: Mission
   1 walked by the bot in 10.4 minutes against 35); the bot now fails Mission 1 if its walk falls under a third of the
-  model's main path (0.40 on 2026-10-22, after the pursuit grew to 180 m), but making the chapters as long as the
+  model's main path (0.40, 10.1 minutes, on 2026-10-23, after the pursuit grew to 180 m) and logs Missions 2 and 3
+  beside their models (placed there, with their lines skipped, so not measures), but making the chapters as long as the
   model says is content still to write, mission by mission, and a player's time still to measure.
 - **What the set pieces are not.** The game has no combat and no fail states: Mission 9's reset, Mission 18's hold
   and Mission 21's arena never fail (a lapse or a fall is a setback to the last anchor); Mission 13's battle and

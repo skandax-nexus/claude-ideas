@@ -71,11 +71,15 @@ const az = (fn, arg) => page.evaluate(([src, a]) => {
   try { return (0, eval)(`(${src})`)(a); } catch (e) { return `ERR ${e.message} @ ${(e.stack || '').split('\n').slice(1, 4).join(' | ')}`; }
 }, [fn.toString(), arg]);
 const ok = (v) => !(typeof v === 'string' && v.startsWith('ERR'));
-// a key, as a player presses it (headless, losing the pointer lock opens the pause menu: close it first)
+// a key, as a player presses it (headless, losing the pointer lock opens the pause menu: close it first). Closing it
+// asks for the lock again, and a lock granted and lost while the key goes down (a load a moment ago, a key just
+// pressed) opens the menu again before the frame: the key's action waits in the queue, so the menu is closed once more
+// in the frame's own call (Mission 3's key C after the lab's save and load was dropped that way)
 const press = async (key) => {
   await az(() => { if (AZ.menu === 'pause') AZ.closeMenu(); });
   await page.keyboard.press(key);
-  await frame();
+  const r = await az(() => { if (AZ.menu === 'pause') AZ.closeMenu(); AZ.frame(); return 'ok'; });
+  if (!ok(r)) console.log('  (frame)', r);
 };
 // one real frame: the keys pressed since the last one are handled
 const frame = async () => {
@@ -495,6 +499,7 @@ check(coat.raincoat && coat.beat_done && coat.gate === false, 'the raincoat is K
 const m1t1 = await az(() => AZ.time);
 const m1min = +((m1t1 - m1t0) / 60).toFixed(1);
 const m1model = await az(() => AZ.edition.deck.minutes);
+const proModels = await az(() => Object.fromEntries(AZ.story.decks.map((d) => [d.key, d.minutes?.main || 0]))); // (the Prologue's three models, logged beside its walk times)
 const m1ratio = +(m1min / m1model.main).toFixed(2);
 console.log(`  (Mission 1 walked by the bot: ${m1min} min of game time, lines at their own length, with the florist and Last Train Home: ${m1ratio} of the model's ${m1model.main}-minute main path)`);
 // (the bot knows every coordinate and reads nothing twice: it is no player. What this guards is the mission itself: a
@@ -720,6 +725,9 @@ check(crowd4.n >= 5 && crowd4.models.every((m) => ['rb_robe_m', 'rb_tala', 'rb_c
 check(await az(() => AZ.facts.get('m01_done') && AZ.facts.get('m02_done') && AZ.facts.get('m03_done')), 'the three prologue missions are recorded as done');
 const times = await az(() => ({ m01: AZ.facts.get('time_m01'), m02: AZ.facts.get('time_m02'), m03: AZ.facts.get('time_m03') }));
 check(times.m01 > 0 && times.m02 > 0 && times.m03 > 0, 'telemetry: each mission\'s time is stored as it ends (time_<mkey>)', JSON.stringify(times));
+// (Missions 2 and 3 beside their models, as the U6 review asked; the bot places Kai and skips the lines there, so their
+// times are logged, not held to the model: only Mission 1 is walked with every line at its own length)
+for (const k of ['m02', 'm03']) console.log(`  (${k}, placed by the bot with its lines skipped: ${(times[k] / 60).toFixed(1)} min of game time; the model's main path is ${proModels[k]} minutes)`);
 // the case board: THE QUESTIONS, SIDE STORIES (with a track button), WHAT YOU CHOSE, ABILITIES
 const board = await az(() => { const el = document.createElement('div'); AZ.edition.renderJournal(AZ, el); const h = [...el.querySelectorAll('h3')].map((x) => x.textContent); return { h, q: el.querySelector('.questions')?.textContent || '', chose: el.innerHTML.includes('Officer Pryce let you through on a long morning.') }; });
 check(['THE QUESTIONS', 'ABILITIES', 'SIDE STORIES', 'WHAT YOU CHOSE'].every((x) => board.h.includes(x)) && /How can the machine predate its inventors\?/.test(board.q) && /Who used my card at 05:40/.test(board.q) && board.chose,
