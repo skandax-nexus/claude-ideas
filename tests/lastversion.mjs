@@ -2073,6 +2073,9 @@ async function survey() {
       return { place: lv.place, sameAs: lv.sameAs, states: g.edition.deck.states, quarter: lv.quarters?.[0]?.name, sky: !!g.edition.mounted?.sky, horizon: !!g.edition.mounted?.horizon };
     }, [ch, d]);
     if (!ok(m)) { check(false, `${key} loads`, m); lost++; await sp.close().catch(() => {}); continue; }
+    // (the mission's opening is over before the first view: a cold open shot in a year of its own, Missions 6, 7, 11
+    // and 12, puts the place back in its year as it ends, and that must not land between a view's year and its picture)
+    if (!crashed) await sp.waitForFunction(() => { AZ.edition.skipOpening(); AZ.simulate(0.1); return !AZ.edition.opening; }, null, { timeout: 120000, polling: 250 }).catch(() => {});
     check(m.place && m.sky && m.horizon, `${key}: ${m.place}, ${m.quarter}, with its sky and horizon`, JSON.stringify(m));
     for (const st of m.states) {
       // the year at once (sky, fog and light without easing); its shaders compiled without blocking the page; then a
