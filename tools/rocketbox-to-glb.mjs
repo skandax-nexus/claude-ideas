@@ -7,6 +7,7 @@
 //   ... --all <Rocketbox checkout> <out dir>                         (Station Zero's set, AVATARS)
 //   ... --edition lastversion <Rocketbox checkout> <out dir> [keys]  (THE LAST VERSION's people,
 //       LV_AVATARS: named characters at 1024 px, crowds at 512 px)
+//   ... --strip <file.glb ...>                                       (an older conversion without its node extras)
 //
 // - Any Rocketbox avatar: texture and material prefixes are letters then digits (f004_, the
 //   children's cf001_ / cm012_, the soldiers' sm024_); children are rigged as Bip02 and their bones
@@ -116,10 +117,31 @@ if (args[0] === '--all' && args.length === 3) {
     if (!a) throw new Error(`${key} is not in LV_AVATARS`);
     await convert(path.join(args[2], 'Assets', 'Avatars', a.src), path.join(args[3], `${key}.glb`), String(a.px), String(a.px / 2), (RB_DROP[key] || []).join(','));
   }
+} else if (args[0] === '--strip' && args.length >= 2) {
+  // node tools/rocketbox-to-glb.mjs --strip <file.glb ...>: rewrite converted models without FBXLoader's node extras
+  // (what a conversion now leaves out), the binary chunk as it was
+  for (const f of args.slice(1)) {
+    const b = fs.readFileSync(f);
+    const jl = b.readUInt32LE(12);
+    const json = JSON.parse(b.subarray(20, 20 + jl).toString('utf8'));
+    for (const n of json.nodes || []) delete n.extras;
+    for (const m of json.meshes || []) delete m.extras;
+    let js = Buffer.from(JSON.stringify(json));
+    js = Buffer.concat([js, Buffer.alloc((4 - (js.length % 4)) % 4, 0x20)]);
+    const rest = b.subarray(20 + jl);
+    const head = Buffer.alloc(20);
+    head.writeUInt32LE(0x46546c67, 0);
+    head.writeUInt32LE(2, 4);
+    head.writeUInt32LE(20 + js.length + rest.length, 8);
+    head.writeUInt32LE(js.length, 12);
+    head.writeUInt32LE(0x4e4f534a, 16);
+    fs.writeFileSync(f, Buffer.concat([head, js, rest]));
+    console.log(`${f}: ${(b.length / 1024).toFixed(0)} -> ${((20 + js.length + rest.length) / 1024).toFixed(0)} KB`);
+  }
 } else if (args.length >= 2 && !args[0].startsWith('--')) {
   await convert(...args);
 } else {
-  console.error('usage: node tools/rocketbox-to-glb.mjs <avatar dir> <out.glb> [colour px] [normal px] [drop parts]\n       node tools/rocketbox-to-glb.mjs --all <Rocketbox checkout> <out dir>\n       node tools/rocketbox-to-glb.mjs --edition lastversion <Rocketbox checkout> <out dir> [keys]');
+  console.error('usage: node tools/rocketbox-to-glb.mjs <avatar dir> <out.glb> [colour px] [normal px] [drop parts]\n       node tools/rocketbox-to-glb.mjs --all <Rocketbox checkout> <out dir>\n       node tools/rocketbox-to-glb.mjs --edition lastversion <Rocketbox checkout> <out dir> [keys]\n       node tools/rocketbox-to-glb.mjs --strip <file.glb ...>');
   process.exit(1);
 }
 
@@ -269,6 +291,10 @@ async function convert(dir, out, colorPx = '1024', normalPx = '512', dropParts =
   let bin = glb.subarray(20 + jsonLen + 8, 20 + jsonLen + 8 + glb.readUInt32LE(20 + jsonLen));
   const chunks = [bin];
   let binLen = bin.length;
+  // (FBXLoader's per-node extras, its transform data and original names, are a fifth of a converted model's bytes and
+  // nothing reads them: left out)
+  for (const n of json.nodes || []) delete n.extras;
+  for (const m of json.meshes || []) delete m.extras;
   json.images = [];
   json.textures = [];
   json.samplers = [{ magFilter: 9729, minFilter: 9987, wrapS: 10497, wrapT: 10497 }];
