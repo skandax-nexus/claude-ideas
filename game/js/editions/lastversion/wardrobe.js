@@ -16,6 +16,7 @@
 // The recoloured map leaves with the people who wear it (DeckWorld.freeLeft disposes it) and is made
 // again the next time someone needs it.
 import * as THREE from '../../../vendor/three.module.min.js';
+import { clothe, hairdo } from './garments.js';
 
 const RAIN_DARK = 0.85; // Rain City's crowds: wet clothes read about 15% darker
 
@@ -123,23 +124,9 @@ export const WARDROBE = {
     // the Director of Continuity, years on: greyer
     old: { head: [{ band: [0, 0, 1, 0.3], lmax: 0.35, sset: 0.03, lrange: [0.45, 0.66] }], body: [{ lmax: 0.3, light: 1.2, sat: 0.6 }] },
   },
-  rb_niko: {
-    // Niko: an undyed linen kurta and a plain woven cap
-    niko: { head: [{ band: [0.05, 0.6, 1, 1], hue: [0.1, 0.5], smin: 0, to: 0.1, sset: 0.2, lrange: [0.5, 0.7], skin: false }] },
-    // Niko, older (M7's cold open): the beard greying
-    older: { head: [{ band: [0.05, 0.6, 1, 1], to: 0.1, sset: 0.2, lrange: [0.5, 0.7], skin: false }, { band: [0, 0, 1, 0.58], lmax: 0.28, sset: 0.04, lrange: [0.42, 0.6] }] },
-  },
   rb_jun: {
     // Jun Park: a navy transit blazer, a line-41 amber tie
     transit: { body: [{ hue: [0.66, 0.12], smin: 0.05, to: 0.63, sset: 0.42, light: 1.15 }, { band: [0.42, 0.35, 0.58, 0.62], lmin: 0.35, to: 0.1, sset: 0.85, lrange: [0.4, 0.55] }] },
-  },
-  rb_tala: {
-    // Tala: an indigo tunic, an undyed scarf
-    tala: { body: [{ hue: [0.13, 0.12], smin: 0.15, to: 0.66, sset: 0.45, light: 0.75 }], hair: [{ lmin: 0.5, to: 0.1, sset: 0.16, light: 0.92 }] },
-    // the settlement's women where Tala is absent (M4, M7): umber, ochre or indigo homespun
-    umber: { body: [{ hue: [0.13, 0.12], smin: 0.15, to: 0.06, sset: 0.4, light: 0.7 }], hair: [{ lmin: 0.5, to: 0.09, sset: 0.22, light: 0.85 }] },
-    ochre: { body: [{ hue: [0.13, 0.12], smin: 0.15, to: 0.1, sset: 0.55, light: 0.95 }], hair: [{ lmin: 0.5, to: 0.1, sset: 0.12, light: 0.95 }] },
-    indigo: { body: [{ hue: [0.13, 0.12], smin: 0.15, to: 0.65, sset: 0.4, light: 0.62 }], hair: [{ lmin: 0.5, to: 0.1, sset: 0.14, light: 0.9 }] },
   },
   rb_security_f: {
     // Officer Pryce: Helix's black uniform and cap
@@ -149,15 +136,6 @@ export const WARDROBE = {
   rb_security_m: {
     // Officer Dale: a grey uniform
     grey: {},
-  },
-  rb_elder: {
-    // the Elder: a madder-red wool robe, a staff, a slow walk
-    // (lighter than her robe was: a madder that read as black at dusk made her a figure in a modern abaya)
-    elder: { body: [{ lmax: 0.5, to: 0.99, sset: 0.56, lrange: [0.27, 0.5] }], hair: [{ to: 0.06, sset: 0.25, lrange: [0.6, 0.78] }], props: ['staff'] },
-    // the settlement's women where the Elder is absent (M5, M7)
-    umber: { body: [{ lmax: 0.5, to: 0.07, sset: 0.42, lrange: [0.14, 0.42] }], hair: [{ to: 0.1, sset: 0.18, lrange: [0.6, 0.8] }] },
-    ochre: { body: [{ lmax: 0.5, to: 0.1, sset: 0.55, lrange: [0.24, 0.56] }], hair: [{ to: 0.1, sset: 0.14, lrange: [0.62, 0.82] }] },
-    indigo: { body: [{ lmax: 0.5, to: 0.65, sset: 0.42, lrange: [0.12, 0.38] }], hair: [{ to: 0.1, sset: 0.16, lrange: [0.6, 0.8] }] },
   },
   rb_ezra: {
     // Ezra Moll: tweed worn as a workshop dust coat, a loupe
@@ -191,8 +169,6 @@ export const WARDROBE = {
   rb_civ_f1: {
     detention: { body: [{ to: 0.58, sset: 0.05, lrange: [0.34, 0.56] }] }, dust: { body: [{ sat: 0.45, light: 1.12 }] },
     default: {}, plum: { body: [{ hue: [0.68, 0.1], smin: 0.15, to: 0.85, sat: 0.9 }] }, teal: { body: [{ hue: [0.68, 0.1], smin: 0.15, to: 0.5, sat: 0.9 }] },
-    // the Helix receptionist
-    'helix desk': { body: [{ hue: [0.68, 0.1], smin: 0.15, to: 0.6, sset: 0.1, light: 0.5 }] },
     // the trapped woman (M1): soaked
     wet: { body: [{ light: 0.78 }] },
   },
@@ -201,8 +177,6 @@ export const WARDROBE = {
     default: {}, rose: { body: [{ band: [0.3, 0, 0.7, 0.6], lmin: 0.3, to: 0.97, sset: 0.35, light: 1 }] }, sand: { body: [{ band: [0.3, 0, 0.7, 0.6], lmin: 0.3, to: 0.1, sset: 0.3 }] },
     // Helix technicians: a slate coverall
     'coverall slate': { body: [{ to: 0.6, sset: 0.14, lrange: [0.2, 0.42] }] },
-    // Officer Haig's recording: at home, a T-shirt
-    home: {},
   },
   // (the tour: rb_civ_f3's and rb_civ_m1's variants dyed only their trims, and two of them walked the same street in the
   // same black hoodie or jacket, the same face twice: their black is dyed too, a moss or rust hoodie, a navy or olive coat)
@@ -227,7 +201,7 @@ export const WARDROBE = {
     // a prisoner of the dam's loop cells (M10): the hard hat gone, the detention grey
     detention: { hide: ['helmet'], body: [{ to: 0.58, sset: 0.05, lrange: [0.34, 0.56] }] },
   },
-  rb_medic_f: { default: {}, dust: { body: [{ sat: 0.6, light: 1.08 }] } },
+  rb_medic_f: { default: {}, dust: { body: [{ sat: 0.6, light: 1.08 }] }, night: { body: [{ hue: [0.62, 0.1], smin: 0.2, to: 0.64, sset: 0.5, light: 0.7 }] } },
   // (the jersey's #38 is painted out of the map itself, tools/rocketbox-textures.py TRANSPLANT: a number shared by the toy
   // boy, Tomas and 2196's children would read as a clue the story does not have)
   rb_child_m2: {
@@ -242,11 +216,7 @@ export const WARDROBE = {
     patched3: { body: [...JERSEY({ hue: [0.07, 0.07], smin: 0.3, to: 0.08, sat: 0.45, light: 0.9 }), { band: [0.42, 0.5, 0.58, 0.62], lmin: 0.5, light: 0.7 }] },
   },
   rb_child_f2: {
-    // the settlement's girls in linen (the head cloth plain)
-    linen: { body: [{ to: 0.11, sset: 0.16, lrange: [0.5, 0.74] }], head: [{ hue: [0.93, 0.1], smin: 0.15, to: 0.1, sset: 0.14, lrange: [0.5, 0.72] }] },
-    ochre: { body: [{ to: 0.1, sset: 0.45, lrange: [0.34, 0.54] }], head: [{ hue: [0.93, 0.1], smin: 0.15, to: 0.1, sset: 0.16, lrange: [0.52, 0.72] }] },
-    // (a third homespun: where a girl in linen is placed by hand, the crowd's children still differ from their neighbours)
-    indigo: { body: [{ to: 0.64, sset: 0.34, lrange: [0.24, 0.44] }], head: [{ hue: [0.93, 0.1], smin: 0.15, to: 0.1, sset: 0.14, lrange: [0.52, 0.72] }] },
+    // (closing) a girl of 2196 in a head scarf, never of the settlement: there a scarf would be a modern garment's
     // a 2196 schoolgirl (M14): a faded blue smock, the head cloth a washed grey
     faded: { body: [{ to: 0.58, sset: 0.2, lrange: [0.4, 0.6] }], head: [{ hue: [0.93, 0.1], smin: 0.15, to: 0.6, sset: 0.06, lrange: [0.5, 0.68] }] },
   },
@@ -255,17 +225,6 @@ export const WARDROBE = {
     continuum: { body: [{ to: 0.6, sset: 0.14, light: 0.75, lmin: 0.06 }], equipment: [{ to: 0.6, sset: 0.12, light: 0.7 }], helmet: [{ to: 0.6, sset: 0.12, light: 0.72 }] },
     // the Spire's elites: graphite, a lit visor
     elite: { body: [{ to: 0.62, sset: 0.05, light: 0.45, lmin: 0.06 }], equipment: [{ to: 0.62, sset: 0.04, light: 0.42 }], helmet: [{ to: 0.62, sset: 0.04, light: 0.4 }], props: ['visor'] },
-  },
-  rb_robe_m: {
-    // the settlement's men: homespun in ochre, indigo, undyed or madder; the head cloth plain
-    ochre: { body: [{ to: 0.1, sset: 0.62, lrange: [0.26, 0.46] }], keffiyeh: [{ to: 0.1, sset: 0.12, lrange: [0.58, 0.78], skin: false }] },
-    indigo: { body: [{ to: 0.65, sset: 0.38, lrange: [0.2, 0.4] }], keffiyeh: [{ to: 0.1, sset: 0.1, lrange: [0.6, 0.8], skin: false }] },
-    undyed: { body: [{ to: 0.11, sset: 0.14, lrange: [0.56, 0.78] }], keffiyeh: [{ to: 0.1, sset: 0.16, lrange: [0.5, 0.7], skin: false }] },
-    madder: { body: [{ to: 0.99, sset: 0.45, lrange: [0.26, 0.44] }], keffiyeh: [{ to: 0.1, sset: 0.12, lrange: [0.58, 0.78], skin: false }] },
-    // an astronomer (M7)
-    astronomer: { body: [{ to: 0.66, sset: 0.42, lrange: [0.14, 0.3] }], keffiyeh: [{ to: 0.66, sset: 0.3, lrange: [0.2, 0.36], skin: false }], props: ['staff'] },
-    // the crowd's elders: darker, with a staff and a slow walk
-    elder: { body: [{ to: 0.08, sset: 0.3, lrange: [0.2, 0.36] }], keffiyeh: [{ to: 0.1, sset: 0.1, lrange: [0.5, 0.66], skin: false }], props: ['staff'] },
   },
   rb_scav: {
     // 2196 scavengers: grey, olive or rust
@@ -296,9 +255,163 @@ export const WARDROBE = {
     lab: { body: [{ band: [0.3, 0.1, 0.7, 0.62], sset: 0.03, lrange: [0.72, 0.9] }] },
     detention: { body: [{ to: 0.58, sset: 0.05, lrange: [0.34, 0.56] }] }, dust: { body: [{ sat: 0.45, light: 1.12 }] },
   },
-  rb_villager_f: { default: {}, sage: { body: [{ hue: [0.09, 0.1], smin: 0.1, to: 0.27, sat: 0.9 }] }, rust: { body: [{ hue: [0.09, 0.1], smin: 0.1, to: 0.04, sat: 1.1 }] } },
+  // 2196's gardeners, medics and archivists (Female_Adult_17: a tee, jeans): moss, rust, a faded blue, worn
+  rb_surv_f: { default: { body: [{ sat: 0.6, light: 0.92 }] }, sage: { body: [{ hue: [0.4, 0.12], smin: 0.15, to: 0.27, sset: 0.3, light: 0.85 }, { hue: [0.6, 0.1], smin: 0.15, to: 0.09, sset: 0.22 }] },
+    rust: { body: [{ hue: [0.4, 0.12], smin: 0.15, to: 0.05, sset: 0.45, light: 0.8 }, { hue: [0.6, 0.1], smin: 0.15, to: 0.1, sset: 0.18, light: 0.85 }] },
+    faded: { body: [{ hue: [0.4, 0.12], smin: 0.15, to: 0.58, sset: 0.18, lrange: [0.45, 0.62] }, { hue: [0.6, 0.1], smin: 0.15, sat: 0.4, light: 1.15 }] } },
   xbot: { default: {}, hologram: {} },
 };
+
+// --- the settlement, three thousand years ago (closing) ---------------------------------------------------------------
+// Its people wear wool and linen made for their bodies (garments.js): a tunic to the ankle (a boy's to the knee), a mantle
+// on the shoulders, a cloak down the back or a sash across the chest, a belt, the bare head or tied-back hair; never
+// Rocketbox's robe, kurta, hijab, abaya or head-cloth avatars (they are gone from the edition). Today's clothes under a
+// tunic take its dye (skin and hair kept). Natural dyes: undyed and grey wool, walnut, madder, weld, woad.
+export const DYE = {
+  undyed: '#d2c4a4', flax: '#b9aa86', oat: '#a39272', grey: '#857a69', brown: '#5b4836', walnut: '#6a4a30', black: '#302a25',
+  madder: '#8c3a2c', rose: '#a65a4a', weld: '#c2a04c', ochre: '#a5803a', saffron: '#bf8a30', woad: '#3d4f6d', sky: '#687c94',
+  olive: '#646036', plum: '#583c48',
+};
+// a body map dyed one colour of the table (its texture's light and shade kept, a little brighter or darker)
+export function dyeRule(name, o = {}) {
+  const h = {};
+  new THREE.Color(DYE[name]).getHSL(h, THREE.SRGBColorSpace);
+  const r3 = (x) => Math.round(x * 1000) / 1000;
+  return { to: r3(h.h), sset: r3(Math.min(0.85, h.s)), lrange: [r3(Math.max(0.04, h.l - 0.14)), r3(Math.min(0.9, h.l + 0.06))], ...o };
+}
+// Each place of the settlement dresses its people from its own palette (crowds.js PALETTE): the first fire's ochres and
+// madder (M4), the river's woad and undyed linen (M5), the night sky-watchers' black wool and plum (M7), the road's feast
+// colours (the Finale). An outfit: [tunic, mantle or cloak or sash, stripe, belt].
+export const SETTLEMENT = {
+  fire: [['ochre', 'madder', 'walnut', 'walnut'], ['undyed', 'walnut', 'madder', 'madder'], ['madder', 'undyed', 'black', 'black'], ['walnut', 'ochre', 'undyed', 'ochre'], ['flax', 'madder', 'ochre', 'brown']],
+  water: [['woad', 'undyed', 'walnut', 'walnut'], ['undyed', 'woad', 'sky', 'brown'], ['sky', 'oat', 'woad', 'woad'], ['olive', 'flax', 'woad', 'brown'], ['oat', 'olive', 'woad', 'walnut']],
+  sky: [['black', 'madder', 'weld', 'madder'], ['woad', 'grey', 'weld', 'black'], ['plum', 'black', 'undyed', 'black'], ['grey', 'woad', 'plum', 'plum'], ['brown', 'plum', 'weld', 'black']],
+  fest: [['saffron', 'rose', 'undyed', 'madder'], ['rose', 'undyed', 'saffron', 'walnut'], ['sky', 'saffron', 'undyed', 'saffron'], ['undyed', 'madder', 'saffron', 'woad'], ['weld', 'sky', 'madder', 'madder']],
+  // the first second (M22): the settlement as the fire left it, its dyes gone to ash and undyed grey
+  ash: [['grey', 'black', 'undyed', 'black'], ['undyed', 'grey', 'brown', 'brown'], ['brown', 'undyed', 'grey', 'black'], ['oat', 'brown', 'black', 'grey'], ['black', 'oat', 'grey', 'brown']],
+};
+const D = (n) => DYE[n];
+// the cuts: a man's tunic to the shin, a woman's and an elder's to the ankle (wider), a child's narrower; a boy's to the knee
+const CUT = {
+  man: (t, o, st, b, i) => ({ skirt: { dye: D(t), stripe: D(st), hem: 0.14, flare: 1.12 }, bodice: { dye: D(t) }, ...(i % 2 ? { cloak: { dye: D(o), stripe: D(st), open: 0.55 } } : { mantle: { dye: D(o), stripe: D(st) } }), belt: { dye: D(b) } }),
+  woman: (t, o, st, b, i) => ({ skirt: { dye: D(t), stripe: D(st), hem: 0.05, flare: 1.25 }, bodice: { dye: D(t) }, ...(i % 2 ? { sash: { dye: D(o), side: i % 4 === 1 ? 'L' : 'R' } } : { mantle: { dye: D(o), stripe: D(st), front: 0.2, back: 0.34 } }), belt: { dye: D(b) } }),
+  elder: (t, o, st, b) => ({ skirt: { dye: D(t), stripe: D(st), hem: 0.05, flare: 1.1 }, bodice: { dye: D(t) }, cloak: { dye: D(o), stripe: D(st), hem: 0.12, open: 0.5 }, belt: { dye: D(b) } }),
+  boy: (t, o, st, b) => ({ skirt: { dye: D(t), stripe: D(st), hem: 0.3, flare: 1.06, ease: 0.014 }, belt: { dye: D(b) } }),
+  girl: (t, o, st, b, i) => ({ skirt: { dye: D(t), stripe: D(st), hem: 0.05, flare: 1.1, ease: 0.014 }, ...(i % 2 ? { sash: { dye: D(o), side: 'L', w: 0.06 } } : { belt: { dye: D(b) } }) }),
+};
+// the one boy's body's jersey and sleeves (rb_child_m2): only those bands are dyed, his skin is the jersey's hue
+const JERSEY_DYE = (name) => JERSEY(dyeRule(name));
+// (Female_Adult_05's blazer is pink, a colour the dye would take for her skin and leave: dyed all over but for the map's
+// corners, where her hands are)
+const OUT_OF_CORNERS = [[0.25, 0, 0.75, 1], [0, 0.17, 0.25, 0.83], [0.75, 0.17, 1, 0.83]];
+const BODY_DYE = { rb_vill_f: (t) => OUT_OF_CORNERS.map((band) => dyeRule(t, { band, skin: false })) };
+function settlementVariants() {
+  const out = { rb_vill_m: {}, rb_vill_m2: {}, rb_vill_f: {}, rb_vill_f2: {}, rb_elder_m: {}, rb_sage_m: {}, rb_child_m2: {} };
+  const kind = { rb_vill_m: 'man', rb_vill_m2: 'man', rb_vill_f: 'woman', rb_vill_f2: 'woman', rb_elder_m: 'elder', rb_sage_m: 'elder' };
+  for (const [pal, outfits] of Object.entries(SETTLEMENT)) {
+    outfits.forEach(([t, o, st, b], k) => {
+      const i = k + 1;
+      for (const [m, kd] of Object.entries(kind)) {
+        // (the two men and the two women wear each outfit differently: the second's cut is the other one)
+        const j = m.endsWith('2') ? i + 1 : i;
+        out[m][`${pal}${i}`] = { body: BODY_DYE[m] ? BODY_DYE[m](t) : [dyeRule(t)], garb: CUT[kd](t, o, st, b, j), ...(kd === 'elder' ? { props: ['staff'] } : {}) };
+      }
+      out.rb_child_m2[`${pal}_boy${i}`] = { body: JERSEY_DYE(t), garb: CUT.boy(t, o, st, b, i) };
+      // a girl wears one of the settlement's women's hair (tied back, or loose to the shoulder)
+      out.rb_child_m2[`${pal}_girl${i}`] = { body: JERSEY_DYE(t), garb: CUT.girl(t, o, st, b, i), hairdo: { from: i % 2 ? 'rb_vill_f2' : 'rb_vill_f' } };
+    });
+  }
+  return out;
+}
+for (const [m, vs] of Object.entries(settlementVariants())) WARDROBE[m] = { ...(WARDROBE[m] || {}), ...vs };
+// the settlement's named people and its people placed by hand
+Object.assign(WARDROBE, {
+  rb_niko: {
+    // Niko, keeper of the settlement: an undyed linen tunic to the shin, a woad mantle; Rocketbox's woven cap is dyed as
+    // the short dark hair under it
+    niko: { body: [dyeRule('flax')], head: [{ band: [0.05, 0.6, 1, 1], hue: [0.1, 0.5], smin: 0, to: 0.08, sset: 0.25, lrange: [0.05, 0.14], skin: false }],
+      garb: { skirt: { dye: D('flax'), stripe: D('walnut'), hem: 0.12, flare: 1.12 }, bodice: { dye: D('flax') }, mantle: { dye: D('woad'), stripe: D('undyed') }, belt: { dye: D('walnut') } } },
+    // Niko, older (M7's cold open): the beard greying, the hair with it
+    older: { body: [dyeRule('oat')], head: [{ band: [0.05, 0.6, 1, 1], hue: [0.1, 0.5], smin: 0, to: 0.08, sset: 0.08, lrange: [0.22, 0.36], skin: false }, { band: [0, 0, 1, 0.58], lmax: 0.28, sset: 0.04, lrange: [0.42, 0.6] }],
+      garb: { skirt: { dye: D('oat'), stripe: D('walnut'), hem: 0.1, flare: 1.12 }, bodice: { dye: D('oat') }, cloak: { dye: D('woad'), stripe: D('undyed') }, belt: { dye: D('walnut') } }, props: ['staff'] },
+  },
+  rb_tala: {
+    // Tala, the water keeper: an indigo tunic, an undyed mantle (the bible's "undyed scarf", worn on the shoulders), her
+    // hair tied up out of the water
+    tala: { body: [dyeRule('woad')], garb: { skirt: { dye: D('woad'), stripe: D('undyed'), hem: 0.06, flare: 1.2 }, bodice: { dye: D('woad') }, mantle: { dye: D('undyed'), stripe: D('woad'), front: 0.2, back: 0.32 }, belt: { dye: D('madder') } } },
+  },
+  rb_elder: {
+    // the Elder: a madder-red wool robe to the ground, a dark cloak, greyed hair, a staff and a slow walk
+    elder: { body: [dyeRule('madder')], hair: [{ sset: 0.05, lrange: [0.52, 0.8] }], garb: { skirt: { dye: D('madder'), stripe: D('weld'), hem: 0.03, flare: 1.15 }, bodice: { dye: D('madder') }, cloak: { dye: D('brown'), stripe: D('weld'), hem: 0.08 }, belt: { dye: D('weld') } }, props: ['staff'] },
+  },
+});
+// (M4's storyteller by the fire, M7's astronomer: elders placed by hand, in clothes no one in the crowd wears)
+WARDROBE.rb_elder_m.storyteller = { body: [dyeRule('walnut')], garb: { skirt: { dye: D('walnut'), stripe: D('madder'), hem: 0.05, flare: 1.1 }, bodice: { dye: D('walnut') }, cloak: { dye: D('madder'), stripe: D('black'), hem: 0.1, open: 0.5 }, belt: { dye: D('black') } }, props: ['staff'] };
+WARDROBE.rb_sage_m.astronomer = { body: [dyeRule('woad')], garb: { skirt: { dye: D('woad'), stripe: D('weld'), hem: 0.04, flare: 1.1 }, bodice: { dye: D('woad') }, cloak: { dye: D('black'), stripe: D('weld'), hem: 0.1, open: 0.5 }, belt: { dye: D('weld') } }, props: ['staff'] };
+
+// the settlement's girls are the crowds' one boy's body with a woman's hair (garments.js hairdo): theirs is 'f'
+for (const [k, v] of Object.entries(WARDROBE.rb_child_m2)) if (/_girl\d$/.test(k)) v.sex = 'f';
+// the people of the settlement placed by hand: M4's craftswoman and the girl who lost her ring, M5's potter, mother and
+// water keeper (in clothes the crowd does not wear)
+Object.assign(WARDROBE.rb_vill_f2, { craft: { body: [dyeRule('walnut')], garb: { skirt: { dye: D('walnut'), stripe: D('ochre'), hem: 0.05, flare: 1.2 }, bodice: { dye: D('walnut') }, apron: { dye: D('undyed'), hem: 0.3 }, belt: { dye: D('ochre') } } } });
+Object.assign(WARDROBE.rb_vill_m, { potter: { body: [dyeRule('oat')], garb: { skirt: { dye: D('oat'), stripe: D('brown'), hem: 0.16, flare: 1.1 }, bodice: { dye: D('oat') }, apron: { dye: D('brown'), hem: 0.4 }, belt: { dye: D('brown') } } } });
+Object.assign(WARDROBE.rb_vill_f, { mother: { body: OUT_OF_CORNERS.map((band) => dyeRule('olive', { band, skin: false })), garb: { skirt: { dye: D('olive'), stripe: D('undyed'), hem: 0.05, flare: 1.25 }, bodice: { dye: D('olive') }, mantle: { dye: D('undyed'), front: 0.2, back: 0.34 }, belt: { dye: D('walnut') } } } });
+Object.assign(WARDROBE.rb_vill_m2, { keeper: { body: [dyeRule('woad')], garb: { skirt: { dye: D('woad'), stripe: D('undyed'), hem: 0.14, flare: 1.12 }, bodice: { dye: D('woad') }, sash: { dye: D('undyed'), side: 'R' }, belt: { dye: D('walnut') } } } });
+Object.assign(WARDROBE.rb_child_m2, {
+  // M4's girl: undyed linen and a madder sash, her hair loose to the shoulder (it is her ring the player finds)
+  girl_m4: { sex: 'f', body: JERSEY_DYE('undyed'), garb: { skirt: { dye: D('undyed'), stripe: D('madder'), hem: 0.05, flare: 1.1, ease: 0.014 }, sash: { dye: D('madder'), side: 'L', w: 0.06 } }, hairdo: { from: 'rb_vill_f2' } },
+  girl_m5: { sex: 'f', body: JERSEY_DYE('sky'), garb: { skirt: { dye: D('sky'), stripe: D('undyed'), hem: 0.05, flare: 1.1, ease: 0.014 }, belt: { dye: D('walnut') } }, hairdo: { from: 'rb_vill_f' } },
+});
+
+// --- today's crowds, place by place (closing) ---------------------------------------------------------------------------
+// The casual crowds of a place wear its own colours (crowds.js PALETTE), so Rain City's wet morning, Old Town's autumn,
+// Loop City's summer before the war, the lock city's winter, the frozen first second and Afterzero's morning do not dress
+// the same few people alike: each body's main garment (its coat, jacket, blouse, flannel, waistcoat) takes the palette's
+// colours, the rest as it was.
+export const PRESENT_PALETTES = {
+  rain: ['#2c3a52', '#3a3d42', '#2f4a3a', '#5a2a32', '#8a6a44', '#4a5866'], // navy, charcoal, bottle, wine, camel, slate
+  autumn: ['#b08a2e', '#8c4a2a', '#2f6a6a', '#9a7a52', '#cfc4aa', '#5a3a52'], // mustard, rust, teal, camel, cream, plum
+  summer: ['#e2e0d8', '#7aa2c8', '#d0705a', '#8ac0a2', '#d8c050', '#d08aa0'], // white, sky, coral, mint, yellow, pink
+  winter: ['#3c4a5e', '#6a2a2a', '#55606a', '#2a3a34', '#8a8070', '#40364a'], // the lock city's fans of 2049: dark wool
+  grey: ['#7a7a78', '#5a5c60', '#8a8478', '#4a4a4c', '#9a9a96', '#66625a'], // the first second, drained
+  bright: ['#d09a30', '#c0607a', '#6a9ac8', '#7ab896', '#e6e2d6', '#d07a5a'], // saffron, rose, sky, mint, white, coral
+  midday: ['#2a3e66', '#d8d4c8', '#7a2e3a', '#3a5a4a', '#b89a6a', '#5c6670'], // 2049's downtown at noon: cobalt, stone, burgundy
+  ward: ['#8a84a8', '#8aa08a', '#d6cfbf', '#7d93ad', '#9a8a7a', '#b88a90'], // the hospital's visitors: lavender, sage, cream
+  memory: ['#b8a07a', '#9a7a5a', '#c8b8a0', '#8a9a8a', '#a88a7a', '#7a6a5a'], // Mira's memory (M20): a faded photograph's
+};
+// each body's main garment, as recolour selectors (the variants' own, without their colour)
+const MAIN = {
+  rb_civ_f1: [{ hue: [0.68, 0.1], smin: 0.15 }],
+  rb_civ_f2: [{ band: [0.3, 0, 0.7, 0.6], lmin: 0.3 }],
+  rb_civ_m1: [{ lmax: 0.3 }],
+  rb_civ_m2: [{ band: [0.3, 0, 0.7, 1], lmin: 0.2 }],
+  rb_civ_m3: [{ band: [0.3, 0.15, 0.7, 0.84] }, { band: [0, 0.42, 0.32, 0.84] }, { band: [0.68, 0.42, 1, 0.84] }],
+  rb_civ_f4: [{ band: [0.3, 0.1, 0.7, 0.62] }],
+  rb_courier: [{ hue: [0.0, 0.06], smin: 0.3 }],
+};
+const hexRule = (hex, sel) => {
+  const h = {};
+  new THREE.Color(hex).getHSL(h, THREE.SRGBColorSpace);
+  const r3 = (x) => Math.round(x * 1000) / 1000;
+  return { ...sel, to: r3(h.h), sset: r3(Math.min(0.8, h.s)), lrange: [r3(Math.max(0.04, h.l - 0.12)), r3(Math.min(0.92, h.l + 0.06))] };
+};
+for (const [pal, cols] of Object.entries(PRESENT_PALETTES)) {
+  for (const [m, sels] of Object.entries(MAIN)) cols.forEach((hex, i) => { WARDROBE[m][`${pal}${i + 1}`] = { body: sels.map((sel) => hexRule(hex, sel)) }; });
+}
+// (closing) soot: the second look of people caught in a disaster (Loop City, the war's port), so a crowd of them is not
+// the same few in the same dust
+for (const m of ['rb_civ_f1', 'rb_civ_f2', 'rb_civ_m1', 'rb_civ_m2', 'rb_courier', 'rb_civ_m3', 'rb_civ_f4']) WARDROBE[m].soot = { body: [{ sat: 0.3, light: 0.72 }] };
+// (closing) Helix at work: a lab coat (a cloak open at the front, hemmed at the knee) over a white top; the technicians'
+// slate work uniform on the paramedic's body (its reflective bands kept); a cook's white top and apron (M21)
+const LABCOAT = { cloak: { dye: '#e4e4e0', hem: 0.5, open: 0.42, fit: true } };
+WARDROBE.rb_civ_f4.labcoat = { body: [{ band: [0.3, 0.1, 0.7, 0.62], sset: 0.03, lrange: [0.74, 0.9] }, { band: [0, 0, 0.3, 0.55], sset: 0.03, lrange: [0.7, 0.88] }, { band: [0.7, 0, 1, 0.55], sset: 0.03, lrange: [0.7, 0.88] }], garb: LABCOAT, props: ['lanyard'] };
+WARDROBE.rb_civ_m3.labcoat = { body: [{ band: [0.3, 0.15, 0.7, 0.84], sset: 0.03, lrange: [0.74, 0.9] }, { band: [0, 0.42, 0.32, 0.84], sset: 0.03, lrange: [0.74, 0.9] }, { band: [0.68, 0.42, 1, 0.84], sset: 0.03, lrange: [0.74, 0.9] }], garb: LABCOAT, props: ['clipboard'] };
+WARDROBE.rb_medic_f['helix tech'] = { body: [{ hue: [0.62, 0.1], smin: 0.2, to: 0.6, sset: 0.14, lrange: [0.16, 0.36] }] };
+WARDROBE.rb_civ_f2.cook = { body: [{ band: [0.3, 0, 0.7, 0.6], sset: 0.03, lrange: [0.76, 0.92] }, { hue: [0.6, 0.1], smin: 0.1, to: 0.6, sset: 0.06, lrange: [0.12, 0.24] }], garb: { apron: { dye: '#ece8dc', hem: 0.38 }, belt: { dye: '#ece8dc', w: 0.03 } } };
+// the receptionist: Helix's navy suit; Officer Haig at home (her recording); Tomas in a 2196 school jersey, patched
+WARDROBE.rb_desk_f = { 'helix desk': { body: [{ lmax: 0.3, to: 0.62, sset: 0.3, lrange: [0.08, 0.2] }] } };
+WARDROBE.rb_haig = { home: {} };
+WARDROBE.rb_tomas = { school: { body: [{ band: [0.3, 0, 0.7, 0.6], to: 0.1, sset: 0.2, lrange: [0.45, 0.7] }] } };
 
 // --- the props --------------------------------------------------------------------------------------
 // built from primitives, once (their geometry and materials are shared and kept); each: where it hangs
@@ -732,6 +845,10 @@ export function dress(actor, crew, opts = {}) {
     });
     if (props.includes('umbrella')) U.umbrella = true;
   }
+  // clothes made for the body (garments.js): the settlement's tunics, mantles and belts (of light on an echo), a lab
+  // coat, an apron; and the settlement's girls' hair
+  if (v.garb) clothe(actor, model, v.garb, { hologram: holo, glow: U.spec.glow });
+  if (v.hairdo) hairdo(actor, model, v.hairdo.from, { ...v.hairdo, hologram: holo, glow: U.spec.glow });
   U.lvVariant = variant;
   return actor;
 }

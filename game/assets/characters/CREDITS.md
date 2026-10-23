@@ -9,7 +9,7 @@
 
 ## Microsoft Rocketbox avatars
 
-Each file is one avatar from `Assets/Avatars/` of the library, converted from its FBX and TGA textures: metres, welded vertices, colour textures 1024 px JPEG, normal and roughness maps 512 px, hair and lashes 1024 px PNG with alpha, accessories at half size. THE LAST VERSION OF EARTH's people (`node tools/rocketbox-to-glb.mjs --edition lastversion`) are converted the same way, its named characters at those sizes and its crowds at half (colour 512 px, normal and roughness 256 px); no one carries a gun (the pistols are left out), the soldiers' sleeve flags are painted out as blank patches, and the number 38 on `Male_Child_02`'s jersey is covered with plain cloth from the same map (`tools/rocketbox-textures.py` TRANSPLANT).
+Each file is one avatar from `Assets/Avatars/` of the library, converted from its FBX and TGA textures: metres, welded vertices, colour textures 1024 px JPEG, normal and roughness maps 512 px, hair and lashes 1024 px PNG with alpha, accessories at half size. THE LAST VERSION OF EARTH's people (`node tools/rocketbox-to-glb.mjs --edition lastversion`) are converted the same way, its named characters at those sizes and its crowds at half (colour 512 px, normal and roughness 256 px); no one carries a gun (the pistols are left out), the soldiers' sleeve flags are painted out as blank patches, and the number 38 on `Male_Child_02`'s jersey is covered with plain cloth from the same map (`tools/rocketbox-textures.py` TRANSPLANT). FBXLoader's node extras are left out of the edition's files. The settlement's people (three thousand years ago) wear wool and linen made for their bodies in the game (`game/js/editions/lastversion/garments.js`) over these avatars' clothes.
 
 | File | Rocketbox avatar | Used for |
 | --- | --- | --- |
@@ -29,10 +29,10 @@ Each file is one avatar from `Assets/Avatars/` of the library, converted from it
 | `rb_rook.glb` | `Professions/Business_Male_04` | THE LAST VERSION: Dr. Elias Rook |
 | `rb_niko.glb` | `Adults/Male_Adult_15` | THE LAST VERSION: Niko |
 | `rb_jun.glb` | `Professions/Business_Male_02` | THE LAST VERSION: Jun Park |
-| `rb_tala.glb` | `Adults/Female_Adult_06` | THE LAST VERSION: Tala; the settlement's women where Tala is absent |
+| `rb_tala.glb` | `Adults/Female_Adult_11` | THE LAST VERSION: Tala, the water keeper |
 | `rb_security_f.glb` | `Professions/Security_Female_01` | THE LAST VERSION: Officer Pryce (the pistol is left out) |
 | `rb_security_m.glb` | `Professions/Security_Male_01` | THE LAST VERSION: Officer Dale |
-| `rb_elder.glb` | `Adults/Female_Adult_10` | THE LAST VERSION: the Elder; the settlement's women where the Elder is absent |
+| `rb_elder.glb` | `Adults/Female_Adult_09` | THE LAST VERSION: the Elder |
 | `rb_ezra.glb` | `Adults/Male_Adult_03` | THE LAST VERSION: Ezra Moll, the Clockmaker |
 | `rb_engineer_f.glb` | `Professions/Construction_Female_01` | THE LAST VERSION: Rhea Odum |
 | `rb_soldier_m.glb` | `Professions/Military_Male_02` | THE LAST VERSION: Sergeant Brask (the sleeve flag is painted out) |
@@ -43,23 +43,31 @@ Each file is one avatar from `Assets/Avatars/` of the library, converted from it
 | `rb_mara.glb` | `Professions/Business_Female_03` | THE LAST VERSION: Mara Quill, the archivist |
 | `rb_iven.glb` | `Professions/Construction_Male_02` | THE LAST VERSION: Iven Marr |
 | `rb_gardener_f.glb` | `Adults/Female_Adult_01` | THE LAST VERSION: the Gardener of 2196 |
-| `rb_civ_f1.glb` | `Adults/Female_Adult_15` | THE LAST VERSION: commuters (2026/2049); the Helix receptionist; the trapped woman |
-| `rb_civ_f2.glb` | `Adults/Female_Adult_08` | THE LAST VERSION: commuters, Helix technicians (2026/2049); Officer Haig's recording |
+| `rb_civ_f1.glb` | `Adults/Female_Adult_15` | THE LAST VERSION: commuters (2026/2049); the trapped woman |
+| `rb_civ_f2.glb` | `Adults/Female_Adult_08` | THE LAST VERSION: commuters (2026/2049); the cook (M21) |
 | `rb_civ_f3.glb` | `Adults/Female_Adult_12` | THE LAST VERSION: gardeners, medics, archivists (2196) |
 | `rb_civ_m1.glb` | `Adults/Male_Adult_04` | THE LAST VERSION: commuters (2026/2049) |
 | `rb_civ_m2.glb` | `Adults/Male_Adult_13` | THE LAST VERSION: shopkeepers, the Helix cleaner (2026/2049) |
 | `rb_courier.glb` | `Professions/Delivery_Male_01` | THE LAST VERSION: couriers (2026/2049); the trapped man |
 | `rb_contractor.glb` | `Professions/Construction_Male_07` | THE LAST VERSION: contractors, 2026 builders, Helix technicians |
-| `rb_medic_f.glb` | `Professions/Medical_Female_03` | THE LAST VERSION: paramedics and responders |
-| `rb_child_m2.glb` | `Children/Male_Child_02` | THE LAST VERSION: children (2049 and 2196); the toy child; Tomas (the jersey's number painted out) |
-| `rb_child_f2.glb` | `Children/Female_Child_02` | THE LAST VERSION: the settlement's children |
+| `rb_medic_f.glb` | `Professions/Medical_Female_03` | THE LAST VERSION: paramedics and responders; Helix technicians in slate |
+| `rb_child_m2.glb` | `Children/Male_Child_02` | THE LAST VERSION: children (2049, 2196 and the settlement's boys, and its girls with a woman's hair); the toy child (the jersey's number painted out) |
+| `rb_child_f2.glb` | `Children/Female_Child_02` | THE LAST VERSION: a schoolgirl of 2196 |
 | `rb_trooper.glb` | `Professions/Military_Male_04` | THE LAST VERSION: Continuum troops and patrols (the sleeve flag is painted out) |
-| `rb_robe_m.glb` | `Adults/Male_Adult_19` | THE LAST VERSION: the settlement's men (recoloured homespun, a plain head cloth) |
 | `rb_scav.glb` | `Adults/Male_Adult_18` | THE LAST VERSION: scavengers (2196) |
 | `rb_trader.glb` | `Professions/Wood_Male_01` | THE LAST VERSION: traders and engineers (2196) |
-| `rb_villager_f.glb` | `Adults/Female_Adult_09` | THE LAST VERSION: gardeners, medics, archivists (2196) |
+| `rb_surv_f.glb` | `Adults/Female_Adult_17` | THE LAST VERSION: gardeners, medics, archivists (2196) |
 | `rb_civ_m3.glb` | `Adults/Male_Adult_14` | THE LAST VERSION: commuters, shopkeepers, transit staff, researchers, prisoners (2026/2049) |
 | `rb_civ_f4.glb` | `Adults/Female_Adult_13` | THE LAST VERSION: commuters, couriers, transit staff, researchers, prisoners (2026/2049) |
+| `rb_tomas.glb` | `Adults/Male_Adult_01` | THE LAST VERSION: Tomas Vale, Anja's son (an echo, at 1.42 m) |
+| `rb_desk_f.glb` | `Professions/Business_Female_01` | THE LAST VERSION: Helix's receptionist |
+| `rb_haig.glb` | `Adults/Female_Party_02` | THE LAST VERSION: Officer Haig's recorded statement |
+| `rb_elder_m.glb` | `Adults/Male_Adult_05` | THE LAST VERSION: the settlement's storyteller and elders |
+| `rb_sage_m.glb` | `Professions/Business_Male_07` | THE LAST VERSION: the settlement's astronomer and sky-watching elders |
+| `rb_vill_m.glb` | `Adults/Male_Adult_07` | THE LAST VERSION: the settlement's men |
+| `rb_vill_m2.glb` | `Adults/Male_Adult_12` | THE LAST VERSION: the settlement's men |
+| `rb_vill_f.glb` | `Adults/Female_Adult_05` | THE LAST VERSION: the settlement's women (and its girls' hair) |
+| `rb_vill_f2.glb` | `Adults/Female_Adult_03` | THE LAST VERSION: the settlement's women (and its girls' hair) |
 
 The crew never wear the model Ren is wearing.
 

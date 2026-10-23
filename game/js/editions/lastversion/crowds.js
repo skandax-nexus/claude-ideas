@@ -4,16 +4,21 @@
 // castLevel() turns them into people who walk those paths, by the era's wardrobe table and the role,
 // and gives the level its cast: the named people (with this mission's variants) plus everyone in its
 // crowds (story.cast = CAST.concat(levelCast), CAST's indices unchanged). Rules:
-//   - a named character's face is never in a crowd (the named meshes present are left out; the
-//     exceptions are the same person, and the crowd meshes a tier-2 person borrows: EXCEPTIONS);
-//   - crowd faces never cross eras (present 2026/2049, ancient, 2196), except rb_child_m2;
-//   - neighbours never share a model and variant; height varies by up to 4%, walk speed by up to 8%,
-//     and hair is tinted; Rain City's crowds read 15% darker (wet) and carry umbrellas;
-//   - a place's people, named and crowd, stay within §4.7's 24.
+//   - a named character's face is never in a crowd, in any mission (closing: the settlement's women no longer wear Tala's
+//     or the Elder's mesh, the receptionist and Officer Haig have faces of their own; EXCEPTIONS is empty);
+//   - crowd faces never cross eras (present 2026/2049, ancient, 2196), except rb_child_m2 (Rocketbox has four children
+//     and the named own two of them: the one boy's body is the crowds' boy in every era, and the settlement's girl with
+//     a woman's hair);
+//   - a place dresses its people from its own palette (PALETTE: the settlement's dyes, today's coats and colours), so
+//     no two missions' crowds look alike; each face walks at most CAP times a year in a place, each time in other
+//     clothes (a face and wardrobe once), and neighbours differ; height varies by up to 4%, walk speed by up to 8%,
+//     hair is tinted; Rain City's crowds read 15% darker (wet) and carry umbrellas;
+//   - every role is named for what it is (ROLE_NAMES), never from another region's list;
+//   - a place's people, named and crowd, stay within §4.7's 24 (a place the sheets call crowded: its own `people`).
 import { compileCondition } from '../../core/conditions.js';
 import { CAST, NPCS, AMBIENT } from './npcs.js';
 import { sexOf, isChild, LV_MODELS, SHARED_MODELS, castOf } from './casting.js';
-import { RAIN_DARK } from './wardrobe.js';
+import { RAIN_DARK, WARDROBE } from './wardrobe.js';
 
 export const MAX_PEOPLE = 24; // §4.7: NPCs (named + crowd) per place
 
@@ -21,7 +26,13 @@ export const MAX_PEOPLE = 24; // §4.7: NPCs (named + crowd) per place
 // than one face, and castLevel caps any one face at CAP a year in a place: a crowd is never copies of one or two.
 const commuters = [['rb_civ_f1', ['default', 'plum', 'teal']], ['rb_civ_m1', ['default', 'navy', 'olive']], ['rb_civ_f2', ['default', 'rose', 'sand']], ['rb_courier', ['default', 'green', 'blue']], ['rb_civ_m2', ['default', 'brown']], ['rb_civ_m3', ['default', 'blue']], ['rb_civ_f4', ['default', 'plum']]];
 const civilians = [['rb_civ_f2', ['default', 'sand']], ['rb_civ_m1', ['default', 'olive']], ['rb_civ_f1', ['default', 'teal']], ['rb_civ_m2', ['default', 'brown']], ['rb_courier', ['default', 'blue']], ['rb_civ_m3', ['default', 'blue']], ['rb_civ_f4', ['default', 'plum']]];
-const dusty = [['rb_civ_f2', ['dust']], ['rb_civ_m1', ['dust']], ['rb_civ_m2', ['dust']], ['rb_civ_f1', ['dust']], ['rb_courier', ['dust']], ['rb_civ_m3', ['dust']], ['rb_civ_f4', ['dust']]];
+const dusty = [['rb_civ_f2', ['dust', 'soot']], ['rb_civ_m1', ['dust', 'soot']], ['rb_civ_m2', ['dust', 'soot']], ['rb_civ_f1', ['dust', 'soot']], ['rb_courier', ['dust', 'soot']], ['rb_civ_m3', ['dust', 'soot']], ['rb_civ_f4', ['dust', 'soot']]];
+// (closing) the casual roles of today wear the place's palette (wardrobe.js PRESENT_PALETTES, '#1'... become e.g. 'rain3'),
+// the settlement's people its dyes ('#2' -> 'fire2', '#_boy1' -> 'fire_boy1'); a mission without a palette of today
+// keeps the plain variants
+const P6 = ['#1', '#2', '#3', '#4', '#5', '#6'];
+const A5 = ['#1', '#2', '#3', '#4', '#5'];
+const KIDS = ['#_boy1', '#_girl2', '#_boy3', '#_girl4', '#_boy5', '#_girl1'];
 export const ERAS = {
   present: {
     commuter: commuters, civilian: civilians, shopper: commuters, visitor: commuters, fan: commuters, neighbour: civilians, evacuee: dusty, driver: [['rb_civ_m1', ['default', 'navy']], ['rb_courier', ['default', 'green']], ['rb_civ_m3', ['default']]],
@@ -31,15 +42,17 @@ export const ERAS = {
     builder: [['rb_contractor', ['default', 'yellow']], ['rb_civ_m2', ['overall']], ['rb_civ_m1', ['dust']], ['rb_civ_m3', ['dust']]],
     quarryman: [['rb_contractor', ['default', 'yellow']], ['rb_courier', ['default', 'green']], ['rb_civ_m2', ['overall']]],
     docker: [['rb_contractor', ['default', 'yellow']], ['rb_courier', ['default', 'green', 'blue']], ['rb_civ_m2', ['overall']], ['rb_civ_m3', ['dust']]],
-    ems: [['rb_medic_f', ['default', 'dust']], ['rb_contractor', ['utility']]],
+    ems: [['rb_medic_f', ['default', 'dust', 'night']]], // (a paramedic is a paramedic: the utility crews are responders)
     responder: [['rb_medic_f', ['default']], ['rb_contractor', ['utility']], ['rb_civ_m3', ['dust']]],
     // transit staff in navy (no airline captain's cap and stripes)
-    staff: [['rb_civ_m3', ['transit']], ['rb_civ_f4', ['transit']], ['rb_civ_f1', ['helix desk']]],
-    researcher: [['rb_doctor_m', ['default', 'tan']], ['rb_civ_f4', ['lab']], ['rb_civ_m3', ['lab']], ['rb_civ_f2', ['coverall slate']]],
+    staff: [['rb_civ_m3', ['transit']], ['rb_civ_f4', ['transit']]],
+    // (closing) Helix's researchers in lab coats, its technicians in slate work uniforms: never a woman in a T-shirt or a
+    // tank top dyed grey, who read as someone off duty
+    researcher: [['rb_doctor_m', ['default', 'tan']], ['rb_civ_f4', ['labcoat']], ['rb_civ_m3', ['labcoat']]],
     staffEcho: [['rb_doctor_m', ['ward']], ['rb_medic_f', ['default']]],
-    recording: [['rb_doctor_m', ['default']], ['rb_contractor', ['helix slate']]],
-    technician: [['rb_contractor', ['helix slate']], ['rb_civ_f2', ['coverall slate']], ['rb_civ_m2', ['overall']], ['rb_civ_f4', ['lab']]],
-    surveyor: [['rb_contractor', ['helix slate']], ['rb_civ_f2', ['coverall slate']], ['rb_civ_m3', ['lab']]],
+    recording: [['rb_doctor_m', ['default']], ['rb_civ_f4', ['labcoat']], ['rb_contractor', ['helix slate']]],
+    technician: [['rb_contractor', ['helix slate']], ['rb_medic_f', ['helix tech']], ['rb_civ_m2', ['overall']], ['rb_civ_m3', ['labcoat']]],
+    surveyor: [['rb_contractor', ['helix slate']], ['rb_medic_f', ['helix tech']], ['rb_civ_m3', ['labcoat']]],
     cleaner: [['rb_civ_m2', ['overall']]],
     child: [['rb_child_m2', ['default', 'blue', 'green']]],
     prisoner: [['rb_civ_m1', ['detention']], ['rb_civ_f1', ['detention']], ['rb_civ_m2', ['detention']], ['rb_civ_f2', ['detention']], ['rb_courier', ['detention']], ['rb_civ_m3', ['detention']], ['rb_civ_f4', ['detention']], ['rb_contractor', ['detention']]],
@@ -49,19 +62,22 @@ export const ERAS = {
     echo: civilians,
   },
   ancient: {
-    // men in homespun; women on whichever named woman's mesh is not in the mission; girls in linen; elders
-    villager: [['rb_robe_m', ['ochre', 'indigo', 'undyed', 'madder'], 3], ['WOMAN', ['umber', 'ochre', 'indigo'], 3], ['rb_child_f2', ['linen', 'ochre', 'indigo']], ['rb_robe_m', ['elder']]],
-    waterKeeper: [['rb_robe_m', ['indigo', 'undyed', 'ochre'], 2], ['WOMAN', ['indigo', 'umber', 'ochre'], 2], ['rb_child_f2', ['linen']]],
-    fisher: [['rb_robe_m', ['undyed', 'madder', 'indigo']], ['WOMAN', ['ochre', 'umber']]],
-    skywatcher: [['rb_robe_m', ['indigo', 'undyed', 'madder'], 2], ['WOMAN', ['indigo', 'ochre'], 2], ['rb_robe_m', ['elder']]],
-    child: [['rb_child_f2', ['linen', 'ochre', 'indigo']]],
-    elder: [['rb_robe_m', ['elder']]],
+    // (closing) the settlement's own people, three thousand years ago, in wool and linen (wardrobe.js SETTLEMENT): two men,
+    // two women, two old men, and the one boy's body as its boys and (with a woman's hair) its girls; never a named face
+    villager: [['rb_vill_m', A5], ['rb_vill_f', A5], ['rb_vill_m2', A5], ['rb_vill_f2', A5], ['rb_child_m2', KIDS], ['rb_elder_m', A5]],
+    waterKeeper: [['rb_vill_m2', A5], ['rb_vill_f', A5], ['rb_vill_m', A5], ['rb_vill_f2', A5], ['rb_child_m2', KIDS]],
+    fisher: [['rb_vill_m', A5], ['rb_vill_m2', A5], ['rb_vill_f2', A5]],
+    skywatcher: [['rb_sage_m', A5], ['rb_vill_m', A5], ['rb_vill_f', A5], ['rb_elder_m', A5], ['rb_vill_f2', A5], ['rb_vill_m2', A5]],
+    child: [['rb_child_m2', KIDS]],
+    elder: [['rb_elder_m', A5], ['rb_sage_m', A5]],
+    craftsperson: [['rb_vill_f2', A5], ['rb_vill_m', A5], ['rb_vill_f', A5]],
+    storyteller: [['rb_elder_m', A5], ['rb_sage_m', A5]],
   },
   future: {
-    survivor: [['rb_trader', ['default', 'earth', 'faded'], 2], ['rb_villager_f', ['default', 'sage', 'rust'], 2], ['rb_scav', ['grey', 'olive', 'rust']], ['rb_civ_f3', ['default', 'moss', 'rust'], 2], ['rb_child_m2', ['patched', 'patched2']]],
-    // (the lock city's schoolchildren, M15: Tomas's own patched jersey is never theirs, he sits among them: castLevel's worn)
-    child: [['rb_child_m2', ['patched', 'patched2', 'patched3']]],
-    gardener: [['rb_villager_f', ['sage', 'default']], ['rb_civ_f3', ['moss', 'default']], ['rb_trader', ['earth']]],
+    survivor: [['rb_trader', ['default', 'earth', 'faded'], 2], ['rb_surv_f', ['default', 'sage', 'rust'], 2], ['rb_scav', ['grey', 'olive', 'rust']], ['rb_civ_f3', ['default', 'moss', 'rust'], 2], ['rb_child_m2', ['patched', 'patched2']]],
+    // (the lock city's schoolchildren, M15: Tomas has a body of his own, and sits among them)
+    child: [['rb_child_m2', ['patched', 'patched2', 'patched3']], ['rb_child_f2', ['faded']]],
+    gardener: [['rb_surv_f', ['sage', 'default']], ['rb_civ_f3', ['moss', 'default']], ['rb_trader', ['earth']]],
     scavenger: [['rb_scav', ['grey', 'olive', 'rust']]],
     trader: [['rb_trader', ['default', 'earth', 'faded']]],
     unwritten: [['rb_scav', ['unwritten', 'rust']], ['rb_trader', ['earth']]],
@@ -76,23 +92,52 @@ ERAS.future.echo = ERAS.future.survivor;
 ERAS.ancient.echo = ERAS.ancient.villager;
 const FALLBACK = { present: 'civilian', ancient: 'villager', future: 'survivor' };
 
-// the crowd meshes tier-2 people borrow, and the ancient women (who are the named women's meshes, used
-// only where that woman is not in the mission): the only overlap between named and crowd faces
-export const EXCEPTIONS = ['rb_civ_f1', 'rb_civ_f2', 'rb_child_m2', 'rb_tala', 'rb_elder'];
-export const ANCIENT_WOMEN = ['rb_tala', 'rb_elder'];
-// (U4 review) one face at most CAP times a year in a place's crowds; holograms (echoes) aside, and the helmeted troopers
-// (a uniform is the point of them)
-export const CAP = 2;
+// (closing) each mission's palette: the settlement's dyes, and the colours today's casual crowds wear (wardrobe.js
+// SETTLEMENT, PRESENT_PALETTES), so that no two missions' crowds look alike; a case replays its mission's
+export const PALETTE = {
+  ancient: { m04: 'fire', m05: 'water', m07: 'sky', m22: 'ash', m23: 'fest' },
+  present: { m01: 'rain', m06: 'autumn', m09: 'summer', m11: 'ward', m14: 'midday', m15: 'winter', m20: 'memory', m22: 'grey', m23: 'bright' },
+};
+export const PALETTE_ROLES = ['commuter', 'civilian', 'shopper', 'visitor', 'fan', 'neighbour', 'echo'];
+const paletteOf = (era, deck) => PALETTE[era]?.[deck.origin || deck.mkey] || (era === 'ancient' ? 'fire' : null);
+// a table's variant in this place: '#n' in its palette; a casual role of today in the place's palette when the body
+// has one
+function placeVariant(v, era, pal) {
+  return typeof v === 'string' && v.startsWith('#') ? (pal || 'fire') + v.slice(1) : v;
+}
+
+// (closing) no named face is ever in a crowd: the settlement's women were the named women's meshes, and the
+// receptionist and Officer Haig wore two commuters' faces; each has her own now
+export const EXCEPTIONS = [];
+// (U4 review; closing) one face at most CAP times a year in a place's crowds, and each time in other clothes; holograms
+// (echoes) aside, and the helmeted troopers (a uniform is the point of them)
+export const CAP = 4;
+// the old: a slower walk, an old voice
+export const OLD = ['rb_elder_m', 'rb_sage_m'];
 const UNCAPPED = ['rb_trooper'];
+// (and the roles whose clothes are a uniform: the loop cells' prisoners may wear the same grey, each face still capped)
+const UNIFORM = ['prisoner', 'officer', 'patrol'];
 // the people Kai has met by the Place Outside Time (M19), its echoes (§6.3): their own faces, as holograms, and their names
 export const MET = ['guard', 'iven', 'odile', 'clockmaker', 'elder'];
 
 // every model a table can put in a crowd, per era (tests: eras are disjoint but for rb_child_m2)
 export function eraModels(era) {
   const out = new Set();
-  for (const list of Object.values(ERAS[era])) for (const [m] of list) for (const k of m === 'WOMAN' ? ANCIENT_WOMEN : [m]) out.add(k);
+  for (const list of Object.values(ERAS[era])) for (const [m] of list) out.add(m);
   return out;
 }
+// what a role is called, in every region (a role a region's own table does not name is named here, never from another
+// region's list: a construction worker was once 'Nurse' because Rain City's names were next in line)
+export const ROLE_NAMES = {
+  commuter: 'Commuter', courier: 'Courier', shopkeeper: 'Shopkeeper', contractor: 'Contractor', staff: 'Platform staff', ems: 'Paramedic',
+  civilian: 'Passer-by', builder: 'Builder', child: 'Child', researcher: 'Researcher', technician: 'Technician', cleaner: 'Cleaner',
+  surveyor: 'Surveyor', guard: 'Guard', villager: 'Villager', waterKeeper: 'Water keeper', fisher: 'Fisher', skywatcher: 'Sky-watcher',
+  elder: 'Elder', craftsperson: 'Craftsperson', storyteller: 'Storyteller', evacuee: 'Evacuee', responder: 'Responder', shopper: 'Shopper',
+  prisoner: 'Prisoner', staffEcho: 'Staff', visitor: 'Visitor', trapped: 'Civilian', docker: 'Docker', officer: 'Officer', patrol: 'Patrol',
+  unwritten: 'Irregular', fan: 'Fan', survivor: 'Survivor', resident: 'Resident', walker: 'Walker', gardener: 'Gardener', scavenger: 'Scavenger',
+  trader: 'Trader', warden: 'Warden', echo: 'Echo', recording: 'A recording', neighbour: 'A memory', driver: 'Driver', quarryman: 'Quarry worker',
+};
+export const roleName = (pool, role) => pool?.roles?.[role] || ROLE_NAMES[role] || 'Someone';
 
 // ambient people a mission places by hand (M1's toy child and the trapped pair, M3's technicians)
 export const AMBIENT_CAST = {
@@ -100,18 +145,19 @@ export const AMBIENT_CAST = {
   trapped_a: { model: 'rb_civ_f1', variant: 'wet', height: 1.66, pronoun: 'f' },
   trapped_b: { model: 'rb_courier', variant: 'dust', height: 1.78, pronoun: 'm' },
   tech_0: { model: 'rb_contractor', variant: 'helix slate', height: 1.8, pronoun: 'm' },
-  tech_1: { model: 'rb_civ_f2', variant: 'coverall slate', height: 1.67, pronoun: 'f' },
+  tech_1: { model: 'rb_medic_f', variant: 'helix tech', height: 1.67, pronoun: 'f' }, // (closing: a work uniform, not a T-shirt dyed grey)
   tech_2: { model: 'rb_contractor', variant: 'helix slate', height: 1.76, pronoun: 'm' },
-  // Act I (U7): the settlement's people at the first fire (M4: the women on Tala's mesh), the villagers who left (M5's
-  // echoes: the women on the Elder's mesh), M8's altered staff
-  m4_craft: { model: 'rb_tala', variant: 'umber', height: 1.66, pronoun: 'f' },
-  m4_teller: { model: 'rb_robe_m', variant: 'elder', height: 1.74, pronoun: 'm' },
-  m4_girl: { model: 'rb_child_f2', variant: 'linen', height: 1.3, pronoun: 'f' },
-  m5_potter: { model: 'rb_robe_m', variant: 'ochre', height: 1.76, pronoun: 'm' },
-  m5_mother: { model: 'rb_elder', variant: 'indigo', height: 1.62, pronoun: 'f' },
-  m5_child: { model: 'rb_child_f2', variant: 'ochre', height: 1.28, pronoun: 'f' },
-  m5_keeper: { model: 'rb_robe_m', variant: 'undyed', height: 1.78, pronoun: 'm' },
-  m7_astro: { model: 'rb_robe_m', variant: 'astronomer', height: 1.75, pronoun: 'm' },
+  // Act I (U7; closing): the settlement's people at the first fire (M4: a craftswoman at her work, the storyteller, an
+  // old man, and the girl who lost her ring), the villagers who left (M5's echoes), M8's altered staff: the settlement's
+  // own faces, never a named woman's
+  m4_craft: { model: 'rb_vill_f2', variant: 'craft', height: 1.62, pronoun: 'f' },
+  m4_teller: { model: 'rb_elder_m', variant: 'storyteller', height: 1.72, pronoun: 'm' },
+  m4_girl: { model: 'rb_child_m2', variant: 'girl_m4', height: 1.28, pronoun: 'f' },
+  m5_potter: { model: 'rb_vill_m', variant: 'potter', height: 1.76, pronoun: 'm' },
+  m5_mother: { model: 'rb_vill_f', variant: 'mother', height: 1.64, pronoun: 'f' },
+  m5_child: { model: 'rb_child_m2', variant: 'girl_m5', height: 1.26, pronoun: 'f' },
+  m5_keeper: { model: 'rb_vill_m2', variant: 'keeper', height: 1.78, pronoun: 'm' },
+  m7_astro: { model: 'rb_sage_m', variant: 'astronomer', height: 1.7, pronoun: 'm' },
   // (U7 review) Ezra's 2026 echo at sixty-five (M6; and the clockmaker of its 1999 cold open), Niko older at the first sky
   // (M7's cold open): their own meshes in another wardrobe, apart from the named person the mission also places
   ezra26: { model: 'rb_ezra', variant: 'ezra65', height: 1.74, pronoun: 'm' },
@@ -129,7 +175,7 @@ export const AMBIENT_CAST = {
   m14_pupilB: { model: 'rb_child_m2', variant: 'patched', height: 1.34, pronoun: 'm' },
   m18_fighter: { model: 'rb_scav', variant: 'unwritten', height: 1.78, pronoun: 'm' },
   m18_citizen: { model: 'rb_civ_f3', variant: 'moss', height: 1.66, pronoun: 'f' },
-  m21_cook: { model: 'rb_civ_f2', variant: 'sand', height: 1.67, pronoun: 'f' }, // (the Loop City evacuee, years on; not Officer Haig's at-home look)
+  m21_cook: { model: 'rb_civ_f2', variant: 'cook', height: 1.67, pronoun: 'f' }, // (the Loop City evacuee, years on, cooking: a white top and an apron)
   m21_listener: { model: 'rb_civ_f1', variant: 'teal', height: 1.66, pronoun: 'f' },
   m23_listener: { model: 'rb_civ_f2', variant: 'rose', height: 1.67, pronoun: 'f' },
   m23_passenger: { model: 'rb_courier', variant: 'blue', height: 1.78, pronoun: 'm' },
@@ -149,6 +195,15 @@ function rng(seed) {
   return () => ((s = (s * 1664525 + 1013904223) >>> 0) / 4294967296);
 }
 const hash = (str) => [...str].reduce((h, c) => (Math.imul(h, 31) + c.charCodeAt(0)) >>> 0, 7);
+
+// what one of a crowd says in passing: every other line of its pool (neighbours share the walla); an elder does not
+// speak of "the elders" as other people
+function barksOf(pool, k, old) {
+  const mine = pool.barks.filter((b, i) => b && i % 2 === k % 2);
+  if (!old) return mine;
+  const own = mine.filter((b) => !/\belders?\b/i.test(b));
+  return own.length ? own : pool.barks.filter((b) => b && !/\belders?\b/i.test(b));
+}
 
 // which bark pool a crowd speaks from
 function poolOf(c, deck) {
@@ -185,9 +240,9 @@ function along(path, f) {
   return { x: path[0][0], z: path[0][1], seg: 0 };
 }
 
-// pick the people of one crowd: a weighted cycle through the role's models (a table row may carry a
-// weight: [model, variants, weight]), each model's variants in turn, never two neighbours alike
-function pickPeople(c, n, named, r, turn, fits = () => true, last = null, worn = null) {
+// pick the people of one crowd: a weighted cycle through the role's models (a table row may carry a weight: [model,
+// variants, weight]), each model's variants in turn (in this place's palette), never two neighbours alike
+function pickPeople(c, n, named, r, turn, fits = () => true, last = null, worn = null, pal = null) {
   // the Place Outside Time's echoes are the people Kai has met (MET), each once, in their own face and wardrobe
   if (c.role === 'met') {
     const met = MET.filter((id) => NPCS[id] && !named.has(NPCS[id].model));
@@ -195,25 +250,29 @@ function pickPeople(c, n, named, r, turn, fits = () => true, last = null, worn =
     return [...met.slice(at), ...met.slice(0, at)].slice(0, n).map((id) => [NPCS[id].model, NPCS[id].variant, id]);
   }
   const table = ERAS[c.era]?.[c.role] || ERAS[c.era]?.[FALLBACK[c.era]] || ERAS.present.civilian;
+  const casual = c.era === 'present' && pal && PALETTE_ROLES.includes(c.role);
   const cycle = [];
-  for (const [m, vs, w = 1] of table) {
-    const models = (m === 'WOMAN' ? c.women || ANCIENT_WOMEN : [m]).filter((model) => !named.has(model) || (model === 'rb_child_m2' && c.era !== 'ancient'));
-    for (const model of models) for (let k = 0; k < w; k++) cycle.push([model, vs]);
+  for (const [m, vs0, w = 1] of table) {
+    // (never a named face: the named of the whole mission are left out; the crowds' one boy's body aside)
+    if (named.has(m) && m !== 'rb_child_m2') continue;
+    // (a casual role of today in the place's palette, where the body has one)
+    const vs = casual && WARDROBE[m]?.[`${pal}1`] ? P6.map((v) => placeVariant(v, c.era, pal)).filter((v) => WARDROBE[m][v]) : vs0.map((v) => placeVariant(v, c.era, pal));
+    for (let k = 0; k < w; k++) cycle.push([m, vs]);
   }
   if (!cycle.length) return [];
   const out = [];
   let i = Math.floor(r() * cycle.length);
   let guard = 0;
-  while (out.length < n && guard++ < n * 8) {
+  while (out.length < n && guard++ < n * 12) {
     const [m, vs] = cycle[i % cycle.length];
     i++;
-    if (!fits(m)) continue; // (this face is already in the place as often as it may be)
     const v = vs[(turn[m] = (turn[m] ?? Math.floor(r() * vs.length)) + 1) % vs.length];
+    if (!fits(m, v)) continue; // (this face, or this face in these clothes, is already here as often as it may be)
     if (worn?.has(`${m}/${v}`)) continue; // (someone placed by hand in this look is not also in the crowd)
     const prev = out[out.length - 1] || last; // (the last of the crowd before is a neighbour too)
     if (prev && prev[0] === m && prev[1] === v && cycle.length > 1) continue;
     out.push([m, v]);
-    fits(m, true);
+    fits(m, v, true);
   }
   return out;
 }
@@ -385,11 +444,11 @@ export function castLevel(level, deck, { facts = null } = {}) {
   // Mission 4, its crowd sharing their three faces)
   const worn = new Set([...level.npcs.filter((n) => byId[n.crew] && isChild(byId[n.crew].model)).map((n) => `${byId[n.crew].model}/${n.variant || byId[n.crew].variant}`),
     ...levelCast.map((c) => `${c.model}/${c.variant || 'default'}`)]);
-  const faces = new Map(); // `${model}@${year}` -> how many of the crowd wear it
+  const faces = new Map(); // `${model}@${year}` -> how many of the crowd wear it (and `${model}/${variant}@${year}`)
   const yearsOf = (c) => (c.years?.length ? c.years : level.states || deck.states || ['PRESENT']);
   // within §4.7's 24: each crowd keeps its share, the places left over going to the largest remainders
   const crowds = (level.crowd || []).filter((c) => c.n > 0 && c.path?.length);
-  const budget = Math.max(0, MAX_PEOPLE - level.npcs.length);
+  const budget = Math.max(0, (level.people || MAX_PEOPLE) - level.npcs.length);
   const wanted = crowds.reduce((s, c) => s + c.n, 0);
   const scale = wanted > budget ? budget / wanted : 1;
   const counts = crowds.map((c) => Math.floor(c.n * scale));
@@ -407,27 +466,28 @@ export function castLevel(level, deck, { facts = null } = {}) {
   crowds.forEach((c, ci) => {
     const n = counts[ci];
     if (!n) return;
-    // (the settlement has three crowd faces, its hand-placed people among them, and its wardrobe waits for a person's
-    // review: there a hand-placed face may also walk in the crowd, still within the cap)
+    // (a face at most CAP times a year in a place, each time in other clothes; never one someone placed by hand here
+    // wears, but in the settlement, whose few faces dress differently by hand and in the crowd)
     const ancient = c.era === 'ancient';
     const ys = yearsOf(c);
     const capped = !c.echo && c.role !== 'met';
-    const fits = (m, take) => {
+    const pal = paletteOf(c.era, deck);
+    const fits = (m, v, take) => {
       if (!take && own && !own.includes(m)) return false; // (a replay's crowd wears only faces its chapter loads)
       if (!capped || UNCAPPED.includes(m)) return true;
-      if (take) { for (const y of ys) faces.set(`${m}@${y}`, (faces.get(`${m}@${y}`) || 0) + 1); return true; }
-      return (ancient || !placed.has(m)) && ys.every((y) => (faces.get(`${m}@${y}`) || 0) < CAP);
+      if (take) { for (const y of ys) for (const k of [`${m}@${y}`, `${m}/${v}@${y}`]) faces.set(k, (faces.get(k) || 0) + 1); return true; }
+      return (ancient || !placed.has(m)) && ys.every((y) => (faces.get(`${m}@${y}`) || 0) < CAP && (UNIFORM.includes(c.role) || !faces.get(`${m}/${v}@${y}`)));
     };
-    const people = pickPeople(c, n, named, r, turn, fits, lastPick, worn);
+    const people = pickPeople(c, n, named, r, turn, fits, lastPick, worn, pal);
     if (people.length) lastPick = people[people.length - 1];
     const pool = AMBIENT[poolOf(c, deck)] || AMBIENT.rain;
     const when = whenOf(c);
     const rainy = wet && ['rain', 'northbank', 'south'].includes(c.region);
     people.forEach(([model, variant, metId], j) => {
       const met = metId ? NPCS[metId] : null;
-      const sex = sexOf(model) || 'm';
+      const sex = sexOf(model, variant) || 'm';
       const child = isChild(model);
-      const old = variant === 'elder';
+      const old = OLD.includes(model);
       const base = (CAST_HEIGHT[model] || 1.72);
       const varied = Math.round(base * (1 + (r() - 0.5) * 0.072) * 100) / 100; // within ±4% (after rounding)
       const height = met ? met.height : varied;
@@ -435,7 +495,8 @@ export function castLevel(level, deck, { facts = null } = {}) {
       // where along the path, which way, a step to one side
       const f = (j + 0.5) / people.length;
       const at = along(c.path, f);
-      const side0 = (r() - 0.5) * 1.4;
+      // (a queue stands in line, each a step from the one ahead, facing its head: crowd.queue)
+      const side0 = c.queue ? (j % 2 ? 0.12 : -0.12) : (r() - 0.5) * 1.4;
       const reverse = j % 2 === 1;
       // (the step to one side that leaves the most of the route to walk on the ground, the one drawn first if it can)
       let best = null;
@@ -466,15 +527,16 @@ export function castLevel(level, deck, { facts = null } = {}) {
       if (['researcher', 'surveyor', 'technician'].includes(c.role) && j % 2 === 0) props.push('clipboard');
       if (c.role === 'gardener' && j % 2 === 0) props.push('trowel');
       if (c.role === 'skywatcher' && j % 3 === 0) props.push('lantern');
-      const first = met ? met.first : pool.roles?.[c.role] || pool.names?.[k % pool.names.length] || 'Someone';
+      const first = met ? met.first : roleName(pool, c.role);
       levelCast.push({
         id, first, name: first.toUpperCase(), color: c.echo ? ECHO_GLOW[c.era] : '#4f6170', seed: 300 + k, pronoun: PRONOUN[sex] || PRONOUN.m, model, variant, height, walk,
         hairTint: met ? null : HAIR_TINTS[k % HAIR_TINTS.length], dark: rainy ? RAIN_DARK : null, props, crowd: true, era: c.era, crowdRole: c.role, ...(met ? { met: metId } : {}),
       });
       level.npcs.push({
-        id, crew: id, first, ambient: true, crowd: true, seed: 300 + k, pronoun: PRONOUN[sex] || PRONOUN.m, pos: [x, y, z], yaw: r() * 6.28, height,
-        path: path?.length > 1 ? path : undefined, speed: Math.round(1.05 * walk * 100) / 100, when, silent: true, room: level.outdoorRoom || level.order[0],
-        hologram: !!c.echo, ...(c.echo && !c.barks ? {} : { barks: c.barks || pool.barks.filter((b, i) => b && i % 2 === k % 2), barkEvery: 24 + (k % 4) * 3 }), // (a crowd may
+        id, crew: id, first, ambient: true, crowd: true, seed: 300 + k, pronoun: PRONOUN[sex] || PRONOUN.m, pos: [x, y, z], height,
+        yaw: c.queue ? Math.atan2(c.path[c.path.length - 1][0] - c.path[0][0], c.path[c.path.length - 1][1] - c.path[0][1]) + (r() - 0.5) * 0.5 : r() * 6.28,
+        path: path?.length > 1 && !c.queue ? path : undefined, speed: Math.round(1.05 * walk * 100) / 100, when, silent: true, room: level.outdoorRoom || level.order[0],
+        hologram: !!c.echo, ...(c.echo && !c.barks ? {} : { barks: c.barks || barksOf(pool, k, old), barkEvery: 24 + (k % 4) * 3 }), // (a crowd may
         // say its own, an echo only its own; else every other line of its pool: neighbours share the walla, and the speech
         // budget holds)
         ...(c.flicker ? { flicker: true } : {}), // (between solid and hologram: Runtime.step)

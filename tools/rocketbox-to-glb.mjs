@@ -63,10 +63,10 @@ export const LV_AVATARS = {
   rb_rook: { src: 'Professions/Business_Male_04', px: 1024 }, // Dr. Elias Rook
   rb_niko: { src: 'Adults/Male_Adult_15', px: 1024 }, // Niko
   rb_jun: { src: 'Professions/Business_Male_02', px: 1024 }, // Jun Park
-  rb_tala: { src: 'Adults/Female_Adult_06', px: 1024 }, // Tala
+  rb_tala: { src: 'Adults/Female_Adult_11', px: 1024 }, // Tala: her hair tied up (closing: Female_Adult_06 wore a hijab)
   rb_security_f: { src: 'Professions/Security_Female_01', px: 1024 }, // Officer Pryce
   rb_security_m: { src: 'Professions/Security_Male_01', px: 1024 }, // Officer Dale
-  rb_elder: { src: 'Adults/Female_Adult_10', px: 1024 }, // the Elder
+  rb_elder: { src: 'Adults/Female_Adult_09', px: 1024 }, // the Elder, her hair greyed (closing: Female_Adult_10 wore a khimar and abaya)
   rb_ezra: { src: 'Adults/Male_Adult_03', px: 1024 }, // Ezra Moll, the Clockmaker
   rb_engineer_f: { src: 'Professions/Construction_Female_01', px: 1024 }, // Rhea Odum
   rb_soldier_m: { src: 'Professions/Military_Male_02', px: 1024 }, // Sergeant Brask
@@ -90,17 +90,25 @@ export const LV_AVATARS = {
   rb_child_m2: { src: 'Children/Male_Child_02', px: 512 }, // children (2049 and 2196)
   rb_child_f2: { src: 'Children/Female_Child_02', px: 512 }, // the settlement's children
   rb_trooper: { src: 'Professions/Military_Male_04', px: 512 }, // Continuum troops: helmet, plate carrier
-  rb_robe_m: { src: 'Adults/Male_Adult_19', px: 512 }, // the settlement's men (recoloured homespun)
   rb_scav: { src: 'Adults/Male_Adult_18', px: 512 }, // 2196 scavengers, hood up
   rb_trader: { src: 'Professions/Wood_Male_01', px: 512 }, // 2196 traders and engineers
-  rb_villager_f: { src: 'Adults/Female_Adult_09', px: 512 }, // 2196 gardeners, medics, archivists
+  rb_surv_f: { src: 'Adults/Female_Adult_17', px: 512 }, // 2196 gardeners, medics, archivists (Female_Adult_09 is the Elder's now)
   // (U4 review) more faces for 2026/2049, so a crowd is not copies of a few
   rb_civ_m3: { src: 'Adults/Male_Adult_14', px: 512 }, // an older man: shirt, khakis
   rb_civ_f4: { src: 'Adults/Female_Adult_13', px: 512 }, // a woman in a waistcoat and jeans
-  // (closing) the settlement's own crowd, so the named women's and Niko's faces leave it, and an old man for its elders
-  rb_robe_m2: { src: 'Adults/Male_Adult_21', px: 512 }, // a second man in a long robe (the head cloth hidden: wardrobe.js)
-  rb_elder_m: { src: 'Adults/Male_Adult_05', px: 512 }, // an old man, grey-bearded: the settlement's elders and storyteller
-  rb_villager_f2: { src: 'Adults/Female_Adult_11', px: 512 }, // a woman in a plain knee-length dress: the settlement's women
+  // (closing) the settlement's own people, three thousand years ago: faces with their own hair (no head cloths: the robe,
+  // kurta, hijab and abaya avatars are gone from the edition), dressed in wool and linen by garments.js; two old men
+  rb_elder_m: { src: 'Adults/Male_Adult_05', px: 512 }, // an old man, grey-bearded: the storyteller and the elders
+  rb_sage_m: { src: 'Professions/Business_Male_07', px: 512 }, // an old man, bald: the astronomer, the sky-watchers' elders
+  rb_vill_m: { src: 'Adults/Male_Adult_07', px: 512 }, // the settlement's men
+  rb_vill_m2: { src: 'Adults/Male_Adult_12', px: 512 },
+  rb_vill_f: { src: 'Adults/Female_Adult_05', px: 512 }, // the settlement's women (and their daughters' hair: garments.js hairdo)
+  rb_vill_f2: { src: 'Adults/Female_Adult_03', px: 512 },
+  // (closing) Tomas Vale, Anja's son, an echo in a school of 2196: a body of his own, a slight young face at 1.42 m
+  rb_tomas: { src: 'Adults/Male_Adult_01', px: 512 },
+  // (closing) the two tier-2 women who wore commuters' faces have their own: Helix's receptionist, Officer Haig at home
+  rb_desk_f: { src: 'Professions/Business_Female_01', px: 1024 }, // a dark suit, a white shirt: Helix's front desk
+  rb_haig: { src: 'Adults/Female_Party_02', px: 512 }, // off shift, at home: her recorded statement, a hologram (M2)
 };
 // parts left out of a conversion: nobody in the game carries a gun
 export const RB_DROP = { rb_security_f: ['pistol'], rb_warden: ['pistol'] };

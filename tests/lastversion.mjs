@@ -22,7 +22,8 @@
 //     aligned), Mission 21 (the elites' rewind; the arena's gaps), Mission 22 (the arm's beat, the seals, the logs'
 //     second), the Finale's two holds to Ending C, its epilogue and the voice in every speaker; then the CASE FILES
 //     (fourteen stories) and three replayed from their places to their end (the garden, chain B, the train)
-//   - casting (OVERHAUL.md §6): Mission 1's checkpoint officer is a security officer (rb_security_f), the toy
+//   - casting (OVERHAUL.md §6): Mission 1's checkpoint officer is a security officer (rb_security_f) with a queue at her
+//     booth, the settlement's people in tunics made for them (closing), the toy
 //     child and the Child have children's bodies, Mission 10's watchers are Continuum troopers whose cones see,
 //     crowds walk Missions 1, 4 and 14
 //   - real walks through the open places: Mission 13's quay to the container canyons, Mission 14's viaduct,
@@ -355,11 +356,15 @@ const cast1 = await az(() => {
   const m = (id) => LVB.npc(id)?.model.userData.spec?.model;
   const crowd = AZ.deckWorld.npcs.filter((n) => n.n.crowd);
   return { guard: m('guard'), guardVariant: LVB.npc('guard')?.model.userData.lvVariant, toy: m('amb_child'), child: m('child'), mira: LVB.npc('mira')?.model.userData.lvVariant,
-    crowd: crowd.length, visible: crowd.filter((n) => n.model.visible).length, walking: crowd.filter((n) => n.n.path).length, umbrellas: crowd.filter((n) => n.model.userData.umbrella).length, people: AZ.deckWorld.npcs.length };
+    crowd: crowd.length, visible: crowd.filter((n) => n.model.visible).length, walking: crowd.filter((n) => n.n.path).length, umbrellas: crowd.filter((n) => n.model.userData.umbrella).length, people: AZ.deckWorld.npcs.length,
+    // (closing) "a crowded security checkpoint": the people standing in line between the tapes, by Officer Pryce's booth
+    queue: crowd.filter((n) => n.model.visible && !n.n.path && Math.abs(n.model.position.x - 1.5) < 2.8 && n.model.position.z > -106 && n.model.position.z < -94).length,
+    rainCoats: crowd.filter((n) => /^rain\d$/.test(n.model.userData.lvVariant || '')).length };
 });
 check(cast1.guard === 'rb_security_f' && cast1.guardVariant === 'helix', 'Mission 1\'s checkpoint officer is a security officer in Helix black (rb_security_f), not a doctor', JSON.stringify(cast1));
 check(cast1.toy === 'rb_child_m2' && cast1.child === 'rb_child_f', 'the toy child and the Child in the Station have children\'s bodies', JSON.stringify(cast1));
-check(cast1.visible >= 10 && cast1.walking >= 8 && cast1.umbrellas >= 3 && cast1.people <= 24, 'Rain City\'s crowds walk Mission 1, umbrellas up (within 24 people)', JSON.stringify(cast1));
+check(cast1.visible >= 10 && cast1.walking >= 8 && cast1.umbrellas >= 3 && cast1.people <= 30, 'Rain City\'s crowds walk Mission 1, umbrellas up (within the place\'s 30 people)', JSON.stringify(cast1));
+check(cast1.queue >= 6 && cast1.rainCoats >= 8, 'the checkpoint is crowded: a queue of people stands at Pryce\'s booth, the commuters in Rain City\'s own dark coats', JSON.stringify(cast1));
 // the photo by the door, then up the avenue: the anomalies (a puddle, the toy, the pigeon)
 const photo = await az(() => { const r = { walk: LVB.walk([[12.6, -3.2]]) }; r.use = LVB.use('photo'); LVB.talkOut(); return { ...r, ...LVB.f('ev_mira_photo', 't_m01_photo'), obj: AZ.edition.threads.current()?.id }; });
 check(photo.ev_mira_photo && photo.t_m01_photo && photo.obj === 'anomalies', 'the photo by the door (ev_mira_photo); the objective moves on to the avenue\'s anomalies', JSON.stringify(photo));
@@ -729,8 +734,18 @@ await nextPlace();
 const act1 = await az(() => ({ ...LVB.where(), name: AZ.edition.deck.name, fell: LVB.said.includes('NONE: Kai Varen falls out of 2049 and lands somewhere older than the building.'), prev: LVB.said.includes('NONE: Kai Varen built a machine he was told not to build.') }));
 check(act1.chapter === 'act1' && act1.deck === 0 && act1.name === 'THE MAN FROM THE LAST DAY' && act1.fell, 'the Prologue ends on its hook ("...lands somewhere older than the building"); Act I begins with Mission 4', JSON.stringify(act1));
 check(act1.prev, 'Act I opens on its PREVIOUSLY card: "Kai Varen built a machine he was told not to build."', JSON.stringify(act1));
-const crowd4 = await az(() => { const c = AZ.deckWorld.npcs.filter((n) => n.n.crowd && n.model.visible); return { n: c.length, models: [...new Set(c.map((n) => n.model.userData.spec?.model))] }; });
-check(crowd4.n >= 5 && crowd4.models.every((m) => ['rb_robe_m', 'rb_tala', 'rb_child_f2'].includes(m)), 'the settlement\'s people walk Mission 4, in homespun (not the Elder\'s face: she is in this mission)', JSON.stringify(crowd4));
+const crowd4 = await az(() => {
+  const c = AZ.deckWorld.npcs.filter((n) => n.n.crowd && n.model.visible);
+  const teller = LVB.npc('m4_teller')?.model;
+  return { n: c.length, models: [...new Set(c.map((n) => n.model.userData.spec?.model))], dressed: c.filter((n) => n.model.userData.garment?.visible !== false && n.model.userData.garment).length,
+    girls: c.filter((n) => n.model.getObjectByName('hairdo')).length + (LVB.npc('m4_girl')?.model.getObjectByName('hairdo') ? 1 : 0),
+    teller: teller?.userData.spec?.model, tellerDressed: !!teller?.userData.garment, variants: [...new Set(c.map((n) => (n.model.userData.lvVariant || '').replace(/_?(boy|girl)?\d$/, '')))] };
+});
+// (closing) the settlement three thousand years ago: its own faces in wool and linen made for them, its girls with hair,
+// its storyteller an old man; never the robe, kurta, hijab or abaya avatars, never Tala's or the Elder's face
+check(crowd4.n >= 5 && crowd4.models.every((m) => ['rb_vill_m', 'rb_vill_m2', 'rb_vill_f', 'rb_vill_f2', 'rb_elder_m', 'rb_sage_m', 'rb_child_m2'].includes(m)) && crowd4.dressed === crowd4.n,
+  'the settlement\'s people walk Mission 4 in tunics, mantles and belts made for them, in faces of their own', JSON.stringify(crowd4));
+check(crowd4.girls >= 1 && crowd4.teller === 'rb_elder_m' && crowd4.tellerDressed && crowd4.variants.join() === 'fire', 'its girls wear their hair, not a head cloth; its storyteller is an old man; its people wear the first fire\'s dyes', JSON.stringify(crowd4));
 check(await az(() => AZ.facts.get('m01_done') && AZ.facts.get('m02_done') && AZ.facts.get('m03_done')), 'the three prologue missions are recorded as done');
 const times = await az(() => ({ m01: AZ.facts.get('time_m01'), m02: AZ.facts.get('time_m02'), m03: AZ.facts.get('time_m03') }));
 check(times.m01 > 0 && times.m02 > 0 && times.m03 > 0, 'telemetry: each mission\'s time is stored as it ends (time_<mkey>)', JSON.stringify(times));
@@ -1901,7 +1916,7 @@ await az(() => { LVP.pick = (opts) => { for (const want of ['I came back', 'Free
 // --- Mission 14 ------------------------------------------------------------------------------------------------------
 console.log('Act III, Mission 14: Welcome to 2196');
 const crowd14 = await az(() => { const c = AZ.deckWorld.npcs.filter((n) => n.n.crowd && n.model.visible); return { year: AZ.engine.state(AZ.room), n: c.length, models: [...new Set(c.map((n) => n.model.userData.spec?.model))] }; });
-const faces14 = crowd14.year === 'FUTURE' ? ['rb_trader', 'rb_villager_f', 'rb_civ_f3', 'rb_scav', 'rb_child_m2'] : ['rb_civ_f1', 'rb_civ_f2', 'rb_civ_m1', 'rb_civ_m2', 'rb_courier', 'rb_contractor'];
+const faces14 = crowd14.year === 'FUTURE' ? ['rb_trader', 'rb_surv_f', 'rb_civ_f3', 'rb_scav', 'rb_child_m2', 'rb_child_f2'] : ['rb_civ_f1', 'rb_civ_f2', 'rb_civ_m1', 'rb_civ_m2', 'rb_courier', 'rb_contractor', 'rb_civ_m3', 'rb_civ_f4'];
 check(crowd14.year === 'FUTURE' && crowd14.n >= 3 && crowd14.models.every((m) => faces14.includes(m)), 'Mission 14 opens in 2196, its home year; a crowd of survivors walks it', JSON.stringify(crowd14));
 const drain14 = await az(() => {
   const z = AZ.edition.deck.mkey === 'm14' ? [6, -10] : null;

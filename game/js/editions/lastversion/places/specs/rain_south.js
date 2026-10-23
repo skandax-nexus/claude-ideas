@@ -38,17 +38,21 @@ export default {
   exits: { m01: 'staffGate' },
   gates: { m01: { visible: true, solid: true, mat: 'gateSteel', box: [-3, 0, -224.3, 3, 3.2, -223.7] } },
   frags: { m01: [['towpath', 'laundromat', 'carriageDoor']] }, // (a fragment is read within 2.4 m: never up on the pigeons' ledge)
+  // (closing) "a crowded security checkpoint" (the bible): the place holds 30 people, not §4.7's 24, and the queue at the
+  // checkpoint stands in two lines between the tapes, waiting for Officer Pryce to wave each one through
+  people: 30,
   crowd: [
-    // (21 asked for, with the eight named and tier-2 people; Rain City's faces walk at most twice a year in a place, so
-    // crowds.js casts 14, in this order: the knot at the staff gate first (the pursuit ends in it: 3), then the station
-    // staff (2), the avenue's commuters (5), the checkpoint queue (2), the EMS (2): twelve walk the morning)
+    // (29 asked for, with the eight named and tier-2 people; each face walks at most three times a year in a place, each
+    // time in other clothes, so crowds.js casts 22, in this order: the knot at the staff gate first (the pursuit ends in
+    // it), the station staff, the avenue's commuters, the checkpoint's two lines, the EMS)
     // Helix's people at the staff gate, waiting to badge in all morning (the crowd where the woman with Mira's face is
     // lost, after the Zero Second); the morning's people are not out yet at 05:40, while the cold open plays (co_m01)
     { era: 'present', years: ['PRESENT', 'PAST'], region: 'rain', role: 'commuter', path: [[-9, -217.5], [9, -217.5], [7, -221], [-7, -221]], n: 4, when: '!co_m01' },
     { era: 'present', years: ['PRESENT', 'PAST'], region: 'rain', role: 'staff', path: [[-30, -153], [28, -153]], y: 3.4, n: 3, when: '!co_m01' },
     { era: 'present', years: ['PRESENT', 'PAST'], region: 'rain', role: 'commuter', path: [[-11, 6], [-11, -64]], n: 4, when: '!co_m01' },
     { era: 'present', years: ['PRESENT', 'PAST'], region: 'rain', role: 'commuter', path: [[11, -8], [11, -66]], n: 4, when: '!co_m01' },
-    { era: 'present', years: ['PRESENT', 'PAST'], region: 'rain', role: 'contractor', path: [[-4, -98], [4, -104]], n: 4, when: '!co_m01' },
+    { era: 'present', years: ['PRESENT', 'PAST'], region: 'rain', role: 'commuter', path: [[0.4, -94.4], [0.4, -98.2]], n: 6, queue: true, when: '!co_m01' },
+    { era: 'present', years: ['PRESENT', 'PAST'], region: 'rain', role: 'contractor', path: [[2.6, -96], [2.6, -99.8]], n: 5, queue: true, when: '!co_m01' },
     { era: 'present', years: ['PRESENT'], region: 'rain', role: 'ems', path: [[-6, -160], [14, -160]], y: 3.4, n: 2, when: 'after_zero' },
   ],
 

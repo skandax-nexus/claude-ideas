@@ -90,7 +90,7 @@ export const NPCS = {
   // CREW lines, said in that voice (Runtime.voiced, voicelines.js)
   guard: { id: 'guard', first: 'Pryce', name: 'Officer Pryce', role: 'Helix security, the checkpoint', pronoun: HER, color: '#4f6170', voice: 'CREW', era: 'present', seed: 21, model: 'rb_security_f', variant: 'helix', height: 1.7, vid: 'PRYCE', walk: 1 },
   dale: { id: 'dale', first: 'Dale', name: 'Officer Dale', role: 'Helix security', pronoun: HIS, color: '#4f6170', voice: 'CREW', era: 'present', seed: 22, model: 'rb_security_m', variant: 'grey', height: 1.8, vid: 'DALE', walk: 1 },
-  haig: { id: 'haig', first: 'Haig', name: 'Officer Haig', role: 'Helix security, off shift', pronoun: HER, color: '#4f6170', voice: 'CREW', era: 'present', seed: 24, model: 'rb_civ_f2', variant: 'home', height: 1.67, vid: 'HAIG', walk: 1, recording: true },
+  haig: { id: 'haig', first: 'Haig', name: 'Officer Haig', role: 'Helix security, off shift', pronoun: HER, color: '#4f6170', voice: 'CREW', era: 'present', seed: 24, model: 'rb_haig', variant: 'home', height: 1.67, vid: 'HAIG', walk: 1, recording: true },
   researcher: { id: 'researcher', first: 'Lin', name: 'Dr. Lin', role: 'Helix researcher', pronoun: HER, color: '#4f6170', voice: 'CREW', era: 'present', seed: 25, model: 'rb_mira', variant: 'lin', height: 1.66, vid: 'LIN', walk: 1 },
   elder: { id: 'elder', first: 'The Elder', name: 'The Elder', role: 'Leader of the settlement', pronoun: HER, color: '#8a6a3a', voice: 'CREW', era: 'past', seed: 26, model: 'rb_elder', variant: 'elder', height: 1.6, vid: 'ELDER', walk: 0.8 },
   clockmaker: { id: 'clockmaker', first: 'Ezra Moll', name: 'Ezra Moll, the Clockmaker', role: 'Keeper of loops', pronoun: HIS, color: '#8a6a3a', voice: 'CREW', era: 'past', seed: 27, model: 'rb_ezra', variant: 'ezra', height: 1.74, vid: 'CLOCKMAKER', walk: 0.9 },
@@ -103,14 +103,14 @@ export const NPCS = {
   // new in v2.1 (no lines yet beyond today's)
   odile: { id: 'odile', first: 'Odile', name: 'Nurse Odile', role: 'Night nurse, Ward 32, since 2026', pronoun: HER, color: '#7aa6c8', voice: 'CREW', era: 'present', seed: 33, model: 'rb_odile', variant: 'ward', height: 1.66, vid: 'ODILE', walk: 0.95 },
   florist: { id: 'florist', first: 'Florist', name: 'The Florist', role: 'Florist, Rain City South', pronoun: HER, color: '#5f8a5a', voice: 'CREW', era: 'present', seed: 34, model: 'rb_florist', variant: 'florist', height: 1.64, vid: 'FLORIST', walk: 1 },
-  receptionist: { id: 'receptionist', first: 'Reception', name: 'Helix reception', role: 'Helix front desk', pronoun: HER, color: '#4f6170', voice: 'CREW', era: 'present', seed: 35, model: 'rb_civ_f1', variant: 'helix desk', height: 1.66, vid: 'RECEPTIONIST', walk: 1 },
+  receptionist: { id: 'receptionist', first: 'Reception', name: 'Helix reception', role: 'Helix front desk', pronoun: HER, color: '#4f6170', voice: 'CREW', era: 'present', seed: 35, model: 'rb_desk_f', variant: 'helix desk', height: 1.66, vid: 'RECEPTIONIST', walk: 1 },
   // the Director of Continuity (M10, M21) is whoever rook_fate made them: Rook, older; Pryce; or an empty chair
   director: {
     id: 'director', first: 'The Director', name: 'The Director of Continuity', role: 'Director of Continuity', pronoun: null, color: '#4f6170', voice: 'CREW', era: 'present', seed: 36, model: null, variant: null, vid: 'DIRECTOR',
     resolve: [{ when: 'rook_fate == "persuade"', as: 'rook', variant: 'old', vid: 'ROOK' }, { when: 'rook_fate == "expose"', as: 'guard', variant: 'helix', vid: 'PRYCE' }, { when: 'true', as: null, chair: 'recorder', vid: 'DIRECTOR' }],
   },
   kai12: { id: 'kai12', first: 'Kai', name: 'Kai, twelve', role: 'Young Kai', pronoun: HIS, color: '#25313d', voice: 'KAI12', era: 'past', seed: 37, model: 'rb_child_m', variant: 'kai12', height: 1.42, vid: 'KAI12', walk: 1.05, silent: true },
-  tomas: { id: 'tomas', first: 'Tomas', name: 'Tomas Vale', role: 'Anja\'s son, an echo', pronoun: HIS, color: '#1f9a90', voice: 'CREW', era: 'future', seed: 38, model: 'rb_child_m2', variant: 'patched', height: 1.3, vid: null, walk: 1.05, silent: true, hologram: true },
+  tomas: { id: 'tomas', first: 'Tomas', name: 'Tomas Vale', role: 'Anja\'s son, an echo', pronoun: HIS, color: '#1f9a90', voice: 'CREW', era: 'future', seed: 38, model: 'rb_tomas', variant: 'school', height: 1.42, vid: null, walk: 1.05, silent: true, hologram: true },
 };
 
 // Officer Pryce answers to both names: the checkpoint's 'guard' and her own (one face, one entry in the cast)

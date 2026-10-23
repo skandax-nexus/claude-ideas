@@ -34,8 +34,9 @@ import { KIT_NAMES } from '../game/js/editions/lastversion/places/kits.js';
 import { STYLES } from '../game/js/editions/lastversion/places/styles.js';
 import { Player } from '../game/js/entities/Player.js';
 import { LV_MODELS, SHARED_MODELS, MANIFEST, CHAPTER_CAST, COMMON, sexOf, isChild, castOf } from '../game/js/editions/lastversion/casting.js';
-import { WARDROBE, hasVariant, packRules } from '../game/js/editions/lastversion/wardrobe.js';
-import { ERAS, EXCEPTIONS, ANCIENT_WOMEN, AMBIENT_CAST, eraModels, MAX_PEOPLE, MET, CAP } from '../game/js/editions/lastversion/crowds.js';
+import { WARDROBE, hasVariant, packRules, SETTLEMENT, PRESENT_PALETTES } from '../game/js/editions/lastversion/wardrobe.js';
+import { ERAS, EXCEPTIONS, AMBIENT_CAST, eraModels, MAX_PEOPLE, MET, CAP, OLD, PALETTE, PALETTE_ROLES, ROLE_NAMES } from '../game/js/editions/lastversion/crowds.js';
+import { PIECES } from '../game/js/editions/lastversion/garments.js';
 import { M01, m01Shots } from '../game/js/editions/lastversion/prologue.js';
 import { WATCHERS, HUMAN, watcherModels, kindsOf } from '../game/js/editions/lastversion/watchers.js';
 import { spokenLines, buildLevels, voiceOf, lexicon, GROUPS, chapterCardLines, missionCardLines, endingLines, POSTCREDIT, choiceLine, numberWords } from '../game/js/editions/lastversion/voicelines.js';
@@ -1197,13 +1198,16 @@ test('a place keeps to its budgets: colliders, texts, people, vegetation kinds, 
     const here = `${deck.mkey}/${s}`;
     assert.ok(level.elements.length <= 1500, `${here}: ${level.elements.length} colliders`);
     assert.ok(level.texts.length <= 60, `${here}: ${level.texts.length} texts`);
-    // people: the named and tier-2 people plus the crowds cast along level.crowd (crowds.js), within §4.7's 24
+    // people: the named and tier-2 people plus the crowds cast along level.crowd (crowds.js), within §4.7's 24 (the one
+    // place the bible calls crowded, Mission 1's checkpoint, within its own 30)
     const crowdN = level.crowd.reduce((a, c) => a + c.n, 0);
     const named = level.npcs.filter((n) => !n.crowd).length;
     const crowd = level.npcs.filter((n) => n.crowd).length;
+    const max = level.people || 24;
+    assert.ok(max === 24 || (deck.mkey === 'm01' || deck.origin === 'm01') && max <= 30, `${here}: ${max} people allowed`);
     // (U4 review: a crowd may come out smaller than its share, where its faces run out: crowds.js CAP)
-    const share = Math.min(crowdN, 24 - named);
-    assert.ok(level.npcs.length <= 24 && crowd <= share && crowd >= Math.floor(share * 0.6), `${here}: ${level.npcs.length} people, ${named} named + ${crowd} of ${crowdN} in the crowd`);
+    const share = Math.min(crowdN, max - named);
+    assert.ok(level.npcs.length <= max && crowd <= share && crowd >= Math.floor(share * 0.6), `${here}: ${level.npcs.length} people, ${named} named + ${crowd} of ${crowdN} in the crowd`);
     const [bx0, bz0, bx1, bz1] = level.bounds;
     assert.ok(level.crowd.length, `${here}: crowd paths for U4`);
     for (const c of level.crowd) {
@@ -1629,13 +1633,13 @@ test('every NPC is cast: a model whose file exists, a defined variant, a height,
 
 test('pronouns match the body: every NPC, every hand-placed passer-by, every person a level casts', () => {
   for (const n of allNamed()) if (sexOf(n.model) !== 'n') assert.equal(SEX[n.pronoun?.their], sexOf(n.model), `${n.id} (${n.pronoun?.their}) on ${n.model}`);
-  for (const [id, a] of Object.entries(AMBIENT_CAST)) assert.equal(a.pronoun, sexOf(a.model), id);
+  for (const [id, a] of Object.entries(AMBIENT_CAST)) assert.equal(a.pronoun, sexOf(a.model, a.variant), id);
   for (const { deck, s, level } of LEVELS) {
     for (const n of level.npcs) {
       const c = level.cast.find((x) => x.id === n.crew);
       assert.ok(c, `${deck.mkey}/${s}: ${n.id} is cast`);
-      if (!c.model || sexOf(c.model) === 'n') continue;
-      assert.equal(SEX[(n.pronoun || c.pronoun)?.their], sexOf(c.model), `${deck.mkey}/${s}: ${n.id} on ${c.model}`);
+      if (!c.model || sexOf(c.model, c.variant) === 'n') continue;
+      assert.equal(SEX[(n.pronoun || c.pronoun)?.their], sexOf(c.model, c.variant), `${deck.mkey}/${s}: ${n.id} on ${c.model}/${c.variant}`);
     }
   }
   // (U4 review) and what is said of them: Mission 1's toy child is a boy on screen, so the narrator says "his hand"
@@ -1693,28 +1697,117 @@ test('every child is a child: the named children, the crowds\' children, the toy
   assert.ok(kids > 0, 'children walk somewhere');
 });
 
-test('the settlement\'s women wear the mesh of whichever named woman is absent from the mission (Tala in M4, the Elder in M5)', () => {
-  const women = (mkey) => {
+// (closing) the Ancient Settlement three thousand years ago: wool and linen tunics, mantles, cloaks, sashes and belts made
+// for each body (garments.js), its own faces (none a named one), its elders and storyteller old men, never Rocketbox's
+// robe, kurta, hijab, abaya or head-cloth avatars; each of its places in its own palette
+const SETTLEMENT_MISSIONS = ['m04', 'm05', 'm07', 'm22', 'm23', 'c_b'];
+test('the settlement\'s people are dressed as people of three thousand years ago, in their own faces', () => {
+  const conv = fs.readFileSync('tools/rocketbox-to-glb.mjs', 'utf8');
+  const srcOf = (m) => new RegExp(`\\b${m}: \\{ src: '([^']+)'`).exec(conv)?.[1];
+  // the avatars that wear today's Gulf and Islamic dress (a ghutra and thobe, a kurta and taqiyah, a lace-fringed hijab,
+  // a khimar and abaya, a burqa) are gone from the edition; the girl in a head scarf is a child of 2196 only
+  for (const gone of ['Adults/Male_Adult_19', 'Adults/Male_Adult_21', 'Adults/Female_Adult_06', 'Adults/Female_Adult_10', 'Adults/Female_Adult_16']) {
+    assert.ok(!Object.keys(LV_MODELS).some((m) => srcOf(m) === gone), `${gone} is not converted for the edition`);
+  }
+  assert.ok(!eraModels('ancient').has('rb_child_f2') && !Object.entries(AMBIENT_CAST).some(([id, a]) => a.model === 'rb_child_f2' && /^m[4-7]_/.test(id)), 'no head scarf in the settlement');
+  // everyone of the settlement wears a tunic (a skirt at least), whoever they are
+  const garbOf = (m, v) => WARDROBE[m]?.[v]?.garb;
+  for (const id of ['niko', 'tala', 'elder']) {
+    const n = NPCS[id];
+    const g = garbOf(n.model, n.variant);
+    assert.ok(g?.skirt && (g.mantle || g.cloak || g.sash) && g.belt, `${id} wears a tunic, a mantle or cloak and a belt: ${JSON.stringify(g)}`);
+  }
+  assert.ok(garbOf('rb_niko', 'older')?.skirt, 'Niko, older');
+  let people = 0;
+  for (const { deck, s, level } of LEVELS.filter((l) => SETTLEMENT_MISSIONS.includes(l.deck.origin || l.deck.mkey))) {
+    for (const n of level.npcs) {
+      const c = level.cast.find((x) => x.id === n.crew);
+      if (!c?.model) continue;
+      const ancient = c.era === 'ancient' || /^m[457]_/.test(n.crew) || ['niko', 'tala', 'elder'].includes(n.crew);
+      if (!ancient) continue;
+      people++;
+      const g = garbOf(c.model, n.variant || c.variant);
+      assert.ok(g?.skirt, `${deck.mkey}/${s}: ${n.id} (${c.model}/${n.variant || c.variant}) wears a tunic`);
+      for (const k of Object.keys(g)) assert.ok(PIECES.includes(k), `${deck.mkey}/${s}: ${k} is a garment`);
+    }
+  }
+  assert.ok(people >= 40, `${people} people of the settlement checked`);
+  // an old man is an old man: the storyteller, the elders, the astronomer
+  assert.ok(OLD.includes(AMBIENT_CAST.m4_teller.model) && OLD.includes(AMBIENT_CAST.m7_astro.model), 'the storyteller and the astronomer are old men');
+  assert.ok(ERAS.ancient.elder.every(([m]) => OLD.includes(m)) && ERAS.ancient.storyteller.every(([m]) => OLD.includes(m)), 'the elders are old men');
+  for (const m of OLD) assert.ok(['Adults/Male_Adult_05', 'Professions/Business_Male_07'].includes(srcOf(m)), `${m}: an old man (${srcOf(m)})`);
+  // the girls of the settlement wear a woman's hair (a woman of the settlement, loaded with them); M4's girl is a girl
+  const girls = Object.entries(WARDROBE.rb_child_m2).filter(([, v]) => v.sex === 'f');
+  assert.ok(girls.length >= 6 && girls.every(([, v]) => ['rb_vill_f', 'rb_vill_f2'].includes(v.hairdo?.from)), 'the settlement\'s girls have hair, not a head cloth');
+  assert.equal(sexOf(AMBIENT_CAST.m4_girl.model, AMBIENT_CAST.m4_girl.variant), 'f');
+  // each place of the settlement in its own palette, and no two alike
+  const dyes = (mkey) => {
     const out = new Set();
     for (const { level } of LEVELS.filter((l) => l.deck.mkey === mkey)) for (const n of level.npcs.filter((x) => x.crowd)) {
       const c = level.cast.find((x) => x.id === n.crew);
-      if (ANCIENT_WOMEN.includes(c.model)) out.add(c.model);
+      if (c.era === 'ancient') out.add(c.variant.replace(/_?(boy|girl)?\d$/, ''));
     }
-    return [...out].sort();
+    return [...out];
   };
-  assert.deepEqual(women('m04'), ['rb_tala'], 'M4: the Elder is here, so the women are on Tala\'s mesh');
-  assert.deepEqual(women('m05'), ['rb_elder'], 'M5: Tala is met here, so the women are on the Elder\'s mesh');
-  assert.ok(women('m07').length && women('m07').every((m) => ANCIENT_WOMEN.includes(m)), 'M7: neither is here, so either mesh');
-  assert.ok(!women('m23').includes('rb_tala'), 'Afterzero: Tala may stand on the road');
-  assert.ok(!women('c_b').includes('rb_tala'), 'the gorge: Tala leads the case');
+  assert.deepEqual(dyes('m04'), ['fire']);
+  assert.deepEqual(dyes('m05'), ['water']);
+  assert.deepEqual(dyes('m07'), ['sky']);
+  assert.deepEqual(dyes('m23'), ['fest']);
+  for (const [pal, outfits] of Object.entries(SETTLEMENT)) assert.ok(outfits.length >= 5 && outfits.flat().every((d) => /^[a-z]+$/.test(d)), pal);
+});
+
+// (closing) every generic role on a body that looks the part, and named for what it is; Tomas's own body; a crowded
+// checkpoint that reads as crowded; each mission's casual crowd in its own colours
+test('casting: generic roles look and are named the part, Tomas has a body of his own, the checkpoint is crowded, crowds dress by place', () => {
+  const labels = new Set([...Object.values(ROLE_NAMES), ...Object.values(AMBIENT).flatMap((p) => Object.values(p.roles || {}))]);
+  for (const { deck, s, level } of LEVELS) {
+    for (const n of level.npcs.filter((x) => x.crowd)) {
+      const c = level.cast.find((x) => x.id === n.crew);
+      if (c.met) continue;
+      // (a construction worker was 'Nurse', a doctor 'Student', a scavenger 'Medic': another region's names in turn)
+      assert.ok(labels.has(c.first) && c.first === (AMBIENT[Object.keys(AMBIENT).find((k) => AMBIENT[k].roles?.[c.crowdRole] === c.first)]?.roles?.[c.crowdRole] || ROLE_NAMES[c.crowdRole]), `${deck.mkey}/${s}: a ${c.crowdRole} called ${c.first}`);
+      // a paramedic is on the paramedic's body; a technician or a researcher in a uniform or a lab coat, never a T-shirt
+      if (c.crowdRole === 'ems') assert.equal(c.model, 'rb_medic_f', `${deck.mkey}/${s}: a paramedic on ${c.model}`);
+      if (['technician', 'researcher', 'surveyor'].includes(c.crowdRole)) assert.ok(c.model === 'rb_doctor_m' || ['helix slate', 'helix tech', 'labcoat', 'overall'].includes(c.variant), `${deck.mkey}/${s}: a ${c.crowdRole} as ${c.model}/${c.variant}`);
+    }
+  }
+  assert.ok(AMBIENT_CAST.tech_1.variant === 'helix tech' && WARDROBE.rb_civ_f2.cook.garb.apron, 'M3\'s technician in a work uniform; M21\'s cook in an apron');
+  // Tomas: his own body, no one else's, a boy's height
+  assert.equal(NPCS.tomas.model, 'rb_tomas');
+  assert.ok(isChild('rb_tomas') && NPCS.tomas.height < 1.5);
+  for (const { deck, level } of LEVELS) for (const c of level.cast) if (c.id !== 'tomas' && level.npcs.some((n) => n.crew === c.id)) assert.notEqual(c.model, 'rb_tomas', `${deck.mkey}: ${c.id} wears Tomas's body`);
+  for (const a of Object.values(AMBIENT_CAST)) assert.notEqual(a.model, 'rb_tomas');
+  // Mission 1's "crowded security checkpoint": people queue between the tapes, Officer Pryce at the booth
+  const m1 = LEVELS.find((l) => l.deck.mkey === 'm01').level;
+  const queue = m1.npcs.filter((n) => n.crowd && !n.path && n.pos[0] > -1.2 && n.pos[0] < 4.2 && n.pos[2] > -106 && n.pos[2] < -94);
+  assert.ok(queue.length >= 6, `M1: ${queue.length} people queue at the checkpoint`);
+  assert.ok(m1.npcs.length > 24 && m1.npcs.length <= 30, `M1: ${m1.npcs.length} people in the place`);
+  // the casual crowds of today: each mission with a palette dresses them in it, and no two missions share one
+  const pals = Object.values(PALETTE.present);
+  assert.equal(new Set(pals).size, pals.length, 'a palette per mission');
+  for (const [mkey, pal] of Object.entries(PALETTE.present)) {
+    assert.ok(PRESENT_PALETTES[pal]?.length >= 6, pal);
+    const level = LEVELS.find((l) => l.deck.mkey === mkey)?.level;
+    const casual = level.npcs.filter((n) => n.crowd).map((n) => level.cast.find((c) => c.id === n.crew)).filter((c) => c.era === 'present' && PALETTE_ROLES.includes(c.crowdRole));
+    assert.ok(casual.length && casual.every((c) => c.variant.startsWith(pal)), `${mkey}: its casual crowd in ${pal}: ${casual.map((c) => c.variant)}`);
+  }
+  const anc = Object.values(PALETTE.ancient);
+  assert.equal(new Set(anc).size, anc.length, 'a settlement palette per mission');
 });
 
 test('named faces stay out of crowds (but for the listed exceptions), and crowd faces never cross eras', () => {
   const named = new Set(allNamed().map((n) => n.model));
   for (const era of Object.keys(ERAS)) for (const m of eraModels(era)) assert.ok(!named.has(m) || EXCEPTIONS.includes(m), `${era}: ${m} is a named face`);
   const [pr, an, fu] = ['present', 'ancient', 'future'].map(eraModels);
-  for (const m of pr) assert.ok(!an.has(m) && (!fu.has(m) || m === 'rb_child_m2'), `present and other eras share ${m}`);
-  for (const m of an) assert.ok(!fu.has(m), `ancient and 2196 share ${m}`);
+  for (const m of pr) assert.ok((!an.has(m) && !fu.has(m)) || m === 'rb_child_m2', `present and other eras share ${m}`);
+  for (const m of an) assert.ok(!fu.has(m) || m === 'rb_child_m2', `ancient and 2196 share ${m}`);
+  // (closing) never a named face in a crowd, or placed by hand as somebody else, before or after that person appears
+  assert.equal(EXCEPTIONS.length, 0);
+  for (const a of Object.values(AMBIENT_CAST)) {
+    const owner = allNamed().find((n) => n.model === a.model);
+    // (Ezra's and Niko's own echoes, and Sera in her disguise, are those people)
+    assert.ok(!owner || ['rb_ezra', 'rb_niko', 'rb_sera'].includes(a.model), `${a.model}/${a.variant} is ${owner?.id}'s face`);
+  }
   // the settlement's women: whichever named woman is not in the mission
   for (const { deck, s, level } of LEVELS) {
     const here = new Set(level.npcs.filter((n) => !n.crowd && NPCS[n.crew]).map((n) => level.cast.find((c) => c.id === n.crew)?.model));
@@ -1725,7 +1818,7 @@ test('named faces stay out of crowds (but for the listed exceptions), and crowd 
         assert.ok(n.hologram && MET.includes(c.met) && c.model === NPCS[c.met].model && c.first === NPCS[c.met].first, `${deck.mkey}/${s}: ${n.id} is an echo of ${c.met}`);
         continue;
       }
-      assert.ok(!here.has(c.model) || c.model === 'rb_child_m2' && c.era !== 'ancient', `${deck.mkey}/${s}: ${c.model} is in the crowd and among the named`);
+      assert.ok(!here.has(c.model) && !allNamed().some((x) => x.model === c.model), `${deck.mkey}/${s}: ${c.model} is in the crowd and a named face`);
       assert.ok(eraModels(c.era).has(c.model), `${deck.mkey}/${s}: ${c.model} is not of the ${c.era} era`);
     }
   }
@@ -1736,7 +1829,7 @@ test('crowds walk every mission\'s place: neighbours differ, heights and paces v
   for (const { deck, s, level } of LEVELS) {
     const crowd = level.npcs.filter((n) => n.crowd);
     byMission[deck.mkey] = (byMission[deck.mkey] || 0) + crowd.length;
-    assert.ok(level.npcs.length <= MAX_PEOPLE, `${deck.mkey}/${s}: ${level.npcs.length} people`);
+    assert.ok(level.npcs.length <= (level.people || MAX_PEOPLE), `${deck.mkey}/${s}: ${level.npcs.length} people`);
     for (let i = 1; i < crowd.length; i++) {
       const a = level.cast.find((c) => c.id === crowd[i - 1].crew), b = level.cast.find((c) => c.id === crowd[i].crew);
       if (crowd[i - 1].when === crowd[i].when) assert.ok(a.model !== b.model || a.variant !== b.variant, `${deck.mkey}/${s}: neighbours ${a.id} and ${b.id} are both ${a.model}/${a.variant}`);
@@ -1794,7 +1887,7 @@ test('tour: people placed by hand stand on the ground, in no wall, seat or count
   assert.ok(people > 300, `${people} placings checked`);
 });
 
-test('crowds are not clones: one face at most twice a year in a place, and never a hand-placed person\'s', () => {
+test('crowds are not clones: one face at most CAP times a year in a place, each time in other clothes, and never a hand-placed person\'s', () => {
   for (const { deck, s, level } of LEVELS) {
     const states = level.states || deck.states || ['PRESENT'];
     const placed = new Set(level.npcs.filter((n) => n.ambient && !n.crowd).map((n) => level.cast.find((c) => c.id === n.crew)?.model).filter((m) => m && !isChild(m)));
@@ -1808,6 +1901,11 @@ test('crowds are not clones: one face at most twice a year in a place, and never
         const k = `${c.model}@${y}`;
         count[k] = (count[k] || 0) + 1;
         assert.ok(count[k] <= CAP, `${deck.mkey}/${s}: ${count[k]} crowd people wear ${c.model} in ${y}`);
+        // (closing) and each of them in other clothes (a uniform aside: the loop cells' prisoners)
+        if (c.crowdRole === 'prisoner') continue;
+        const kv = `${c.model}/${c.variant}@${y}`;
+        count[kv] = (count[kv] || 0) + 1;
+        assert.ok(count[kv] === 1, `${deck.mkey}/${s}: two crowd people wear ${c.model}/${c.variant} in ${y}`);
       }
     }
   }
@@ -1906,9 +2004,20 @@ test('each chapter loads the people it casts; the edition offers Kai\'s look onl
 
 test('the manifest carries only the edition\'s models, each with a credit and a conversion entry', () => {
   const lvFiles = Object.values(LV_MODELS).map((m) => m.file);
-  assert.equal(Object.keys(LV_MODELS).length, 37, '37 new people');
-  assert.equal(Object.values(LV_MODELS).filter((m) => m.px === 1024).length, 20, '20 named at 1024 px');
-  assert.equal(Object.values(LV_MODELS).filter((m) => m.px === 512).length, 17, '17 crowd at 512 px');
+  // (closing: the settlement's own six, Tomas, the receptionist and Officer Haig with faces of their own; the robe, hijab,
+  // abaya and the second robe gone)
+  assert.equal(Object.keys(LV_MODELS).length, 45, '45 new people');
+  assert.equal(Object.values(LV_MODELS).filter((m) => m.px === 1024).length, 21, '21 named at 1024 px');
+  assert.deepEqual(Object.entries(LV_MODELS).filter(([, m]) => m.px === 512 && !m.crowd).map(([k]) => k).sort(), ['rb_haig', 'rb_tomas'], 'two named only ever seen as light, at 512 px');
+  assert.equal(Object.values(LV_MODELS).filter((m) => m.crowd).length, 22, '22 crowd at 512 px');
+  for (const m of Object.values(LV_MODELS).filter((x) => x.crowd)) assert.equal(m.px, 512);
+  // (closing) mind the APK: the edition's people within 30 MB, and no FBXLoader extras in the edition's own files
+  const bytes = MANIFEST.reduce((a, f) => a + fs.statSync(`game/assets/characters/${f}`).size, 0);
+  assert.ok(bytes < 30e6, `the edition's people: ${(bytes / 1e6).toFixed(2)} MB`);
+  for (const f of lvFiles) {
+    const b = fs.readFileSync(`game/assets/characters/${f}`);
+    assert.ok(!b.subarray(20, 20 + b.readUInt32LE(12)).toString('utf8').includes('"extras"'), `${f} carries node extras`);
+  }
   // (U4 review) no one in the edition wears a Station Zero character's face: Juno, Varga, Kade, Ren's FIELD JACKET, the
   // captain (Kai keeps Ren's SHIRTSLEEVES: he is the player)
   for (const f of ['rb_juno.glb', 'rb_office_f.glb', 'rb_engineer_m.glb', 'rb_ren_f.glb', 'rb_captain_m.glb']) assert.ok(!MANIFEST.includes(f), `${f} is a Station Zero face`);
@@ -1933,12 +2042,25 @@ test('the manifest carries only the edition\'s models, each with a credit and a 
 });
 
 test('every wardrobe variant is a valid recolour: at most 8 rules, numbers in range, real parts and props', () => {
-  const PARTS = ['body', 'head', 'hair', 'hat', 'helmet', 'equipment', 'keffiyeh', 'stetoskop', 'tools', 'glasses'];
+  const PARTS = ['body', 'head', 'hair', 'hat', 'helmet', 'equipment', 'keffiyeh', 'stetoskop', 'tools', 'glasses', 'protection'];
+  const DYE_RE = /^#[0-9a-f]{6}$/i;
   for (const [model, vs] of Object.entries(WARDROBE)) {
     assert.ok(MODEL_OF(model), model);
     for (const [name, v] of Object.entries(vs)) {
       for (const [k, rules] of Object.entries(v)) {
         if (k === 'hide' || k === 'props') { assert.ok(Array.isArray(rules), `${model}/${name}.${k}`); continue; }
+        // (closing) clothes made for the body, another's hair, whose a variant is
+        if (k === 'garb') {
+          for (const [piece, g] of Object.entries(rules)) {
+            assert.ok(PIECES.includes(piece), `${model}/${name}: garment ${piece}`);
+            assert.ok(DYE_RE.test(g.dye) && (g.stripe === undefined || DYE_RE.test(g.stripe)), `${model}/${name}.${piece}: dyes ${g.dye} ${g.stripe}`);
+            for (const x of ['hem', 'front', 'back', 'reach', 'w', 'top', 'ease', 'open', 'wide']) if (g[x] !== undefined) assert.ok(g[x] >= 0 && g[x] <= 1.6, `${model}/${name}.${piece}.${x}`);
+            if (g.flare !== undefined) assert.ok(g.flare >= 1 && g.flare <= 1.6, `${model}/${name}.${piece}.flare`);
+          }
+          continue;
+        }
+        if (k === 'hairdo') { assert.ok(LV_MODELS[rules.from] && !LV_MODELS[rules.from].child, `${model}/${name}: hair from ${rules.from}`); continue; }
+        if (k === 'sex') { assert.ok(['f', 'm'].includes(rules), `${model}/${name}: sex ${rules}`); continue; }
         if (k === 'holoProps') { assert.equal(rules, true, `${model}/${name}.holoProps`); assert.ok(v.props?.length, `${model}/${name}: holoProps with props`); continue; }
         assert.ok(PARTS.includes(k), `${model}/${name}: part ${k}`);
         assert.ok(rules.length <= 8, `${model}/${name}.${k}: ${rules.length} rules`);
