@@ -1002,6 +1002,26 @@ const PLAYER = () => {
         P.wait(() => P.done(t), 12);
       },
     },
+    // (U7 review) Mission 8's escape: the breach seals the cube round Kai; in 2049 the glass holds, so he walks out
+    // through 2026 (no cube) and comes back to 2049 at the terminal
+    m08: {
+      escape: (t) => {
+        const p = g.player.pos, inCube = () => Math.abs(p.x) < 7.8 && Math.abs(p.z) < 7.8;
+        const r = { inside: inCube() };
+        const held = g.deckWorld.sentinels.splice(0);
+        B.walkTo(0, 10, 4);
+        r.held2049 = inCube();
+        P.year('PAST');
+        const s0 = P.placed;
+        const left = B.walkTo(0, 10.6, 6); // (where the door was, between the lens's bollards)
+        P.go(P.at(t), 1.6);
+        r.out2026 = left < 0.6 && !inCube() && P.placed === s0;
+        g.deckWorld.sentinels.push(...held);
+        P.year('PRESENT');
+        g.simulate(0.3);
+        window.LVESCAPE = r;
+      },
+    },
     // (U7 review) Mission 10: the chamber's crossing counts once Kai has stepped ahead of himself
     m10: {
       cross: (t) => {
@@ -1243,6 +1263,8 @@ const m8f = await az(() => ({ fate: AZ.facts.get('rook_fate'), ...LVB.f('ev_boot
 check(['expose', 'persuade', 'record'].includes(m8f.fate) && m8f.rook && order(m8.steps, 'readLog', 'rook', 'boot', 'reconstruct'), 'Mission 8: Rook confronted in his office ("By me. Write it down."): rook_fate is set', JSON.stringify(m8f));
 check(m8f.ev_boot_mine && m8f.ev_ninth_minute && m8f.lin_gone && m8f.lin, 'the boot print is Kai\'s; the last ten minutes played back in order; Lin: "Because I am not the one who died."', JSON.stringify(m8f));
 check(m8f.version_17 && m8f.v17, 'VERSION 17: "TIMELINE: VERSION 17. PRIOR VERSIONS: NO SURVIVING RECORD."', JSON.stringify(m8f));
+const esc8 = await az(() => window.LVESCAPE || null);
+check(esc8?.inside && esc8.held2049 && esc8.out2026 && order(m8.steps, 'containment', 'escape', 'version'), 'Mission 8: Lin is spoken to inside the cube; the breach seals it (in 2049 the glass holds); Kai walks out through 2026, where there is no cube', JSON.stringify(esc8));
 await finish();
 const act2 = await az(() => ({ ...LVB.where(), name: AZ.edition.deck.name, card: LVB.said.includes('NONE: Act Two. The Nine-Minute War.') }));
 check(act2.chapter === 'act2' && act2.deck === 0 && act2.name === 'NINE MINUTES TO ZERO' && act2.card, 'Act I ends on VERSION 17; Act II begins with its card ("Act Two. The Nine-Minute War.") and Mission 9', JSON.stringify(act2));

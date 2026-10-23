@@ -794,8 +794,8 @@ const M08_HINTS = {
   rook: ['Rook is in his office.', 'Up the outside stair.', 'Talk to Rook.'],
   boot: ['Rook said boot prints.', 'The print case.', 'Stand beside it.'],
   reconstruct: ['Four entries, one order.', 'The echoes walk them.', 'Order them at the island.'],
-  containment: ['Lin is in the cube.', 'Through the glass.', 'Talk to Lin.'],
-  escape: ['Lockdown. They hunt further now.', 'The island drone circles the cube.', 'Wait for it to pass the terminal, then go.'],
+  containment: ['Lin is in the cube.', 'Its door is open.', 'Go in to her.'],
+  escape: ['Sealed in.', 'In 2026 there was no cube.', 'Out through 2026, back at the terminal.'],
   version: ['The terminal names this world.', 'On the island.', 'Read it.'],
   iven: ['Iven Marr.', 'The east arcade.', 'Talk to him, or play his record.'],
   door: ['The staff door is locked.', 'An officer who trusts me.', 'Talk to the officer.'],
@@ -814,7 +814,7 @@ export const M08 = {
   ambience: 'hum', ambient: 'helix', crew: C('rook'),
   labels: { PRESENT: '2049 · V17' },
   named: ['receptionist', 'rook', 'guard', 'dale', 'researcher', 'iven'], // (the altered staff never wear their faces)
-  minutes: { main: 33, optional: 8 }, autoExit: 1.2, gateAfter: true,
+  minutes: { main: 34, optional: 8 }, autoExit: 1.2, gateAfter: true,
   fragSpots: [['southBridge'], ['eastArcade']],
   fragments: [[
     'A visitor badge printed for VAREN, M., age 9, dated today. Nobody has signed it out.',
@@ -890,7 +890,9 @@ export const M08 = {
             K('She was there. She was there, and she let him.')],
           goal: 'Reconstruct the morning, up to the Zero Second.', because: 'The cube kept it backwards. The log has it forwards.', set: { ev_ninth_minute: true }, log: 'At the ninth minute a man turned the ring. Lin stood beside him.', hints: M08_HINTS.reconstruct, minutes: 6 },
         { id: 'containment', kind: 'talk', npc: 'researcher', at: 'containmentCube', after: ['reconstruct'], goal: 'Lin is inside the containment cube.', because: 'She was in the reconstruction. She is in there now.', done: 'lin_gone', hints: M08_HINTS.containment, minutes: 3 },
-        { id: 'escape', kind: 'stealth', at: 'versionTerminal', r: 3, after: ['containment'], when: 'lin_gone', goal: 'The court locks down. Reach the version terminal unseen.', because: 'Whatever took her set every drone on the island looking.', hints: M08_HINTS.escape, minutes: 2 },
+        // (the breach seals the cube with Kai inside it: in 2049 the glass holds; 2026 has no cube, so he walks out
+        // through that year and comes back to 2049 at the terminal, past the island's drone; U7 review)
+        { id: 'escape', kind: 'stealth', at: 'versionTerminal', r: 3, after: ['containment'], when: 'lin_gone', goal: 'The cube seals. Get out, and reach the version terminal unseen.', because: 'In 2049 the glass holds. In 2026 there was no glass.', hints: M08_HINTS.escape, minutes: 3 },
         { id: 'version', kind: 'scene', scene: 'version', at: 'versionTerminal', after: ['escape'], spot: { prompt: 'THE VERSION TERMINAL', offset: [0, 1.2, -1], r: 2.8, model: () => makeScreen(0xd8d4ff) },
           goal: 'Read the version terminal.', because: 'Containment, version control. Version of what?', done: 'version_17', hints: M08_HINTS.version, minutes: 1 },
       ],
@@ -947,7 +949,8 @@ export const M08 = {
     read_log: { when: 'has_drive && @PRESENT', lines: [N('Four entries readable, from 05:33 to 08:14. Rook\'s office is in one.')], set: { ev_log_entries: true } },
     read_log_no: { lines: [K('The drive first. Then read it here, in 2049.')] },
     boot: { lines: [N('Kai sets his boot beside the glass. The same tread. The same worn heel.'), REV(K('Three thousand years. It\'s mine.'))], set: { ev_boot_mine: true }, log: 'The Site Zero print is my boot.' },
-    version: { lines: [REV(N('TIMELINE: VERSION 17. PRIOR VERSIONS: NO SURVIVING RECORD.'))], set: { version_17: true, ev_version17: true }, log: 'This is VERSION 17.' },
+    version: { when: '@PRESENT', lines: [REV(N('TIMELINE: VERSION 17. PRIOR VERSIONS: NO SURVIVING RECORD.'))], set: { version_17: true, ev_version17: true }, log: 'This is VERSION 17.' },
+    version_no: { lines: [K('Not built yet, in 2026.')] },
     group_photo: { lines: [N('The 2026 junior programme: Mira in yellow boots, a scowling boy of twelve, and a young Elias Rook.'),
       K('I hated that day. I don\'t remember why.')], set: { ev_group_photo: true } },
     iven_record: {
@@ -959,16 +962,16 @@ export const M08 = {
   },
   rules: [
     // Lin is gone: the containment alarm, and the drones on the island start looking
-    { id: 'lockdown', when: 'lin_gone', say: [N('CONTAINMENT BREACH. Every drone on the island turns.')], then: 'lockdown' },
+    { id: 'lockdown', when: 'lin_gone', say: [N('CONTAINMENT BREACH. The cube seals. Every drone on the island turns.')], then: 'lockdown' },
   ],
   fx: {
-    // the lockdown: every drone of the court's last quarter turns and rushes the cube's far side, then hunts the island
-    // further and faster than before; the version terminal is past them (U7 review: the escape is a stealth beat)
+    // the lockdown: every drone of the court's last quarter turns and rushes to the cube's sealed door, then hunts the
+    // island further and faster than before; the version terminal is past them (U7 review: the escape is a stealth beat)
     lockdown(rt) {
       const g = rt.g;
       g.audio.alert?.();
       if (!g.settings?.comfort) g.hud.flash('rgba(200,190,255,0.45)');
-      for (const s of g.deckWorld?.sentinels || []) if (ISLAND.test(s.def.id)) { s.lure = { x: 0, z: -11, t: 4 }; s.suspicion = 0; s.mode = 'patrol'; }
+      for (const s of g.deckWorld?.sentinels || []) if (ISLAND.test(s.def.id)) { s.lure = { x: 0, z: 10, t: 4 }; s.suspicion = 0; s.mode = 'patrol'; }
       lockdown(g.deckWorld?.sentinels?.map((s) => s.def) || []);
     },
   },
@@ -986,8 +989,8 @@ export const M08 = {
     person(P, { id: 'door_dale', crew: 'dale', at: 'staffDoor', off: [-2.4, 0, 1.6], turn: Math.PI, when: '!(trust_guard >= 1) && officer_trusted', prompt: 'TALK TO THE OFFICER' });
     // Iven, in person (his team got out) or as a record (he was suspended over the raw log)
     person(P, { id: 'iven', crew: 'iven', at: 'eastArcade', off: [0, 0, 1.6], turn: Math.PI, when: 'iven_team_saved || !ev_raw_log', scene: 'iven_record', prompt: 'TALK TO IVEN' });
-    // Lin in the cube, after the reconstruction
-    person(P, { id: 'lin_cube', crew: 'researcher', at: 'containmentCube', off: [0, 0, -3.2], turn: Math.PI, hologram: true, when: 't_m08_reconstruct && !lin_gone', prompt: 'TALK TO LIN' });
+    // Lin in the cube, after the reconstruction: in its middle, in 2049, spoken to from inside (its door stands open)
+    person(P, { id: 'lin_cube', crew: 'researcher', at: 'containmentCube', off: [0, 0, -7.4], turn: Math.PI, hologram: true, when: '@PRESENT && t_m08_reconstruct && !lin_gone', prompt: 'TALK TO LIN' });
     // the altered staff (researchers with their stethoscopes hidden, technicians) walk the court
     person(P, { id: 'm8_tech', crew: 'm8_tech', first: 'Technician', seed: 801, ambient: true, at: 'eastArcade', off: [-3, 0, 6], silent: true, path: [[34, -30], [34, -12]], speed: 0.9 });
   },

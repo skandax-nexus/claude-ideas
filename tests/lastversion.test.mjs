@@ -1218,6 +1218,9 @@ test('the places can be walked: their stairs, terraces, ramps and bridges carry 
     ['m08', 'PRESENT', () => [0, 0, -22], [[0, -18.4], [-0.3, -17], [0.4, -15.6], [-0.2, -14.2], [0.3, -12.8], [0, -11]], 0.4, {}],
     // (U7 review) Mission 8 without anyone's trust: up the old river wall's nine ledges, a jump each, to the balcony
     ['m08', 'PRESENT', () => [0, 0, -36], [[0.4, -38.3], ...Array.from({ length: 9 }, (_, i) => [1.6 + i * 1.1, -38.3, true]), [11.5, -38.3, true], [14, -38.3], [22, -38.3]], 9, {}],
+    // (U7 review) Mission 8: into the containment cube by its open door, to Lin; sealed (lin_gone), out through 2026's lens
+    ['m08', 'PRESENT', () => [0, 0.4, 11.5], [[0, 9], [0, 6], [0, 4.6]], 0.4, {}],
+    ['m08', 'PAST', () => [0, 0.4, 4.6], [[0, 10.6], [3.4, 11.2]], 0.4, { lin_gone: true }],
     // (U7 review) Mission 10: Kai wakes in his cell, on its floor, and walks out onto the gallery
     ['m10', 'PRESENT', () => [-24, 0, -19.5], [[-24, -17], [-24, -12], [-18, -10]], 0, {}],
     // (U3) the stone arch over the 2026 canyon; the lamp-post heads over the 2049 flood; the 2196 tilted floors up to the tower's deck
@@ -2998,6 +3001,12 @@ test('Acts I and II (U7 review): the escapement, the morning that agrees, the ch
   // M8: at the lockdown the island has a drone of its own, and the court's last quarter hunts further and faster
   const isl = lv('m08').sentinels.filter((sn) => /_q2s\d+$/.test(sn.id));
   assert.ok(isl.length === 2 && isl.some((sn) => /lin_gone/.test(sn.when || '') && sn.y === 0.4), JSON.stringify(isl.map((sn) => [sn.id, sn.when])));
+  // (and the breach seals the cube round Kai: in 2049 its door holds; Lin is spoken to inside it; the terminal is 2049's)
+  const sealed = walkRoute(lv('m08'), 'PRESENT', [0, 0.4, 4.6], [[0, 10]], { lin_gone: true });
+  assert.ok(sealed.stuck, `sealed in 2049: ${JSON.stringify(sealed)}`);
+  const lin = lv('m08').npcs.find((n) => n.id === 'lin_cube');
+  assert.ok(Math.abs(lin.pos[0]) < 7.8 - 3.2 && Math.abs(lin.pos[2]) < 7.8 - 3.2 && /@PRESENT/.test(lin.when), `Lin is spoken to from inside the cube: ${JSON.stringify(lin.pos)}`);
+  assert.ok(m('m08').scenes.version.when === '@PRESENT' && m('m08').scenes.version_no && /@PRESENT/.test(isl.find((sn) => sn.when).when));
   const defs = isl.map((sn) => ({ ...sn }));
   const f8 = new FactStore();
   f8.set('lin_gone');

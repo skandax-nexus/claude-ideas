@@ -36,9 +36,10 @@ export default {
   beatAt: { m08: ['recordsTerminal', 'serverRoom2026', 'containmentCube'] },
   exits: { m08: 'versionTerminal' },
   frags: { m08: [['printCase', 'photoWall', 'groupPhoto'], ['securityOffice', 'riverWall', 'rookOffice'], ['reconstruction', 'riverCourt', 'southBridge']] },
-  // (U7 review) at the lockdown the island has a drone of its own, round the cube on its terrace (past the version terminal)
+  // (U7 review) at the lockdown the island has a drone of its own in 2049, round the cube on its terrace (past the
+  // version terminal): Kai, sealed in the cube, can watch it go round before he steps into 2026 and out
   watch: { m08: [[], [[[18, -30], [30, -30], [30, -14], [18, -14]]], [[[-20, 22], [20, 22], [20, 30], [-20, 30]],
-    { y: 0.4, when: 'lin_gone && !version_17', path: [[-10.5, 10.5], [10.5, 10.5], [10.5, -10.5], [-10.5, -10.5]] }]] },
+    { y: 0.4, when: '@PRESENT && lin_gone && !version_17', path: [[-10.5, 10.5], [10.5, 10.5], [10.5, -10.5], [-10.5, -10.5]] }]] },
   crowd: [
     // (their own words in this version, U7 review: not the storm night's lockdown)
     { era: 'present', years: ['PRESENT', 'PAST'], region: 'helix', role: 'researcher', path: [[-33, -32], [27, -32]], n: 4,
@@ -84,10 +85,16 @@ export default {
     P.land('reconstruction', -10.2, 0.4, -2, Math.PI / 2);
     P.land('versionTerminal', 5, 0.4, 11.4, 0);
     P.E('PRESENT', () => {
-      P.box([-8, 0.4, -8, 8, 9.4, 8], 'cubeGlass', { solid: false });
-      P.col([-8, 0.4, -8, 8, 9.4, 8]);
+      // (U7 review) the glass has a door in its south face (x -1.4 .. 1.4, 3 m high), open while Lin is inside: Kai goes in
+      // to her, and the breach (lin_gone) seals it behind him. In 2049 the cube holds; 2026 has no cube, only the lens
+      for (const b of [[-8, 0.4, -8, 8, 9.4, -7.8], [-8, 0.4, -7.8, -7.8, 9.4, 7.8], [7.8, 0.4, -7.8, 8, 9.4, 7.8], [-8, 0.4, 7.8, -1.4, 9.4, 8], [1.4, 0.4, 7.8, 8, 9.4, 8], [-1.4, 3, 7.8, 1.4, 9.4, 8]]) P.box(b, 'cubeGlass');
+      for (const x of [-1.6, 1.6]) P.box([x - 0.2, 0.4, 7.7, x + 0.2, 3.2, 8.1], 'steel');
+      P.W('lin_gone', () => {
+        P.box([-1.4, 0.4, 7.84, 1.4, 3, 7.96], 'cubeGlass');
+        for (const y of [1.2, 2.2]) P.vbox([-1.4, y - 0.06, 7.78, 1.4, y + 0.06, 8.02], 'steel'); // (its bars: the door reads shut)
+      });
       for (const [x, z] of [[-8, -8], [8, -8], [-8, 8], [8, 8]]) P.box([x - 0.3, 0.4, z - 0.3, x + 0.3, 9.6, z + 0.3], 'steel');
-      for (const y of [0.6, 9.4]) for (const [x0, z0, x1, z1] of [[-8, -8.3, 8, -7.7], [-8, 7.7, 8, 8.3], [-8.3, -8, -7.7, 8], [7.7, -8, 8.3, 8]]) P.vbox([x0, y - 0.2, z0, x1, y + 0.2, z1], 'steel');
+      for (const y of [0.6, 9.4]) for (const [x0, z0, x1, z1] of [[-8, -8.3, 8, -7.7], [-8.3, -8, -7.7, 8], [7.7, -8, 8.3, 8], ...(y > 1 ? [[-8, 7.7, 8, 8.3]] : [[-8, 7.7, -1.8, 8.3], [1.8, 7.7, 8, 8.3]])]) P.vbox([x0, y - 0.2, z0, x1, y + 0.2, z1], 'steel');
       P.vbox([-7.4, 9.4, -7.4, 7.4, 9.6, 7.4], 'cubeGlass');
       prop(P, 'booth', 5, 9.8, Math.PI, { y: 0.4, m: 'helixWhite' });
       sign(P, 'CONTAINMENT - VERSION CONTROL', 0, 10.4, 8.4, 0, { size: 0.42, color: '#d8d4ff', board: 0 });
