@@ -6,19 +6,24 @@ AFTERZERO engine, all 23 missions written by hand on threads (the Prologue in U6
 and the Finale in U8), with the CASE FILES after an ending. How it works: [`DESIGN.md`](DESIGN.md).
 
 **Each chapter's length** (minutes; the model is the length model of §9.8, main path + side stories, which is each
-sheet's target; the bot's is the game's own telemetry for the full run of `tests/lastversion.mjs` on 2026-10-23 after
-the U8 review: 335 checks, 334 passed; the one failure, the Zero Second's music duck sampled late on a loaded machine,
-passed in the full run before it and in a Prologue run after it, 81/81):
+sheet's target; the floor is what a player cannot go under who hears every line of a mission's own (its threads, side
+stories, people, records and cards, measured from the recordings' lengths in the packs; not hints, barks or the shared
+conversations of `npcs.js`) and walks its main route in straight lines at Kai's walking 3.9 m/s; the bot's is the game's
+own telemetry for the full run of `tests/lastversion.mjs` in the play-through audit, 2026-10-23: 335 checks, 335 passed;
+the words are each mission's own as v2.0 had them, the build the player found short, and as they are now):
 
-| Chapter | Target (model) | The bot |
-| --- | --- | --- |
-| Prologue | 97 (74 + 23) | 12.8 (Mission 1 walked in 10.2; Missions 2 and 3 by the Prologue's own checks, which place Kai beat to beat) |
-| Act I | 192 (151 + 41) | 43.7 |
-| Act II | 199 (162 + 37) | 32.7 |
-| Act III | 194 (154 + 40) | 44.8 |
-| Act IV | 158 (130 + 28) | 29.7 |
-| Finale | 50 (40 + 10; the sheet allows 90) | 10.4 |
-| The campaign | 890 (711 + 179), about 15 hours | 174.1, under 3 hours |
+| Chapter | Target (model) | Floor (speech + walk) | The bot | Words (v2.0 → now) |
+| --- | --- | --- | --- | --- |
+| Prologue | 97 (74 + 23) | 25.3 (21.3 + 4.0 for 930 m) | 13.5 (Mission 1 walked in 10.9; Missions 2 and 3 placed beat to beat with their lines skipped) | 1,033 → 3,482 |
+| Act I | 192 (151 + 41) | 32.7 (24.7 + 8.0 for 1,871 m) | 42.9 | 701 → 4,285 |
+| Act II | 199 (162 + 37) | 28.2 (19.2 + 9.0 for 2,117 m) | 35.0 | 810 → 3,196 |
+| Act III | 194 (154 + 40) | 32.1 (22.1 + 10.0 for 2,342 m) | 44.1 | 542 → 3,701 |
+| Act IV | 158 (130 + 28) | 21.0 (14.6 + 6.4 for 1,489 m) | 29.2 | 346 → 2,599 |
+| Finale | 50 (40 + 10; the sheet allows 90) | 4.9 (3.5 + 1.4 for 317 m) | 10.1 | 110 → 599 |
+| The campaign | 890 (711 + 179), about 15 hours | 144.2 (105.4 + 38.8 for 9,066 m) | 174.8, under 3 hours | 3,542 → 17,862 |
+
+Every line the edition says, once each: 554 lines and 7,295 words in v2.0, 2,692 and 22,350 now. Each mission's place
+is 1.7-6.8 ha (v2.0's generated rooms: 0.2-0.8 ha a sector).
 
 The bot knows every coordinate, reads nothing twice, never looks around or gets lost, asks for no hint and plays one
 or two side stories a mission; the model, not the bot, is the estimate of a player's time, and neither has been
@@ -314,6 +319,33 @@ measured with a player.
   duck, a real-time sample taken late on a loaded machine (music 0.21, not under 0.05), which passed in the full run
   before (where the one failure was Kai on screen in Ending C, fixed since) and in a Prologue run after (81 passed, 0
   failed); Station Zero: `node tests/smoke.mjs` passed, `node tests/qa.mjs` 26/26.
+- **The play-through and test audit** (2026-10-23; `git log a18e119..`): the campaign played and the packs checked
+  again after the visual and casting tour. The whole browser bot (`node tests/lastversion.mjs`, 39.1 minutes on this
+  box) passed 335 of 335 with no page error: NEW GAME to Ending C, the CASE FILES and their replays, the survey (1,657
+  pairs of views in different places, the closest 22 bits apart); 1,633 lines said, every one from the packs,
+  `speechSynthesis` never asked, the cues card, chapter, zero and ending:C played. The voices: the game's own lookup
+  (`Voice.plan`, with the packs the runtime makes active for each line's chapter) over every line `spokenLines()` walks
+  (3,905 lines, 2,788 distinct) misses none; `voice-lv.sh check` finds all eight packs up to date (4,170 recordings,
+  every one of them said by some line); and of the 1,309 string literals in the edition's code that look like lines,
+  the 48 not walked are signs, refusal labels and the ledger's clue matchers, none of them said. No pack was recorded
+  again. The packs are 15.56 MB in all, the largest file act1's `voice.ogg` at 2.87 MB (the preview's limit is 15 MB a
+  file); Station Zero's 13.98 MB pack is byte-identical (its sha256 is pinned in a test). New:
+  `tests/lastversion-audio.mjs`, which plays from NEW GAME in real time with the game's own frame loop under Chromium's
+  autoplay policy and listens on analysers on the voice's output and the master: the first tap starts the
+  AudioContext; the Prologue's card, the cold open and Mission 1's card start decoded clips of the common and Prologue
+  packs (21 buffers, the voice's output at 0.41 RMS at its peak, the mix at 0.23 with the chapter and card cues), and
+  so does the florist's conversation (her lines and Kai's, from the Prologue's pack, 0.40 RMS); `speechSynthesis` 0
+  calls, no miss; 10 of 10. Two unit tests: REVERSE reads as the one held process running backwards (a collapsed piece,
+  a fallen car, a burnt door and a shell go back to where they were while held, are solid when seated, and go forward
+  again when let go unless their kind settles; a flood drains and comes back; a mechanism turns in place, backwards
+  while held), and no chapter is short (every mission at least 40 lines and 400 words of its own, 2.5 minutes of
+  recorded speech, a place of 1.5 ha, six main threads, a side story, a cold open and a hook; the shortest, Mission
+  12, says 42 lines, 443 words and 2.6 minutes). Fixed: Mira's raincoat carried two `head` rules, the later and older
+  one silently overriding the rule the tour wrote for her hair under the hood (esbuild warned in both builds). Checked:
+  `npm test` 156/156; Station Zero: `node tests/smoke.mjs` passed, `node tests/qa.mjs` 26/26; `bash
+  android/build-apk.sh` 51,396,546 bytes (Station Zero's voice only, no edition pack); `EDITION=lastversion bash
+  android/build-apk.sh` 47,314,930 bytes (seven packs, 41 models; budget 50 MB), its preview 55.1 MB with no file over
+  3.8 MB.
 - **The NPC system** of the supplement: trust, knowledge, quest state, temporal state, faction
   standing and evidence flags in the save; dialogue choices by intent (challenge / comfort /
   investigate / withdraw); barks; echoes standing in for people absent from a state; the case

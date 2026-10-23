@@ -595,6 +595,57 @@ test('every REVERSE process record is valid', () => {
   }
 });
 
+test('REVERSE reads as the one held process running backwards: a fallen piece rises to where it was and stays while held, then falls again; water drains back; a settled kind stays', () => {
+  // (the bible: "reverse selected motion or mechanism - local and readable"; nothing about it is gravity)
+  const level = { rooms: { r: { bounds: [[-10, -1, -30, 10, 10, 0]], spawn: [0, 0.86, -1.6, 0] } }, order: ['r'] };
+  const anchor = { pos: [0, 0, -10], yaw: 0, room: 'r' };
+  const at = (mesh, p) => mesh.position.distanceTo(new THREE.Vector3(...p)) < 1e-3;
+  for (const kind of ['collapse', 'fall', 'burn', 'projectile']) {
+    const env = fakeEnv();
+    const rec = makeRecord({ id: kind, kind, parts: [{ shape: 'box', size: [1, 0.3, 1], at: [0, 1.5, 0], rest: { at: [0.4, 0.15, 1], rot: [0.3, 0.2, 0] }, solid: true }], hints: ['a', 'b', 'c'] }, anchor, level);
+    const p = new Process(rec, env);
+    const mesh = p.meshes[0], part = rec.parts[0];
+    assert.ok(at(mesh, part.rest.p), `${kind}: it lies where it fell`);
+    p.reverse();
+    run(p, 0.25);
+    assert.ok(p.P > 0 && p.P < 1 && !at(mesh, part.rest.p) && !at(mesh, part.origin.p), `${kind}: a quarter second in, it is on its way back (P ${p.P.toFixed(2)})`);
+    const ev = run(p, 4);
+    assert.ok(p.P === 1 && at(mesh, part.origin.p), `${kind}: held, it is back where it was`);
+    assert.ok(ev.some((e) => e.type === 'origin' || e.type === 'settled'), `${kind}: it says it got there`);
+    assert.equal(env.deckWorld.temps.length, 1, `${kind}: seated, it is solid (a stair or a bridge carries Kai)`);
+    p.release();
+    run(p, 4);
+    if (rec.settle === 'held') {
+      assert.ok(p.P === 0 && at(mesh, part.rest.p), `${kind}: let go, it goes forward again to where it fell`);
+      if (kind !== 'fall') assert.equal(env.deckWorld.temps.length, 0, `${kind}: fallen, nothing of it is solid`); // (a lift car is solid all along)
+    } else assert.ok(p.settled && at(mesh, part.origin.p), `${kind}: a settled kind stays where REVERSE left it`);
+    p.dispose();
+  }
+  // water: held, the flood drains back out of the hall; let go, it comes in again
+  const flood = new Process(makeRecord({ id: 'flood', kind: 'flow', parts: [{ shape: 'box', size: [6, 1.2, 6], at: [0, 0.6, 0], mat: 'water' }], hints: ['a', 'b', 'c'] }, anchor, level), fakeEnv());
+  const h0 = flood.meshes[0].scale.y;
+  flood.reverse();
+  run(flood, 3);
+  assert.ok(h0 > 0.9 && flood.meshes[0].scale.y < 0.05, `the water drains while held (${h0} -> ${flood.meshes[0].scale.y.toFixed(2)})`);
+  flood.release();
+  run(flood, 3);
+  assert.ok(flood.meshes[0].scale.y > 0.9, 'and floods again when let go');
+  flood.dispose();
+  // a mechanism turns in place, and backwards at its own speed while held
+  const mech = new Process(makeRecord({ id: 'gear', kind: 'mechanism', spin: [0, 0, 1, 2], parts: [{ shape: 'box', size: [1, 1, 0.2], at: [0, 1.5, 0] }], hints: ['a', 'b', 'c'] }, anchor, level), fakeEnv());
+  const q0 = mech.meshes[0].quaternion.clone();
+  run(mech, 0.5);
+  const fwd = mech.meshes[0].quaternion.clone();
+  mech.reverse();
+  run(mech, 0.6);
+  assert.ok(q0.angleTo(fwd) > 0.9 && at(mech.meshes[0], mech.rec.parts[0].origin.p), 'a mechanism turns in place');
+  const qa = mech.meshes[0].quaternion.clone();
+  run(mech, 0.5);
+  assert.ok(Math.abs(qa.angleTo(mech.meshes[0].quaternion) - q0.angleTo(fwd)) < 0.05 && mech.P === 1, 'held, it turns at its own speed');
+  assert.ok(q0.angleTo(mech.meshes[0].quaternion) < q0.angleTo(qa) - 0.2, 'and backwards, toward where it started');
+  mech.dispose();
+});
+
 test('REVERSE is never required before Mission 11, and the menu primes it from Act III', () => {
   const late = /\b(rev_\w+|inv_\w+|has_inversion)\b/;
   for (const m of Object.values(MISSIONS).flat()) {
@@ -1926,6 +1977,32 @@ test('every spoken line plans fully from the common pack and its own group\'s: n
     const size = fs.statSync(`game/assets/voice/lv/${g}/voice.ogg`).size;
     for (const lib of Object.values(PACKS[g])) for (const [off, len, dur] of Object.values(lib)) assert.ok(off >= 0 && off + len <= size && dur > 0, `${g}: a clip outside voice.ogg`);
   }
+});
+
+test('no chapter is short (the player\'s "make each chapter a little longer"): every mission has its own words, recorded speech, place and threads', () => {
+  // (v2.0, the build the player found short, averaged about 10 lines and 140 words a mission in generated rooms;
+  // these floors are what every v2.1 mission keeps above, measured from what it says and where it stands)
+  const words = (t) => t.split(/\s+/).filter(Boolean).length;
+  const secs = (e) => {
+    const v = voiceOf(e.who, e.extra);
+    return voicePieces(e.text, []).reduce((a, p) => a + (p.pause || ((PACKS.common?.[v]?.[p.key] || PACKS[e.group]?.[v]?.[p.key])?.[2] ?? 0)), 0);
+  };
+  const per = [];
+  for (const m of main) {
+    const own = SPOKEN.filter((e) => (e.path.startsWith(`${m.key}.`) || e.path.startsWith(`${m.key}#`) || e.path.startsWith(`card:${m.key}`)) && !/hint|bark/.test(e.path));
+    const level = LEVELS.find((l) => l.deck.mkey === m.key).level;
+    const [x0, z0, x1, z1] = level.bounds;
+    const mains = threadsOf(asDeck(m)).filter((t) => !t.side);
+    const r = { key: m.key, lines: own.length, words: own.reduce((a, e) => a + words(e.text), 0), speech: own.reduce((a, e) => a + secs(e), 0) / 60, area: (x1 - x0) * (z1 - z0), mains: mains.length, sides: sidesOf(m).length };
+    per.push(r);
+    const at = `${m.key}: ${JSON.stringify(r)}`;
+    assert.ok(r.lines >= 40 && r.words >= 400, `${at}: 40 lines and 400 words of its own or more`);
+    assert.ok(r.speech >= 2.5, `${at}: two and a half minutes of recorded speech or more`);
+    assert.ok(r.area >= 15000, `${at}: a place of 1.5 ha or more`);
+    assert.ok(r.mains >= 6 && r.sides >= 1 && m.coldOpen && m.hook, `${at}: six main threads or more (§9.8), a side story, a cold open and a hook`);
+  }
+  const total = per.reduce((a, r) => a + r.words, 0);
+  assert.ok(total >= 15000, `the 23 missions say ${total} words of their own`);
 });
 
 test('what a consequence adds to a place (a mission\'s adjust, after an earlier choice) is walked, so it is recorded (U5 review)', () => {
