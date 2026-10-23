@@ -27,8 +27,9 @@ const M23_HINTS = {
 
 const M23_PROCESSES = [
   // the street that fell: the Witness holds its far half (his REVERSE, scripted); Kai may hold it himself as well
+  // (it answers Kai only once the Witness has it: before, it is his to hold, and he takes it as Kai reaches the pit)
   {
-    id: 'streetCollapse', kind: 'collapse', at: 'streetCollapse', label: 'THE STREET', weight: 1.5, grain: 'stone', mat: 'concrete',
+    id: 'streetCollapse', kind: 'collapse', at: 'streetCollapse', label: 'THE STREET', weight: 1.5, grain: 'stone', mat: 'concrete', arm: 't_m23_streets',
     span: { from: [0, 0, 0], to: [0, 0, 8.4], width: 12, pieces: 6, thick: 0.6, floor: -6 }, aim: [0, 0.6, 4],
     hints: ['The street fell.', 'Fallen things rise.', 'REVERSE the street, or let him hold it.'],
   },
@@ -59,7 +60,8 @@ function m23Step(rt) {
       street.release();
     }
   }
-  if (f.get('rev_settlementBridge') && f.get('t_m23_settlement') && !f.get('m23_witness_across')) {
+  // (he crosses only if he came this far: he held the street that fell, t_m23_street)
+  if (f.get('rev_settlementBridge') && f.get('t_m23_street') && f.get('t_m23_settlement') && !f.get('m23_witness_across')) {
     f.set('m23_witness_across', true);
     g.hud.say(M23_SAY.across, f);
   }
@@ -92,9 +94,11 @@ export const M23 = {
     {
       name: 'THE OPENING STREETS',
       threads: [
-        { id: 'streets', kind: 'stealth', at: [0, 0, 141, 0], r: 4, goal: 'Cross the opening streets.', because: 'The avenue from the first morning, and the watchers on it.',
+        // (the line across the whole avenue before the fallen street, pavements and all: whichever way Kai comes, the
+        // Witness takes the street as he gets there; the strips beside the pit are closed by fallen facades)
+        { id: 'streets', kind: 'stealth', at: [0, 0, 141, 0], box: [-50, 137, 50, 147], goal: 'Cross the opening streets.', because: 'The avenue from the first morning, and the watchers on it.',
           say: [L('WITNESS', 'I will hold the route. Go to her.'), K('Why now?'), REV(L('WITNESS', 'Because this is the version where I ask.'))], hints: M23_HINTS.streets, minutes: 6 },
-        { id: 'street', kind: 'go', at: [0, 0, 114, 0], r: 5, after: ['streets'], goal: 'Over the street that fell.', because: 'He is holding it. In his ring, my colour.',
+        { id: 'street', kind: 'go', at: [0, 0, 114, 0], box: [-50, 104, 50, 119], after: ['streets'], goal: 'Over the street that fell.', because: 'He is holding it. In his ring, my colour.',
           say: [N('Behind Kai, the street goes down into the dark without a sound.')], hints: M23_HINTS.street, minutes: 4 },
       ],
       sides: [
@@ -173,7 +177,10 @@ export const M23 = {
         when: '!m23_asked',
         lines: [L('MIRA', 'Ask me.'), K('Ask you what?'), L('MIRA', 'What I want. Nobody has. Not in a hundred and seventeen worlds.'), K('What do you want?'),
           REV(L('MIRA', 'A second that is mine. Not saved. Not fixed. Mine. Count it with me.')),
-          K('I thought the answer was to find the right world.'), L('MIRA', 'And now?'), K('Now I think we kept asking the world to pay for our answer.')],
+          K('I thought the answer was to find the right world.'), L('MIRA', 'And now?'), K('Now I think we kept asking the world to pay for our answer.'),
+          // (the letter Kai kept in Mission 17: she knows)
+          L('MIRA', 'You kept my letter. Did you ever read it?', 'letter == "kept"'), K('No. It was yours to send.', 'letter == "kept"'),
+          L('MIRA', 'Then I will. Afterwards.', 'letter == "kept"')],
         set: { m23_asked: true },
       },
       { when: 'm23_asked', lines: [L('MIRA', 'Count it with me, Kai.')] },
@@ -240,6 +247,12 @@ export const M23 = {
     person(P, { id: 'sera23', crew: 'sera', at: 'seraGarden', off: [0, 0, 1.6], turn: Math.PI, prompt: 'TALK TO SERA', temporal: EVERY });
     person(P, { id: 'anja23', crew: 'anja', at: 'anja', off: [2.4, 0, 0], turn: -Math.PI / 2, prompt: 'TALK TO ANJA', temporal: EVERY });
     person(P, { id: 'mira23', crew: 'mira', at: 'miraStands', off: [0, 0, 0], turn: 0, prompt: 'TALK TO MIRA', when: 't_m23_city' });
+    // the endings' people (Runtime.ending stages them; Kai himself is not on screen): A, Kai under the 41's board; B,
+    // Sera at the seam where one world ends, and someone on the other side; C, Mira at a window box in Rain City
+    person(P, { id: 'kai_end', crew: 'kai', at: 'board41', silent: true, when: 'ending == "A"', temporal: EVERY });
+    person(P, { id: 'sera_end', crew: 'sera', at: 'seam41', off: [0, 0, -5], silent: true, when: 'ending == "B"', temporal: EVERY });
+    person(P, { id: 'm23_guard', crew: 'm23_guard', first: 'Someone', seed: 2303, ambient: true, at: 'seam41', off: [0, 0, 4], turn: Math.PI, silent: true, when: 'ending == "B"', temporal: EVERY });
+    person(P, { id: 'mira_end', crew: 'mira', at: 'windowBox', silent: true, when: 'ending == "C"', temporal: EVERY });
   },
   // (the Finale has no hook: the ending sequence is Runtime.ending's; the voice in every speaker closes it)
   hook: { cue: 'postcredit', minutes: 5, lines: POSTCREDIT },
@@ -263,5 +276,18 @@ export const ENDINGS = {
   C: {
     title: 'AFTERZERO', text: ['Kai becomes the anchor that absorbs contradictions. Mira wakes in a world where Kai was never born, with only a faint memory of a voice urging her to live.', 'I finally found a second that belongs to nobody.'],
     after: [N('Rain City, a Tuesday. The 41 is late.'), N('A woman plants something in a window box and hums three notes: up, up, and then down.'), { who: 'KAI', text: 'Live.', voice: { fx: 'echo' } }],
+    // (the epilogue's lines come from the worlds Kai passed through, not from hers, where he was never born)
+    frame: [N('In the worlds he passed through, what he did stayed done.')],
   },
+};
+
+// the endings, staged (Runtime.ending): one shot for the bible's text, one for each line the ending adds, and one for
+// Kai's quote and the epilogue; Kai himself is never on screen (A has him under the 41's board, in a body of his own)
+const RING = { cam: [9, 9.5, -128], to: [5, 8, -134], look: 'originalRing' };
+const STOP = { cam: [1, 3.2, 151], to: [-1.5, 2.9, 155], look: [-12.2, 2.9, 163.4] }; // (the 41's sign over the shelter)
+export const ENDING_SHOTS = {
+  A: [RING, STOP, { cam: [-11.6, 1.75, 162.2], to: [-11.4, 1.7, 162.6], look: [-9.4, 1.62, 163.4] }, { cam: [0, 5, 176], to: [0, 18, 160], look: [0, 3, 110] }],
+  B: [RING, { cam: [7, 2.4, 108.5], to: [8.5, 2.9, 108.5], look: [0, 1.4, 108.5] }, { cam: [0, 6, 122], to: [0, 22, 100], look: [0, 0, 60] }],
+  C: [{ cam: [8, 6.5, -132], to: [4, 6, -137], look: 'originalRing' }, STOP, { cam: [-11.4, 1.75, 174.5], to: [-11.7, 1.7, 173], look: [-13.6, 1.3, 169.5] },
+    { cam: [-12, 1.6, 171.6], to: [-12.2, 1.6, 171.2], look: [-13.3, 1.5, 169.5] }, { cam: [-10, 3, 172], to: [0, 20, 160], look: [0, 2, 120] }],
 };

@@ -450,7 +450,8 @@ function gorgeGate(rt, k) {
   const g = rt.g, f = g.facts;
   if (g.engine.state(g.room) !== 'PAST') return g.hud.say(M05_SAY.gateNotNow, f);
   if (!f.get('quest_tala')) return g.hud.say(M05_SAY.askTala, f);
-  const n = f.get('gates_n') || 0;
+  // (no gate up is the count's start, whatever an earlier run left in it: a CASE FILES replay of chain B)
+  const n = ['gate_low', 'gate_high', 'gate_mid'].some((x) => f.get(x)) ? f.get('gates_n') || 0 : 0;
   if (f.get('water_route')) return;
   const note = [261.63, 349.23, 466.16][k];
   g.audio.bell?.(note, g.audio.ctx?.currentTime || 0, 0.06, g.audio.sfx);

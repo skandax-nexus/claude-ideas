@@ -2114,7 +2114,7 @@ The mimics **counter-reverse** any held process in their cone, which releases it
   - KAI "I killed her."
   - MIRA (faint, from the ring) "No."
   - The archive's glass breaks, and storms stand on the horizon.
-  - NONE "Mira's body died that afternoon. A pattern of her did not. It stayed in the ring." (bible ending)
+  - NONE "Mira's body did not survive the week. A pattern of her did. It stayed in the ring." (bible ending; U8 review: "the week" agrees with Rook's fever in M8, Ward 32 in M11 and the hospital bench in M20)
 
 **Side stories:** **The Unsent Letter** (bible optional, 6): Mira's letter to "the man who keeps bringing me back". Deliver it or keep it (`letter`).
 

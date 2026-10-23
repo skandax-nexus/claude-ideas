@@ -529,8 +529,9 @@ export class Score {
     if (this.bar0 === null || this.bar0 === undefined) this.bar0 = n;
     const k = n - this.bar0;
     const bar = Math.floor(k / 8), beat = k % 8;
-    // the locked city's four bars repeat exactly: the dice are the same every time round
-    if (R.repeat && beat === 0 && bar % R.repeat === 0) this.seed = 4242;
+    // the locked city's four bars repeat exactly: the dice are the same every time round, until tomorrow is let in
+    // (city_freed: the phrase goes on, and changes; a stabilized city keeps its one day)
+    if (R.repeat && beat === 0 && bar % R.repeat === 0 && !this.rt.g.facts?.get?.('city_freed')) this.seed = 4242;
     const mode = MODES[R.mode] || MODES.aeolian;
     const deg = R.prog[bar % R.prog.length];
     const note = (d, oct = 0) => R.root + mode[((d % 7) + 7) % 7] + 12 * (Math.floor(d / 7) + oct);

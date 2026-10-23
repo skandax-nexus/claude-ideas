@@ -142,7 +142,7 @@ export const M14 = {
   named: ['sera', 'gardener', 'warden'],
   minutes: { main: 30, optional: 8 }, autoExit: 1.2, gateAfter: true,
   processes: M14_PROCESSES,
-  fragSpots: [['bankTerrace'], ['lowWaterPath'], ['kaiStatue']],
+  fragSpots: [['bankTerrace'], ['lowWaterPath'], ['kaiStatue']], fragYears: ['FUTURE'], // (2196's things: no statue's plinth in 2026)
   fragments: [[
     'A ticket for the 41, kept a hundred and forty-seven years.',
     'Beans growing in a bank\'s safety deposit boxes.',
@@ -635,7 +635,7 @@ export const M16 = {
     },
   ],
   talks: {
-    mara: [{ when: 'true', lines: [L('MARA', 'Seventeen halls. A hundred cases. I dust them all. Someone keeps adding.')] }],
+    mara: [{ when: 'true', lines: [L('MARA', 'Seventeen halls. A hundred cases. I dust them all. Someone keeps adding.'), L('MARA', 'And a photograph behind the falls that I never hung. I dust round it.')] }],
   },
   deductions: {
     museum: {
@@ -888,7 +888,7 @@ export const M17 = {
   hook: {
     cue: 'cliff', minutes: 2,
     lines: [K('I killed her.'), FX(L('MIRA', 'No.'), 'echo'), N('The archive\'s glass breaks. On the horizon, storms stand up like pillars.'),
-      REV(N('Mira\'s body died that afternoon. A pattern of her did not. It stayed in the ring.'))],
+      REV(N('Mira\'s body did not survive the week. A pattern of her did. It stayed in the ring.'))],
   },
   done: 'ev_i_pressed',
 };
@@ -943,7 +943,9 @@ export const M18 = {
   motto: 'THE ONE BEFORE YOU TRIED TO SAVE ME', gate: 'THE TRANSMISSION TOWER', crew: C('sera'),
   named: ['sera', 'mira', 'iven'],
   minutes: { main: 32, optional: 8 }, autoExit: 1.2, gateAfter: true,
-  watch: [[], [[[-30, -96], [30, -96]]], [], [[[-36, 92], [36, 92]], [[-55, 150], [-55, 120]], [[30, 160], [30, 130]]]], // (round the skyscraper, not through it)
+  // (round the skyscraper, not through it; and wide of the stabilizer's pylons, so a scavenger never walks through a pylon
+  // Kai must re-anchor while it drifts: pylon two is at x 30, the east patrol at x 54, U8 review)
+  watch: [[], [[[-30, -96], [30, -96]]], [], [[[-36, 92], [36, 92]], [[-55, 150], [-55, 120]], [[54, 160], [54, 126]]]],
   processes: M18_PROCESSES,
   zones: [{ at: 'towerDeck', box: [-8, -1, -8, 8, 4, 8], set: { m18_on_deck: true }, when: 'm18_stabilized' }],
   fragSpots: [['anchorMast', 'garden'], ['canyonArch', 'highwaySign'], ['verge', 'tollBooth']],

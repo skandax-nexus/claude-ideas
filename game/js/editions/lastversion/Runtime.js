@@ -10,6 +10,7 @@ import { setChapters, latestFor, describeSave, listSaves, latestSave } from '../
 import { makeCastModel, setCrewDresser } from '../../world/People.js';
 import { PROLOGUE } from './prologue.js';
 import { ACTS, ENDINGS, CASE_FILES, CASE_STATES, caseState } from './acts.js';
+import { ENDING_SHOTS } from './finale.js';
 import { CAST, DIALOGUE, NPCS, TRUST, KNOWLEDGE, AMBIENT, npcState } from './npcs.js';
 import { Inversion } from './inversion.js';
 import { placeAuthored } from './processes.js';
@@ -240,6 +241,12 @@ const EV_LABELS = {
 const _v = new THREE.Vector3();
 // the facts a replay starts from, handed over the page reload (sessionStorage)
 const CASE_FACTS = 'afterzero.lv.caseFacts';
+// a CASE FILES replay saves in a slot of its own, never listed and never a campaign's (Saves.js keys it like slot N):
+// it never writes over the finished campaign it was opened from, nor over the autosave a full set of slots falls back to
+export const CASE_SLOT = 'case';
+// whose people a chapter loads behind its card: a replay's are its own mission's chapter's (cases.js voiceGroup), not
+// every replay's at once
+export const castKeyOf = (chapter, di = 0) => (chapter === 'cases' && MISSIONS.cases[di]?.voiceGroup) || chapter;
 // how long a chapter waits behind its card for its people before it starts with what arrived (Runtime.waitForCast)
 export const CAST_WAIT_MS = 90000;
 // how long the station chime (score.js 'pa': two tones 0.42 s apart) sounds before an announcement is said
@@ -342,8 +349,8 @@ export class LastVersion {
     // the people of the chapter most likely to be played next start loading on the title screen, with its voices
     const latest = listSaves().filter((x) => x.data?.campaign?.lv).sort((a, b) => (b.data.meta?.savedAt || 0) - (a.data.meta?.savedAt || 0))[0];
     const likely = CHAPTERS[latest?.data.campaign.chapter] ? latest.data.campaign.chapter : 'prologue';
-    loadCast(likely);
-    this.g.voice?.usePacks?.([voicePack('common'), voicePack(likely)]);
+    loadCast(castKeyOf(likely, latest?.data.campaign.deck));
+    this.g.voice?.usePacks?.(this.packsFor(likely, latest?.data.campaign.deck ?? 0));
     this.sound();
   }
 
@@ -517,7 +524,10 @@ export class LastVersion {
     this.quietPins = true; // (what a chapter counts as already found is not news)
     // the chapter's people load behind its card first (one model at a time); then the chapter starts.
     // (Once waited for, it starts whatever arrived: a model that could not load has a stand-in.)
-    if (!waited && !castReady(chapter)) return this.waitForCast(chapter, () => this.start(asked, saved, true));
+    const castKey = castKeyOf(chapter, di);
+    if (!waited && !castReady(castKey)) return this.waitForCast(chapter, () => this.start(asked, saved, true), castKey);
+    // (a replay saves in its own slot: a new one always; a saved one loaded from it, which main.js leaves slotless)
+    if (chapter === 'cases' && (replay || g.slot == null)) g.slot = CASE_SLOT;
     g.mode = 'deck';
     g.run = chapter;
     this.chapter = chapter;
@@ -550,7 +560,8 @@ export class LastVersion {
   // side story, the pack of the mission it lives in (voiceGroup)
   packsFor(chapter, di = 0) {
     const vg = MISSIONS[chapter]?.[di]?.voiceGroup;
-    return [voicePack('common'), voicePack(chapter), ...(vg && vg !== chapter ? [voicePack(vg)] : [])];
+    // (the cases pack has no recordings: every replay speaks from its own mission's pack, so it is not fetched)
+    return [voicePack('common'), ...(chapter === 'cases' ? [] : [voicePack(chapter)]), ...(vg && vg !== chapter ? [voicePack(vg)] : [])];
   }
 
   // a replay starts from the facts the player had (the CASE FILES screen hands them over; else the latest save's),
@@ -598,7 +609,7 @@ export class LastVersion {
         try {
           window.sessionStorage.setItem(CASE_FACTS, JSON.stringify(f.facts || {}));
         } catch { /* storage blocked: the replay reads the latest save */ }
-        g.begin(`lv:cases/${b.dataset.case}`, null, g.slot ?? null);
+        g.begin(`lv:cases/${b.dataset.case}`, null, CASE_SLOT);
       };
     }
     $('#lvTitle').onclick = () => location.reload();
@@ -618,7 +629,7 @@ export class LastVersion {
   // Load a chapter's cast (casting.js) behind its card, the game held still meanwhile (begin() unpauses
   // after start() returns: held again once it has). Without its models the chapter would start with
   // stand-ins that change face when the real ones arrive.
-  waitForCast(chapter, then) {
+  waitForCast(chapter, then, castKey = chapter) {
     const g = this.g;
     const c = CHAPTERS[chapter];
     if (g.mode !== 'deck') g.mode = 'lvwait'; // (neither a deck nor Station Zero: nothing steps or draws a place)
@@ -636,12 +647,12 @@ export class LastVersion {
     }
     document.body.classList.add('lvwait');
     g.hud.card(c.name, c.sub, 'The people of this chapter are on their way.', 600000);
-    const token = (this.castWaitFor = chapter);
+    const token = (this.castWaitFor = castKey);
     // a model that never comes (a stalled fetch) does not hold the chapter for ever: after CAST_WAIT_MS it starts
     // with what arrived (whoever's model is missing is a hologram stand-in: casting.js makeDresser), and the rest
     // keeps loading
     const timeout = new Promise((resolve) => setTimeout(resolve, CAST_WAIT_MS));
-    Promise.race([loadCast(chapter), timeout]).then(() => {
+    Promise.race([loadCast(castKey), timeout]).then(() => {
       if (this.castWaitFor !== token) return;
       this.castWaitFor = null;
       document.body.classList.remove('lvwait');
@@ -1993,7 +2004,16 @@ export class LastVersion {
     g.hud.flash('rgba(255,255,255,0.9)');
     g.audio.silence(1.0);
     this.score.cue(`ending:${key}`);
-    g.after(1.2, () => this.cinema.play({ shots: null, lines: endingLines(key, g.facts) }, () => {
+    if (g.player?.model) g.player.model.visible = false; // (the staged camera leaves it so: Player.updateCamera)
+    g.deckWorld?.refresh?.(); // (the ending's people: finale.js, when ending == key)
+    // (staged: the ring, then each line the ending adds where it happens, then Kai's quote and the epilogue over the road;
+    // Kai himself is not on screen: in C he was never born, and in A he stands under the 41's board in a body of his own)
+    const lines = endingLines(key, g.facts);
+    const dur = (l) => g.hud.durFn?.(l) || Math.max(2.2, l.text.length * 0.055);
+    const plan = ENDING_SHOTS[key] || [];
+    const n = 1 + (e.after?.length || 0);
+    const shots = plan.map((s, i) => ({ ...s, t: Math.max(2.5, (i < n ? [lines[i]] : i === plan.length - 1 ? lines.slice(n) : []).reduce((a, l) => a + (l ? dur(l) : 0), 0)) }));
+    g.after(1.2, () => this.cinema.play({ shots: shots.length ? shots : null, lines }, () => {
       this.score.cue('postcredit');
       g.after(4.2, () => g.hud.say(POSTCREDIT, g.facts, show));
     }));

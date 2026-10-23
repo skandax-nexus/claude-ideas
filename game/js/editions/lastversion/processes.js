@@ -752,6 +752,18 @@ export class Process {
   stepMechanism(dt, ctx) {
     const sp = this.rec.spin || [0, 1, 0, 2];
     const w = sp[3] * (this.P > 0.5 ? -1 : 1);
+    const beat = this.rec.beat;
+    if (beat && this.P <= 0.5 && !this.settled && ctx?.time !== undefined) {
+      // (a mechanism on a counted beat, M22's clock arm, shows it: it stands for the counts, ticking once at each, then
+      // turns a third of a circle in the window that answers REVERSE; the same clock as Inversion's, so what is seen
+      // and heard is when it answers. Inversion.step sounds the clicks and the turn's chime)
+      const per = beat.period, ph = ctx.time % per, turns = Math.floor(ctx.time / per);
+      const turn = (Math.PI * 2) / 3, tick = 0.07;
+      const a = turns * (turn + 2 * tick) + (ph < beat.on ? turn * Math.sin((ph / beat.on) * Math.PI * 0.5) : turn + Math.floor(ph) * tick);
+      _q.setFromAxisAngle(_v.set(sp[0], sp[1], sp[2]).normalize(), a);
+      this.meshes.forEach((m, i) => m.quaternion.set(...this.rec.parts[i].origin.q).multiply(_q));
+      return;
+    }
     for (const m of this.meshes) {
       m.rotateOnAxis(_v.set(sp[0], sp[1], sp[2]).normalize(), w * dt);
     }

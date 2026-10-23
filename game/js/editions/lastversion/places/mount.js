@@ -125,15 +125,17 @@ export function mountPlace(rt) {
       continue;
     }
     root.add(kit);
-    if (it.kitYears) yearKits.push([kit, it.kitYears]);
+    let glint = null;
     if (p && !it.model) {
       // the crystal or the gem goes; a faint glint marks what is still to read
       p.clear();
-      const glint = makeGlint(it.kind === 'fragment' ? 0xffe2b0 : 0xffd27a);
+      glint = makeGlint(it.kind === 'fragment' ? 0xffe2b0 : 0xffd27a);
       glint.position.y = 0.2;
       p.add(glint);
       p.userData.gem = glint.children[0];
     }
+    // (its glint with it: DeckWorld sets the prop's own visibility, never its child's)
+    if (it.kitYears) yearKits.push([kit, it.kitYears, glint]);
   }
   for (const h of dw.hazards) {
     if (!h.hz.lvKit) continue;
@@ -195,7 +197,10 @@ export function mountPlace(rt) {
       if (gangways.length) turn(g.time || 0);
       // a model that has a form per year (the Chronolith: the black ring, broken into a halo by 2196)
       for (const p of Object.values(dw.props)) p.traverse((o) => o.userData.setEra?.(s));
-      for (const [kit, years] of yearKits) kit.visible = years.includes(s);
+      for (const [kit, years, glint] of yearKits) {
+        kit.visible = years.includes(s);
+        if (glint) glint.visible = kit.visible;
+      }
     },
     setEra(s) {
       api.setYear(s);

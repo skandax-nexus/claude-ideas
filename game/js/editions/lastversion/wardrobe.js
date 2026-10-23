@@ -230,11 +230,14 @@ export const WARDROBE = {
     // 2196 children: patched, faded
     patched: { body: [...JERSEY({ hue: [0.07, 0.07], smin: 0.3, to: 0.12, sat: 0.4, light: 1.05 }), { band: [0.4, 0.45, 0.6, 0.6], lmin: 0.5, light: 0.6 }] },
     patched2: { body: JERSEY({ hue: [0.07, 0.07], smin: 0.3, to: 0.42, sat: 0.35 }) },
+    patched3: { body: [...JERSEY({ hue: [0.07, 0.07], smin: 0.3, to: 0.08, sat: 0.45, light: 0.9 }), { band: [0.42, 0.5, 0.58, 0.62], lmin: 0.5, light: 0.7 }] },
   },
   rb_child_f2: {
     // the settlement's girls in linen (the head cloth plain)
     linen: { body: [{ to: 0.11, sset: 0.16, lrange: [0.5, 0.74] }], head: [{ hue: [0.93, 0.1], smin: 0.15, to: 0.1, sset: 0.14, lrange: [0.5, 0.72] }] },
     ochre: { body: [{ to: 0.1, sset: 0.45, lrange: [0.34, 0.54] }], head: [{ hue: [0.93, 0.1], smin: 0.15, to: 0.1, sset: 0.16, lrange: [0.52, 0.72] }] },
+    // a 2196 schoolgirl (M14): a faded blue smock, the head cloth a washed grey
+    faded: { body: [{ to: 0.58, sset: 0.2, lrange: [0.4, 0.6] }], head: [{ hue: [0.93, 0.1], smin: 0.15, to: 0.6, sset: 0.06, lrange: [0.5, 0.68] }] },
   },
   rb_trooper: {
     // Continuum troops: slate blue-grey, helmeted

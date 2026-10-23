@@ -76,6 +76,12 @@ export default {
     prop(P, 'busShelter', -11, 160, Math.PI / 2);
     sign(P, '41', -12.2, 2.9, 163.4, Math.PI / 2, { size: 0.5, color: '#ffffff', boardMat: 'busStopGreen' });
     P.land('platform41', -5, 0, 166, Math.PI);
+    // the endings (finale.js, Runtime.ending): A, where Kai stands under the 41's board; C, a window box on the low
+    // block's shopfront, and the woman who plants it
+    P.land('board41', -9.4, 0, 163.4, -Math.PI / 2);
+    P.land('windowBox', -12.9, 0, 169.5, -Math.PI / 2);
+    P.box([-14.25, 1.05, 168.4, -13.75, 1.35, 170.6], 'wood', { solid: false });
+    for (const z of [168.8, 169.5, 170.2]) P.tree('flowers', -14, z, 0.35, { y: 1.35, solid: false });
     P.land('junPassengers', -11.6, 0, 150, Math.PI / 2);
     P.land('streetCollapse', 0, 0, 128, Math.PI);
     P.E(['PAST', 'PRESENT'], () => {
@@ -94,6 +100,12 @@ export default {
     stair(P, 12, 121, -6, 12, 135.6, 0, 1.8, 'concreteStained');
     for (let i = 0; i < 10; i++) P.obox(P.rng.float(-12, 9), -6, P.rng.float(121, 135), P.rng.float(1.5, 3.5), P.rng.float(0.3, 1.2), P.rng.float(1.5, 3), P.rng.float(0, 3), 'asphalt', { rx: P.rng.float(-0.3, 0.3), solid: false });
     P.E('PAST', () => P.box([-14, -0.6, 128, 14, 0, 136], 'asphalt'));
+    // (the strips beside the pit, west of the low block and east of the tall one, are closed by fallen facades: the
+    // only way on is over the street the Witness holds, U8 review)
+    for (const [x0, x1] of [[-50, -40], [46, 50]]) {
+      P.box([x0, 0, 121, x1, 2.8, 133], 'concreteStained');
+      P.obox((x0 + x1) / 2, 2.8, 127, x1 - x0 + 1.2, 0.5, 4, 0.25, 'asphalt', { rx: 0.18, solid: false });
+    }
     // --- the seam: the asphalt ends mid-street; the 41 stands in the field beyond -------------------------------------
     P.land('seam41', 0, 0, 108, Math.PI);
     P.land('busField', 9.4, 0, 102, -Math.PI / 2);

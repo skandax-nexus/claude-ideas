@@ -12,7 +12,7 @@
 //   side     { id, name, giver, start?, when?, done, case?, hook?: lines, threads, minutes? } (when: offered only while it holds)
 //
 // The kinds (and what placeThreads puts at their landmark):
-//   go       reach a landmark: a trigger of radius r (4 m) at `at`
+//   go       reach a landmark: a trigger of radius r (4 m) at `at` (or over `box`, [x0, z0, x1, z1])
 //   talk     finish a conversation with `npc` (the mission's talks); done names the fact the talk sets
 //   clue     need `need` of the facts in `of`; `spots` are scenes placed at landmarks
 //   residue  read a record that says one thing now and another in the past (`record: { official, echo, prompt }`)
@@ -196,7 +196,9 @@ export function placeThreads(deck, level) {
   // (the thread's own interaction: gated on what it comes after; its prop keeps its own year)
   const own = (s, t) => spot({ ...s, when: gate(t, s.when), kitYears: yearsOf(s.when) }, t);
   for (const t of all) {
-    for (const s of t.spots || []) spot(s, t);
+    // (a clue's evidence is free to find; a tasks thread with a done of its own is finished by what is done at its
+    // spots, Mission 5's gorge gates, so they answer only once the story is there)
+    for (const s of t.spots || []) (t.kind === 'tasks' && t.done ? own(s, t) : spot(s, t));
     if (t.spot) own({ id: t.scene || t.id, scene: t.scene, ...t.spot }, t);
     if ((t.kind === 'go' || t.kind === 'stealth') && t.at && !t.done) {
       const a = anchor(t.at);
@@ -204,7 +206,9 @@ export function placeThreads(deck, level) {
       // (trigWhen: what the arrival itself asks, beyond the thread being up: Mission 10's crossing counts once Kai has
       // stepped ahead of himself, while the objective shows from the start)
       const when = [t.when, t.trigWhen].filter(Boolean).map((c) => `(${c})`).join(' && ') || undefined;
-      if (a) level.triggers.push({ box: [a.pos[0] - r, a.pos[1] - 1.5, a.pos[2] - r, a.pos[0] + r, a.pos[1] + 5, a.pos[2] + r], set: { [factOf(deck, t)]: true }, when: gate(t, when), once: true, room: a.room });
+      // (box: [x0, z0, x1, z1], an area instead of a radius: a line across a whole avenue, the Finale's streets)
+      const b = t.box ? [t.box[0], a?.pos[1] - 1.5, t.box[1], t.box[2], a?.pos[1] + 5, t.box[3]] : a && [a.pos[0] - r, a.pos[1] - 1.5, a.pos[2] - r, a.pos[0] + r, a.pos[1] + 5, a.pos[2] + r];
+      if (a) level.triggers.push({ box: b, set: { [factOf(deck, t)]: true }, when: gate(t, when), once: true, room: a.room });
     }
     if (t.kind === 'deduce' && t.at && deck.deductions?.[t.deduction]) own({ id: `deduce_${t.id}`, scene: `deduce:${t.deduction || t.id}`, prompt: t.prompt || 'PIECE IT TOGETHER', ...(t.spotOpts || {}) }, t);
     if (t.kind === 'residue' && t.at && t.record) {

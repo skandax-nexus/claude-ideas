@@ -21,7 +21,7 @@
 //     Mission 19 (the bridge in the reflection; the roads loop), Mission 20 (a memory refuses REVERSE; three memories
 //     aligned), Mission 21 (the elites' rewind; the arena's gaps), Mission 22 (the arm's beat, the seals, the logs'
 //     second), the Finale's two holds to Ending C, its epilogue and the voice in every speaker; then the CASE FILES
-//     (fourteen stories) and one replayed from its place
+//     (fourteen stories) and three replayed from their places to their end (the garden, chain B, the train)
 //   - casting (OVERHAUL.md §6): Mission 1's checkpoint officer is a security officer (rb_security_f), the toy
 //     child and the Child have children's bodies, Mission 10's watchers are Continuum troopers whose cones see,
 //     crowds walk Missions 1, 4 and 14
@@ -1588,8 +1588,9 @@ await az(() => {
   P.kinds.hold = (t) => {
     const T = g.edition.threads, a = lm(t.at);
     const home = () => P.go([a[0], a[1], a[2] - 4], 3);
-    // (the watchers stand still: keeping the scavengers off is another check's business)
-    const held = g.deckWorld.sentinels.splice(0);
+    // (U8 review: the watchers walk their patrols through the hold; none comes by a pylon or the stabilizer, so Kai is
+    // never caught standing at one: setbacks counted, P.go's own walks aside)
+    const s0 = B.setbacks;
     home();
     let anchored = 0, far = 0;
     for (let k = 0; k < 1600 && !P.done(t); k++) {
@@ -1605,8 +1606,7 @@ await az(() => {
         home();
       }
     }
-    g.deckWorld.sentinels.push(...held);
-    P.checks.hold = { done: P.done(t), anchored, far, prog: g.facts.get(`hold_${P.mk()}_${t.id}`), posts: T.holds[t.id]?.posts.map((q) => q.st) };
+    P.checks.hold = { done: P.done(t), anchored, far, setbacks: B.setbacks - s0, watchers: g.deckWorld.sentinels.length, prog: g.facts.get(`hold_${P.mk()}_${t.id}`), posts: T.holds[t.id]?.posts.map((q) => q.st) };
   };
   // hold a process with REVERSE from where Kai stands (no stepping round it to aim)
   // (before a measured walk: nothing staged or said still playing, no menu, no setback's fade under way)
@@ -1746,6 +1746,26 @@ await az(() => {
       out.stuck = P.f('m21_stuck');
       P.checks.elites = out;
     },
+    // (U8 review) the elite on the cells' terrace: from behind it, its rewind REVERSEd, and through while it is stuck
+    cellDoor: () => {
+      P.ready();
+      const s = g.deckWorld.sentinels.find((x) => /_q1s0$/.test(x.def.id));
+      const out = { elite: !!s };
+      for (let k = 0; s && k < 3 && !P.f('m21_door'); k++) {
+        P.year('PRESENT');
+        g.edition.stability = Math.max(g.edition.stability, 0.8);
+        const l = Math.hypot(s.dir.x, s.dir.z) || 1;
+        B.place(s.pos.x - (s.dir.x / l) * 4, s.pos.z - (s.dir.z / l) * 4, 12.86);
+        g.simulate(0.2);
+        out.rev = P.holdHere('eliteC');
+        const p0 = s.pos.clone();
+        g.simulate(2);
+        out.still = +p0.distanceTo(s.pos).toFixed(2);
+        P.out();
+      }
+      out.door = P.f('m21_door');
+      P.checks.cellDoor = out;
+    },
     // the first gap: hold the fallen slab and cross on it
     gapOne: (t) => {
       P.ready();
@@ -1777,18 +1797,42 @@ await az(() => {
   };
   P.own.m22 = {
     // the arm answers only on its counted beat: off the beat it jams; Kai tries again, on the turn
+    // (U8 review: as a player counts it: the arm stands for two clicks and turns on the third, with a bell; Kai waits for
+    // the bell and REVERSEs while it turns. No charge is given back between tries)
     arm: (t) => {
-      let jams = 0;
-      for (let k = 0; k < 12 && !P.f('inv_clockArm_done'); k++) {
-        g.edition.inv.state.charge = g.edition.inv.cap;
-        const j0 = P.f('inv_jams') || 0;
-        P.log.push(`  reverse clockArm: ${P.rev('clockArm')}`);
-        if ((P.f('inv_jams') || 0) > j0) jams++;
-        P.wait(() => P.f('inv_clockArm_done') || !g.edition.inv.active, 4, 0.2);
-        P.release();
-        g.simulate(0.3 + (k % 3) * 0.37);
+      let jams = 0, tries = 0, heard = 0;
+      const inv = g.edition.inv, p = B.proc('clockArm'), b = p.rec.beat;
+      const said0 = B.said.length;
+      // stand where the arm is in view (as P.rev does), without pressing
+      P.year(P.yearsOf(p.rec.when)[0]);
+      for (const [dx, dz] of [[0, 3], [2.4, 1.6], [-2.4, 1.6], [0, -3], [3, 0], [-3, 0]]) {
+        const a = inv.aimOf(p);
+        B.place(a[0] + dx, a[2] + dz, 0.9);
+        g.simulate(0.1);
+        if (B.aim(inv.aimOf(p)) === 'clockArm') break;
       }
-      P.checks.arm = { done: P.f('inv_clockArm_done'), jams };
+      // (how far the arm has turned between two moments: the angle between its two poses)
+      const pose = () => p.meshes[0].quaternion.toArray();
+      const moved = (a, c) => 2 * Math.acos(Math.min(1, Math.abs(a[0] * c[0] + a[1] * c[1] + a[2] * c[2] + a[3] * c[3])));
+      for (let k = 0; k < 6 && !P.f('inv_clockArm_done'); k++) {
+        // the counts: the arm still between them (a tick each), then the turn (it swings, and a bell rings)
+        P.wait(() => (inv.time % b.period) > b.on + 0.15 && (inv.time % 1) < 0.5, 4, 0.05);
+        const a0 = pose();
+        g.simulate(0.4);
+        const still = moved(a0, pose());
+        P.wait(() => (inv.time % b.period) < 0.12 && inv.state.charge >= 1, 6, 0.05);
+        const a1 = pose();
+        g.simulate(0.12);
+        if (moved(a1, pose()) > 0.05 && still < 0.02) heard++;
+        tries++;
+        const j0 = P.f('inv_jams') || 0;
+        P.log.push(`  reverse clockArm on the turn: ${P.holdHere('clockArm')}`);
+        if ((P.f('inv_jams') || 0) > j0) jams++;
+        P.wait(() => P.f('inv_clockArm_done') || !inv.active, 4, 0.2);
+        P.release();
+        g.simulate(0.3);
+      }
+      P.checks.arm = { done: P.f('inv_clockArm_done'), jams, tries, turnsSeen: heard, charge: +inv.state.charge.toFixed(1) };
     },
     // the seals: last fitted, first out (MACHINE, GATE, WALL, RIVER)
     seals: () => {
@@ -1911,6 +1955,7 @@ console.log('Act III, Mission 18: The Fracture');
 const m18 = await playMission('m18', { sides: ['signal'], before: 'climb' });
 const m18f = await az(() => ({ hold: LVP.checks.hold, slabs: LVP.checks.slabs, climb: LVP.checks.climb, ...LVB.f('m18_stabilized', 'ev_mira_message', 'last_signal'), cap: AZ.edition.inv.cap }));
 check(m18f.hold?.done && m18f.hold.anchored >= 2 && m18f.m18_stabilized && m18f.cap === 12, 'Mission 18: the pylons held in phase, each re-anchored in its own year; the Chronolith holds twelve seconds', JSON.stringify(m18f.hold));
+check(m18f.hold?.watchers > 0 && m18f.hold.setbacks === 0, 'Mission 18: the hold with the scavengers on their patrols: none walks by a pylon, nobody is caught at one', JSON.stringify(m18f.hold));
 check(m18f.slabs?.held === 'held' && m18f.slabs.route.n === m18f.slabs.route.of && !m18f.slabs.setbacks && m18f.slabs.y > 11, 'the slab stair: the core\'s slabs reversed, last fallen first, and climbed while they hold, from the stump to the tilted floors', JSON.stringify(m18f.slabs));
 check(m18f.ev_mira_message && m18f.last_signal, 'Mira\'s message on the tower\'s screen; the Last Signal (Iven out of the pocket)', JSON.stringify(m18f));
 await finish();
@@ -1956,7 +2001,9 @@ await finish();
 // --- Mission 21 ------------------------------------------------------------------------------------------------------
 console.log('Act IV, Mission 21: The Last Battle of the Continuum');
 const m21 = await playMission('m21', { sides: ['radio'] });
-const m21f = await az(() => ({ elites: LVP.checks.elites, gapOne: LVP.checks.gapOne, gapTwo: LVP.checks.gapTwo, ...LVB.f('arena_fallen', 'm21_wrists'), ally: AZ.facts.get('ally') }));
+const m21f = await az(() => ({ elites: LVP.checks.elites, gapOne: LVP.checks.gapOne, gapTwo: LVP.checks.gapTwo, cellDoor: LVP.checks.cellDoor, ...LVB.f('arena_fallen', 'm21_wrists', 'ev_witness_plan', 'ev_requisition', 'm21_door'), ally: AZ.facts.get('ally') }));
+check(order(m21.steps, 'infiltrate', 'orders', 'plan', 'cellDoor', 'arena') && m21f.ev_witness_plan && m21f.ev_requisition && m21f.m21_door && m21f.cellDoor?.still < 0.3,
+  'Mission 21 (U8 review): the command structure read (the wall, the orders, the Director\'s desk), what he is building deduced, and the elite at the cells stuck by its own rewind', JSON.stringify({ steps: m21.steps.map((x) => x.id || x.side), door: m21f.cellDoor }));
 check(m21f.elites?.snapped && m21f.elites.stuck, 'the elites: an afterimage throws one back five seconds; its rewind REVERSEd leaves it stuck', JSON.stringify(m21f.elites));
 check(m21f.arena_fallen && m21f.gapOne?.held === 'held' && m21f.gapOne.route.n === m21f.gapOne.route.of && m21f.gapTwo?.route.n === m21f.gapTwo.route.of && m21f.ally === 'none',
   'the arena falls: the first gap crossed on its slab, held; going alone, the second on 2196\'s frozen girder', JSON.stringify({ g1: m21f.gapOne, g2: m21f.gapTwo, ally: m21f.ally }));
@@ -1969,6 +2016,7 @@ const m22 = await playMission('m22', { sides: ['record'] });
 const m22f = await az(() => ({ arm: LVP.checks.arm, ...LVB.f('ev_chain', 'inv_finalSeals_done', 'inv_twoLogs_done', 'ev_second_early', 'm22_reveal', 'm22_chamber', 'ev_unwritten_record'),
   logs: LVB.said.includes('NONE: Two logs, one second apart. RING: 16:02:00. CONSOLE BUTTON: 16:02:01.'), early: LVB.said.includes('WITNESS: …No. I was a second early.'), pa: LVB.voices.find((v) => v.text === 'Kai Varen. Do not build the machine.' && v.who === 'WITNESS')?.fx }));
 check(m22f.ev_chain && m22f.arm?.done && m22f.inv_finalSeals_done, 'Mission 22: the chain inferred; the arm reversed on its beat; the seals undone last fitted first', JSON.stringify(m22f));
+check(m22f.arm?.done && m22f.arm.jams === 0 && m22f.arm.turnsSeen >= 1, 'Mission 22: the arm\'s beat can be read: it stands for the counts and turns on the third, and REVERSE on the turn answers at once, with no charge given back', JSON.stringify(m22f.arm));
 check(m22f.logs && m22f.ev_second_early && m22f.early && m22f.pa === 'pa', 'the deduction: the logs keep the second ("…No. I was a second early."), the warnings\' speaker fixed: the Witness at the microphone', JSON.stringify(m22f));
 check(m22f.m22_reveal && m22f.m22_chamber && m22f.ev_unwritten_record, 'the reveal; the final chamber; the Unwritten Record', JSON.stringify(m22f));
 await finish();
@@ -1982,7 +2030,19 @@ const m23f = await az(() => ({ street: LVP.checks.street, bridge: LVP.checks.bri
 check(m23f.street?.held === 'witness' && m23f.street.route.n === m23f.street.route.of && m23f.street.y > -0.5, 'the street that fell: he holds its far half; in 2026 Kai walks the near half and steps onto what he holds', JSON.stringify(m23f.street));
 check(m23f.bridge?.held === 'held' && m23f.bridge.witness && m23f.bridge.route.n === m23f.bridge.route.of && m23f.time, 'the swap: Kai holds the settlement\'s bridge, the Witness crosses, then Kai: "For once, you are on time."', JSON.stringify(m23f.bridge));
 check(m23f.m23_asked && m23f.ask, 'Mira: "Ask me."', JSON.stringify(m23f));
-for (let i = 0; i < 60 && !(await az(() => AZ.menu === 'ending')); i++) await az(() => { LVB.talkOut(30); AZ.simulate(0.5); });
+// (U8 review: the ending is staged: its own shots, Kai off screen, Mira at the window box in C)
+let staged = null;
+for (let i = 0; i < 60 && !(await az(() => AZ.menu === 'ending')); i++) {
+  const r = await az(() => {
+    const a = AZ.edition.cinema.active, m = AZ.deckWorld.npcs.find((n) => n.n.id === 'mira_end');
+    const out = a?.shots ? { shots: a.shots.length, i: a.i, player: AZ.player.model.visible, mira: !!m?.model.visible } : null;
+    LVB.talkOut(30);
+    AZ.simulate(0.5);
+    return out;
+  });
+  if (ok(r) && r) staged = { ...(staged || r), maxI: Math.max(staged?.maxI ?? 0, r.i), playerSeen: !!(staged?.playerSeen || r.player), mira: !!(staged?.mira || r.mira) };
+}
+check(staged?.shots === 5 && staged.maxI >= 3 && !staged.playerSeen && staged.mira, 'Ending C is staged: the ring, the 41\'s stop, Mira at a window box, then the road; Kai is never on screen', JSON.stringify(staged));
 const ending = await az(() => ({ menu: AZ.menu, text: document.querySelector('#ending .body')?.textContent || '', ending: AZ.facts.get('ending') }));
 const endSaid = await az(() => ({ heard: AZ.edition.score.heard.filter((c) => /ending|postcredit/.test(c)), said: LVB.said.slice(-40) }));
 check(endSaid.heard.includes('ending:C') && endSaid.heard.includes('postcredit') && endSaid.said.includes('KAI: I finally found a second that belongs to nobody.') && endSaid.said.includes('NONE: Rain City, a Tuesday. The 41 is late.') && endSaid.said.includes('KAI: Live.'),
@@ -2161,6 +2221,9 @@ check(heardAll.synth === 0, 'speechSynthesis is never asked for anything', JSON.
 check(['card', 'chapter', 'zero', 'ending:C'].every((c) => heardAll.cues.includes(c)), 'the cues card, chapter, zero and ending:C all played', JSON.stringify(heardAll.cues));
 
 // --- CASE FILES: a replay (after the run's voices are counted: it reloads the page) ---------------------------------
+// (the campaign's own saves as the ending left them: no replay may write over them, U8 review)
+const campaignSaves = () => page.evaluate(() => Object.fromEntries(Object.keys(localStorage).filter((k) => /^afterzero\.lv\.(slot\.\d+|save\.v1)$/.test(k)).sort().map((k) => [k, localStorage.getItem(k)])));
+const savesBefore = await campaignSaves();
 await page.evaluate(() => { window.__before = true; document.querySelector('#ending [data-case="c_garden"]').click(); });
 await page.waitForFunction(() => !window.__before && window.AZ && AZ.pendingBoot && document.querySelector('#continue'), null, { timeout: 400000 });
 await page.evaluate(() => setTimeout(() => document.querySelector('#continue').click(), 0));
@@ -2170,6 +2233,36 @@ const replay = await page.evaluate(() => ({ key: AZ.edition.deck.mkey, chapter: 
   had: !!AZ.facts.get('m21_wrists') && AZ.facts.get('ending') === 'C', cleared: !AZ.facts.get('garden_restored'), replaying: AZ.facts.get('lv_replay') }));
 check(replay.key === 'c_garden' && replay.chapter === 'cases' && replay.quarter === replay.start && replay.had && replay.cleared && replay.packs.some((p) => /act3/.test(p)),
   'a replay: the Survivor\'s Garden from its place, with the facts the player had (the story\'s own cleared), in Mission 14\'s voice', JSON.stringify(replay));
+// (U8 review) replays played to their end, with real use() and REVERSE: the garden, chain B in Mission 5's gorge (the low
+// gate first, after Mission 5 left its count at three), the train in the lock city (the board's flaps, then the next
+// carriage); each returns to the CASE FILES with its story resolved, saved in a slot of its own
+const playReplay = async (key, boot) => {
+  if (boot) {
+    await page.evaluate((k) => { window.__before = true; setTimeout(() => document.querySelector(`#ending [data-case="${k}"]`).click(), 0); }, key);
+    await page.waitForFunction(() => !window.__before && window.AZ && AZ.pendingBoot && document.querySelector('#continue'), null, { timeout: 400000 });
+    await page.evaluate(() => setTimeout(() => document.querySelector('#continue').click(), 0));
+    await page.waitForFunction((k) => AZ.started && AZ.mode === 'deck' && AZ.level?.place && AZ.edition.deck?.mkey === k, key, { timeout: 300000 });
+    await az(() => { AZ.renderer.setAnimationLoop(null); });
+  }
+  await az(PLAYER);
+  await opening();
+  const before = await az(() => ({ slot: AZ.slot, gates: AZ.facts.get('gates_n') || 0 }));
+  const r = await playMission(key);
+  const back = await page.waitForFunction(() => { LVB.step(0.25); LVB.skip(); return AZ.menu === 'ending' && !!document.querySelector('#ending .caseFiles'); }, null, { timeout: 120000, polling: 250 }).then(() => true, () => false);
+  const st = await az((k) => ({ slot: AZ.slot, state: [...document.querySelectorAll('#ending .caseFile')].find((el) => el.querySelector(`[data-case="${k}"]`))?.dataset.state, said: LVB.said.slice(-40) }), key);
+  return { ...r, back, before, ...st };
+};
+const rg = await playReplay('c_garden', false);
+check(rg.back && ['resolved', 'observed'].includes(rg.state), 'the Survivor\'s Garden replayed to its end: back on the CASE FILES, resolved', JSON.stringify({ back: rg.back, state: rg.state, left: rg.left, log: rg.log }));
+const rb = await playReplay('c_b', true);
+check(rb.back && ['resolved', 'observed'].includes(rb.state) && !rb.said.some((t) => /Stone does not argue/.test(t)),
+  'chain B replayed in Mission 5\'s gorge to its end: Tala\'s gates taken low, high, middle, none refused', JSON.stringify({ back: rb.back, state: rb.state, before: rb.before, left: rb.left, log: rb.log }));
+const rt = await playReplay('c_train', true);
+check(rt.back && ['resolved', 'observed'].includes(rt.state) && rt.said.some((t) => /Every line is blank/.test(t)),
+  'the Train That Arrives Yesterday replayed to its end: the board\'s flaps run forwards to a blank tomorrow, then the next carriage', JSON.stringify({ back: rt.back, state: rt.state, left: rt.left, log: rt.log }));
+const savesAfter = await campaignSaves();
+check([rg, rb, rt].every((x) => x.slot === 'case' && x.before.slot === 'case') && JSON.stringify(savesAfter) === JSON.stringify(savesBefore) && (await page.evaluate(() => !!localStorage.getItem('afterzero.lv.slot.case'))),
+  'every replay saves in a slot of its own: the finished campaign\'s saves are untouched', JSON.stringify({ slots: [rg.slot, rb.slot, rt.slot], changed: Object.keys(savesAfter).filter((k) => savesAfter[k] !== savesBefore[k]) }));
 
 // --- saves --------------------------------------------------------------------------------------------------------
 const keys = await az(() => { AZ.saveTo(0); return Object.keys(localStorage); });

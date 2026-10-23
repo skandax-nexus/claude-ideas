@@ -63,11 +63,14 @@ export const choiceLine = (c) => (c && !c.mute && (c.say || c.label) ? { who: 'K
 
 // the ending sequence (OVERHAUL.md §8.9, §5 M23): the bible's text, the ending's own added lines, the
 // bible's quote in Kai's voice (C through the echo), then one line per consequence the player set
+// (Ending C: Mira's own line, from her world, first; then the frame, and the lines of the worlds Kai passed through)
 export function endingLines(key, facts = null) {
   const e = ENDINGS[key];
   if (!e) return [];
   const quote = { who: 'KAI', text: e.text[1], ...(key === 'C' ? { voice: { fx: 'echo' } } : {}) };
-  return [{ who: 'NONE', text: e.text[0] }, ...(e.after || []), quote, ...EPILOGUE.filter((l) => !facts || facts.test(l.when))];
+  const ep = EPILOGUE.filter((l) => !facts || facts.test(l.when));
+  const hers = ep.filter((l) => l.hers), rest = ep.filter((l) => !l.hers);
+  return [{ who: 'NONE', text: e.text[0] }, ...(e.after || []), quote, ...hers, ...(rest.length ? e.frame || [] : []), ...rest];
 }
 // after the epilogue: four clock ticks, then the voice in every speaker (finale.js)
 export { POSTCREDIT };

@@ -143,6 +143,27 @@ export class Inversion {
     this.snd.stopLoops();
   }
 
+  // a mechanism on a counted beat (M22's clock arm), near and in Kai's room: a click at each count, and a bell as it
+  // turns, the window REVERSE answers in (the arm's pose follows the same clock: Process.stepMechanism)
+  stepBeat(p) {
+    const g = this.g, b = p.rec.beat;
+    if (p.settled || p.rec.room !== g.room || !g.player) return;
+    const a = this.aimOf(p);
+    if (Math.hypot(g.player.pos.x - a[0], g.player.pos.z - a[2]) > 18) return;
+    const count = Math.floor(this.time / Math.min(1, b.period));
+    if (p.beatCount === count) return;
+    const first = p.beatCount === undefined;
+    p.beatCount = count;
+    if (first || this.active?.p === p) return;
+    if ((this.time % b.period) < Math.min(1, b.period) * 0.5) {
+      this.snd.settle();
+      this.rt.score?.capText('the clock arm turns');
+    } else {
+      this.snd.click();
+      this.rt.score?.capText('the clock arm counts');
+    }
+  }
+
   // --- each frame -----------------------------------------------------------------------------
   step(dt) {
     const g = this.g;
@@ -168,6 +189,7 @@ export class Inversion {
     for (const p of this.procs) {
       if (p.hiddenByWhen) continue;
       for (const e of p.step(dt, ctx)) this.onEvent(p, e);
+      if (p.rec.beat) this.stepBeat(p);
     }
     for (const d of this.displays) {
       const name = d.step(this.time);

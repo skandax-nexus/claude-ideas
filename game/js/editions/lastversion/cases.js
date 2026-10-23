@@ -20,9 +20,13 @@ import { PLACES } from './places/index.js';
 
 // --- a side story, replayed from its place -------------------------------------------------------------------------
 // The replay is the mission's place, its people and what the story itself uses (its processes, talks, scenes,
-// deductions, rules), with only the story's threads, from the quarter it lives in. Its lines are the mission's own
-// (voiceGroup: the replay speaks from the mission's pack). The facts the story sets or waits for are cleared when it
-// starts (clear), so it can happen again; everything else the player had stays true.
+// deductions, and the rules that set what its threads wait for), with only the story's threads, from the quarter it
+// lives in, each answering only once the threads before it are done (gateAfter, as in the missions). Its lines are the
+// mission's own (voiceGroup: the replay speaks from the mission's pack; its people are that chapter's). The facts the
+// story sets or waits for are cleared when it starts (clear), so it can happen again: what its threads wait for and
+// set, what its own scenes set, what the conversation nodes that move it on set, what its processes and rules set, and
+// what the mission's code keeps for it (o.clear: chain B's gate count). Everything else the player had stays true (a
+// shared conversation's first meeting is not met again).
 const IDENT = /\b[a-z_][a-z0-9_]*\b/gi;
 const idents = (cond) => (typeof cond === 'string' ? cond.replace(/"[^"]*"/g, '').match(IDENT) || [] : []).filter((k) => !['true', 'false'].includes(k) && !/^[A-Z]+$/.test(k));
 function replay(m, sideId, o) {
@@ -45,11 +49,17 @@ function replay(m, sideId, o) {
   }
   const pick = (obj, set) => Object.fromEntries(Object.entries(obj || {}).filter(([k]) => set.has(k) || set.has(k.replace(/_no$/, ''))));
   const talks = pick(m.talks, used.talk), scenes = pick(m.scenes, used.scene);
-  // what to clear: what the story waits for, and what its own talks, scenes and rules set
-  const clear = new Set([...idents(side.done), ...ts.flatMap((t) => [...idents(doneCond({ ...m, mkey: m.key }, t) || ''), ...(t.of || []), ...Object.keys(t.set || {})])]);
-  const sets = (n) => { for (const k of Object.keys(n?.set || {})) clear.add(k); for (const c of n?.choices || []) for (const k of Object.keys(c.set || {})) clear.add(k); };
-  for (const nodes of Object.values(talks)) nodes.forEach(sets);
-  Object.values(scenes).forEach(sets);
+  // what the story waits for and sets (its threads' done, of, set and when, and its own end)
+  const core = new Set([...idents(side.done), ...ts.flatMap((t) => [...idents(doneCond({ ...m, mkey: m.key }, t) || ''), ...(t.of || []), ...Object.keys(t.set || {}), ...idents(t.when)])]);
+  // a mission rule that sets what a thread waits for is the story's (Mission 15's flaps: the board run forwards
+  // says every line is blank, and that is what the train's thread waits for)
+  for (const r of m.rules || []) if (Object.keys(r.set || {}).some((k) => core.has(k))) used.rule.add(r.id);
+  const clear = new Set([...core, ...(o.clear || [])]);
+  const keys = (n) => [...Object.keys(n?.set || {}), ...(n?.choices || []).flatMap((c) => Object.keys(c.set || {}))];
+  // its own scenes' facts; of a conversation, only the nodes that move the story on (the clockmaker's first meeting,
+  // ezra_met, is Mission 6's, not the debt's)
+  Object.values(scenes).forEach((n) => keys(n).forEach((k) => clear.add(k)));
+  for (const nodes of Object.values(talks)) for (const n of nodes) if (keys(n).some((k) => core.has(k))) keys(n).forEach((k) => clear.add(k));
   for (const p of (m.processes || []).filter((x) => used.proc.has(x.id))) { clear.add(`inv_${p.id}_done`); clear.add(`rev_${p.id}`); }
   const rules = (m.rules || []).filter((r) => used.rule.has(r.id));
   for (const r of rules) Object.keys(r.set || {}).forEach((k) => clear.add(k));
@@ -57,7 +67,7 @@ function replay(m, sideId, o) {
     key: o.key, n: o.n, chapter: 'cases', origin: m.key, voiceGroup: m.chapter, name: side.name, title: o.title, subtitle: o.subtitle,
     place: m.place, wing: m.wing, exitAt: PLACES[m.place]?.exits?.[m.key], sectors: 1, home: m.home, states: m.states, drones: m.quarters.map(() => 0), ambience: m.ambience, ambient: m.ambient,
     motto: o.motto || m.motto, gate: side.name, crew: m.crew, named: m.named,
-    minutes: { main: side.minutes, optional: 0 }, autoExit: 1.2,
+    minutes: { main: side.minutes, optional: 0 }, autoExit: 1.2, gateAfter: true,
     processes: (m.processes || []).filter((p) => used.proc.has(p.id)), spots: o.spots ? m.spots : undefined, zones: m.zones,
     beats: [{ kind: 'custom', goal: side.name }],
     quarters: m.quarters.map((q, i) => ({ name: q.name, threads: i === qi ? ts.map((t) => ({ ...t, after: (t.after || []).filter((a) => ids.has(a)) })) : [], sides: [] })),
@@ -71,7 +81,8 @@ function replay(m, sideId, o) {
 const R = {
   // the two quest chains of v2.0 keep their keys (an old save loads into them): chain B is Mission 5's gorge, chain C
   // Mission 15's archive
-  b: replay(M05, 'water', { key: 'c_b', n: 'B', title: 'Tala, the Ancient Settlement', subtitle: 'A dry channel in the present was a river in the past.', motto: 'WHO TAUGHT IT TO STAY' }),
+  // (the gates' order is counted in gates_n by Mission 5's code: a replay starts it from nothing)
+  b: replay(M05, 'water', { key: 'c_b', n: 'B', title: 'Tala, the Ancient Settlement', subtitle: 'A dry channel in the present was a river in the past.', motto: 'WHO TAUGHT IT TO STAY', clear: ['gates_n'] }),
   c: replay(M15, 'archive', { key: 'c_c', n: 'C', title: 'Mara Quill, the lock city', subtitle: 'Two archives name different first Chronolith operators.', motto: 'TRUE FOR WHOM',
     threads: ['mara', 'ink'], name: 'TWO RECORDS, ONE DISASTER', done: 'ev_dual_archive', minutes: 8 }),
   child: replay(M01, 'booth', { key: 'c_child', n: 'E', title: 'Rain City, the first morning', subtitle: 'A photo booth that printed with nobody in it.' }),

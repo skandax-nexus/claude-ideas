@@ -12,7 +12,7 @@
 //   - a place's people, named and crowd, stay within §4.7's 24.
 import { compileCondition } from '../../core/conditions.js';
 import { CAST, NPCS, AMBIENT } from './npcs.js';
-import { sexOf, isChild, LV_MODELS, SHARED_MODELS } from './casting.js';
+import { sexOf, isChild, LV_MODELS, SHARED_MODELS, castOf } from './casting.js';
 import { RAIN_DARK } from './wardrobe.js';
 
 export const MAX_PEOPLE = 24; // §4.7: NPCs (named + crowd) per place
@@ -59,7 +59,8 @@ export const ERAS = {
   },
   future: {
     survivor: [['rb_trader', ['default', 'earth', 'faded'], 2], ['rb_villager_f', ['default', 'sage', 'rust'], 2], ['rb_scav', ['grey', 'olive', 'rust']], ['rb_civ_f3', ['default', 'moss', 'rust'], 2], ['rb_child_m2', ['patched', 'patched2']]],
-    child: [['rb_child_m2', ['patched', 'patched2']]],
+    // (the lock city's schoolchildren, M15: Tomas's own patched jersey is never theirs, he sits among them: castLevel's worn)
+    child: [['rb_child_m2', ['patched', 'patched2', 'patched3']]],
     gardener: [['rb_villager_f', ['sage', 'default']], ['rb_civ_f3', ['moss', 'default']], ['rb_trader', ['earth']]],
     scavenger: [['rb_scav', ['grey', 'olive', 'rust']]],
     trader: [['rb_trader', ['default', 'earth', 'faded']]],
@@ -122,15 +123,18 @@ export const AMBIENT_CAST = {
   m13_listener: { model: 'rb_civ_m1', variant: 'dust', height: 1.78, pronoun: 'm' },
   m13_freed: { model: 'rb_civ_m2', variant: 'detention', height: 1.76, pronoun: 'm' },
   // Act III (U8): Sera's schoolchildren (M14), an Unwritten fighter and a lock-city volunteer at the pylons (M18)
+  // (a girl and two boys in two bodies, in 2196's faded clothes: not one boy three times, U8 review)
   m14_pupil: { model: 'rb_child_m2', variant: 'patched2', height: 1.3, pronoun: 'm' },
-  m14_pupilA: { model: 'rb_child_m2', variant: 'green', height: 1.24, pronoun: 'm' },
-  m14_pupilB: { model: 'rb_child_m2', variant: 'blue', height: 1.34, pronoun: 'm' },
+  m14_pupilA: { model: 'rb_child_f2', variant: 'faded', height: 1.24, pronoun: 'f' },
+  m14_pupilB: { model: 'rb_child_m2', variant: 'patched', height: 1.34, pronoun: 'm' },
   m18_fighter: { model: 'rb_scav', variant: 'unwritten', height: 1.78, pronoun: 'm' },
   m18_citizen: { model: 'rb_civ_f3', variant: 'moss', height: 1.66, pronoun: 'f' },
   m21_cook: { model: 'rb_civ_f2', variant: 'home', height: 1.67, pronoun: 'f' },
   m21_listener: { model: 'rb_civ_f1', variant: 'teal', height: 1.66, pronoun: 'f' },
   m23_listener: { model: 'rb_civ_f2', variant: 'rose', height: 1.67, pronoun: 'f' },
   m23_passenger: { model: 'rb_courier', variant: 'blue', height: 1.78, pronoun: 'm' },
+  // Ending B: whoever stands guard on the other side of the line (a temporal scavenger with a lantern)
+  m23_guard: { model: 'rb_scav', variant: 'lantern', height: 1.78, pronoun: 'm' },
 };
 
 // the crowd models' base heights
@@ -183,7 +187,7 @@ function along(path, f) {
 
 // pick the people of one crowd: a weighted cycle through the role's models (a table row may carry a
 // weight: [model, variants, weight]), each model's variants in turn, never two neighbours alike
-function pickPeople(c, n, named, r, turn, fits = () => true, last = null) {
+function pickPeople(c, n, named, r, turn, fits = () => true, last = null, worn = null) {
   // the Place Outside Time's echoes are the people Kai has met (MET), each once, in their own face and wardrobe
   if (c.role === 'met') {
     const met = MET.filter((id) => NPCS[id] && !named.has(NPCS[id].model));
@@ -205,6 +209,7 @@ function pickPeople(c, n, named, r, turn, fits = () => true, last = null) {
     i++;
     if (!fits(m)) continue; // (this face is already in the place as often as it may be)
     const v = vs[(turn[m] = (turn[m] ?? Math.floor(r() * vs.length)) + 1) % vs.length];
+    if (worn?.has(`${m}/${v}`)) continue; // (a child placed by hand in this look is not also in the crowd)
     const prev = out[out.length - 1] || last; // (the last of the crowd before is a neighbour too)
     if (prev && prev[0] === m && prev[1] === v && cycle.length > 1) continue;
     out.push([m, v]);
@@ -375,6 +380,8 @@ export function castLevel(level, deck, { facts = null } = {}) {
   // (a face a hand-placed person wears here, the trapped woman or Sera in her disguise, is not also in the crowd:
   // children aside, who have one crowd face)
   const placed = new Set(levelCast.map((c) => c.model).filter((m) => !isChild(m)));
+  // (a named child placed here is not also a crowd child in the same look: Tomas among the lock city's)
+  const worn = new Set(level.npcs.filter((n) => byId[n.crew] && isChild(byId[n.crew].model)).map((n) => `${byId[n.crew].model}/${n.variant || byId[n.crew].variant}`));
   const faces = new Map(); // `${model}@${year}` -> how many of the crowd wear it
   const yearsOf = (c) => (c.years?.length ? c.years : level.states || deck.states || ['PRESENT']);
   // within §4.7's 24: each crowd keeps its share, the places left over going to the largest remainders
@@ -385,7 +392,10 @@ export function castLevel(level, deck, { facts = null } = {}) {
   const counts = crowds.map((c) => Math.floor(c.n * scale));
   let left = Math.min(budget, wanted) - counts.reduce((a, b) => a + b, 0);
   for (const ci of crowds.map((c, i) => i).sort((a, b) => (crowds[b].n * scale % 1) - (crowds[a].n * scale % 1))) if (left-- > 0) counts[ci]++;
-  const r = rng(hash(`${deck.mkey}:${level.id}`));
+  // (a CASE FILES replay walks its mission's crowd: seeded as the mission's, in faces the mission's chapter loads, as
+  // a replay loads only that chapter's people: Runtime.castKeyOf)
+  const r = rng(hash(`${deck.origin || deck.mkey}:${level.id}`));
+  const own = deck.origin && deck.voiceGroup ? castOf(deck.voiceGroup) : null;
   const turn = {};
   const route = crowds.length ? groundOf(level, deck) : null;
   let lastPick = null;
@@ -400,11 +410,12 @@ export function castLevel(level, deck, { facts = null } = {}) {
     const ys = yearsOf(c);
     const capped = !c.echo && c.role !== 'met';
     const fits = (m, take) => {
+      if (!take && own && !own.includes(m)) return false; // (a replay's crowd wears only faces its chapter loads)
       if (!capped || UNCAPPED.includes(m)) return true;
       if (take) { for (const y of ys) faces.set(`${m}@${y}`, (faces.get(`${m}@${y}`) || 0) + 1); return true; }
       return (ancient || !placed.has(m)) && ys.every((y) => (faces.get(`${m}@${y}`) || 0) < CAP);
     };
-    const people = pickPeople(c, n, named, r, turn, fits, lastPick);
+    const people = pickPeople(c, n, named, r, turn, fits, lastPick, worn);
     if (people.length) lastPick = people[people.length - 1];
     const pool = AMBIENT[poolOf(c, deck)] || AMBIENT.rain;
     const when = whenOf(c);

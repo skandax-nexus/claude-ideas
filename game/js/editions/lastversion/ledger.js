@@ -208,5 +208,5 @@ export const EPILOGUE = [
   { when: 'last_signal', who: 'IVEN', text: 'I came out of the pocket. Some nights I still hear it folding.' },
   { when: 'photo_taken', who: 'NONE', text: 'A photograph lies on a kitchen table in Rain City. Nobody remembers taking it.' },
   { when: 'letter == "delivered"', who: 'NONE', text: 'A letter, opened at last, in the pocket of a coat nobody claims.' },
-  { when: 'ev_no_owner && ending == "C"', who: 'MIRA', text: 'There\'s a letter in my desk to a brother I never had. I keep meaning to send it.' },
+  { when: 'ev_no_owner && ending == "C"', who: 'MIRA', hers: true, text: 'There\'s a letter in my desk to a brother I never had. I keep meaning to send it.' },
 ];

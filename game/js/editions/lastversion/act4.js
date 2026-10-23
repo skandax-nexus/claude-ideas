@@ -267,8 +267,11 @@ export const M20 = {
       name: 'THE EXPERIMENT',
       threads: [
         { id: 'experiment', kind: 'playback', at: 'console', after: ['song'], prompt: 'THE CONSOLE', offset: [0, 1.2, 1.4], kit: 'memoryChair',
-          echoes: [{ crew: 'kai12', at: 'console' }, { crew: 'child', variant: 'mira9', at: 'childChair' }],
+          // (from her chair she saw what his memory never kept: an older man by the ring, hooded, his hand on it; the
+          // Witness's second early, Mission 22, planted here)
+          echoes: [{ crew: 'kai12', at: 'console' }, { crew: 'child', variant: 'mira9', at: 'childChair' }, { crew: 'witness', variant: 'hooded', at: [-14.6, 0, -47.5], yaw: Math.PI / 2 }],
           lines: [N('Chamber One, from the chair. The ring is enormous. A boy on a step stool, at a console built for grown men.'), L('MIRA9', 'Do it, Kai. I want to see it turn.'),
+            L('MIRA9', 'Kai. Who is the old man by the ring?'), L('MIRA', 'I asked you about him, after. You said there was nobody there.'),
             L('MIRA', 'You let me. I asked, and you let me. I was nine, Kai, not nothing.'), K('I should have said no.'), REV(L('MIRA', 'Then I would have asked somebody else. I was that kind of nine.'))],
           set: { ev_her_side: true }, log: 'The first experiment, from her side: she asked.',
           goal: 'Replay the original experiment, from Mira\'s side.', because: 'In the white room, the child-sized chair.', hints: M20_HINTS.experiment, minutes: 5 },
@@ -366,10 +369,14 @@ const M21_HINTS = {
   confront: ['The Witness.', 'At the summit, by the ring.', 'Face him.'],
   office: ['The Director\'s office.', 'A glass corner on the cells\' terrace.', 'Look.'],
   radio: ['A radio.', 'By the light bridge.', 'Listen.'],
+  orders: ['What is the Witness building?', 'The halls, the elite ramps, the Director\'s desk.', 'Read what they left: the wall, the orders, the desk.'],
+  plan: ['What is he building up here?', 'A console, a stool, a child\'s chair.', 'Not a timeline. A room.'],
+  cellDoor: ['An elite at the cells.', 'It walks across the way to the arena.', 'REVERSE its rewind, and go while it is stuck.'],
 };
 const M21_SAY = {
   snap: [K('It jumped back to where it stood five seconds ago. They rewind themselves.')],
   stuck: [K('Its rewind, run forwards. It\'s stuck where it stands.')],
+  door: [K('Six seconds. Go.')],
   release: [K('The slab is going. Whoever held it, thank you.')],
 };
 // a slab of the fallen arena: held, it comes back out of the clouds, a bridge across its gap
@@ -382,6 +389,8 @@ const M21_PROCESSES = [
   // R5: the elites rewind themselves; reversing a rewind leaves one stuck forward for six seconds
   { id: 'eliteA', kind: 'patrol', target: 'm21_spire_q0s0', mode: 'rewind', stuck: 6, label: 'THE REWIND', weight: 1, hints: M21_HINTS.elites },
   { id: 'eliteB', kind: 'patrol', target: 'm21_spire_q0s1', mode: 'rewind', stuck: 6, label: 'THE REWIND', weight: 1, hints: M21_HINTS.elites },
+  // (U8 review) the elite posted on the cells' terrace, across the way to the arena's bridge
+  { id: 'eliteC', kind: 'patrol', target: 'm21_spire_q1s0', mode: 'rewind', stuck: 6, label: 'THE REWIND', weight: 1, hints: M21_HINTS.cellDoor },
   GAP('arenaGap1'), GAP('arenaGap2'),
 ];
 // an elite that sees an afterimage snaps back to where it stood five seconds earlier
@@ -389,7 +398,7 @@ function m21Echo(rt, p) {
   const g = rt.g;
   let n = 0;
   for (const s of g.deckWorld?.sentinels || []) {
-    if (!/_q0s\d$/.test(s.def.id) || Math.hypot(s.pos.x - p.x, s.pos.z - p.z) > 16) continue;
+    if (!/_q[01]s\d$/.test(s.def.id) || Math.hypot(s.pos.x - p.x, s.pos.z - p.z) > 16) continue;
     const h = rt.inv?.hist.get(s.def.id) || [];
     const back = h[Math.max(0, h.length - 50)];
     if (!back) continue;
@@ -425,10 +434,10 @@ const DIRECTOR_LINE = 'One permanent timeline. The Witness is building it for us
 export const M21 = {
   key: 'm21', n: 21, chapter: 'act4', name: 'THE LAST BATTLE OF THE CONTINUUM', title: 'The command structure', subtitle: 'The Continuum wants one timeline. The Witness wants Mira. The Unwritten want the network gone.',
   logline: 'The Continuum Spire, above the clouds.',
-  place: 'spire', sectors: 1, states: ['PRESENT', 'PAST', 'FUTURE'], drones: [2, 0, 0, 0], unstable: true, ambience: 'wind', ambient: 'loop',
+  place: 'spire', sectors: 1, states: ['PRESENT', 'PAST', 'FUTURE'], drones: [2, 1, 0, 0], unstable: true, ambience: 'wind', ambient: 'loop',
   motto: 'ONE PERMANENT TIMELINE', gate: 'THE ARENA', crew: C('witness'),
   named: ['witness', 'sera', 'anja', 'iven', 'rook', 'guard', 'mara'],
-  minutes: { main: 34, optional: 6 }, autoExit: 1.2, gateAfter: true,
+  minutes: { main: 40, optional: 2 }, autoExit: 1.2, gateAfter: true,
   processes: M21_PROCESSES,
   fragSpots: [['gliderDeck'], ['eliteRamps'], ['mastRail']],
   fragments: [[
@@ -449,7 +458,7 @@ export const M21 = {
       name: 'THE ALLY / ARRIVAL',
       threads: [
         { id: 'elites', kind: 'tasks', of: ['m21_snapped', 'm21_stuck'], at: 'arrival', say: [K('Throw them back, then hold them there.')],
-          goal: 'Elite watchers on the deck. They rewind what you do to them.', because: 'Graphite, emissive visors. They heal backwards.', hints: M21_HINTS.elites, minutes: 7 },
+          goal: 'Elite watchers on the deck. They rewind what you do to them.', because: 'Graphite, emissive visors. They heal backwards.', hints: M21_HINTS.elites, minutes: 6 },
         { id: 'infiltrate', kind: 'stealth', at: 'commandHalls', r: 6, after: ['elites'], goal: 'Infiltrate the command structure.', because: 'The command halls, on the first terrace.', hints: M21_HINTS.infiltrate, minutes: 6 },
       ],
       sides: [
@@ -461,19 +470,27 @@ export const M21 = {
     {
       name: 'THE COMMAND STRUCTURE',
       threads: [
+        // (U8 review) what the Witness is building, read from the halls, the elites' orders and the Director's desk (the
+        // office, a side story before, is on the main road now: whoever sits there, Rook, Pryce or nobody, is seen)
+        { id: 'orders', kind: 'clue', need: 3, of: ['ev_one_line', 'ev_field_orders', 'ev_director_office21'], after: ['infiltrate'],
+          spots: [
+            { id: 'timelineWall', scene: 'timelineWall', at: 'commandHalls', prompt: 'THE TIMELINE WALL', offset: [0, 1.8, -5.8], r: 2.8, model: NO_MODEL },
+            { id: 'fieldOrders', scene: 'fieldOrders', at: 'eliteRamps', prompt: 'FIELD ORDERS', offset: [3.5, 1.1, -1], r: 2.6, kit: 'logbook' },
+            { id: 'officeLook', scene: 'office', at: 'directorOffice', prompt: 'THE DIRECTOR\'S DESK', offset: [0, 1.1, 1.4], r: 2.8, kit: 'commandLectern' },
+          ],
+          goal: 'Find out what the Witness is building up here.', because: 'The Continuum thinks it knows. The orders, the wall and the Director\'s desk may not agree.', hints: M21_HINTS.orders, minutes: 3 },
+        { id: 'plan', kind: 'deduce', deduction: 'plan', at: 'directorOffice', after: ['orders'], spotOpts: { offset: [3, 1.2, 1.2], r: 3, kit: 'chartBoard' },
+          goal: 'What is he building?', because: 'One timeline, they say. A child\'s chair, the desk says.', hints: M21_HINTS.plan, minutes: 2 },
         { id: 'prisoners', kind: 'scene', scene: 'cells', at: 'cells', when: 'prisoners_held', after: ['infiltrate'], spot: { prompt: 'THE CELLS', offset: [0, 1.2, 1.4], r: 3, kit: 'citadelConsole' },
           goal: 'Free the prisoners from the dam.', because: 'They were held. They are here.', done: 'm21_cells', hints: M21_HINTS.prisoners, minutes: 2 },
-      ],
-      sides: [
-        { id: 'office', name: 'THE DIRECTOR\'S OFFICE', done: 'ev_director_office21', minutes: 4,
-          threads: [{ id: 'officeLook', kind: 'scene', scene: 'office', at: 'directorOffice', spot: { prompt: 'THE DIRECTOR\'S DESK', offset: [0, 1.1, 1.4], r: 2.8, kit: 'commandLectern' },
-            goal: 'The Director\'s office.', because: 'A glass corner, with a view of everything.', done: 'ev_director_office21', hints: M21_HINTS.office, minutes: 4 }] },
+        { id: 'cellDoor', kind: 'tasks', of: ['m21_door'], at: 'cells', after: ['plan'],
+          goal: 'An elite stands between the cells and the arena\'s bridge.', because: 'It rewinds whatever I do to it. Unless I run its rewind forwards.', hints: M21_HINTS.cellDoor, minutes: 2 },
       ],
     },
     {
       name: 'THE ARENA',
       threads: [
-        { id: 'arena', kind: 'go', at: 'arenaRing', r: 6, after: ['infiltrate'], set: { arena_fallen: true },
+        { id: 'arena', kind: 'go', at: 'arenaRing', r: 6, after: ['cellDoor'], set: { arena_fallen: true },
           say: [N('The arena shudders. Slabs of the ring drop into the clouds, one after another.'), K('Last fallen, first back.')],
           goal: 'The arena ring.', because: 'The summit stair is on its far side.', hints: M21_HINTS.arena, minutes: 1 },
         { id: 'gapOne', kind: 'go', at: 'arenaMid', r: 4, after: ['arena'], goal: 'Across the first gap.', because: 'The slab is in the clouds.', hints: M21_HINTS.gapOne, minutes: 3 },
@@ -510,9 +527,12 @@ export const M21 = {
     office: {
       lines: [L('ROOK', 'They gave me the chair. I signed nothing in it. Go up.', 'rook_fate == "persuade"'),
         SAYS('OFFICER PRYCE', 'PRYCE', 'They gave me his chair. I check badges from it. Not yours.', 'rook_fate == "expose"'),
-        N('An empty chair, and a recorder on the desk, still running.', '!(rook_fate == "persuade") && !(rook_fate == "expose")')],
-      set: { ev_director_office21: true },
+        N('An empty chair, and a recorder on the desk, still running.', '!(rook_fate == "persuade") && !(rook_fate == "expose")'),
+        N('On the desk, a requisition signed W.: ONE CONSOLE, 2026 PATTERN. ONE STEP STOOL. ONE CHAIR, CHILD-SIZED.')],
+      set: { ev_director_office21: true, ev_requisition: true }, log: 'The Witness requisitioned a 2026 console, a step stool and a child\'s chair.',
     },
+    timelineWall: { lines: [N('A wall of one hundred and seventeen timelines, each one struck through but one. The one left has no date on it.'), K('One permanent timeline. Theirs, or his?')], set: { ev_one_line: true } },
+    fieldOrders: { lines: [N('Orders on a lectern: HOLD THE ARENA UNTIL THE RING TURNS. VAREN IS NOT TO BE HARMED. THE WITNESS WILL NEED HIM.')], set: { ev_field_orders: true } },
     ally: {
       lines: [N('The second gap. Somebody you earned could hold it for thirty seconds. Or the year could.')],
       choices: [
@@ -526,7 +546,20 @@ export const M21 = {
       ],
     },
   },
-  rules: [{ id: 'stuck', when: 'stuck_eliteA || stuck_eliteB', set: { m21_stuck: true }, say: M21_SAY.stuck }],
+  rules: [{ id: 'stuck', when: 'stuck_eliteA || stuck_eliteB', set: { m21_stuck: true }, say: M21_SAY.stuck }, { id: 'door', when: 'stuck_eliteC', set: { m21_door: true }, say: M21_SAY.door }],
+  deductions: {
+    plan: {
+      question: [K('The Continuum thinks he is building them one timeline. What is he building?')],
+      answers: [
+        { intent: 'challenge', label: 'One timeline, for the Continuum.', lines: [K('Then why does he need a child\'s chair?')] },
+        { intent: 'investigate', label: 'Chamber One. Again. For her.', correct: true, needs: 'ev_requisition && ev_field_orders',
+          lines: [K('A console, a stool, a chair for a nine-year-old. He is building the first second again, up here.'), REV(K('And he needs me at the console.'))] },
+        { intent: 'withdraw', label: 'A weapon.', lines: [K('A weapon would not need me unharmed.')] },
+      ],
+      unproven: [K('Not on a feeling. What did he order, and what did he tell them?')],
+      set: { ev_witness_plan: true }, reveal: true, log: 'The Witness is rebuilding Chamber One above the clouds, and he needs me at its console.',
+    },
+  },
   fx: {
     allyHold(rt) {
       const p = rt.inv?.procs.find((x) => x.rec.id === 'arenaGap2');
@@ -540,7 +573,8 @@ export const M21 = {
   onEcho: m21Echo,
   step: m21Step,
   spoken: M21_SAY, // (the lines its code says: the snap back, the stuck elite, the ally letting go)
-  watch: [[[[-50, 40], [50, 40]], [[40, 58], [-40, 58]]], [], [], []],
+  // (q1: the elite on the cells' terrace, walking across the way from the elite ramps to the arena's bridge)
+  watch: [[[[-50, 40], [50, 40]], [[40, 58], [-40, 58]]], [{ y: 12, path: [[30, -69], [30, -61]] }], [], []],
   overlay(P) {
     person(P, { id: 'witness21', crew: 'witness', at: 'witnessStand', off: [-2, 0, 0], turn: Math.PI / 2, prompt: 'TALK TO HIM', when: 't_m21_gapTwo' });
     person(P, { id: 'm21_cook', crew: 'm21_cook', first: 'A cook', seed: 2101, ambient: true, at: 'kitchenDoor', off: [2.2, 0, 1.6], turn: Math.PI, prompt: 'TALK', when: 'warned_evacuees && !t_m21_infiltrate' });

@@ -23,6 +23,7 @@ import { RULES, INV_LINES } from '../game/js/editions/lastversion/inversion.js';
 import { checkRecord, makeRecord, colliderEntry, Process, MAX_PROCESSES, MAX_PARTS, WEIGHTS, KINDS } from '../game/js/editions/lastversion/processes.js';
 import * as THREE from '../game/vendor/three.module.min.js';
 import { ENDINGS, LOCK_ORDER, CASE_FILES, CASE_STATES, caseState } from '../game/js/editions/lastversion/acts.js';
+import { ENDING_SHOTS } from '../game/js/editions/lastversion/finale.js';
 import { hazardAt, musicGain } from '../game/js/editions/lastversion/act2.js';
 import { NPCS, DIALOGUE, AMBIENT, npcState, JUN_HOOK, WATER_HOOK, MARA_HOOK, IVEN_HOOK } from '../game/js/editions/lastversion/npcs.js';
 import { PLACES, signature, quartersOf } from '../game/js/editions/lastversion/places/index.js';
@@ -1806,7 +1807,8 @@ test('the watchers: each mission\'s kind, people built from the edition\'s model
 
 test('each chapter loads the people it casts; the edition offers Kai\'s look only', () => {
   for (const { ch, deck, s, level } of LEVELS) {
-    const need = castOf(ch);
+    // (a replay loads its own mission's chapter's people, not every replay's: Runtime.castKeyOf)
+    const need = castOf(ch === 'cases' && deck.voiceGroup ? deck.voiceGroup : ch);
     for (const n of level.npcs) {
       const c = level.cast.find((x) => x.id === n.crew);
       if (c?.model) assert.ok(need.includes(c.model), `${ch} ${deck.mkey}/${s}: ${n.id} on ${c.model} is not in CHAPTER_CAST.${ch}`);
@@ -2307,10 +2309,14 @@ test('the consequence ledger (global since U8): every fact a choice sets is read
     const read = conds(later(m.key));
     walkObj(m, (o) => {
       if (!o.intent) return;
-      for (const k of Object.keys(o.set || {})) {
+      for (const [k, v] of Object.entries(o.set || {})) {
         if (k.startsWith('ev_') || k.startsWith('t_')) continue; // (evidence is pinned to the case board)
         n++;
         assert.ok(new RegExp(`\\b${k}\\b`).test(read), `${m.key}: "${o.label}" sets ${k}, which nothing later reads`);
+        // (U8 review) each value of a choice with several is read for itself: keeping the letter is a choice too. (A
+        // default branch, read as "neither of the others", and a value read by a mission's code are named here.)
+        const READ_ELSE = { quest_jun: ['resolved'], machine_buried: ['clay'], rook_fate: ['record'], m20_lead: ['kai'] };
+        if (o.consequence && typeof v === 'string' && !READ_ELSE[k]?.includes(v)) assert.ok(new RegExp(`\\b${k}\\s*[!=]=\\s*"${v}"`).test(read), `${m.key}: "${o.label}" sets ${k} = "${v}", which nothing later reads`);
       }
     });
   }
@@ -2977,8 +2983,21 @@ function freePlay(m, level, facts0, withhold = null) {
     if (x.set && !apply(x.set)) return;
     const c = (x.choices || []).find((ch) => open(ch.when) && !Object.keys(ch.set || {}).some((k) => held.has(k)));
     if (c?.set) apply(c.set);
+    if (x.then) fx(x.then);
+    if (c?.then) fx(c.then);
   };
   const fired = new Set();
+  // a node's code (then: the mission's fx), with a stand-in runtime in the year it is used in; what it sets that the
+  // withheld thread needs is undone (the player never did it)
+  let year = 'PRESENT';
+  const rt = { g: { facts: f, engine: { state: () => year }, room: 'r', hud: { say: (l, ff, done) => done?.(), toast() {} }, audio: {}, log: [], deckWorld: { flags: {}, npcs: [] }, after() {} }, inv: null, deck, level, score: null };
+  const fx = (name) => {
+    const fn = deck.fx?.[name];
+    if (!fn) return;
+    const snap = { ...f.facts };
+    try { fn(rt); } catch { /* code that needs the browser: what it set so far stays */ }
+    if ([...held].some((k) => f.facts[k] !== snap[k])) f.facts = snap;
+  };
   for (let round = 0; round < 60; round++) {
     const before = JSON.stringify(f.facts);
     for (const it of level.interactables) {
@@ -2997,7 +3016,12 @@ function freePlay(m, level, facts0, withhold = null) {
         if (t) apply({ [placedFact(deck, t)]: (t.entries || []).length, [factOf(deck, t)]: true, ...(t.set || {}) });
       } else if (!sc.startsWith('hold:') && !deck.nodes?.[sc]) {
         const x = deck.scenes?.[sc];
-        if (x && open(it.when, x.when)) node(x);
+        // (in each year it answers in: its code may care which, Mission 5's gates take only 2026)
+        for (const st of YEARS3) {
+          if (!x || !f.test(it.when || 'true', st) || !f.test(x.when || 'true', st)) continue;
+          year = st;
+          node(x);
+        }
       }
     }
     for (const tr of level.triggers) if (open(tr.when)) apply(tr.set);
@@ -3011,7 +3035,11 @@ function freePlay(m, level, facts0, withhold = null) {
       if (rec.kind === 'refusal' || (rec.arm && !f.test(rec.arm)) || !open(rec.when)) continue;
       apply({ [`inv_${rec.id}_done`]: true, [`rev_${rec.id}`]: true });
     }
-    for (const r of deck.rules || []) if (!fired.has(r.id) && f.test(r.when) && apply(r.set || {})) fired.add(r.id);
+    for (const r of deck.rules || []) {
+      if (fired.has(r.id) || !f.test(r.when) || !apply(r.set || {})) continue;
+      fired.add(r.id);
+      if (r.then) fx(r.then);
+    }
     for (const t of th.list) {
       const self = (t.kind === 'cinema' && t.lines?.length) || t.kind === 'chase' || ((t.kind === 'loop' || t.kind === 'hold') && th.current() === t);
       if (self && th.available(t) && !th.done(t)) apply({ [factOf(deck, t)]: true, ...(t.kind === 'cinema' ? t.set || {} : {}) });
@@ -3046,6 +3074,110 @@ test('Acts I to IV and the Finale: nothing done out of order skips a main thread
   }
   assert.ok(checked >= 120, `${checked} threads withheld`);
   assert.ok(finished >= 12, `${finished} missions a free player can finish (the check is not vacuous)`);
+});
+
+// U8 review: the CASE FILES replays are played to their end by the same free player, from a finished campaign's facts
+// with each replay's own cleared (Runtime.replayFacts); and none ends before its story gets there
+test('CASE FILES: every replay can be finished from its own deck, and none ends early (the free player)', () => {
+  const f0 = new FactStore();
+  for (const c of [...ORDER, 'cases']) for (const k of PRIMES[c] || []) (Array.isArray(k) ? f0.set(k[0], k[1]) : f0.set(k));
+  f0.set('faction', 'neutral');
+  // (a campaign that played the stories once already: their facts as the missions left them)
+  for (const [k, v] of Object.entries({ water_route: true, quest_tala: 'resolved', gate_low: true, gate_high: true, gate_mid: true, gates_n: 3, garden_restored: true, m14_culvert_asked: true,
+    quest_jun: 'observed', m15_jun: true, ev_blank_tomorrow: true, inv_departureBoard_done: true, ezra_met: true, ezra_debt: 'release', has_spring: true, letter: 'kept', ev_unwritten_record: true, m22_orren: true })) f0.set(k, v);
+  let finished = 0, withheld = 0;
+  for (const c of MISSIONS.cases) {
+    assert.ok(c.gateAfter, `${c.key}: its threads wait on the threads before them`);
+    const { level } = LEVELS.find((l) => l.deck.mkey === c.key);
+    const start = { ...f0.facts };
+    for (const k of c.clear) start[k] = false;
+    const f = freePlay(c, level, start);
+    assert.ok(f.test(c.done), `${c.key}: a player who does everything the replay offers finishes it (${c.done})`);
+    finished++;
+    const deck = { ...c, mkey: c.key };
+    for (const t of threadsOf(deck)) {
+      if (IDS(c.done).includes(factOf(deck, t)) || IDS(doneCond(deck, t) || '').some((k) => IDS(c.done).includes(k))) continue;
+      withheld++;
+      assert.ok(!freePlay(c, level, start, t).test(c.done), `${c.key}: ${t.id} withheld, yet the replay ends`);
+    }
+  }
+  assert.equal(finished, MISSIONS.cases.length);
+  assert.ok(withheld >= 10, `${withheld} replay threads withheld`);
+});
+
+test('CASE FILES (U8 review): chain B takes the low gate first; the train\'s board says its blank line; the clockmaker is not met again', () => {
+  const byKey = (k) => MISSIONS.cases.find((c) => c.key === k);
+  // chain B, after Mission 5 left gates_n at 3: the replay clears it, and the low gate is taken first
+  const cb = byKey('c_b');
+  assert.ok(cb.clear.includes('gates_n'));
+  const said = [];
+  const f = new FactStore({ water_route: true, quest_tala: 'resolved', gate_low: true, gate_high: true, gate_mid: true, gates_n: 3 });
+  for (const k of cb.clear) f.set(k, false);
+  f.set('quest_tala', 'active');
+  const rt = { g: { facts: f, engine: { state: () => 'PAST' }, room: 'r', hud: { say: (l, ff, done) => { said.push(...l.map((x) => x.text)); done?.(); } }, audio: {}, log: [] } };
+  cb.fx.gate1(rt);
+  assert.ok(f.get('gate_low') && f.get('gates_n') === 1, 'the low gate holds');
+  // and even with a count an earlier run left behind, no gate up is the start (gorgeGate)
+  f.set('gate_low', false);
+  f.set('gates_n', 3);
+  cb.fx.gate1(rt);
+  assert.ok(f.get('gate_low') && f.get('gates_n') === 1);
+  assert.ok(!said.some((t) => /Stone does not argue/.test(t)), 'no gate is refused');
+  // the train: the board's rule comes with it
+  const ct = byKey('c_train');
+  assert.deepEqual(ct.rules.map((r) => r.id), ['flaps']);
+  // the debt: Ezra's first meeting is Mission 6's, not the debt's
+  const cd = byKey('c_debt');
+  assert.ok(!cd.clear.includes('ezra_met') && cd.clear.includes('ezra_debt') && cd.clear.includes('has_spring'), cd.clear.join(' '));
+});
+
+test('U8 review: the timeline, the years, the letter, the plant in Mira\'s memory, the endings, the Finale\'s street, the pylons, the casting', () => {
+  const lv = (k) => LEVELS.find((l) => l.deck.mkey === k && !l.adjusted).level;
+  const mm = (k) => main.find((x) => x.key === k);
+  const thr = (k, id) => threadsOf(asDeck(mm(k))).find((t) => t.id === id);
+  // Mira's body did not survive the week (M8's fever, M11's ward, M20's bench), not "that afternoon"
+  assert.ok(!SPOKEN.some((e) => /died that afternoon/.test(e.text)) && mm('m17').hook.lines.some((l) => /did not survive the week/.test(l.text)));
+  // M14: the memorial's core and the fragments of 2196 stand in 2196 only
+  assert.deepEqual(lv('m14').interactables.find((i) => i.id === 'memorialCore').kitYears, ['FUTURE']);
+  assert.ok(lv('m14').interactables.filter((i) => i.kind === 'fragment').every((i) => i.when === '@FUTURE' && i.kitYears?.[0] === 'FUTURE'));
+  // the kept letter is asked about in the Finale
+  assert.ok(mm('m23').talks.mira23[0].lines.some((l) => l.who === 'MIRA' && l.when === 'letter == "kept"' && /my letter/.test(l.text)));
+  // Mira's side of the experiment has the old man by the ring in it
+  const exp = thr('m20', 'experiment');
+  assert.ok(exp.echoes.some((e) => e.crew === 'witness') && exp.lines.some((l) => l.who === 'MIRA9' && /old man by the ring/.test(l.text)));
+  assert.ok(lv('m20').npcs.some((n) => n.id === 'pb_experiment_2' && n.crew === 'witness' && n.hologram));
+  // Ending C: Mira's own line, then the frame, then the worlds he passed through
+  const f = new FactStore({ ending: 'C', trust_sera: 'accept', ev_no_owner: true, jun_line: true });
+  const C = endingLines('C', f).map((l) => l.text);
+  const iFrame = C.findIndex((t) => /worlds he passed through/.test(t));
+  assert.ok(iFrame > C.findIndex((t) => /brother I never had/.test(t)) && iFrame < C.findIndex((t) => /AND HE CAME BACK/.test(t)), C.join(' | '));
+  assert.ok(!endingLines('A', new FactStore({ ending: 'A', jun_line: true })).some((l) => /worlds he passed through/.test(l.text)));
+  // the endings are staged: a shot for the text, one per added line, one for the quote and the epilogue; their people
+  for (const k of ['A', 'B', 'C']) assert.equal(ENDING_SHOTS[k].length, 2 + ENDINGS[k].after.length, k);
+  const m23 = lv('m23');
+  for (const [id, k] of [['kai_end', 'A'], ['sera_end', 'B'], ['m23_guard', 'B'], ['mira_end', 'C']]) assert.equal(m23.npcs.find((n) => n.id === id)?.when, `ending == "${k}"`, id);
+  assert.ok(m23.landmarks.windowBox && m23.landmarks.board41);
+  // the Finale's streets: the Witness takes the street whichever way Kai comes (the trigger spans the avenue, pavements
+  // and all); the strips beside the pit are closed; the street answers Kai only once the Witness has it
+  const trig = (id) => m23.triggers.find((t) => Object.keys(t.set || {}).includes(`t_m23_${id}`));
+  for (const id of ['streets', 'street']) assert.ok(trig(id).box[0] <= -50 && trig(id).box[3] >= 50, `${id}: ${trig(id).box}`);
+  const solidAt = (x, z) => m23.elements.some((e) => e.solid && x > e.box[0] && x < e.box[3] && z > e.box[2] && z < e.box[5] && e.box[1] < 1 && e.box[4] > 1.5);
+  assert.ok(solidAt(-45, 127) && solidAt(48, 127), 'the strips beside the pit are closed');
+  assert.equal(m23.processes.find((p) => p.id === 'streetCollapse').arm, 't_m23_streets');
+  // M18: no scavenger walks within 12 m of a pylon Kai must re-anchor
+  const m18 = lv('m18');
+  for (const sn of m18.sentinels) for (const po of ['pylon1', 'pylon2', 'pylon3']) {
+    const [px, , pz] = m18.landmarks[po];
+    const d = Math.min(...sn.path.slice(0, -1).map((a, i) => { const b = sn.path[i + 1]; const vx = b[0] - a[0], vz = b[1] - a[1], L = vx * vx + vz * vz || 1; const u = Math.max(0, Math.min(1, ((px - a[0]) * vx + (pz - a[1]) * vz) / L)); return Math.hypot(a[0] + u * vx - px, a[1] + u * vz - pz); }));
+    assert.ok(d >= 12, `${sn.id} passes ${d.toFixed(1)} m from ${po}`);
+  }
+  // M16: Mara says what the photograph thread says she said
+  assert.ok(mm('m16').talks.mara[0].lines.some((l) => /photograph/.test(l.text)));
+  // M14's three pupils are not one boy three times; M15's crowd children never wear Tomas's look
+  const pupils = lv('m14').cast.filter((c) => /^m14_pupil/.test(c.id)).map((c) => c.model);
+  assert.ok(new Set(pupils).size >= 2, pupils.join());
+  const tomas = lv('m15').cast.find((c) => c.id === 'tomas');
+  assert.ok(!lv('m15').cast.some((c) => c.crowd && c.model === tomas.model && c.variant === tomas.variant), 'Tomas\'s look is his own');
 });
 
 test('U8 review: a talk the story has not reached is not offered, a REVERSE it has not reached does not answer, and a thread done early is paid in order', () => {
@@ -3250,7 +3382,11 @@ test('Act IV: the shadowless door, the memories that refuse, the elites\' rewind
   assert.ok(facts.get('m20_aligned'), 'an interleaving that keeps each memory\'s order is hers');
   assert.ok(m('m20').scenes.align && m('m20').spoken.align.length >= 5, 'the board\'s lines are walked for the voice');
   // M21: elites rewind (Echo Step snaps them back; REVERSE leaves them stuck); the arena's gaps; going alone works
-  assert.ok(m('m21').processes.filter((p) => p.mode === 'rewind').every((p) => p.stuck === 6 && /_q0s\d$/.test(p.target)));
+  assert.ok(m('m21').processes.filter((p) => p.mode === 'rewind').every((p) => p.stuck === 6 && /_q[01]s\d$/.test(p.target)));
+  // (U8 review) the command structure read before the arena (the wall, the orders, the Director's desk; what he is
+  // building), and an elite at the cells' door whose rewind must be run forwards
+  assert.deepEqual([thr('m21', 'plan').after, thr('m21', 'cellDoor').after, thr('m21', 'arena').after], [['orders'], ['plan'], ['cellDoor']]);
+  assert.ok(m('m21').deductions.plan.answers.find((a) => a.correct).needs.includes('ev_requisition') && m('m21').processes.some((p) => p.id === 'eliteC' && p.target === 'm21_spire_q1s0'));
   assert.equal(typeof m('m21').onEcho, 'function');
   assert.ok(['arenaGap1', 'arenaGap2'].every((id) => m('m21').processes.find((p) => p.id === id)?.when === 'arena_fallen'));
   assert.ok(thr('m21', 'arena').set.arena_fallen && thr('m21', 'prisoners').when === 'prisoners_held');

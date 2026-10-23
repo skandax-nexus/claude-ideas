@@ -91,7 +91,9 @@ export function buildPlace(key, story, si, rt, opts = {}) {
     const text = lore[n];
     if (!text || !P.landmarks[name]) return;
     const [x, y, z, yaw] = P.landmarks[name];
-    P.inter.push({ id: `frag_${rid}_${si}_${k}`, kind: 'fragment', pos: [x, y + 1.1, z], yaw, r: 2.4, prompt: P.style.kits?.fragmentPrompt || 'LOOK CLOSER', text, n, room: rid, kit: P.style.kits?.fragment || 'cairn' });
+    // (deck.fragYears: fragments of things one year has, found and drawn only in it: Mission 14's are 2196's)
+    const yrs = deck.fragYears ? { when: deck.fragYears.map((y) => `@${y}`).join(' || '), kitYears: deck.fragYears } : {};
+    P.inter.push({ id: `frag_${rid}_${si}_${k}`, kind: 'fragment', pos: [x, y + 1.1, z], yaw, r: 2.4, prompt: P.style.kits?.fragmentPrompt || 'LOOK CLOSER', text, n, room: rid, kit: P.style.kits?.fragment || 'cairn', ...yrs });
   });
   // the watchers of this quarter (they patrol ground at y 0, or at the floor a path gives as { y, path, when? }: a
   // watcher's eye is 1.6 m above it; `when`: it stands only while that holds); a mission that is one map has every
