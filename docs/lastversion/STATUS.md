@@ -541,7 +541,7 @@ Every line the edition says, once each: 554 lines and 7,295 words in v2.0, 2,727
   a phone* (already closed by the visual closing pass, f002096; checked): Mission 10 is the dam's face, its gallery ledge,
   crest and gorge under an open night sky, with the cells cut into the face; Mission 2 is Helix, the bible's facility,
   with windows, the court it opens onto, the lobby's glass roof and the roof terrace. Measured at 915 × 412, medium
-  quality, SwiftShader (mean luminance of the frame, 0–1): Mission 2's lobby 0.28, dark corridor 0.24, west gallery 0.31, staff
+  quality, SwiftShader (mean luminance of the frame, 0–1; measured again on `c3ca5a6`, the same to 0.01): Mission 2's lobby 0.28, dark corridor 0.24, west gallery 0.31, staff
   lounge 0.25; Mission 10's cell 0.17, gallery 0.11, guard post 0.10, cell block 0.13; Rain City's plaza in its 2049
   storm light 0.21 for comparison; each picture reads (the snow moonlit, the face's lamps, Helix's ceiling lights). *Mission 11's reversed
   rain as still filaments* (already closed by the visual closing pass; checked in the code: the court's rain surfaces
@@ -551,10 +551,19 @@ Every line the edition says, once each: 554 lines and 7,295 words in v2.0, 2,727
   Found and fixed on the way, by the full bot's free-roam check: from Mission 14 on the case board did not open at all
   (Sera's standing, `trust_sera`, is a word, 'accept', 'deny' or 'ask', and the board's PEOPLE read every standing as a
   number: `TRUST['accept']` threw), so TRAVEL could not be reached there either; a word now reads as a standing, and a
-  unit test opens the board after every mission of a walked campaign with everyone met, and on a trip.
-  Checked: `npm test` NPM_RESULT; `node tests/lastversion.mjs` FULL_RESULT. The free-roam check alone (`LV_ONLY=roam`, about
-  four minutes, from a new game taken to Mission 16) was run as it was built; the full run includes it. Edition files and tests only; no shared engine file changed (Station Zero is
-  untouched, so `tests/smoke.mjs` and `tests/qa.mjs` were not run for it).
+  unit test opens the board after every mission of a walked campaign with everyone met, and on a trip. And by the full
+  bot's pictures (`LV_ROAM_SHOTS`): a fragment's count read just before TRAVEL ("MEMORY FRAGMENT 1 / 4, THE BROKEN
+  OBSERVATORY") waited under the case board and came up over Rain City's arrival, and Rain City's over the return to
+  Mission 16; `Runtime.go` now clears the toast with the line it was saying, and the bot's check reads the arrival and the
+  return for it (without the fix `LV_ONLY=roam` gave 14 passed, 2 failed, on trip 3 and BACK TO THE STORY; with it 16
+  passed, 0 failed).
+  Checked: `npm test` 169/169 (141 of them the edition's); the whole bot (`node tests/lastversion.mjs`, on `c3ca5a6`)
+  373 passed, 0 failed, with no page error, in 45 minutes (the campaign from NEW GAME to Ending C, Endings A and B in real
+  time, the free-roam trips and back, the CASE FILES and the survey of the 23 places; the run before the fix, on
+  `19b255a`, 373 passed too, which is how the pictures were seen). The free-roam check alone (`LV_ONLY=roam`, about four
+  minutes, from a new game taken to Mission 16) was run as it was built and after the fix; the full run includes it.
+  Edition files and tests only (`git diff --name-only b7f5b3d..`: no shared engine file), so Station Zero is untouched
+  and `tests/smoke.mjs` and `tests/qa.mjs` were not run for it.
 - **Visuals after the closing pass** (2026-10-24; `git log f498f2d..`; the player's point 6 and the visual half of point 2;
   DESIGN.md "Places under an open sky", "Surfaces and props"). Each of the critic's gaps was checked against the code and
   a frame of it first (a survey of all 23 missions at 640 × 360 and close views of each gap, looked at in the pass), then

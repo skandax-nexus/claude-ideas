@@ -718,8 +718,8 @@ measured minutes against its target.
   the case board's TRAVEL (fifteen places, Rain City and Helix's west wing in 2049 only), trips to Old Town in 2026 (no
   way on, no watchers, no gate, the story's threads as props; walked, a fragment read, 2196 by its key; a save taken on
   the trip, the page reloaded and the save loaded on the trip), the Broken Observatory and Rain City, each arriving under
-  its FREE ROAM card, every line said from the packs, and BACK TO THE STORY at the checkpoint left with the objective as it
-  was and the fragments kept; then, after an ending, a trip from the CASE FILES on the title and back to them with the
+  its FREE ROAM card with nothing of the place before over it (no fragment's count, no fragment's line), every line said
+  from the packs, and BACK TO THE STORY at the checkpoint left with the objective as it was and the fragments kept; then, after an ending, a trip from the CASE FILES on the title and back to them with the
   finished save as it was (`LV_ONLY=roam` runs this alone from a new game taken to Mission 16; `LV_ROAM_SHOTS` keeps
   pictures). The
   Prologue's routes start at the places' landmarks, and Helix's glass lift carries Kai down into

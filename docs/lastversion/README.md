@@ -25,6 +25,7 @@ Build: `EDITION=lastversion bash android/build-apk.sh` (app "AFTERZERO: Last Ver
 its own saves; 46.7 MB on 2026-10-22, with the eight voice packs under `assets/voice/lv/`); the default build stays
 the Station Zero game.
 
-Tests: `npm test` (the edition's 88 unit tests among 116) and `NODE_PATH=$(npm root -g) node tests/lastversion.mjs`
-(the browser bot: NEW GAME to Ending C, the CASE FILES and a survey of the 23 places, 312 checks on 2026-10-22).
+Tests: `npm test` (the edition's 141 unit tests among 169) and `NODE_PATH=$(npm root -g) node tests/lastversion.mjs`
+(the browser bot: NEW GAME to Ending C, Endings A and B, free roam's trips and back, the CASE FILES and a survey of the
+23 places, 373 checks on 2026-10-24; `LV_ONLY=roam` runs free roam's alone).
 Recording the voices: `VOICE_WORK=<dir> bash tools/voice-lv.sh <group>` (DESIGN.md "Voice and score").
