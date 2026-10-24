@@ -2142,7 +2142,10 @@ const ending = await az(() => ({ menu: AZ.menu, text: document.querySelector('#e
 const endSaid = await az(() => ({ heard: AZ.edition.score.heard.filter((c) => /ending|postcredit/.test(c)), said: LVB.said.slice(-40) }));
 check(endSaid.heard.includes('ending:C') && endSaid.heard.includes('postcredit') && endSaid.said.includes('KAI: I finally found a second that belongs to nobody.') && endSaid.said.includes('NONE: Rain City, a Tuesday. The 41 is late.') && endSaid.said.includes('KAI: Live.'),
   'Ending C: the bible\'s text, what it adds (a Tuesday, the 41 late, three notes, "Live."), Kai\'s quote', JSON.stringify(endSaid));
-check(!endSaid.said.slice(endSaid.said.lastIndexOf('MIRA: Kai, what are you doing?')).some((l) => l.startsWith('CREW:')), 'Ending C: nobody in the crowd says a line in passing over it (the closing pass: one did, over the flash)', JSON.stringify(endSaid.said.slice(-14)));
+// (a line said in passing is one of the place's crowd barks; the epilogue's people speak as CREW too, in their own voices)
+const barksC = await az(() => [...new Set(AZ.level.npcs.flatMap((n) => n.barks || []))]);
+const passingC = endSaid.said.slice(endSaid.said.lastIndexOf('MIRA: Kai, what are you doing?')).filter((l) => barksC.includes(l.slice(l.indexOf(': ') + 2)));
+check(barksC.length > 0 && !passingC.length, 'Ending C: nobody in the crowd says a line in passing over it (the closing pass: one did, over the flash)', JSON.stringify(passingC));
 check(endSaid.said.some((l) => l === 'MIRA: There\'s a letter in my desk to a brother I never had. I keep meaning to send it.') && endSaid.said.includes('VOICE: Version one hundred and eighteen.') && !endSaid.said.some((l) => /post-credit/i.test(l)),
   'the epilogue, one line per fact set (Ending C: the letter to a brother she never had); then the voice in every speaker: "Version one hundred and eighteen."', JSON.stringify(endSaid.said.slice(-10)));
 check(ending.menu === 'ending' && ending.ending === 'C' && /ENDING C/.test(ending.text) && /AFTERZERO/.test(ending.text), 'Ending C, Afterzero', JSON.stringify({ ...ending, text: ending.text.slice(0, 120) }));
@@ -2517,6 +2520,7 @@ const playEnding = async (key) => {
       samples: on.length, voicePeak: +Math.max(0, ...on.map((x) => x.voice)).toFixed(4), mixPeak: +Math.max(0, ...on.map((x) => x.mix)).toFixed(4),
       voiced: on.filter((x) => x.voice > 0.005).length, under: on.filter((x) => x.voice < 0.002 && x.mix > 0.004).length,
       heard: AZ.edition.score.heard.filter((c) => /ending|postcredit/.test(c)), quote: AZ.edition.score.quotes.filter((q) => q.cue === `ending:${k}`),
+      barks: [...new Set(AZ.level.npcs.flatMap((n) => n.barks || []))],
       misses: (window.__voiceMiss || []).length, miss: (window.__voiceMiss || []).slice(0, 4), planMiss: LVB.planMiss.slice(0, 4), synth: window.__synthCalls,
       secs: on.length ? +((on[on.length - 1].wall - on[0].wall) / 1000).toFixed(1) : 0,
     };
@@ -2525,7 +2529,9 @@ const playEnding = async (key) => {
   check(over && r.menu === 'ending' && r.ending === key && r.text.includes(`ENDING ${key} — ${E.title}`), `Ending ${key}, ${E.title}: chosen at the ring, played to its overlay`, JSON.stringify({ over, menu: r.menu, ending: r.ending, text: r.text.slice(0, 100) }));
   check(r.said.includes(E.mira) && E.lines.every((l) => r.said.includes(l)) && r.said.includes('VOICE: Version one hundred and eighteen.') && !r.said.some((l) => /post-credit/i.test(l)),
     `Ending ${key}: Mira answers the choice; the bible's text, what the ending adds, Kai's quote; the voice in every speaker`, JSON.stringify(r.said.slice(-12)));
-  check(!r.said.slice(r.said.indexOf(E.mira)).some((l) => l.startsWith('CREW:')), `Ending ${key}: nobody in the crowd says a line in passing over it`, JSON.stringify(r.said.filter((l) => l.startsWith('CREW:'))));
+  // (a line said in passing is one of the place's crowd barks; the epilogue's people speak as CREW too, in their own voices)
+  const passing = r.said.slice(r.said.indexOf(E.mira)).filter((l) => r.barks.includes(l.slice(l.indexOf(': ') + 2)));
+  check(r.barks.length > 0 && !passing.length, `Ending ${key}: nobody in the crowd says a line in passing over it`, JSON.stringify(passing));
   check(r.stage.shots === E.shots && r.stage.maxI >= E.shots - 1 && !r.stage.playerSeen && r.stage.person,
     `Ending ${key} is staged: its ${E.shots} shots, Kai never on screen, ${E.person === 'kai_end' ? 'Kai in a body of his own under the 41\'s board' : 'Sera on guard at the seam'}`, JSON.stringify(r.stage));
   check(r.misses === 0 && !r.planMiss.length && r.synth === 0 && r.plays >= E.lines.length + 2 && r.started === r.plays && r.packs.length && r.packs.every((b) => /assets\/voice\/lv\/(finale|common)\//.test(b)),
