@@ -57,10 +57,12 @@ VOICES = {
     'TALA': ('af_aoede', 0.95, 1.0),
     'MARA': ('bf_lily', 0.92, 0.98),
     'ORREN': ('am_adam', 0.86, 0.88),
-    'CHILD': ('af_river', 1.02, 1.2),
+    # (a voice raised by resampling, pitch factor f, also speaks f times faster: its speed is set back by f, so the
+    # children are not 25-40% faster than the adults round them; the closing ear check measured 22-27 characters a second)
+    'CHILD': ('af_river', 0.85, 1.2),
     # v2.1 (OVERHAUL.md §8.4): the same person shares a base voice. The Witness is Kai after years without
     # sleep (the VOICE in every speaker is his, recorded as WITNESS); Lin and the Child are built on Mira's
-    'KAI12': ('am_eric*0.5+am_puck*0.5', 1.05, 1.25),
+    'KAI12': ('am_eric*0.5+am_puck*0.5', 0.84, 1.25),
     'LIN': ('af_river*0.7+af_heart*0.3', 1.0, 0.97),
     # tier 2: named people with a voice of their own
     'PRYCE': ('af_sarah', 0.97, 0.96),
@@ -84,7 +86,7 @@ VOICES = {
     'CROWD_M2': ('am_puck', 0.98, 0.9),
     'CROWD_OLD_F': ('bf_lily*0.5+bf_alice*0.5', 0.9, 0.92),
     'CROWD_OLD_M': ('am_santa', 0.9, 0.95),
-    'CROWD_CHILD': ('af_nicole*0.6+am_puck*0.4', 1.05, 1.2),
+    'CROWD_CHILD': ('af_nicole*0.6+am_puck*0.4', 0.87, 1.2),
 }
 
 
@@ -192,9 +194,18 @@ def main():
         peak = np.max(np.abs(s)) or 1
         s = s * (0.89 / peak)
         wav, ogg = os.path.join(tmp, 'a.wav'), os.path.join(tmp, 'a.ogg')
-        sf.write(wav, s, SR)
-        subprocess.run([ffmpeg, '-loglevel', 'error', '-y', '-i', wav, '-c:a', 'libopus', '-b:a', f"{it.get('br', 18)}k", '-application', 'voip',
-                        '-ac', '1', '-map_metadata', '-1', '-fflags', '+bitexact', ogg], check=True)
+        # levelled to -1 dBFS, then encoded; Opus can overshoot that once decoded (a browser decodes at 48 kHz), so the
+        # clip is decoded back and, while it peaks above -0.5 dBFS, the source is levelled lower and encoded again
+        for _ in range(4):
+            sf.write(wav, s, SR)
+            subprocess.run([ffmpeg, '-loglevel', 'error', '-y', '-i', wav, '-c:a', 'libopus', '-b:a', f"{it.get('br', 18)}k", '-application', 'voip',
+                            '-ac', '1', '-map_metadata', '-1', '-fflags', '+bitexact', ogg], check=True)
+            back = np.frombuffer(subprocess.run([ffmpeg, '-loglevel', 'error', '-i', ogg, '-f', 'f32le', '-ac', '1', '-ar', '48000', '-'],
+                                                capture_output=True, check=True).stdout, dtype=np.float32)
+            got = float(np.max(np.abs(back))) if len(back) else 0
+            if got <= 0.944:
+                break
+            s = s * (0.89 / got)
         data = open(ogg, 'rb').read()
         dur = round(len(s) / SR, 3)
         open(cpath, 'wb').write(data)

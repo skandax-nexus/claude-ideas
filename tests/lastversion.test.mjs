@@ -2221,12 +2221,18 @@ test('the spoken text is clean: no tags, key names, design notes or digits the v
   // the lexicon (§8.5): years, times, acts, names, the relay
   assert.equal(lexicon('Rain City, 2049.'), 'Rain City, twenty forty-nine.');
   assert.equal(lexicon('Test moved to 05:40.'), 'Test moved to oh five forty.');
-  assert.equal(lexicon('8:14 and 16:02'), 'eight fourteen and sixteen oh two');
+  assert.equal(lexicon('8:14 and 16:02'), 'eight four-teen and six-teen oh two');
   assert.equal(lexicon('Act II'), 'Act Two');
   assert.equal(lexicon('Jun Park'), 'Joon Park');
   assert.equal(lexicon('Dr. Lin'), 'Doctor Lin');
   assert.equal(lexicon('Relay 41-B'), 'Relay forty-one B');
   assert.equal(lexicon('2196'), 'twenty-one ninety-six');
+  // (the closing ear check) a -teen number is said with its stress on the -teen, never close to seventy; names the voice
+  // model reads wrong are spelled as said
+  assert.equal(lexicon('This is VERSION 17. V.117.'), 'This is Version seven-teen. Version one hundred and seven-teen.');
+  assert.equal(lexicon('the 13th, 14 halls, Seventeen, nineteen'), 'the thir-teenth, four-teen halls, Seven-teen, nine-teen');
+  assert.equal(lexicon('seventy, seven, teenage'), 'seventy, seven, teenage');
+  assert.equal(lexicon('Rhea and Nurse Odile'), 'Reeya and Nurse Oh-deel');
   assert.equal(numberWords(117), 'one hundred and seventeen');
 });
 
@@ -2257,6 +2263,9 @@ test('every speaker has a voice of their own, and the same person shares a base 
   for (const k of ['KAI', 'WITNESS', 'KAI12']) assert.equal(baseOf(V[k][0]), 'am_eric', `${k} is Kai's voice`);
   for (const k of ['MIRA', 'LIN', 'CHILD']) assert.equal(baseOf(V[k][0]), 'af_river', `${k} is Mira's voice`);
   assert.equal(voiceOf('VOICE', {}), 'WITNESS', 'the voice in every speaker is the Witness voice');
+  // (the closing ear check) a voice raised by resampling speaks faster by the same factor: its speed is set back by it,
+  // so the children are not 25-40% faster than the adults round them
+  for (const [k, [, speed, pf]] of Object.entries(V)) if (pf > 1.05 && ed.includes(k)) assert.ok(speed * pf <= 1.08, `${k}: speaks at ${(speed * pf).toFixed(2)} of its voice's pace`);
   // a person who speaks has a recorded voice of their own
   const speaking = new Set();
   for (const e of SPOKEN) if (e.who === 'CREW') speaking.add(e.extra.id);
@@ -3931,7 +3940,7 @@ test('Act IV: the shadowless door, the memories that refuse, the elites\' rewind
   assert.equal(m('m22').processes.find((p) => p.id === 'memoryCards').refuse, 'A MEMORY');
   const ev = m('m22').deductions.evidence.answers.find((a) => a.correct);
   assert.ok(/inv_twoLogs_done/.test(ev.needs) && ev.lines.some((l) => l.who === 'WITNESS' && l.text === '…No. I was a second early.'));
-  assert.equal(lexicon('RING: 16:02:00. CONSOLE BUTTON: 16:02:01.'), 'Ring: sixteen oh two exactly. Console Button: sixteen oh two and one second.');
+  assert.equal(lexicon('RING: 16:02:00. CONSOLE BUTTON: 16:02:01.'), 'Ring: six-teen oh two exactly. Console Button: six-teen oh two and one second.');
 });
 
 test('the Finale: two holds at once, Mira asks, the three endings with what they add, the epilogue and the voice in every speaker', () => {

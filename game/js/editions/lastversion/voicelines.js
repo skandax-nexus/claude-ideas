@@ -109,6 +109,13 @@ export const LEXICON = [
   [/\s·\s/g, ', '],
   [/\b(1\d\d\d|20\d\d|21\d\d)\b/g, (m, y) => yearWords(+y)],
   [/\b(\d{1,3}(?:,\d{3})+|\d+)\b/g, (m, n) => numberWords(+n.replace(/,/g, ''))],
+  // (the closing ear check) a -teen number with its stress on the -teen: the voice model reads "seventeen" as
+  // SEV-en-teen, "thirteen" as THIR-tin, close to "seventy" and "thirty" (Version seventeen, a hundred and seventeen)
+  [/\b(thir|four|fif|six|seven|eigh|nine)teen(th)?\b/gi, (m, a, th) => `${a}-teen${th || ''}`],
+  // names the voice model reads wrong: Rhea is one syllable to it ("Ree"; spelled Ria, the British narrator said
+  // "rear"), Odile is OH-dile (she is oh-DEEL)
+  [/\bRhea\b/g, 'Reeya'],
+  [/\bOdile\b/g, 'Oh-deel'],
 ];
 // the text a recording says (the subtitle keeps what is written): no digits are left for the voice to guess, and
 // a word in capitals inside a sentence (a sign, a name on a drawing: KAI + MIRA) is read as a word, not spelled
