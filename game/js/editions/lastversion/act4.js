@@ -617,7 +617,7 @@ export const M21 = {
     radio: { lines: [FX(L('MARA', 'Whatever you choose, I\'ll keep both records.'), 'radio')], set: { ev_mara_radio: true } },
     cells: { lines: [N('The prisoners from the dam, twelve of them, behind glass. The lock answers the Chronolith.'), K('Out. All of you. Go down the way I came.')], set: { m21_cells: true } },
     office: {
-      lines: [L('ROOK', 'They gave me the chair. I signed nothing in it. Go up.', 'rook_fate == "persuade"'),
+      lines: [L('ROOK', 'They gave me the chair. I signed nothing in it. Go up.', 'rook_fate == "persuade" && !(ally == "rook")'),
         SAYS('OFFICER PRYCE', 'PRYCE', 'They gave me his chair. I check badges from it. Not yours.', 'rook_fate == "expose"'),
         N('An empty chair, and a recorder on the desk, still running.', '!(rook_fate == "persuade") && !(rook_fate == "expose")'),
         N('On the desk, a requisition signed W.: ONE CONSOLE, 2026 PATTERN. ONE STEP STOOL. ONE CHAIR, CHILD-SIZED.')],
@@ -678,12 +678,13 @@ export const M21 = {
     for (const [id, crew, when, o] of [['sera21', 'sera', 'ally == "sera" && !@PAST', {}], ['anja21', 'anja', 'ally == "anja" && !@PAST', {}], ['iven21', 'iven', 'ally == "iven" && !@PAST', {}], ['rook21', 'rook', 'ally == "rook" && !@PAST', { variant: 'old' }]]) {
       person(P, { id, crew, at: 'arenaGap2', off: [3.6, 0, 9.4], turn: Math.PI, silent: true, when, ...o });
     }
+    // (one person in one place: an ally holding the gap is no longer where Kai met them, 112 m off and 18 m down)
     person(P, { id: 'm21_glazier_gap', crew: 'm12_glazier', first: 'The glazier', seed: 1201, ambient: true, at: 'arenaGap2', off: [3.6, 0, 9.4], turn: Math.PI, silent: true, when: 'ally == "glazier" && !@PAST' });
-    person(P, { id: 'm21_glazier', crew: 'm12_glazier', first: 'The glazier', seed: 1201, ambient: true, at: 'gliderDeck', off: [1.6, 0, 2.4], turn: Math.PI, prompt: 'TALK TO HER', when: 'm12_glazier && !@PAST' });
+    person(P, { id: 'm21_glazier', crew: 'm12_glazier', first: 'The glazier', seed: 1201, ambient: true, at: 'gliderDeck', off: [1.6, 0, 2.4], turn: Math.PI, prompt: 'TALK TO HER', when: 'm12_glazier && !@PAST && !(ally == "glazier")' });
     person(P, { id: 'brask21', crew: 'soldier', at: 'eliteRamps', off: [-3, 0, 2], turn: Math.PI, prompt: 'TALK TO BRASK', when: '!@PAST' });
     person(P, { id: 'mira21', crew: 'mira', at: 'witnessStand', off: [13.5, 0, -5], turn: -Math.PI / 2, hologram: true, prompt: 'TALK TO MIRA', when: 't_m21_chamber && !m21_wrists' });
     person(P, { id: 'm21_listener', crew: 'm21_listener', first: 'One who listened', seed: 2102, ambient: true, at: 'arenaGap2', off: [3.6, 0, 9.4], turn: Math.PI, silent: true, when: 'ally == "listeners" && !@PAST' });
-    person(P, { id: 'rook_office', crew: 'rook', variant: 'old', at: 'directorOffice', off: [0, 0, -1.2], silent: true, when: 'rook_fate == "persuade"' });
+    person(P, { id: 'rook_office', crew: 'rook', variant: 'old', at: 'directorOffice', off: [0, 0, -1.2], silent: true, when: 'rook_fate == "persuade" && !(ally == "rook")' });
     person(P, { id: 'pryce_office', crew: 'guard', at: 'directorOffice', off: [0, 0, -1.2], silent: true, when: 'rook_fate == "expose"' });
   },
   hook: {

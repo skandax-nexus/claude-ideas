@@ -77,16 +77,33 @@ function bodyInfo(model, mesh, root) {
 const REST = new Map();
 function restInfo(model) {
   if (REST.has(model)) return REST.get(model);
+  if (!actorLoaded(model)) return null;
   const a = makeActor({ model });
   if (a.userData.spec?.model !== model) return null;
   // (standing as the people of a place stand: the first frames of its idle)
   for (let f = 0; f < 3; f++) a.userData.animate?.(1 / 30, 0, f / 30, false);
   a.updateMatrixWorld(true);
-  const root = a.userData.model || a;
   let mesh = null;
   a.traverse((o) => { if (o.isSkinnedMesh && !mesh && [].concat(o.material)[0]?.name === 'body') mesh = o; });
   if (!mesh) a.traverse((o) => { if (o.isSkinnedMesh && !mesh) mesh = o; });
   if (!mesh) return null;
+  // (the hair's and the eyes' vertices, which share the body's buffer: a strap round the neck goes round the neck and a
+  // collar, not round a ponytail)
+  const pos = mesh.geometry.attributes.position;
+  const hair = new Uint8Array(pos.count);
+  a.traverse((o) => {
+    if (!o.isSkinnedMesh || o.geometry.attributes.position !== pos || !['hair', 'eye'].includes([].concat(o.material)[0]?.name)) return;
+    const ix = o.geometry.index;
+    if (ix) for (let k = 0; k < ix.count; k++) hair[ix.getX(k)] = 1;
+  });
+  const info = restFrom(mesh, a.userData.model || a, hair);
+  a.traverse((o) => { if (o.userData.ownGeometry) o.geometry.dispose(); });
+  REST.set(model, info);
+  return info;
+}
+// a skinned body as it is posed now (its matrices up to date), in the frame of its root: its points, and the way back from
+// a point of that frame to the mesh's bind space under given weights (unskin)
+function restFrom(mesh, root, hair = null) {
   const toRoot = new THREE.Matrix4().copy(root.matrixWorld).invert();
   const toModel = toRoot.clone().multiply(mesh.matrixWorld);
   const g = mesh.geometry;
@@ -132,18 +149,7 @@ function restInfo(model) {
     if (nrm) nrm.applyMatrix3(N3.setFromMatrix4(M)).normalize();
     return p.applyMatrix4(M);
   };
-  // (the hair's and the eyes' vertices, which share the body's buffer: a strap round the neck goes round the neck and a
-  // collar, not round a ponytail)
-  const hair = new Uint8Array(n);
-  a.traverse((o) => {
-    if (!o.isSkinnedMesh || o.geometry.attributes.position !== pos || !['hair', 'eye'].includes([].concat(o.material)[0]?.name)) return;
-    const ix = o.geometry.index;
-    if (ix) for (let k = 0; k < ix.count; k++) hair[ix.getX(k)] = 1;
-  });
-  a.traverse((o) => { if (o.userData.ownGeometry) o.geometry.dispose(); });
-  const info = { q, n, dom, names, at, floor, top, si: skinI, sw: skinW, unskin, hair, sets: new Map() };
-  REST.set(model, info);
-  return info;
+  return { q, n, dom, names, at, floor, top, si: skinI, sw: skinW, unskin, hair: hair || new Uint8Array(n), sets: new Map() };
 }
 
 // the body's vertices whose main bone matches, with a grid over them for nearest-vertex queries
@@ -485,21 +491,24 @@ function build(info, garb) {
   const nearArm = (r) => ({ idx: S('arms').idx.filter((i) => { const x = info.q[i * 3], j = x > cx ? shL : shR; return Math.hypot(x - j.x, info.q[i * 3 + 1] - j.y, info.q[i * 3 + 2] - j.z) < r; }) });
   // a piece that lies on the shoulders and hangs (the cloak's cape, a mantle): N rings from yTop down to low(a), each point
   // at its own height on the cut through the body there (the hull of `sets` and of the clothes under it), e(t, a) out from
-  // it, and down each column never nearer in than the point above (cloth hangs); open(t): the opening at the front
-  const drape = ({ yTop, low, sets, segs, open = () => 0, N = 10, e }) => {
+  // it, and down each column never nearer in than the point above (cloth hangs); open(t): the opening at the front. Its top
+  // ring is gathered round the neck (a cut through it alone: the band of the cuts below would reach the slope of the
+  // shoulders behind, and the shirt showed between the neck and a ring that lay out on them), and its rings are closest
+  // together there, where the shoulders fall away fastest
+  const drape = ({ yTop, low, sets, segs, open = () => 0, N = 12, e }) => {
     const cuts = new Map();
-    const cutAt = (y) => {
-      const key = Math.round(y * 400);
-      if (!cuts.has(key)) cuts.set(key, cut(info, sets, key / 400, 0.018, under(key / 400, 0.012)));
+    const cutAt = (y, band = 0.018) => {
+      const key = `${Math.round(y * 400)}|${band}`;
+      if (!cuts.has(key)) cuts.set(key, cut(info, sets, Math.round(y * 400) / 400, band, under(Math.round(y * 400) / 400, 0.008)));
       return cuts.get(key);
     };
     const rings = [];
     let prev = null;
     for (let k = 0; k < N; k++) {
       const t = k / (N - 1), o = open(t), angs = colAngles(segs, o);
-      const ys = angs.map((a) => lerp(yTop, low(a), Math.pow(t, 1.15)));
+      const ys = angs.map((a) => lerp(yTop, low(a), Math.pow(t, 1.5)));
       const rad = angs.map((a, j) => {
-        const poly = cutAt(ys[j]);
+        const poly = cutAt(ys[j], k ? 0.018 : 0.006);
         const r = poly ? rayOut(poly, cx, cz, a) + e(t, a) : prev ? prev.rad[j] : 0.12;
         return Math.max(r, prev ? prev.rad[j] : 0);
       });
@@ -508,10 +517,11 @@ function build(info, garb) {
     }
     return rings;
   };
-  // the neck and the top of the chest with whatever collar is on them (the head's vertices too, not its hair or eyes)
+  // the neck and the chest with whatever collar and lapels are on them (not the head's: a ponytail modelled in the head's
+  // own mesh hangs to the base of the neck, and a strap round it stood out behind the neck to the hair's tip)
   const collar = () => {
     if (info.sets.has('collar')) return info.sets.get('collar');
-    const re = /^Bip01_(Spine2|Neck|Head|[LR]_Clavicle)$/, idx = [];
+    const re = /^Bip01_(Spine1?|Spine2|Neck|[LR]_Clavicle)$/, idx = [];
     for (let i = 0; i < info.n; i++) if (re.test(info.names[info.dom[i]]) && !info.hair?.[i]) idx.push(i);
     const c = { idx };
     info.sets.set('collar', c);
@@ -630,12 +640,17 @@ function build(info, garb) {
         const j = sg < 0 ? 0 : NC - 1;
         const P0 = [xs[j] - sg * 0.012, ys[0] - 0.018, zs[0][j] + 0.004], P1 = onNeck(sg * side, yN).p;
         const leg = [];
-        for (let k = 0; k <= 6; k++) {
-          const t = k / 6, x = lerp(P0[0], P1[0], t), y = lerp(P0[1], P1[1], t);
-          const poly = cut(info, [collar()], y, 0.009);
-          const z = Math.max(lerp(P0[2], P1[2], t), poly ? frontAt(poly, x) + 0.007 : -Infinity);
+        // (over the lapels, whichever bone carries them: a cut a little taller than the mesh's rows are apart, so the
+        // strap never dips into the cloth between them)
+        for (let k = 0; k <= 10; k++) {
+          const t = k / 10, x = lerp(P0[0], P1[0], t), y = lerp(P0[1], P1[1], t);
+          const poly = cut(info, [collar()], y, 0.02);
+          const z = Math.max(lerp(P0[2], P1[2], t), poly ? frontAt(poly, x) + 0.01 : -Infinity);
           leg.push({ p: [x, y, z], n: [0, 0.45, 1] });
         }
+        // (pulled taut: straight over the lapels' edges as the bib is over the hollows, not stepping over each)
+        const z0 = leg.map((l) => l.p[2]);
+        for (let k = 1; k < leg.length - 1; k++) for (let i = 0; i < k; i++) for (let m = k + 1; m < leg.length; m++) leg[k].p[2] = Math.max(leg[k].p[2], lerp(z0[i], z0[m], (k - i) / (m - i)));
         path.push(sg < 0 ? leg : leg.reverse());
       }
       const arc = [];
@@ -678,7 +693,7 @@ function build(info, garb) {
     {
       const segs = 32;
       const low = (a) => { const fb = lerp(yFront, yBack, (1 - Math.cos(a)) / 2); return fb + (ySide - fb) * Math.pow(Math.sin(a), 2); };
-      const rings = drape({ yTop, low, sets: [S('torso'), capArm], segs, open: (t) => lerp(clasp, open, t * t * (3 - 2 * t)), e: (t) => 0.022 + 0.026 * t });
+      const rings = drape({ yTop, low, sets: [S('torso'), capArm], segs, open: (t) => lerp(clasp, open, t * t * (3 - 2 * t)), e: (t) => 0.018 + 0.016 * t });
       band(out, { piece: 'cloak', rings, cx, cz, segs, open, pleats: 7, pleat: 0.03,
         // (each point as the body under it moves: the arms' near the arms, the chest's and the neck's elsewhere)
         skin: (a, x, y, z) => transfer(info, [[S('shoulders'), 1]], x, y, z, 10) });
@@ -691,9 +706,9 @@ function build(info, garb) {
       for (let k = 0; k < N; k++) {
         const t = k / (N - 1), y = lerp(yP, hem, t);
         const sets = y > pelvis.y + 0.08 ? [S('torso')] : [S('torso'), S('legs')];
-        let rad = ringReach(info, sets, y, 0.03, cx, cz, angs, under(y, 0.016));
+        let rad = ringReach(info, sets, y, 0.03, cx, cz, angs, under(y, 0.01));
         if (!rad) rad = prev ? prev.rad.slice() : angs.map(() => 0.15);
-        const e = y > yBack ? 0.014 : 0.022;
+        const e = y > yBack ? 0.01 : 0.018;
         rad = rad.map((r, j) => Math.max(r + e, prev ? prev.rad[j] : 0));
         prev = { y, rad };
         rings.push(prev);
@@ -900,7 +915,10 @@ export function clothe(actor, model, garb, { hologram = false, glow = null } = {
   const shape = `${model}|${shapeOf(garb)}`;
   let base = SHAPES.get(shape);
   if (!base) {
-    base = build(restInfo(model) || bodyInfo(model, body, actor.userData.model || actor), garb);
+    // (a coat fitted to the body is cut round the bind pose, its arms out from its sides: cut round the arms as they hang,
+    // its straight sides took the upper arms in and it stood off them as a box)
+    const bind = () => bodyInfo(model, body, actor.userData.model || actor);
+    base = build(garb.cloak?.fit ? bind() : restInfo(model) || bind(), garb);
     SHAPES.set(shape, base);
   }
   const key = `${model}|${JSON.stringify(garb)}`;
@@ -1230,4 +1248,4 @@ export function hairdo(actor, model, src, { scale = 1, lift = 0, back = 0, holog
   P.body.parent.add(m);
   return m;
 }
-export const _dbg = { restInfo, ringReach, cut, colAngles, subset, SETS, outline, ellReach };
+export const _dbg = { restInfo, restFrom, bodyInfo, build, ringReach, cut, colAngles, subset, SETS, outline, ellReach, hull2, rayOut, frontAt };

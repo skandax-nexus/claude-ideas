@@ -758,22 +758,17 @@ function worn(map) {
 }
 
 const cache = new Map(); // `${model}|${variant}|${part}` -> texture
-export const stats = { made: 0, ms: 0 };
-export function recoloured(renderer, src, key, rules, skin, px = 512, corners = [0, 0]) {
-  if (cache.has(key)) return cache.get(key);
-  if (!renderer || !src?.image || !rules?.length) return src;
-  const t0 = performance.now();
-  const w = Math.min(px, src.image.width || px), h = Math.min(px, src.image.height || px);
-  const rt = new THREE.WebGLRenderTarget(w, h, { colorSpace: THREE.SRGBColorSpace, generateMipmaps: true, minFilter: THREE.LinearMipmapLinearFilter, magFilter: THREE.LinearFilter, depthBuffer: false });
-  rt.texture.anisotropy = src.anisotropy || 1;
-  rt.texture.wrapS = src.wrapS;
-  rt.texture.wrapT = src.wrapT;
-  rt.texture.name = `lv:${key}`;
+// (castfix round 3) how each recolour in use was made, to make it again: a recolour lives only on the GPU (a render
+// target's texture, with no image behind it), and a lost GPU context (an app switch, memory pressure on a phone) takes it
+// away. three.js uploads every texture with an image again by itself; these came back black (a dyed body map: black
+// arms, hands and neckline under an undyed face). On the context's return each is drawn again from its source map.
+const made = new Map(); // key -> { rt, src, skin, corners, rows }
+const watched = new WeakSet();
+function paint(renderer, { rt, src, skin, corners, rows }) {
   const q = quadScene();
   q.uniforms.map.value = src;
   q.uniforms.skin.value.set(...(skin || [-1, -1, -1]));
   q.uniforms.corners.value.set(...corners);
-  const rows = packRules(rules);
   q.uniforms.count.value = rows.length;
   rows.forEach((r, i) => {
     q.uniforms.band.value[i].set(...r.band);
@@ -788,8 +783,36 @@ export function recoloured(renderer, src, key, rules, skin, px = 512, corners = 
   renderer.setRenderTarget(prev);
   q.uniforms.map.value = null;
   letGo(src);
+}
+// every recolour in use drawn again (after the renderer's own restore, whose listener came first): the count
+export function redye(renderer) {
+  if (!renderer) return 0;
+  for (const job of made.values()) paint(renderer, job);
+  return made.size;
+}
+function watch(renderer) {
+  const el = renderer.domElement;
+  if (watched.has(renderer) || !el?.addEventListener) return;
+  watched.add(renderer);
+  el.addEventListener('webglcontextrestored', () => redye(renderer));
+}
+export const stats = { made: 0, ms: 0 };
+export function recoloured(renderer, src, key, rules, skin, px = 512, corners = [0, 0]) {
+  if (cache.has(key)) return cache.get(key);
+  if (!renderer || !src?.image || !rules?.length) return src;
+  const t0 = performance.now();
+  watch(renderer);
+  const w = Math.min(px, src.image.width || px), h = Math.min(px, src.image.height || px);
+  const rt = new THREE.WebGLRenderTarget(w, h, { colorSpace: THREE.SRGBColorSpace, generateMipmaps: true, minFilter: THREE.LinearMipmapLinearFilter, magFilter: THREE.LinearFilter, depthBuffer: false });
+  rt.texture.anisotropy = src.anisotropy || 1;
+  rt.texture.wrapS = src.wrapS;
+  rt.texture.wrapT = src.wrapT;
+  rt.texture.name = `lv:${key}`;
+  const job = { rt, src, skin, corners, rows: packRules(rules) };
+  paint(renderer, job);
+  made.set(key, job);
   // when the people who wore it have left (DeckWorld.freeLeft disposes it), the copy goes too
-  rt.texture.addEventListener('dispose', () => { cache.delete(key); rt.dispose(); });
+  rt.texture.addEventListener('dispose', () => { cache.delete(key); made.delete(key); rt.dispose(); });
   cache.set(key, rt.texture);
   stats.made++;
   stats.ms += performance.now() - t0;

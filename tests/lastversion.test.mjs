@@ -36,9 +36,9 @@ import { KIT_NAMES } from '../game/js/editions/lastversion/places/kits.js';
 import { STYLES } from '../game/js/editions/lastversion/places/styles.js';
 import { Player } from '../game/js/entities/Player.js';
 import { LV_MODELS, SHARED_MODELS, MANIFEST, CHAPTER_CAST, COMMON, sexOf, isChild, castOf } from '../game/js/editions/lastversion/casting.js';
-import { WARDROBE, hasVariant, packRules, SETTLEMENT, PRESENT_PALETTES, holoDepth } from '../game/js/editions/lastversion/wardrobe.js';
+import { WARDROBE, hasVariant, packRules, SETTLEMENT, PRESENT_PALETTES, holoDepth, recoloured, redye, dyeRule } from '../game/js/editions/lastversion/wardrobe.js';
 import { ERAS, EXCEPTIONS, AMBIENT_CAST, eraModels, MAX_PEOPLE, MET, CAP, OLD, PALETTE, PALETTE_ROLES, ROLE_NAMES } from '../game/js/editions/lastversion/crowds.js';
-import { PIECES, MASS_DEFAULT } from '../game/js/editions/lastversion/garments.js';
+import { PIECES, MASS_DEFAULT, _dbg as GARMENT_DBG } from '../game/js/editions/lastversion/garments.js';
 import { MISSION_BARKS } from '../game/js/editions/lastversion/barks.js';
 import { M01, m01Shots } from '../game/js/editions/lastversion/prologue.js';
 import { WATCHERS, HUMAN, watcherModels, kindsOf } from '../game/js/editions/lastversion/watchers.js';
@@ -2030,6 +2030,158 @@ test('castfix round 2: the two boys of one body are two boys as echoes, echoes s
   const old = hairTexels('rb_niko_old'), young = hairTexels('rb_niko');
   assert.ok(old.silver / old.all > 0.6, `old Niko's hair cards: ${((100 * old.silver) / old.all).toFixed(1)}% grey`);
   assert.ok(young.silver / young.all < 0.1, `young Niko's hair is black (${((100 * young.silver) / young.all).toFixed(1)}% grey)`);
+});
+
+// (castfix round 3) what the follow-up check found: the glazier's bib apron was a stiff board with no neck strap, standing
+// out at the throat and off the chest below the bust; the Elder's cloak stood off her shoulders and back like a shell, and
+// did not follow her stoop (clothes were cut round the bind pose, the arms out at 43 degrees, and worn with them down); a
+// lost and restored WebGL context left every dyed map black (Niko's arms, the glazier's head); the glazier, chosen as
+// Mission 21's ally, stood at the glider deck and the arena's gap at once
+// a body of rings for garments.js, each ring wholly on its bone: its bind pose has the arms out at 43 degrees below the
+// shoulders, as the converted models' has, and it stands with them down at 71.5, as they do (a bust 5 cm out at the chest)
+function ringBody() {
+  const P = { Bip01: [0, 0.95, 0], Bip01_Pelvis: [0, 0.95, 0], Bip01_Spine: [0, 1.0, 0], Bip01_Spine1: [0, 1.1, 0], Bip01_Spine2: [0, 1.24, 0], Bip01_Neck: [0, 1.45, -0.01], Bip01_Head: [0, 1.54, 0] };
+  const up = { Bip01_Pelvis: 'Bip01', Bip01_Spine: 'Bip01_Pelvis', Bip01_Spine1: 'Bip01_Spine', Bip01_Spine2: 'Bip01_Spine1', Bip01_Neck: 'Bip01_Spine2', Bip01_Head: 'Bip01_Neck' };
+  const dir = [Math.cos((43 * Math.PI) / 180), -Math.sin((43 * Math.PI) / 180)];
+  for (const [s, sx] of [['L', 1], ['R', -1]]) {
+    Object.assign(P, { [`Bip01_${s}_Clavicle`]: [0.03 * sx, 1.41, 0], [`Bip01_${s}_UpperArm`]: [0.18 * sx, 1.38, 0], [`Bip01_${s}_Forearm`]: [(0.18 + 0.28 * dir[0]) * sx, 1.38 + 0.28 * dir[1], 0],
+      [`Bip01_${s}_Thigh`]: [0.095 * sx, 0.92, 0], [`Bip01_${s}_Calf`]: [0.095 * sx, 0.5, 0] });
+    Object.assign(up, { [`Bip01_${s}_Clavicle`]: 'Bip01_Spine2', [`Bip01_${s}_UpperArm`]: `Bip01_${s}_Clavicle`, [`Bip01_${s}_Forearm`]: `Bip01_${s}_UpperArm`, [`Bip01_${s}_Thigh`]: 'Bip01_Pelvis', [`Bip01_${s}_Calf`]: `Bip01_${s}_Thigh` });
+  }
+  const names = Object.keys(P), bones = {};
+  for (const n of names) { bones[n] = new THREE.Bone(); bones[n].name = n; }
+  for (const n of names) {
+    const pw = up[n] ? P[up[n]] : [0, 0, 0];
+    bones[n].position.set(P[n][0] - pw[0], P[n][1] - pw[1], P[n][2] - pw[2]);
+    if (up[n]) bones[up[n]].add(bones[n]);
+  }
+  const pos = [], skin = [];
+  const ring = (x, y, z, w, f, b, bone, n = 40) => {
+    for (let k = 0; k < n; k++) {
+      const a = (k / n) * Math.PI * 2;
+      pos.push(x + Math.sin(a) * w, y, z + Math.cos(a) * (Math.cos(a) >= 0 ? f : b));
+      skin.push(names.indexOf(typeof bone === 'function' ? bone(Math.sin(a)) : bone));
+    }
+  };
+  for (let y = 0.04; y <= 0.9; y += 0.01) for (const sx of [1, -1]) { const r = y < 0.5 ? 0.055 : 0.075; ring(0.095 * sx, y, 0, r, r, r, `Bip01_${sx > 0 ? 'L' : 'R'}_${y < 0.5 ? 'Calf' : 'Thigh'}`); }
+  for (let y = 0.88; y < 1.0; y += 0.01) ring(0, y, 0, 0.17, 0.11, 0.13, y < 0.95 ? 'Bip01_Pelvis' : 'Bip01_Spine');
+  for (let y = 1.0; y < 1.18; y += 0.01) ring(0, y, 0, 0.135 + 0.03 * Math.abs(y - 1.07), 0.1, 0.1, 'Bip01_Spine1');
+  for (let y = 1.18; y < 1.37; y += 0.01) ring(0, y, 0, 0.15 + 0.1 * (y - 1.18), 0.1 + 0.05 * Math.max(0, 1 - Math.abs(y - 1.26) / 0.07), 0.1, 'Bip01_Spine2');
+  for (let y = 1.37; y < 1.435; y += 0.01) ring(0, y, -0.005, 0.19 - (y - 1.37), 0.08, 0.085, (s) => (s >= 0 ? 'Bip01_L_Clavicle' : 'Bip01_R_Clavicle'));
+  for (let y = 1.435; y < 1.55; y += 0.01) ring(0, y, -0.01, 0.052, 0.05, 0.05, 'Bip01_Neck');
+  for (let e = 0.15; e < Math.PI; e += 0.15) ring(0, 1.64 - 0.1 * Math.cos(e), 0.005, 0.095 * Math.sin(e), 0.105 * Math.sin(e), 0.095 * Math.sin(e), 'Bip01_Head', 24);
+  for (const [s, sx] of [['L', 1], ['R', -1]]) {
+    for (let t = 0.02; t <= 0.53; t += 0.012) {
+      const cx = (0.18 + t * dir[0]) * sx, cy = 1.38 + t * dir[1], r = t < 0.28 ? 0.045 : 0.037;
+      for (let k = 0; k < 16; k++) {
+        const a = (k / 16) * Math.PI * 2;
+        pos.push(cx - r * Math.cos(a) * dir[1] * sx, cy + r * Math.cos(a) * dir[0], r * Math.sin(a));
+        skin.push(names.indexOf(`Bip01_${s}_${t < 0.28 ? 'UpperArm' : 'Forearm'}`));
+      }
+    }
+  }
+  const n = pos.length / 3;
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(Array.from({ length: n * 4 }, (_, i) => (i % 4 ? 0 : skin[i >> 2])), 4));
+  g.setAttribute('skinWeight', new THREE.Float32BufferAttribute(Array.from({ length: n * 4 }, (_, i) => (i % 4 ? 0 : 1)), 4));
+  const mesh = new THREE.SkinnedMesh(g, new THREE.MeshBasicMaterial());
+  const root = new THREE.Group();
+  root.add(bones.Bip01, mesh);
+  root.updateMatrixWorld(true);
+  mesh.bind(new THREE.Skeleton(names.map((k) => bones[k])), new THREE.Matrix4());
+  const down = ((71.5 - 43) * Math.PI) / 180;
+  bones.Bip01_L_UpperArm.rotation.z = -down;
+  bones.Bip01_R_UpperArm.rotation.z = down;
+  root.updateMatrixWorld(true);
+  return { root, mesh, P };
+}
+// an outfit cut round the standing body (as garments.js cuts every one but a fitted coat) and worn by it: each of its
+// points as posed, its piece, and its distance from the posed body's nearest point
+function wornOn(garb) {
+  const B = ringBody();
+  const { g, paint } = GARMENT_DBG.build(GARMENT_DBG.restFrom(B.mesh, B.root), garb);
+  const v = new THREE.Vector3(), body = [];
+  const bp = B.mesh.geometry.attributes.position;
+  for (let i = 0; i < bp.count; i++) { B.mesh.applyBoneTransform(i, v.fromBufferAttribute(bp, i)); body.push(v.x, v.y, v.z); }
+  const m = new THREE.SkinnedMesh(g, new THREE.MeshBasicMaterial());
+  B.root.add(m);
+  m.bind(B.mesh.skeleton, B.mesh.bindMatrix);
+  B.root.updateMatrixWorld(true);
+  const pts = [];
+  for (let i = 0; i < g.attributes.position.count; i++) {
+    m.applyBoneTransform(i, v.fromBufferAttribute(g.attributes.position, i));
+    let d = Infinity;
+    for (let k = 0; k < body.length; k += 3) d = Math.min(d, (body[k] - v.x) ** 2 + (body[k + 1] - v.y) ** 2 + (body[k + 2] - v.z) ** 2);
+    pts.push({ x: v.x, y: v.y, z: v.z, d: Math.sqrt(d), piece: PIECES[paint[i] >> 1] });
+  }
+  return { B, pts };
+}
+test('castfix round 3: clothes cut round the body as it stands, the bib on the chest and strapped, dyes that survive a lost context, one glazier', () => {
+  // the way back from the standing body to the bind pose is the skinning's inverse, under any weights
+  const B = ringBody();
+  const info = GARMENT_DBG.restFrom(B.mesh, B.root);
+  const sk = B.mesh.skeleton, bi = (n) => sk.bones.findIndex((b) => b.name === n);
+  const v = new THREE.Vector3();
+  for (const [ji, wi] of [[[bi('Bip01_L_UpperArm'), bi('Bip01_Spine2'), 0, 0], [0.6, 0.4, 0, 0]], [[bi('Bip01_R_Clavicle'), bi('Bip01_R_UpperArm'), bi('Bip01_Neck'), 0], [0.3, 0.5, 0.2, 0]], [[bi('Bip01_Pelvis'), 0, 0, 0], [1, 0, 0, 0]]]) {
+    const p = new THREE.Vector3(0.21, 1.33, 0.04);
+    const back = info.unskin(p.clone(), ji, wi);
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute([back.x, back.y, back.z], 3));
+    g.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(ji, 4));
+    g.setAttribute('skinWeight', new THREE.Float32BufferAttribute(wi, 4));
+    const m = new THREE.SkinnedMesh(g, new THREE.MeshBasicMaterial());
+    B.root.add(m);
+    m.bind(sk, B.mesh.bindMatrix);
+    B.root.updateMatrixWorld(true);
+    assert.ok(m.applyBoneTransform(0, v.fromBufferAttribute(g.attributes.position, 0)).distanceTo(p) < 1e-4, 'a point cut round the standing body comes back to it worn');
+  }
+  const yArm = 1.38, neckZ = -0.01, yWaist = 0.95 + 0.29 * 0.32;
+  // the glazier's bib: its top edge on the chest at the shoulders' height (not out in front of the throat), lying on the
+  // chest and spanning only its hollows down to the waist, held by a strap that goes round the back of the neck, close
+  const glazier = wornOn(WARDROBE.rb_glazier.glazier.garb).pts.filter((q) => q.piece === 'apron');
+  const top = glazier.filter((q) => Math.abs(q.x) < 0.03 && q.z > 0 && q.y > yWaist + 0.05).sort((a, b) => b.y - a.y)[0];
+  assert.ok(top.y <= yArm + 0.01 && top.d <= 0.025, `the bib's top edge at ${top.y.toFixed(3)} m, ${(100 * top.d).toFixed(1)} cm off the chest`);
+  const bib = glazier.filter((q) => q.z > 0 && q.y > yWaist + 0.05 && q.y < yArm - 0.04);
+  assert.ok(bib.length > 50 && bib.every((q) => q.d <= 0.045), `the bib at most ${(100 * Math.max(...bib.map((q) => q.d))).toFixed(1)} cm off the body`);
+  const strap = glazier.filter((q) => q.z < neckZ - 0.03 && q.y > yArm);
+  assert.ok(strap.length >= 6 && strap.every((q) => q.d <= 0.025), `a neck strap behind the neck (${strap.length} points), at most ${(100 * Math.max(0, ...strap.map((q) => q.d))).toFixed(1)} cm off it`);
+  assert.ok(/strap\(out, 'apron'/.test(fs.readFileSync('game/js/editions/lastversion/garments.js', 'utf8')) && WARDROBE.rb_glazier.glazier.garb.apron.bib >= 0, 'the bib below the shoulders, strapped');
+  // a cloak's cape and a mantle: gathered round the neck and lying on the shoulders, wherever the arms hang
+  for (const [who, garb, piece] of [['the Elder', WARDROBE.rb_elder.elder.garb, 'cloak'], ['Niko', WARDROBE.rb_niko.niko.garb, 'mantle'], ['Tala', WARDROBE.rb_tala.tala.garb, 'mantle']]) {
+    const pts = wornOn(garb).pts.filter((q) => q.piece === piece);
+    const high = pts.filter((q) => q.y > yArm + 0.02);
+    assert.ok(high.length > 20 && high.every((q) => q.d <= 0.035), `${who}'s ${piece} on the shoulders: at most ${(100 * Math.max(...high.map((q) => q.d))).toFixed(1)} cm off them`);
+    const sides = pts.filter((q) => q.y > yArm - 0.12 && q.y < yArm - 0.02 && Math.abs(q.x) > 0.2);
+    assert.ok(sides.length && sides.every((q) => q.d <= 0.08), `${who}'s ${piece} over the tops of the arms as they hang: at most ${(100 * Math.max(...sides.map((q) => q.d))).toFixed(1)} cm off them`);
+  }
+  // a dyed map is drawn on the GPU alone; on the context's return every one in use is drawn again
+  const el = new EventTarget(), draws = [];
+  let target = null;
+  const renderer = { domElement: el, getRenderTarget: () => target, setRenderTarget: (t) => { target = t; }, render: () => draws.push(target) };
+  const src = new THREE.Texture({ width: 64, height: 64 });
+  const dyed = recoloured(renderer, src, 'test|r3|body', [dyeRule('madder')], [0.8, 0.6, 0.5], 64);
+  assert.ok(dyed.isRenderTargetTexture && draws.length === 1 && draws[0].texture === dyed && target === null, 'dyed once');
+  el.dispatchEvent(new Event('webglcontextrestored'));
+  assert.ok(draws.length >= 2 && draws.at(-1).texture === dyed && target === null, 'dyed again when the context comes back');
+  dyed.dispose();
+  const n = draws.length;
+  el.dispatchEvent(new Event('webglcontextrestored'));
+  assert.ok(!draws.slice(n).some((t) => t.texture === dyed), 'not once its wearers have gone');
+  assert.equal(redye(null), 0);
+  // Mission 21: an ally holding the arena's gap is no longer where Kai met them (the glazier at the glider deck, Rook in
+  // the director's office)
+  const m21 = LEVELS.filter(({ deck }) => deck.mkey === 'm21');
+  assert.ok(m21.length);
+  for (const { level } of m21) {
+    for (const holder of level.npcs.filter((x) => /ally == "(\w+)"/.test(x.when || '') && !/!\(ally ==/.test(x.when))) {
+      const who = /ally == "(\w+)"/.exec(holder.when)[1];
+      for (const other of level.npcs.filter((x) => x !== holder && x.crew === holder.crew)) {
+        assert.ok((other.when || '').includes(`!(ally == "${who}")`), `${other.id} (${other.when}) stands somewhere else while ${holder.id} holds the gap`);
+      }
+    }
+    assert.ok(level.npcs.some((x) => x.id === 'm21_glazier') && level.npcs.some((x) => x.id === 'm21_glazier_gap'));
+  }
 });
 
 test('named faces stay out of crowds (but for the listed exceptions), and crowd faces never cross eras', () => {
