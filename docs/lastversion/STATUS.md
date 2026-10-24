@@ -522,6 +522,45 @@ Every line the edition says, once each: 554 lines and 7,295 words in v2.0, 2,727
   180k triangles in the scene pass (262 draw calls and 343–350k triangles for the whole frame,
   11.4–11.5 ms of JavaScript on average, 15.0–16.4 ms p95), Mission 4's THE VILLAGE 25 and 86k
   (8.0 ms) and BEFORE THE FIRE 20 and 22k (4.1 ms): all within §4.7.
+- **Visuals after the closing pass** (2026-10-24; `git log f498f2d..`; the player's point 6 and the visual half of point 2;
+  DESIGN.md "Places under an open sky", "Surfaces and props"). Each of the critic's gaps was checked against the code and
+  a frame of it first (a survey of all 23 missions at 640 × 360 and close views of each gap, looked at in the pass), then
+  closed. No plain colour in a place: the plain finishes carry wear (matte grime, satin worn paint, brushed metal, cloth),
+  DeckWorld's doors and gates wear their surface, every kit is textured or rebuilt as its thing (no white cube left:
+  Mission 11's wristband is a trolley with its tray, Mission 13's helmet sits on sandbags, Mission 19's chalk mark is on a
+  slab, Mission 20's chair has legs), props are crates, cardboard boxes, aid crates, packing crates, washing machines,
+  ridge tents and display cases and differ by mission (Missions 15, 16 and 20 had shared the same white boxes), metal and
+  timber railings are posts and rails, and Mission 1's checkpoint barrier is glass leaves in a steel frame with the
+  company's band, not a blank panel. Mission 1: the laundromat the story uses is walked into (its door, washing machines,
+  a bench, the shop camera's feed on its back wall, the receipt dated tomorrow by the bench) and every other shopfront in a place is a
+  room behind its glass (shelves of goods, a café's counter and tables, a ceiling of light; Missions 1, 6, 9 and 23).
+  Mission 2 reads on a phone: its emergency light is a red wash (0.38, was 0.85) over the storm's light through the
+  windows and the lobby's new glass roof, and each Helix room with windows has a daylight light. Mission 10: the moon
+  in front of the face, the snow lit, a caged lamp in every cell and a bulkhead over each mouth. Mission 11's reversed
+  rain moves: sheets of streaks that fall in the west and rise in the east, their pictures scrolling with the frame's
+  time (measured in the page: both offsets change between frames). Mission 14's 2196 towers are broken curtain walls
+  under real overgrowth (vines hanging from the garden terraces, ivy along their edges, sheets of creeper, roots over the
+  podiums, trees on the crowns), the podiums dark shopfronts behind rusted shutters (lit shops in 2026 and 2049), the
+  bank grown over, the viaduct grassed, the gantry rusted. Mission 15: the stadium's ribbed, painted and tagged precast
+  walls, houses with doors, shutters and window boxes on the tiers, suburb houses with gables, ridge tents and aid
+  crates in 2049, and the forecourt under the north wall dressed in each year (2196 houses against the wall, pennants,
+  creepers, lanterns, stalls; 2026 banners, floodlights and kiosks; 2049 an aid tent and the evacuation sign). Missions
+  19 and 20: Mission 20's 2049 is Chamber One as the child remembers it (white panels round the whole plot, a ceiling of
+  light, a dark grid floor, the street in pencil lines), no longer a white fog void beside Mission 19's white plain: the
+  survey's hashes of the two now differ by 111-112 bits (38-39 before). Mission 22: the sky's wedges run into one
+  another with no seam, each year lights its own two, and the chamber is a building site under a crane in 2026, a beam
+  into the eclipse in 2049 and grown through by lindens in 2196; from its spawn the largest mean difference of the sky between two years is now
+  30-100 of 255 in a channel (12-24 before). Today's crowds were already dressed by place by the casting pass (`PALETTE`, ae89808,
+  with its unit test). Checked: `npm test` 161/161 with the pass's own unit test (Kai walks through the laundromat's door to the feed, the corner
+  shop's glass stops him, the worn finishes, the moving rain, the chamber, the soft wedges; each code step 160/160 on its
+  own, the first from an export of its index); the
+  places survey (`LV_ONLY=places node tests/lastversion.mjs`, at 640 × 360 with screenshots) 87 passed, 0 failed, its
+  1,657 pairs of views in different places at least 21 bits apart (the threshold is 18); the whole bot (`node tests/lastversion.mjs`, 2026-10-24, on
+  `f002096`) 358 passed, 0 failed, with no page error: the campaign to Ending C, Endings A and B in real time, every line
+  said (1,966) from the packs, `speechSynthesis` never asked, its own survey's 1,657 pairs at least 22 bits apart. No shared runtime
+  file changed (only the edition and its docs; Station Zero is untouched), so `tests/smoke.mjs` and `tests/qa.mjs` were
+  not run for it. Not closed here: one bounded map per mission with no travel between places (the open-world closing
+  step's), and Kai's own gravity, which never changes as the player asked (DESIGN.md, D1).
 - **Voice and score after the closing pass** (2026-10-24; `git log 5d877ca..`; the player's point 1; DESIGN.md "Voice
   and score"). SKIP and Enter skip one line and the shot it is in, never the whole opening or the mission's spoken card
   (a tap once ended the whole opening, so a player who tapped to pass one line never heard the card): the unit test taps
@@ -858,6 +897,6 @@ Every line the edition says, once each: 554 lines and 7,295 words in v2.0, 2,727
   voice; the packs are 18.9 MB now (after the audio closing pass's re-recordings: 18,872,161 bytes of Opus), so it
   would come to about 52.5 MB, over the 50 MB budget, until the packs' bitrate or the models give some of it back. Each
   pack is far under the 15 MB a file the build script enforces (the largest, act2, 3.37 MB). The release step builds it.
-- **Mission 11's discontinuity court** shows its rain as still filaments (falling on the west half, rising on the
-  east is drawn, not animated; only the clouds drift backwards there), and Mission 14's arrival view was not
-  recomposed to frame the 2196 lagoon (U3 review nits, deferred).
+- **Mission 14's arrival view** was not recomposed to frame the 2196 lagoon (a U3 review nit, deferred); since the
+  visual closing pass the water shows through the viaduct's open railings, between the overgrown towers. (Mission 11's
+  rain, the other half of that nit, moves since the same pass.)

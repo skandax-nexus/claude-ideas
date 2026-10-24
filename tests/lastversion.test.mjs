@@ -1338,6 +1338,31 @@ test('the places can be walked: their stairs, terraces, ramps and bridges carry 
   assert.ok(walkRoute(m5, 'PRESENT', [sx, 0, sz], [[n[0], n[2]]]).at?.[1] === undefined || walkRoute(m5, 'PRESENT', [sx, 0, sz], [[n[0], n[2]]]).at[1] < -1, 'ABANDONED: into the river');
 });
 
+// (closing: visuals) the shop Mission 1's story uses is walked into, the other shops are rooms behind glass; the plain
+// finishes carry wear; Mission 11's rain moves; Mission 20's first experiment is a chamber, not Mission 19's white void;
+// Mission 22's sky has no seam and each year lights its own wedges
+test('the visual closing pass: the laundromat entered, shops behind glass, worn finishes, moving rain, the chamber, a seamless sky', () => {
+  const lv = (key) => PLACED.find((l) => l.deck.mkey === key && l.s === 0).level;
+  const m01 = lv('m01');
+  const feed = m01.interactables.find((i) => i.id === 'camera');
+  const inside = walkRoute(m01, 'PRESENT', [10, 0.15, -41.5], [[13.2, -41.5], [15.4, -41.5]]);
+  assert.ok(!inside.stuck, `M1: through the laundromat's open door (${JSON.stringify(inside)})`);
+  assert.ok(Math.hypot(inside.at[0] - feed.pos[0], inside.at[2] - feed.pos[2]) <= feed.r, 'M1: the shop camera\'s feed is watched from inside the shop');
+  assert.ok(walkRoute(m01, 'PRESENT', [10.5, 0.15, -10], [[15.5, -10]]).stuck, 'M1: the corner shop is seen through its glass, not walked into');
+  assert.ok(m01.vis.filter((v) => v.m === 'shopShelves').length >= 8 && m01.vis.some((v) => v.m === 'washerFront'), 'M1: the shops have their rooms, the laundromat its machines');
+  for (const s of ['matte', 'satin', 'metal', 'cloth']) assert.ok(SURFACES[s].paint, `the ${s} finish carries its wear`);
+  assert.ok(SURFACES.rainDown.scroll[1] > 0 && SURFACES.rainUp.scroll[1] < 0, 'M11: the rain falls in the west and rises in the east');
+  const m11 = lv('m11');
+  assert.ok(m11.vis.some((v) => v.m === 'rainDown') && m11.vis.some((v) => v.m === 'rainUp'), 'M11: the court\'s rain is the moving surfaces');
+  const m20 = lv('m20');
+  const now = m20.vis.filter((v) => v.e?.includes('PRESENT') && v.e.length === 1);
+  assert.ok(!now.some((v) => v.m === 'voidWhite') && ['chamberPanel', 'chamberGrid', 'chamberLights', 'pencil'].every((m) => now.some((v) => v.m === m)), 'M20: 2049 is Chamber One, panelled, lit, gridded, the street in pencil');
+  const wedges = PLACES.firstsecond.skyFeatures.all.filter((f) => f.kind === 'wedges');
+  assert.equal(wedges.length, 3, 'M22: a sky of wedges for each year');
+  assert.ok(wedges.every((f) => f.soft === 1), 'M22: the wedges run into each other (no seam)');
+  assert.equal(new Set(wedges.map((f) => f.cols.join())).size, 3, 'M22: each year lights its own wedges');
+}); 
+
 // a quarter's spawn is also where a setback and a load put Kai: never inside a stair or a wall (a step's rise is fine)
 test('every quarter of the Prologue and Act I spawns Kai clear of colliders (M8\'s arcade was on the office stair)', () => {
   let n = 0;
