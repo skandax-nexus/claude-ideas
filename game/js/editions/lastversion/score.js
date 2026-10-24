@@ -1,63 +1,76 @@
-// THE LAST VERSION OF EARTH: the score (OVERHAUL.md §8.9). Procedural, 0 bytes of assets: it writes the
-// music through Synth's composer hook, plays the cues of the story's moments, runs the ambience beds of
-// each place and year, keeps the player's mix (Dialogue, Music, Effects, Ambience, Sound captions) and
-// shows TAP FOR SOUND until the first tap has woken the sound up.
+// THE LAST VERSION OF EARTH: the score (OVERHAUL.md §8.9; the bible §6 and §7). Written music played live: the
+// themes the bible names are written out note for note in themes.js (melody, harmony, form), and this plays them
+// through Synth's composer hook (0 bytes of assets) in each mission's region: its key, tempo and instruments, with
+// a layer per year. It also plays the cues of the story's moments, runs the ambience beds of each place and year,
+// keeps the player's mix (Dialogue, Music, Effects, Ambience, Sound captions) and shows TAP FOR SOUND until the
+// first tap has woken the sound up.
 //
+//   THEMES   themes.js: the Main Theme (the title, the CASE FILES), a theme per act (the Prologue: Kai's; Act I: the
+//            Past; Act II: the Nine-Minute War; Act III: 2196; Act IV: the Unwritten Second; the Finale: the Final
+//            Choice) and the characters' (Mira's in Missions 11 and 20, the Witness's in 12, 17 and 21); Mission 16's
+//            museum plays the other themes' first phrases out of order. All of them grow from the MOTIF.
 //   MOTIF    the bible's three notes, also the Child's song: up a fourth, up a fourth, and it stops on an
-//            unresolved sus4. The Main Theme plays it on piano, the Witness slower and lower on bowed metal,
-//            Mira with reversed tails, the Child on a music box.
-//   REGIONS  each mission's music: tempo, mode and instruments, with a layer per year that crossfades
-//            over 1.5 s when the year changes (Synth.sweep is the signature transition).
-//   CUES     the story's moments: chapter, card, reveal, consequence, cliff, zero, fracture, pin, echoStep,
-//            reverse, loopReset, pa, ending:A / B / C, postcredit.
+//            unresolved sus4 (motif(): the Main Theme on piano, the Witness slower and lower on bowed metal,
+//            Mira with reversed tails, the Child on a music box).
+//   REGIONS  each mission's place: tempo, key, the instrument that carries the tune in each year (lead) and what
+//            plays under it (layers), crossfading over 1.5 s when the year changes. The same tune is heard in each
+//            year of a place, on other instruments (the bible §7: a place sounds different in each era and keeps
+//            a motif you know it by).
+//   CUES     the story's moments: chapter (the act's theme), card (the mission's theme), reveal, consequence (not
+//            music: a low metallic ring and a dropout), cliff, zero, fracture, pin, echoStep, reverse, loopReset, pa,
+//            ending:A / B / C, postcredit.
 //   BEDS     what a place sounds like in each year (rain, traffic, walla, wind, water, birds, ...).
-const mtof = (m) => 440 * Math.pow(2, (m - 69) / 12);
-const MODES = {
-  aeolian: [0, 2, 3, 5, 7, 8, 10], phrygian: [0, 1, 3, 5, 7, 8, 10], dorian: [0, 2, 3, 5, 7, 9, 10],
-  lydian: [0, 2, 4, 6, 7, 9, 11], ionian: [0, 2, 4, 5, 7, 9, 11], mixolydian: [0, 2, 4, 5, 7, 9, 10],
-};
-export const MOTIF = [0, 5, 10]; // semitones: up a fourth, up a fourth (it stops there, over a sus4)
+import { THEMES, MUSEUM, MOTIF as THE_MOTIF, missionTheme, section, head, ACT_THEME, ENDING_A } from './themes.js';
 
-// a region's music. layers: what plays in each year; prog: the chord roots (scale degrees), a bar each
+const mtof = (m) => 440 * Math.pow(2, (m - 69) / 12);
+export const MOTIF = THE_MOTIF; // semitones: up a fourth, up a fourth (it stops there, over a sus4)
+
+// a region's music: tempo, the key its tune is played in (root), the instrument that carries the tune in each year
+// (lead) and what plays under it (layers: harmony, bass and texture, by role; see Score.accompany)
 export const REGIONS = {
-  title: { tempo: 78, root: 57, mode: 'aeolian', prog: [0, 5, 2, 6], layers: { PRESENT: ['pad', 'piano', 'motif'] }, motif: 'theme' },
-  rain_city: { tempo: 92, root: 57, mode: 'aeolian', prog: [0, 5, 3, 4], motif: 'theme',
-    layers: { PRESENT: ['piano', 'pulse', 'ticks', 'bass'], PAST: ['piano', 'pluck', 'bell', 'bass'], FUTURE: ['strings', 'piano'] } },
-  helix: { tempo: 84, root: 50, mode: 'phrygian', prog: [0, 1, 0, 6], motif: 'witness',
-    layers: { PRESENT: ['metal', 'piano', 'alarm', 'sub'], PAST: ['piano', 'pluck', 'pad'], FUTURE: ['glass', 'strings', 'metal'] } },
-  settlement: { tempo: 82, root: 52, mode: 'dorian', prog: [0, 3, 6, 4], motif: 'theme',
-    layers: { PRESENT: ['drum', 'flute', 'pluck'], PAST: ['drum', 'flute', 'pluck', 'bass'], FUTURE: ['flute', 'glass', 'pad'] } },
-  clockmaker: { tempo: 72, root: 55, mode: 'ionian', prog: [0, 3, 4, 0], motif: 'child',
-    layers: { PRESENT: ['clock', 'musicbox', 'piano'], PAST: ['clock', 'musicbox', 'pluck'], FUTURE: ['clock', 'glass'] } },
-  observatory: { tempo: 60, root: 53, mode: 'lydian', prog: [0, 1, 4, 0], motif: 'theme',
-    layers: { PRESENT: ['glass', 'cello'], PAST: ['glass', 'cello', 'flute'], FUTURE: ['glass', 'strings'] } },
-  loop_city: { tempo: 118, root: 57, mode: 'aeolian', prog: [0, 5, 6, 4], motif: 'witness', loop: ['bass', 'pulse', 'piano', 'strings', 'choir'],
-    layers: { PRESENT: ['bass'], PAST: ['bass', 'pluck'], FUTURE: ['bass', 'glass'] } },
-  detention: { tempo: 100, root: 52, mode: 'phrygian', prog: [0, 1, 6, 0], motif: 'theme',
-    layers: { PRESENT: ['perc', 'ostinato', 'sub'], PAST: ['perc', 'ostinato'], FUTURE: ['ostinato', 'glass'] } },
-  hospital: { tempo: 64, root: 60, mode: 'aeolian', prog: [0, 5, 3, 6], motif: 'mira',
-    layers: { PRESENT: ['beeps', 'revpad', 'piano'], PAST: ['beeps', 'pad', 'piano'], FUTURE: ['revpad', 'glass'] } },
-  war: { tempo: 118, root: 50, mode: 'phrygian', prog: [0, 6, 5, 1], motif: 'theme', drop: 9,
+  title: { tempo: 78, root: 57, lead: { PRESENT: 'piano' }, layers: { PRESENT: ['cello', 'choir', 'strings'] } },
+  rain_city: { tempo: 92, root: 57, lead: { PRESENT: 'piano', PAST: 'pluck', FUTURE: 'strings' },
+    layers: { PRESENT: ['pulse', 'ticks', 'bass', 'strings'], PAST: ['pad', 'bass', 'bell'], FUTURE: ['glass', 'sub', 'pad'] } },
+  helix: { tempo: 84, root: 50, lead: { PRESENT: 'piano', PAST: 'pluck', FUTURE: 'glass' },
+    layers: { PRESENT: ['metal', 'alarm', 'sub', 'pad', 'ticks'], PAST: ['pad', 'pulse', 'bass'], FUTURE: ['strings', 'metal', 'sub'] } },
+  settlement: { tempo: 82, root: 52, lead: { PRESENT: 'flute', PAST: 'flute', FUTURE: 'glass' },
+    layers: { PRESENT: ['drum', 'pluck', 'bass'], PAST: ['drum', 'pluck', 'bass', 'pad'], FUTURE: ['pad', 'sub'] } },
+  clockmaker: { tempo: 72, root: 55, lead: { PRESENT: 'piano', PAST: 'pluck', FUTURE: 'glass' },
+    layers: { PRESENT: ['clock', 'musicbox', 'pad'], PAST: ['clock', 'musicbox', 'bass'], FUTURE: ['clock', 'sub'] } },
+  observatory: { tempo: 60, root: 53, lead: { PRESENT: 'glass', PAST: 'flute', FUTURE: 'strings' },
+    layers: { PRESENT: ['cello', 'pad'], PAST: ['glass', 'cello', 'drum'], FUTURE: ['glass', 'sub'] } },
+  loop_city: { tempo: 118, root: 57, loop: ['pulse', 'piano', 'perc', 'strings', 'choir'], lead: { PRESENT: 'strings', PAST: 'pluck', FUTURE: 'glass' },
+    layers: { PRESENT: ['bass', 'ostinato'], PAST: ['bass', 'ostinato'], FUTURE: ['bass', 'glass'] } },
+  detention: { tempo: 100, root: 52, lead: { PRESENT: 'cello', PAST: 'pluck', FUTURE: 'glass' },
+    layers: { PRESENT: ['perc', 'ostinato', 'sub'], PAST: ['ostinato', 'bass'], FUTURE: ['ostinato', 'sub'] } },
+  hospital: { tempo: 64, root: 60, lead: { PRESENT: 'piano', PAST: 'piano', FUTURE: 'flute' },
+    layers: { PRESENT: ['beeps', 'revpad', 'cello'], PAST: ['beeps', 'pad', 'cello'], FUTURE: ['revpad', 'glass'] } },
+  war: { tempo: 118, root: 50, drop: 9, lead: { PRESENT: 'strings', PAST: 'pluck', FUTURE: 'brass' },
     layers: { PRESENT: ['perc', 'ostinato', 'bass', 'brass'], PAST: ['perc', 'ostinato', 'bass'], FUTURE: ['perc', 'ostinato', 'strings'] } },
-  city2196: { tempo: 70, root: 53, mode: 'lydian', prog: [0, 4, 5, 3], motif: 'theme',
-    layers: { PRESENT: ['strings', 'piano'], PAST: ['strings', 'piano', 'pluck'], FUTURE: ['strings', 'brass', 'piano'] } },
-  locked_city: { tempo: 70, root: 53, mode: 'lydian', prog: [0, 4, 5, 3], motif: 'theme', repeat: 4,
-    layers: { PRESENT: ['strings', 'piano'], PAST: ['strings', 'pluck'], FUTURE: ['strings', 'brass', 'piano'] } },
-  museum: { tempo: 66, root: 55, mode: 'dorian', prog: [0, 3, 1, 5], motif: 'all', free: true,
-    layers: { PRESENT: ['glass', 'prepared'], PAST: ['glass', 'prepared', 'pluck'], FUTURE: ['glass', 'prepared', 'strings'] } },
-  archive: { tempo: 54, root: 45, mode: 'phrygian', prog: [0, 1, 5, 0], motif: 'witness',
-    layers: { PRESENT: ['cello', 'metal', 'sub'], PAST: ['cello', 'metal'], FUTURE: ['metal', 'glass', 'sub'] } },
-  fracture: { tempo: 76, root: 50, mode: 'aeolian', prog: [0, 1, 5, 6], motif: 'witness', mixed: true,
-    layers: { PRESENT: ['piano', 'pulse', 'sub'], PAST: ['drum', 'flute', 'sub'], FUTURE: ['strings', 'brass', 'sub'] } },
-  liminal: { tempo: 48, root: 50, mode: 'lydian', prog: [0, 4, 0, 1], motif: 'fragments', free: true,
-    layers: { PRESENT: ['glass', 'sub'], PAST: ['glass', 'sub', 'flute'], FUTURE: ['glass', 'sub', 'strings'] } },
-  memory: { tempo: 64, root: 57, mode: 'aeolian', prog: [0, 5, 2, 6], motif: 'mira',
-    layers: { PRESENT: ['piano', 'cello'], PAST: ['piano', 'cello', 'musicbox'], FUTURE: ['piano', 'cello', 'strings'] } },
-  command: { tempo: 110, root: 48, mode: 'phrygian', prog: [0, 6, 1, 0], motif: 'witness', cold: true,
-    layers: { PRESENT: ['perc', 'ostinato', 'metal', 'bass'], PAST: ['perc', 'ostinato', 'bass'], FUTURE: ['ostinato', 'metal', 'strings'] } },
-  finale: { tempo: 78, root: 57, mode: 'aeolian', prog: [0, 5, 2, 6], motif: 'theme', slows: 62,
-    layers: { PRESENT: ['piano', 'metal', 'strings'], PAST: ['piano', 'flute', 'drum'], FUTURE: ['piano', 'strings', 'brass'] } },
+  city2196: { tempo: 70, root: 53, lead: { PRESENT: 'strings', PAST: 'piano', FUTURE: 'strings' },
+    layers: { PRESENT: ['piano', 'sub', 'pad'], PAST: ['strings', 'pluck', 'bass'], FUTURE: ['brass', 'pad', 'glass'] } },
+  locked_city: { tempo: 70, root: 53, repeat: 4, lead: { PRESENT: 'strings', PAST: 'pluck', FUTURE: 'strings' },
+    layers: { PRESENT: ['piano', 'pad'], PAST: ['strings', 'bass'], FUTURE: ['brass', 'pad'] } },
+  museum: { tempo: 66, root: 55, free: true, lead: { PRESENT: 'prepared' },
+    layers: { PRESENT: ['glass', 'pad'], PAST: ['glass', 'pad', 'pluck'], FUTURE: ['glass', 'pad', 'strings'] } },
+  archive: { tempo: 54, root: 45, irregular: true, lead: { PRESENT: 'cello', PAST: 'cello', FUTURE: 'metal' },
+    layers: { PRESENT: ['metal', 'sub', 'pulse'], PAST: ['metal', 'pad'], FUTURE: ['glass', 'sub'] } },
+  fracture: { tempo: 76, root: 50, mixed: true, lead: { PRESENT: 'piano', PAST: 'flute', FUTURE: 'strings' },
+    layers: { PRESENT: ['pulse', 'sub'], PAST: ['drum', 'sub'], FUTURE: ['brass', 'sub'] } },
+  liminal: { tempo: 48, root: 50, free: true, lead: { PRESENT: 'glass', PAST: 'flute', FUTURE: 'strings' },
+    layers: { PRESENT: ['sub', 'prepared'], PAST: ['sub', 'glass'], FUTURE: ['sub', 'glass'] } },
+  memory: { tempo: 64, root: 57, lead: { PRESENT: 'piano', PAST: 'piano', FUTURE: 'flute' },
+    layers: { PRESENT: ['cello', 'pad'], PAST: ['cello', 'musicbox'], FUTURE: ['cello', 'strings'] } },
+  command: { tempo: 110, root: 48, cold: true, irregular: true, lead: { PRESENT: 'metal', PAST: 'cello', FUTURE: 'strings' },
+    layers: { PRESENT: ['perc', 'ostinato', 'bass', 'pulse'], PAST: ['perc', 'ostinato', 'bass'], FUTURE: ['ostinato', 'metal', 'sub'] } },
+  finale: { tempo: 62, root: 57, slows: 54, lead: { PRESENT: 'piano', PAST: 'piano', FUTURE: 'piano' },
+    layers: { PRESENT: ['cello', 'pad'], PAST: ['cello', 'flute'], FUTURE: ['cello', 'strings'] } },
 };
+// where an instrument plays the tune: [lowest, highest] MIDI note (a theme is moved by octaves to sit in it)
+const RANGE = { piano: [57, 86], flute: [64, 93], strings: [55, 84], cello: [41, 67], glass: [72, 98], musicbox: [76, 100], bell: [72, 96],
+  pluck: [62, 88], metal: [43, 70], brass: [50, 74], prepared: [62, 90] };
+// the instrument an act's theme is announced on (the chapter card)
+const SIGNATURE = { kai: 'piano', past: 'flute', war: 'strings', c2196: 'strings', unwritten: 'glass', final: 'piano', main: 'piano', mira: 'piano', witness: 'cello' };
 // which region each mission plays in (a mission's own `music` wins)
 export const MISSION_REGION = {
   m01: 'rain_city', m02: 'helix', m03: 'helix', m04: 'settlement', m05: 'settlement', m06: 'clockmaker', m07: 'observatory', m08: 'helix',
@@ -148,6 +161,11 @@ export class Score {
     this.beds = new Map();
     this.layer = null;
     this.loops = 0;
+    this.themeKey = 'main'; // the theme playing (themes.js), and where in its form (cur)
+    this.cur = null;
+    this.bars = 0;
+    this.played = []; // the tune's last notes: { theme, sec, bar, p, midi, ins } (the tests and the bots read it)
+    this.quotes = []; // what each cue quoted: { cue, theme }
     if (typeof document !== 'undefined' && document.querySelector('#ui') && !document.querySelector('#lvScore')) {
       const st = document.createElement('style');
       st.id = 'lvScore';
@@ -233,6 +251,7 @@ export class Score {
   // --- where the music is ---------------------------------------------------------------------------------
   title() {
     this.setRegion('title');
+    this.setTheme('main');
     this.setBeds([]);
   }
 
@@ -241,15 +260,24 @@ export class Score {
     this.deck = deck;
     this.level = level;
     this.loops = 0;
+    this.bars = 0;
     this.setRegion(deck.music || MISSION_REGION[deck.mkey || deck.key] || 'rain_city');
+    this.setTheme(deck.theme || missionTheme(deck.mkey || deck.key));
     this.setYear(year, true);
+  }
+
+  // the theme a place plays (themes.js): it starts again from the top of its form
+  setTheme(key) {
+    if (this.themeKey === key && this.cur) return;
+    this.themeKey = (THEMES[key] || key === 'museum') ? key : 'main';
+    this.cur = null;
   }
 
   setRegion(key) {
     if (this.regionKey === key && this.region) return;
     this.regionKey = key;
     this.region = REGIONS[key] || REGIONS.rain_city;
-    this.bar0 = null;
+    this.cur = null;
     this.newLayer(0.8);
   }
 
@@ -405,11 +433,12 @@ export class Score {
     a.osc('sine', f * 2, t, 0.6, v * (felt ? 0.12 : 0.25), 0.003, 0.5, dest);
   }
 
-  cello(f, t, dur, v, dest, rev = false) {
+  cello(f, t, dur, v, dest, rev = false, cutoff = 900, detune = 0) {
     const c = this.a.ctx;
     const o = c.createOscillator();
     o.type = 'sawtooth';
     o.frequency.setValueAtTime(f, t);
+    o.detune.value = detune;
     const vib = c.createOscillator();
     vib.frequency.value = 5.2;
     const vg = c.createGain();
@@ -417,7 +446,7 @@ export class Score {
     vib.connect(vg).connect(o.detune);
     const lp = c.createBiquadFilter();
     lp.type = 'lowpass';
-    lp.frequency.value = 900;
+    lp.frequency.value = cutoff;
     const g = c.createGain();
     const atk = rev ? dur * 0.9 : Math.min(0.6, dur * 0.3);
     g.gain.setValueAtTime(0.0001, t);
@@ -517,71 +546,285 @@ export class Score {
     for (const s of [0, 5, 7]) this.a.pad(mtof(root + s), t + 2 * beat, beat * 5, 0.014);
   }
 
-  // --- the composer: one step of the region's music ----------------------------------------------------------
+  // more instruments: bowed strings (an ensemble of two, slightly apart), distant brass that opens as it swells, a
+  // wordless choir-like texture, a music box, and an impact played backwards (the war's gaps)
+  strings(f, t, dur, v, dest, rev = false) {
+    this.cello(f, t, dur, v * 0.6, dest, rev, 1700, -5);
+    this.cello(f, t, dur, v * 0.6, dest, rev, 1700, 6);
+  }
+
+  brass(f, t, dur, v, dest) {
+    const c = this.a.ctx;
+    const o = c.createOscillator();
+    o.type = 'sawtooth';
+    o.frequency.setValueAtTime(f, t);
+    const lp = c.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.setValueAtTime(300, t);
+    lp.frequency.linearRampToValueAtTime(1300, t + Math.min(1.2, dur * 0.5));
+    lp.frequency.setTargetAtTime(500, t + dur * 0.7, 0.4);
+    const g = c.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(v, t + Math.min(0.9, dur * 0.4));
+    g.gain.setTargetAtTime(0.0001, t + dur, 0.35);
+    o.connect(lp).connect(g).connect(dest);
+    if (this.a.reverb) g.connect(this.a.reverb); // (distant: more of it in the room)
+    o.start(t);
+    o.stop(t + dur + 1.8);
+  }
+
+  choir(f, t, dur, v, dest) {
+    const c = this.a.ctx;
+    const bp = c.createBiquadFilter();
+    bp.type = 'bandpass';
+    bp.frequency.value = 900;
+    bp.Q.value = 0.8;
+    const g = c.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(v, t + Math.min(1.6, dur * 0.4));
+    g.gain.setTargetAtTime(0.0001, t + dur, 0.6);
+    bp.connect(g).connect(dest);
+    for (const d of [-7, 0, 8]) {
+      const o = c.createOscillator();
+      o.type = 'sawtooth';
+      o.frequency.setValueAtTime(f, t);
+      o.detune.value = d;
+      o.connect(bp);
+      o.start(t);
+      o.stop(t + dur + 2.2);
+    }
+  }
+
+  musicbox(f, t, v, dest) {
+    this.a.bell(f, t, v, dest);
+    this.a.osc('sine', f * 4.02, t, 0.15, v * 0.15, 0.001, 0.12, dest);
+  }
+
+  revImpact(t, dur, dest) {
+    this.noise(t, dur, { type: 'lowpass', from: 200, to: 2400, vol: 0.06 }, dest);
+    this.a.osc('sine', 52, t, dur, 0.12, dur * 0.95, 0.03, dest);
+  }
+
+  // --- the composer: one step (an eighth) of the theme, in the region's key, tempo and instruments --------------------
+  // the sections to play, in order: the theme's form; the museum's exhibits (each theme's first phrase, then a
+  // breath); the locked city's first four bars, over and over, until tomorrow is let in
+  planFor(R) {
+    const locked = !!(R.repeat && !this.rt.g.facts?.get?.('city_freed'));
+    const key = `${this.themeKey}|${locked}`;
+    if (this.planKey === key) return this.plan;
+    this.planKey = key;
+    if (this.themeKey === 'museum') {
+      const breath = section('main', 'breath');
+      this.plan = MUSEUM.flatMap((k) => [section(k, THEMES[k].form.find((x) => section(k, x).bars.some((b) => b.notes.length))), breath]);
+    } else {
+      const th = THEMES[this.themeKey] || THEMES.main;
+      this.plan = th.form.map((x) => section(this.themeKey, x));
+      if (locked) {
+        const A = this.plan.find((x) => x.bars.some((b) => b.notes.length));
+        this.plan = [{ ...A, key: `${A.key}:locked`, bars: A.bars.slice(0, R.repeat) }];
+      }
+    }
+    this.cur = null;
+    return this.plan;
+  }
+
+  // where the next eighth is in the form, then one eighth on: { sec, bar, bi, beat, newBar, top (the form begins) }
+  advance(R) {
+    const plan = this.planFor(R);
+    if (!this.cur) this.cur = { pi: 0, bi: 0, beat: 0 };
+    const c = this.cur;
+    const sec = plan[c.pi % plan.length];
+    const bar = sec.bars[c.bi % sec.bars.length];
+    const pos = { sec, bar, bi: c.bi, beat: c.beat, newBar: c.beat === 0, top: c.pi === 0 && c.bi === 0 && c.beat === 0 };
+    if (pos.newBar) this.bars++;
+    if (++c.beat >= bar.len) {
+      c.beat = 0;
+      if (++c.bi >= sec.bars.length) {
+        c.bi = 0;
+        c.pi = (c.pi + 1) % plan.length;
+      }
+    }
+    return pos;
+  }
+
+  // the octave a theme sits in on an instrument: its notes' middle near the middle of the instrument's range
+  octave(ins, root) {
+    const k = `${this.themeKey}|${ins}|${root}`;
+    this.octaves ||= new Map();
+    if (this.octaves.has(k)) return this.octaves.get(k);
+    const ps = this.plan.flatMap((x) => x.bars.flatMap((b) => b.notes.map((n) => n.p))).sort((a, b) => a - b);
+    const mid = ps.length ? ps[Math.floor(ps.length / 2)] : 12;
+    const [lo, hi] = RANGE[ins] || RANGE.piano;
+    const shift = 12 * Math.round(((lo + hi) / 2 - (root + mid)) / 12);
+    this.octaves.set(k, shift);
+    return shift;
+  }
+
+  // a chord, voiced from the tonic: its bass and its upper notes placed between C3 and C6
+  voicing(chord, root) {
+    let bass = root - 12 + chord[0];
+    while (bass > 52) bass -= 12;
+    while (bass < 33) bass += 12;
+    let up = chord.slice(1).map((v) => root + v);
+    while (up.length && Math.min(...up) < 48) up = up.map((m) => m + 12);
+    while (up.length && Math.max(...up) > 84) up = up.map((m) => m - 12);
+    return { bass, up };
+  }
+
+  // one note of the tune on an instrument
+  lead(ins, m, t, dur, v, dest, rev) {
+    const f = mtof(m);
+    switch (ins) {
+      case 'flute': this.flute(f, t, dur, v * 0.75, dest); break;
+      case 'strings': this.strings(f, t, dur, v * 0.42, dest, rev); break;
+      case 'cello': this.cello(f, t, dur, v * 0.75, dest, rev); break;
+      case 'glass': this.glass(f, t, v * 0.5, dest, rev); break;
+      case 'metal': this.metal(f, t, v * 0.5, dest, rev); break;
+      case 'brass': this.brass(f, t, dur, v * 0.22, dest); break;
+      case 'pluck': this.a.pluck(f, t, v * 0.9, dest); break;
+      case 'bell': this.a.bell(f, t, v * 0.7, dest); break;
+      case 'musicbox': this.musicbox(f, t, v * 0.6, dest); break;
+      case 'prepared': this.piano(f, t, v * 0.8, dest, rev); this.noise(t, 0.05, { type: 'highpass', from: 4000, to: 4000, vol: v * 0.3 }, dest); break;
+      default: this.piano(f, t, v, dest, rev, this.themeKey === 'mira'); break;
+    }
+  }
+
   step(synth, n, t) {
     const R = this.region || REGIONS.title;
     let tempo = R.tempo;
     if (R.slows && this.rt.g.facts?.get?.('ending')) tempo = R.slows;
-    const len = R.free ? (60 / tempo / 2) * (0.75 + this.rand() * 0.6) : 60 / tempo / 2;
+    const e8 = 60 / tempo / 2;
+    const len = R.free ? e8 * (0.8 + this.rand() * 0.5) : e8;
     if (!this.layer) this.newLayer(0.5);
     const dest = this.layer || synth.music;
     if (this.silentUntil && t < this.silentUntil) return len;
-    if (this.bar0 === null || this.bar0 === undefined) this.bar0 = n;
-    const k = n - this.bar0;
-    const bar = Math.floor(k / 8), beat = k % 8;
-    // the locked city's four bars repeat exactly: the dice are the same every time round, until tomorrow is let in
-    // (city_freed: the phrase goes on, and changes; a stabilized city keeps its one day)
-    if (R.repeat && beat === 0 && bar % R.repeat === 0 && !this.rt.g.facts?.get?.('city_freed')) this.seed = 4242;
-    const mode = MODES[R.mode] || MODES.aeolian;
-    const deg = R.prog[bar % R.prog.length];
-    const note = (d, oct = 0) => R.root + mode[((d % 7) + 7) % 7] + 12 * (Math.floor(d / 7) + oct);
-    const chord = [note(deg), note(deg + 2), note(deg + 4)];
+    const pos = this.advance(R);
+    const { sec, bar, bi, beat } = pos;
+    // the locked city's four bars: the dice are the same every time round, until tomorrow is let in
+    if (R.repeat && pos.top) this.seed = 4242;
+    // the war drops a beat every nine bars
+    if (R.drop && this.bars % R.drop === R.drop - 1 && beat === bar.len - 1) return len;
+    const year = R.mixed ? ['PRESENT', 'PAST', 'FUTURE'][this.bars % 3] : this.year;
+    let ins = R.lead?.[year] || R.lead?.PRESENT || 'piano';
+    if (sec.flute && ins === 'piano') ins = 'flute'; // (Mira's second phrase: a breathy woodwind takes the tune)
+    if (this.themeKey === 'museum') ins = 'prepared';
+    let layers = R.layers[year] || R.layers.PRESENT || [];
+    if (R.loop) layers = [...new Set([...layers, ...R.loop.slice(0, Math.min(R.loop.length, 1 + (this.rt.g.facts?.get?.('loops_seen') || 0)))])];
+    if (R.mixed) layers = [...new Set(Object.values(R.layers).flat())].filter((x, i) => (this.bars + i) % 3 !== 0);
+    if (sec.reduced) layers = ['cello']; // (the Final Choice begins as the Main Theme on piano and cello alone)
+    else if (sec.bloom && !layers.includes('strings') && ins !== 'strings') layers = [...layers, 'strings'];
+    if (sec.brass && !layers.includes('brass')) layers = [...layers, 'brass'];
+    layers = layers.filter((x) => x !== ins);
     const rev = !!this.rt.inv?.active;
     const energy = Math.min(1, synth.threat || 0);
-    // the war drops a beat every nine bars
-    if (R.drop && bar % R.drop === R.drop - 1 && beat === 7) return len;
-    let layers = R.layers[this.year] || R.layers.PRESENT || [];
-    if (R.loop) layers = [...new Set([...layers, ...R.loop.slice(0, Math.min(R.loop.length, 1 + (this.rt.g.facts?.get?.('loops_seen') || 0)))])];
-    if (R.mixed) layers = [...new Set(Object.values(R.layers).flat())].filter((x, i) => (bar + i) % 3 !== 0);
-    const v = 0.05 * (R.cold ? 0.8 : 1);
+    const v = 0.05 * (R.cold ? 0.8 : 1) * (0.55 + 0.45 * sec.dyn);
+    const barSec = e8 * bar.len;
+    const root = R.root;
+    // the war's gap: nothing, and an impact played backwards into the next downbeat
+    if (bar.gap) {
+      if (beat === bar.len - 2) this.revImpact(t, len * 2, dest);
+      this.bedEvents(t, len);
+      return len;
+    }
+    // the tune
+    for (const nt of bar.notes) {
+      if (nt.at !== beat) continue;
+      const m = root + nt.p + this.octave(ins, root);
+      // (a little give in the hands: physical, not on the grid)
+      const lt = t + (ins === 'piano' || ins === 'pluck' || ins === 'prepared' ? (this.rand() - 0.5) * 0.012 : 0);
+      const accent = beat === 0 ? 1.08 : 1;
+      this.lead(ins, m, lt, Math.max(len, nt.d * e8 * 0.98), v * accent, dest, rev);
+      if (sec.brass && ins !== 'brass') this.brass(mtof(m - 12), t, nt.d * e8, v * 0.12, dest); // (2196: the brass carries it too)
+      this.played.push({ theme: sec.theme, sec: sec.key, bar: bi, p: nt.p, midi: m, ins });
+      if (this.played.length > 256) this.played.shift();
+    }
+    // what plays under it
+    if (bar.chord) this.accompany(layers, { t, sec, bar, bi, beat, len, barSec, root, dest, v, energy, rev, synth, irregular: !!R.irregular });
+    this.bedEvents(t, len);
+    return len;
+  }
+
+  // the layers under the tune, by role: harmony (pad, strings, choir, brass, revpad, flute), bass (bass, cello, sub),
+  // figures from the chord (piano, pluck, glass, bell, prepared, musicbox) and texture (pulse, ticks, perc, drum,
+  // ostinato, alarm, beeps, clock, metal)
+  accompany(layers, o) {
+    const { t: when, sec, bar, bi, beat, len, barSec, root, dest, v, energy, rev, synth } = o;
+    const { bass, up } = this.voicing(bar.chord, root);
+    const k = bar.len;
+    const grow = sec.bloom ? 0.35 + 0.65 * Math.min(1, (bi + 1) / sec.bars.length) : 1; // (strings that slowly widen)
     for (const ins of layers) {
       switch (ins) {
-        case 'pad': if (beat === 0) for (const m of chord) synth.pad(mtof(m), t, len * 8.4, 0.016); break;
-        case 'strings': if (beat === 0) for (const m of [...chord, chord[0] + 12]) this.cello(mtof(m + 12), t, len * 7.6, 0.012, dest, rev); break;
-        case 'piano': if (beat === 0 || (this.rand() < 0.22 + energy * 0.3 && beat % 2 === 0)) this.piano(mtof(chord[Math.floor(this.rand() * 3)] + 12), t, v * 0.9, dest, rev, this.regionKey === 'memory'); break;
-        case 'prepared': if (this.rand() < 0.3) { this.piano(mtof(chord[0] + 24 + Math.floor(this.rand() * 3)), t, v * 0.6, dest, rev); this.noise(t, 0.05, { type: 'highpass', from: 4000, to: 4000, vol: 0.02 }, dest); } break;
-        case 'pulse': if (beat % 2 === 0) synth.osc('sine', mtof(chord[0] - 12), t, len * 0.8, 0.035, 0.005, len * 0.6, dest); break;
-        case 'ticks': this.tick(t + (this.rand() - 0.5) * len * 0.3 * (1 + bar % 3), 0.012, dest); break;
-        case 'bass': if (beat === 0 || (beat === 4 && energy > 0.3)) synth.osc('sine', mtof(chord[0] - 12), t, len * 5, 0.07, 0.04, 0.6, dest); break;
-        case 'sub': if (beat === 0 && bar % 2 === 0) synth.osc('sine', mtof(R.root - 24), t, len * 16, 0.06, 1.2, 2.4, dest); break;
-        case 'pluck': if (this.rand() < 0.3 + energy * 0.4) synth.pluck(mtof(chord[Math.floor(this.rand() * 3)] + 24), t, 0.045, dest); break;
-        case 'bell': if (beat === 6 && this.rand() < 0.5) synth.bell(mtof(chord[1] + 24), t, 0.035, dest); break;
-        case 'cello': if (beat === 0 && bar % 2 === 0) this.cello(mtof(chord[0] - 12), t, len * 14, 0.03, dest, rev); break;
-        case 'glass': if (beat === 0 || (beat === 4 && this.rand() < 0.4)) this.glass(mtof(chord[Math.floor(this.rand() * 3)] + 24), t, 0.02, dest, rev); break;
-        case 'metal': if (beat === 0 && bar % 2 === 1) this.metal(mtof(chord[0]), t, 0.018, dest, rev); break;
-        case 'alarm': if (beat === 0 || beat === 1) synth.osc('square', beat ? 880 : 932, t, 0.12, 0.006, 0.005, 0.08, dest); break;
-        case 'drum': if (beat === 0 || beat === 3 || (beat === 6 && this.rand() < 0.6)) this.drum(t, beat === 0 ? 0.08 : 0.05, dest); break;
-        case 'flute': if (beat === 0 && this.rand() < 0.6) this.flute(mtof(note(deg + Math.floor(this.rand() * 5), 1)), t, len * (2 + Math.floor(this.rand() * 3)), 0.03, dest); break;
-        case 'musicbox': if (bar % 4 === 2 && beat === 0) this.motif('child', R.root, t, len, dest, 0.04); break;
-        case 'clock': for (const bpm of [60, 72, 90]) { const p = 60 / bpm; const first = Math.ceil(t / p) * p; for (let x = first; x < t + len; x += p) this.tick(x, bpm === 60 ? 0.016 : 0.009, dest); } break;
-        case 'beeps': if (beat % 4 === 0) synth.osc('sine', 1000, t, 0.09, 0.012, 0.004, 0.06, dest); break;
-        case 'revpad': if (beat === 0 && bar % 2 === 0) for (const m of chord) synth.osc('triangle', mtof(m), t, len * 15, 0.012, len * 14, 0.03, dest); break;
-        case 'perc': if (beat % 2 === 0 || this.rand() < energy * 0.5) this.noise(t, 0.08, { type: 'lowpass', from: beat === 0 ? 200 : 900, to: 120, vol: beat === 0 ? 0.12 : 0.05 }, dest); break;
-        case 'ostinato': synth.osc('sawtooth', mtof(R.root + MOTIF[k % 3] + (beat >= 4 ? 7 : 0)), t, len * 0.7, 0.008, 0.01, len * 0.4, dest); break;
-        case 'brass': if (beat === 0 && bar % 4 === 0) synth.osc('sawtooth', mtof(chord[0]), t, len * 12, 0.008, 0.8, 1.6, dest); break;
-        case 'choir': if (beat === 0) for (const m of chord) synth.osc('sawtooth', mtof(m + 12), t, len * 8, 0.004, 1.2, 1.4, dest, 4); break;
-        case 'motif': break;
+        case 'pad': if (beat === 0) for (const m of up) { this.a.osc('triangle', mtof(m), when, barSec * 1.05, 0.012, Math.min(1.2, barSec * 0.3), Math.min(1.6, barSec * 0.4), dest, -6); this.a.osc('sine', mtof(m), when, barSec * 1.05, 0.01, Math.min(1.2, barSec * 0.3), Math.min(1.6, barSec * 0.4), dest, 6); } break;
+        case 'strings': if (beat === 0) for (const m of up) this.strings(mtof(m), when, barSec * 0.98, 0.016 * grow, dest, rev); break;
+        case 'choir': if (beat === 0 && bi % 2 === 0) for (const m of up.slice(0, 3)) this.choir(mtof(m), when, barSec * 1.9, 0.0045, dest); break;
+        case 'brass': if (beat === 0 && bi % 2 === 0) for (const m of [bass + 12, bass + 19]) this.brass(mtof(m), when, barSec * 1.6, 0.007, dest); break;
+        case 'revpad': if (beat === 0 && bi % 2 === 0) for (const m of up) this.a.osc('triangle', mtof(m), when, barSec * 1.9, 0.011, barSec * 1.8, 0.03, dest); break;
+        case 'flute': if (beat === 0 && bi % 2 === 1) this.flute(mtof(up[up.length - 1] + 12), when, barSec * 0.9, 0.018, dest); break;
+        case 'bass': if (beat === 0 || (beat === 4 && energy > 0.3)) this.a.osc('sine', mtof(bass), when, len * (beat ? 3 : 5), 0.07, 0.04, 0.6, dest); break;
+        case 'cello': if (beat === 0) this.cello(mtof(bass + (bass < 40 ? 12 : 0)), when, barSec * 0.97, sec.reduced ? 0.034 : 0.028, dest, rev); break;
+        case 'sub': if (beat === 0 && bi % 2 === 0) this.a.osc('sine', mtof(root - 24), when, barSec * 2, 0.06, 1.2, 2.4, dest); break;
+        case 'piano': if (beat === 0 || beat === 3 || beat === 6) this.piano(mtof(up[[0, 1, 2][beat / 3] % up.length] + 12), when, v * 0.55, dest, rev); break;
+        case 'pluck': if ([0, 2, 3, 5, 6].includes(beat)) this.a.pluck(mtof(up[[0, 1, 2, 1, 2][[0, 2, 3, 5, 6].indexOf(beat)] % up.length] + 12), when, 0.032 + energy * 0.012, dest); break;
+        case 'glass': if (beat === 0 || beat === 4) this.glass(mtof(up[up.length - 1 - (beat ? 1 : 0)] + 12), when, 0.014, dest, rev); break;
+        case 'bell': if (beat === 6 && bi % 2 === 1) this.a.bell(mtof(up[1 % up.length] + 24), when, 0.028, dest); break;
+        case 'prepared': if ((beat === 1 || beat === 5) && bi % 2 === 0) { this.piano(mtof(up[up.length - 1] + 12), when, v * 0.4, dest, rev); this.noise(when, 0.05, { type: 'highpass', from: 4000, to: 4000, vol: 0.016 }, dest); } break;
+        case 'musicbox': if (bi % 4 === 2 && beat === 0) MOTIF.forEach((s, i) => this.musicbox(mtof(bass + 36 + s), when + i * len * 2, 0.03, dest)); break;
+        case 'pulse': {
+          // (the Witness's pulse is irregular: three beats in a bar, never the same two bars running)
+          const hit = o.irregular ? (bi % 2 ? [0, 3, 5] : [0, 2, 6]).includes(beat) : beat % 2 === 0;
+          if (hit) this.a.osc('sine', mtof(bass + 12), when, len * 0.8, 0.032, 0.005, len * 0.6, dest);
+          break;
+        }
+        case 'ticks': {
+          // (Kai's ticking drifts off the grid as a section goes on, and is put right when the next begins)
+          const drift = Math.sin(beat * 1.7 + bi * 0.9) * len * 0.3 * Math.min(1, bi / Math.max(1, sec.bars.length - 1));
+          this.tick(when + drift, 0.011, dest);
+          break;
+        }
+        case 'perc': {
+          // a 4/4 bar: low on 1 and 3, a snap on 2 and 4, a tick between; a 7/8 bar falls 2 + 2 + 3
+          const low = k === 7 ? [0, 4] : [0, 4], snap = k === 7 ? [2] : [2, 6];
+          if (low.includes(beat)) this.noise(when, 0.09, { type: 'lowpass', from: 220, to: 110, vol: 0.12 }, dest);
+          else if (snap.includes(beat)) this.noise(when, 0.07, { type: 'bandpass', from: 1800, to: 900, q: 1.2, vol: 0.05 }, dest);
+          else if (this.rand() < 0.5 + energy * 0.4) this.noise(when, 0.03, { type: 'highpass', from: 6000, to: 6000, vol: 0.018 }, dest);
+          break;
+        }
+        case 'drum': if (beat === 0 || beat === 3 || beat === 6 || (beat === 5 && bi % 2)) this.drum(when, beat === 0 ? 0.08 : beat === 5 ? 0.03 : 0.05, dest); break;
+        case 'ostinato': synth.osc('sawtooth', mtof(bass + 24 + MOTIF[beat % 3] + (beat >= 4 ? 7 : 0)), when, len * 0.7, 0.008, 0.01, len * 0.4, dest); break;
+        case 'alarm': if (bi % 2 === 0 && (beat === 0 || beat === 1)) synth.osc('square', beat ? 880 : 932, when, 0.12, 0.006, 0.005, 0.08, dest); break;
+        case 'beeps': if (beat === 0 || beat === 4) synth.osc('sine', 1000, when, 0.09, 0.012, 0.004, 0.06, dest); break;
+        case 'clock': for (const bpm of [60, 72, 90]) { const p = 60 / bpm; const first = Math.ceil(when / p) * p; for (let x = first; x < when + len; x += p) this.tick(x, bpm === 60 ? 0.016 : 0.009, dest); } break;
+        case 'metal': if (beat === 0 && bi % 2 === 1) this.metal(mtof(bass + 12), when, 0.018, dest, rev); break;
         default: break;
       }
     }
-    // the motif closes a phrase every eight bars (the museum plays other regions' motifs out of order; the
-    // liminal places only fragments of it)
-    if (bar % 8 === 7 && beat === 0) {
-      const kind = R.motif === 'all' ? ['theme', 'witness', 'mira', 'child'][Math.floor(this.rand() * 4)] : R.motif === 'fragments' ? (this.rand() < 0.5 ? 'theme' : 'child') : R.motif;
-      this.motif(kind, R.root, t, len, dest);
+  }
+
+  // a theme's bars played once, as a cue: the tune on an instrument, its chords under it (on strings, a pad, or
+  // none) and its bass on the cello, at a tempo, in a key; -> its length in seconds
+  phrase(bars, { root, tempo, ins = 'piano', chords = 'strings', t, out, v = 0.05, bass = true, theme = null }) {
+    const e8 = 60 / tempo / 2;
+    const ps = bars.flatMap((b) => b.notes.map((n) => n.p)).sort((x, y) => x - y);
+    const mid = ps.length ? ps[Math.floor(ps.length / 2)] : 12;
+    const [lo, hi] = RANGE[ins] || RANGE.piano;
+    const shift = 12 * Math.round(((lo + hi) / 2 - (root + mid)) / 12);
+    let x = t;
+    for (const b of bars) {
+      const barSec = e8 * b.len;
+      if (b.chord) {
+        const { bass: bs, up } = this.voicing(b.chord, root);
+        if (chords === 'strings') for (const m of up) this.strings(mtof(m), x, barSec, 0.014, out);
+        else if (chords === 'pad') for (const m of up) this.a.osc('triangle', mtof(m), x, barSec, 0.01, Math.min(0.6, barSec * 0.3), 1, out);
+        if (bass) this.cello(mtof(bs + (bs < 40 ? 12 : 0)), x, barSec, 0.03, out);
+      }
+      for (const n of b.notes) {
+        this.lead(ins, root + n.p + shift, x + n.at * e8, n.d * e8, v, out);
+        this.played.push({ theme: theme || 'cue', sec: 'cue', bar: 0, p: n.p, midi: root + n.p + shift, ins, cue: true });
+      }
+      x += barSec;
     }
-    this.bedEvents(t, len);
-    return len;
+    if (this.played.length > 256) this.played.splice(0, this.played.length - 256);
+    return x - t;
   }
 
   // --- the cues --------------------------------------------------------------------------------------------
@@ -597,23 +840,42 @@ export class Score {
       case 'title':
         this.title();
         break;
-      case 'chapter':
-        // a seven-second phrase of the theme and a cello rising under it
-        this.motif('theme', 57, t + 0.2, 0.42, out, 0.06);
-        this.cello(mtof(33), t, 6.5, 0.05, out);
-        this.cello(mtof(40), t + 2.5, 4.5, 0.035, out);
+      case 'chapter': {
+        // the act's own theme announced: its first two bars, on the instrument it is known by, in its own key and
+        // tempo, with its chords on strings and a low cello rising under them (the Prologue: Kai's theme on piano;
+        // Act I: the Past on the flute; Act II: the war's strings over its percussion; Act III: 2196's strings and
+        // brass; Act IV: the Unwritten Second's glass; the Finale: the Main Theme on piano and cello)
+        const key = ACT_THEME[o.chapter || this.rt.chapter] || 'main';
+        const h = head(key, 2);
+        const ins = SIGNATURE[key] || 'piano';
+        const len = this.phrase(h.bars, { root: h.home, tempo: h.tempo, ins, chords: key === 'unwritten' ? 'pad' : 'strings', t: t + 0.2, out, v: 0.06, theme: key });
+        if (key === 'war') for (let i = 0; i < 2; i++) this.noise(t + 0.2 + i * len / 2, 0.12, { type: 'lowpass', from: 220, to: 100, vol: 0.14 }, out);
+        if (key === 'c2196') this.brass(mtof(h.home + 7), t + 0.2, len, 0.012, out);
+        this.cello(mtof(h.home - 24), t, len + 0.5, 0.05, out);
+        this.cello(mtof(h.home - 17), t + len * 0.4, len * 0.6 + 0.5, 0.035, out);
+        this.quotes.push({ cue: name, theme: key });
         break;
-      case 'card':
-        // a reversed swell, the motif in the mission's key, a low resonance
+      }
+      case 'card': {
+        // a reversed swell, then the head of the mission's own theme (its first bar) on the instrument that carries
+        // it in this place and year, in the place's key, and a low resonance under it
         a.osc('triangle', mtof(root), t, 0.8, 0.05, 0.78, 0.02, out);
         this.noise(t, 0.8, { type: 'bandpass', from: 400, to: 3000, q: 0.7, vol: 0.05 }, out);
-        this.motif(R.motif === 'witness' ? 'witness' : R.motif === 'mira' ? 'mira' : 'theme', root, t + 0.85, 0.32, out, 0.055);
+        const key = this.themeKey === 'museum' ? 'main' : this.themeKey;
+        const h = head(key, 1);
+        const ins = R.lead?.[this.year] || R.lead?.PRESENT || 'piano';
+        this.phrase(h.bars, { root, tempo: R.tempo, ins: ins === 'prepared' ? 'piano' : ins, chords: 'pad', t: t + 0.85, out, v: 0.055, bass: false, theme: key });
         a.osc('sine', mtof(root - 24), t + 0.85, 3.2, 0.12, 0.02, 2.6, out);
+        this.quotes.push({ cue: name, theme: key });
         break;
+      }
       case 'reveal':
+        // a minor second, a low drop, and the Witness's two first notes, slow and low, on bowed metal
         a.osc('triangle', mtof(root + 12), t, 2.2, 0.04, 0.01, 1.8, out);
         a.osc('triangle', mtof(root + 13), t, 2.2, 0.04, 0.01, 1.8, out);
         this.dropTo(40, t, out);
+        this.metal(mtof(root - 12), t + 0.5, 0.04, out);
+        this.metal(mtof(root - 7), t + 1.6, 0.035, out);
         this.dropout(0.4);
         break;
       case 'consequence':
@@ -641,6 +903,9 @@ export class Score {
         o.stop(t + 9);
         let x = t, gap = 0.6;
         while (x < t + 8) { this.tick(x, 0.02, g); x += gap; gap = Math.max(0.08, gap * 0.88); }
+        // and the motif's first two notes, its third withheld: the story stops before it resolves
+        this.piano(mtof(root + 12), t + 0.4, 0.04, g);
+        this.piano(mtof(root + 17), t + 1.3, 0.04, g);
         break;
       }
       case 'zero':
@@ -681,27 +946,39 @@ export class Score {
         a.bell(mtof(76), t, 0.07, out);
         a.bell(mtof(72), t + 0.42, 0.07, out);
         break;
-      case 'ending:A':
-        // the only full major cadence in the game: IV, V, I
-        [[53, 57, 60, 65], [55, 59, 62, 67], [48, 52, 55, 60, 64, 72]].forEach((ch, i) => {
-          for (const m of ch) this.cello(mtof(m), t + 1.2 + i * 1.6, i === 2 ? 6 : 1.7, 0.02, out);
-          this.piano(mtof(ch[ch.length - 1] + 12), t + 1.2 + i * 1.6, 0.06, out);
-        });
+      case 'ending:A': {
+        // THE FIXED WORLD: the only full major cadence in the game. The motif goes up a fourth and, for once, does
+        // not stop: it rises to the sixth over IV, falls through V, and comes home to A major (strings under the last)
+        const len = this.phrase(ENDING_A, { root: 57, tempo: 62, ins: 'piano', chords: 'strings', t: t + 1.2, out, v: 0.06, theme: 'main' });
+        this.silentUntil = t + 1.2 + len; // (the place's music waits for it)
+        this.quotes.push({ cue: name, theme: 'main' });
         break;
-      case 'ending:B':
-        // the motif in two keys at once, never agreeing
-        this.motif('theme', 57, t + 1.2, 0.5, out, 0.05);
-        this.motif('theme', 63, t + 1.2, 0.5, out, 0.04);
-        this.motif('witness', 50, t + 4.2, 0.6, out, 0.04);
+      }
+      case 'ending:B': {
+        // THE INFINITE WAR: the Main Theme's head in A minor and in E-flat minor at once, a tritone apart, never
+        // agreeing; the war's ostinato under them; then the Witness's motif, low
+        const h = head('main', 2);
+        const len = this.phrase(h.bars, { root: 57, tempo: 62, ins: 'piano', chords: 'strings', t: t + 1.2, out, v: 0.05, theme: 'main' });
+        this.phrase(h.bars, { root: 63, tempo: 62, ins: 'glass', chords: 'none', t: t + 1.2, out, v: 0.05, bass: false, theme: 'main' });
+        for (let i = 0; i < 24; i++) a.osc('sawtooth', mtof(38 + MOTIF[i % 3] + (i % 8 >= 4 ? 7 : 0)), t + 1.2 + i * 0.32, 0.22, 0.006, 0.01, 0.15, out);
+        this.motif('witness', 45, t + 1.4 + len, 0.6, out, 0.04);
+        this.silentUntil = t + 1.2 + len + 3;
+        this.quotes.push({ cue: name, theme: 'main' });
         break;
-      case 'ending:C':
-        // piano and cello, a bloom of strings, one breath of silence, one note
-        this.motif('theme', 57, t + 1.2, 0.6, out, 0.05);
-        this.cello(mtof(45), t + 1.2, 5, 0.05, out);
-        for (const m of [57, 60, 64, 69]) this.cello(mtof(m + 12), t + 3.5, 4.5, 0.014, out);
-        this.silentUntil = t + 9.5;
-        this.piano(mtof(69), t + 10, 0.05, out);
+      }
+      case 'ending:C': {
+        // AFTERZERO: the Final Choice. The Main Theme's first two bars reduced to piano and cello, then strings bloom
+        // on the hopeful suspended chord; one breath of silence; one note
+        const h = head('main', 2);
+        const len = this.phrase(h.bars, { root: 57, tempo: 62, ins: 'piano', chords: 'none', t: t + 1.2, out, v: 0.05, theme: 'final' });
+        for (const m of [57, 62, 64, 69]) this.strings(mtof(m + 12), t + 1.2 + len, 4.5, 0.016, out);
+        this.cello(mtof(45), t + 1.2 + len, 4.5, 0.04, out);
+        const end = t + 1.2 + len + 4.5;
+        this.silentUntil = end + 2.2; // (the breath: everything stops)
+        this.piano(mtof(69), end + 2.2, 0.05, out);
+        this.quotes.push({ cue: name, theme: 'final' });
         break;
+      }
       case 'postcredit':
         for (let i = 0; i < 4; i++) this.tick(t + i, 0.05, out);
         break;

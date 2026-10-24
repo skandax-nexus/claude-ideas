@@ -137,7 +137,7 @@ check(['chapter', 'card'].every((c) => cineState.cues.includes(c)) && cine.mixPe
 
 // --- a conversation: the florist on the market lane ---------------------------------------------------------------
 console.log('A conversation: the florist');
-// (the rest of the opening is skipped: Enter skips a whole staged moment, as a player may)
+// (the rest of the opening is skipped, a press of Enter (SKIP's key) a line, as a player may)
 for (let i = 0; i < 40; i++) {
   const busy = await page.evaluate(() => !!(AZ.edition.opening || AZ.edition.cinema.active || AZ.transitioning));
   if (!busy) break;

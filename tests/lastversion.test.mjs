@@ -25,6 +25,7 @@ import * as THREE from '../game/vendor/three.module.min.js';
 import { ENDINGS, LOCK_ORDER, CASE_FILES, CASE_STATES, caseState } from '../game/js/editions/lastversion/acts.js';
 import { ENDING_SHOTS } from '../game/js/editions/lastversion/finale.js';
 import { Cinema } from '../game/js/editions/lastversion/cinema.js';
+import { HUD } from '../game/js/ui/HUD.js';
 import { hazardAt, musicGain } from '../game/js/editions/lastversion/act2.js';
 import { NPCS, DIALOGUE, AMBIENT, npcState, JUN_HOOK, WATER_HOOK, MARA_HOOK, IVEN_HOOK } from '../game/js/editions/lastversion/npcs.js';
 import { PLACES, signature, quartersOf } from '../game/js/editions/lastversion/places/index.js';
@@ -2465,6 +2466,108 @@ test('the score: every region plays a minute in every year, and every cue plays,
   assert.equal(score.cues.gain.value, 0, 'Music at 0: the chapter theme and the endings\' cadences are silent too');
 });
 
+// closing (the player's point 1, the score): the music is written, not drawn at random. Every theme the bible names is
+// in themes.js as notes; each act has its own; every theme states the motif; the composer plays the tune note for
+// note in each mission's key and instruments, the same each time round and in every year; the cues quote the themes
+test('the score is written music: a theme per act, the motif in each, the tune played note for note, the cues quoting it', async () => {
+  const { THEMES, ACT_THEME, CHARACTER_THEME, MUSEUM, missionTheme, actOf, section, melodyPitches, head, ENDING_A, MOTIF: M } = await import('../game/js/editions/lastversion/themes.js');
+  const { Score, REGIONS, MISSION_REGION } = await import('../game/js/editions/lastversion/score.js');
+  assert.deepEqual(M, [0, 5, 10], 'the motif: up a fourth, up a fourth');
+  // a theme for every act and for the bible's named cues (Main, Kai, Mira, the Witness, the Past, 2196, the war, the
+  // Unwritten Second, the Final Choice), each with its own tune
+  for (const ch of ORDER) assert.ok(THEMES[ACT_THEME[ch]], `${ch} has a theme`);
+  assert.ok(THEMES[ACT_THEME.cases]);
+  assert.equal(new Set(ORDER.map((ch) => ACT_THEME[ch])).size, ORDER.length, 'each act its own theme');
+  for (const k of ['main', 'kai', 'mira', 'witness', 'past', 'c2196', 'war', 'unwritten', 'final']) assert.ok(THEMES[k], k);
+  const tunes = new Set();
+  for (const [k, th] of Object.entries(THEMES)) {
+    assert.ok(th.name && th.tempo >= 40 && th.tempo <= 130 && th.home > 30, k);
+    let ps = [];
+    for (const x of new Set(th.form)) {
+      const sec = section(k, x);
+      assert.ok(sec, `${k}/${x}`);
+      for (const [i, b] of sec.bars.entries()) assert.equal(b.total, b.len, `${k}/${x} bar ${i + 1}: its notes fill its ${b.len} eighths`);
+      ps = ps.concat(melodyPitches(k, x));
+    }
+    let motif = false;
+    for (let i = 0; i + 2 < ps.length; i++) if (ps[i + 1] - ps[i] === 5 && ps[i + 2] - ps[i + 1] === 5) motif = true;
+    assert.ok(motif, `${k} states the motif (up a fourth, up a fourth)`);
+    if (!th.of) { assert.ok(!tunes.has(ps.join()), `${k}: a tune of its own`); tunes.add(ps.join()); }
+  }
+  // every mission plays its act's theme, or a character's (Mira, the Witness), or the museum's, or Helix's own again
+  const allowed = new Set(['mira', 'witness', 'museum', 'kai']);
+  for (const m of main) {
+    const th = missionTheme(m.key);
+    assert.ok(th === ACT_THEME[actOf(m.key)] || (allowed.has(th) && (CHARACTER_THEME[m.key] || m.key === 'm08')), `${m.key}: ${th}`);
+  }
+  assert.ok(['m11', 'm20'].every((k) => missionTheme(k) === 'mira') && ['m12', 'm17', 'm21'].every((k) => missionTheme(k) === 'witness'));
+  assert.ok(MUSEUM.every((k) => THEMES[k]) && missionTheme('m16') === 'museum');
+  // the composer, on a stand-in audio graph: the tune note for note, in order, round the form
+  const param = () => ({ value: 0, setValueAtTime() {}, linearRampToValueAtTime() {}, exponentialRampToValueAtTime() {}, setTargetAtTime() {}, cancelScheduledValues() {} });
+  const node = () => { const n = { gain: param(), frequency: param(), detune: param(), Q: param(), playbackRate: param(), connect: (x) => x || n, disconnect() {}, start() {}, stop() {}, type: '', buffer: null }; return n; };
+  const ctx = { currentTime: 1, sampleRate: 8000, createOscillator: node, createGain: node, createBiquadFilter: node, createBufferSource: node, createBuffer: (ch, len) => ({ getChannelData: () => new Float32Array(len) }) };
+  const synth = { ctx, music: node(), sfx: node(), amb: node(), master: node(), reverb: node(), threat: 0, mix: {}, osc() {}, pad() {}, pluck() {}, bell() {}, silence() {}, setMix() {}, level: () => 1 };
+  const facts = new FactStore();
+  const score = new Score({ g: { audio: synth, facts, voice: null }, inv: null, wallaLines: () => [], chapter: 'act2' });
+  const play = (deck, year = 'PRESENT', eighths = null) => {
+    score.enter(deck, year, null);
+    score.played.length = 0;
+    const th = score.themeKey;
+    const plan = score.planFor(score.region);
+    const total = eighths ?? plan.reduce((a, x) => a + x.bars.reduce((b, y) => b + y.len, 0), 0);
+    let t = 1;
+    for (let n = 0; n < total; n++) t += score.step(synth, n, t);
+    return { th, plan, notes: score.played.filter((x) => !x.cue) };
+  };
+  for (const m of [...main, { key: 'c_b' }, { key: 'c_c' }]) {
+    const deck = { ...m, mkey: m.key };
+    const { th, plan, notes } = play(deck);
+    const want = plan.flatMap((x) => x.bars.flatMap((b) => b.notes.map((nt) => nt.p)));
+    assert.deepEqual(notes.map((x) => x.p), want, `${m.key} (${th}, ${MISSION_REGION[m.key]}): the tune, note for note, once round its form`);
+    assert.ok(notes.length >= 10, `${m.key}: ${notes.length} notes`);
+    // the same again the next time round (nothing drawn at random)
+    const again = play(deck);
+    assert.deepEqual(again.notes.map((x) => x.midi), notes.map((x) => x.midi), `${m.key}: the same tune the second time`);
+  }
+  // a place keeps its tune in every year, on other instruments (Rain City: piano in 2049, plucked in 2026, strings in 2196)
+  const m01 = { ...main.find((m) => m.key === 'm01'), mkey: 'm01' };
+  const byYear = Object.fromEntries(['PRESENT', 'PAST', 'FUTURE'].map((y) => [y, play(m01, y).notes]));
+  assert.deepEqual(byYear.PAST.map((x) => x.p), byYear.PRESENT.map((x) => x.p));
+  assert.deepEqual(byYear.FUTURE.map((x) => x.p), byYear.PRESENT.map((x) => x.p));
+  assert.deepEqual(['PRESENT', 'PAST', 'FUTURE'].map((y) => byYear[y][0].ins), ['piano', 'pluck', 'strings']);
+  assert.ok(Object.values(REGIONS).every((R) => R.lead?.PRESENT), 'every region names the instrument that carries its tune');
+  // the locked city (Mission 15) plays its first four bars over and over until tomorrow is let in; then the theme goes on
+  const m15 = { ...main.find((m) => m.key === 'm15'), mkey: 'm15' };
+  const four = section('c2196', 'A').bars.slice(0, 4).flatMap((b) => b.notes.map((nt) => nt.p));
+  assert.deepEqual(play(m15, 'PRESENT', 64).notes.map((x) => x.p), [...four, ...four], 'the locked city: four bars, twice, the same');
+  facts.set('city_freed', true);
+  assert.deepEqual(play(m15, 'PRESENT', 64).notes.map((x) => x.p), section('c2196', 'A').bars.flatMap((b) => b.notes.map((nt) => nt.p)), 'freed: the phrase goes on');
+  // the museum (Mission 16): the other themes' first phrases, exhibit by exhibit
+  const m16 = play({ ...main.find((m) => m.key === 'm16'), mkey: 'm16' });
+  assert.deepEqual([...new Set(m16.notes.map((x) => x.theme))], MUSEUM, 'the museum plays the other themes in its own order');
+  // the cues quote the themes: each act's card its act's theme; a mission's card its own; the endings theirs
+  for (const ch of ORDER) { score.quotes.length = 0; score.cue('chapter', { chapter: ch }); assert.deepEqual(score.quotes, [{ cue: 'chapter', theme: ACT_THEME[ch] }], ch); }
+  score.enter({ mkey: 'm11' }, 'PRESENT');
+  score.quotes.length = 0;
+  score.cue('card');
+  assert.deepEqual(score.quotes, [{ cue: 'card', theme: 'mira' }], 'Mission 11\'s card quotes Mira\'s theme');
+  const cardNotes = score.played.filter((x) => x.cue).map((x) => x.p);
+  assert.deepEqual(cardNotes, head('mira', 1).bars[0].notes.map((nt) => nt.p), 'its first bar, note for note');
+  // Ending A is the only full major cadence: its last chord is A major with the tonic on top; no theme ends on one
+  const last = ENDING_A[ENDING_A.length - 1];
+  assert.ok(last.chord[0] === 0 && last.chord.includes(4) && last.notes[last.notes.length - 1].p % 12 === 0, 'Ending A comes home to A major');
+  for (const [k, th] of Object.entries(THEMES)) {
+    for (const x of new Set(th.form)) {
+      const bars = section(k, x).bars.filter((b) => b.chord);
+      const end = bars[bars.length - 1];
+      if (end) assert.ok(!(end.chord[0] % 12 === 0 && end.chord.some((v) => ((v % 12) + 12) % 12 === 4)), `${k}/${x} does not end on a major tonic`);
+    }
+  }
+  for (const k of ['A', 'B', 'C']) { score.quotes.length = 0; score.cue(`ending:${k}`); assert.equal(score.quotes.length, 1, `ending ${k} quotes its theme`); }
+  assert.equal(score.quotes[0].theme, 'final', 'Ending C is the Final Choice');
+  assert.ok(score.silentUntil > ctx.currentTime + 8, 'and it keeps a breath of silence before its one note');
+});
+
 // --- story part 1: threads, ledgers and the Prologue rewrite (OVERHAUL.md §3.3, §5 M1-M3, §9; U6) ----------------------
 const REWRITTEN = main.filter(isRewritten);
 const asDeck = (m) => ({ ...m, mkey: m.key });
@@ -3637,26 +3740,56 @@ test('a cold open is shot in its own year, with its people, and the place\'s yea
   assert.ok(!facts.get('co_m12'), 'and its cast has left');
 });
 
-// closing: SKIP (or Enter) ends the part of a mission's opening being played, not the whole of it: a player who skips
-// Mission 12's cold open (it comes before the title) still hears the mission's spoken card, and a second SKIP ends the card
-test('SKIP ends the part of an opening being played: the cold open skipped, the mission\'s card is still said', () => {
+// closing: one tap of SKIP (or Enter) skips the line being said and the shot it is in, and nothing more: never the whole
+// opening, never the mission's spoken card. Mission 12's cold open (it comes before the title) is tapped through line by
+// line, its shots one at a time, and the mission's card is still said, line by line, before the mission starts
+test('SKIP skips one line and its shot, never the whole opening: Mission 12 tapped through, and its card is still said', () => {
   const m12 = MISSIONS.act2.find((m) => m.key === 'm12');
   const { level } = LEVELS.find((l) => l.deck.mkey === 'm12');
   const e = engine();
   for (const r of level.order) { e.setAvailable(r, level.rooms[r].states || m12.states); e.setState(r, 'PRESENT', { force: true }); }
-  const played = [];
-  let pending = null;
-  const game = { engine: e, facts: new FactStore(), campaign: { lv: true, deck: 3 }, story: { decks: MISSIONS.act2 }, hud: { card() {} }, deckWorld: { refresh() {} } };
-  // a stand-in cinema: each part waits until it is skipped (Runtime.skipOpening asks the cinema to end its moment)
-  const cinema = { play: (o, done) => { played.push(o.shots ? 'shots' : (o.lines?.[0]?.text || 'card')); pending = done; }, skipAll() { const d = pending; pending = null; d?.(); } };
-  const rt = Object.assign(Object.create(LastVersion.prototype), { g: game, def: LV, level, chapter: 'act2', chapterStart: false, whenVoices: (then) => then(), hideCard() {}, cinema });
+  // the game's own HUD (its subtitles' queue and skips; no DOM behind it) and the edition's own Cinema
+  const hud = Object.assign(Object.create(HUD.prototype), { subs: [], subT: 0, speakers: {}, el: { subs: { innerHTML: '' } }, card() {} });
+  const said = [];
+  hud.onLine = (who, l) => said.push(l.text);
+  const g = { engine: e, facts: new FactStore(), campaign: { lv: true, deck: 3 }, story: { decks: MISSIONS.act2 }, hud, deckWorld: { refresh() {} },
+    player: { pos: new THREE.Vector3(0, 0.86, 0), H: { x: 0, z: 1 }, model: { visible: true }, cinema: null, rayDistance: (o, d, m) => m },
+    input: { keys: new Set(), state: {} }, after: () => {} };
+  const rt = Object.assign(Object.create(LastVersion.prototype), { g, def: LV, level, chapter: 'act2', chapterStart: false, whenVoices: (then) => then(), hideCard() {} });
+  rt.cinema = new Cinema(rt);
+  const cold = m12.coldOpen.lines.map((l) => l.text);
+  const card = missionCardLines({ ...m12, mkey: 'm12' }).map((l) => l.text);
   rt.openMission(m12, 'MISSION 12');
-  assert.deepEqual(played, ['shots'], 'the cold open plays first (Mission 12 opens before its title)');
+  assert.equal(said[0], cold[0], 'the cold open plays first (Mission 12 opens before its title)');
+  const shot0 = rt.cinema.active.i;
   rt.skipOpening();
-  assert.equal(played[1], 'Mission twelve. The Man Behind the Glass.', 'one SKIP: the cold open ends and the mission\'s card is said');
-  assert.ok(rt.opening, 'the opening goes on');
+  hud.update(0.02);
+  assert.equal(said[1], cold[1], 'one SKIP: the next line of the cold open is said');
+  assert.equal(rt.cinema.active.i, shot0 + 1, 'and the next shot is taken');
+  assert.ok(rt.opening && rt.cinema.active, 'the opening goes on');
+  // tap through the rest of the cold open: one line a tap; then the card's first line, then its second
+  for (let i = 2; i < cold.length; i++) { rt.skipOpening(); hud.update(0.02); assert.equal(said[i], cold[i], `tap ${i}: line ${i} of the cold open`); }
   rt.skipOpening();
-  assert.ok(!rt.opening, 'a second SKIP ends the card, and with it the opening');
+  hud.update(0.02);
+  assert.equal(said[cold.length], card[0], 'past the cold open\'s last line, the mission\'s card is said: ' + card[0]);
+  assert.ok(rt.opening, 'still in the opening');
+  rt.skipOpening();
+  hud.update(0.02);
+  assert.equal(said[cold.length + 1], card[1], 'one tap on the card skips its first line only: its logline is said');
+  // and the opening ends with its last line, not before
+  let taps = 0;
+  while (rt.opening && taps < 20) { rt.skipOpening(); hud.update(0.02); taps++; }
+  assert.ok(!rt.opening && !rt.cinema.active, 'the opening ends after its last line');
+  assert.deepEqual(said.slice(0, cold.length + card.length), [...cold, ...card], 'every line of the cold open and the card was said, in order');
+  // a moment with no lines (a timed, held shot) ends on a tap at its last shot
+  rt.cinema.play({ shots: [{ cam: [4, 3, 4], look: [0, 1, 0], t: 3 }, { cam: [6, 3, 4], look: [0, 1, 0], t: 3 }], lines: [], total: 6 });
+  rt.cinema.skip();
+  assert.ok(rt.cinema.active && rt.cinema.active.i === 1, 'a tap on a timed moment takes its next shot');
+  rt.cinema.skip();
+  assert.ok(!rt.cinema.active, 'and at its last shot, ends it');
+  // the SKIP button and Enter say the same: one line (the code that handles them)
+  const src = fs.readFileSync('game/js/editions/lastversion/cinema.js', 'utf8');
+  assert.ok(/SKIP_KEYS = \[[^\]]*'Enter'/.test(src) && /skipBtn\.onclick = \(e\) => \{\s*e\.stopPropagation\(\);\s*this\.skip\(\);/.test(src), 'Enter and the button skip a line');
 });
 
 // tour: a bark still being said in the place left behind is not said over the next mission's card; a conversation is

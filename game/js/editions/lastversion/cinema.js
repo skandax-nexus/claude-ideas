@@ -6,9 +6,10 @@
 // lines' length shared out); 'default' stages the level's spawn: a wide view behind it easing in, then over
 // the shoulder; null keeps the game's camera (letterbox and lines only). The camera runs through the
 // existing Player.cinema hook; Kai is held meanwhile (keys, the touch stick, the actions that act in the world);
-// the lines are said through hud.say (the voice packs). A tap on the view, a click, Space or E skips the line being
-// said and the shot it is in (Enter, or SKIP, the whole moment: in a mission's opening, the part of it being played,
-// Runtime.skipOpening); the moment ends with its last line.
+// the lines are said through hud.say (the voice packs). A tap on the view, a click, Space, E, Enter or the SKIP button
+// skips the line being said and the shot it is in, and only that: one tap never ends a whole moment, a mission's
+// opening or its spoken card (the closing pass: SKIP once ended the whole opening, so a player who tapped it to pass
+// one line of a cold open never heard the mission's card). The moment ends with its last line, or its last shot.
 import * as THREE from '../../../vendor/three.module.min.js';
 
 const STYLE = `
@@ -34,9 +35,9 @@ const STYLE = `
   body.lastversion.touch #lvSkip small { display: none; }
 `;
 
-// the keys that skip a line (Enter skips the whole moment); the actions held while a moment plays (use, the year,
+// the keys that skip a line and its shot (Enter is the SKIP button's); the actions held while a moment plays (use, the year,
 // REVERSE, echo-step, the anchor, THINK, gear): what acts in the world. Pause, the map, the case board, saves pass.
-const SKIP_KEYS = ['Space', 'KeyE'];
+const SKIP_KEYS = ['Space', 'KeyE', 'Enter', 'NumpadEnter'];
 const HELD = /^(use|shift|set:|combo|anchor|hint|gear:|rules$)/;
 
 const _a = new THREE.Vector3(), _b = new THREE.Vector3();
@@ -55,15 +56,14 @@ export class Cinema {
       const bars = document.createElement('div');
       bars.id = 'lvBars';
       document.body.appendChild(bars);
-      // SKIP: the whole moment (in a mission's opening, the part being played: a card, the cold open), not just the line
+      // SKIP: the line being said and the shot it is in (one tap, one line: the card and the rest still play)
       const skipBtn = document.createElement('button');
       skipBtn.id = 'lvSkip';
       skipBtn.innerHTML = 'SKIP › <small>ENTER</small>';
       skipBtn.setAttribute('aria-label', 'Skip');
       skipBtn.onclick = (e) => {
         e.stopPropagation();
-        if (this.rt.skipOpening) this.rt.skipOpening();
-        else this.skipAll();
+        this.skip();
       };
       document.body.appendChild(skipBtn);
       // a deliberate tap, click or key skips a shot (and the line being said): Space or E, a click, a tap on the
@@ -73,12 +73,7 @@ export class Cinema {
         if (!this.active || this.g.menu) return;
         if (e.type === 'keydown') {
           if (e.repeat) return; // (a key held down repeats: one press skips one line, not the whole moment)
-          // Enter is SKIP's key: with the pointer locked (a desktop at play) the button cannot be clicked
-          if (e.code === 'Enter' || e.code === 'NumpadEnter') {
-            if (this.rt.skipOpening) this.rt.skipOpening();
-            else this.skipAll();
-            return;
-          }
+          // (Enter is SKIP's key: with the pointer locked, a desktop at play, the button cannot be clicked)
           if (!SKIP_KEYS.includes(e.code)) return;
         } else if (e.target?.closest?.('button, input, .overlay, #stickzone, #dock, #buttons, #topbtns')) return;
         this.skip();
@@ -183,14 +178,18 @@ export class Cinema {
     else this.end();
   }
 
+  // one tap: the line being said ends (the next one is said) and the shot it is in (the next one is taken); a moment
+  // with no line left to say and no shot after this one (a held shot, a timed beat with no lines) ends
   skip() {
     const a = this.active;
     if (!a) return;
-    if (a.shots && a.i < a.shots.length - 1) {
+    const more = a.shots && a.i < a.shots.length - 1;
+    if (more) {
       a.i++;
       a.t = 0;
     }
     if (this.g.hud.talking) this.g.hud.skipSub();
+    else if (!more) this.end();
   }
 
   // each step: the camera along its shot; nothing the player presses walks Kai off his mark meanwhile

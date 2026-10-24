@@ -526,27 +526,52 @@ const outroLoad = await az(() => {
 });
 const resume = outroLoad.q;
 check(outroLoad.outro && !outroLoad.after, 'a load during a mission\'s outro leaves no gate shut (transitioning is cleared)', JSON.stringify(outroLoad));
-// the PREVIOUSLY card: a tap on SKIP (the button, as a touch screen has it) ends it at once
-await page.waitForFunction(() => { LVB.step(0.05); return AZ.edition.opening?.previously && AZ.edition.cinema.active; }, null, { timeout: 120000, polling: 250 }).catch(() => {});
-const skipTap = await az(() => { const b = document.querySelector('#lvSkip'); const shown = getComputedStyle(b).display !== 'none'; b.click(); AZ.simulate(0.1); return { shown, opening: !!AZ.edition.opening, cine: !!AZ.edition.cinema.active }; });
-check(skipTap.shown && !skipTap.opening && !skipTap.cine, 'the SKIP button (a tap) ends the PREVIOUSLY card at once', JSON.stringify(skipTap));
+// the PREVIOUSLY card: a tap on SKIP (the button, as a touch screen has it) skips the line being said, and only that:
+// the card goes on with its next line (closing: one tap once ended the whole card)
+await page.waitForFunction(() => { LVB.step(0.05); return AZ.edition.opening?.previously && AZ.edition.cinema.active && AZ.hud.subT > 0; }, null, { timeout: 120000, polling: 250 }).catch(() => {});
+const skipTap = await az(() => {
+  const b = document.querySelector('#lvSkip');
+  const shown = getComputedStyle(b).display !== 'none';
+  const first = AZ.hud.cur?.text;
+  b.click();
+  AZ.simulate(0.1);
+  return { shown, first, now: AZ.hud.cur?.text, talking: AZ.hud.subT > 0, opening: !!AZ.edition.opening, cine: !!AZ.edition.cinema.active };
+});
+check(skipTap.shown && skipTap.opening && skipTap.cine && skipTap.talking && skipTap.now && skipTap.now !== skipTap.first,
+  'the SKIP button (a tap) skips one line of the PREVIOUSLY card, and the card goes on with its next', JSON.stringify(skipTap));
 await page.waitForFunction(() => { LVB.talkOut(1); return !AZ.edition.opening && !AZ.edition.cinema.active && AZ.voice.loading >= 1; }, null, { timeout: 120000, polling: 250 }).catch(() => {});
 const back = await az(() => { const lm = LVB.lm('platform'); return { quarter: AZ.campaign.quarter, room: AZ.room, at: AZ.player.pos.toArray().map((v) => +v.toFixed(1)), d: Math.hypot(AZ.player.pos.x - lm[0], AZ.player.pos.z - lm[2]), prev: LVB.said.includes('NONE: Rain City, 2049.'), done: !!AZ.deckWorld.flags.beat_done, raincoat: AZ.facts.get('raincoat') }; });
 check(resume === 2 && back.quarter === 2 && back.d < 1 && back.prev && back.done && back.raincoat, 'an M1 save loads where it was taken (LINE 41, its quarter\'s spawn), after a PREVIOUSLY card; its facts and flags kept', JSON.stringify({ resume, back }));
 await az(() => { LVB.walk([[26, -158], [29.5, -165], [29.5, -177.5], [3, -185], [1, -192], [0.5, -205], [0.5, -225]]); LVB.skip(); }); // (the exit is past the staff gate, z < -222)
-// Mission 2's opening: its cold open plays before its card; SKIP ends the part being played (the cold open), and the
-// mission's card is still said (closing: SKIP once used to end the whole opening, its spoken card with it)
-await page.waitForFunction(() => { LVB.step(0.1); return AZ.campaign.deck === 1 && !AZ.transitioning && AZ.edition.cinema.active && LVB.said.some((l) => l.startsWith('IVEN: Test')); }, null, { timeout: 180000, polling: 250 }).catch(() => {});
-const skipBefore = await az(() => ({ deck: AZ.campaign.deck, opening: !!AZ.edition.opening, cine: !!AZ.edition.cinema.active, btn: getComputedStyle(document.querySelector('#lvSkip')).display }));
+// Mission 2's opening: its cold open plays before its card. One press of Enter (SKIP's key) skips the line being said
+// and nothing more: the cold open goes on, line by line, and then the mission's card is said, line by line (closing:
+// SKIP once ended the whole opening, its spoken card with it)
+await page.waitForFunction(() => { LVB.step(0.1); return AZ.campaign.deck === 1 && !AZ.transitioning && AZ.edition.cinema.active && AZ.hud.subT > 0 && LVB.said.some((l) => l.startsWith('IVEN: Test')); }, null, { timeout: 180000, polling: 250 }).catch(() => {});
+const skipBefore = await az(() => ({ deck: AZ.campaign.deck, opening: !!AZ.edition.opening, cine: !!AZ.edition.cinema.active, btn: getComputedStyle(document.querySelector('#lvSkip')).display, cur: AZ.hud.cur?.text }));
 // (at play on a desktop the pointer is locked and the button cannot be clicked: Enter is SKIP's key)
 await press('Enter');
-await az(() => { AZ.simulate(0.3); });
-const skipMid = await az(() => ({ opening: !!AZ.edition.opening, cine: !!AZ.edition.cinema.active, card: document.querySelector('#card').classList.contains('on'), card2: LVB.said.includes('NONE: Mission two. Helix Goes Dark.') }));
+await az(() => { AZ.simulate(0.1); });
+const skipMid = await az(() => ({ opening: !!AZ.edition.opening, cine: !!AZ.edition.cinema.active, cur: AZ.hud.cur?.text, card: document.querySelector('#card').classList.contains('on') }));
+check(skipBefore.deck === 1 && skipBefore.opening && skipBefore.cine && skipBefore.btn !== 'none' && skipMid.opening && skipMid.cine && skipMid.cur && skipMid.cur !== skipBefore.cur && !/^Mission two/.test(skipMid.cur),
+  'one press of SKIP (Enter) in Mission 2\'s cold open skips one line: the cold open goes on with its next', JSON.stringify({ skipBefore, skipMid }));
+// press on, a line a press, until the mission's card is said; then once more: its logline, still in the opening
+const pressed = [skipBefore.cur, skipMid.cur];
+let cardAt = null;
+for (let i = 0; i < 16 && cardAt === null; i++) {
+  await press('Enter');
+  const now = await az(() => { AZ.simulate(0.1); return { cur: AZ.hud.cur?.text, card: document.querySelector('#card').classList.contains('on'), opening: !!AZ.edition.opening }; });
+  if (!now.opening) break;
+  if (now.cur !== pressed[pressed.length - 1]) pressed.push(now.cur);
+  if (now.cur === 'Mission two. Helix Goes Dark.' && now.card) cardAt = pressed.length - 1;
+}
 await press('Enter');
-await az(() => { AZ.simulate(0.3); });
+const logline = await az(() => { AZ.simulate(0.1); return { cur: AZ.hud.cur?.text, opening: !!AZ.edition.opening, card: document.querySelector('#card').classList.contains('on') }; });
+check(cardAt !== null && cardAt >= 5 && logline.opening && logline.card && logline.cur === 'Helix in the storm, under emergency light.',
+  'pressed through line by line, Mission 2\'s cold open is said to its end, then its card ("Mission two. Helix Goes Dark."), then the card\'s logline', JSON.stringify({ pressed, cardAt, logline }));
+// the opening ends with its last line, and the mission starts
+await page.waitForFunction(() => { if (AZ.edition.cinema.active) AZ.edition.skipOpening(); AZ.simulate(0.1); return !AZ.edition.opening; }, null, { timeout: 60000, polling: 250 }).catch(() => {});
 const skipAfter = await az(() => ({ opening: !!AZ.edition.opening, cine: !!AZ.edition.cinema.active, card: document.querySelector('#card').classList.contains('on') }));
-check(skipBefore.deck === 1 && skipBefore.opening && skipBefore.cine && skipBefore.btn !== 'none' && skipMid.opening && skipMid.card && skipMid.card2 && !skipAfter.opening && !skipAfter.cine && !skipAfter.card,
-  'SKIP (Enter) ends the part of Mission 2\'s opening being played: the cold open, then its card is said; a second SKIP ends the card, and the mission starts', JSON.stringify({ skipBefore, skipMid, skipAfter }));
+check(!skipAfter.opening && !skipAfter.cine && !skipAfter.card, 'after the card\'s last line the opening is over, and Mission 2 starts', JSON.stringify(skipAfter));
 await az(() => { AZ.simulate(0.3); LVB.skip(); });
 check((await az(() => LVB.where())).deck === 1, 'through the staff gate, after the hook: Mission 2');
 const hook1 = await az(() => LVB.said.includes('KAI: She died twenty-three years ago. I was at the funeral. I was twelve.') && LVB.said.includes('NONE: One voicemail. Received 05:40. Caller unknown.'));

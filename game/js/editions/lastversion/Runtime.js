@@ -928,11 +928,12 @@ export class LastVersion {
     }, () => {});
   }
 
-  // a tap on SKIP (or Enter): the part of the opening being played ends (the PREVIOUSLY card, the chapter's card, the
-  // mission's card, the cold open, the title's shots) and the next part plays, so a player who skips a cold open still
-  // hears the mission's card; outside an opening, the staged moment ends. What a skipped part sets is still set
+  // a tap on SKIP (or Enter): the line being said, and the shot it is in, ends, and only that (Cinema.skip). An
+  // opening is its parts in turn (the PREVIOUSLY card, the chapter's card, the mission's card, the cold open, the
+  // title's shots), each part its lines: one tap never ends a part, let alone the opening, so a player who taps SKIP
+  // to pass a line of a cold open still hears the rest of it and the mission's card. What a skipped line sets is set
   skipOpening() {
-    this.cinema.skipAll();
+    this.cinema.skip();
     return true;
   }
 
