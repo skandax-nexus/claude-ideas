@@ -78,11 +78,13 @@ uniform vec4 uStorm; // on, bands, eye, time
 uniform vec3 uStormDir, uBandCol;
 uniform vec4 uWedge; // on, count, turn, strength
 uniform vec3 uWedgeCol[7];
+uniform float uWedgeSoft; // 0: hard panes (ending B); 1: each wedge's light runs into the next (M22)
 uniform vec4 uEclipse; // on, radius, corona, -
 uniform vec3 uEclipseDir;
 uniform sampler2D uNoise;
 varying vec3 vDir;
 float hash(vec3 p) { p = fract(p * 0.3183099 + 0.1); p *= 17.0; return fract(p.x * p.y * p.z * (p.x + p.y + p.z)); }
+vec3 wedgeCol(float i) { vec3 c = uWedgeCol[0]; for (int k = 0; k < 7; k++) if (float(k) == i) c = uWedgeCol[k]; return c; }
 void main() {
   vec3 d = normalize(vDir);
   float h = d.y;
@@ -93,12 +95,16 @@ void main() {
     float n = uWedge.y;
     float w = a / (6.2831853 / n);
     float idx = floor(w);
-    vec3 wc = uWedgeCol[0];
-    for (int i = 0; i < 7; i++) if (float(i) == idx) wc = uWedgeCol[i];
+    vec3 wc = wedgeCol(idx);
     float edge = min(fract(w), 1.0 - fract(w));
+    // (closing: soft wedges: from each wedge's middle its light runs into its neighbour's over half a wedge, no seam; a
+    // hard seam read as a rendering fault on a phone)
+    float u = w - 0.5, i0 = floor(u);
+    vec3 soft = mix(wedgeCol(mod(i0 + n, n)), wedgeCol(mod(i0 + 1.0, n)), smoothstep(0.2, 0.8, fract(u)));
+    wc = mix(wc, soft, uWedgeSoft);
     vec3 wcol = mix(wc, uZenith, pow(clamp(h, 0.0, 1.0), 1.6) * 0.65);
     col = mix(col, wcol, uWedge.x * uWedge.w * smoothstep(-0.02, 0.08, h));
-    col *= 1.0 - uWedge.x * 0.55 * (1.0 - smoothstep(0.0, 0.035, edge)) * smoothstep(0.02, 0.12, h);
+    col *= 1.0 - uWedge.x * (1.0 - uWedgeSoft) * 0.55 * (1.0 - smoothstep(0.0, 0.035, edge)) * smoothstep(0.02, 0.12, h);
   }
   col += uGlow * uGlowK * exp(-abs(h) * 9.0);
   float sd = dot(d, uSunDir);
@@ -374,7 +380,7 @@ export class Sky {
       uCl1: { value: new THREE.Vector4(0.5, 0.01, 1, 0) }, uCl2: { value: new THREE.Vector4(0.3, 0.01, 2, 0) },
       uRing: { value: new THREE.Vector4(0, 0.19, 0.045, 0) }, uRingDir: { value: new THREE.Vector3(0, 1, 0) },
       uStorm: { value: new THREE.Vector4(0, 1, 1, 0) }, uStormDir: { value: new THREE.Vector3(0, 0, -1) }, uBandCol: { value: new THREE.Color(0x0a0e22) },
-      uWedge: { value: new THREE.Vector4(0, 5, 0, 0.6) }, uWedgeCol: { value: Array.from({ length: 7 }, () => new THREE.Color(0x888888)) },
+      uWedge: { value: new THREE.Vector4(0, 5, 0, 0.6) }, uWedgeCol: { value: Array.from({ length: 7 }, () => new THREE.Color(0x888888)) }, uWedgeSoft: { value: 0 },
       uEclipse: { value: new THREE.Vector4(0, 0.05, 1, 0) }, uEclipseDir: { value: new THREE.Vector3(0, 1, 0) },
     };
     for (const k of COLORS) u[k] = { value: new THREE.Color() };
@@ -401,7 +407,8 @@ export class Sky {
         this.extras.push(o.mesh);
       }
       if (f.kind === 'route') o.stops = f.stops.map(([z, sky]) => ({ z, sky }));
-      if (f.kind === 'wedges') f.cols.forEach((c, i) => u.uWedgeCol.value[i]?.setHex(c));
+      // (a mission may give each year its own wedges, `when: '@PAST'`: the strongest one sets the sky, its colours eased in)
+      if (f.kind === 'wedges') { o.colors = f.cols.map((c) => new THREE.Color(c)); f.cols.forEach((c, i) => u.uWedgeCol.value[i]?.setHex(c)); }
       return o;
     });
     this.goal = null;
@@ -459,6 +466,7 @@ export class Sky {
     // the features first: some change what the sky eases toward
     let drift = 1;
     let goal = this.year ? this.targetOf(this.year.sky) : null;
+    let wb = null;
     for (const f of this.features) {
       const on = !!f.cond(ctx);
       f.k = this.snap ? (on ? 1 : 0) : f.k + ((on ? 1 : 0) - f.k) * Math.min(1, dt * (f.rate ?? 0.6));
@@ -474,7 +482,7 @@ export class Sky {
         this.u.uStormDir.value.set(...(f.dir ||= dirOf(f.az ?? 0, 0))).normalize(); // (a feature's bearing is fixed: worked out once)
         if (f.band) this.u.uBandCol.value.setHex(f.band);
       } else if (f.kind === 'wedges') {
-        this.u.uWedge.value.set(f.k, f.n || 5, (f.turn || 0) + time * (f.spin || 0), f.mix ?? 0.6);
+        if (!wb || f.k > wb.k) wb = f;
       } else if (f.kind === 'eclipse') {
         this.u.uEclipse.value.set(f.k, (f.size || 3) * deg, f.corona ?? 1.2, 0);
         this.u.uEclipseDir.value.set(...(f.dir ||= dirOf(f.az ?? 180, f.elev ?? 40)));
@@ -502,6 +510,12 @@ export class Sky {
           for (const o of f.mesh.children) o.material.opacity = o.userData.base * f.k * pulse;
         }
       }
+    }
+    if (wb) {
+      this.u.uWedge.value.set(wb.k, wb.n || 5, (wb.turn || 0) + time * (wb.spin || 0), wb.mix ?? 0.6);
+      this.u.uWedgeSoft.value = wb.soft ?? 0;
+      const kk = this.snap ? 1 : Math.min(1, dt * 2.5);
+      wb.colors.forEach((c, i) => this.u.uWedgeCol.value[i]?.lerp(c, kk));
     }
     if (goal) this.goal = goal;
     this.ease(this.snap ? 1 : 1 - Math.exp(-dt * 3.2));

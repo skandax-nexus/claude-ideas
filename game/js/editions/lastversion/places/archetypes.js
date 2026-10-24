@@ -175,7 +175,15 @@ export function block(P, o) {
   const m = o.facade || P.style.facade;
   const t = o.tint ?? P.rng.pick(P.style.tints || [0xffffff]);
   const W = x1 - x0, D = z1 - z0;
-  P.box([x0, y, z0, x1, y + h, z1], m, { t, solid: o.solid !== false });
+  // (closing: visuals) a shop on the ground floor is a room you see into, not a lit panel: the storey is set back by
+  // the shop's depth on its shopfront sides, and the shop is built in the gap (shopRoom, below)
+  const sides = o.shop ? [].concat(o.shop.side || 'W') : [];
+  const SH = 3.4, deep = o.shop && o.shop.interior !== false ? Math.min(o.shop.depth ?? 3, Math.min(W, D) / 3) : 0;
+  if (deep && h > SH + 0.5) {
+    const has = (k) => sides.includes(k);
+    P.box([x0 + (has('W') ? deep : 0), y, z0 + (has('N') ? deep : 0), x1 - (has('E') ? deep : 0), y + SH, z1 - (has('S') ? deep : 0)], m, { t, solid: o.solid !== false });
+    P.box([x0, y + SH, z0, x1, y + h, z1], m, { t, solid: o.solid !== false });
+  } else P.box([x0, y, z0, x1, y + h, z1], m, { t, solid: o.solid !== false });
   P.blocks.push([x0, z0, x1, z1]);
   P.reserve(x0, z0, x1, z1);
   const roof = o.roof || 'flat';
@@ -206,25 +214,36 @@ export function block(P, o) {
   }
   if (o.cornice) P.vbox([x0 - 0.3, y + h - 0.5, z0 - 0.3, x1 + 0.3, y + h - 0.1, z1 + 0.3], o.cornice === true ? P.style.trim : o.cornice);
   if (o.shop) {
-    for (const side of [].concat(o.shop.side || 'W')) {
-      const sm = o.shop.mat || 'shopLit';
-      const g = 0.06, inset = Math.min(1.2, (side === 'W' || side === 'E' ? D : W) * 0.12);
-      if (side === 'W') P.vbox([x0 - g - 0.04, y + 0.3, z0 + inset, x0 - g, y + 3.2, z1 - inset], sm);
-      if (side === 'E') P.vbox([x1 + g, y + 0.3, z0 + inset, x1 + g + 0.04, y + 3.2, z1 - inset], sm);
-      if (side === 'N') P.vbox([x0 + inset, y + 0.3, z0 - g - 0.04, x1 - inset, y + 3.2, z0 - g], sm);
-      if (side === 'S') P.vbox([x0 + inset, y + 0.3, z1 + g, x1 - inset, y + 3.2, z1 + g + 0.04], sm);
+    for (const side of sides) {
+      const alongZ = side === 'W' || side === 'E';
+      const inset = Math.min(1.2, (alongZ ? D : W) * 0.12);
+      const lo = (alongZ ? z0 : x0), hi = (alongZ ? z1 : x1);
+      const spans = (o.shop.spans || [[lo + inset, hi - inset]]).map(([a, b]) => [Math.max(lo + 0.3, a), Math.min(hi - 0.3, b)]).filter(([a, b]) => b - a > 1.2);
+      if (deep && h > SH + 0.5) shopRoom(P, { side, x0, z0, x1, z1, y, deep, lo, hi, spans, m, t, shop: o.shop });
+      else {
+        // (a shop with no room to it: its lit panel, as before)
+        const sm = o.shop.mat || 'shopLit', g = 0.06;
+        if (side === 'W') P.vbox([x0 - g - 0.04, y + 0.3, z0 + inset, x0 - g, y + 3.2, z1 - inset], sm);
+        if (side === 'E') P.vbox([x1 + g, y + 0.3, z0 + inset, x1 + g + 0.04, y + 3.2, z1 - inset], sm);
+        if (side === 'N') P.vbox([x0 + inset, y + 0.3, z0 - g - 0.04, x1 - inset, y + 3.2, z0 - g], sm);
+        if (side === 'S') P.vbox([x0 + inset, y + 0.3, z1 + g, x1 - inset, y + 3.2, z1 + g + 0.04], sm);
+      }
       // the shopfront's frame: mullions every 2.4 m or so and a transom, so it reads as windows and a door
-      {
-        const alongZ = side === 'W' || side === 'E';
-        const a0 = (alongZ ? z0 : x0) + inset, a1 = (alongZ ? z1 : x1) - inset, n = Math.max(1, Math.round((a1 - a0) / 2.4));
-        const f = side === 'W' ? x0 - g - 0.1 : side === 'E' ? x1 + g + 0.1 : side === 'N' ? z0 - g - 0.1 : z1 + g + 0.1;
+      const g = 0.06;
+      for (const [a0, a1] of deep ? spans : [[lo + inset, hi - inset]]) {
+        const n = Math.max(1, Math.round((a1 - a0) / 2.4));
+        const f = side === 'W' ? x0 - g - 0.04 : side === 'E' ? x1 + g + 0.04 : side === 'N' ? z0 - g - 0.04 : z1 + g + 0.04;
         const bar = (u0, u1, v0, v1) => P.vbox(alongZ ? [f - 0.05, v0, u0, f + 0.05, v1, u1] : [u0, v0, f - 0.05, u1, v1, f + 0.05], o.shop.frame || 'ironDark', { prop: 1, noShadow: 1 });
+        const door = o.shop.enter;
         for (let i = 0; i <= n; i++) {
           const u = a0 + ((a1 - a0) * i) / n;
+          if (door && u > door[0] + 0.1 && u < door[1] - 0.1) continue;
           bar(u - 0.07, u + 0.07, y + 0.3, y + 3.2);
         }
+        if (door) for (const u of door) bar(u - 0.07, u + 0.07, y, y + 3.2);
         bar(a0, a1, y + 2.45, y + 2.55);
-        bar(a0, a1, y + 0.25, y + 0.45);
+        if (door) { if (door[0] > a0) bar(a0, door[0], y + 0.25, y + 0.45); if (door[1] < a1) bar(door[1], a1, y + 0.25, y + 0.45); }
+        else bar(a0, a1, y + 0.25, y + 0.45);
       }
       if (o.shop.awning) {
         const am = o.shop.awning;
@@ -238,6 +257,68 @@ export function block(P, o) {
     }
   }
   return { x0, z0, x1, z1, y, h };
+}
+
+// (closing: visuals) a shop behind its glass, `deep` metres into the block: its floor, a ceiling of light panels, its back
+// wall of shelves (lit with the year's windows), the piers between shops in the block's facade, a counter and a shelf unit
+// or two; with `shop.enter` ([from, to] along the shopfront) a doorway in the glass and the room is walked into, and
+// `shop.kind` 'laundry' fills it with washing machines and a bench. Its local frame: u along the shopfront, d into the block.
+function shopRoom(P, { side, x0, z0, x1, z1, y, deep, lo, hi, spans, m, t, shop }) {
+  const box = (u0, u1, d0, d1, y0, y1) => {
+    const [ua, ub] = [Math.min(u0, u1), Math.max(u0, u1)], [da, db] = [Math.min(d0, d1), Math.max(d0, d1)];
+    if (side === 'W') return [x0 + da, y0, ua, x0 + db, y1, ub];
+    if (side === 'E') return [x1 - db, y0, ua, x1 - da, y1, ub];
+    if (side === 'N') return [ua, y0, z0 + da, ub, y1, z0 + db];
+    return [ua, y0, z1 - db, ub, y1, z1 - da];
+  };
+  const SH = 3.4;
+  // the piers: the facade between and either side of the shops, the storey's full depth
+  let u = lo;
+  for (const [a, b] of [...spans, [hi, hi]]) {
+    if (a - u > 0.01) P.box(box(u, a, 0, deep, y, y + SH), m, { t });
+    u = b;
+  }
+  const kind = shop.kind || 'goods';
+  spans.forEach(([a, b], si) => {
+    P.vbox(box(a, b, 0.05, deep, y + 0.01, y + 0.04), 'shopFloor', { noShadow: 1 });
+    P.vbox(box(a, b, 0, deep, SH + y - 0.12, y + SH), 'shopCeiling', { noShadow: 1 });
+    P.vbox(box(a, b, deep - 0.06, deep - 0.01, y, y + SH - 0.1), kind === 'laundry' ? 'shopBack' : 'shopShelves', { noShadow: 1 });
+    for (const e of [a, b]) P.vbox(box(e === a ? a : b - 0.04, e === a ? a + 0.04 : b, 0, deep, y, y + SH - 0.1), 'shopBack', { noShadow: 1 });
+    // the glass, solid; the doorway's gap left open
+    const door = shop.enter && si === 0 ? shop.enter : null;
+    const glass = (g0, g1) => g1 - g0 > 0.05 && P.box(box(g0, g1, -0.02, 0.03, y + 0.15, y + 3.2), 'glass', { noShadow: 1 });
+    if (door) { glass(a, door[0]); glass(door[1], b); P.vbox(box(door[0], door[1], -0.02, 0.03, y + 3.2, y + SH), 'glass', { noShadow: 1 }); } else glass(a, b);
+    // what is in it
+    const len = b - a, r = P.rng;
+    const face = ({ W: -PI / 2, E: PI / 2, N: PI, S: 0 })[side];
+    if (kind === 'laundry') {
+      // washing machines along the back wall, a bench at the far end, a folding counter at the near end
+      for (let k = a + 0.6; k < b - 0.6; k += 0.75) {
+        if (door && k > door[0] - 0.6 && k < door[1] + 0.6) continue;
+        const [cx, , cz] = box(k, k, deep - 0.4, deep - 0.4, y, y);
+        prop(P, 'washer', cx, cz, face, { y, solid: true });
+      }
+      P.box(box(a + 0.8, a + 3.8, 0.8, 1.2, y, y + 0.45), 'wood', { prop: 1 });
+      P.box(box(b - 3.4, b - 0.6, deep - 1.6, deep - 1.0, y, y + 0.9), 'counterTop', { prop: 1 });
+    } else if (kind === 'cafe') {
+      // a counter with its machine at one end, little round tables and their chairs along the glass
+      P.box(box(b - 2.4, b - 0.3, 1.4, 2.1, y, y + 1.0), 'counterTop', { prop: 1 });
+      P.vbox(box(b - 1.6, b - 1.0, 1.6, 1.9, y + 1.0, y + 1.45), 'steel', { prop: 1 });
+      for (let k = a + 1.2; k < b - 3; k += 2.2) {
+        const [cx, , cz] = box(k, k, 1.0, 1.0, y, y);
+        P.cyl(cx, y, cz, 0.05, 0.72, 'ironDark', { seg: 6, prop: 1 });
+        P.cyl(cx, y + 0.72, cz, 0.38, 0.04, 'wood', { seg: 14, prop: 1 });
+        for (const dk of [-0.6, 0.6]) { const [qx, , qz] = box(k + dk, k + dk, 1.0, 1.0, y, y); P.cyl(qx, y + 0.42, qz, 0.2, 0.05, 'wood', { seg: 10, prop: 1 }); P.cyl(qx, y, qz, 0.03, 0.42, 'ironDark', { seg: 5, prop: 1 }); }
+      }
+    } else {
+      // a counter at one end, a freestanding shelf unit or two across the room's middle
+      const cEnd = r.chance(0.5);
+      P.box(box(cEnd ? a + 0.3 : b - 1.6, cEnd ? a + 1.6 : b - 0.3, 0.9, 1.5, y, y + 0.95), 'counterTop', { prop: 1 });
+      for (let k = a + 2.6; k < b - 2.2; k += 3.2) P.vbox(box(k, k + 1.6, deep * 0.45, deep * 0.45 + 0.5, y, y + 1.7), 'shopShelves', { prop: 1 });
+    }
+    const [lx, , lz] = box((a + b) / 2, (a + b) / 2, deep / 2, deep / 2, y, y);
+    P.glow(lx, y + 0.06, lz, Math.min(3, len / 2), shop.color ?? 0xffd9a8);
+  });
 }
 
 // a tall glass tower with a crown
@@ -428,6 +509,11 @@ export function glyphs(P, x, y, z, w, h, ry, o = {}) {
   P.obox(x, y, z, w, h, o.d ?? 0.35, ry, o.m || 'glyphStone', { solid: o.solid, prop: o.prop });
 }
 
+// (closing: visuals) a plain painted material as the painted panel it stands for: booths, cabins, cabinets and consoles
+// with their seams and scuffs, never a blank box
+export const PAINTED = { helixWhite: 'panelWhite', helixProp: 'panelWhite', boothBlue: 'panelNavy', siteCabin: 'panelCream', relayCabinet: 'panelGreen', kioskGreen: 'panelGreen', tarp: 'canvasBlue', tarpScav: 'canvasKhaki', tentWhite: 'canvasWhite' };
+export const painted = (m) => PAINTED[m] || m;
+
 // small things: each a few pieces, culled beyond 90 m (Scenery.js); solid when large enough to bump into
 export function prop(P, kind, x, z, ry = 0, o = {}) {
   const y = o.y ?? P.heightAt(x, z);
@@ -437,7 +523,7 @@ export function prop(P, kind, x, z, ry = 0, o = {}) {
   const at = (dx, dz) => [x + dx * c + dz * s, z - dx * s + dz * c];
   const ob = (dx, dy, dz, w, h, d, m, q = {}) => {
     const [px, pz] = at(dx, dz);
-    P.obox(px, y + dy, pz, w, h, d, ry, m, { prop: 1, ...q });
+    P.obox(px, y + dy, pz, w, h, d, ry + (q.turn || 0), m, { prop: 1, ...q });
   };
   // the AABB of a turned rectangle (half sizes hw across, hd deep), h high
   const rb = (hw, hd, h, dx = 0, dz = 0) => {
@@ -486,14 +572,18 @@ export function prop(P, kind, x, z, ry = 0, o = {}) {
       break;
     }
     case 'kiosk':
-      ob(0, 0, 0, 2.2, 2.6, 2.2, o.m || 'kioskGreen');
+      ob(0, 0, 0, 2.2, 2.6, 2.2, painted(o.m || 'kioskGreen'));
       ob(0, 2.6, 0, 2.6, 0.2, 2.6, 'ironDark');
       C([x - 1.1, y, z - 1.1, x + 1.1, y + 2.6, z + 1.1]);
       break;
     case 'booth':
-      ob(0, 0, 0, 2.2, 2.6, 2.0, o.m || 'helixWhite');
-      ob(0, 1.0, 1.01, 1.8, 1.2, 0.04, 'glass');
-      ob(0, 2.6, 0, 2.6, 0.25, 2.4, 'steel');
+      // a booth: panelled sides, a counter under its window, a dark inside behind the glass, a roof with a lit fascia
+      ob(0, 0, 0, 2.2, 2.6, 2.0, painted(o.m || 'helixWhite'));
+      ob(0, 1.0, 1.0, 1.8, 1.2, 0.02, 'carGlass');
+      ob(0, 1.0, 1.02, 1.8, 1.2, 0.04, 'glass');
+      ob(0, 0.95, 1.16, 2.0, 0.06, 0.34, 'counterTop');
+      ob(0, 2.6, 0, 2.6, 0.25, 2.4, 'panelGrey');
+      ob(0, 2.62, 1.21, 2.4, 0.2, 0.02, 'lightPanel', { noShadow: 1 });
       C(rb(1.1, 1.0, 2.6));
       break;
     case 'barrier':
@@ -518,9 +608,62 @@ export function prop(P, kind, x, z, ry = 0, o = {}) {
       C([x - 0.7, y, z - 0.7, x + 0.7, y + 0.8, z + 0.7]);
       break;
     case 'crate':
-      ob(0, 0, 0, 1.1, 0.9, 1.1, o.m || 'wood');
+      ob(0, 0, 0, 1.1, 0.9, 1.1, o.m || 'crateWood');
       C([x - 0.6, y, z - 0.6, x + 0.6, y + 0.9, z + 0.6]);
       break;
+    // (closing: visuals) each mission's own boxes and cases, never the same white cube: a stack of cardboard boxes, a stack
+    // of aid crates, a museum's packing crates, a washing machine, a ridge tent, a display case with its exhibit
+    case 'cardboard':
+      ob(0, 0, 0, 0.7, 0.5, 0.56, o.m || 'cardboard');
+      ob(0.74, 0, 0.06, 0.6, 0.44, 0.5, 'cardboardPale', { turn: 0.15 });
+      if ((o.n ?? 3) > 2) ob(0.12, 0.5, 0.02, 0.56, 0.4, 0.46, o.m || 'cardboard', { turn: 0.45 });
+      C(rb(0.8, 0.4, 0.9, 0.35, 0));
+      break;
+    case 'aidCrates':
+      for (const [dx, dz] of [[-0.42, 0], [0.42, 0], [0, 0.64]]) ob(dx, 0, dz, 0.8, 0.5, 0.6, o.m || 'aidCrate');
+      ob(0, 0.5, 0.2, 0.8, 0.5, 0.6, o.m2 || o.m || 'aidCrate', { turn: 0.2 });
+      C(rb(0.85, 0.7, 1.0, 0, 0.3));
+      break;
+    case 'packingCrate':
+      ob(0, 0, 0, 1.6, 1.3, 1.2, o.m || 'crateMuseum');
+      ob(1.25, 0, 0.1, 0.8, 0.7, 0.7, o.m || 'crateMuseum', { turn: 0.3 });
+      ob(0.2, 1.3, 0, 1.4, 0.04, 1.0, 'cloth', { noShadow: 1 });
+      C(rb(1.5, 0.65, 1.3, 0.4, 0));
+      break;
+    case 'washer':
+      ob(0, 0, 0, 0.62, 0.86, 0.62, 'panelWhite');
+      ob(0, 0.02, 0.31, 0.6, 0.82, 0.02, 'washerFront', { noShadow: 1 });
+      C(rb(0.32, 0.32, 0.86));
+      break;
+    case 'tent': {
+      // a ridge tent along its own z: low canvas walls, the roof, a dark door flap at the front, guy lines
+      const w = o.w ?? 4, d = o.d ?? 6, wh = o.wall ?? 0.9, rh = o.ridge ?? 1.8, m = painted(o.m || 'canvasWhite');
+      for (const sx of [-1, 1]) ob(sx * (w / 2 - 0.03), 0, 0, 0.06, wh, d, m);
+      ob(0, 0, -d / 2 + 0.03, w, wh, 0.06, m);
+      ob(0, 0, d / 2 - 0.03, w, wh, 0.06, m);
+      P.gable(x, y + wh, z, w + 0.3, d + 0.2, rh, ry, m, { prop: 1 });
+      ob(0, 0, d / 2 + 0.01, 1.1, wh + rh * 0.7, 0.03, 'shadow', { noShadow: 1 });
+      for (const sx of [-1, 1]) for (const dz of [-d / 3, d / 3]) ob(sx * (w / 2 + 0.7), 0, dz, 0.03, 1.4, 0.03, 'rope', { rz: sx * 0.9, noShadow: 1 });
+      C(rb(w / 2, d / 2, wh + rh));
+      break;
+    }
+    case 'displayCase': {
+      // a museum's case: a plinth, a glass box on it, and in it what it shows (o.show: a clock, a reel, a shard, a toy)
+      ob(0, 0, 0, 1.0, 0.9, 0.7, o.m || 'wood');
+      ob(0, 0.9, 0, 0.92, 0.62, 0.62, 'caseGlass');
+      ob(0, 0.9, 0, 1.0, 0.04, 0.7, 'brass', { noShadow: 1 });
+      ob(0, 1.52, 0, 1.0, 0.04, 0.7, 'brass', { noShadow: 1 });
+      const sh = o.show || 'clock';
+      const [px, pz] = at(0, 0);
+      if (sh === 'clock') { P.cyl(px, y + 0.94, pz, 0.16, 0.06, 'clockFaceWhite', { seg: 14, rx: PI / 2, ry, prop: 1 }); P.torus(px, y + 1.1, pz, 0.17, 0.02, 'brass', { ry, seg: 16, prop: 1 }); }
+      else if (sh === 'reel') { for (const k of [-0.14, 0.14]) { const [qx, qz] = at(k, 0); P.torus(qx, y + 1.12, qz, 0.12, 0.03, 'reelBrown', { ry: ry + PI / 2, seg: 14, prop: 1 }); } }
+      else if (sh === 'shard') ob(0, 0.94, 0, 0.36, 0.05, 0.22, 'bronzeAged', { turn: 0.5 });
+      else if (sh === 'toy') { P.sphere(px, y + 1.02, pz, 0.08, 'carRed', { prop: 1 }); ob(0, 0.94, 0, 0.2, 0.1, 0.12, 'marqueeYellow'); }
+      else ob(0, 0.94, 0, 0.3, 0.2, 0.2, 'bronzeAged');
+      P.glow(px, y + 0.02, pz, 1.4, 0xffd8a0);
+      C(rb(0.5, 0.35, 1.55));
+      break;
+    }
     case 'barrel':
       P.cyl(x, y, z, 0.42, 1.0, o.m || 'wood', { seg: 10, prop: 1 });
       C([x - 0.4, y, z - 0.4, x + 0.4, y + 1.0, z + 0.4]);
@@ -590,16 +733,21 @@ export function prop(P, kind, x, z, ry = 0, o = {}) {
       P.glow(x, y + 0.02, z, 4.5, 0xe8f0ff, 4.4);
       break;
     case 'siteHut':
-      ob(0, 0, 0, 6, 2.7, 2.6, 'siteCabin');
-      ob(0, 2.7, 0, 6.2, 0.12, 2.8, 'steel');
+      ob(0, 0, 0, 6, 2.7, 2.6, 'panelCream');
+      ob(0, 2.7, 0, 6.2, 0.12, 2.8, 'panelGrey');
       ob(1.2, 1.0, 1.31, 1.4, 0.9, 0.04, 'windowWarm');
+      ob(-1.6, 0, 1.31, 0.9, 2.1, 0.04, 'doorDark');
+      ob(-1.6, 0, 1.6, 1.2, 0.2, 0.6, 'gratingSteel');
       C(rb(3, 1.4, 2.7));
       break;
     case 'tarp':
-      ob(0, 0, 0, o.w ?? 4, 0.6, o.d ?? 3, 'tarp');
+      // a tarp over a stack of things on pallets: its shape shows what is under it
+      ob(0, 0, 0, (o.w ?? 4) * 0.9, 0.14, (o.d ?? 3) * 0.9, 'wood');
+      ob(-(o.w ?? 4) * 0.2, 0.14, 0, (o.w ?? 4) * 0.45, 0.5, (o.d ?? 3) * 0.8, 'crateWood');
+      ob(0, 0.14, 0, o.w ?? 4, 0.6, o.d ?? 3, painted(o.m || 'tarp'));
       break;
     case 'chiller':
-      ob(0, 0, 0, 3.0, 1.9, 1.6, 'steel');
+      ob(0, 0, 0, 3.0, 1.9, 1.6, 'panelGrey');
       P.cyl(at(-0.7, 0)[0], y + 1.9, at(-0.7, 0)[1], 0.6, 0.25, 'ironDark', { seg: 12, prop: 1 });
       P.cyl(at(0.7, 0)[0], y + 1.9, at(0.7, 0)[1], 0.6, 0.25, 'ironDark', { seg: 12, prop: 1 });
       C([x - 1.6, y, z - 1.6, x + 1.6, y + 1.9, z + 1.6]);

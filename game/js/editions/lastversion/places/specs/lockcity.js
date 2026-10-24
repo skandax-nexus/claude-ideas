@@ -55,7 +55,14 @@ function bowl(P, { seats }) {
   }
   // the outer wall, broken in places, and the stair down from the north concourse to the gate
   const OA = PX + TIERS * DEPTH + 4, OB = PZ + TIERS * DEPTH + 4;
-  for (const [x0, z0, x1, z1] of [[-OA, -OB, -6, -OB + 1], [6, -OB, OA, -OB + 1], [-OA, OB - 1, OA, OB], [-OA, -OB, -OA + 1, OB], [OA - 1, -OB, OA, OB]]) P.box([x0, 0, z0, x1, RIM + 3 + (x0 * 3 % 4), z1], 'stadiumConcrete');
+  // (closing: visuals; the precast panels of the outer wall, ribbed, the club's stripe faded, tags and stains, not a blank
+  // wall: what the north gate's forecourt looks at)
+  for (const [x0, z0, x1, z1] of [[-OA, -OB, -6, -OB + 1], [6, -OB, OA, -OB + 1], [-OA, OB - 1, OA, OB], [-OA, -OB, -OA + 1, OB], [OA - 1, -OB, OA, OB]]) P.box([x0, 0, z0, x1, RIM + 3 + (x0 * 3 % 4), z1], 'stadiumWall');
+  // the gate's frame over the tunnel, and the vents and service doors along the wall's foot
+  P.box([-7.5, 0, -OB - 0.6, -6, RIM + 5, -OB + 1.2], 'stadiumConcrete');
+  P.box([6, 0, -OB - 0.6, 7.5, RIM + 5, -OB + 1.2], 'stadiumConcrete');
+  P.vbox([-7.5, RIM - 1, -OB - 0.6, 7.5, RIM + 5, -OB + 1.2], 'stadiumConcrete');
+  for (let x = -OA + 10; x < OA - 6; x += 14) if (Math.abs(x) > 12) { P.vbox([x, 0, -OB - 0.06, x + 2.2, 2.6, -OB], 'doorDark', { noShadow: 1 }); P.vbox([x + 4, 3.4, -OB - 0.06, x + 6.4, 4.4, -OB], 'gratingSteel', { noShadow: 1 }); }
   return { OA, OB };
 }
 
@@ -125,7 +132,7 @@ export default {
             if (AISLES.some((c) => Math.abs(pos - c) < 4) || (k++ * 7) % 5 === 0) continue;
             const depth = i * DEPTH, w = 3.2;
             const [hx, hz] = alongX ? [pos, (side === 'N' ? -1 : 1) * (PZ + depth + 2)] : [(side === 'W' ? -1 : 1) * (PX + depth + 2), pos];
-            P.obox(hx, y, hz, alongX ? w : 2.6, 2.2, alongX ? 2.6 : w, 0, k % 3 ? 'whitewash' : 'containerHouse', { t: [0xf4e8f0, 0xe8e0f4, 0xf8f0d8][k % 3] });
+            P.obox(hx, y, hz, alongX ? w : 2.6, 2.2, alongX ? 2.6 : w, 0, k % 4 === 0 ? 'containerHouse' : ['shackFace', 'shackFaceBlue', 'shackFaceRose'][k % 3], { t: [0xffffff, 0xf8f0f8, 0xfff8ec][k % 3] });
             P.obox(hx, y + 2.2, hz, alongX ? w + 0.6 : 3.2, 0.25, alongX ? 3.2 : w + 0.6, 0, 'lilacTarp', { rz: 0.08 });
           }
         }
@@ -148,14 +155,15 @@ export default {
     P.vbox([-PX - 0.1, 0.6, -PZ, -PX, 1.3, PZ], 'mud', { noShadow: 1 });
     // 2049: the evacuation tents on the pitch, in the rain
     P.E('PRESENT', () => {
-      for (let i = 0; i < 18; i++) P.obox(-40 + (i % 6) * 16, 0, -24 + Math.floor(i / 6) * 22, 6, 2.8, 4, 0, 'tentWhite', { solid: true, shrink: 0.9 });
-      for (let i = 0; i < 4; i++) P.gable(-40 + i * 26, 2.8, 22, 6, 12, 1.6, 0, 'tarp');
+      for (let i = 0; i < 18; i++) prop(P, 'tent', -40 + (i % 6) * 16, -24 + Math.floor(i / 6) * 22, Math.PI / 2, { w: 4, d: 6, wall: 1.0, ridge: 1.8, m: ['canvasWhite', 'canvasWhite', 'canvasBlue'][i % 3] });
+      for (let i = 0; i < 4; i++) P.gable(-40 + i * 26, 2.8, 22, 6, 12, 1.6, 0, 'canvasBlue');
+      for (const [x, z, r] of [[-32, -12, 0.2], [0, -12, -0.3], [24, 10, 0.5], [-16, 10, 0]]) prop(P, 'aidCrates', x, z, r);
     });
     // --- the school in the main stand (west), at the rim ----------------------------------------------------
     P.land('school', -76, RIM, 6, Math.PI / 2);
     P.land('schoolDoor', -72, RIM, 14, Math.PI / 2);
     P.land('register', -72.6, RIM, -6, Math.PI / 2);
-    P.box([-OA + 1, RIM, -20, -75, RIM + 5, 20], 'stadiumConcrete');
+    P.box([-OA + 1, RIM, -20, -75, RIM + 5, 20], 'stadiumWall');
     P.vbox([-75.1, RIM + 0.8, -18, -75, RIM + 3.6, 18], 'glass', { noShadow: 1 });
     P.vbox([-OA, RIM + 5, -24, -PX - 10, RIM + 5.4, 24], 'roofLight');
     for (const z of [-22, 22]) P.cyl(-PX - 12, RIM, z, 0.3, 5, 'steel', { seg: 8, solid: true });
@@ -190,7 +198,7 @@ export default {
     P.land('lockConsole', TX, RIM, TZ, Math.PI);
     P.land('lockHalo', 0, 60, 0, 0);
     // the tower: its shaft, the archive floor at the rim level (open sky above: the roof has gone)
-    P.box([TX - 10, 0, TZ - 10, TX + 10, RIM, TZ + 10], 'stadiumConcrete');
+    P.box([TX - 10, 0, TZ - 10, TX + 10, RIM, TZ + 10], 'stadiumWall');
     P.setTerrain(TX - 10, TZ - 10, TX + 10, TZ + 10, RIM);
     for (const [x0, z0, x1, z1, h] of [[TX - 10, TZ - 10, TX + 10, TZ - 9.4, 9], [TX - 10, TZ - 10, TX - 9.4, TZ + 4, 6], [TX + 9.4, TZ - 10, TX + 10, TZ + 10, 7]]) P.box([x0, RIM, z0, x1, RIM + h, z1], 'stadiumConcrete');
     P.vbox([TX - 9.4, RIM + 1, TZ - 9.5, TX + 9.4, RIM + 6, TZ - 9.45], 'glass', { noShadow: 1 });
@@ -203,7 +211,10 @@ export default {
     railing(P, TX - 10, TZ + 10, TX + 10, TZ + 10, 1.1, 'steel', { y: RIM, openings: [[17.6, 19.4]] });
     sign(P, 'PRESS', TX, RIM + 7.4, TZ + 10.1, 0, { size: 0.8, board: 0, color: '#3a3a40', e: ['PAST'] });
     // the outside: houses of the suburbs round the stadium
-    for (const [x, z] of [[-96, -40], [-96, 40], [96, 40], [96, 80], [-96, 86], [40, 96], [-40, 96]]) P.box([x - 6, 0, z - 6, x + 6, 7, z + 6], 'whitewash', { t: 0xe8e0d8 });
+    for (const [i, [x, z]] of [[-96, -40], [-96, 40], [96, 40], [96, 80], [-96, 86], [40, 96], [-40, 96]].entries()) {
+      P.box([x - 6, 0, z - 6, x + 6, 7, z + 6], 'suburbHouse', { t: [0xffffff, 0xf0e4d4, 0xe4ecf0][i % 3] });
+      P.gable(x, 7, z, 12.6, 12.6, 3.4, (i % 2) * Math.PI / 2, i % 3 ? 'slate' : 'roofDark');
+    }
     for (let i = 0; i < 12; i++) P.tree('plane', P.rng.pick([-100, 100]), P.rng.float(-100, 100), P.rng.float(0.9, 1.3));
   },
 };

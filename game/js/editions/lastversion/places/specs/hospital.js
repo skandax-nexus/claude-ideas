@@ -104,12 +104,17 @@ export default {
     P.land('discontinuityCourt', -24, 0, 15, 0);
     P.land('glassWindow', -40.6, 1.4, 14, Math.PI / 2);
     P.land('ivStand', -14, 0, 8, 0);
-    // rain falling on its west half, rising on its east half (the sky drifts backwards there: a Sky feature)
-    for (let i = 0; i < 14; i++) {
-      const x = -38 + (i % 7) * 2.2, z = 4 + Math.floor(i / 7) * 12 + (i % 3) * 3;
-      P.vbox([x, 0.1, z, x + 0.04, 9, z + 0.04], 'waterfallWater', { noShadow: 1, prop: 1 });
-      P.vbox([x + 16, 0.1, z + 2, x + 16.04, 9, z + 2.04], 'stormGlow', { noShadow: 1, prop: 1 });
+    // rain falling on its west half, rising on its east half (the sky drifts backwards there: a Sky feature). (closing:
+    // visuals) the rain moves: sheets of streaks, crossed, that run down in the west and up in the east (materials.js
+    // rainDown / rainUp scroll with the frame's time), where still filaments had read as wires; a violet light under the rising half
+    for (let i = 0; i < 18; i++) {
+      const x = -38.5 + (i % 6) * 2.6 + (Math.floor(i / 6) % 2) * 1.3, z = 5 + Math.floor(i / 6) * 8 + (i % 3) * 1.4;
+      for (const k of [0, 1]) {
+        P.obox(x, 0.1, z, 2.2, 8.9, 0.02, 0.35 + k * Math.PI / 2, 'rainDown', { noShadow: 1, prop: 1 });
+        P.obox(x + 16, 0.1, z + 1.5, 2.2, 8.9, 0.02, -0.35 + k * Math.PI / 2, 'rainUp', { noShadow: 1, prop: 1 });
+      }
     }
+    P.glow(-16, 0.06, 16, 9, 0xc9b8ff);
     P.cyl(40, 0, 15, 3.2, 0.8, 'renderWhite', { seg: 18, solid: true });
     P.disc(40, 0.75, 15, 2.9, 'fountainWater', { noShadow: 1 });
     for (const [x, z] of [[-34, 6], [-12, 24], [28, 8], [52, 24], [30, 24]]) prop(P, 'bench', x, z, 0.3);

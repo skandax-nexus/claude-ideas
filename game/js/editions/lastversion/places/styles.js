@@ -84,7 +84,7 @@ export const STYLES = {
   drowned: {
     ground: 'mossStone', walk: 'viaductDeck', facade: 'towerGlass', roof: 'roofGarden', trim: 'rust', base: 'concreteStained',
     tints: [0xffffff, 0xe8f0e8, 0xd8e4dc, 0xc8d8d0],
-    veg: ['willow', 'reeds', 'birch', 'fern'], kits: { record: 'beaconCase', residue: 'wardenSign', fragment: 'stackedStones', scene: 'memorialCore' },
+    veg: ['willow', 'reeds', 'birch', 'vine', 'ivy', 'roots'], kits: { record: 'beaconCase', residue: 'wardenSign', fragment: 'stackedStones', scene: 'memorialCore' },
     palette: pal({ fog: 0xb8c8b0, wall: '#7a8a78', floor: '#4a5a48', accent: 0x9fff7a, accent2: 0xffd36a, light: 0xe8ffd0, tint: 0xd0e8d0, night: 0.05, weather: 'pollen', sky: 'dusk' }),
   },
   // the lock city in a ruined stadium: houses on the stands, the market on the pitch, the press tower

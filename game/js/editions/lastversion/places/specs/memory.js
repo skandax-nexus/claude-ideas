@@ -4,8 +4,9 @@
 // boundary), and the sky is a watercolour wash.
 //   PAST    THE HOUSE WITH THE BLUE DOOR: the terrace and its gardens on a golden, overexposed summer evening,
 //           a sprinkler, bikes; the kitchen opens to the garden through French doors; the drawing on the fridge.
-//   PRESENT THE FIRST EXPERIMENT: the same plot overlaid by the 2026 Helix chamber, a white void with only the
-//           remembered things in colour, the walls dissolving, the child-sized chair.
+//   PRESENT THE FIRST EXPERIMENT: the same plot inside the 2026 Helix chamber as the child in the chair remembers it:
+//           white panelled walls round the whole memory, a ceiling of light, a dark grid floor; the street only pencil
+//           lines in it; the remembered things in colour, the child-sized chair in its pool of light.
 //   FUTURE  THE WORLD WITHOUT KAI: adult Mira's seaside garden in morning light; the sea where the street was,
 //           the 41 stop at the corner, a memorial for nobody, a house that belongs to nobody on record.
 //   Q0 THE HOUSE                 the west of the terrace, Mira's house and garden (x -65 .. 10)
@@ -42,8 +43,9 @@ export default {
   years: {
     PAST: { sky: 'overexposedSummer', era: '2026', hour: 19.3, sun: { elev: 9, az: 292 }, fog: 0xffe8c8, density: 1.0, night: 0, weather: 'pollen', ibl: 'dusk', lit: 0.2,
       hemi: { sky: 0xffe8c0, ground: 0x8a7a5a, k: 1.05 }, sunColor: 0xffd890, sunK: 1.25, grade: { shadowTint: 0x6a4a3a, highlightTint: 0xfff4d8, toning: 0.26, contrast: 0.96, saturation: 1.06 } },
-    PRESENT: { sky: 'coldVoid', era: '2049', hour: 12.2, sun: { elev: 72, az: 180 }, fog: 0xf4f6f8, density: 1.7, night: 0, weather: 'motes', ibl: 'warehouse', lit: 0,
-      hemi: { sky: 0xf4f8ff, ground: 0xd8dce0, k: 1.15 }, sunColor: 0xf4f8ff, sunK: 0.6, grade: { shadowTint: 0x4a5a6a, highlightTint: 0xffffff, toning: 0.12, contrast: 0.94, saturation: 0.7 } },
+    // (closing: inside Chamber One, a ceiling of light over a dark floor; the air a cool grey, not Mission 19's white)
+    PRESENT: { sky: 'coldVoid', era: '2049', hour: 12.2, sun: { elev: 72, az: 180 }, fog: 0xb4bccc, density: 1.0, night: 0, weather: 'motes', ibl: 'warehouse', lit: 0,
+      hemi: { sky: 0xf4f8ff, ground: 0x4a5060, k: 1.15 }, sunColor: 0xf4f8ff, sunK: 0.45, grade: { shadowTint: 0x2a3448, highlightTint: 0xf4f8ff, toning: 0.16, contrast: 1.12, saturation: 0.8 } },
     FUTURE: { sky: 'seaMorning', era: '2196', hour: 8.4, sun: { elev: 20, az: 105 }, fog: 0xdcecf2, density: 0.9, night: 0, weather: 'pollen', ibl: 'dusk', lit: 0,
       hemi: { sky: 0xd8ecf8, ground: 0x6a8a6a, k: 0.95 }, sunColor: 0xfff4e0, sunK: 1.15, grade: { shadowTint: 0x2a4a5a, highlightTint: 0xfff8ec, toning: 0.2, contrast: 1.02, saturation: 1.04 } },
   },
@@ -92,28 +94,61 @@ export default {
       P.drown([-B, SEA, B, B], -1.2);
       for (let i = 0; i < 5; i++) prop(P, 'bench', -50 + i * 22, 31.4, Math.PI);
     });
-    // PRESENT: the white void; only the remembered things keep their colour
+    // PRESENT: the first experiment, as the child in the chair remembers it: Chamber One round the whole plot, its white
+    // panelled walls and a ceiling of light, a dark grid underfoot; the street she knew is only pencil lines in it, and the
+    // remembered things keep their colour. (closing: visuals; a white fog void with a ring read as Mission 19's salt plain,
+    // the mission before)
     P.E('PRESENT', () => {
-      P.plane(-B - 60, -B - 60, B + 60, B + 60, 0.01, 'voidWhite', { noShadow: 1 });
-      // the chamber's floor and ring, in the park
+      P.plane(-B - 4, -B - 4, B + 4, B + 4, 0.01, 'chamberGrid', { noShadow: 1 });
+      const CH = 15;
+      for (const b of [[-B - 4, -B - 4, B + 4, -B - 3], [-B - 4, B + 3, B + 4, B + 4], [-B - 4, -B - 4, -B - 3, B + 4], [B + 3, -B - 4, B + 4, B + 4]]) P.vbox([b[0], 0, b[1], b[2], CH, b[3]], 'chamberPanel');
+      P.vbox([-B - 4, CH, -B - 4, B + 4, CH + 0.3, B + 4], 'chamberLights');
+      // the wall's lit band and its skirting, and the ribs that hold the ceiling
+      for (const b of [[-B - 3, -B - 3, B + 3, -B - 2.9], [-B - 3, B + 2.9, B + 3, B + 3], [-B - 3, -B - 3, -B - 2.9, B + 3], [B + 2.9, -B - 3, B + 3, B + 3]]) { P.vbox([b[0], 3.2, b[1], b[2], 3.5, b[3]], 'lightPanel', { noShadow: 1 }); P.vbox([b[0], 0, b[1], b[2], 0.4, b[3]], 'ironDark', { noShadow: 1 }); }
+      for (let x = -B; x <= B; x += 26) P.vbox([x - 0.4, CH - 1.2, -B - 3, x + 0.4, CH, B + 3], 'panelGrey', { noShadow: 1 });
+      // the chamber's floor and ring, in the park: the platform, the consoles, the cables to them
       P.disc(-10, 0.03, -50, 13, 'helixWhite', { seg: 48 });
       P.torus(-10, 0.05, -50, 13, 0.12, 'helixGlass', { rx: Math.PI / 2, seg: 64 });
       P.torus(-10, 7, -58, 6.5, 0.7, 'blackRing', { seg: 48 });
       P.box([-17.5, 0, -59, -16.5, 7, -57], 'blackRing');
       P.box([-3.5, 0, -59, -2.5, 7, -57], 'blackRing');
+      for (const [x, z, r] of [[-22, -44, 0.6], [2, -54, -0.5], [-24, -58, 1.2]]) { P.obox(x, 0, z, 1.6, 1.0, 0.8, r, 'panelWhite', { solid: true }); P.obox(x, 1.0, z, 1.4, 0.06, 0.6, r, 'lightPanel', { rx: -0.3 }); }
+      for (const [x0, z0, x1, z1] of [[-10, -36, -10.2, -44], [-24, -44.4, -16, -44.2], [2, -54.2, -4, -54]]) P.vbox([Math.min(x0, x1) - 0.08, 0.02, Math.min(z0, z1) - 0.08, Math.max(x0, x1) + 0.08, 0.1, Math.max(z0, z1) + 0.08], 'ironDark', { noShadow: 1 });
+      // the pool of light on the child's chair
+      P.cyl(-10, 0.03, -50, 1.6, 9, 'smoke', { seg: 16, r2: 0.5, open: true });
+      P.glow(-10, 0.05, -50, 2.4, 0xfff4d8);
+      // the street she knew, in pencil: each house's edges, its roof, its windows and door
+      const line = (a, b) => P.vbox([Math.min(a[0], b[0]) - 0.035, Math.min(a[1], b[1]) - 0.035, Math.min(a[2], b[2]) - 0.035, Math.max(a[0], b[0]) + 0.035, Math.max(a[1], b[1]) + 0.035, Math.max(a[2], b[2]) + 0.035], 'pencil', { noShadow: 1 });
+      for (const x0 of HOUSES) {
+        const x1 = x0 + 12, t = 6.4, r = 9.6, mz = (BACK + FRONT) / 2;
+        for (const [ax, az, bx, bz] of [[x0, BACK, x1, BACK], [x0, FRONT, x1, FRONT], [x0, BACK, x0, FRONT], [x1, BACK, x1, FRONT]]) { line([ax, 0, az], [bx, 0, bz]); line([ax, t, az], [bx, t, bz]); }
+        for (const [cx, cz] of [[x0, BACK], [x1, BACK], [x0, FRONT], [x1, FRONT]]) line([cx, 0, cz], [cx, t, cz]);
+        line([x0, r, mz], [x1, r, mz]);
+        if (x0 === MIRA) continue; // (her own house is drawn in colour, below)
+        for (const fx of [x0 + 2.4, x0 + 8.4]) for (const fy of [1.0, 3.9]) { line([fx, fy, FRONT], [fx + 1.3, fy, FRONT]); line([fx, fy + 1.7, FRONT], [fx + 1.3, fy + 1.7, FRONT]); line([fx, fy, FRONT], [fx, fy + 1.7, FRONT]); line([fx + 1.3, fy, FRONT], [fx + 1.3, fy + 1.7, FRONT]); }
+        line([x0 + 5.2, 2.2, FRONT], [x0 + 6.4, 2.2, FRONT]); line([x0 + 5.2, 0, FRONT], [x0 + 5.2, 2.2, FRONT]); line([x0 + 6.4, 0, FRONT], [x0 + 6.4, 2.2, FRONT]);
+      }
+      // the gable ends' slopes, drawn as short steps of line (the sketch's diagonals)
+      for (const x0 of HOUSES) for (const xe of [x0, x0 + 12]) for (let k = 0; k < 6; k++) {
+        const f0 = k / 6, f1 = (k + 1) / 6;
+        for (const [za, zb] of [[BACK, (BACK + FRONT) / 2], [FRONT, (BACK + FRONT) / 2]]) line([xe, 6.4 + 3.2 * f0, za + (zb - za) * f0], [xe, 6.4 + 3.2 * f1, za + (zb - za) * f1]);
+      }
     });
-    // the edge of the memory: white, thickening, then nothing (an invisible ring keeps Kai inside)
-    for (let k = 0; k < 3; k++) {
-      const d = 2 + k * 5, h = 8 + k * 6;
-      for (const b of [[-B - d, -B - d, B + d, -B - d + 3], [-B - d, B + d - 3, B + d, B + d], [-B - d, -B - d, -B - d + 3, B + d], [B + d - 3, -B - d, B + d, B + d]]) P.vbox([b[0], -1, b[1], b[2], h, b[3]], 'memoryFog', { noShadow: 1 });
-    }
+    // the edge of the memory: white, thickening, then nothing (an invisible ring keeps Kai inside); in the first experiment
+    // the chamber's walls are its edge
+    P.E(['PAST', 'FUTURE'], () => {
+      for (let k = 0; k < 3; k++) {
+        const d = 2 + k * 5, h = 8 + k * 6;
+        for (const b of [[-B - d, -B - d, B + d, -B - d + 3], [-B - d, B + d - 3, B + d, B + d], [-B - d, -B - d, -B - d + 3, B + d], [B + d - 3, -B - d, B + d, B + d]]) P.vbox([b[0], -1, b[1], b[2], h, b[3]], 'memoryFog', { noShadow: 1 });
+      }
+    });
     // --- the terrace: Mira's house, and the others ------------------------------------------------------------------
     P.E(['PAST', 'FUTURE'], () => HOUSES.forEach((x0, i) => { if (x0 !== MIRA) house(P, x0, i); }));
-    // in the first experiment the houses are walls dissolving: white stubs, their tops gone
+    // in the first experiment the houses are only their pencil lines (above), and a low wall here and there where the
+    // memory still holds the street's line (the walk along the terrace keeps its kerb)
     P.E('PRESENT', () => HOUSES.forEach((x0) => {
       if (x0 === MIRA) return;
-      P.box([x0 + 0.1, 0, FRONT - 0.3, x0 + 11.9, 1.2 + ((x0 + 62) % 5) * 0.4, FRONT], 'voidWhite');
-      P.box([x0 + 0.1, 0, BACK, x0 + 0.4, 2 + ((x0 + 62) % 3), FRONT], 'voidWhite');
+      P.box([x0 + 0.1, 0, FRONT - 0.3, x0 + 11.9, 0.5 + ((x0 + 62) % 3) * 0.3, FRONT], 'chamberPanel');
     }));
     // Mira's house: a garden-room kitchen under a glass roof, French doors to the garden, the hall, the blue door
     P.land('kitchen', -20, 0, 12, Math.PI);

@@ -212,7 +212,7 @@ export default {
     P.E(['PRESENT', 'FUTURE'], () => {
       for (const [x, z] of [[46, -12], [54, -14], [58, -2]]) tent(P, { x, z, r: 2.2, h: 2.8, m: 'tarpScav' });
       prop(P, 'firePit', 50, -6, 0, { fire: true });
-      for (const [x, z] of [[64, -14], [66, -10], [44, 0]]) prop(P, 'crate', x, z, 0.6, { m: 'rust' });
+      for (const [x, z] of [[64, -14], [66, -10], [44, 0]]) prop(P, 'crate', x, z, 0.6, { m: 'crateWood' });
     });
     P.E('PAST', () => {
       for (const [x, z] of [[46, -12], [56, -8]]) tent(P, { x, z, r: 2.6, h: 3.2, m: 'hide' });

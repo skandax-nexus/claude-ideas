@@ -203,8 +203,9 @@ export const M01 = {
     P.inter.push({ id: 'toy', kind: 'scene', scene: 'toy', pos: [tx + 0.4, ty + 0.25, tz - 1.1], r: 2.4, prompt: 'LOOK', model: () => makeToy(), once: true, room: rid });
     const [cx, cy, cz] = L('plazaClock');
     P.inter.push({ id: 'clock', kind: 'scene', scene: 'clock', pos: [cx, cy + 6.15, cz + 0.95], yaw: 0, r: 7, prompt: 'LOOK AT THE CLOCK', model: () => { const m = makeClock({ mode: 'backwards' }); m.scale.setScalar(2.4); return m; }, once: true, room: rid });
+    // the shop camera's feed, on the laundromat's back wall over the machines: walk in through its open door to watch it
     const [lx, ly, lz] = L('laundromat');
-    P.inter.push({ id: 'camera', kind: 'scene', scene: 'camera', pos: [lx - 0.1, ly + 1.7, lz], yaw: -Math.PI / 2, r: 3.2, prompt: 'WATCH THE FEED', model: () => makeScreen(0xbfe4ff), once: true, room: rid });
+    P.inter.push({ id: 'camera', kind: 'scene', scene: 'camera', pos: [lx - 0.1, ly + 1.7, lz], yaw: -Math.PI / 2, r: 2.4, prompt: 'WATCH THE FEED', model: () => makeScreen(0xbfe4ff), once: true, room: rid });
     // --- Rook's call, on the way into the plaza: across the whole street, wall to wall and roofs too (the Zero Second
     // waits for it; a strip narrower than the place could be walked round, and the platform would wait for ever)
     const [, , rz] = L('rookCall');
@@ -460,7 +461,9 @@ M01.outro = M01.hook.lines;
 // =============================================================================================================
 // Helix's rooms take the light of their own palette (DeckWorld's few pieces: doors, the gate); the
 // place draws everything else in the Helix style (places/specs/helix.js). No Vessel look.
-const HELIX_PALETTE = { emergency: 0.85, fog: 0x2a2226, density: 1.6, wall: '#e8ecf0', floor: '#202428', accent: 0xff6a48, accent2: 0xffb36b, light: 0xffb0a0, tint: 0x6a4a4a, night: 0.7, weather: 'storm', sky: 'night', probe: false, ink: 0.85, grade: { shadowTint: 0x2a1418, highlightTint: 0xffc0a8, toning: 0.24, contrast: 1.14, saturation: 0.92 } };
+// (closing: visuals; readable on a phone: the emergency light is a red wash over the storm's grey daylight through the windows
+// and the lobby's skylight, not a dark red room. It had read as near black)
+const HELIX_PALETTE = { emergency: 0.45, fog: 0x3a3234, density: 1.2, wall: '#e8ecf0', floor: '#202428', accent: 0xff6a48, accent2: 0xffb36b, light: 0xffc4b4, tint: 0x8a6a6a, night: 0.4, weather: 'storm', sky: 'night', probe: false, ink: 0.85, daylight: 0xc8d8f0, daylightK: 1.8, grade: { shadowTint: 0x2a1418, highlightTint: 0xffd0bc, toning: 0.2, contrast: 1.1, saturation: 0.94 } };
 
 const T0 = 0.4;
 
@@ -497,7 +500,7 @@ function helixDarkRooms(P, story, si, rt) {
   const D = new Deck({ id: 'm02', deckName: 'HELIX', palette: HELIX_PALETTE, seed: 'lv', states: ['PRESENT'], estimateMin: 40, place: P, start: { at: [-48, 40], rot: 0 } });
   const land = (R, name, at, yaw = 0) => { const w = R.p(at); P.land(name, w[0], w[1], w[2], yaw + R.th); };
   // r0 SECURITY: the double-height lobby, glass to the city and the court
-  D.room({ id: 'security', name: 'SECURITY', W: 12, L: 14, H: 9, kind: 'arrival', beat: 'custom', windows: { S: 'full', E: 'full' }, gaps: { E: [{ at: [6.5, 9.5] }] } }, (R) => {
+  D.room({ id: 'security', name: 'SECURITY', W: 12, L: 14, H: 9, kind: 'arrival', beat: 'custom', roof: 'glass', windows: { S: 'full', E: 'full' }, gaps: { E: [{ at: [6.5, 9.5] }] } }, (R) => {
     R.floor(0, -R.L, 0, { mat: 'terrazzo' });
     R.text('HELIX TEMPORAL RESEARCH - STAFF', [0, 6.6, -13.9], 0, { size: 0.5, color: '#ffb0a0' });
     R.text('LOCKDOWN IN EFFECT', [-5.9, 3.2, -7], Math.PI / 2, { size: 0.5, color: '#ff6a48' });
@@ -572,7 +575,7 @@ function helixDarkRooms(P, story, si, rt) {
     land(R, 'ivenPost', [4.6, 0, -7.4]);
   });
   // r3 RECORDS: the staff lounge: three recorded statements, the roster, the door log; one officer can be trusted
-  D.room({ id: 'records', name: 'STAFF LOUNGE', W: 12, L: 14, H: 6, exit: 'E', windows: { E: [[1, 5.8]] }, gaps: { E: [{ at: [6.4, 9.4] }] } }, (R) => {
+  D.room({ id: 'records', name: 'STAFF LOUNGE', W: 12, L: 14, H: 6, exit: 'E', windows: { E: [[1, 5.8]], W: [[2, 12, 1.0, 4.6]] }, gaps: { E: [{ at: [6.4, 9.4] }] } }, (R) => {
     R.floor();
     for (const [id, x, crew] of [['rec_pryce', -4, 'guard'], ['rec_haig', 0, 'haig'], ['rec_dale', 4, 'dale']]) {
       R.prop('console', x, -5.4);

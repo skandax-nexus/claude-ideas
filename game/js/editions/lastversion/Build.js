@@ -20,10 +20,12 @@ const DOOR_H = 4;
 const CL = 4; // corridor length
 
 // the place materials a room's own materials become inside a place
+// (closing: visuals; Helix's desks, consoles, ledges and stairs are painted panels with their seams, its plant painted
+// cabinets, its floors a grey tile that reads in emergency light, never blank white boxes on black rubber)
 const PLACE_MATS = {
-  wall: 'helixWhite', floor: 'rubber', ceil: 'helixCeil', prop: 'helixProp', prop2: 'wood', pillar: 'steel', trim: 'steel', trimDark: 'ironDark',
-  glow: 'glowAccent', panelGlow: 'lightPanel', door: 'helixDoor', crate: 'wood', industrial: 'rawConcrete', pit: 'rawConcrete', pipe: 'rust',
-  moss: 'moss', tank: 'steel', metal: 'steel', glass: 'glass', console: 'helixProp',
+  wall: 'helixWhite', floor: 'helixFloor', ceil: 'helixCeil', prop: 'panelWhite', prop2: 'wood', pillar: 'steel', trim: 'steel', trimDark: 'ironDark',
+  glow: 'glowAccent', panelGlow: 'lightPanel', door: 'helixDoor', crate: 'crateWood', industrial: 'rawConcrete', pit: 'rawConcrete', pipe: 'rust',
+  moss: 'moss', tank: 'panelGrey', metal: 'steel', glass: 'glass', console: 'panelWhite',
 };
 
 // a condition that only names years ('@PAST', '!@PAST', '@PAST || @FUTURE'): the years it holds in
@@ -85,10 +87,18 @@ export class Deck {
       const c = R.corridorBox;
       bounds = [[rx0, yLo, rz0, rx1, R.y0 + H + 0.6, rz1], [c[0] - 0.5, yLo, c[2] - 0.5, c[3] + 0.5, c[4] + 0.6, c[5] + 0.5]];
     }
+    // (closing: visuals) inside a place, the daylight through a room's windows or glass roof is a light of its own, so a room
+    // reads on a phone: the fourth light stands inside its brightest window wall (or under its glass roof)
+    const daylight = (() => {
+      if (!this.place || lights) return [];
+      const wall = ['E', 'W', 'S', 'N'].find((k) => windows[k]);
+      const at = roof !== 'solid' ? [0, H - 0.6, -L / 2] : wall === 'E' ? [W / 2 - 1.2, H * 0.6, -L / 2] : wall === 'W' ? [-W / 2 + 1.2, H * 0.6, -L / 2] : wall === 'S' ? [0, H * 0.6, -1.2] : wall === 'N' ? [0, H * 0.6, -L + 1.2] : null;
+      return at ? [[...R.p(at), lv.palette.daylight ?? 0xc8d4e8, lv.palette.daylightK ?? 1.5, Math.max(16, L)]] : [];
+    })();
     const room = {
       name, kind, bounds,
       spawn: [...R.p([0, 0.86, -1.6]).map((v) => Math.round(v * 1000) / 1000), R.th],
-      lights: lights || [[...R.p([0, H - 0.8, -L * 0.3]), lv.palette.light, 2.0, Math.max(14, L)], [...R.p([0, H - 0.8, -L * 0.75]), lv.palette.light, 1.8, Math.max(14, L)], [...R.p([W / 2 - 1, 2.2, -L / 2]), lv.palette.accent, 0.8, 10]],
+      lights: lights || [[...R.p([0, H - 0.8, -L * 0.3]), lv.palette.light, 2.0, Math.max(14, L)], [...R.p([0, H - 0.8, -L * 0.75]), lv.palette.light, 1.8, Math.max(14, L)], [...R.p([W / 2 - 1, 2.2, -L / 2]), lv.palette.accent, 0.8, 10], ...daylight],
       tint: tint ?? lv.palette.tint, killY: R.y0 - 3, floatY: floatY ?? R.y0 + 1.3, challenges: R.challenges, route: [], exitSide: exit, L, W, H,
       states: states || lv.states || undefined, interior, sky: sky || (roof === 'solid' ? null : typeof roof === 'string' ? roof : 'year'),
       rect: R.rectXZ(-W / 2, -L, W / 2, 0),
@@ -230,7 +240,8 @@ class Room {
       return;
     }
     const P = this.P;
-    const run = () => (el.solid === false ? P.vbox(b, m, { t: o.t }) : P.box(b, m, { t: o.t, room: this.id }));
+    // (o.vis false: a collider only, its look drawn by finer pieces: a desk, a console, a shelf)
+    const run = () => (o.vis === false ? P.col(b, { room: this.id }) : el.solid === false ? P.vbox(b, m, { t: o.t }) : P.box(b, m, { t: o.t, room: this.id }));
     if (era) P.E(era, run);
     else run();
   }
@@ -328,6 +339,30 @@ class Room {
 
   // a desk, a crate, a console, a shelf
   prop(kind, x, z, o = {}) {
+    // (closing: visuals) inside a place, a desk is a top on two pedestals with a monitor on it, a console a cabinet with its
+    // lit screen, a shelf uprights and boards and the binders on them: each collides as one box and is drawn in pieces
+    if (this.P && ['desk', 'console', 'shelf'].includes(kind)) {
+      const wood = o.mat === 'prop2';
+      const v = (b, mat) => this.box(b, { mat, solid: false });
+      if (kind === 'desk') {
+        this.box([x - 0.9, 0, z - 0.5, x + 0.9, 0.78, z + 0.5], { vis: false });
+        v([x - 0.92, 0.72, z - 0.52, x + 0.92, 0.78, z + 0.52], wood ? 'wood' : 'counterTop');
+        for (const s of [-1, 1]) v([x + s * 0.45, 0, z - 0.46, x + s * 0.88, 0.72, z + 0.46], wood ? 'wood' : 'panelGrey');
+        if (!wood) { v([x - 0.34, 0.86, z - 0.34, x + 0.34, 1.26, z - 0.3], 'carGlass'); v([x - 0.04, 0.78, z - 0.34, x + 0.04, 0.86, z - 0.28], 'ironDark'); v([x - 0.25, 0.78, z - 0.1, x + 0.25, 0.8, z + 0.08], 'ironDark'); }
+      } else if (kind === 'console') {
+        this.box([x - 0.6, 0, z - 0.4, x + 0.6, 1.0, z + 0.4], { vis: false });
+        v([x - 0.6, 0.1, z - 0.4, x + 0.6, 1.0, z + 0.4], 'panelGrey');
+        v([x - 0.56, 0, z - 0.34, x + 0.56, 0.1, z + 0.34], 'ironDark');
+        v([x - 0.5, 1.0, z - 0.3, x + 0.5, 1.06, z + 0.3], 'glowAccent');
+        v([x - 0.5, 1.06, z - 0.36, x + 0.5, 1.5, z - 0.3], 'carGlass');
+      } else {
+        this.box([x - 1.2, 0, z - 0.35, x + 1.2, 2.2, z + 0.35], { vis: false });
+        for (const s of [-1, 1]) v([x + s * 1.14, 0, z - 0.35, x + s * 1.2, 2.2, z + 0.35], wood ? 'wood' : 'panelGrey');
+        v([x - 1.14, 0.05, z + 0.28, x + 1.14, 2.15, z + 0.33], 'shopShelves');
+        for (let k = 0; k < 5; k++) v([x - 1.14, 0.08 + k * 0.52, z - 0.33, x + 1.14, 0.12 + k * 0.52, z + 0.33], wood ? 'wood' : 'panelWhite');
+      }
+      return;
+    }
     if (kind === 'desk') {
       this.box([x - 0.9, 0, z - 0.5, x + 0.9, 0.78, z + 0.5], { mat: 'prop', ...o });
     } else if (kind === 'console') {

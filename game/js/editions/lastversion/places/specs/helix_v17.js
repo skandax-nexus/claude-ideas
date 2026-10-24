@@ -107,7 +107,7 @@ export default {
       P.vbox([-9.2, 1.0, -0.04, 9.2, 1.05, 0.04], 'barrierTape', { prop: 1 });
       // the junior programme's marquee on the island: SITE ZERO JUNIOR TOUR, the yellow canvas
       canopy(P, { rect: [-11, 4, -3, 10], h: 3.2, roof: 'marqueeYellow', span: 4, y: 0.4, post: 0.08, postMat: 'steel' });
-      for (const [x, z] of [[-9, 6], [-6, 8], [-5, 5.4]]) prop(P, 'crate', x, z, 0.2, { y: 0.4, m: 'helixWhite' });
+      for (const [x, z] of [[-9, 6], [-6, 8.6]]) prop(P, 'cardboard', x, z, 0.2, { y: 0.4 }); // (the tour's handouts in their boxes)
     });
     // --- the full ring: four wings round the court, arched over the river -------------------------------------
     const wingBlock = (rect, o = {}) => block(P, { rect, h: o.h ?? WING_H, facade: 'helixPanel', roof: 'flat', roofMat: 'roofLight', parapet: true, units: o.units ?? 1, tint: 0xf4f2f8, trim: 'steel', ...o });
@@ -212,7 +212,7 @@ export default {
         P.cyl(x, 0, z, 0.06, 6, 'steel', { seg: 6 });
         P.vbox([x + 0.08, 3.4, z - 0.02, x + 0.9, 5.8, z + 0.02], 'bannerYellow');
       }
-      for (const [x, z] of [[-26, 40], [26, 40], [-44, 30], [44, -30], [-44, -30], [20, -36]]) prop(P, 'crate', x, z, 0.5, { m: 'wood' });
+      for (const [x, z] of [[-26, 40], [26, 40], [-44, 30], [44, -30], [-44, -30], [20, -36]]) prop(P, 'crate', x, z, 0.5);
       for (const [x, z, w, d] of [[-30, 34, 6, 3], [30, 34, 5, 3], [36, -34, 4, 4], [-20, -34, 5, 2]]) P.box([x - w / 2, 0, z - d / 2, x + w / 2, 1.0, z + d / 2], 'pavingStack');
       sign(P, 'SITE ZERO JUNIOR TOUR - SATURDAY 14 MARCH - 16:00', -7, 3.9, 10.1, 0, { size: 0.26, color: '#3a2a10', board: 0 });
       prop(P, 'booth', -16, 22, Math.PI, { m: 'helixWhite' });

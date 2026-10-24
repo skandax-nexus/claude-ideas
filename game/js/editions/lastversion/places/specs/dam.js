@@ -24,8 +24,9 @@ export default {
   primary: 'crestYard',
   backdrop: { notch: 'near', gorge: true },
   years: {
-    PRESENT: { sky: 'snowNight', era: '2049', hour: 23.2, sun: { elev: 34, az: 30 }, fog: 0x1c2638, density: 1.3, night: 0.75, weather: 'frost', ibl: 'night', lit: 1,
-      hemi: { sky: 0x2a3a54, ground: 0x10161e, k: 0.7 }, sunColor: 0xa8c0e8, sunK: 0.35, grade: { shadowTint: 0x101c3a, highlightTint: 0xffd8a0, toning: 0.22, contrast: 1.14, saturation: 0.9 } },
+    // (closing: readable on a phone: a bright moon on the snow, the face striped with its lights; it had read as black)
+    PRESENT: { sky: 'snowNight', era: '2049', hour: 23.2, sun: { elev: 34, az: 30 }, fog: 0x26324a, density: 1.1, night: 0.5, weather: 'frost', ibl: 'night', lit: 1,
+      hemi: { sky: 0x5a6a8a, ground: 0x242a36, k: 1.0 }, sunColor: 0xb8cce8, sunK: 0.6, grade: { shadowTint: 0x101c3a, highlightTint: 0xffd8a0, toning: 0.22, contrast: 1.14, saturation: 0.9 } },
     PAST: { sky: 'damDusk', era: '2026', hour: 19.1, sun: { elev: 2, az: 255 }, fog: 0x6a5a6a, density: 1.0, night: 0.4, weather: 'motes', ibl: 'dusk', lit: 0.8,
       hemi: { sky: 0xb08a8a, ground: 0x2a2630, k: 0.8 }, sunColor: 0xff9a5a, sunK: 0.8, grade: { shadowTint: 0x2a1c34, highlightTint: 0xffc890, toning: 0.24, contrast: 1.1, saturation: 1.02 } },
   },
@@ -138,6 +139,15 @@ export default {
       P.col([cx - 3.2, -0.6, FZ - 6, cx + 3.2, 0, FZ]); // (the cell's floor holds, level with the gallery: Kai wakes in one)
       x = cx + 3.2;
     }
+    // (closing: each cell lit by a caged lamp in its ceiling, the gallery by a strip of cold light along the face: lamps
+    // that light the walls as real lights do, so the block reads on a phone)
+    for (const cx of CELLS) {
+      P.vbox([cx - 0.5, 3.22, FZ - 3.3, cx + 0.5, 3.4, FZ - 2.7], 'ledGlow', { noShadow: 1 });
+      P.vbox([cx - 0.6, 3.15, FZ - 3.4, cx + 0.6, 3.22, FZ - 2.6], 'cellBars', { noShadow: 1 });
+      P.glow(cx, 0.02, FZ - 3, 3.2, 0xe4ecff, 3.2);
+    }
+    P.vbox([-70, 3.7, FZ + 0.02, 70, 3.85, FZ + 0.14], 'ledGlow', { noShadow: 1 });
+    for (let gx = -60; gx <= 60; gx += 20) P.glow(gx, 0.02, FZ + 3, 4.5, 0xdce8ff, 3.8);
     P.land('cell', CELLS[3], 0, FZ - 3, 0);
     P.land('cellWall', CELLS[3], 0, FZ - 5.6, 0); // (the back wall of Kai's own cell: the next cell's front is the gallery stair)
     // the cells' bars (2049; in 2026 these are store bays with roller doors open)

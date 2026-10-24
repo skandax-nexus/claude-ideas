@@ -7,7 +7,7 @@
 // scaled to nothing. setEra(state) switches the year; refresh() re-reads the fact conditions.
 import * as THREE from '../../../../vendor/three.module.min.js';
 import { compileCondition } from '../../../core/conditions.js';
-import { MATS, surfaceOf, surfaceMaterial, setEraBit, eraDepthMaterial } from './materials.js';
+import { MATS, surfaceOf, surfaceMaterial, setEraBit, eraDepthMaterial, tickSurfaces } from './materials.js';
 
 const _m = new THREE.Matrix4(), _e = new THREE.Euler(), _q = new THREE.Quaternion(), _p = new THREE.Vector3(), _s = new THREE.Vector3(), _c = new THREE.Color(), _t = new THREE.Color();
 const PROP_RANGE = 90;
@@ -172,6 +172,7 @@ function part(geo, color, x = 0, y = 0, z = 0, sx = 1, sy = 1, sz = 1, rx = 0, r
 }
 const trunk = (h, r, c = BARK) => part(new THREE.CylinderGeometry(r * 0.7, r, h, 6).translate(0, h / 2, 0), c);
 const blob = (r, c, x, y, z, sy = 1) => part(new THREE.IcosahedronGeometry(r, 1), c, x, y, z, 1, sy, 1);
+const leaf = (r, c, x, y, z, sy = 1) => part(new THREE.IcosahedronGeometry(r, 0), c, x, y, z, 1, sy, 1); // (a small clump, 20 faces)
 const blades = (n, h, c, spread = 0.3) => {
   const out = [];
   for (let i = 0; i < n; i++) {
@@ -201,6 +202,27 @@ const VEG = {
   wildflower: () => [...blades(6, 0.7, 0x7a9a4a, 0.25), blob(0.12, 0xe8c040, 0.2, 0.75, 0), blob(0.11, 0xd84a3a, -0.2, 0.7, 0.15), blob(0.1, 0xf4f0f0, 0, 0.8, -0.2), blob(0.11, 0x8a6ad8, 0.1, 0.65, 0.22)],
   scrub: () => [blob(0.6, 0x8a8a5a, 0, 0.35, 0, 0.55), blob(0.45, 0x9a9462, 0.4, 0.3, 0.2, 0.55), blob(0.4, 0x7a7a50, -0.3, 0.28, -0.2, 0.55)],
   flowers: () => [blob(0.45, 0x4a7a3a, 0, 0.3, 0, 0.6), blob(0.16, 0xf06a8a, 0.2, 0.55, 0.1), blob(0.15, 0xffd040, -0.2, 0.5, -0.1), blob(0.14, 0xf8f8f0, 0.05, 0.6, -0.25)],
+  // (closing: visuals) 2196's overgrowth, real leaves on the towers instead of green glass: vines hanging from a ledge (the
+  // instance stands at the ledge, the strands hang 4-7 m below it), a clump of ivy over an edge, roots down a wall
+  vine: () => {
+    const out = [blob(0.8, 0x44702e, 0, 0, 0, 0.4)];
+    for (let i = 0; i < 4; i++) {
+      const x = (i - 1.5) * 0.6, z = Math.sin(i * 2.1) * 0.2, len = 4 + (i % 3) * 1.5;
+      out.push(part(new THREE.CylinderGeometry(0.03, 0.05, len, 4).translate(0, -len / 2, 0), 0x3a4a26, x, 0, z));
+      for (let k = 0; k < 4; k++) out.push(leaf(0.34 - k * 0.04, k % 2 ? 0x4a7a32 : 0x5e8e3c, x + Math.sin(k * 1.7 + i) * 0.16, -0.7 - k * (len / 4.4), z + 0.12, 0.75));
+    }
+    return out;
+  },
+  ivy: () => [blob(1.3, 0x3e6a2c, 0, 0.3, 0, 0.5), blob(1.0, 0x4e7a34, 0.95, 0.15, 0.3, 0.55), blob(0.9, 0x5a8a3c, -0.95, 0.2, -0.2, 0.55), leaf(0.7, 0x3a5a28, 0.2, -0.55, 0.45, 0.9), leaf(0.6, 0x4a7232, -0.4, -1.0, 0.4, 1.0)],
+  roots: () => {
+    const out = [part(new THREE.CylinderGeometry(0.22, 0.38, 1.2, 6).translate(0, 0.2, 0), 0x5a4632)];
+    for (let i = 0; i < 6; i++) {
+      const a = (i / 6) * Math.PI * 2 + 0.4, len = 2.6 + (i % 3) * 1.1;
+      out.push(part(new THREE.CylinderGeometry(0.05, 0.15, len, 5).translate(0, -len / 2, 0), i % 2 ? 0x5a4632 : 0x4a3a2a, Math.cos(a) * 0.3, 0, Math.sin(a) * 0.3, 1, 1, 1, Math.sin(a) * 0.3, -Math.cos(a) * 0.3));
+    }
+    out.push(blob(0.7, 0x4a7a32, 0, 0.9, 0, 0.6));
+    return out;
+  },
 };
 let vegMat = null;
 function vegGeometry(kind) {
@@ -238,6 +260,7 @@ export class Scenery {
     for (const grp of groups.values()) {
       if (!grp.geos.length) continue;
       const mat = surfaceMaterial(grp.s);
+      if (mat.userData.scroll) this.moving = true;
       const mesh = new THREE.Mesh(merge(grp.geos), mat);
       mesh.castShadow = mat.userData.cast;
       mesh.receiveShadow = !mat.transparent;
@@ -261,7 +284,7 @@ export class Scenery {
     }
     for (const [k, list] of kinds) {
       const inst = new THREE.InstancedMesh(vegGeometry(k), vegMat, list.length);
-      inst.castShadow = !['grass', 'barley', 'reeds', 'fern', 'wildflower', 'scrub', 'flowers'].includes(k);
+      inst.castShadow = !['grass', 'barley', 'reeds', 'fern', 'wildflower', 'scrub', 'flowers', 'vine'].includes(k);
       inst.receiveShadow = true;
       inst.frustumCulled = false;
       this.root.add(inst);
@@ -293,7 +316,10 @@ export class Scenery {
     }
   }
 
-  update() {}
+  // (closing: the surfaces that move, Mission 11's rain, scroll with the frame's time)
+  update(dt = 0) {
+    if (this.moving) tickSurfaces(dt);
+  }
 
   // what is drawn: draw calls and triangles of the visible scenery (for the perf numbers)
   stats() {

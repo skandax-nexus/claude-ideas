@@ -37,7 +37,7 @@ export default {
   ],
   exits: { m01: 'staffGate' },
   gates: { m01: { visible: true, solid: true, mat: 'gateSteel', box: [-3, 0, -224.3, 3, 3.2, -223.7] } },
-  frags: { m01: [['towpath', 'laundromat', 'carriageDoor']] }, // (a fragment is read within 2.4 m: never up on the pigeons' ledge)
+  frags: { m01: [['towpath', 'laundryBench', 'carriageDoor']] }, // (a fragment is read within 2.4 m: never up on the pigeons' ledge)
   // (closing) "a crowded security checkpoint" (the bible): the place holds 30 people, not §4.7's 24, and the queue at the
   // checkpoint stands in two lines between the tapes, waiting for Officer Pryce to wave each one through
   people: 30,
@@ -74,12 +74,17 @@ export default {
     }
     // --- Q0: home and market -----------------------------------------------------------------------------
     // Kai's building (door 4B on the avenue), the lane, the laundromat's block
-    block(P, { rect: [14, -16, 46, 12], floors: 7, tint: 0x9a5a48, cornice: true, shop: { side: 'W', color: 0xffd9a8 } });
+    // (closing: visuals) the shops on the ground floors are rooms seen through their glass (archetypes.shopRoom); Kai's
+    // building keeps its door and the photo beside it between a corner shop and the savings bank
+    block(P, { rect: [14, -16, 46, 12], floors: 7, tint: 0x9a5a48, cornice: true, shop: { side: 'W', color: 0xffd9a8, spans: [[-14.8, -5], [1, 10.8]] } });
     P.land('door4B', 12.2, 0.15, -2, Math.PI);
     P.land('photoByDoor', 13.9, 1.6, -3.4, -Math.PI / 2);
     P.vbox([13.86, 0.15, -3.2, 14, 3.4, -0.8], 'doorDark');
-    block(P, { rect: [14, -52, 46, -22], floors: 9, tint: 0xc89a7a, cornice: true, shop: { side: 'W', color: 0xcfe4ff, awning: 'awningBlue' } });
-    P.land('laundromat', 13.9, 0.15, -44, -Math.PI / 2);
+    // the laundromat: its door open, washing machines along the back wall; the shop camera's feed (Mission 1's anomaly) on
+    // the back wall over them, and the receipt by the bench, both inside (closing: the shop the story uses, walked into)
+    block(P, { rect: [14, -52, 46, -22], floors: 9, tint: 0xc89a7a, cornice: true, shop: { side: 'W', color: 0xcfe4ff, awning: 'awningBlue', kind: 'laundry', enter: [-42.4, -40.6] } });
+    P.land('laundromat', 16.95, 0, -41.5, -Math.PI / 2);
+    P.land('laundryBench', 15.7, 0, -48.4, -Math.PI / 2);
     P.land('puddle', 10.6, 0.15, -31, 0);
     P.plane(9.4, -32.4, 12.2, -29.6, 0.17, 'puddleWater', { noShadow: 1 });
     P.reserve(14, -22, 46, -16); // the side street
@@ -99,7 +104,7 @@ export default {
     sign(P, 'NOODLES 24H', -42, 3.6, -2.2, 0, { size: 0.36, color: '#ffb48a' });
     P.glow(-42, 0.02, -4, 3, 0xffb07a);
     block(P, { rect: [-60, -62, -40, -34], floors: 8, tint: 0x7a5040, cornice: true, shop: { side: 'S', awning: 'awningRed' } });
-    block(P, { rect: [-40, -42, -14, -34], floors: 4, tint: 0xd8c8b0, shop: { side: ['S', 'E'] } });
+    block(P, { rect: [-40, -42, -14, -34], floors: 4, tint: 0xd8c8b0, shop: { side: ['S', 'E'], kind: 'cafe', color: 0xffc890 } });
     P.land('pigeonLedge', -13.7, 5.2, -38, Math.PI / 2);
     P.vbox([-14, 5.0, -41, -13.4, 5.2, -35], 'concrete');
     // the pocket park

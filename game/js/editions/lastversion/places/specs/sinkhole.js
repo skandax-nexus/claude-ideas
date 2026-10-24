@@ -155,7 +155,7 @@ export default {
     P.E('FUTURE', () => {
       P.box([-40, RIM, 66, -6, RIM + 5, 74], 'quarryCut');
       P.vbox([-40, RIM + 5, 64, -6, RIM + 5.3, 74], 'glassRoof');
-      for (let i = 0; i < 10; i++) prop(P, 'crate', -38 + i * 3.3, 64.4, 0, { y: RIM, m: 'caseGlass' });
+      for (let i = 0; i < 10; i++) prop(P, 'displayCase', -38 + i * 3.3, 64.4, 0, { y: RIM, m: 'pontoonWood', show: ['clock', 'reel', 'shard', 'toy', 'stone'][i % 5] });
       sign(P, 'THE MUSEUM OF FAILED WORLDS', -23, RIM + 3.4, 65.9, Math.PI, { size: 0.5, color: '#ffc27a', board: 0 });
       // lanterns along the ramp
       for (let a = A0 + 10; a < A1; a += 24) { const [x, z] = pt(a, rAt(a) - W / 2 + 0.4); P.cyl(x, yAt(a), z, 0.06, 1.8, 'ironDark', { seg: 5, prop: 1 }); P.sphere(x, yAt(a) + 1.9, z, 0.18, 'lanternGlow', { prop: 1 }); }
@@ -178,7 +178,8 @@ export default {
     P.E('PRESENT', () => {
       P.disc(0, LAKE, 0, 47, 'lakeWater', { seg: 48, noShadow: 1 });
       P.box([-6, LAKE - 1, -14, 14, LAKE + 1.2, 2], 'containerGrey');
-      P.vbox([-4, LAKE + 1.2, -12, 12, LAKE + 4, 0], 'helixWhite');
+      P.vbox([-4, LAKE + 1.2, -12, 4, LAKE + 4, -4], 'panelWhite');
+      for (const [x, z, r] of [[7, -9, 0.1], [9.5, -3.5, -0.2], [6, -2, 0.3]]) prop(P, 'packingCrate', x, z, r, { y: LAKE + 1.2, solid: false });
       sign(P, 'HELIX STORAGE', 4, LAKE + 3, 0.1, 0, { size: 0.5, color: '#3a4a5a', board: 0 });
       const [px, pz] = pt(490);
       P.box([Math.min(px, 6), LAKE - 0.3, pz - 1.4, Math.max(px, 6), LAKE + 0.1, pz + 1.4], 'pontoonWood');

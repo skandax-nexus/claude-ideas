@@ -14,15 +14,23 @@ const VX = 32, VY = 8; // the Line 41 viaduct: its axis (x) and deck height
 const SEA = 0.75; // the lagoon's surface in 2196 (the sidewalks are 0.6 m under it)
 const ROADS = [-60, 0, 60]; // the avenues (both ways), 14 m wide, with 4 m sidewalks
 
-// a tower: a podium in every year; above it glass (2049), glass or a steel frame and a crane (2026), broken
-// glass under hanging gardens (2196)
-function tower(P, [x0, z0, x1, z1], h, { frame = false, tint = 0xffffff, podium = 8 } = {}) {
-  P.box([x0, 0, z0, x1, podium, z1], 'concreteStained', { t: tint });
+// a tower: a podium in every year (shops lit behind their glass in 2026 and 2049; in 2196 the old shopfronts dark behind
+// rusted shutters, gone green at the waterline); above it glass (2049), glass or a steel frame and a crane (2026), and in
+// 2196 the broken curtain wall under real overgrowth: terraces of hanging gardens with ivy along their edges and vines
+// falling from them, sheets of creeper down the faces, roots over the podium's edge, trees on the broken crown
+// (closing: visuals; the towers had read as green-tinted glass). `faces`: the sides that look onto the avenues or the
+// viaduct, where the growth is ('N', 'S', 'E', 'W')
+function tower(P, [x0, z0, x1, z1], h, { frame = false, tint = 0xffffff, podium = 8, faces = 'SW', only = null } = {}) {
+  // (only: the years it stands in, the fallen tower's 2026 and 2049)
+  const E = (yrs, fn) => { const ys = [].concat(yrs).filter((y) => !only || only.includes(y)); if (ys.length) P.E(ys, fn); };
+  E(['PRESENT', 'PAST', 'FUTURE'], () => P.col([x0, 0, z0, x1, podium, z1]));
+  E(['PRESENT', 'PAST'], () => P.vbox([x0, 0, z0, x1, podium, z1], 'podiumFacade', { t: tint }));
+  E('FUTURE', () => P.vbox([x0, 0, z0, x1, podium, z1], 'ruinPodium', { t: tint }));
   P.blocks.push([x0, z0, x1, z1]);
   P.reserve(x0, z0, x1, z1);
   const [ix0, iz0, ix1, iz1] = [x0 + 2, z0 + 2, x1 - 2, z1 - 2];
-  P.E('PRESENT', () => P.vbox([ix0, podium, iz0, ix1, h, iz1], 'rainGlass', { t: tint }));
-  P.E('PAST', () => {
+  E('PRESENT', () => P.vbox([ix0, podium, iz0, ix1, h, iz1], 'rainGlass', { t: tint }));
+  E('PAST', () => {
     if (!frame) return P.vbox([ix0, podium, iz0, ix1, h * 0.85, iz1], 'rainGlass', { t: tint });
     // a steel frame of floors and columns, and a crane on top
     for (let y = podium + 4; y < h * 0.7; y += 4) P.vbox([ix0, y, iz0, ix1, y + 0.4, iz1], 'rawConcrete');
@@ -30,14 +38,48 @@ function tower(P, [x0, z0, x1, z1], h, { frame = false, tint = 0xffffff, podium 
     P.obox((ix0 + ix1) / 2, h * 0.7, (iz0 + iz1) / 2, 1.2, 18, 1.2, 0, 'craneYellow');
     P.obox((ix0 + ix1) / 2 + 10, h * 0.7 + 18, (iz0 + iz1) / 2, 30, 1, 1, 0, 'craneYellow');
   });
-  P.E('FUTURE', () => {
+  E('FUTURE', () => {
     const top = h * (0.6 + ((x0 * 7 + z0 * 3) % 10) / 30);
-    P.vbox([ix0, podium, iz0, ix1, top, iz1], 'towerGlass', { t: 0xc8d8c8 });
-    // terraces of hanging gardens every few floors, vines down the faces
-    for (let y = podium + 8; y < top; y += 12) P.vbox([ix0 - 1, y, iz0 - 1, ix1 + 1, y + 1.2, iz1 + 1], 'roofGarden');
-    P.vbox([ix0 - 0.3, podium, iz0 + 2, ix0, top - 4, iz1 - 6], 'vineCurtain', { noShadow: 1 });
-    P.vbox([ix1, podium, iz0 + 4, ix1 + 0.3, top - 8, iz1 - 2], 'vineCurtain', { noShadow: 1 });
+    P.vbox([ix0, podium, iz0, ix1, top, iz1], 'ruinFacade', { t: 0xe8ece0 });
+    // the crown broken off: stubs of the top storey's frame
+    for (let k = 0; k < 5; k++) { const u = ix0 + ((ix1 - ix0) * (k + 0.2)) / 5; P.vbox([u, top, iz0 + 0.2, u + 0.8, top + 1.2 + ((k * 7 + x0) % 4) * 0.7, iz0 + 1.0], 'concreteStained'); }
+    // the faces with growth: [the face's line, along x?, outward sign]
+    const F = { N: [iz0, true, -1], S: [iz1, true, 1], W: [ix0, false, -1], E: [ix1, false, 1] };
+    const sides = [...faces].map((f) => F[f]);
+    // terraces of hanging gardens every few floors: a slab, its soil and leaves, ivy along the edge, vines falling from it
+    for (let y = podium + 8; y < top - 3; y += 12) {
+      P.vbox([ix0 - 1.2, y, iz0 - 1.2, ix1 + 1.2, y + 0.5, iz1 + 1.2], 'concreteStained');
+      P.vbox([ix0 - 1.1, y + 0.5, iz0 - 1.1, ix1 + 1.1, y + 0.7, iz1 + 1.1], 'roofGarden', { noShadow: 1 });
+      for (const [line, alongX, sg] of sides) {
+        const [a0, a1] = alongX ? [ix0, ix1] : [iz0, iz1];
+        for (let u = a0 + 2 + ((y * 3) % 5); u < a1 - 1; u += 9) {
+          const [vx, vz] = alongX ? [u, line + sg * 1.25] : [line + sg * 1.25, u];
+          P.tree('vine', vx, vz, P.rng.float(0.9, 1.25), { y: y + 0.4, solid: false });
+          const [ix, iz] = alongX ? [u + 4.5, line + sg * 0.6] : [line + sg * 0.6, u + 4.5];
+          P.tree('ivy', ix, iz, P.rng.float(0.55, 0.85), { y: y + 0.7, solid: false });
+        }
+        // a sheet of creeper hung from the terrace down the storey below it (leaves cut out of a sheet)
+        const len = Math.min(10, y - podium - 1);
+        const w = Math.min(12, a1 - a0 - 4), c = a0 + 2 + ((y * 7 + a0) % Math.max(1, a1 - a0 - 4 - w));
+        if (alongX) P.vbox([c, y - len, line + sg * 0.15 - 0.02, c + w, y + 0.3, line + sg * 0.15 + 0.02], P.rng.chance(0.5) ? 'vineSheet' : 'vineSheetDark');
+        else P.vbox([line + sg * 0.15 - 0.02, y - len, c, line + sg * 0.15 + 0.02, y + 0.3, c + w], P.rng.chance(0.5) ? 'vineSheet' : 'vineSheetDark');
+      }
+    }
+    // creeper sheets down the face from the crown, and roots over the podium's edge where the faces meet the street
+    for (const [line, alongX, sg] of sides) {
+      const [a0, a1] = alongX ? [ix0, ix1] : [iz0, iz1];
+      const c = a0 + (a1 - a0) * 0.55, len = Math.min(14, top - podium - 2);
+      if (alongX) P.vbox([c, top - len, line + sg * 0.12 - 0.02, c + Math.min(9, a1 - c), top + 0.4, line + sg * 0.12 + 0.02], 'vineSheet');
+      else P.vbox([line + sg * 0.12 - 0.02, top - len, c, line + sg * 0.12 + 0.02, top + 0.4, c + Math.min(9, a1 - c)], 'vineSheet');
+      for (let u = a0 + 3; u < a1; u += 11) {
+        const [rx, rz] = alongX ? [u, line + sg * 2.2] : [line + sg * 2.2, u];
+        P.tree('roots', rx, rz, P.rng.float(0.9, 1.2), { y: podium, solid: false });
+      }
+    }
+    // trees grown on the broken crown
     P.tree('birch', (ix0 + ix1) / 2, (iz0 + iz1) / 2, 1.6, { y: top, solid: false });
+    P.tree('willow', ix0 + 4, iz1 - 4, 1.1, { y: top, solid: false });
+    P.tree('ivy', ix1 - 3, iz0 + 3, 1.0, { y: top, solid: false });
   });
 }
 
@@ -105,7 +147,9 @@ export default {
       if (i === 0 && j === 3) continue; // the bank (below)
       if (i === 0 && j === 2) continue; // where the fallen tower lies
       n++;
-      tower(P, [x0 + 2, z0 + 2, x1 - 2, z1 - 2], 40 + ((n * 37) % 50), { frame: n % 2 === 0, tint: [0xffffff, 0xe0e8e4, 0xd8e0e8, 0xe8e0d8][n % 4] });
+      // (the growth on the faces seen from the viaduct and the avenues: toward the line, and south toward the arrival)
+      const fc = ((x0 + x1) / 2 < VX ? 'E' : 'W') + 'S' + ((z0 + z1) / 2 < -40 ? 'N' : '');
+      tower(P, [x0 + 2, z0 + 2, x1 - 2, z1 - 2], 40 + ((n * 37) % 50), { frame: n % 2 === 0, tint: [0xffffff, 0xe0e8e4, 0xd8e0e8, 0xe8e0d8][n % 4], faces: fc });
     }
     // --- Q0: the arrival platform on the viaduct, the bank tower and its roof garden, the fallen tower ------------------
     P.land('arrivalPlatform', VX, VY, 92, Math.PI);
@@ -130,14 +174,23 @@ export default {
     P.land('bankTerrace', -92, 24, 70, Math.PI / 2); // (the roof terrace's far end, under the set-back tower)
     P.land('fallenTower', -92, 0, 40, -Math.PI / 2);
     // the bank: six storeys to a roof terrace at 24 m, its tower set back above
-    P.box([-106, 0, 60, -44, 24, 106], 'concreteStained', { t: 0xe8e0d8 });
+    // (its six storeys: brick and tall windows in 2026 and 2049; in 2196 the same frame broken and grown over)
+    P.col([-106, 0, 60, -44, 24, 106]);
+    P.E(['PRESENT', 'PAST'], () => P.vbox([-106, 0, 60, -44, 24, 106], 'rainBrick', { t: 0xe0d0c0 }));
+    P.E('FUTURE', () => {
+      P.vbox([-106, 0, 60, -44, 24, 106], 'ruinFacade', { t: 0xf0ece4 });
+      for (const [x0, x1] of [[-102, -92], [-84, -74], [-64, -54]]) P.vbox([x0, 9, 59.86, x1, 24.3, 59.9], 'vineSheet');
+      for (const z0 of [64, 82, 96]) P.vbox([-43.9, 8, z0, -43.86, 24.3, z0 + 8], 'vineSheetDark');
+      for (let x = -100; x < -48; x += 10) P.tree('ivy', x, 59.6, 0.9, { y: 24, solid: false });
+    });
     P.blocks.push([-106, 60, -44, 106]);
     P.reserve(-106, 60, -44, 106);
     P.setTerrain(-106, 60, -44, 106, 24);
-    P.vbox([-104, 0, 59.8, -46, 22, 60], 'rainGlass', { noShadow: 1 });
+    P.E(['PRESENT', 'PAST'], () => P.vbox([-104, 0, 59.8, -46, 22, 60], 'rainGlass', { noShadow: 1 }));
     P.E(['PRESENT', 'PAST'], () => P.vbox([-104, 24, 84, -80, 70, 104], 'rainGlass', { t: 0xd8e0e8 }));
     P.E('FUTURE', () => {
-      P.vbox([-104, 24, 84, -80, 52, 104], 'towerGlass');
+      P.vbox([-104, 24, 84, -80, 52, 104], 'ruinFacade');
+      P.vbox([-96, 34, 83.86, -86, 52.3, 83.9], 'vineSheet');
       P.plane(-104, 62, -46, 82, 24.05, 'roofGarden', { noShadow: 1 });
       for (let i = 0; i < 10; i++) P.tree(i % 2 ? 'birch' : 'willow', P.rng.float(-100, -50), P.rng.float(64, 80), P.rng.float(0.9, 1.3), { y: 24 });
     });
@@ -148,13 +201,14 @@ export default {
     P.box([-44, 23.6, 67.8, -43.2, 24, 71.2], 'concreteStained');
     sign(P, 'RAIN CITY SAVINGS', -75, 23, 59.7, Math.PI, { size: 0.9, board: 0, color: '#d8c8a0', e: ['PRESENT', 'PAST'] });
     // the fallen tower: in 2196 a tower lies across the block like a ramp onto the bank's terrace
-    P.E(['PRESENT', 'PAST'], () => tower(P, [-106, 4, -64, 42], 70, { tint: 0xd8e0e8 }));
+    tower(P, [-106, 4, -64, 42], 70, { tint: 0xd8e0e8, only: ['PRESENT', 'PAST'] });
     P.E('FUTURE', () => {
       P.box([-106, 0, 4, -64, 8, 42], 'concreteStained');
-      ramp(P, [-106, 48, -46, 56], 0, 24, 'E', 'towerGlass', { terrain: false });
-      P.box([-52, 23.6, 48, -44, 24, 62], 'towerGlass');
-      P.obox(-76, 3, 52, 64, 8, 12, 0, 'towerGlass', { rz: Math.atan2(24, 60), t: 0xb8c8b8 });
-      for (let i = 0; i < 8; i++) P.tree('fern', -100 + i * 7, 52, 1, { y: 2 + i * 2.8, solid: false });
+      ramp(P, [-106, 48, -46, 56], 0, 24, 'E', 'ruinFacade', { terrain: false });
+      P.box([-52, 23.6, 48, -44, 24, 62], 'ruinFacade');
+      P.obox(-76, 3, 52, 64, 8, 12, 0, 'ruinFacade', { rz: Math.atan2(24, 60), t: 0xd8dccc });
+      for (let i = 0; i < 8; i++) P.tree('ivy', -100 + i * 7, 52 + (i % 2 ? 4.6 : -4.6), 0.8, { y: 2.6 + i * 2.8, solid: false });
+      for (let i = 0; i < 4; i++) P.tree('roots', -98 + i * 14, 46.4, 1.1, { y: 3 + i * 5.6, solid: false });
     });
     // --- Q1: the viaduct (Line 41), its fallen span in 2196 (the transit bridge), the low-water path below ------------
     for (const [z0, z1] of [[-110, -24], [-4, 110]]) viaduct(P, VX, z0, VX, z1, VY, 7, 'viaductDeck', { span: 12, walk: true, under: true });
@@ -162,6 +216,11 @@ export default {
     P.E('FUTURE', () => {
       // the span has fallen into the canal: its pieces in the water
       for (let i = 0; i < 4; i++) P.obox(VX + P.rng.float(-3, 3), -0.6, -22 + i * 5, 7, 1.2, 4.6, P.rng.float(-0.3, 0.3), 'viaductDeck', { rx: P.rng.float(-0.3, 0.3), rz: P.rng.float(-0.3, 0.3) });
+    });
+    // (2196: the line is the survivors' high street: grass along its edges, ivy over its parapets)
+    P.E('FUTURE', () => {
+      for (const [z0, z1] of [[-110, -24], [-4, 110]]) for (const sx of [-1, 1]) P.plane(VX + sx * 3.35, z0, VX + sx * 2.2, z1, VY + 0.03, 'meadowLong', { noShadow: 1 });
+      for (let z = -100; z < 106; z += 13) if (z < -26 || z > -2) P.tree('ivy', VX + ((z / 13) % 2 ? 3.3 : -3.3), z, 0.55, { y: VY, solid: false });
     });
     railing(P, VX - 3.4, -110, VX - 3.4, 110, 1.1, 'rust', { y: VY, openings: [[38, 42], [86, 106], [214, 220]] });
     railing(P, VX + 3.4, -110, VX + 3.4, 110, 1.1, 'rust', { y: VY, openings: [[76, 84], [86, 106]] }); // (onto the survivors' platform; the fallen span)
@@ -209,7 +268,7 @@ export default {
       P.box([-27, 1.6, -84, -11, 4.6, -82.6], 'basalt');
       P.box([-35.5, 1.6, -83.5, -32.5, 3.2, -80.5], 'statueStone'); // (the statue on it is Kai himself, in stone: M14's overlay)
       P.box([-17, 1.6, -79, -15, 1.9, -78], 'flowersStall', { solid: false });
-      for (let i = 0; i < 6; i++) P.tree('fern', -44 + i * 8, -102, 1.2, { y: 1.6, solid: false });
+      for (let i = 0; i < 6; i++) P.tree('ivy', -44 + i * 8, -102, 0.7, { y: 1.6, solid: false });
       P.box([-12, 1.6, -104, 8, 5.4, -100], 'concreteStained');
       P.vbox([-14, 5.4, -104, 10, 5.7, -92], 'pontoonWood');
       for (const x of [-12, 8]) P.cyl(x, 1.6, -92, 0.15, 3.8, 'pontoonWood', { seg: 6, solid: true });
