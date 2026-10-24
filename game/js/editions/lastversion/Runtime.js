@@ -2152,9 +2152,14 @@ export class LastVersion {
     const esc = (t) => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;');
     const label = (k) => EV_LABELS[k] || k.replace(/_/g, ' ');
     const evs = Object.keys(facts.facts).filter((k) => k.startsWith('ev_') && facts.facts[k]).map((k) => `<li><span class="ev">◆</span> ${label(k.slice(3))}</li>`).join('') || '<li class="dim">Nothing pinned yet.</li>';
+    // (a standing may be a word, not a number: Mission 14's trust_sera is what Kai told Sera at the memorial, 'accept',
+    // 'deny' or 'ask'; from there on TRUST['accept'] had thrown and the case board, TRAVEL with it, would not open)
+    const trustOf = (v) => (typeof v === 'number' && Number.isFinite(v) ? Math.max(-1, Math.min(1, Math.round(v))) : v === 'accept' ? 1 : 0);
+    const knowOf = (v) => Math.max(0, Math.min(KNOWLEDGE.length - 1, Math.round(+v || 0)));
     const people = Object.values(NPCS).filter((n) => facts.get(`met_${n.id}`) && n.id !== 'kai').map((n) => {
       const st = npcState(facts, n.id);
-      return `<li><span><b>${n.name}</b> <small>${n.role}</small></span><span class="st ${st.trust > 0 ? 'good' : st.trust < 0 ? 'bad' : ''}">${TRUST[st.trust].toUpperCase()} · ${KNOWLEDGE[st.knowledge].toUpperCase()}${st.quest ? ` · ${st.quest.toUpperCase()}` : ''}</span></li>`;
+      const tv = trustOf(st.trust);
+      return `<li><span><b>${n.name}</b> <small>${n.role}</small></span><span class="st ${tv > 0 ? 'good' : tv < 0 ? 'bad' : ''}">${TRUST[tv].toUpperCase()} · ${KNOWLEDGE[knowOf(st.knowledge)].toUpperCase()}${st.quest ? ` · ${String(st.quest).toUpperCase()}` : ''}</span></li>`;
     }).join('') || '<li class="dim">Nobody yet.</li>';
     // ▶: a question, read by the narrator; a log line Kai can say from the packs, by Kai
     const can = (text, who) => !!game.voice?.plan?.(text, who);

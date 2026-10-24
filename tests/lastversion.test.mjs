@@ -4273,3 +4273,51 @@ test('free roam: saves: a trip saves in the story\'s slot with the story inside 
   assert.equal(reverseEarned(camp), reverseEarned(story.campaign));
   assert.equal(reverseEarned(camp), 10);
 });
+
+// the full browser bot found it: Mission 14's trust_sera is a word ('accept', 'deny', 'ask'), and the case board's PEOPLE
+// read it as a number (TRUST['accept'].toUpperCase() threw), so from Mission 14 on the case board, and TRAVEL on it, did
+// not open. The board is rendered here after every mission of a campaign a free player walks, with everyone met, in the
+// story and on a trip
+test('the case board opens after every mission, with everyone met (TRAVEL on it), in the story and on a trip', () => {
+  const f = new FactStore();
+  for (const k of PRIMES.prologue) (Array.isArray(k) ? f.set(k[0], k[1]) : f.set(k));
+  f.set('faction', 'neutral');
+  for (const n of Object.values(NPCS)) f.set(`met_${n.id}`, true);
+  const log = [];
+  let boards = 0;
+  for (const ch of ORDER) {
+    const game = { engine: engine(), facts: f, story: null, log, run: ch, voice: null };
+    const rt = Object.assign(Object.create(LastVersion.prototype), { g: game, def: LV });
+    game.story = rt.makeStory(ch);
+    MISSIONS[ch].forEach((m, d) => {
+      game.campaign = { lv: true, chapter: ch, deck: d, sector: 0, quarter: 0, flags: {} };
+      game.deckWorld = { flags: {} };
+      rt.chapter = ch;
+      rt.level = rt.buildLevel(game.campaign);
+      const el = { innerHTML: '', querySelectorAll: () => [], querySelector: () => null };
+      rt.renderJournal(game, el);
+      boards++;
+      assert.ok(/<h3 id="lvTravel">TRAVEL<\/h3>/.test(el.innerHTML) && /PEOPLE/.test(el.innerHTML), `${m.key}: the case board, with TRAVEL`);
+      if (d > 0 || ch !== 'prologue') assert.ok(el.innerHTML.includes('data-travel="m01"'), `${m.key}: Rain City is a trip`);
+      // the mission played by a player who does everything it offers (its first choice each time), then done
+      const { level } = LEVELS.find((l) => l.deck.mkey === m.key && !l.adjusted);
+      const end = freePlay(m, level, f.facts);
+      for (const [k, v] of Object.entries(end.facts)) f.set(k, v);
+      f.set(`${m.key}_done`, true);
+    });
+  }
+  assert.equal(typeof f.get('trust_sera'), 'string', 'the campaign walked sets Sera\'s standing as a word');
+  // and on a trip, at the end of it all
+  const game = { engine: engine(), facts: f, story: null, log, run: 'finale', voice: null };
+  const rt = Object.assign(Object.create(LastVersion.prototype), { g: game, def: LV });
+  game.story = rt.makeStory('roam');
+  const di = roamIndex('m14');
+  game.campaign = { lv: true, chapter: 'roam', deck: di, sector: 0, quarter: 0, flags: {}, roam: { key: 'm14', year: 'FUTURE', years: ['FUTURE', 'PRESENT', 'PAST'], fresh: true, back: { campaign: { chapter: 'finale', deck: 0 } }, meta: { where: 'THE LAST VERSION · AFTERZERO', run: 'finale' } } };
+  game.deckWorld = { flags: {} };
+  rt.chapter = 'roam';
+  rt.level = rt.buildLevel(game.campaign);
+  const el = { innerHTML: '', querySelectorAll: () => [], querySelector: () => null };
+  rt.renderJournal(game, el);
+  assert.ok(/FREE ROAM &middot; DOWNTOWN/.test(el.innerHTML) && /id="lvBack"/.test(el.innerHTML) && /class="here"/.test(el.innerHTML), 'on a trip: where it is, BACK TO THE STORY, and the place marked on TRAVEL');
+  assert.ok(boards === main.length);
+});

@@ -2381,9 +2381,12 @@ async function roamTrips(storyJson, finishedJson) {
     await page.mouse.click(480, 120);
     await page.waitForFunction(() => AZ.audio.ctx?.state === 'running', null, { timeout: 20000 }).catch(() => {});
     await page.evaluate((s) => setTimeout(() => AZ.begin('load', s), 0), slot);
-    await page.waitForFunction(until, arg, { timeout: 300000 });
+    // (a load that never arrives is a failure said here, and the rest of the free-roam check is skipped, not the run)
+    const ok = await page.waitForFunction(until, arg, { timeout: 300000 }).then(() => true, () => false);
+    if (!ok) { check(false, `free roam: slot ${slot} loads`, JSON.stringify(await az(() => ({ where: LVB?.where?.(), chapter: AZ.campaign?.chapter, key: AZ.edition?.deck?.key })))); return false; }
     await az(() => { AZ.renderer.setAnimationLoop(null); });
     await az(HANDS);
+    return true;
   };
   if (!storyJson) { check(false, 'free roam: a story save to start from'); return; }
   // the story save: Mission 16, with Missions 1-15 done and nothing of 16-23 (so the mission does not end on its own)
@@ -2396,7 +2399,7 @@ async function roamTrips(storyJson, finishedJson) {
     d.meta = { ...(d.meta || {}), run: 'act3', savedAt: Date.now() };
     localStorage.setItem(`afterzero.lv.slot.${slot}`, JSON.stringify(d));
   }, [storyJson, SLOT]);
-  await loadSlot(SLOT, () => AZ.started && AZ.mode === 'deck' && AZ.edition.deck?.mkey === 'm16' && !AZ.edition.castWaitFor && AZ.level?.place);
+  if (!(await loadSlot(SLOT, () => AZ.started && AZ.mode === 'deck' && AZ.edition.deck?.mkey === 'm16' && !AZ.edition.castWaitFor && AZ.level?.place))) return;
   await opening();
   const before = await az(() => ({ chapter: AZ.campaign.chapter, deck: AZ.campaign.deck, quarter: AZ.campaign.quarter, cp: AZ.checkpoint.slice(0, 3), objective: AZ.edition.objectiveText(),
     fragments: AZ.facts.get('fragments') || 0, slot: AZ.slot, said: LVB.said.length }));
@@ -2477,7 +2480,7 @@ async function roamTrips(storyJson, finishedJson) {
   check(y1.year === 'FUTURE' && /2196/.test(y1.objective) && y1.stability === 1, 'trip 1: 3 switches the place to 2196, and the trip costs the Chronolith nothing', JSON.stringify(y1));
   // a save on the trip, the page reloaded, the save loaded from the title: still on the trip
   await az((slot) => { AZ.saveTo(slot); return 'ok'; }, SLOT);
-  await loadSlot(SLOT, () => AZ.started && AZ.mode === 'deck' && AZ.campaign?.chapter === 'roam' && AZ.edition.deck?.key === 'm06' && !AZ.edition.castWaitFor && AZ.level?.place);
+  if (!t1.arrived || !(await loadSlot(SLOT, () => AZ.started && AZ.mode === 'deck' && AZ.campaign?.chapter === 'roam' && AZ.edition.deck?.key === 'm06' && !AZ.edition.castWaitFor && AZ.level?.place))) return;
   const r1 = { arrived: true, ...(await state()) };
   const keptRead = await az((id) => !!(id && AZ.deckWorld.flags[`done_${id}`] && AZ.facts.get(`fr_${id}`)), w1.read?.id);
   check(tripOk({ ...r1, year: r1.year }, 'm06', 'oldtown', 'FUTURE') && keptRead && /FREE ROAM/.test(r1.card) && !(await az(() => !!AZ.edition.opening)),
