@@ -295,6 +295,9 @@ if (process.env.LV_ONLY === 'roam') {
         for (const q of m.quarters || []) for (const t of q.threads || []) { f.set(`t_${m.key}_${t.id}`, true); f.set(`t_${m.key}_${t.id}_paid`, true); }
       }
     }
+    // (people met on the way, with the standings they left: Sera's is a word since Mission 14)
+    for (const id of ['rook', 'sera', 'clockmaker', 'niko', 'tala']) f.set(`met_${id}`, true);
+    f.set('trust_sera', 'deny');
     AZ.saveTo(0);
     return localStorage.getItem('afterzero.lv.slot.0');
   });
