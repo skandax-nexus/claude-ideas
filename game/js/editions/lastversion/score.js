@@ -164,7 +164,7 @@ export class Score {
     this.themeKey = 'main'; // the theme playing (themes.js), and where in its form (cur)
     this.cur = null;
     this.bars = 0;
-    this.played = []; // the tune's last notes: { theme, sec, bar, p, midi, ins } (the tests and the bots read it)
+    this.played = []; // the tune's last notes: { theme, sec, bar, p, midi, ins, t } (the tests, the bots and tools/score-render.mjs read it)
     this.quotes = []; // what each cue quoted: { cue, theme }
     if (typeof document !== 'undefined' && document.querySelector('#ui') && !document.querySelector('#lvScore')) {
       const st = document.createElement('style');
@@ -433,7 +433,7 @@ export class Score {
     a.osc('sine', f * 2, t, 0.6, v * (felt ? 0.12 : 0.25), 0.003, 0.5, dest);
   }
 
-  cello(f, t, dur, v, dest, rev = false, cutoff = 900, detune = 0) {
+  cello(f, t, dur, v, dest, rev = false, cutoff = 900, detune = 0, attack = null) {
     const c = this.a.ctx;
     const o = c.createOscillator();
     o.type = 'sawtooth';
@@ -448,7 +448,7 @@ export class Score {
     lp.type = 'lowpass';
     lp.frequency.value = cutoff;
     const g = c.createGain();
-    const atk = rev ? dur * 0.9 : Math.min(0.6, dur * 0.3);
+    const atk = rev ? dur * 0.9 : attack ?? Math.min(0.6, dur * 0.3);
     g.gain.setValueAtTime(0.0001, t);
     g.gain.linearRampToValueAtTime(v, t + atk);
     g.gain.setTargetAtTime(0.0001, t + dur, rev ? 0.02 : 0.4);
@@ -548,9 +548,9 @@ export class Score {
 
   // more instruments: bowed strings (an ensemble of two, slightly apart), distant brass that opens as it swells, a
   // wordless choir-like texture, a music box, and an impact played backwards (the war's gaps)
-  strings(f, t, dur, v, dest, rev = false) {
-    this.cello(f, t, dur, v * 0.6, dest, rev, 1700, -5);
-    this.cello(f, t, dur, v * 0.6, dest, rev, 1700, 6);
+  strings(f, t, dur, v, dest, rev = false, attack = null) {
+    this.cello(f, t, dur, v * 0.6, dest, rev, 1700, -5, attack);
+    this.cello(f, t, dur, v * 0.6, dest, rev, 1700, 6, attack);
   }
 
   brass(f, t, dur, v, dest) {
@@ -676,7 +676,9 @@ export class Score {
     const f = mtof(m);
     switch (ins) {
       case 'flute': this.flute(f, t, dur, v * 0.75, dest); break;
-      case 'strings': this.strings(f, t, dur, v * 0.42, dest, rev); break;
+      // (the tune on strings is bowed with a quick attack and sits over its chords: tools/score-render.mjs found it heard as
+      // the strongest pitch at a quarter of its notes when it swelled in at the accompaniment's level)
+      case 'strings': this.strings(f, t, dur, v * 0.75, dest, rev, Math.min(0.1, dur * 0.25)); break;
       case 'cello': this.cello(f, t, dur, v * 0.75, dest, rev); break;
       case 'glass': this.glass(f, t, v * 0.5, dest, rev); break;
       case 'metal': this.metal(f, t, v * 0.5, dest, rev); break;
@@ -735,7 +737,7 @@ export class Score {
       const accent = beat === 0 ? 1.08 : 1;
       this.lead(ins, m, lt, Math.max(len, nt.d * e8 * 0.98), v * accent, dest, rev);
       if (sec.brass && ins !== 'brass') this.brass(mtof(m - 12), t, nt.d * e8, v * 0.12, dest); // (2196: the brass carries it too)
-      this.played.push({ theme: sec.theme, sec: sec.key, bar: bi, p: nt.p, midi: m, ins });
+      this.played.push({ theme: sec.theme, sec: sec.key, bar: bi, p: nt.p, midi: m, ins, t: lt });
       if (this.played.length > 256) this.played.shift();
     }
     // what plays under it
@@ -819,7 +821,7 @@ export class Score {
       }
       for (const n of b.notes) {
         this.lead(ins, root + n.p + shift, x + n.at * e8, n.d * e8, v, out);
-        this.played.push({ theme: theme || 'cue', sec: 'cue', bar: 0, p: n.p, midi: root + n.p + shift, ins, cue: true });
+        this.played.push({ theme: theme || 'cue', sec: 'cue', bar: 0, p: n.p, midi: root + n.p + shift, ins, cue: true, t: x + n.at * e8 });
       }
       x += barSec;
     }
@@ -850,7 +852,7 @@ export class Score {
         const ins = SIGNATURE[key] || 'piano';
         const len = this.phrase(h.bars, { root: h.home, tempo: h.tempo, ins, chords: key === 'unwritten' ? 'pad' : 'strings', t: t + 0.2, out, v: 0.06, theme: key });
         if (key === 'war') for (let i = 0; i < 2; i++) this.noise(t + 0.2 + i * len / 2, 0.12, { type: 'lowpass', from: 220, to: 100, vol: 0.14 }, out);
-        if (key === 'c2196') this.brass(mtof(h.home + 7), t + 0.2, len, 0.012, out);
+        if (key === 'c2196') this.brass(mtof(h.home - 5), t + 0.2, len, 0.008, out); // (distant: a fifth below the tune, not in its octave)
         this.cello(mtof(h.home - 24), t, len + 0.5, 0.05, out);
         this.cello(mtof(h.home - 17), t + len * 0.4, len * 0.6 + 0.5, 0.035, out);
         this.quotes.push({ cue: name, theme: key });

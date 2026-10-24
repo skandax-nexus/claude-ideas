@@ -2549,6 +2549,7 @@ test('the score is written music: a theme per act, the motif in each, the tune p
   for (const ch of ORDER) { score.quotes.length = 0; score.cue('chapter', { chapter: ch }); assert.deepEqual(score.quotes, [{ cue: 'chapter', theme: ACT_THEME[ch] }], ch); }
   score.enter({ mkey: 'm11' }, 'PRESENT');
   score.quotes.length = 0;
+  score.played.length = 0; // (the chapter cues above played their notes too)
   score.cue('card');
   assert.deepEqual(score.quotes, [{ cue: 'card', theme: 'mira' }], 'Mission 11\'s card quotes Mira\'s theme');
   const cardNotes = score.played.filter((x) => x.cue).map((x) => x.p);
