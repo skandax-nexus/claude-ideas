@@ -493,6 +493,7 @@ const M06_HINTS = {
   debt: ['Ezra owes fifty years.', 'Take him the spring.', 'Talk to Ezra.'],
   gauge: ['Ezra mended something.', 'The 2026 workbench.', 'Look at the bench.'],
   ledger: ['His appointment book.', 'On the counter.', 'Read it now, then in 2026.'],
+  echo26: ['Ezra, in 2026.', 'His echo at the counter, in 2026.', 'Listen to him in 2026.'],
 };
 
 // a brass clock of the escapement: in its own year (and once the window has been read), a choice of hour; the right one
@@ -542,6 +543,8 @@ export const M06 = {
             hint: 'The same appointment, on every page.', after: [K('Every Tuesday for fifty years, he wrote me in.')], prompt: 'THE APPOINTMENT BOOK', offset: [2.6, 1.0, -0.4], kit: 'ledger',
             log: 'Ezra\'s appointment book: V., every Tuesday since 1999, paid in advance.' },
           goal: 'The appointment book on the counter.', because: 'A clockmaker writes down who is coming.', ev: 'tuesdays', hints: M06_HINTS.ledger },
+        // (the closing pass: Ezra at sixty-five, in 2026, talking to the spot where Kai will stand)
+        { id: 'echo26', kind: 'talk', npc: 'ezra_shop26', at: 'shopFloor', after: ['ezra'], goal: 'In 2026 Ezra was sixty-five, and already waiting.', because: 'His echo is still at the counter, talking.', done: 'ev_ezra26', hints: M06_HINTS.echo26 },
         { id: 'cross', kind: 'go', at: 'galleryLanding', r: 3, after: ['arm'], when: 'ev_arm_count', goal: 'Get past the arm to the stair.', because: 'It sweeps the whole floor. It always comes back.', hints: M06_HINTS.cross, minutes: 3 },
       ],
       sides: [
@@ -569,7 +572,7 @@ export const M06 = {
       threads: [
         // the escapement (the sheet's [6]): three brass clocks, each answering in one year only, each to be set to the hour
         // the shop window gives that year (2026 morning, 2049 evening, 2196 noon); a wrong hour slips back
-        { id: 'clocks', kind: 'tasks', of: ['clk_26', 'clk_49', 'clk_96'], after: ['stair', 'windows', 'ledger'],
+        { id: 'clocks', kind: 'tasks', of: ['clk_26', 'clk_49', 'clk_96'], after: ['stair', 'windows', 'ledger', 'echo26'],
           spots: [
             { id: 'clock26', scene: 'clock26', at: 'clock2026', prompt: 'THE BRASS CLOCK', offset: [0, -0.4, 1.2], r: 2.6, model: NO_MODEL },
             { id: 'clock49', scene: 'clock49', at: 'clock2049', prompt: 'THE BRASS CLOCK', offset: [0, -0.4, 1.2], r: 2.6, model: NO_MODEL },
@@ -640,7 +643,13 @@ export const M06 = {
     recording: { lines: [N('In the case, a recording cylinder. The label is in a hand that is nearly yours: FOR THE CHILD.')], set: { recording_found: true, ev_witness_recording: true },
       log: 'A recording, labelled in a hand that is nearly mine.' },
     spring: { lines: [N('In the ruin of 2196, the loop\'s spring, rusted into a knot. Fifty years of Tuesdays, wound tight.')], set: { has_spring: true } },
-    ezra_echo: { lines: [N('2026. Ezra at sixty-five, his hair still brown at the edges, oiling the arm.'), EZRA('Twenty-seven years of Tuesdays. Half done, child. Half done.')] },
+    ezra_echo: {
+      lines: [N('2026. Ezra at sixty-five, his hair still brown at the edges, oiling the arm.'), EZRA('Twenty-seven years of Tuesdays. Half done, child. Half done.'),
+        K('You can see me?', '!ev_ezra26'), EZRA('I can see where you will stand. I have talked to that spot since 1999. It is nice when it answers.', '!ev_ezra26'),
+        EZRA('Your sister came in once. Nine years old, yellow boots. She wanted a watch that went backwards.', '!ev_ezra26'), K('Did you make her one?', '!ev_ezra26'),
+        EZRA('I made her one that went forwards very slowly. She said it would do.', '!ev_ezra26')],
+      set: { ev_ezra26: true }, log: 'In 2026 Ezra made Mira a watch that went forwards very slowly.',
+    },
     gauge: { lines: [N('On the 2026 workbench: a brass ring gauge stamped HELIX, tagged for return.'), EZRA('A Dr. Rook. Very polite. Very frightened.')], set: { ev_rook_gauge: true } },
   },
   rules: [

@@ -848,6 +848,7 @@ const M12_HINTS = {
   gangway: ['He stopped on the gangway.', 'In 2026, where the flowers were.', 'Look at him. Look under him.'],
   camp: ['Where he has been living.', 'In the ruin, by the east wing.', 'The cot, the cup, the wall.'],
   ring: ['The second ring is humming.', 'Listen to it.', 'Stay.'],
+  practice: ['A tape recorder by his cot.', 'It runs backwards, in 2196.', 'REVERSE it, and listen.'],
 };
 const GLAZIER = AMB('CROWD_F');
 const M12_SAY = {
@@ -882,6 +883,13 @@ const M12_PROCESSES = [
     ],
     aim: [-4, 0.5, 4.6],
     hints: ['The frame fell across her way.', 'Fallen things rise.', 'REVERSE the frame, and hold it while she gets clear.'],
+  },
+  // (the closing pass) his tape recorder by the cot, in 2196, running backwards: held, it plays forwards once, and it is
+  // him rehearsing what he will say to Kai
+  {
+    id: 'practice', kind: 'recording', at: 'eastRuin', label: 'HIS TAPE RECORDER', weight: 0.5, grain: 'pen', when: '@FUTURE', aim: [13, 1.0, -2.8],
+    clip: { who: 'WITNESS', text: 'You\'re early. No. Kai, you\'re early. No. You were always early, and I was always late, and she was nine.' },
+    hints: ['A tape recorder, running backwards.', 'A recording runs forwards once.', 'REVERSE his tape recorder.'],
   },
   // a Helix drone over the court: held, it walks its last seconds backwards and forgets it saw Kai
   { id: 'droneCourt', kind: 'patrol', target: 'm12_helix_q0s0', label: 'THE DRONE', weight: 1,
@@ -967,7 +975,9 @@ export const M12 = {
             { id: 'campWall', scene: 'campWall', at: 'eastRuin', prompt: 'THE WALL', offset: [9.6, 1.4, -6.4], r: 2.6, kit: 'drawingFrame', when: '@FUTURE' },
           ],
           goal: 'Where he has been living, in the ruin.', because: 'Somebody has slept here, more than once.', hints: M12_HINTS.camp },
-        { id: 'route', kind: 'deduce', deduction: 'route', at: 'eastRuin', after: ['camp'], spotOpts: { offset: [2, 1.2, 0], r: 3 }, goal: 'Reconstruct his route.', because: 'He repeats it.', hints: M12_HINTS.route, minutes: 3 },
+        { id: 'practice', kind: 'invert', target: 'practice', at: 'eastRuin', after: ['camp'], say: [K('He rehearses it. What he will say to me when I catch up.'), K('He still gets it wrong.')],
+          goal: 'A tape recorder by his cot, running backwards.', because: 'Whatever is on it, he plays it every night.', hints: M12_HINTS.practice },
+        { id: 'route', kind: 'deduce', deduction: 'route', at: 'eastRuin', after: ['practice'], spotOpts: { offset: [2, 1.2, 0], r: 3 }, goal: 'Reconstruct his route.', because: 'He repeats it.', hints: M12_HINTS.route, minutes: 3 },
       ],
     },
     {
@@ -994,7 +1004,12 @@ export const M12 = {
         when: '!m12_faced',
         lines: [K('Who are you?'), L('WITNESS', 'The person you become when you refuse to let go.'), REV(N('He lifts his wrist. A circle with a broken halo, thirty years older than yours.')),
           L('WITNESS', 'You got yours at a train door. It aches when it rains. It always rains.')],
-        set: { m12_faced: true },
+        // (the closing pass: face to face, Kai asks one thing)
+        choices: [
+          intent('investigate', 'Ask about the flowers.', { lines: [L('WITNESS', 'White chrysanthemums. For a girl who liked the yellow ones.'), K('Mira.'), L('WITNESS', 'Don\'t say her name here. The ring is listening.')], set: { m12_faced: true } }),
+          intent('challenge', 'Ask why he runs.', { lines: [L('WITNESS', 'I don\'t run. I lead. You only ever follow what runs.'), K('Where are you leading me?'), L('WITNESS', 'Somewhere you can forgive me from.')], set: { m12_faced: true } }),
+          intent('withdraw', 'Say nothing.', { lines: [N('You say nothing. He nods, as if it was the right answer, and the one he gave.')], set: { m12_faced: true } }),
+        ],
       },
       { when: 'm12_faced', lines: [L('WITNESS', 'Go home, Kai.')] },
     ],
