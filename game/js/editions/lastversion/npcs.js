@@ -110,7 +110,7 @@ export const NPCS = {
     resolve: [{ when: 'rook_fate == "persuade"', as: 'rook', variant: 'old', vid: 'ROOK' }, { when: 'rook_fate == "expose"', as: 'guard', variant: 'helix', vid: 'PRYCE' }, { when: 'true', as: null, chair: 'recorder', vid: 'DIRECTOR' }],
   },
   kai12: { id: 'kai12', first: 'Kai', name: 'Kai, twelve', role: 'Young Kai', pronoun: HIS, color: '#25313d', voice: 'KAI12', era: 'past', seed: 37, model: 'rb_child_m', variant: 'kai12', height: 1.42, vid: 'KAI12', walk: 1.05, silent: true },
-  tomas: { id: 'tomas', first: 'Tomas', name: 'Tomas Vale', role: 'Anja\'s son, an echo', pronoun: HIS, color: '#1f9a90', voice: 'CREW', era: 'future', seed: 38, model: 'rb_tomas', variant: 'school', height: 1.42, vid: null, walk: 1.05, silent: true, hologram: true },
+  tomas: { id: 'tomas', first: 'Tomas', name: 'Tomas Vale', role: 'Anja\'s son, an echo', pronoun: HIS, color: '#1f9a90', voice: 'CREW', era: 'future', seed: 38, model: 'rb_tomas', variant: 'school', height: 1.52, vid: null, walk: 1.05, silent: true, hologram: true },
 };
 
 // Officer Pryce answers to both names: the checkpoint's 'guard' and her own (one face, one entry in the cast)

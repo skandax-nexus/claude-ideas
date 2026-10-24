@@ -14,6 +14,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import zlib from 'node:zlib';
 import { RealityEngine } from '../game/js/core/RealityEngine.js';
 import { FactStore } from '../game/js/core/FactStore.js';
 import { compileCondition } from '../game/js/core/conditions.js';
@@ -1746,7 +1747,7 @@ test('the settlement\'s people are dressed as people of three thousand years ago
   const srcOf = (m) => new RegExp(`\\b${m}: \\{ src: '([^']+)'`).exec(conv)?.[1];
   // the avatars that wear today's Gulf and Islamic dress (a ghutra and thobe, a kurta and taqiyah, a lace-fringed hijab,
   // a khimar and abaya, a burqa) are gone from the edition; the girl in a head scarf is a child of 2196 only
-  for (const gone of ['Adults/Male_Adult_19', 'Adults/Male_Adult_21', 'Adults/Female_Adult_06', 'Adults/Female_Adult_10', 'Adults/Female_Adult_16']) {
+  for (const gone of ['Adults/Male_Adult_15', 'Adults/Male_Adult_19', 'Adults/Male_Adult_21', 'Adults/Female_Adult_06', 'Adults/Female_Adult_10', 'Adults/Female_Adult_16']) {
     assert.ok(!Object.keys(LV_MODELS).some((m) => srcOf(m) === gone), `${gone} is not converted for the edition`);
   }
   assert.ok(!eraModels('ancient').has('rb_child_f2') && !Object.entries(AMBIENT_CAST).some(([id, a]) => a.model === 'rb_child_f2' && /^m[4-7]_/.test(id)), 'no head scarf in the settlement');
@@ -1814,7 +1815,7 @@ test('casting: generic roles look and are named the part, Tomas has a body of hi
   assert.ok(AMBIENT_CAST.tech_1.variant === 'helix tech' && WARDROBE.rb_civ_f2.cook.garb.apron, 'M3\'s technician in a work uniform; M21\'s cook in an apron');
   // Tomas: his own body, no one else's, a boy's height
   assert.equal(NPCS.tomas.model, 'rb_tomas');
-  assert.ok(isChild('rb_tomas') && NPCS.tomas.height < 1.5);
+  assert.ok(isChild('rb_tomas') && NPCS.tomas.height < 1.6);
   for (const { deck, level } of LEVELS) for (const c of level.cast) if (c.id !== 'tomas' && level.npcs.some((n) => n.crew === c.id)) assert.notEqual(c.model, 'rb_tomas', `${deck.mkey}: ${c.id} wears Tomas's body`);
   for (const a of Object.values(AMBIENT_CAST)) assert.notEqual(a.model, 'rb_tomas');
   // Mission 1's "crowded security checkpoint": people queue between the tapes, Officer Pryce at the booth
@@ -1833,6 +1834,133 @@ test('casting: generic roles look and are named the part, Tomas has a body of hi
   }
   const anc = Object.values(PALETTE.ancient);
   assert.equal(new Set(anc).size, anc.length, 'a settlement palette per mission');
+});
+
+// (castfix) a converted model's materials, and its hair cards' texels by colour (the PNG decoded: one palette index a
+// texel, its rows unfiltered)
+const glbOf = (key) => {
+  const b = fs.readFileSync(`game/assets/characters/${MODEL_OF(key).file}`);
+  const n = b.readUInt32LE(12);
+  return { b, n, j: JSON.parse(b.subarray(20, 20 + n).toString('utf8')) };
+};
+const matsOf = (key) => glbOf(key).j.materials.map((m) => m.name);
+function hairTexels(key) {
+  const { b, n, j } = glbOf(key);
+  const mat = j.materials.find((m) => m.name === 'hair');
+  const bv = j.bufferViews[j.images[j.textures[mat.pbrMetallicRoughness.baseColorTexture.index].source].bufferView];
+  const at = 20 + n + 8 + (bv.byteOffset || 0);
+  const png = b.subarray(at, at + bv.byteLength);
+  let p = 8, ihdr = null, plte = null, trns = null;
+  const idat = [];
+  while (p < png.length) {
+    const len = png.readUInt32BE(p), type = png.toString('latin1', p + 4, p + 8), data = png.subarray(p + 8, p + 8 + len);
+    if (type === 'IHDR') ihdr = data; else if (type === 'PLTE') plte = data; else if (type === 'tRNS') trns = data; else if (type === 'IDAT') idat.push(data);
+    p += 12 + len;
+  }
+  const w = ihdr.readUInt32BE(0), h = ihdr.readUInt32BE(4);
+  assert.ok(ihdr[8] === 8 && ihdr[9] === 3 && plte && trns, `${key}: hair cards in an 8-bit palette with alpha`);
+  const raw = zlib.inflateSync(Buffer.concat(idat));
+  const paeth = (a, b2, c) => { const q = a + b2 - c, pa = Math.abs(q - a), pb = Math.abs(q - b2), pc = Math.abs(q - c); return pa <= pb && pa <= pc ? a : pb <= pc ? b2 : c; };
+  const count = new Array(256).fill(0);
+  let prev = new Uint8Array(w);
+  for (let y = 0; y < h; y++) {
+    const f = raw[y * (w + 1)], line = raw.subarray(y * (w + 1) + 1, (y + 1) * (w + 1)), cur = new Uint8Array(w);
+    for (let x = 0; x < w; x++) {
+      const a = x ? cur[x - 1] : 0, up = prev[x], c = x ? prev[x - 1] : 0;
+      cur[x] = (line[x] + (f === 1 ? a : f === 2 ? up : f === 3 ? (a + up) >> 1 : f === 4 ? paeth(a, up, c) : 0)) & 255;
+      count[cur[x]]++;
+    }
+    prev = cur;
+  }
+  // the opaque texels' share by colour: { silver, all }
+  let silver = 0, all = 0;
+  for (let i = 0; i < count.length; i++) {
+    if (!count[i] || (i < trns.length ? trns[i] : 255) < 128) continue;
+    const hsl = {};
+    new THREE.Color(plte[i * 3] / 255, plte[i * 3 + 1] / 255, plte[i * 3 + 2] / 255).getHSL(hsl);
+    all += count[i];
+    if (hsl.s < 0.16 && hsl.l > 0.42) silver += count[i];
+  }
+  return { silver, all };
+}
+
+// (castfix) the player's "every NPC must look like who they are": no one of the settlement wears a cap or a head cloth
+// (Niko's woven prayer cap was dyed as hair and read as a cap); Tomas is a boy on a child's body; the people who come
+// back (the glazier, the ticket keeper, the named) are dressed as no crowd is; the Elder is old in her face and hair
+test('castfix: no cap or head cloth in the settlement, Tomas on a child\'s body, the returning dressed as no crowd, the Elder old', () => {
+  const conv = fs.readFileSync('tools/rocketbox-to-glb.mjs', 'utf8');
+  const srcOf = (m) => new RegExp(`\\b${m}: \\{ src: '([^']+)'`).exec(conv)?.[1];
+  // the avatars whose cap, hat or head cloth is modelled into the head (a taqiyah, a baseball cap, a ghutra, a hijab, a
+  // khimar, a burqa, a girl's head scarf, a beanie, a chef's toque, an officer's cap): no person of the settlement is one
+  const HEAD_COVERED = ['Adults/Male_Adult_15', 'Adults/Male_Adult_17', 'Adults/Male_Adult_19', 'Adults/Male_Adult_21', 'Adults/Female_Adult_06', 'Adults/Female_Adult_10',
+    'Adults/Female_Adult_16', 'Children/Female_Child_02', 'Professions/Delivery_Male_01', 'Professions/Chef_Female_01', 'Professions/Pilot_Female_02', 'Professions/Security_Female_01'];
+  const HEAD_PROPS = ['beret', 'visor', 'helmet', 'raincoatHood', 'raincoatChildHood', 'shadowHood'];
+  const settled = new Set();
+  for (const { deck, s, level } of LEVELS) {
+    for (const n of level.npcs) {
+      const c = level.cast.find((x) => x.id === n.crew);
+      if (!c?.model) continue;
+      if (!(c.era === 'ancient' || ['niko', 'tala', 'elder'].includes(c.met || n.crew) || /^m[457]_/.test(n.crew))) continue;
+      const v = WARDROBE[c.model]?.[n.variant || c.variant] || {};
+      const where = `${deck.mkey}/${s}: ${n.id} (${c.model}/${n.variant || c.variant})`;
+      assert.ok(!HEAD_COVERED.includes(srcOf(c.model)), `${where} is ${srcOf(c.model)}, whose head is covered`);
+      assert.ok(!matsOf(c.model).some((m) => /hat|helmet|cap|keffiyeh|scarf/i.test(m)), `${where} wears a ${matsOf(c.model)}`);
+      assert.ok(![...(v.props || []), ...(c.props || [])].some((x) => HEAD_PROPS.includes(x)), `${where} carries something on the head`);
+      settled.add(c.model);
+    }
+  }
+  assert.ok(settled.has('rb_niko') && settled.has('rb_elder') && settled.has('rb_tala') && settled.size >= 9, [...settled].join());
+  // Niko: real hair (its own cards), not a cap dyed dark; his look in every mission and the cases is the one man's
+  assert.equal(srcOf('rb_niko'), 'Adults/Male_Adult_09');
+  assert.ok(matsOf('rb_niko').includes('hair') && !WARDROBE.rb_niko.niko.head, 'Niko\'s hair is hair');
+  // Tomas, thirteen: a child's body (Rocketbox's four children are the only ones), a slight boy's height, in a look no
+  // crowd wears anywhere and on a body no crowd child has; his echo wears a coat, which neither young Kai nor any crowd
+  // child of 2196 does
+  assert.ok(srcOf('rb_tomas').startsWith('Children/') && isChild('rb_tomas'), srcOf('rb_tomas'));
+  assert.ok(NPCS.tomas.height >= 1.45 && NPCS.tomas.height <= 1.6 && LV_MODELS.rb_tomas.height === NPCS.tomas.height, `Tomas at ${NPCS.tomas.height} m`);
+  assert.ok(WARDROBE.rb_tomas.school.garb?.cloak && !WARDROBE.rb_child_m.kai12.garb, 'Tomas\'s coat');
+  // the people who come back: whoever is met in two missions or more (a replay counting as its mission) wears looks
+  // (model and clothes) no crowd anywhere in the campaign or the cases wears (the Place Outside Time's echoes are the
+  // people themselves), and someone placed by hand comes back the same
+  const crowdLooks = new Map(), people = new Map();
+  for (const { deck, level } of LEVELS) {
+    for (const n of level.npcs) {
+      const c = level.cast.find((x) => x.id === n.crew);
+      if (!c?.model) continue;
+      const look = `${c.model}/${n.variant || c.variant || 'default'}`;
+      if (n.crowd && !c.met) { if (!crowdLooks.has(look)) crowdLooks.set(look, new Set()); crowdLooks.get(look).add(deck.mkey); continue; }
+      const id = c.met || n.crew;
+      if (!people.has(id)) people.set(id, { looks: new Set(), missions: new Set(), ambient: !!c.ambient });
+      people.get(id).looks.add(look);
+      people.get(id).missions.add(deck.origin || deck.mkey);
+    }
+  }
+  let back = 0;
+  for (const [id, p] of people) {
+    if (p.missions.size < 2) continue;
+    back++;
+    for (const look of p.looks) assert.ok(!crowdLooks.has(look), `${id} (back in ${[...p.missions]}) as ${look}, which a crowd wears in ${[...(crowdLooks.get(look) || [])]}`);
+    if (p.ambient) assert.equal(p.looks.size, 1, `${id} comes back in one look: ${[...p.looks]}`);
+  }
+  assert.ok(back >= 15, `${back} people come back`);
+  // the glazier (M12, M21, M23): her own face, worn by no one else, the technicians' paramedic body no longer
+  const glazier = people.get('m12_glazier');
+  assert.deepEqual([...glazier.missions].sort(), ['m12', 'm21', 'm23']);
+  assert.deepEqual([...glazier.looks], ['rb_glazier/glazier']);
+  assert.ok(![...crowdLooks.keys()].some((l) => l.startsWith('rb_glazier/')) && Object.entries(AMBIENT_CAST).every(([id, a]) => a.model !== 'rb_glazier' || id === 'm12_glazier'), 'the glazier\'s body is hers');
+  assert.ok(allNamed().every((n2) => n2.model !== 'rb_glazier') && !Object.values(ERAS).some((era) => Object.values(era).some((t) => t.some(([m]) => m === 'rb_glazier'))));
+  assert.ok(WARDROBE.rb_glazier.glazier.garb.apron && WARDROBE.rb_glazier.glazier.props.includes('glassLifter'), 'a glazier\'s apron and lifter');
+  // the Elder: her face aged and her hair silvered in her model's maps, kept silver by her wardrobe; a stoop, a staff
+  // (in her echoes too) and a slow walk
+  assert.ok(/\brb_elder: \{ src: 'Adults\/Female_Adult_09', px: 1024, edit: 'age' \}/.test(conv), 'the Elder\'s maps are aged');
+  const hair = WARDROBE.rb_elder.elder.hair;
+  assert.ok(hair?.length && hair.every((r) => r.sset <= 0.06 && r.skin === false), 'her wardrobe greys her hair');
+  const { silver, all } = hairTexels('rb_elder');
+  assert.ok(all > 1000 && silver / all > 0.85, `the Elder's hair cards: ${((100 * silver) / all).toFixed(1)}% silver`);
+  const young = hairTexels('rb_tala');
+  assert.ok(young.silver / young.all < 0.2, `Tala's hair is not silver (${((100 * young.silver) / young.all).toFixed(1)}%)`);
+  const elder = WARDROBE.rb_elder.elder;
+  assert.ok(elder.stoop > 0.1 && elder.props.includes('staff') && elder.holoProps && NPCS.elder.walk < 1, 'a stoop, a staff and a slow walk');
 });
 
 test('named faces stay out of crowds (but for the listed exceptions), and crowd faces never cross eras', () => {
@@ -2075,8 +2203,8 @@ test('the manifest carries only the edition\'s models, each with a credit and a 
   const lvFiles = Object.values(LV_MODELS).map((m) => m.file);
   // (closing: the settlement's own six, Tomas, the receptionist and Officer Haig with faces of their own; the robe, hijab,
   // abaya and the second robe gone)
-  assert.equal(Object.keys(LV_MODELS).length, 45, '45 new people');
-  assert.equal(Object.values(LV_MODELS).filter((m) => m.px === 1024).length, 21, '21 named at 1024 px');
+  assert.equal(Object.keys(LV_MODELS).length, 46, '46 new people');
+  assert.equal(Object.values(LV_MODELS).filter((m) => m.px === 1024).length, 22, '22 named at 1024 px');
   assert.deepEqual(Object.entries(LV_MODELS).filter(([, m]) => m.px === 512 && !m.crowd).map(([k]) => k).sort(), ['rb_haig', 'rb_tomas'], 'two named only ever seen as light, at 512 px');
   assert.equal(Object.values(LV_MODELS).filter((m) => m.crowd).length, 22, '22 crowd at 512 px');
   for (const m of Object.values(LV_MODELS).filter((x) => x.crowd)) assert.equal(m.px, 512);
@@ -2123,7 +2251,8 @@ test('every wardrobe variant is a valid recolour: at most 8 rules, numbers in ra
           for (const [piece, g] of Object.entries(rules)) {
             assert.ok(PIECES.includes(piece), `${model}/${name}: garment ${piece}`);
             assert.ok(DYE_RE.test(g.dye) && (g.stripe === undefined || DYE_RE.test(g.stripe)), `${model}/${name}.${piece}: dyes ${g.dye} ${g.stripe}`);
-            for (const x of ['hem', 'front', 'back', 'reach', 'w', 'top', 'ease', 'open', 'wide']) if (g[x] !== undefined) assert.ok(g[x] >= 0 && g[x] <= 1.6, `${model}/${name}.${piece}.${x}`);
+            for (const x of ['hem', 'front', 'back', 'reach', 'w', 'top', 'ease', 'open', 'wide', 'bibWide']) if (g[x] !== undefined) assert.ok(g[x] >= 0 && g[x] <= 1.6, `${model}/${name}.${piece}.${x}`);
+            if (g.bib !== undefined) assert.ok(g.bib >= -0.15 && g.bib <= 0.6, `${model}/${name}.${piece}.bib`); // (m below the shoulders: a little above them, a high bib)
             if (g.flare !== undefined) assert.ok(g.flare >= 1 && g.flare <= 1.6, `${model}/${name}.${piece}.flare`);
           }
           continue;
@@ -2131,6 +2260,8 @@ test('every wardrobe variant is a valid recolour: at most 8 rules, numbers in ra
         if (k === 'hairdo') { assert.ok(LV_MODELS[rules.from] && !LV_MODELS[rules.from].child, `${model}/${name}: hair from ${rules.from}`); continue; }
         if (k === 'sex') { assert.ok(['f', 'm'].includes(rules), `${model}/${name}: sex ${rules}`); continue; }
         if (k === 'holoProps') { assert.equal(rules, true, `${model}/${name}.holoProps`); assert.ok(v.props?.length, `${model}/${name}: holoProps with props`); continue; }
+        // (castfix) an old back's bend, in radians
+        if (k === 'stoop') { assert.ok(rules > 0 && rules < 0.5, `${model}/${name}.stoop ${rules}`); continue; }
         assert.ok(PARTS.includes(k), `${model}/${name}: part ${k}`);
         assert.ok(rules.length <= 8, `${model}/${name}.${k}: ${rules.length} rules`);
         for (const r of packRules(rules)) {
@@ -2139,7 +2270,7 @@ test('every wardrobe variant is a valid recolour: at most 8 rules, numbers in ra
           assert.ok(r.band[0] < r.band[2] && r.band[1] < r.band[3] && r.win[0] < r.win[1], `${model}/${name}.${k}: band and window`);
         }
       }
-      for (const p of v.props || []) assert.ok(['umbrella', 'lantern', 'staff', 'trowel', 'clipboard', 'loupe', 'lanyard', 'beret', 'visor', 'badge', 'raincoatHood', 'raincoatChildHood', 'shadowHood', 'helmet', 'vest'].includes(p), `${model}/${name}: prop ${p}`);
+      for (const p of v.props || []) assert.ok(['umbrella', 'lantern', 'staff', 'trowel', 'clipboard', 'loupe', 'lanyard', 'beret', 'visor', 'badge', 'raincoatHood', 'raincoatChildHood', 'shadowHood', 'helmet', 'vest', 'glassLifter'].includes(p), `${model}/${name}: prop ${p}`);
     }
   }
 });

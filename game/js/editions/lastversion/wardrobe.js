@@ -238,6 +238,10 @@ export const WARDROBE = {
   },
   // (faded: a khaki shirt over washed-out jeans; only paler, it was the default's blue shirt again on the same street)
   rb_trader: { default: {}, earth: { body: [{ hue: [0.58, 0.12], smin: 0.1, to: 0.08, sat: 0.9 }] },
+    // the ticket keeper of the 41's old platform (M14, the Finale's road): the line's navy, faded, in a work shirt and
+    // dark trousers, the amber strap of his ticket bag across him; no trader of 2196 wears it
+    keeper: { body: [{ hue: [0.56, 0.14], smin: 0.04, lmin: 0.5, to: 0.62, sset: 0.3, lrange: [0.2, 0.38] }, { band: [0, 0, 0.31, 0.44], to: 0.62, sset: 0.06, lrange: [0.12, 0.28] },
+      { band: [0.69, 0, 1, 0.44], to: 0.62, sset: 0.06, lrange: [0.12, 0.28] }], garb: { sash: { dye: '#c8962a', side: 'R', w: 0.05 } } },
     faded: { body: [{ hue: [0.58, 0.12], smin: 0.1, lmin: 0.45, to: 0.14, sset: 0.28, lrange: [0.5, 0.68] }, { hue: [0.58, 0.12], smin: 0.1, lmax: 0.45, sat: 0.4, light: 1.25 }] } },
   // (U4 review) more 2026/2049 faces: an older man in a shirt and khakis, a woman in a waistcoat and jeans; each has the
   // crowds' working wardrobes (a transit uniform, a lab white, the detention grey, dust)
@@ -291,6 +295,8 @@ export const SETTLEMENT = {
   ash: [['grey', 'black', 'undyed', 'black'], ['undyed', 'grey', 'brown', 'brown'], ['brown', 'undyed', 'grey', 'black'], ['oat', 'brown', 'black', 'grey'], ['black', 'oat', 'grey', 'brown']],
 };
 const D = (n) => DYE[n];
+// Male_Adult_09's (Niko's) hair on his head map: over the crown, at the temples and behind the ears, the tail's pieces
+const NIKO_HAIR = [[0, 0, 1, 0.235], [0, 0.235, 0.3, 0.62], [0.7, 0.235, 1, 0.62], [0.55, 0.64, 1, 1]];
 // the cuts: a man's tunic to the shin, a woman's and an elder's to the ankle (wider), a child's narrower; a boy's to the knee
 const CUT = {
   man: (t, o, st, b, i) => ({ skirt: { dye: D(t), stripe: D(st), hem: 0.14, flare: 1.12 }, bodice: { dye: D(t) }, ...(i % 2 ? { cloak: { dye: D(o), stripe: D(st), open: 0.55 } } : { mantle: { dye: D(o), stripe: D(st) } }), belt: { dye: D(b) } }),
@@ -327,12 +333,14 @@ for (const [m, vs] of Object.entries(settlementVariants())) WARDROBE[m] = { ...(
 // the settlement's named people and its people placed by hand
 Object.assign(WARDROBE, {
   rb_niko: {
-    // Niko, keeper of the settlement: an undyed linen tunic to the shin, a woad mantle; Rocketbox's woven cap is dyed as
-    // the short dark hair under it
-    niko: { body: [dyeRule('flax')], head: [{ band: [0.05, 0.6, 1, 1], hue: [0.1, 0.5], smin: 0, to: 0.08, sset: 0.25, lrange: [0.05, 0.14], skin: false }],
+    // Niko, keeper of the settlement (Male_Adult_09: his own black hair, long and tied back; Male_Adult_15's woven cap
+    // read as a present-day prayer cap and is gone): an undyed linen tunic to the shin, a woad mantle
+    niko: { body: [dyeRule('flax')],
       garb: { skirt: { dye: D('flax'), stripe: D('walnut'), hem: 0.12, flare: 1.12 }, bodice: { dye: D('flax') }, mantle: { dye: D('woad'), stripe: D('undyed') }, belt: { dye: D('walnut') } } },
-    // Niko, older (M7's cold open): the beard greying, the hair with it
-    older: { body: [dyeRule('oat')], head: [{ band: [0.05, 0.6, 1, 1], hue: [0.1, 0.5], smin: 0, to: 0.08, sset: 0.08, lrange: [0.22, 0.36], skin: false }, { band: [0, 0, 1, 0.58], lmax: 0.28, sset: 0.04, lrange: [0.42, 0.6] }],
+    // Niko, older (M7's cold open): his hair gone to salt and pepper, the tied-back tail with it (the hair painted on the
+    // head map: over the crown, at the temples and behind the ears, and its tail's pieces), a staff
+    older: { body: [dyeRule('oat')], hair: [{ sset: 0.03, lrange: [0.36, 0.66], skin: false }],
+      head: NIKO_HAIR.map((band) => ({ band, lmax: 0.3, sset: 0.03, lrange: [0.36, 0.62], skin: false })),
       garb: { skirt: { dye: D('oat'), stripe: D('walnut'), hem: 0.1, flare: 1.12 }, bodice: { dye: D('oat') }, cloak: { dye: D('woad'), stripe: D('undyed') }, belt: { dye: D('walnut') } }, props: ['staff'] },
   },
   rb_tala: {
@@ -341,8 +349,12 @@ Object.assign(WARDROBE, {
     tala: { body: [dyeRule('woad')], garb: { skirt: { dye: D('woad'), stripe: D('undyed'), hem: 0.06, flare: 1.2 }, bodice: { dye: D('woad') }, mantle: { dye: D('undyed'), stripe: D('woad'), front: 0.2, back: 0.32 }, belt: { dye: D('madder') } } },
   },
   rb_elder: {
-    // the Elder: a madder-red wool robe to the ground, a dark cloak, greyed hair, a staff and a slow walk
-    elder: { body: [dyeRule('madder')], hair: [{ sset: 0.05, lrange: [0.52, 0.8] }], garb: { skirt: { dye: D('madder'), stripe: D('weld'), hem: 0.03, flare: 1.15 }, bodice: { dye: D('madder') }, cloak: { dye: D('brown'), stripe: D('weld'), hem: 0.08 }, belt: { dye: D('weld') } }, props: ['staff'] },
+    // the Elder: a madder-red wool robe to the ground, a dark cloak, a staff and a slow, stooped walk. Her face is aged in
+    // her model's own maps (tools/rocketbox-textures.py 'age': silver hair, lines at the brow, the eyes, the mouth and the
+    // neck, paler skin); the wardrobe keeps her hair cards silver whatever the light. In an echo (M19, M22) her staff is
+    // of its light (holoProps), her back as bent, and her silver hair cards a pale light where a dark head of hair is dim
+    elder: { body: [dyeRule('madder')], hair: [{ sset: 0.03, light: 1.06, skin: false }], stoop: 0.28, holoProps: true,
+      garb: { skirt: { dye: D('madder'), stripe: D('weld'), hem: 0.03, flare: 1.15 }, bodice: { dye: D('madder') }, cloak: { dye: D('brown'), stripe: D('weld'), hem: 0.08 }, belt: { dye: D('weld') } }, props: ['staff'] },
   },
 });
 // (M4's storyteller by the fire, M7's astronomer: elders placed by hand, in clothes no one in the crowd wears)
@@ -408,10 +420,27 @@ WARDROBE.rb_civ_f4.labcoat = { body: [{ band: [0.3, 0.1, 0.7, 0.62], sset: 0.03,
 WARDROBE.rb_civ_m3.labcoat = { body: [{ band: [0.3, 0.15, 0.7, 0.84], sset: 0.03, lrange: [0.74, 0.9] }, { band: [0, 0.42, 0.32, 0.84], sset: 0.03, lrange: [0.74, 0.9] }, { band: [0.68, 0.42, 1, 0.84], sset: 0.03, lrange: [0.74, 0.9] }], garb: LABCOAT, props: ['clipboard'] };
 WARDROBE.rb_medic_f['helix tech'] = { body: [{ hue: [0.62, 0.1], smin: 0.2, to: 0.6, sset: 0.14, lrange: [0.16, 0.36] }] };
 WARDROBE.rb_civ_f2.cook = { body: [{ band: [0.3, 0, 0.7, 0.6], sset: 0.03, lrange: [0.76, 0.92] }, { hue: [0.6, 0.1], smin: 0.1, to: 0.6, sset: 0.06, lrange: [0.12, 0.24] }], garb: { apron: { dye: '#ece8dc', hem: 0.38 }, belt: { dye: '#ece8dc', w: 0.03 } } };
-// the receptionist: Helix's navy suit; Officer Haig at home (her recording); Tomas in a 2196 school jersey, patched
+// the receptionist: Helix's navy suit; Officer Haig at home (her recording)
 WARDROBE.rb_desk_f = { 'helix desk': { body: [{ lmax: 0.3, to: 0.62, sset: 0.3, lrange: [0.08, 0.2] }] } };
 WARDROBE.rb_haig = { home: {} };
-WARDROBE.rb_tomas = { school: { body: [{ band: [0.3, 0, 0.7, 0.6], to: 0.1, sset: 0.2, lrange: [0.45, 0.7] }] } };
+// Tomas Vale, thirteen, in the lock city's school of 2196 (an echo): a boy's body (Male_Child_01, his own sandy hair and
+// freckles in his model's maps), a brick-red school jersey under a grey-green wool coat to the knee, buttoned (a fitted
+// coat: garments.js), which his echo wears too: no crowd child of 2196 wears a coat, nor young Kai
+WARDROBE.rb_tomas = { school: { body: [{ hue: [0.6, 0.1], smin: 0.3, to: 0.025, sset: 0.42, lrange: [0.2, 0.42] }], garb: { cloak: { dye: '#56604f', stripe: '#3c4238', hem: 0.36, open: 0.3, fit: true } } } };
+// The glazier Kai holds the frame for on Helix's roof (M12), who is at the Spire's glass (M21) and on the road (M23): a face
+// of her own (Business_Female_04), her hair dyed copper, a petrol work jacket (the suit's jacket dyed, its pinstripe
+// gone to a twill), charcoal work trousers, a leather bib apron and tool belt, and a suction lifter for the panes. No one
+// else, crowd or named, wears her body
+const GLAZIER_HAIR = [[0, 0, 1, 0.17], [0, 0.17, 0.3, 0.55], [0.7, 0.17, 1, 0.55], [0.5, 0.64, 1, 1]];
+const PETROL = { to: 0.5, sset: 0.4, lrange: [0.18, 0.42], lmax: 0.7 };
+WARDROBE.rb_glazier = { glazier: {
+  body: [{ band: [0.33, 0, 0.67, 0.86], ...PETROL }, { band: [0, 0.12, 0.33, 0.48], ...PETROL }, { band: [0.67, 0.12, 1, 0.48], ...PETROL },
+    { band: [0, 0.55, 0.33, 1], to: 0.08, sset: 0.12, lrange: [0.1, 0.26] }, { band: [0.67, 0.55, 1, 1], to: 0.08, sset: 0.12, lrange: [0.1, 0.26] }],
+  hair: [{ to: 0.045, sset: 0.66, lrange: [0.24, 0.58], skin: false }],
+  head: GLAZIER_HAIR.map((band) => ({ band, lmax: 0.36, to: 0.045, sset: 0.6, lrange: [0.2, 0.48], skin: false })),
+  garb: { apron: { dye: '#9a683c', hem: 0.4, wide: 1.2, bib: -0.05, bibWide: 0.62 }, belt: { dye: '#3a2a1e', w: 0.05 } },
+  props: ['glassLifter'],
+} };
 
 // --- the props --------------------------------------------------------------------------------------
 // built from primitives, once (their geometry and materials are shared and kept); each: where it hangs
@@ -434,6 +463,7 @@ function propKit() {
     rainRedOut: M({ color: 0x9c1c22, roughness: 0.32 }), rainRedIn: M({ color: 0x3a0a0e, roughness: 0.6, side: THREE.BackSide }),
     slate: M({ color: 0x3c4652, roughness: 0.55, side: THREE.DoubleSide }), plate: M({ color: 0x4a5664, roughness: 0.7 }),
     lens: M({ color: 0x141a22, metalness: 0.4, roughness: 0.12, side: THREE.DoubleSide }),
+    rubber: M({ color: 0x1b1d20, roughness: 0.75 }), lifter: M({ color: 0xc8501e, roughness: 0.45 }),
     // the Witness's hood, and the dark inside it where a face would be
     hoodCloth: M({ color: 0x1c2026, roughness: 0.9, side: THREE.DoubleSide }), shade: keepMat(new THREE.MeshBasicMaterial({ color: 0x040405, side: THREE.DoubleSide })),
   };
@@ -474,6 +504,11 @@ function propKit() {
       mesh(new THREE.TorusGeometry(0.045, 0.006, 4, 10), mats.brass, 0, -0.05, 0)) },
     staff: { at: 'handR', upright: true, make: () => group(mesh(new THREE.CylinderGeometry(0.02, 0.025, 1.7, 6), mats.wood, 0, -0.1, 0)) },
     trowel: { at: 'handR', make: () => group(mesh(new THREE.BoxGeometry(0.03, 0.12, 0.03), mats.wood, 0, -0.04, 0), mesh(new THREE.BoxGeometry(0.07, 0.11, 0.008), mats.steel, 0, -0.15, 0)) },
+    // a glazier's suction lifter: two rubber cups under an orange grip, carried by the grip, cups down
+    glassLifter: { at: 'handR', upright: true, make: () => group(
+      mesh(new THREE.BoxGeometry(0.2, 0.026, 0.032), mats.lifter, 0, -0.05, 0), mesh(new THREE.BoxGeometry(0.024, 0.04, 0.03), mats.lifter, -0.085, -0.075, 0),
+      mesh(new THREE.BoxGeometry(0.024, 0.04, 0.03), mats.lifter, 0.085, -0.075, 0),
+      mesh(new THREE.CylinderGeometry(0.058, 0.064, 0.018, 16), mats.rubber, -0.085, -0.1, 0), mesh(new THREE.CylinderGeometry(0.058, 0.064, 0.018, 16), mats.rubber, 0.085, -0.1, 0)) },
     clipboard: { at: 'handL', make: () => group(mesh(new THREE.BoxGeometry(0.22, 0.3, 0.012), mats.board, 0, -0.1, 0.03), mesh(new THREE.BoxGeometry(0.19, 0.25, 0.004), mats.paper, 0, -0.1, 0.04)) },
     // a jeweller's loupe over the right eye
     loupe: { at: 'head', make: () => group(mesh(new THREE.CylinderGeometry(0.018, 0.022, 0.03, 10), mats.brass, -0.034, 0.075, 0.1, Math.PI / 2, 0, 0)) },
@@ -849,6 +884,8 @@ export function dress(actor, crew, opts = {}) {
   // coat, an apron; and the settlement's girls' hair
   if (v.garb) clothe(actor, model, v.garb, { hologram: holo, glow: U.spec.glow });
   if (v.hairdo) hairdo(actor, model, v.hairdo.from, { ...v.hairdo, hologram: holo, glow: U.spec.glow });
+  // an old back (the Elder's): bent forward at the spine after every pose, the head raised again (afterPose)
+  U.stoop = v.stoop || 0;
   U.lvVariant = variant;
   return actor;
 }
@@ -876,7 +913,8 @@ export function attach(actor, where, obj, offset = [0, 0, 0], upright = false) {
 }
 
 // After each pose (the actor's animate): an umbrella is held up, the forearm raised in front of the
-// chest, and the props in a hand turn upright again.
+// chest, an old back is bent (stoop: radians, most of it in the lower spine, the neck raised again so the face is
+// not on the chest), and the props in a hand turn upright again.
 const _q = new THREE.Quaternion(), _p = new THREE.Quaternion(), _y = new THREE.Quaternion(), _v = new THREE.Vector3(), _ax = new THREE.Vector3();
 function turnWorld(bone, axis, ang) {
   bone.parent.getWorldQuaternion(_p);
@@ -893,6 +931,13 @@ export function afterPose(actor) {
     actor.getWorldQuaternion(_y);
     turnWorld(U.bones.RightForeArm, _ax.set(-1, 0, 0).applyQuaternion(_y), -1.45);
   }
+  if (U.stoop && U.bones?.Spine1 && U.bones.Spine2 && U.bones.Neck) {
+    actor.getWorldQuaternion(_y);
+    const right = _v.set(-1, 0, 0).applyQuaternion(_y);
+    turnWorld(U.bones.Spine1, right, -U.stoop * 0.6);
+    turnWorld(U.bones.Spine2, right, -U.stoop * 0.4);
+    turnWorld(U.bones.Neck, right, U.stoop * 0.75);
+  }
   const props = U.props;
   if (!props) return;
   actor.getWorldQuaternion(_y);
@@ -901,7 +946,6 @@ export function afterPose(actor) {
     o.parent.getWorldQuaternion(_p);
     o.quaternion.copy(_q.copy(_p).invert().multiply(_y));
   }
-  void _v;
 }
 
 // recolour a whole render sheet's worth of variants: for tests and the render sheets

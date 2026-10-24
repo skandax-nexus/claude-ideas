@@ -3,7 +3,7 @@
 // into a plain glTF binary for the game: game/assets/characters/rb_*.glb.
 //
 //   NODE_PATH=<dir with three@0.169 in node_modules> node tools/rocketbox-to-glb.mjs \
-//     <Assets/Avatars/.../Name_01 dir> <out.glb> [colour px (1024)] [normal px (512)] [drop parts]
+//     <Assets/Avatars/.../Name_01 dir> <out.glb> [colour px (1024)] [normal px (512)] [drop parts] [edit]
 //   ... --all <Rocketbox checkout> <out dir>                         (Station Zero's set, AVATARS)
 //   ... --edition lastversion <Rocketbox checkout> <out dir> [keys]  (THE LAST VERSION's people,
 //       LV_AVATARS: named characters at 1024 px, crowds at 512 px)
@@ -12,7 +12,8 @@
 // - Any Rocketbox avatar: texture and material prefixes are letters then digits (f004_, the
 //   children's cf001_ / cm012_, the soldiers' sm024_); children are rigged as Bip02 and their bones
 //   are renamed Bip01_ (the game's rig, and the eye bones); RB_DROP lists parts whose triangles are
-//   left out (the pistols).
+//   left out (the pistols); an LV_AVATARS entry's `edit` names an edit tools/rocketbox-textures.py makes to that
+//   output's own maps (EDITS: the Elder's face aged, Tomas's own hair and freckles).
 //
 // - Geometry: the FBX's single skinned mesh, centimetres -> metres, vertex colours
 //   dropped, UVs flipped to glTF's top-left origin, triangles sorted so each
@@ -61,12 +62,12 @@ export const LV_AVATARS = {
   rb_mira: { src: 'Professions/Medical_Female_01', px: 1024 }, // Mira; Dr. Lin (same face)
   rb_child_f: { src: 'Children/Female_Child_01', px: 1024 }, // the Child in the Station
   rb_rook: { src: 'Professions/Business_Male_04', px: 1024 }, // Dr. Elias Rook
-  rb_niko: { src: 'Adults/Male_Adult_15', px: 1024 }, // Niko
+  rb_niko: { src: 'Adults/Male_Adult_09', px: 1024 }, // Niko: his own hair, long and tied back (castfix: Male_Adult_15 wore a woven prayer cap)
   rb_jun: { src: 'Professions/Business_Male_02', px: 1024 }, // Jun Park
   rb_tala: { src: 'Adults/Female_Adult_11', px: 1024 }, // Tala: her hair tied up (closing: Female_Adult_06 wore a hijab)
   rb_security_f: { src: 'Professions/Security_Female_01', px: 1024 }, // Officer Pryce
   rb_security_m: { src: 'Professions/Security_Male_01', px: 1024 }, // Officer Dale
-  rb_elder: { src: 'Adults/Female_Adult_09', px: 1024 }, // the Elder, her hair greyed (closing: Female_Adult_10 wore a khimar and abaya)
+  rb_elder: { src: 'Adults/Female_Adult_09', px: 1024, edit: 'age' }, // the Elder, her face aged and her hair silvered in her maps (closing: Female_Adult_10 wore a khimar and abaya)
   rb_ezra: { src: 'Adults/Male_Adult_03', px: 1024 }, // Ezra Moll, the Clockmaker
   rb_engineer_f: { src: 'Professions/Construction_Female_01', px: 1024 }, // Rhea Odum
   rb_soldier_m: { src: 'Professions/Military_Male_02', px: 1024 }, // Sergeant Brask
@@ -104,11 +105,14 @@ export const LV_AVATARS = {
   rb_vill_m2: { src: 'Adults/Male_Adult_12', px: 512 },
   rb_vill_f: { src: 'Adults/Female_Adult_05', px: 512 }, // the settlement's women (and their daughters' hair: garments.js hairdo)
   rb_vill_f2: { src: 'Adults/Female_Adult_03', px: 512 },
-  // (closing) Tomas Vale, Anja's son, an echo in a school of 2196: a body of his own, a slight young face at 1.42 m
-  rb_tomas: { src: 'Adults/Male_Adult_01', px: 512 },
+  // Tomas Vale, Anja's son, thirteen, an echo in a school of 2196: a boy's body (castfix: Male_Adult_01, a man at 1.42 m,
+  // read as a small adult), the one young Kai has too, with his own sandy hair and freckles in his maps
+  rb_tomas: { src: 'Children/Male_Child_01', px: 512, edit: 'tomas' },
   // (closing) the two tier-2 women who wore commuters' faces have their own: Helix's receptionist, Officer Haig at home
   rb_desk_f: { src: 'Professions/Business_Female_01', px: 1024 }, // a dark suit, a white shirt: Helix's front desk
   rb_haig: { src: 'Adults/Female_Party_02', px: 512 }, // off shift, at home: her recorded statement, a hologram (M2)
+  // (castfix) the glazier of M12, M21 and M23: a face of her own, not the technicians' paramedic body
+  rb_glazier: { src: 'Professions/Business_Female_04', px: 1024 },
 };
 // parts left out of a conversion: nobody in the game carries a gun
 export const RB_DROP = { rb_security_f: ['pistol'], rb_warden: ['pistol'] };
@@ -123,7 +127,7 @@ if (args[0] === '--all' && args.length === 3) {
   for (const key of keys) {
     const a = LV_AVATARS[key];
     if (!a) throw new Error(`${key} is not in LV_AVATARS`);
-    await convert(path.join(args[2], 'Assets', 'Avatars', a.src), path.join(args[3], `${key}.glb`), String(a.px), String(a.px / 2), (RB_DROP[key] || []).join(','));
+    await convert(path.join(args[2], 'Assets', 'Avatars', a.src), path.join(args[3], `${key}.glb`), String(a.px), String(a.px / 2), (RB_DROP[key] || []).join(','), a.edit || '');
   }
 } else if (args[0] === '--strip' && args.length >= 2) {
   // node tools/rocketbox-to-glb.mjs --strip <file.glb ...>: rewrite converted models without FBXLoader's node extras
@@ -149,18 +153,18 @@ if (args[0] === '--all' && args.length === 3) {
 } else if (args.length >= 2 && !args[0].startsWith('--')) {
   await convert(...args);
 } else {
-  console.error('usage: node tools/rocketbox-to-glb.mjs <avatar dir> <out.glb> [colour px] [normal px] [drop parts]\n       node tools/rocketbox-to-glb.mjs --all <Rocketbox checkout> <out dir>\n       node tools/rocketbox-to-glb.mjs --edition lastversion <Rocketbox checkout> <out dir> [keys]\n       node tools/rocketbox-to-glb.mjs --strip <file.glb ...>');
+  console.error('usage: node tools/rocketbox-to-glb.mjs <avatar dir> <out.glb> [colour px] [normal px] [drop parts] [edit]\n       node tools/rocketbox-to-glb.mjs --all <Rocketbox checkout> <out dir>\n       node tools/rocketbox-to-glb.mjs --edition lastversion <Rocketbox checkout> <out dir> [keys]\n       node tools/rocketbox-to-glb.mjs --strip <file.glb ...>');
   process.exit(1);
 }
 
-async function convert(dir, out, colorPx = '1024', normalPx = '512', dropParts = '') {
+async function convert(dir, out, colorPx = '1024', normalPx = '512', dropParts = '', edit = '') {
   const drop = new Set(dropParts.split(',').filter(Boolean));
   const name = path.basename(path.resolve(dir));
   const fbx = path.join(dir, 'Export', `${name}.fbx`);
 
   // 1. textures (python + PIL)
   const tex = fs.mkdtempSync(path.join(os.tmpdir(), 'rb-tex-'));
-  const py = spawnSync('python3', ['-I', path.join(path.dirname(fileURLToPath(import.meta.url)), 'rocketbox-textures.py'), path.join(dir, 'Textures'), tex, colorPx, normalPx, [...drop].join(',')], { encoding: 'utf8' });
+  const py = spawnSync('python3', ['-I', path.join(path.dirname(fileURLToPath(import.meta.url)), 'rocketbox-textures.py'), path.join(dir, 'Textures'), tex, colorPx, normalPx, [...drop].join(','), edit], { encoding: 'utf8' });
   if (py.status !== 0) throw new Error(py.stderr);
   const parts = JSON.parse(py.stdout.trim().split('\n').pop());
 

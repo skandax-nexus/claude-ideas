@@ -17,7 +17,10 @@
 //   belt:   { dye, w: m (0.05) }
 //   bodice: { dye, top: m below the shoulders (0.07) }   the tunic's body from under the arms to the waist, over today's
 //             clothes (a jacket's front, a blouse's buttons), joining the skirt
-//   apron:  { dye, hem: m above the floor (0.42), wide: half-angle round the front (1.1 rad) }   a cook's apron
+//   apron:  { dye, hem: m above the floor (0.42), wide: half-angle round the front (1.1 rad), bib: m below the shoulder
+//             joints the bib reaches up the chest (none; less than 0: above them), bibWide: its half-angle (0.7 rad) }
+//             a cook's apron; with a bib, a
+//             work apron (the glazier's leather one)
 //   (a cloak `fit` to the body, hemmed at the knee and open at the front, is a lab coat)
 // dyes: 0xRRGGBB or '#rrggbb' (sRGB).
 import * as THREE from '../../../vendor/three.module.min.js';
@@ -316,6 +319,22 @@ function build(info, garb) {
     const pel = bone('Bip01_Pelvis');
     band(out, { piece: 'apron', rings, cx, cz, segs: 14, open: Math.PI - (s.wide ?? 1.1), turn: Math.PI,
       skin: (a, x, y, z) => transfer(info, [[S('hips'), 1]], x, y, z, 14, [pel, Math.min(0.5, Math.max(0, (top - y) / (top - hem)) * 0.5)]) });
+    if (s.bib != null) {
+      // the bib: up the front of the chest from the apron's top, over the jacket, narrower than the skirt
+      // (down into the apron's top, and never in nearer than the ring above it: a jacket's skirts flare at the hips)
+      const yTop = yArm - s.bib, yBot = top - 0.03;
+      const bib = [];
+      const NB = 7;
+      for (let k = 0; k < NB; k++) {
+        const t = k / (NB - 1);
+        const y = lerp(yTop, yBot, t);
+        const o = outline(info, y > lerp(pelvis.y, spine2.y, 0.5) ? S('torso') : S('hips'), y, 0.025, cx, cz) || bib[k - 1];
+        const e = 0.028 + 0.03 * t * t;
+        bib.push(grow({ y, l: o.l + e, r: o.r + e, f: o.f + e, b: o.b + e }, t > 0.5 ? bib[k - 1] : null));
+      }
+      band(out, { piece: 'apron', rings: bib, cx, cz, segs: 10, open: Math.PI - (s.bibWide ?? 0.7), turn: Math.PI,
+        skin: (a, x, y, z) => transfer(info, [[S('torso'), 1]], x, y, z, 10) });
+    }
   }
 
   if (garb.bodice) {
