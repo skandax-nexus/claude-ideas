@@ -115,8 +115,8 @@ await page.waitForFunction(() => AZ.started && AZ.room && AZ.mode === 'deck' && 
 const playedKey = (re) => page.waitForFunction((src) => window.__plays.some((p) => p.keys.some((k) => new RegExp(src).test(k)) && p.starts > 0), re.source, { timeout: 180000, polling: 500 }).then(() => true, () => false);
 await playedKey(/^NONE\|the prologue/);
 await playedKey(/^NONE\|rain city/);
-// the cold open goes on line by line (Space skips one line, as a tap on the view does; Enter would end the whole
-// opening, its card with it): then Mission 1's card is said
+// the cold open goes on line by line (Space skips one line, as a tap on the view, Enter or SKIP does; none of them ends
+// the whole opening): then Mission 1's card is said
 const hasKey = (src) => page.evaluate((x) => window.__plays.some((p) => p.keys.some((k) => new RegExp(x).test(k)) && p.starts > 0), src);
 for (let i = 0; i < 80 && !(await hasKey('^NONE\\|mission one')); i++) {
   await page.evaluate(() => { if (AZ.menu === 'pause') AZ.closeMenu(); });

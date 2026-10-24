@@ -2121,6 +2121,15 @@ await az(() => {
     st.mira ||= !!m?.model.visible;
   };
 });
+// (Endings A and B are played after the run from the moment this one's choice comes up: as the thread that takes Kai to
+// the ring begins, the game is saved in slot 8, as a player would before choosing)
+await az(() => {
+  const was = LVP.kinds.choice;
+  LVP.kinds.choice = (t) => {
+    if (AZ.edition.deck?.mkey === 'm23' && t.id === 'choose' && !window.__endSave) window.__endSave = AZ.saveTo(8);
+    return was(t);
+  };
+});
 const m23 = await playMission('m23', { sides: ['gallery'], before: 'meet' });
 const m23f = await az(() => ({ street: LVP.checks.street, bridge: LVP.checks.bridge, ...LVB.f('m23_asked'), ask: LVB.said.includes('MIRA: Ask me.'), time: LVB.said.includes('WITNESS: And, Kai. For once, you are on time.') }));
 check(m23f.street?.held === 'witness' && m23f.street.route.n === m23f.street.route.of && m23f.street.y > -0.5, 'the street that fell: he holds its far half; in 2026 Kai walks the near half and steps onto what he holds', JSON.stringify(m23f.street));
@@ -2133,6 +2142,7 @@ const ending = await az(() => ({ menu: AZ.menu, text: document.querySelector('#e
 const endSaid = await az(() => ({ heard: AZ.edition.score.heard.filter((c) => /ending|postcredit/.test(c)), said: LVB.said.slice(-40) }));
 check(endSaid.heard.includes('ending:C') && endSaid.heard.includes('postcredit') && endSaid.said.includes('KAI: I finally found a second that belongs to nobody.') && endSaid.said.includes('NONE: Rain City, a Tuesday. The 41 is late.') && endSaid.said.includes('KAI: Live.'),
   'Ending C: the bible\'s text, what it adds (a Tuesday, the 41 late, three notes, "Live."), Kai\'s quote', JSON.stringify(endSaid));
+check(!endSaid.said.slice(endSaid.said.lastIndexOf('MIRA: Kai, what are you doing?')).some((l) => l.startsWith('CREW:')), 'Ending C: nobody in the crowd says a line in passing over it (the closing pass: one did, over the flash)', JSON.stringify(endSaid.said.slice(-14)));
 check(endSaid.said.some((l) => l === 'MIRA: There\'s a letter in my desk to a brother I never had. I keep meaning to send it.') && endSaid.said.includes('VOICE: Version one hundred and eighteen.') && !endSaid.said.some((l) => /post-credit/i.test(l)),
   'the epilogue, one line per fact set (Ending C: the letter to a brother she never had); then the voice in every speaker: "Version one hundred and eighteen."', JSON.stringify(endSaid.said.slice(-10)));
 check(ending.menu === 'ending' && ending.ending === 'C' && /ENDING C/.test(ending.text) && /AFTERZERO/.test(ending.text), 'Ending C, Afterzero', JSON.stringify({ ...ending, text: ending.text.slice(0, 120) }));
@@ -2391,6 +2401,141 @@ const overFade = await page.evaluate(() => new Promise((resolve) => {
   during = { on: card.classList.contains('on'), card: +getComputedStyle(card).zIndex, fade: +getComputedStyle(fade).zIndex };
 }));
 check(overFade.during.on && overFade.during.card > overFade.during.fade && !overFade.after, 'between chapters the waiting card shows over the fade, and goes when the people come', JSON.stringify(overFade));
+
+// --- Endings A and B, played in real time (closing: only Ending C had been played in a browser) --------------------
+// From the save taken as the Finale's choice came up (slot 8, put back before each: a load makes slot 8 the game's own,
+// and its autosaves write over it): the page reloaded, the first tap, the save loaded from the title as a player loads
+// it, Kai walks to the ring and its scene is said. The choice is clicked, and from there the game runs by the wall clock,
+// in real time (its update thirty times a second, without the drawing: SwiftShader draws the Finale at a frame or two a
+// second, which played Ending A at a fifth of its speed), while the AudioContext plays what it schedules: the flash, the
+// ending's music, its staged shots with Kai off screen, every line from the packs (each line's decoded clips start, the
+// voice's own output carries signal, the mix carries the music under it), the clock's ticks, the voice in every
+// speaker, the overlay
+const END = {
+  A: { pick: 'Destroy the Chronolith.', title: 'THE FIXED WORLD', shots: 4, person: 'kai_end', theme: 'main',
+    mira: 'MIRA: Then let me watch it go. Hold my hand while it does.',
+    lines: ['NONE: Kai destroys the Chronolith. Temporal fractures close and history stabilizes, but Mira\'s reconstructed existence cannot survive.',
+      'NONE: Rain City. The 41 is late.', 'NONE: Kai Varen looks up at the board, and smiles at it.', 'KAI: For the first time, tomorrow belonged to tomorrow.'] },
+  B: { pick: 'Separate the states into independent branches.', title: 'THE INFINITE WAR', shots: 3, person: 'sera_end', theme: 'main',
+    mira: 'MIRA: Then I\'ll live in one of them. Write to me. You never write.',
+    lines: ['NONE: Kai separates temporal states into independent branches. Mira survives, but civilizations begin fighting over the boundaries between timelines.',
+      'NONE: At the line where one world ends and the next begins, Sera Voss stands guard. On the other side, someone stands guard back.',
+      'KAI: We had saved every possible tomorrow. None of them agreed on the future.'] },
+};
+let endSave = null;
+const playEnding = async (key) => {
+  const E = END[key];
+  console.log(`Ending ${key}: ${E.title}, in real time`);
+  endSave ??= await page.evaluate(() => localStorage.getItem('afterzero.lv.slot.8'));
+  check(!!endSave, `Ending ${key}: the save taken as the Finale's choice came up is in slot 8`);
+  if (!endSave) return;
+  await page.evaluate((s) => localStorage.setItem('afterzero.lv.slot.8', s), endSave);
+  await page.reload();
+  await page.waitForFunction(() => window.AZ && document.querySelector('#title') && AZ.edition, null, { timeout: 400000 });
+  await az(() => { AZ.changeSetting('quality', 'low'); AZ.changeSetting('smart', false); });
+  await page.mouse.click(480, 120);
+  await page.waitForFunction(() => AZ.audio.ctx?.state === 'running', null, { timeout: 20000 }).catch(() => {});
+  await page.evaluate(() => setTimeout(() => AZ.begin('load', 8), 0));
+  await page.waitForFunction(() => AZ.started && AZ.mode === 'deck' && AZ.edition.deck?.mkey === 'm23' && !AZ.edition.castWaitFor && AZ.level?.place, null, { timeout: 300000 });
+  await az(() => { AZ.renderer.setAnimationLoop(null); });
+  await az(HANDS);
+  await az(PLAYER);
+  await opening();
+  // to the ring (the Finale's last thread; its spot is the original Chronolith); its scene's lines are said, its choice waits
+  const ring = await az(() => {
+    const t = AZ.edition.threads.current();
+    const c = LVP.find('ending');
+    if (!c) return { thread: t?.id || null, err: 'no ring to use' };
+    LVP.go(LVP.near(c.pos, c.pos[1] - 1.1, 1.3), 0.9);
+    AZ.focus = LVP.cand('ending') || c;
+    AZ.lastUse = null;
+    AZ.use();
+    return { thread: t?.id || null, talking: !!AZ.hud.talking, menu: AZ.menu, ending: AZ.facts.get('ending') || null };
+  });
+  // from here the game in real time; the voice's output and the whole mix into analysers sampled every 25 ms;
+  // each line the voice plays logged with the decoded clips it starts; the ending's shots sampled as they are drawn
+  await az((who) => {
+    const ctx = AZ.audio.ctx, v = AZ.voice;
+    const tap = (node) => { const a = ctx.createAnalyser(); a.fftSize = 1024; node.connect(a); return a; };
+    const vA = tap(v.output()), mA = tap(AZ.audio.master), buf = new Float32Array(1024);
+    const rms = (a) => { a.getFloatTimeDomainData(buf); let s = 0; for (const x of buf) s += x * x; return Math.sqrt(s / buf.length); };
+    const E = (window.__end = { rms: [], plays: [], starts: 0, said: LVB.said.length, stage: { shots: 0, maxI: -1, playerSeen: false, person: false } });
+    const voiced = new WeakSet();
+    const clip = v.clip.bind(v);
+    v.clip = (...a) => clip(...a).then((b) => { voiced.add(b); return b; });
+    const start = AudioBufferSourceNode.prototype.start;
+    AudioBufferSourceNode.prototype.start = function (...a) { if (this.buffer && voiced.has(this.buffer)) E.starts++; return start.apply(this, a); };
+    const play = v.playPlan.bind(v);
+    v.playPlan = (plan, extra) => {
+      const rec = { wall: performance.now(), key: plan.find((p) => p.key)?.key || null, packs: [...new Set(plan.filter((p) => p.pack).map((p) => p.pack.base))], starts: 0, ending: !!AZ.facts.get('ending') };
+      E.plays.push(rec);
+      const n0 = E.starts;
+      return play(plan, extra).then((r) => { rec.starts = E.starts - n0; return r; });
+    };
+    const c = AZ.edition.cinema, step = c.step.bind(c);
+    c.step = (dt) => {
+      step(dt);
+      const a = c.active;
+      if (!a?.shots || !AZ.facts.get('ending')) return;
+      E.stage.shots = Math.max(E.stage.shots, a.shots.length);
+      E.stage.maxI = Math.max(E.stage.maxI, a.i);
+      E.stage.playerSeen ||= AZ.player.model.visible;
+      E.stage.person ||= !!AZ.deckWorld.npcs.find((n) => n.n.id === who)?.model.visible;
+    };
+    window.__endIv = setInterval(() => {
+      if (AZ.menu === 'pause') AZ.closeMenu();
+      E.rms.push({ wall: performance.now(), voice: rms(vA), mix: rms(mA), ending: !!AZ.facts.get('ending'), talking: !!AZ.hud.talking });
+    }, 25);
+    let last = performance.now();
+    window.__endStep = setInterval(() => {
+      const now = performance.now(), dt = Math.min(0.2, (now - last) / 1000);
+      last = now;
+      if (AZ.menu === 'pause') AZ.closeMenu();
+      if (AZ.menu !== 'choice' && AZ.menu !== 'ending') AZ.simulate(dt);
+    }, 33);
+    return 'ok';
+  }, E.person);
+  const offered = await page.waitForFunction(() => AZ.menu === 'choice', null, { timeout: 120000, polling: 250 }).then(() => true, () => false);
+  const options = await page.evaluate(() => [...document.querySelectorAll('#choice [data-choice]')].map((b) => b.textContent));
+  check(ring.thread === 'choose' && !ring.err && offered && options.length === 3 && options.some((o) => o.includes(E.pick)),
+    `Ending ${key}: the save loads at the Finale's last thread; at the ring the three choices are offered`, JSON.stringify({ ring, offered, options }));
+  // the choice, as a click
+  await page.evaluate((label) => setTimeout(() => [...document.querySelectorAll('#choice [data-choice]')].find((b) => b.textContent.includes(label))?.click(), 0), E.pick);
+  const over = await page.waitForFunction(() => AZ.menu === 'ending', null, { timeout: 400000, polling: 500 }).then(() => true, () => false);
+  await page.waitForTimeout(400);
+  const r = await az((k) => {
+    clearInterval(window.__endIv);
+    clearInterval(window.__endStep);
+    const E = window.__end;
+    const on = E.rms.filter((x) => x.ending);
+    const plays = E.plays.filter((p) => p.ending);
+    return {
+      menu: AZ.menu, ending: AZ.facts.get('ending'), text: document.querySelector('#ending .body')?.textContent || '',
+      said: LVB.said.slice(E.said), stage: E.stage,
+      plays: plays.length, started: plays.filter((p) => p.starts > 0).length, unstarted: plays.filter((p) => !(p.starts > 0)).map((p) => p.key).slice(0, 6),
+      packs: [...new Set(plays.flatMap((p) => p.packs))], keys: plays.map((p) => p.key).slice(0, 12),
+      samples: on.length, voicePeak: +Math.max(0, ...on.map((x) => x.voice)).toFixed(4), mixPeak: +Math.max(0, ...on.map((x) => x.mix)).toFixed(4),
+      voiced: on.filter((x) => x.voice > 0.005).length, under: on.filter((x) => x.voice < 0.002 && x.mix > 0.004).length,
+      heard: AZ.edition.score.heard.filter((c) => /ending|postcredit/.test(c)), quote: AZ.edition.score.quotes.filter((q) => q.cue === `ending:${k}`),
+      misses: (window.__voiceMiss || []).length, miss: (window.__voiceMiss || []).slice(0, 4), planMiss: LVB.planMiss.slice(0, 4), synth: window.__synthCalls,
+      secs: on.length ? +((on[on.length - 1].wall - on[0].wall) / 1000).toFixed(1) : 0,
+    };
+  }, key);
+  console.log(`  (Ending ${key} played for ${r.secs} s of real time: ${r.plays} lines from the packs, voice peak ${r.voicePeak}, mix peak ${r.mixPeak})`);
+  check(over && r.menu === 'ending' && r.ending === key && r.text.includes(`ENDING ${key} — ${E.title}`), `Ending ${key}, ${E.title}: chosen at the ring, played to its overlay`, JSON.stringify({ over, menu: r.menu, ending: r.ending, text: r.text.slice(0, 100) }));
+  check(r.said.includes(E.mira) && E.lines.every((l) => r.said.includes(l)) && r.said.includes('VOICE: Version one hundred and eighteen.') && !r.said.some((l) => /post-credit/i.test(l)),
+    `Ending ${key}: Mira answers the choice; the bible's text, what the ending adds, Kai's quote; the voice in every speaker`, JSON.stringify(r.said.slice(-12)));
+  check(!r.said.slice(r.said.indexOf(E.mira)).some((l) => l.startsWith('CREW:')), `Ending ${key}: nobody in the crowd says a line in passing over it`, JSON.stringify(r.said.filter((l) => l.startsWith('CREW:'))));
+  check(r.stage.shots === E.shots && r.stage.maxI >= E.shots - 1 && !r.stage.playerSeen && r.stage.person,
+    `Ending ${key} is staged: its ${E.shots} shots, Kai never on screen, ${E.person === 'kai_end' ? 'Kai in a body of his own under the 41\'s board' : 'Sera on guard at the seam'}`, JSON.stringify(r.stage));
+  check(r.misses === 0 && !r.planMiss.length && r.synth === 0 && r.plays >= E.lines.length + 2 && r.started === r.plays && r.packs.length && r.packs.every((b) => /assets\/voice\/lv\/(finale|common)\//.test(b)),
+    `Ending ${key} is said from the edition's packs: every line's decoded clips start (${r.plays} lines), nothing missed, no device speech`, JSON.stringify({ plays: r.plays, started: r.started, unstarted: r.unstarted, packs: r.packs, misses: r.misses, miss: r.miss, planMiss: r.planMiss, synth: r.synth }));
+  check(r.voicePeak > 0.01 && r.voiced >= 200, `Ending ${key} is heard: the voice's output carries signal while it plays (${r.voiced} of ${r.samples} samples)`, JSON.stringify({ voicePeak: r.voicePeak, voiced: r.voiced, samples: r.samples }));
+  check(r.heard.includes(`ending:${key}`) && r.heard.includes('postcredit') && r.quote.length === 1 && r.quote[0].theme === E.theme && r.mixPeak > r.voicePeak * 0.5 && r.under >= 20,
+    `Ending ${key} is scored: its cue quotes the Main Theme, the mix carries the music under the voice and between its lines; the clock ticks`, JSON.stringify({ heard: r.heard, quote: r.quote, mixPeak: r.mixPeak, under: r.under }));
+};
+await playEnding('A');
+await playEnding('B');
 await page.close();
 await survey();
 check(errors.length === 0, 'no page errors', [...new Set(errors)].join(' | '));

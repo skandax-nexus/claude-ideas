@@ -2062,6 +2062,10 @@ export class LastVersion {
     g.hud.flash('rgba(255,255,255,0.9)');
     g.audio.silence(1.0);
     this.score.cue(`ending:${key}`);
+    // (nobody in the crowd says a line in passing over the flash and the silence before the ending's first shot: the
+    // closing bot heard "The 41 is on time. I don't trust it." there, in every ending; the shots then hold them off)
+    this.hushBarks();
+    if (g.deckWorld) g.deckWorld.lastBarkT = g.time;
     g.deckWorld?.refresh?.(); // (the ending's people: finale.js, when ending == key)
     // (staged: the ring, then each line the ending adds where it happens, then Kai's quote and the epilogue over the road;
     // Kai himself is not on screen, hidePlayer: in C he was never born, and in A he stands under the 41's board in a body
