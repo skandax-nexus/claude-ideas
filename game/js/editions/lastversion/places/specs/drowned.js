@@ -154,8 +154,13 @@ export default {
     // --- Q0: the arrival platform on the viaduct, the bank tower and its roof garden, the fallen tower ------------------
     P.land('arrivalPlatform', VX, VY, 92, Math.PI);
     // the line's signal gantry over the viaduct, just ahead of the platform (rusted, ivied in 2196)
-    for (const s of [-1, 1]) P.box([VX + s * 4.6 - 0.3, VY, 81.7, VX + s * 4.6 + 0.3, VY + 6.4, 82.3], 'ironDark');
-    P.vbox([VX - 4.9, VY + 5.6, 81.6, VX + 4.9, VY + 6.6, 82.4], 'ironDark');
+    // (closing: visuals; painted steel while the line runs, rust and flaking in 2196, not a black frame in every year)
+    for (const s of [-1, 1]) P.col([VX + s * 4.6 - 0.3, VY, 81.7, VX + s * 4.6 + 0.3, VY + 6.4, 82.3]);
+    for (const [yrs, m] of [[['PRESENT', 'PAST'], 'signGreen'], [['FUTURE'], 'rust']]) P.E(yrs, () => {
+      for (const s of [-1, 1]) P.vbox([VX + s * 4.6 - 0.3, VY, 81.7, VX + s * 4.6 + 0.3, VY + 6.4, 82.3], m);
+      P.vbox([VX - 4.9, VY + 5.6, 81.6, VX + 4.9, VY + 6.6, 82.4], m);
+      for (const s of [-1, 1]) P.obox(VX + s * 3.9, VY + 4.9, 82, 0.12, 1.6, 0.12, 0, m, { rz: s * 0.785 }); // (the knee braces)
+    });
     // (lit while the line runs; in 2196 the line has been dead for a century and a half: dark lamps, one head hanging)
     for (const dx of [-2, 0, 2]) {
       P.vbox([VX + dx - 0.35, VY + 4.3, 81.9, VX + dx + 0.35, VY + 5.6, 82.3], 'signBoard', { e: dx === 2 ? ['PRESENT', 'PAST'] : null });

@@ -126,8 +126,11 @@ export default {
     m02: {
       primary: 'lobby',
       years: {
-        PRESENT: { sky: 'stormNight', era: '2049', hour: 22.5, sun: { elev: 40, az: 200 }, fog: 0x1c2028, density: 1.4, night: 0.7, weather: 'storm', ibl: 'night', lit: 1, emergency: 0.85,
-          hemi: { sky: 0x3a4250, ground: 0x14161a, k: 0.6 }, sunColor: 0x9aa8c8, sunK: 0.25, grade: { shadowTint: 0x2a1418, highlightTint: 0xffc0a8, toning: 0.24, contrast: 1.14, saturation: 0.92 } },
+        // (closing: visuals; readable on a phone: the emergency light a red wash over the storm's grey light through the
+        // windows and the lobby's glass roof, the white walls still white under it. At 0.85 the room had read near black:
+        // the lights all turned red and the exposure dropped by nearly half)
+        PRESENT: { sky: 'stormNight', era: '2049', hour: 22.5, sun: { elev: 40, az: 200 }, fog: 0x242a34, density: 1.2, night: 0.45, weather: 'storm', ibl: 'night', lit: 1, emergency: 0.38,
+          hemi: { sky: 0x6a7488, ground: 0x2a2c32, k: 0.9 }, sunColor: 0xa8b8d8, sunK: 0.35, grade: { shadowTint: 0x2a1418, highlightTint: 0xffd0bc, toning: 0.2, contrast: 1.1, saturation: 0.94 } },
       },
       quarters: [
         { name: 'SECURITY', area: [-70, 14, -20, 70], spawn: [-48, 0, 38.4, 0] },

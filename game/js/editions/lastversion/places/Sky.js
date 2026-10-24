@@ -97,10 +97,11 @@ void main() {
     float idx = floor(w);
     vec3 wc = wedgeCol(idx);
     float edge = min(fract(w), 1.0 - fract(w));
-    // (closing: soft wedges: from each wedge's middle its light runs into its neighbour's over half a wedge, no seam; a
-    // hard seam read as a rendering fault on a phone)
+    // (closing: soft wedges: from each wedge's middle its light runs into its neighbour's all the way to the next middle,
+    // no seam anywhere; a hard seam read as a rendering fault on a phone, and a narrower blend still read as an edge
+    // where a pale wedge met a dark one)
     float u = w - 0.5, i0 = floor(u);
-    vec3 soft = mix(wedgeCol(mod(i0 + n, n)), wedgeCol(mod(i0 + 1.0, n)), smoothstep(0.2, 0.8, fract(u)));
+    vec3 soft = mix(wedgeCol(mod(i0 + n, n)), wedgeCol(mod(i0 + 1.0, n)), smoothstep(0.0, 1.0, fract(u)));
     wc = mix(wc, soft, uWedgeSoft);
     vec3 wcol = mix(wc, uZenith, pow(clamp(h, 0.0, 1.0), 1.6) * 0.65);
     col = mix(col, wcol, uWedge.x * uWedge.w * smoothstep(-0.02, 0.08, h));

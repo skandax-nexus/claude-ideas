@@ -206,7 +206,7 @@ export default {
     // 2049: the black half finished, and from the ring a beam of light straight up into the eclipse
     P.E('PRESENT', () => {
       P.cyl(0, 7.2, -3, 0.5, 90, 'lightPanel', { seg: 10 });
-      P.cyl(0, 7.2, -3, 2.2, 90, 'smoke', { seg: 16, open: true });
+      P.cyl(0, 7.2, -3, 1.4, 90, 'beamHalo', { seg: 16, open: true });
       P.glow(0, 0.06, -3, 6, 0x9fd8ff);
       for (const a of [60, 120, 240, 300]) { const [x, z] = polar(a, RC + 7); P.cyl(x, 0, z, 0.1, 4.4, 'ironDark', { seg: 6 }); P.obox(x, 4.4, z, 0.8, 0.4, 0.4, -a * D2R, 'ledGlow'); P.glow(x, 0.05, z, 4, 0xdce8ff); }
     });

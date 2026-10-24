@@ -24,9 +24,10 @@ export default {
   primary: 'crestYard',
   backdrop: { notch: 'near', gorge: true },
   years: {
-    // (closing: readable on a phone: a bright moon on the snow, the face striped with its lights; it had read as black)
-    PRESENT: { sky: 'snowNight', era: '2049', hour: 23.2, sun: { elev: 34, az: 30 }, fog: 0x26324a, density: 1.1, night: 0.5, weather: 'frost', ibl: 'night', lit: 1,
-      hemi: { sky: 0x5a6a8a, ground: 0x242a36, k: 1.0 }, sunColor: 0xb8cce8, sunK: 0.6, grade: { shadowTint: 0x101c3a, highlightTint: 0xffd8a0, toning: 0.22, contrast: 1.14, saturation: 0.9 } },
+    // (closing: readable on a phone: a bright moon over the gorge to the south, full on the face and its cells and on the
+    // snow of the gallery, the face striped with its lights; with the moon behind the dam the face had read as black)
+    PRESENT: { sky: 'snowNight', era: '2049', hour: 23.2, sun: { elev: 30, az: 165 }, fog: 0x26324a, density: 1.1, night: 0.45, weather: 'frost', ibl: 'night', lit: 1,
+      hemi: { sky: 0x6a7a9a, ground: 0x2a303c, k: 1.1 }, sunColor: 0xb8cce8, sunK: 0.75, grade: { shadowTint: 0x101c3a, highlightTint: 0xffd8a0, toning: 0.22, contrast: 1.14, saturation: 0.9 } },
     PAST: { sky: 'damDusk', era: '2026', hour: 19.1, sun: { elev: 2, az: 255 }, fog: 0x6a5a6a, density: 1.0, night: 0.4, weather: 'motes', ibl: 'dusk', lit: 0.8,
       hemi: { sky: 0xb08a8a, ground: 0x2a2630, k: 0.8 }, sunColor: 0xff9a5a, sunK: 0.8, grade: { shadowTint: 0x2a1c34, highlightTint: 0xffc890, toning: 0.24, contrast: 1.1, saturation: 1.02 } },
   },
@@ -147,6 +148,8 @@ export default {
       P.glow(cx, 0.02, FZ - 3, 3.2, 0xe4ecff, 3.2);
     }
     P.vbox([-70, 3.7, FZ + 0.02, 70, 3.85, FZ + 0.14], 'ledGlow', { noShadow: 1 });
+    // a caged bulkhead lamp over each cell's mouth, its light on the gallery's snow
+    for (const cx of CELLS) { P.vbox([cx - 0.35, 3.42, FZ, cx + 0.35, 3.62, FZ + 0.22], 'lampGlow', { noShadow: 1 }); for (const by of [3.46, 3.56]) P.vbox([cx - 0.4, by, FZ + 0.23, cx + 0.4, by + 0.02, FZ + 0.25], 'cellBars', { noShadow: 1, prop: 1 }); P.glow(cx, 0.03, FZ + 2.2, 3.4, 0xffe2b8, 3.4); }
     for (let gx = -60; gx <= 60; gx += 20) P.glow(gx, 0.02, FZ + 3, 4.5, 0xdce8ff, 3.8);
     P.land('cell', CELLS[3], 0, FZ - 3, 0);
     P.land('cellWall', CELLS[3], 0, FZ - 5.6, 0); // (the back wall of Kai's own cell: the next cell's front is the gallery stair)
@@ -159,7 +162,7 @@ export default {
       }
     });
     P.E('PAST', () => {
-      for (const cx of CELLS) { P.vbox([cx - 3.2, 2.6, FZ - 0.4, cx + 3.2, 3.4, FZ], 'containerGrey'); prop(P, 'crate', cx - 1.2, FZ - 4, 0.2); }
+      for (const cx of CELLS) { P.vbox([cx - 3.2, 2.6, FZ - 0.4, cx + 3.2, 3.4, FZ], 'containerGrey'); prop(P, 'cardboard', cx - 1.2, FZ - 4, 0.2); } // (2026: store bays, boxes of stores in each)
       // the scaffold stair up the face to the crown bench, east: in 2026 there is another way up
       stair(P, 12, -14.2, 0, 32.4, -14.2, CROWN, 2.2, 'scaffold');
       P.box([32, CROWN - 0.4, -16, 38, CROWN, -13], 'scaffold');

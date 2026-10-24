@@ -76,10 +76,12 @@ export default {
   years: {
     FUTURE: { sky: 'lilacMorning', era: '2196', hour: 11.6, sun: { elev: 42, az: 150 }, fog: 0xd8d0e0, density: 0.8, night: 0, weather: 'motes', ibl: 'dusk', lit: 0,
       hemi: { sky: 0xfff0d0, ground: 0x9a8a8a, k: 1.0 }, sunColor: 0xfff0d8, sunK: 1.15, grade: { shadowTint: 0x3a2a4a, highlightTint: 0xfff0d8, toning: 0.18, contrast: 1.04, saturation: 1.0 } },
-    PAST: { sky: 'floodlitEvening', era: '2026', hour: 20.6, sun: { elev: -8, az: 290 }, fog: 0x2a2c48, density: 0.8, night: 0.65, weather: null, ibl: 'night', lit: 1,
-      hemi: { sky: 0x4a4a7a, ground: 0x14161e, k: 0.75 }, sunColor: 0xe8f0ff, sunK: 0.5, grade: { shadowTint: 0x101830, highlightTint: 0xf0f4ff, toning: 0.12, contrast: 1.14, saturation: 1.12 } },
-    PRESENT: { sky: 'tentRain', era: '2049', hour: 14.2, sun: { elev: 30, az: 200 }, fog: 0x7a8288, density: 1.4, night: 0.2, weather: 'rain', ibl: 'night', lit: 0.3,
-      hemi: { sky: 0x8e969c, ground: 0x3a3c3a, k: 0.85 }, sunColor: 0xc8ccd0, sunK: 0.55, grade: { shadowTint: 0x1c242c, highlightTint: 0xd8e0e8, toning: 0.1, contrast: 1.06, saturation: 0.82 } },
+    // (closing: visuals; the evening under the floodlights reads on a phone: the bowl and the forecourt lit, not black)
+    PAST: { sky: 'floodlitEvening', era: '2026', hour: 20.6, sun: { elev: -8, az: 290 }, fog: 0x2a2c48, density: 0.8, night: 0.5, weather: null, ibl: 'night', lit: 1,
+      hemi: { sky: 0x6a6a9a, ground: 0x24262e, k: 0.95 }, sunColor: 0xe8f0ff, sunK: 0.5, grade: { shadowTint: 0x101830, highlightTint: 0xf0f4ff, toning: 0.12, contrast: 1.14, saturation: 1.12 } },
+    // (closing: visuals; a grey afternoon, not a dark one: the panels and the tents read on a phone)
+    PRESENT: { sky: 'tentRain', era: '2049', hour: 14.2, sun: { elev: 30, az: 200 }, fog: 0x7a8288, density: 1.3, night: 0.12, weather: 'rain', ibl: 'night', lit: 0.3,
+      hemi: { sky: 0xa8b0b6, ground: 0x4a4c4a, k: 1.0 }, sunColor: 0xc8ccd0, sunK: 0.55, grade: { shadowTint: 0x1c242c, highlightTint: 0xd8e0e8, toning: 0.1, contrast: 1.06, saturation: 0.82 } },
   },
   skyFeatures: { all: [{ kind: 'halo', at: [0, 60, 0], r: 30, tilt: 0.15, when: '@FUTURE' }] },
   quarters: [
@@ -184,6 +186,56 @@ export default {
     P.vbox([-110, 0.02, -108.6, 110, 0.12, -105.4], 'ballast', { noShadow: 1 });
     P.E(['FUTURE', 'PRESENT'], () => { for (let i = 0; i < 3; i++) P.obox(20 + (i - 1) * 13, 0.2, -107, 3, 3.4, 12.4, Math.PI / 2, i === 1 ? 'trainBody' : 'containerGrey', { solid: false }); });
     P.E('PAST', () => { for (let i = 0; i < 6; i++) prop(P, 'car', -90 + i * 14, -80, 0); });
+    // --- (closing: visuals) the forecourt under the outer wall, a face of its own in each year: from the spawn the wall had
+    // read as one blank dark slab --------------------------------------------------------------------------------------
+    const WZ = -OB; // the wall's outer face
+    // 2196: the city spilt out of its gate: houses built against the wall's foot (two high here and there) under lilac
+    // tarps, creepers down the panels, bunting along the wall, lanterns on poles over the forecourt, two stalls by the gate
+    P.E('FUTURE', () => {
+      let k = 0;
+      for (let x = -OA + 8; x < OA - 6; x += 4.2) {
+        if (Math.abs(x) < 12) continue;
+        k++;
+        const face = ['shackFace', 'shackFaceBlue', 'shackFaceRose'][k % 3], tint = [0xffffff, 0xf8f0f8, 0xfff8ec][k % 3];
+        P.obox(x, 0, WZ - 1.4, 3.6, 2.4, 2.6, 0, face, { solid: true, t: tint });
+        P.obox(x, 2.4, WZ - 1.55, 4.0, 0.18, 3.0, 0, 'lilacTarp', { rx: -0.1 });
+        if (k % 3 === 1) { P.obox(x, 2.58, WZ - 1.25, 3.2, 2.2, 2.2, 0, ['shackFaceRose', 'shackFace', 'shackFaceBlue'][k % 3], { t: tint }); P.obox(x, 4.78, WZ - 1.4, 3.6, 0.18, 2.6, 0, 'lilacTarp', { rx: -0.1 }); }
+        if (k % 4 === 2) prop(P, 'planter', x + 1.2, WZ - 3.3, 0);
+      }
+      for (let x = -OA + 14; x < OA - 10; x += 17) if (Math.abs(x) > 15) P.vbox([x, 5.2, WZ - 0.06, x + 7, RIM + 3.1, WZ - 0.02], k++ % 2 ? 'vineSheet' : 'vineSheetDark');
+      // strings of pennants along the wall: a line, and flags of five colours hung from it
+      const PEN = ['awningRed', 'marqueeYellow', 'awningBlue', 'awningGreen', 'lilacTarp'];
+      for (const [x0, x1] of [[-OA + 4, -9], [9, OA - 4]]) {
+        P.vbox([x0, 9.18, WZ - 0.32, x1, 9.21, WZ - 0.29], 'rope', { noShadow: 1 });
+        for (let x = x0 + 0.4, i = 0; x < x1; x += 0.9, i++) P.obox(x, 8.88, WZ - 0.3, 0.32, 0.32, 0.02, 0, PEN[i % 5], { rz: Math.PI / 4, noShadow: 1, prop: 1 });
+      }
+      for (const [x, z] of [[-34, -72], [-22, -78], [-8, -72], [24, -73], [32, -80], [42, -72]]) {
+        P.cyl(x, 0, z, 0.07, 3.4, 'timber', { seg: 6, solid: true });
+        P.sphere(x, 3.55, z, 0.24, 'lanternGlow');
+        P.glow(x, 0.03, z, 3.4, 0xffd8a0);
+      }
+      prop(P, 'stall', -16, WZ - 6.5, 0, { awning: 'lilacTarp', goods: 'produce' });
+      prop(P, 'stall', 18, WZ - 6.5, 0, { awning: 'awningGreen', goods: 'produce' });
+      sign(P, 'NORTH GATE', 0, RIM + 3.2, WZ - 0.7, Math.PI, { size: 0.7, color: '#4a3a6a', boardMat: 'linen' });
+    });
+    // 2026, match day: the club's banners down the panels, floodlights along the wall's top over the forecourt, ticket
+    // kiosks either side of the gate, lamps along the way from the station
+    P.E('PAST', () => {
+      let k = 0;
+      for (let x = -OA + 12; x < OA - 8; x += 16) if (Math.abs(x) > 14) P.vbox([x, 3.6, WZ - 0.08, x + 2.6, RIM + 1.6, WZ - 0.03], k++ % 2 ? 'bannerYellow' : 'awningBlue', { noShadow: 1 });
+      for (let x = -60; x <= 60; x += 20) { P.obox(x, RIM + 3.3, WZ - 0.9, 3.2, 1.2, 0.5, 0, 'floodlightGlow', { rx: 0.5 }); P.glow(x, 0.03, WZ - 9, 8, 0xe8f0ff, 3.2); }
+      for (const x of [-13, 13]) prop(P, 'kiosk', x, WZ - 4, 0, { m: 'boothBlue' });
+      for (const [x, z] of [[-14, -80], [14, -80], [-14, -70], [14, -70]]) prop(P, 'lampPost', x, z, x < 0 ? 0 : Math.PI);
+      sign(P, 'NORTH STAND - GATES 1-4', 0, RIM + 3.2, WZ - 0.7, Math.PI, { size: 0.6, color: '#f4f0e0', boardMat: 'signBlue' });
+    });
+    // 2049, the day after: an aid tent at the gate, aid crates, floodlights on stands, the evacuation centre's sign
+    P.E('PRESENT', () => {
+      prop(P, 'tent', -17, WZ - 5.5, 0, { w: 5, d: 4, wall: 1.1, ridge: 1.6, m: 'canvasWhite' });
+      prop(P, 'aidCrates', 15, WZ - 3.6, 0.3);
+      prop(P, 'aidCrates', 19, WZ - 4.2, -0.2, { m: 'aidCrateGreen' });
+      for (const x of [-9, 9]) prop(P, 'floodlight', x, WZ - 7, 0);
+      sign(P, 'EVACUATION CENTRE - REGISTER INSIDE', 0, RIM + 3.2, WZ - 0.7, Math.PI, { size: 0.5, color: '#f4f0e0', boardMat: 'signGreen' });
+    });
     // --- Q2: the press tower in the north-east corner: the archive at the rim, broken open to the sky -----------
     const TX = PX + 12, TZ = -PZ - 12;
     P.land('pressTower', TX, 0, TZ, -Math.PI / 4);
