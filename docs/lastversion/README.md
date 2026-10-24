@@ -22,11 +22,11 @@ The code is in `game/js/editions/lastversion/` (`prologue.js`, `act1.js` … `ac
 `cases.js`, `roam.js`, `Threads.js`, `ledger.js`, `Runtime.js`, `places/`).
 
 Build: `EDITION=lastversion bash android/build-apk.sh` (app "AFTERZERO: Last Version",
-its own saves; 45,259,406 bytes in the release check, 2026-10-24, its models deflated, with seven voice packs under
+its own saves; 45,849,315 bytes when the castfix pass built it, 2026-10-24 (45,259,406 in the release check before it), its models deflated, with seven voice packs under
 `assets/voice/lv/`, the cases' empty one left out; not yet run on a phone); the default build stays the Station Zero
 game (its APK's entries unchanged).
 
-Tests: `npm test` (the edition's 141 unit tests among 169) and `NODE_PATH=$(npm root -g) node tests/lastversion.mjs`
+Tests: `npm test` (the edition's 142 unit tests among 170) and `NODE_PATH=$(npm root -g) node tests/lastversion.mjs`
 (the browser bot: NEW GAME to Ending C, Endings A and B, free roam's trips and back, the CASE FILES and a survey of the
 23 places, 373 of 373 checks in 36.7 minutes in the release check; `LV_ONLY=roam` runs free roam's alone) and
 `node tests/lastversion-audio.mjs` (the cards, the cold open and a conversation heard in real time; `LV_ROOT=` a built

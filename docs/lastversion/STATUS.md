@@ -761,6 +761,42 @@ in 5,143 recordings. Each mission's place is 1.7-6.8 ha (v2.0's generated rooms:
   changed (the converter and the models' CREDITS are offline; Station Zero's 28 model files are byte for byte as they
   were): `node tests/qa.mjs` 26/26; `node tests/smoke.mjs` passed on its second run (its first, on this shared
   machine, waited past its 30 s for HALCYON to build after the vault and stopped there).
+- **Casting, the last four** (2026-10-24, on `157a488`; the player's "chose the character for npc perfectly"): a
+  completeness check of the casting found four people still miscast, and they are recast. *Niko* wore Male_Adult_15,
+  the kurta-and-taqiyah avatar, whose woven cap the wardrobe only dyed dark: close up it read as a brimless prayer cap,
+  the present-day dress the closing pass took from everyone else in the settlement. He is `rb_niko` from
+  Adults/Male_Adult_09 now, his own black hair long and tied back, in the same undyed tunic and woad mantle (his older
+  self in Mission 7's cold open with the hair and its tail gone to salt and pepper), the same man in Missions 4, 5 and
+  7, the cold opens and Case B. *The Elder* read as a dark-haired woman of about forty (her crown sampled near black,
+  RGB 8-16, in Mission 4's light): her model's maps are aged at conversion (`tools/rocketbox-textures.py` EDITS
+  `age`: her hair silvered on the head map and the hair cards, lines at the brow, eyes, mouth and neck drawn into the
+  colour and normal maps, her skin and lips paler, a few age spots), her wardrobe keeps the cards silver whatever the
+  light (its rule had skin protection on, which kept brown strands brown), her back is bent after every pose
+  (`stoop`), and her echoes in Missions 19 and 22 carry her staff (`holoProps`). In the mission light her crown now
+  samples a neutral grey: RGB 103-144 (saturation 0.04-0.05) in Mission 4's four shots, pale in her echoes (220-230 in
+  Mission 19, 134-155 in Mission 22). *Tomas*, "a slight boy of about thirteen", was Adults/Male_Adult_01, a man in
+  his twenties scaled to 1.42 m: he is on a child's body (Children/Male_Child_01, the body young Kai has, with his
+  own sandy hair and freckles in his maps: EDITS `tomas`) at 1.52 m, in a brick school jersey under a wool coat to the
+  knee that his echo wears too, so his outline in Mission 15 (and Cases C and the Train) is no crowd child's and not
+  young Kai's. *The glazier* of Missions 12, 21 and 23 wore exactly the technicians' body and slate (`rb_medic_f/helix
+  tech`): she is `rb_glazier` (Professions/Business_Female_04, a face no one else in the edition has), the same look
+  each time: copper hair, a petrol work jacket (the suit's jacket dyed), charcoal trousers, a leather bib apron (a
+  `bib` for `garments.js`'s apron) and tool belt, an orange suction lifter for the panes. A check of everyone who
+  comes back found one more: Mission 14's ticket keeper, on the Finale's road too, walked in the 2196 traders'
+  `faded` khaki; he wears his own `keeper` look (the 41's faded navy, the amber strap of his ticket bag). The
+  paramedic body leaves Acts IV and the Finale's casts (only the glazier wore it there). The edition's models: 46
+  (50 files with the four shared, 29.8 MB). *Checked:* `npm test` 170/170, with a new casting test (no one of the
+  settlement on an avatar whose head is covered, with a hat material or a head prop; Niko's hair is hair; Tomas on a
+  child's body at a boy's height; everyone met in two missions or more, replays counted, in looks no crowd anywhere
+  wears, the hand-placed in one look; the glazier's body hers alone; the Elder's maps aged and her hair cards over 85%
+  silver, the PNG decoded, Tala's under 20%); the cast dump changes only the glazier's and the keeper's rows (no crowd
+  changed, so no pack: `voice-lv.sh check` reports all eight up to date); close, full-length and wide shots in each
+  mission's own light of Niko (Missions 4, 5, 7, the cold opens and Case B), the Elder (Mission 4, her Mission 19 and 22
+  echoes), Tomas (Mission 15), the glazier (Missions 12, 21, 23) and the keeper (14, 23), all looked at, with no page
+  error in any of the eleven places loaded. The edition's APK (`EDITION=lastversion bash android/build-apk.sh`, built
+  to measure it) is 45,849,315 bytes with the 50 models, 4.15 MB under the 50 MB budget; its preview 122 files and
+  62,883,567 bytes. *Not changed:* an echo's face still shows its mouth and the back of its hair through it (every
+  hologram's, the Elder's too: the bodies of light do not write depth); the whole browser bot was not run here.
 - **The CASE FILES** (v2.1, U8; `cases.js`; replaces the Cases chapter): fourteen stories (chains A–D, the Child in
   Three Photographs, the Train That Arrives Yesterday, the Unsent Letter, the House with No Owner, the Last Signal, the
   Names Beneath the City, the Clockmaker's Debt, the Ninth Minute: Evidence, the Survivor's Garden, the Unwritten
@@ -951,10 +987,11 @@ in 5,143 recordings. Each mission's place is 1.7-6.8 ha (v2.0's generated rooms:
 - **The settlement's wardrobe** no longer waits for a person's decision (U4 left it as one: Rocketbox's robe, kurta,
   hijab and abaya avatars recoloured, which both U4 reviews read as present-day Gulf and Islamic dress on a settlement
   3,000 years old). The closing pass decided it (Built, "Casting after the closing pass"): those avatars are gone and
-  the settlement's people wear wool and linen made for bodies of their own. A person's look at the render sheets of
-  the made clothes is still welcome; nothing else of it is open.
+  the settlement's people wear wool and linen made for bodies of their own; the last of them, Niko's kurta-and-cap
+  avatar, went in the castfix pass (Built, "Casting, the last four"). A person's look at the render sheets of the made
+  clothes is still welcome; nothing else of it is open.
 - **Models stay loaded.** Each chapter loads its people behind its card, but Actors has no release, so
-  a long session keeps the models of every chapter it has visited (at most the edition's 45).
+  a long session keeps the models of every chapter it has visited (at most the edition's 46).
 - **Faction support** changes who answers in Mission 21 and what people say; it does not change
   patrol responses or open safe routes elsewhere (Jun's line in the Finale is the one safe route).
 - **A human ear check** of the voices and the score has still not been done: nothing in this container can play
