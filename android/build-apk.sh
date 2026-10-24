@@ -34,6 +34,8 @@ ANDROID_JAR=${ANDROID_JAR:-/usr/lib/android-sdk/platforms/android-23/android.jar
 OUT=build
 MANIFEST=AndroidManifest.xml
 FLAG=""
+# what aapt stores without deflating: the models and the voice (Station Zero's build, unchanged)
+STORED=(-0 glb -0 ogg)
 if [ "$EDITION" = "lastversion" ]; then
   OUT=build-lastversion
   VER=2.0
@@ -45,6 +47,9 @@ if [ "$EDITION" = "lastversion" ]; then
   MANIFEST="$OUT/AndroidManifest.xml"
   sed -e 's/android:versionCode="[0-9]*"/android:versionCode="200"/' -e 's/android:versionName="[^"]*"/android:versionName="2.0.0"/' \
       -e 's/android:label="[^"]*"/android:label="AFTERZERO: Last Version"/' AndroidManifest.xml > "$MANIFEST"
+  # its 49 models deflate by a quarter (their vertex buffers; MainActivity streams an asset either way), which keeps
+  # the APK within the edition's 50 MB (OVERHAUL.md §10.2); the voice packs (Opus) stay stored
+  STORED=(-0 ogg)
 elif [ -n "$EDITION" ]; then
   echo "unknown EDITION '$EDITION' (lastversion, or unset for Station Zero)" >&2; exit 1
 else
@@ -68,7 +73,7 @@ fs.writeFileSync(out + '/assets/index.html', html);
 JS
 # character models and the voice pack, served by MainActivity from https://afterzero.app/assets/...
 # Each game carries its own people: THE LAST VERSION the models of its manifest (casting.js MANIFEST: its
-# 37 people and the 4 shared models it uses), Station Zero every model but the edition's own people.
+# 45 people and the 4 shared models it uses), Station Zero every model but the edition's own people.
 CHARS=$(node --input-type=module -e "
   const m = await import('$(pwd)/../game/js/editions/lastversion/casting.js');
   const all = (await import('node:fs')).readdirSync('../game/assets/characters').filter((f) => f.endsWith('.glb')).sort();
@@ -99,7 +104,7 @@ javac --release 8 -classpath "$ANDROID_JAR" -d "$OUT/classes" src/com/afterzero/
 dalvik-exchange --dex --output="$OUT/classes.dex" "$OUT/classes"
 
 # 3. Package, align, sign (with the key checked at the top).
-aapt package -f -0 glb -0 ogg --rename-manifest-package "$APP_ID" -M "$MANIFEST" -S res -A "$OUT/assets" -I "$ANDROID_JAR" -F "$OUT/unsigned.apk"
+aapt package -f "${STORED[@]}" --rename-manifest-package "$APP_ID" -M "$MANIFEST" -S res -A "$OUT/assets" -I "$ANDROID_JAR" -F "$OUT/unsigned.apk"
 (cd "$OUT" && aapt add unsigned.apk classes.dex >/dev/null)
 zipalign -f 4 "$OUT/unsigned.apk" "$OUT/aligned.apk"
 apksigner sign --ks "$KS" --ks-pass pass:android --key-pass pass:android --out "$OUT/$APK" "$OUT/aligned.apk"

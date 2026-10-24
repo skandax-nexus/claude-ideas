@@ -2283,6 +2283,10 @@ test('each voice pack is under 12 MB and the edition under 22 MB; Station Zero\'
   assert.ok(total < 22e6, `the edition's voices: ${(total / 1e6).toFixed(2)} MB`);
   // (U8 review: an empty pack, the cases', is neither fetched, Runtime.packsFor, nor shipped in the APK or the preview)
   assert.ok(fs.readFileSync('android/build-apk.sh', 'utf8').includes('[ -s "$d/voice.ogg" ] || continue'), 'build-apk.sh skips an empty pack');
+  // (release check: the edition's APK deflates its models, 52.6 MB stored, 45.3 MB deflated, within §10.2's 50 MB;
+  // Station Zero's build stores them as it always has)
+  const apk = fs.readFileSync('android/build-apk.sh', 'utf8');
+  assert.ok(/STORED=\(-0 glb -0 ogg\)\nif \[ "\$EDITION" = "lastversion" \]/.test(apk) && /\n  STORED=\(-0 ogg\)\nelif/.test(apk) && apk.includes('aapt package -f "${STORED[@]}"'), 'build-apk.sh deflates the edition\'s models only');
   const { createHash } = await import('node:crypto');
   const sha = (f) => createHash('sha256').update(fs.readFileSync(f)).digest('hex');
   assert.equal(sha('game/assets/voice/voice.json'), '4654fc0b03d7d19eef14ee870550a6112137ff3cdc87217a56987ad07917685e', 'Station Zero voice.json');
