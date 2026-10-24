@@ -1351,6 +1351,16 @@ test('the visual closing pass: the laundromat entered, shops behind glass, worn 
   assert.ok(!inside.stuck, `M1: through the laundromat's open door (${JSON.stringify(inside)})`);
   assert.ok(Math.hypot(inside.at[0] - feed.pos[0], inside.at[2] - feed.pos[2]) <= feed.r, 'M1: the shop camera\'s feed is watched from inside the shop');
   assert.ok(walkRoute(m01, 'PRESENT', [10.5, 0.15, -10], [[15.5, -10]]).stuck, 'M1: the corner shop is seen through its glass, not walked into');
+  // (open world closing) the pharmacy, the café and the plaza's grocer are walked into by their doors, not through glass
+  for (const [name, start, route, glass] of [
+    ['the 24-hour pharmacy', [-11, 0.15, -6.5], [[-13.2, -6.5], [-15.4, -6.5]], [-11, 0.15, -9]],
+    ['the café', [-11, 0.15, -37.35], [[-13.2, -37.35], [-15, -37.35]], [-11, 0.15, -40.3]],
+    ['the grocer on the plaza', [-44, 0.15, -89.1], [[-46.5, -89.1], [-49.6, -89.1]], [-44, 0.15, -95]],
+  ]) {
+    const w = walkRoute(m01, 'PRESENT', start, route);
+    assert.ok(!w.stuck, `M1: into ${name} by its door (${JSON.stringify(w)})`);
+    assert.ok(walkRoute(m01, 'PRESENT', glass, [[route[route.length - 1][0], glass[2]]]).stuck, `M1: ${name}'s glass beside the door is glass`);
+  }
   assert.ok(m01.vis.filter((v) => v.m === 'shopShelves').length >= 8 && m01.vis.some((v) => v.m === 'washerFront'), 'M1: the shops have their rooms, the laundromat its machines');
   for (const s of ['matte', 'satin', 'metal', 'cloth']) assert.ok(SURFACES[s].paint, `the ${s} finish carries its wear`);
   assert.ok(SURFACES.rainDown.scroll[1] > 0 && SURFACES.rainUp.scroll[1] < 0, 'M11: the rain falls in the west and rises in the east');

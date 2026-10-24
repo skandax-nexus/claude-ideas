@@ -252,7 +252,7 @@ export function block(P, o) {
         const n = Math.max(1, Math.round((a1 - a0) / 2.4));
         const f = side === 'W' ? x0 - g - 0.04 : side === 'E' ? x1 + g + 0.04 : side === 'N' ? z0 - g - 0.04 : z1 + g + 0.04;
         const bar = (u0, u1, v0, v1) => P.vbox(alongZ ? [f - 0.05, v0, u0, f + 0.05, v1, u1] : [u0, v0, f - 0.05, u1, v1, f + 0.05], o.shop.frame || 'ironDark', { prop: 1, noShadow: 1 });
-        const door = o.shop.enter;
+        const door = enterOf(o.shop, side);
         for (let i = 0; i <= n; i++) {
           const u = a0 + ((a1 - a0) * i) / n;
           if (door && u > door[0] + 0.1 && u < door[1] - 0.1) continue;
@@ -277,10 +277,15 @@ export function block(P, o) {
   return { x0, z0, x1, z1, y, h };
 }
 
+// a shop's doorway on one of its sides: `shop.enter` is [from, to] along its shopfront, or { W: [from, to], ... } per side
+// (a shop on a corner opens on one street, not on both at the same numbers)
+const enterOf = (shop, side) => (Array.isArray(shop?.enter) ? shop.enter : shop?.enter?.[side]) || null;
+
 // (closing: visuals) a shop behind its glass, `deep` metres into the block: its floor, a ceiling of light panels, its back
 // wall of shelves (lit with the year's windows), the piers between shops in the block's facade, a counter and a shelf unit
 // or two; with `shop.enter` ([from, to] along the shopfront) a doorway in the glass and the room is walked into, and
 // `shop.kind` 'laundry' fills it with washing machines and a bench. Its local frame: u along the shopfront, d into the block.
+// (open world closing: a room walked into has furniture that stops Kai, its shelf units and the café's tables and chairs)
 function shopRoom(P, { side, x0, z0, x1, z1, y, deep, lo, hi, spans, m, t, shop }) {
   const box = (u0, u1, d0, d1, y0, y1) => {
     const [ua, ub] = [Math.min(u0, u1), Math.max(u0, u1)], [da, db] = [Math.min(d0, d1), Math.max(d0, d1)];
@@ -303,7 +308,7 @@ function shopRoom(P, { side, x0, z0, x1, z1, y, deep, lo, hi, spans, m, t, shop 
     P.vbox(box(a, b, deep - 0.06, deep - 0.01, y, y + SH - 0.1), kind === 'laundry' ? 'shopBack' : 'shopShelves', { noShadow: 1 });
     for (const e of [a, b]) P.vbox(box(e === a ? a : b - 0.04, e === a ? a + 0.04 : b, 0, deep, y, y + SH - 0.1), 'shopBack', { noShadow: 1 });
     // the glass, solid; the doorway's gap left open
-    const door = shop.enter && si === 0 ? shop.enter : null;
+    const door = si === 0 ? enterOf(shop, side) : null;
     const glass = (g0, g1) => g1 - g0 > 0.05 && P.box(box(g0, g1, -0.02, 0.03, y + 0.15, y + 3.2), 'glass', { noShadow: 1 });
     if (door) { glass(a, door[0]); glass(door[1], b); P.vbox(box(door[0], door[1], -0.02, 0.03, y + 3.2, y + SH), 'glass', { noShadow: 1 }); } else glass(a, b);
     // what is in it
@@ -330,12 +335,13 @@ function shopRoom(P, { side, x0, z0, x1, z1, y, deep, lo, hi, spans, m, t, shop 
         P.cyl(cx, y, cz, 0.05, 0.72, 'ironDark', { seg: 6, prop: 1 });
         P.cyl(cx, y + 0.72, cz, 0.38, 0.04, 'wood', { seg: 14, prop: 1 });
         for (const dk of [-0.6, 0.6]) { const [qx, , qz] = box(k + dk, k + dk, 1.0, 1.0, y, y); P.cyl(qx, y + 0.42, qz, 0.2, 0.05, 'wood', { seg: 10, prop: 1 }); P.cyl(qx, y, qz, 0.03, 0.42, 'ironDark', { seg: 5, prop: 1 }); }
+        if (door) P.col(box(k - 0.8, k + 0.8, 0.7, 1.3, y, y + 0.76)); // (a table and its two chairs, as one)
       }
     } else {
       // a counter at one end, a freestanding shelf unit or two across the room's middle
       const cEnd = r.chance(0.5);
       P.box(box(cEnd ? a + 0.3 : b - 1.6, cEnd ? a + 1.6 : b - 0.3, 0.9, 1.5, y, y + 0.95), 'counterTop', { prop: 1 });
-      for (let k = a + 2.6; k < b - 2.2; k += 3.2) P.vbox(box(k, k + 1.6, deep * 0.45, deep * 0.45 + 0.5, y, y + 1.7), 'shopShelves', { prop: 1 });
+      for (let k = a + 2.6; k < b - 2.2; k += 3.2) P.box(box(k, k + 1.6, deep * 0.45, deep * 0.45 + 0.5, y, y + 1.7), 'shopShelves', { prop: 1, solid: !!door });
     }
     const [lx, , lz] = box((a + b) / 2, (a + b) / 2, deep / 2, deep / 2, y, y);
     P.glow(lx, y + 0.06, lz, Math.min(3, len / 2), shop.color ?? 0xffd9a8);

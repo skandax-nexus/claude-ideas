@@ -96,7 +96,8 @@ export default {
     P.land('floristStall', -24, 0.15, -25.6, Math.PI);
     for (const [x, aw, goods] of [[-24, 'awningGreen', 'flowersStall'], [-32, 'awningRed', 'produce'], [-40, 'awningBlue', 'produce'], [-48, 'awningRed', 'produce'], [-56, 'awningGreen', 'produce']]) prop(P, 'stall', x, -25.8, Math.PI, { awning: aw, goods, y: 0.15 });
     for (const x of [-28, -44, -60]) prop(P, 'stall', x, -32.2, 0, { awning: 'awningBlue', goods: 'produce', y: 0.15 });
-    block(P, { rect: [-40, -14, -14, 12], floors: 6, tint: 0xb06a52, shop: { side: ['E', 'N'] }, cornice: true });
+    // (open world closing) the 24-hour pharmacy on the avenue is walked into as well, by its door under the sign
+    block(P, { rect: [-40, -14, -14, 12], floors: 6, tint: 0xb06a52, shop: { side: ['E', 'N'], enter: { E: [-7.4, -5.6] } }, cornice: true });
     block(P, { rect: [-60, -14, -44, 12], floors: 5, tint: 0xa8a49c, shop: { side: 'N' } });
     block(P, { rect: [-44, -2, -40, 12], floors: 3, tint: 0x7a5040, roof: 'flat' });
     P.land('noodleAlley', -42, 0, -10, 0);
@@ -104,7 +105,8 @@ export default {
     sign(P, 'NOODLES 24H', -42, 3.6, -2.2, 0, { size: 0.36, color: '#ffb48a' });
     P.glow(-42, 0.02, -4, 3, 0xffb07a);
     block(P, { rect: [-60, -62, -40, -34], floors: 8, tint: 0x7a5040, cornice: true, shop: { side: 'S', awning: 'awningRed' } });
-    block(P, { rect: [-40, -42, -14, -34], floors: 4, tint: 0xd8c8b0, shop: { side: ['S', 'E'], kind: 'cafe', color: 0xffc890 } });
+    // (open world closing) and the café, by its door under COFFEE: a counter and a table inside
+    block(P, { rect: [-40, -42, -14, -34], floors: 4, tint: 0xd8c8b0, shop: { side: ['S', 'E'], kind: 'cafe', color: 0xffc890, enter: { E: [-38.6, -36.8] } } });
     P.land('pigeonLedge', -13.7, 5.2, -38, Math.PI / 2);
     P.vbox([-14, 5.0, -41, -13.4, 5.2, -35], 'concrete');
     // the pocket park
@@ -161,7 +163,8 @@ export default {
     for (const [x, z] of [[-12, -80], [12, -100], [-38, -100], [38, -80]]) prop(P, 'bench', x, z, 0, { y: 0.15 });
     for (const x of [-40, -24, 24, 40]) prop(P, 'lampPost', x, -104, Math.PI / 2, { y: 0.15, color: 0xffe0b0 });
     // the blocks round the plaza; the fire escape up the east block to its roof terrace
-    block(P, { rect: [-90, -106, -48, -72], floors: 7, tint: 0x8a7a70, cornice: true, shop: { side: 'E', awning: 'awningGreen' } });
+    // (open world closing) the grocer under the green awning on the plaza: walked into
+    block(P, { rect: [-90, -106, -48, -72], floors: 7, tint: 0x8a7a70, cornice: true, shop: { side: 'E', awning: 'awningGreen', enter: [-90, -88.2] } });
     const east = block(P, { rect: [48, -106, 82, -74], h: 12, tint: 0xb06a52, roofWalk: true, parapet: true, units: 2, shop: { side: 'W' } });
     P.land('fireEscape', 46.2, 0.15, -100, Math.PI / 2);
     // four flights in two lanes (up north in the outer lane, back south in the inner), landings across both
