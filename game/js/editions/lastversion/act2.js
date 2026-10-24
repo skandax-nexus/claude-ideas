@@ -849,6 +849,7 @@ const M12_HINTS = {
   camp: ['Where he has been living.', 'In the ruin, by the east wing.', 'The cot, the cup, the wall.'],
   ring: ['The second ring is humming.', 'Listen to it.', 'Stay.'],
   practice: ['A tape recorder by his cot.', 'It runs backwards, in 2196.', 'REVERSE it, and listen.'],
+  deck: ['The plant decks on the roof.', 'He ran past one planter he never looks at.', 'Read it now, then in 2026.'],
 };
 const GLAZIER = AMB('CROWD_F');
 const M12_SAY = {
@@ -935,7 +936,13 @@ export const M12 = {
         { id: 'holdGlass', kind: 'tasks', of: ['rev_roofFrame'], at: 'glassPanes', after: ['glazier'], when: 'm12_glazier == "saved"', until: 'm12_glazier == "left"',
           say: [GLAZIER('Eleven years on this roof. It never moved before tonight.'), GLAZIER('Go on, then. Whoever he is, he stood at the glass and waited for you.')],
           goal: 'Hold the fallen frame up while she gets clear.', because: 'It only has to stand for a few seconds.', hints: M12_HINTS.holdGlass },
-        { id: 'follow', kind: 'go', at: 'gangway2026', r: 4, after: ['holdGlass'], goal: 'He stepped off the roof into 2026. Follow.', because: 'In 2026 there was a way across.', hints: M12_HINTS.follow, minutes: 3 },
+        // (the closing pass: the roof he runs across every evening, and the one planter he never looks at: Lin's)
+        { id: 'deck', kind: 'residue', at: 'plantDecks', after: ['holdGlass'],
+          record: { official: 'PLANT DECK 4: ADOPTED BY DR. LIN. Yellow chrysanthemums, watered every evening at the same minute.', echo: 'In 2026 the roof was bare concrete. On the parapet, in chalk at a child\'s height: a ring, and a sun with a face. MIRA, 9.',
+            hint: 'Chalk, under the planter. A child was up here once.', after: [K('She grows the yellow ones. He brings her the white ones.'), K('He runs past her flowers every evening, and never looks.')],
+            prompt: 'THE PLANTER', offset: [0, 1.0, 1.4], model: 'none', log: 'Lin grows yellow chrysanthemums on the north roof. In 2026 a nine-year-old chalked a sun with a face there.' },
+          goal: 'One planter on the roof he ran past without looking.', because: 'Everything else up here he touched.', hints: M12_HINTS.deck },
+        { id: 'follow', kind: 'go', at: 'gangway2026', r: 4, after: ['deck'], goal: 'He stepped off the roof into 2026. Follow.', because: 'In 2026 there was a way across.', hints: M12_HINTS.follow, minutes: 3 },
       ],
     },
     {
@@ -1017,7 +1024,10 @@ export const M12 = {
       {
         when: '!m12_no_shadow',
         lines: [L('WITNESS', 'Look down, Kai.'), K('You have no shadow.'), L('WITNESS', 'Not in this year. In this year I haven\'t happened yet.'), L('WITNESS', 'Neither have you, quite. Keep up.')],
-        set: { m12_no_shadow: true },
+        choices: [
+          intent('investigate', 'Why do you wait for me?', { lines: [L('WITNESS', 'Because you always catch up at the glass. I like to see your face when you do.'), K('And what does it look like?'), L('WITNESS', 'Younger.')], set: { m12_no_shadow: true } }),
+          intent('challenge', 'Stop running.', { lines: [L('WITNESS', 'Stop chasing, and we could both sit down.'), K('Then sit.'), L('WITNESS', 'Not here. I haven\'t happened yet.')], set: { m12_no_shadow: true } }),
+        ],
       },
       { when: 'm12_no_shadow', lines: [L('WITNESS', 'Keep up.')] },
     ],

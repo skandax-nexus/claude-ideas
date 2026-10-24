@@ -329,7 +329,18 @@ export const M20 = {
       { when: 'm20_song', lines: [L('MIRA', 'Down, Kai. It goes down.')] },
     ],
     mira20: [
-      { when: '!m20_sister', lines: [L('MIRA', 'I remember being your sister.'), K('That\'s not the same thing.'), L('MIRA', 'Would it be enough if I said it was?')], set: { m20_sister: true } },
+      {
+        when: '!m20_sister',
+        lines: [L('MIRA', 'I remember being your sister.'), K('That\'s not the same thing.'), L('MIRA', 'Would it be enough if I said it was?'),
+          // (the closing pass: what she remembers, and what she wants instead of an apology)
+          L('MIRA', 'I remember a kitchen, a hospital and a ring. I remember a hundred and seventeen brothers, and every one of them was sorry.'),
+          L('MIRA', 'I don\'t want sorry. I want somebody who lets me be thirty-two.')],
+        choices: [
+          intent('comfort', 'It\'s enough.', { lines: [L('MIRA', 'Then that\'s what we\'ll have. Not the same thing. Enough.')], set: { m20_sister: true } }),
+          intent('investigate', 'Who are you, when you\'re not my sister?', { lines: [L('MIRA', 'Somebody who plants things and argues with buses. You\'d like her. You\'d find her annoying.'), K('I already do.')], set: { m20_sister: true } }),
+          intent('withdraw', 'I don\'t know.', { lines: [L('MIRA', 'Good. That\'s the first true thing anyone has said in this house.')], set: { m20_sister: true } }),
+        ],
+      },
       { when: 'm20_sister', lines: [L('MIRA', 'Go on. He\'s waiting for you.')] },
     ],
   },
@@ -701,6 +712,7 @@ const M22_HINTS = {
   microphone: ['The station wedge.', 'The microphone he used.', 'Stand where he stood.'],
   sign: ['Chamber One\'s log.', 'On the evidence table.', 'Sign it, or leave it.'],
   herVoice: ['Somebody is beyond the chamber.', 'Listen.', 'Go when you\'re ready.'],
+  ezra: ['Ezra\'s echo.', 'By the brass arm.', 'Listen to him.'],
 };
 const M22_PROCESSES = [
   // the activation sequence: the arm answers only on its counted beat (Ezra's count)
@@ -766,7 +778,8 @@ export const M22 = {
         { id: 'arm', kind: 'invert', target: 'clockArm', at: 'clockArm', after: ['chain'], set: { ev_arm_count: true },
           say: [K('On the beat, it turns back. Its count is the activation sequence.')],
           goal: 'Read the repeating pattern from the clockmaker\'s house.', because: 'The arm counts the way it did in his light well.', hints: M22_HINTS.arm, minutes: 5 },
-        { id: 'odile', kind: 'talk', npc: 'odile', at: 'hospitalLock', after: ['arm'], goal: 'Odile\'s echo, at the hospital\'s lock.', because: 'She knew how the ward door undid itself.', done: 'm22_odile', hints: M22_HINTS.odile, minutes: 2 },
+        { id: 'ezra', kind: 'talk', npc: 'clockmaker', at: 'clockArm', after: ['arm'], goal: 'Ezra\'s echo, by the arm.', because: 'He counted it with me. He has something to say after the turn.', done: 'm22_ezra', hints: M22_HINTS.ezra },
+        { id: 'odile', kind: 'talk', npc: 'odile', at: 'hospitalLock', after: ['ezra'], goal: 'Odile\'s echo, at the hospital\'s lock.', because: 'She knew how the ward door undid itself.', done: 'm22_odile', hints: M22_HINTS.odile, minutes: 2 },
       ],
     },
     {
@@ -809,7 +822,20 @@ export const M22 = {
     },
   ],
   talks: {
-    clockmaker: [{ when: 'true', lines: [CREW('Count it, child. Three, and the turn. Always on the turn.')] }],
+    clockmaker: [
+      { when: '!t_m22_arm', lines: [CREW('Count it, child. Three, and the turn. Always on the turn.')] },
+      // (the closing pass: Ezra's echo, after the arm, as Mission 6 left him)
+      {
+        when: 't_m22_arm && !m22_ezra',
+        lines: [CREW('On the turn. Good. You were always early, and now you are on time.'),
+          CREW('I had my Wednesday, child. It rained. I liked it very much.', 'ezra_debt == "release"'),
+          CREW('I finished it. The only clock in the house that keeps its own time. It is still going.', 'ezra_debt == "finish"'),
+          CREW('Still Tuesday, in here. It is always Tuesday in here.', '!ezra_debt'),
+          K('Ezra, what is this place?'), CREW('The first second. Everyone who ever waited for you is waiting in it. Go on. Be on time for them.')],
+        set: { m22_ezra: true },
+      },
+      { when: 'm22_ezra', lines: [CREW('Be on time, child.')] },
+    ],
     odile: [
       { when: '!m22_odile', lines: [CREW('Last in, first out. Same as my ward door. Whatever was fitted first comes out last.'), K('The river went in first.')], set: { m22_odile: true } },
       { when: 'm22_odile', lines: [CREW('Last in, first out.')] },

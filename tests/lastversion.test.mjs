@@ -2624,7 +2624,9 @@ test('the speech budget (§8.10): the Prologue, common, the Finale and each Act 
   const w = wordsPerGroup(SPOKEN);
   assert.ok(w.prologue <= 4200, `the Prologue: ${w.prologue} words`);
   assert.ok(w.common <= 2500, `common: ${w.common} words`);
-  assert.ok(w.finale <= 1800, `the Finale: ${w.finale} words`);
+  // (the Finale: 2,600 since the closing pass made it a climax in scenes, with three endings, the epilogue and the
+  // post-credit among its words; its pack is 1.2 MB)
+  assert.ok(w.finale <= 2600, `the Finale: ${w.finale} words`);
   // each Act mission (main and optional): 1,600 words (closing: §8.10's 1,000 was set for the build the player found short;
   // what bounds the speech now is each pack's file, under the preview's 15 MB, and the edition's APK, checked where they
   // are built)
