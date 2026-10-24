@@ -12,8 +12,8 @@ bible's inversion: hold one process backwards for a few seconds), the Witness, M
   "As built" notes say where the build differs).
 
 v2.1 in one paragraph: 23 missions in 23 authored open places, each one map with soft quarters, threads and
-side stories, a cold open and a hook; REVERSE, three years, Echo Step; 31 cast people, crowds and watchers;
-every line spoken from the edition's own packs, with a score of written themes played live; three endings with an epilogue line
+side stories, a cold open and a hook; REVERSE, three years, Echo Step; 45 people of its own (Rocketbox-based) and
+4 shared models, crowds and watchers; every line spoken from the edition's own packs, with a score of written themes played live; three endings with an epilogue line
 per choice that mattered; and the CASE FILES, fourteen side stories and quest chains replayable from their
 places. Free roam (the closing pass on "make it open world"): once a mission is done, TRAVEL on the case board (or
 the map) goes back to its place, in any year opened there, to walk it with no story gates, its side stories and
@@ -22,10 +22,13 @@ The code is in `game/js/editions/lastversion/` (`prologue.js`, `act1.js` … `ac
 `cases.js`, `roam.js`, `Threads.js`, `ledger.js`, `Runtime.js`, `places/`).
 
 Build: `EDITION=lastversion bash android/build-apk.sh` (app "AFTERZERO: Last Version",
-its own saves; 46.7 MB on 2026-10-22, with the eight voice packs under `assets/voice/lv/`); the default build stays
-the Station Zero game.
+its own saves; 45,259,406 bytes in the release check, 2026-10-24, its models deflated, with seven voice packs under
+`assets/voice/lv/`, the cases' empty one left out; not yet run on a phone); the default build stays the Station Zero
+game (its APK's entries unchanged).
 
 Tests: `npm test` (the edition's 141 unit tests among 169) and `NODE_PATH=$(npm root -g) node tests/lastversion.mjs`
 (the browser bot: NEW GAME to Ending C, Endings A and B, free roam's trips and back, the CASE FILES and a survey of the
-23 places, 373 checks on 2026-10-24; `LV_ONLY=roam` runs free roam's alone).
+23 places, 373 of 373 checks in 36.7 minutes in the release check; `LV_ONLY=roam` runs free roam's alone) and
+`node tests/lastversion-audio.mjs` (the cards, the cold open and a conversation heard in real time; `LV_ROOT=` a built
+web preview to play that instead).
 Recording the voices: `VOICE_WORK=<dir> bash tools/voice-lv.sh <group>` (DESIGN.md "Voice and score").

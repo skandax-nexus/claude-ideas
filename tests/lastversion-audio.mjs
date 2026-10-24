@@ -7,6 +7,9 @@
 //   - a conversation (the florist on the market lane: hers and Kai's lines) starts audio the same way
 //   - speechSynthesis is never asked for anything, and nothing said misses the packs (__voiceMiss)
 //   NODE_PATH=$(npm root -g) node tests/lastversion-audio.mjs
+// LV_ROOT=<dir> serves another build instead of game/: the edition's built web preview, as published
+// (LV_ROOT=android/build-lastversion/preview after EDITION=lastversion bash android/build-apk.sh: one bundled page,
+// the models as glTF JSON, the packs under assets/voice/lv/)
 import { createRequire } from 'node:module';
 import http from 'node:http';
 import fs from 'node:fs';
@@ -15,7 +18,7 @@ import { fileURLToPath } from 'node:url';
 
 const require = createRequire(import.meta.url);
 const { chromium } = require('playwright');
-const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'game');
+const root = process.env.LV_ROOT ? path.resolve(process.env.LV_ROOT) : path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'game');
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.webp': 'image/webp' };
 const server = http.createServer((req, res) => {
   const p = path.join(root, decodeURIComponent(req.url.split('?')[0]).replace(/\/$/, '/index.html'));

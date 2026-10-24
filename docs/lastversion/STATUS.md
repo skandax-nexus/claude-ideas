@@ -5,63 +5,70 @@ creator's bible. The bible describes a 25–30 hour campaign; this is a playable
 AFTERZERO engine, all 23 missions written by hand on threads (the Prologue in U6, Acts I and II in U7, Acts III and IV
 and the Finale in U8), with the CASE FILES after an ending. How it works: [`DESIGN.md`](DESIGN.md).
 
-**Each chapter's length, measured** (the closing pass on the player's points 4 and 5, 2026-10-24). Minutes of game
-time against the bible's own targets (each mission's "Target duration"; a chapter's is the sum of its missions', with
-the hours of its heading beside it). The bot's minutes are the game's own telemetry (`time_<mkey>`; the Finale's from
-its start to the ending) in the full run of `tests/lastversion.mjs` on `3eb6767` with this pass's bot (2026-10-24: 337 checks, 337 passed, every
-line said (1,974) from the packs). Speech is each mission's own lines, each
-once, measured from the recordings in the packs (threads, side stories, people, records and cards; not hints or barks);
-words are those lines counted the same way before the closing pass (`3d2e463`) and now:
+**Each chapter's length, measured** (the release check, 2026-10-24, on `75b3e91` with the closing passes all in).
+Minutes of game time against the bible's own targets (each mission's "Target duration"; a chapter's is the sum of its
+missions', with the hours of its heading beside it). The bot's minutes are the game's own telemetry (`time_<mkey>`;
+the Finale's from its start to the ending) in the release check's full run of `tests/lastversion.mjs` (373 checks,
+373 passed, every line said (1,966) from the packs), beside the closing pass's run (`3eb6767`) and the runs before it.
+Speech and words are each mission's own lines (threads, side stories, people, records and its card; not hints or
+barks), each line once, with its speech measured from the recordings in the packs as they are now:
 
-| Chapter | The bible (minutes) | The bot | Of the bible | Speech of its own | Words (before → now) |
+| Chapter | The bible (minutes) | The bot (closing pass → release check) | Of the bible | Speech of its own | Words of its own |
 | --- | --- | --- | --- | --- | --- |
-| Prologue | 120 (2 h in its heading) | 13.5 | 11% | 19.6 | 3,286 → 3,286 |
-| Act I | 260 (5 h in its heading) | 44.0 | 17% | 22.7 | 3,681 → 4,017 |
-| Act II | 320 (6 h in its heading) | 44.7 | 14% | 22.6 | 2,611 → 3,912 |
-| Act III | 300 (6 h in its heading) | 52.2 | 17% | 23.0 | 3,229 → 3,972 |
-| Act IV | 240 (5 h in its heading) | 35.0 | 15% | 17.4 | 2,246 → 3,180 |
-| Finale | 90 (1.5 h in its heading) | 11.6 | 13% | 8.1 | 516 → 1,494 |
-| The campaign | 1,330 (22.2 h; the bible's own total: about 25.5 h of main story) | 201.0 | 15% | 113.4 | 15,569 → 19,861 |
+| Prologue | 120 (2 h in its heading) | 13.5 → 13.3 | 11% | 19.9 | 3,325 |
+| Act I | 260 (5 h in its heading) | 44.0 → 44.1 | 17% | 22.8 | 4,017 |
+| Act II | 320 (6 h in its heading) | 44.7 → 44.8 | 14% | 23.0 | 3,982 |
+| Act III | 300 (6 h in its heading) | 52.2 → 52.2 | 17% | 23.2 | 3,992 |
+| Act IV | 240 (5 h in its heading) | 35.0 → 35.0 | 15% | 17.4 | 3,181 |
+| Finale | 90 (1.5 h in its heading) | 11.6 → 11.7 | 13% | 8.1 | 1,498 |
+| The campaign | 1,330 (22.2 h; the bible's own total: about 25.5 h of main story) | 201.0 → 201.1 | 15% | 114.4 | 19,995 |
 
-| Mission | | The bible | The bot (before → now) | Speech | Words (before → now) |
+| Mission | | The bible | The bot (before → closing pass → release check) | Speech | Words |
 | --- | --- | --- | --- | --- | --- |
-| 1 | The Last Normal Day | 35 | 10.9 → 10.9 | 8.2 | 1,408 → 1,408 |
-| 2 | Helix Goes Dark | 45 | (placed, lines skipped) | 6.5 | 1,069 → 1,069 |
-| 3 | The First Switch | 40 | (placed, lines skipped) | 4.9 | 809 → 809 |
-| 4 | The Man from the Last Day | 50 | 8.6 → 9.2 | 4.1 | 767 → 767 |
-| 5 | The Village That Never Existed | 55 | 10.8 → 9.1 | 4.1 | 832 → 832 |
-| 6 | The Clockmaker's House | 45 | 6.0 → 6.6 | 5.5 | 728 → 879 |
-| 7 | The Broken Observatory | 65 | 7.3 → 9.9 | 3.9 | 537 → 722 |
-| 8 | The First Death | 45 | 8.8 → 9.3 | 5.1 | 817 → 817 |
-| 9 | Nine Minutes to Zero | 60 | 9.2 → 10.0 | 3.7 | 524 → 621 |
-| 10 | Enemies Who Remember | 65 | 4.9 → 8.7 | 4.5 | 433 → 784 |
-| 11 | The Inverted Hospital | 50 | 7.9 → 7.2 | 4.7 | 625 → 793 |
-| 12 | The Man Behind the Glass | 70 | 7.0 → 8.4 | 5.0 | 378 → 894 |
-| 13 | The Nine-Minute War | 75 | 7.8 → 10.5 | 4.7 | 651 → 820 |
-| 14 | Welcome to 2196 | 50 | 7.0 → 10.6 | 6.1 | 777 → 1,108 |
-| 15 | The City That Forgot Tomorrow | 65 | 11.3 → 9.4 | 4.4 | 745 → 757 |
-| 16 | The Museum of Failed Worlds | 55 | 8.4 → 10.3 | 4.9 | 640 → 783 |
-| 17 | The Witness's Archive | 70 | 7.6 → 10.8 | 3.7 | 495 → 645 |
-| 18 | The Fracture | 60 | 10.4 → 11.1 | 3.9 | 572 → 679 |
-| 19 | The Place Outside Time | 60 | 8.6 → 11.0 | 3.2 | 545 → 621 |
-| 20 | Mira's Memory | 55 | 6.7 → 7.1 | 4.0 | 577 → 766 |
-| 21 | The Last Battle of the Continuum | 75 | 6.1 → 9.2 | 5.7 | 620 → 1,048 |
-| 22 | The First Second | 50 | 8.3 → 7.7 | 4.5 | 504 → 745 |
-| 23 | Afterzero | 90 | 10.4 → 11.7 | 8.1 | 516 → 1,494 |
+| 1 | The Last Normal Day | 35 | 10.9 → 10.9 → 10.2 | 8.2 | 1,408 |
+| 2 | Helix Goes Dark | 45 | (placed, lines skipped) | 6.5 | 1,069 |
+| 3 | The First Switch | 40 | (placed, lines skipped) | 5.2 | 848 |
+| 4 | The Man from the Last Day | 50 | 8.6 → 9.2 → 9.3 | 4.1 | 767 |
+| 5 | The Village That Never Existed | 55 | 10.8 → 9.1 → 9.1 | 4.1 | 832 |
+| 6 | The Clockmaker's House | 45 | 6.0 → 6.6 → 6.7 | 5.5 | 879 |
+| 7 | The Broken Observatory | 65 | 7.3 → 9.9 → 9.7 | 3.9 | 722 |
+| 8 | The First Death | 45 | 8.8 → 9.3 → 9.3 | 5.1 | 817 |
+| 9 | Nine Minutes to Zero | 60 | 9.2 → 10.0 → 10.0 | 3.7 | 621 |
+| 10 | Enemies Who Remember | 65 | 4.9 → 8.7 → 8.7 | 4.7 | 822 |
+| 11 | The Inverted Hospital | 50 | 7.9 → 7.2 → 7.3 | 4.7 | 793 |
+| 12 | The Man Behind the Glass | 70 | 7.0 → 8.4 → 8.4 | 5.1 | 896 |
+| 13 | The Nine-Minute War | 75 | 7.8 → 10.5 → 10.5 | 4.8 | 850 |
+| 14 | Welcome to 2196 | 50 | 7.0 → 10.6 → 10.6 | 6.1 | 1,109 |
+| 15 | The City That Forgot Tomorrow | 65 | 11.3 → 9.4 → 9.4 | 4.5 | 776 |
+| 16 | The Museum of Failed Worlds | 55 | 8.4 → 10.3 → 10.3 | 5.0 | 783 |
+| 17 | The Witness's Archive | 70 | 7.6 → 10.8 → 10.8 | 3.8 | 645 |
+| 18 | The Fracture | 60 | 10.4 → 11.1 → 11.1 | 3.9 | 679 |
+| 19 | The Place Outside Time | 60 | 8.6 → 11.0 → 11.0 | 3.2 | 621 |
+| 20 | Mira's Memory | 55 | 6.7 → 7.1 → 7.1 | 4.0 | 754 |
+| 21 | The Last Battle of the Continuum | 75 | 6.1 → 9.2 → 9.2 | 5.6 | 1,041 |
+| 22 | The First Second | 50 | 8.3 → 7.7 → 7.7 | 4.7 | 765 |
+| 23 | Afterzero | 90 | 10.4 → 11.7 → 11.7 | 8.1 | 1,498 |
 
 "Before" is the bot's earlier runs as this file recorded them (Missions 4–13 on 2026-10-22, 14–23 and the Finale on
 2026-10-23, Mission 1 in the audit). Those runs carried a fault of the bot's that the closing pass found and fixed: when
 a mission ended inside its own last step (a staged moment that plays itself, or a set piece whose end is the mission's),
 the bot's loop went on into the next mission's first threads, and its wait for the next mission then let game time run
-idle on that mission's clock. Some earlier minutes were too high for it: Missions 5, 11, 15 and 22 measure lower now
-(11 and 22 with more in them), and this pass's own first run, still with the fault, gave the Finale 10.4 where the
+idle on that mission's clock. Some earlier minutes were too high for it: Missions 5, 11, 15 and 22 measure lower now (11
+and 22 with more in them), and the closing pass's own first run, still with the fault, gave the Finale 10.4 where the
 same Finale measured 9.8 once it was fixed. Missions 2 and 3 are placed beat to beat with their lines skipped, so they
-are not measures.
+are not measures (0.3 and 1.4 minutes in the release check). Mission 1's figure is its walk from the first step to its
+end, lines at their own length (10.2; its telemetry, with the opening, about 11.6). Between the closing pass's run and
+the release check's no line changed (`spokenLines()` gives the same 4,553 speakers, voices and texts on both commits)
+and no mission moved by more than 0.7 minutes (Mission 1, 10.9 to 10.2). The words and speech are counted the same way
+for every mission; the closing pass's table (19,861 words, 113.4 minutes) counted a few lines fewer with a filter it did
+not record, and the same count as here on its own commit gives 19,995 words and 114.2 minutes: no line changed after it,
+and the audio closing pass's re-recordings (`f623a68`) added 0.2 minutes.
 
-What the numbers say. The bot plays the campaign in 201.0 minutes of game time, about a seventh of the bible's 22.2 hours of
-mission targets; every mission is below its target. Under ten bot minutes after this pass: Missions 4 (9.2), 5 (9.1), 6 (6.6), 7 (9.9), 8 (9.3), 10 (8.7), 11 (7.2), 12 (8.4), 15 (9.4), 20 (7.1), 21 (9.2), 22 (7.7).
-The bot knows every coordinate, reads nothing twice, never looks around or gets lost, asks for no hint and plays one
-to four side stories a mission; a player will take longer, and no player has been measured.
+What the numbers say. The bot plays the campaign in 201.1 minutes of game time, about a seventh of the bible's 22.2
+hours of mission targets; every mission is below its target. Under ten bot minutes: Missions 4 (9.3), 5 (9.1), 6
+(6.7), 7 (9.7), 8 (9.3), 10 (8.7), 11 (7.3), 12 (8.4), 15 (9.4), 20 (7.1), 21 (9.2), 22 (7.7): twelve of the nineteen
+Act missions. The bot knows every coordinate, reads nothing twice, never looks around or gets lost, asks for no hint and
+plays one to four side stories a mission; a player will take longer, and no player has been measured.
 
 The length model is gone. Earlier versions of this file set each chapter's "target (model)" beside the bot: the sum of
 each thread's authored minutes, 890 minutes or about 15 hours. Those minutes were set by their authors and never
@@ -71,7 +78,8 @@ longer measures Mission 1 against it (it needs nine minutes or more). Older entr
 history.
 
 Every line the edition says, once each: 554 lines and 7,295 words in v2.0, 2,727 and 22,781 before the closing pass,
-3,215 and 27,593 now. Each mission's place is 1.7-6.8 ha (v2.0's generated rooms: 0.2-0.8 ha a sector).
+3,215 and 27,593 now (4,553 lines as `spokenLines()` walks them, a line said in several places counted each time),
+in 5,143 recordings. Each mission's place is 1.7-6.8 ha (v2.0's generated rooms: 0.2-0.8 ha a sector).
 
 ## Built (by hand, playable, tested)
 
@@ -522,6 +530,45 @@ Every line the edition says, once each: 554 lines and 7,295 words in v2.0, 2,727
   180k triangles in the scene pass (262 draw calls and 343–350k triangles for the whole frame,
   11.4–11.5 ms of JavaScript on average, 15.0–16.4 ms p95), Mission 4's THE VILLAGE 25 and 86k
   (8.0 ms) and BEFORE THE FIRE 20 and 22k (4.1 ms): all within §4.7.
+- **The release check** (2026-10-24; `git log 75b3e91..`; every closing step committed before it). What was run on the
+  finished overhaul, what it found and what was fixed; the version labels, app ids and the title's version text are as
+  the closing passes left them (v2.0, `com.afterzero.lastversion`, versionName 2.0.0), for the release step to decide.
+  *Voices.* Nothing was left to record: `VOICE_WORK=<dir> bash tools/voice-lv.sh check` finds all eight packs up to date
+  (0 not rendered, 0 not in the pack, 0 from older text, 0 no longer said), no line has changed since the audio closing
+  pass recorded them (`spokenLines()` gives the same 4,553 speakers, voices and texts on `3eb6767` and now), and the
+  unit test that plans every spoken line through the packs finds 0 misses and no CREW voice. The packs as shipped
+  (voice.ogg + voice.json, bytes): `common` 2,445,567 (600 recordings, 17.9 minutes), `prologue` 2,490,239 (624, 19.3),
+  `act1` 3,377,811 (892, 27.0), `act2` 3,418,813 (980, 27.0), `act3` 3,406,517 (946, 26.9), `act4` 2,561,937 (716,
+  20.2), `finale` 1,430,987 (385, 11.1), `cases` empty (2 bytes, neither fetched nor shipped): 19,131,873 bytes, 5,143
+  recordings, 149.4 minutes as recorded. The largest file is `act2/voice.ogg`, 3,371,096 bytes (the preview's limit is
+  15 MB a file); Station Zero's `voice.ogg` is 13,980,662 bytes and keeps its sha256. *The edition's APK* was over its
+  budget: 52,644,494 bytes against OVERHAUL.md §10.2's 50 MB, its 49 models (29.1 MB) stored uncompressed (`aapt -0
+  glb`). Its branch of `android/build-apk.sh` now deflates the models and stores only the Opus packs (`ecffaca`; a unit
+  test holds both branches): 45,259,406 bytes, with the same 132 entries, CRCs and sizes (MainActivity streams every
+  asset through `AssetManager.open`, which reads a deflated entry as well as a stored one; no phone has run it, below).
+  Station Zero's build is unchanged: its APK was built before and after the change and its entries, methods, CRCs and
+  sizes are identical. *Builds* (`bash android/build-apk.sh`; `EDITION=lastversion bash android/build-apk.sh`; not
+  committed): Station Zero `AFTERZERO-v1.1.apk` (`com.afterzero.v1_1`) 51,453,890 bytes with 28 models, its preview 88
+  files and 59,708,350 bytes, the largest its `voice.ogg`; the edition `AFTERZERO-LastVersion-v2.0.apk`
+  (`com.afterzero.lastversion`) 45,259,406 bytes with 49 models (45 its own, 4 shared with Station Zero: Kai's body, two
+  doctors' and Xbot's motion library) and 7 packs, its preview 121 files and 61,989,159 bytes with `assets/voice/lv/` (7
+  packs), the largest file 3,797,328 bytes (Xbot as glTF JSON). *Checked:* `npm test` 169/169 (141 of them the
+  edition's); the whole bot (`NODE_PATH=$(npm root -g) node tests/lastversion.mjs`, on `75b3e91`) 373 passed, 0 failed,
+  with no page error, in 36.7 minutes: the campaign from NEW GAME to Ending C (its staging, the epilogue and the voice
+  in every speaker, no crowd line over it), Endings A and B in real time from the save at the Finale's choice (89.8 and
+  87.1 s, 24 and 23 lines, every line's decoded clips started from the `finale` and `common` packs, the voice's peak
+  0.522 and 0.523, the music under it), the free-roam trips and back, the CASE FILES (fourteen stories, twelve replays,
+  the Survivor's Garden replayed to its end), every line said (1,966) from the packs and `speechSynthesis` never asked,
+  and the survey's 1,657 pairs of views in different places at least 21 bits apart (the threshold is 18; the closest
+  Mission 4 before the fire and Mission 17 in 2049); its minutes are the table at the top. The real-time audio check
+  (`node tests/lastversion-audio.mjs`) 10/10 from `game/` (10.1 minutes), and 10/10 served from the built web preview as
+  it would be published (9.1 minutes; `LV_ROOT=android/build-lastversion/preview`, new in this check: the one bundled
+  page with the edition flag, the models as glTF JSON, the packs under `assets/voice/lv/`): the first tap starts the
+  AudioContext, the Prologue's card, the cold open and Mission 1's card are said from the packs and heard over the
+  score, the florist's conversation is heard in her own recorded voice, nothing misses and `speechSynthesis` is never
+  asked. Station Zero: `node tests/smoke.mjs` passed, `node tests/qa.mjs` 26/26, `node tests/cradle.mjs` 167/167 (twelve
+  Cradle districts; 3.6, 0.9 and 2.4 minutes). Shared files changed by this check: `android/build-apk.sh` only (the
+  edition's branch, above).
 - **Free roam after the open-world closing pass** (2026-10-24; `git log b7f5b3d..`; the player's point 2, "make it
   open world"; DESIGN.md "Free roam"). Each of the critic's gaps was checked against the code first. *One bounded map per
   mission, story-gated quarters, a linear order and no travel* (real): the story keeps its order and its gates, and free
@@ -935,10 +982,11 @@ Every line the edition says, once each: 554 lines and 7,295 words in v2.0, 2,727
   does Mission 18's hold read as a defence and Mission 20's board as an alignment, how long a player takes) has not
   been done; the bot stands in for it.
 - **Device testing** of the Android build on phones has not been done in this session.
-- **The edition's APK** was not rebuilt in the closing pass. It was last measured at 49,040,014 bytes with 15 MB of
-  voice; the packs are 18.9 MB now (after the audio closing pass's re-recordings: 18,872,161 bytes of Opus), so it
-  would come to about 52.5 MB, over the 50 MB budget, until the packs' bitrate or the models give some of it back. Each
-  pack is far under the 15 MB a file the build script enforces (the largest, act2, 3.37 MB). The release step builds it.
+- **The edition's APK and preview are built, not installed.** The release check built both (Built, "The release
+  check": the edition's APK 45,259,406 bytes with its models deflated, within the 50 MB budget; its preview 61,989,159
+  bytes in 121 files, none over 3.8 MB) and played the built preview's page in headless Chromium, but no phone has
+  installed or run the APK, deflated models included, and the preview has not been published again (the release step
+  publishes it; at 62.0 MB it fits one publish's 64 MB).
 - **Free roam's limits.** A trip is a mission's place, so a place two missions used is two trips (Helix's three wings
   are three); it arrives at the mission's first quarter's spawn (Mission 6's is its cellar stair); its people say what
   the story left them saying (the story's own conversations are said again without acting, never a new line); it has
