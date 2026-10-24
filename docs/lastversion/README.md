@@ -22,7 +22,7 @@ The code is in `game/js/editions/lastversion/` (`prologue.js`, `act1.js` … `ac
 `cases.js`, `roam.js`, `Threads.js`, `ledger.js`, `Runtime.js`, `places/`).
 
 Build: `EDITION=lastversion bash android/build-apk.sh` (app "AFTERZERO: Last Version",
-its own saves; 45,849,315 bytes when the castfix pass built it, 2026-10-24 (45,259,406 in the release check before it), its models deflated, with seven voice packs under
+its own saves; 46,443,321 bytes when the third casting pass built it, 2026-10-24 (45,259,406 in the release check before the casting passes), its models deflated, with seven voice packs under
 `assets/voice/lv/`, the cases' empty one left out; not yet run on a phone); the default build stays the Station Zero
 game (its APK's entries unchanged).
 

@@ -2,25 +2,28 @@
 //
 // Rocketbox dresses everyone in today's clothes. The settlement's people wear woven wool and linen over them: a long
 // tunic's skirt, a mantle on the shoulders or a cloak down the back, a sash across the chest, a belt. Each piece is built
-// once per model and outfit from the body it covers (its rings follow the body's own outline in the bind pose, a little
-// out from it, falling free below the knee) and is skinned to that body's skeleton by weight transfer: each vertex takes
-// the bone weights of the nearest vertices of the body under it, so it moves with the hips, legs and shoulders it hangs
-// from. One geometry per model and outfit, one draw call per person (the pieces are merged; their dyes are vertex colours
-// over one woven map), shared and kept for the session.
+// once per model and outfit from the body it covers as it stands (its rings follow the body's own cut at each height,
+// direction by direction, a little out from it, falling free below the knee; a fitted coat is cut round the bind pose)
+// and is skinned to that body's skeleton by weight transfer: each vertex takes the bone weights of the nearest vertices
+// of the body under it, so it moves with the hips, legs and shoulders it hangs from, and is taken back to the bind pose
+// through that skinning. One geometry per model and outfit, one draw call per person (the pieces are merged; their dyes
+// are vertex colours over one woven map), shared and kept for the session.
 //
 // A variant's `garb` (wardrobe.js):
 //   skirt:  { dye, hem: m above the floor (0.07), top: 'waist' | 'hips', flare (1.3), stripe: dye, ease }
 //   mantle: { dye, front: m below the shoulders at the front (0.24), back: m at the back (0.36), reach: m down the
 //             arms (0.2), stripe: dye }                          a short mantle over both shoulders and the tops of the arms
 //   cloak:  { dye, hem: m above the floor (0.22), open: half-angle of the opening at the front (0.75 rad), stripe }
+//             a cape on the shoulders over its length
 //   sash:   { dye, side: 'L' | 'R' (the shoulder it hangs from), w: m (0.09) }
 //   belt:   { dye, w: m (0.05) }
 //   bodice: { dye, top: m below the shoulders (0.07) }   the tunic's body from under the arms to the waist, over today's
 //             clothes (a jacket's front, a blouse's buttons), joining the skirt
 //   apron:  { dye, hem: m above the floor (0.42), wide: half-angle round the front (1.1 rad), bib: m below the shoulder
-//             joints the bib reaches up the chest (none; less than 0: above them), bibWide: its half-angle (0.7 rad) }
-//             a cook's apron; with a bib, a
-//             work apron (the glazier's leather one)
+//             joints the bib reaches up the chest (none; less than 0: above them), bibWide: its half-angle (0.7 rad),
+//             leather }
+//             a cook's apron; with a bib (held by a neck strap), a work apron (the glazier's: leather, its weave only a
+//             shading)
 //   (a cloak `fit` to the body, hemmed at the knee and open at the front, is a lab coat)
 // dyes: 0xRRGGBB or '#rrggbb' (sRGB).
 import * as THREE from '../../../vendor/three.module.min.js';

@@ -834,6 +834,43 @@ in 5,143 recordings. Each mission's place is 1.7-6.8 ha (v2.0's generated rooms:
   freckles, its clothes' colours); the whole browser bot was not run here. (The shots' first Mission 4 run lost its
   WebGL context once: the machine's disk was full, 42 MB free; with room made, by removing the two APK build folders
   the build script recreates, every run was clean.)
+- **Casting, round 3** (2026-10-24, on `13e3831` and the checkpoint `1c051ba`; a follow-up check of the second look):
+  what it found is fixed. *The glazier's bib was a board*: a stiff flat panel with no neck strap, its top edge out in
+  front of her throat from the side and a few centimetres off her chest below the bust (Missions 21 and 12). *The
+  Elder's cloak stood off her shoulders and back like a shell* and did not follow her stoop; old Niko's cloak panels
+  too. Both came from how every garment was cut: round the body's bind pose, where the converted models hold their
+  arms out at 43 degrees, from four extents a height (an ellipse round the widest points), and worn with the arms down
+  at 71.5. `garments.js` now cuts round the body as it stands (a fresh actor's first idle frames), each ring following
+  the body direction by direction (the convex hull of a cut through it at that height), and takes each point back to
+  the bind pose through the very skinning it is given, so worn it comes back where it was cut. A long cloak is a cape
+  gathered round the base of the neck over the shoulders and the tops of the arms, over the cloak's length, open down
+  the front, the arms out at its sides; the Elder's cape follows her bent back. Mantles are cut the same way, their top
+  ring gathered round the neck alone (Niko's shirt showed in two patches between his neck and a mantle that lay out on
+  his shoulders). The bib lies on the chest below the shoulders and spans only its hollows to the waist, held by a
+  neck strap over her lapels, pulled taut, round the back of her neck (not round her ponytail: it is modelled in her
+  head's own mesh, and a strap round it stood out behind her neck to its tip). The fitted coats (the lab coats,
+  Tomas's coat) stay cut round the bind pose, as they were: round the hanging arms they boxed them in. *A lost WebGL
+  context left every dyed map black* (already so before this round): a recolour lives only in a render target, which
+  a restored context does not bring back, so Niko's arms and neckline came back black under his undyed face, the Elder's
+  body too and the glazier's whole head (her hair bands are dyed). Every recolour in use is drawn again from its source
+  map on `webglcontextrestored` (`wardrobe.js redye`); checked by losing and restoring the context (WEBGL_lose_context)
+  with Niko, the Elder and the glazier in a plain scene and in Missions 4 and 12: black before the fix, right after it.
+  *Mission 21's glazier stood in two places at once* when chosen as the ally, at the glider deck and at the arena's
+  gap, 112 m and 18 m of height apart; Rook, persuaded and chosen, sat in the director's office as well. Each stands
+  only where they are now (`!(ally == ...)` on the first place; the office's Rook line keeps its text and its voice).
+  *Checked:* `npm test` 172/172, with a new test (on a body of rings whose bind pose has the arms out and which stands
+  with them down: the way back to the bind pose is the skinning's inverse; the bib's top edge on the chest at the
+  shoulders' height, the bib within 4.5 cm of the body, a strap behind the neck within 2.5 cm of it; the Elder's cape
+  and Niko's and Tala's mantles within 3.5 cm of the shoulders; a dyed map drawn again on a restored context, and not
+  once its wearers have gone; in Mission 21 every ally at the gap absent from where they were met); the cast dump
+  changes two rows (Mission 21's glazier and Rook, their conditions); `voice-lv.sh check` reports all eight packs up to
+  date. Shots in each mission's own light (talk framing, full, face, side, back and wide), all looked at, with no page
+  error and no context lost unbidden in the eleven places loaded (Mission 21 twice): Niko (Missions 4, 5, 7, the cold opens, Case B), the Elder
+  (Mission 4, her echoes in Missions 19 and 22), Tomas (Mission 15, Case C), the glazier (Missions 12, 21 in both
+  cases, 23). The edition's APK is 46,443,321 bytes, 3.56 MB under the 50 MB budget; its preview 123 files, 63,798,682
+  bytes. *Not changed:* a cloak's cape still ends in a small step over the cloak at the back (two layers of wool); the
+  fitted coats are as they were; the whole browser bot was not run here. (The machine's disk had about 0.6 GB free:
+  browser runs used a temporary folder in memory, and the round's own scratch renders were pruned.)
 - **The CASE FILES** (v2.1, U8; `cases.js`; replaces the Cases chapter): fourteen stories (chains A–D, the Child in
   Three Photographs, the Train That Arrives Yesterday, the Unsent Letter, the House with No Owner, the Last Signal, the
   Names Beneath the City, the Clockmaker's Debt, the Ninth Minute: Evidence, the Survivor's Garden, the Unwritten
