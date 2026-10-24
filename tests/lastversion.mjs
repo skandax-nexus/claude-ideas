@@ -2447,17 +2447,20 @@ async function roamTrips(storyJson, finishedJson) {
     // (the arrival's card, read as it arrives: it is up for 4.2 s)
     const ok = await page.waitForFunction((k) => {
       if (!(AZ.campaign?.chapter === 'roam' && AZ.edition.deck?.key === k && AZ.level?.place && !AZ.transitioning && !AZ.edition.castWaitFor && !AZ.edition.travelFade)) return false;
-      const c = document.querySelector('#card');
-      return { on: c.classList.contains('on'), text: c.textContent };
+      const c = document.querySelector('#card'), t = document.querySelector('#toast');
+      return { on: c.classList.contains('on'), text: c.textContent, toast: t?.classList.contains('on') ? t.textContent : '', subs: document.querySelector('#subs')?.textContent || '' };
     }, key, { timeout: 300000 }).then((h) => h.jsonValue(), () => null);
     if (name) await shot(name);
     await az(() => { AZ.simulate(0.3); LVB.skip(); });
     return { arrived: !!ok, arrivalCard: ok, ...(await state()) };
   };
-  const tripOk = (s, key, place, year) => s.arrived && (!s.arrivalCard || (s.arrivalCard.on && /FREE ROAM/.test(s.arrivalCard.text))) && s.chapter === 'roam' && s.key === key && s.place === place && s.year === year && !s.exit && !s.watchers && !s.gate && !s.mains && !s.inertLive.length
+  // (nothing of the place left behind comes up over the arrival: no fragment's count, no line read there)
+  const tripOk = (s, key, place, year) => s.arrived && (!s.arrivalCard || (s.arrivalCard.on && /FREE ROAM/.test(s.arrivalCard.text) && !/MEMORY FRAGMENT/.test(s.arrivalCard.toast) && !readTexts.some((t) => s.arrivalCard.subs.includes(t)))) && s.chapter === 'roam' && s.key === key && s.place === place && s.year === year && !s.exit && !s.watchers && !s.gate && !s.mains && !s.inertLive.length
     && /^Free roam: /.test(s.objective) && /BACK TO THE STORY/.test(s.why) && s.back?.[0] === 'act3' && s.back?.[1] === 2 && s.saved?.[0] === 'roam' && s.saved?.[1] === key && s.saved?.[2] === 'act3' && /^FREE ROAM/.test(s.saved?.[3] || '') && s.slot === SLOT;
   // walk with real movement towards a fragment not yet read, and read it (a trip finds what the place kept)
-  const walkAndRead = () => az(() => {
+  const readTexts = []; // (the fragments read on the trips: none of them may still be on screen at the next arrival)
+  const walkAndRead = async () => { const w = await walkAndRead1(); if (w.read?.text) readTexts.push(w.read.text); return w; };
+  const walkAndRead1 = () => az(() => {
     const g = AZ, B = LVB, p0 = g.player.pos.clone();
     const left = g.level.interactables.filter((i) => i.kind === 'fragment' && !i.when && !g.deckWorld.flags[`done_${i.id}`]);
     left.sort((a, b) => Math.hypot(a.pos[0] - p0.x, a.pos[2] - p0.z) - Math.hypot(b.pos[0] - p0.x, b.pos[2] - p0.z));
@@ -2510,10 +2513,12 @@ async function roamTrips(storyJson, finishedJson) {
     return { chapter: AZ.campaign.chapter, deck: AZ.campaign.deck, quarter: AZ.campaign.quarter, dist: +Math.hypot(AZ.player.pos.x - cp[0], AZ.player.pos.z - cp[2]).toFixed(2), objective: AZ.edition.objectiveText(),
       fragments: AZ.facts.get('fragments') || 0, fr: Object.keys(AZ.facts.facts).filter((k) => k.startsWith('fr_') && AZ.facts.get(k)).length, roam: !!AZ.campaign.roam, lvRoam: AZ.facts.get('lv_chapter'),
       saved: s ? [s.campaign?.chapter, s.campaign?.deck, !!s.campaign?.roam, s.meta?.run] : null, previously: !!AZ.edition.opening?.previously, card: document.querySelector('#card')?.textContent || '', slot: AZ.slot,
-      said: AZ.hud.talking ? AZ.hud.cur?.text || '(waiting)' : null };
+      said: AZ.hud.talking ? AZ.hud.cur?.text || '(waiting)' : null, subs: document.querySelector('#subs')?.textContent || '',
+      toast: document.querySelector('#toast')?.classList.contains('on') ? document.querySelector('#toast').textContent : '' };
   }, before.cp);
   // (nothing a trip's place was saying goes on over the story: the fragments read on the trips)
-  const tripLine = [w1, w2, w3].some((w) => w.read?.text && w.read.text === after.said) ? after.said : null;
+  const tripLine = [w1, w2, w3].some((w) => w.read?.text && w.read.text === after.said) ? after.said
+    : readTexts.find((t) => after.subs.includes(t)) || (/MEMORY FRAGMENT/.test(after.toast) ? after.toast : null);
   check(home && after.chapter === 'act3' && after.deck === 2 && after.quarter === before.quarter && after.dist < 1 && after.objective === before.objective && !after.roam && after.lvRoam === 'act3' && after.slot === before.slot,
     'BACK TO THE STORY: Mission 16 at the checkpoint it was left at, its objective as it was (the story kept its order)', JSON.stringify({ home, before, after }));
   check(after.fragments === before.fragments + reads && after.fr >= reads && reads >= 2 && after.saved?.[0] === 'act3' && after.saved?.[1] === 2 && !after.saved?.[2] && !after.previously && /BACK TO THE STORY/.test(after.card) && !tripLine,

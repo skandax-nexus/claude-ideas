@@ -1068,6 +1068,12 @@ export class LastVersion {
     g.hud.skipAll?.();
     g.hud.cur = null;
     g.voice?.stop?.();
+    // (nor does what it put up: a fragment's count read just before TRAVEL waited under the menu and came up over the
+    // next place's arrival, 'MEMORY FRAGMENT 1 / 4 · THE BROKEN OBSERVATORY' in Rain City; and a line's text that
+    // has stopped is not left on screen)
+    g.hud.toastT = 0;
+    g.hud.el?.toast?.classList.remove('on');
+    if (!g.hud.talking && g.hud.el?.subs) g.hud.el.subs.innerHTML = '';
     g.closeMenu?.();
     this.cinema.end(true);
     g.transitioning = true;
