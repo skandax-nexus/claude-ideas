@@ -212,7 +212,10 @@ export default {
     P.E(['PRESENT', 'FUTURE'], () => {
       for (const [x, z] of [[46, -12], [54, -14], [58, -2]]) tent(P, { x, z, r: 2.2, h: 2.8, m: 'tarpScav' });
       prop(P, 'firePit', 50, -6, 0, { fire: true });
-      for (const [x, z] of [[64, -14], [66, -10], [44, 0]]) prop(P, 'crate', x, z, 0.6, { m: 'crateWood' });
+      // (the scavengers' stores: drums and a tarp over a stack, not the crates every other place has)
+      for (const [x, z] of [[64, -14], [65.2, -13.2]]) prop(P, 'barrel', x, z, 0, { m: 'rust' });
+      prop(P, 'tarp', 66, -9, 0.6, { w: 2.6, d: 2, m: 'tarpScav' });
+      prop(P, 'barrel', 44, 0, 0, { m: 'rust' });
     });
     P.E('PAST', () => {
       for (const [x, z] of [[46, -12], [56, -8]]) tent(P, { x, z, r: 2.6, h: 3.2, m: 'hide' });

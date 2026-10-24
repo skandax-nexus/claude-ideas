@@ -183,19 +183,28 @@ export default {
       P.gable(-20, 6.4, 20, 12, 12, 3.2, Math.PI / 2, 'slate');
       for (const fx of [-25, -17.6]) P.vbox([fx, 3.9, FRONT, fx + 1.3, 5.6, FRONT + 0.06], 'windowWarm', { noShadow: 1 });
       P.vbox([-24.6, 0.9, FRONT, -22, 2.3, FRONT + 0.06], 'windowWarm', { noShadow: 1 });
-      // inside: the counter, the table, the hall table, the stair (to a landing that is not remembered)
-      P.box([mx0 + 0.3, 0, 12.8, -21.5, 0.95, BACK], 'woodWhite');
-      P.box([-19.5, 0, 9.6, -16.5, 0.78, 11.4], 'oakFloor');
+      // inside: the counter, the table, the hall table, the stair (to a landing that is not remembered). (closing: visuals)
+      // each drawn as what it is, its collider one box: a counter with its worktop, doors and handles; a table on four
+      // legs with two chairs; the stair as its steps and stringer
+      P.box([mx0 + 0.3, 0, 12.8, -21.5, 0.88, BACK], 'woodWhite');
+      P.vbox([mx0 + 0.3, 0.88, 12.7, -21.4, 0.95, BACK], 'counterTop');
+      for (let x = mx0 + 0.9; x < -21.9; x += 0.75) { P.vbox([x - 0.33, 0.08, 12.78, x + 0.33, 0.8, 12.8], 'woodWhite', { noShadow: 1 }); P.vbox([x + 0.2, 0.62, 12.74, x + 0.26, 0.74, 12.78], 'steel', { noShadow: 1 }); }
+      P.col([-19.5, 0, 9.6, -16.5, 0.78, 11.4]);
+      P.vbox([-19.6, 0.72, 9.5, -16.4, 0.78, 11.5], 'oakFloor');
+      for (const [x, z] of [[-19.35, 9.75], [-16.65, 9.75], [-19.35, 11.25], [-16.65, 11.25]]) P.vbox([x - 0.04, 0, z - 0.04, x + 0.04, 0.72, z + 0.04], 'oakFloor');
+      for (const [x, z, ry] of [[-18.6, 9.0, 0], [-17.2, 12.0, Math.PI]]) { P.obox(x, 0.44, z, 0.44, 0.04, 0.42, ry, 'oakFloor', { prop: 1 }); for (const dx of [-0.18, 0.18]) for (const dz of [-0.17, 0.17]) P.vbox([x + dx - 0.02, 0, z + dz - 0.02, x + dx + 0.02, 0.44, z + dz + 0.02], 'oakFloor', { prop: 1, noShadow: 1 }); P.obox(x, 0.48, z + (ry ? 0.19 : -0.19), 0.44, 0.5, 0.04, ry, 'oakFloor', { prop: 1 }); }
       P.box([-15, 0, 21.2, -14.3, 0.85, 22.8], 'woodWhite');
-      P.box([-25.6, 0, 16, -24.2, 2.6, 23], 'oakFloor');
+      P.col([-25.6, 0, 16, -24.2, 2.6, 23]);
+      for (let k = 0; k < 10; k++) P.vbox([-25.6, 0, 16 + k * 0.7, -24.2, 0.26 * (k + 1), 16.7 + k * 0.7], 'oakFloor');
+      P.vbox([-24.25, 0, 16, -24.2, 3.2, 23], 'woodWhite', { noShadow: 1 });
     });
     // the blue door itself, ajar (every year: it is the one thing the memory keeps)
     P.obox(-20.6, 0, FRONT + 0.25, 1.1, 2.3, 0.07, -0.9, 'blueDoor', { prop: 1 });
     P.vbox([-21, 0, FRONT - 0.1, -20.7, 2.5, FRONT + 0.1], 'woodWhite', { noShadow: 1 });
     P.vbox([-19.3, 0, FRONT - 0.1, -19, 2.5, FRONT + 0.1], 'woodWhite', { noShadow: 1 });
     // the remembered things, in colour in every year: the boots, the bikes, the badge on the hall table
-    P.vbox([-22.9, 0, 8.7, -22.6, 0.32, 9.0], 'marqueeYellow', { prop: 1 });
-    P.vbox([-22.5, 0, 8.7, -22.2, 0.32, 9.0], 'marqueeYellow', { prop: 1 });
+    // (the yellow wellingtons: each a shaft and a foot, not a cube)
+    for (const x of [-22.75, -22.35]) { P.vbox([x - 0.07, 0.06, 8.84, x + 0.07, 0.34, 9.0], 'marqueeYellow', { prop: 1 }); P.vbox([x - 0.075, 0, 8.66, x + 0.075, 0.08, 9.02], 'marqueeYellow', { prop: 1 }); P.vbox([x - 0.075, 0, 8.66, x + 0.075, 0.02, 9.02], 'ironDark', { prop: 1, noShadow: 1 }); }
     P.vbox([-15.0, 0.85, 21.8, -14.6, 0.88, 22.2], 'accentBlue', { prop: 1, noShadow: 1 });
     for (const [x, z, r] of [[-12.5, -2, 0.3], [-11.4, -3.2, 0.5]]) { P.torus(x, 0.35, z, 0.33, 0.03, 'ironDark', { ry: r, seg: 12 }); P.torus(x + Math.cos(r) * 1.0, 0.35, z - Math.sin(r) * 1.0, 0.33, 0.03, 'ironDark', { ry: r, seg: 12 }); P.obox(x + Math.cos(r) * 0.5, 0.45, z - Math.sin(r) * 0.5, 0.06, 0.3, 1.0, r + Math.PI / 2, 'carRed', { prop: 1 }); }
     // --- the gardens: fences, the sprinkler, a shed; Mira's gate into the back lane --------------------------------

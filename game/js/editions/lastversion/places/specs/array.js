@@ -94,7 +94,7 @@ export default {
           for (const [g0, g1] of [...gaps, [x1, x1]]) {
             if (g0 > u) {
               if (st === 'FUTURE') P.obox((u + g0) / 2, -0.4, z, g0 - u, 2.0, 1.4, 0, 'drumRack', { rz: 0.06, solid: true, t: 0xc8a070 });
-              else if (st === 'PAST') { for (let x = u + 1; x < g0 - 1; x += 3) prop(P, 'crate', x, z, 0.2); P.col([u, 0, z - 0.6, g0, 1.1, z + 0.6]); }
+              else if (st === 'PAST') { for (let x = u + 1; x < g0 - 1; x += 3) prop(P, 'packingCrate', x, z, 0.2, { solid: false }); P.col([u, 0, z - 0.6, g0, 1.1, z + 0.6]); }
               else { P.box([u, 0, z - 0.6, g0, 2.4, z + 0.6], 'drumRack'); for (let x = u + 1; x < g0; x += 2.2) P.vbox([x, 1.9, z + 0.6, x + 0.3, 2.1, z + 0.64], 'redBeacon', { noShadow: 1, prop: 1 }); }
             }
             u = g1;

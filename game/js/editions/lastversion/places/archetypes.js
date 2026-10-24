@@ -158,9 +158,27 @@ export function wall(P, x0, z0, x1, z1, h, t, m, o = {}) {
 }
 
 // a railing or parapet: a low wall whose collider is taller (nobody climbs over it)
+// (closing: visuals) a railing of metal or timber is posts and rails you see through, not a painted slab: a top rail, a
+// mid rail and a kick rail, a post every 1.5 m (none in an opening); stone, glass and hedges stay parapets. It collides
+// as before (an invisible wall, o.block high)
+const OPEN_RAIL = new Set(['steel', 'ironDark', 'rust', 'brass', 'bronze', 'bronzeAged', 'gratingSteel', 'scaffold', 'wood', 'timber', 'quayTimber', 'pontoonWood']);
 export function railing(P, x0, z0, x1, z1, h, m, o = {}) {
   const y = o.y ?? 0;
-  wall(P, x0, z0, x1, z1, h, o.t ?? 0.2, m, { ...o, solid: false, y });
+  if (o.open ?? OPEN_RAIL.has(m)) {
+    const { t: _t, ...q } = o; // (o.t is the slab's thickness: P.box would read it as a tint)
+    const rail = (dy, th) => wall(P, x0, z0, x1, z1, th, th, m, { ...q, solid: false, y: y + dy, noShadow: 1 });
+    rail(h - 0.07, 0.07);
+    rail(h * 0.52, 0.045);
+    rail(0.1, 0.045);
+    const len = Math.hypot(x1 - x0, z1 - z0), ux = (x1 - x0) / len, uz = (z1 - z0) / len;
+    const n = Math.max(1, Math.round(len / 1.5));
+    for (let i = 0; i <= n; i++) {
+      const u = (len * i) / n;
+      if ((o.openings || []).some(([a, b]) => u > a + 0.05 && u < b - 0.05)) continue;
+      const px = x0 + ux * u, pz = z0 + uz * u;
+      P.vbox([px - 0.04, y, pz - 0.04, px + 0.04, y + h, pz + 0.04], m, { prop: 1, noShadow: 1 });
+    }
+  } else wall(P, x0, z0, x1, z1, h, o.t ?? 0.2, m, { ...o, solid: false, y });
   if (o.solid !== false) wall(P, x0, z0, x1, z1, o.block ?? 1.6, 0.3, m, { ...o, vis: false, y });
 }
 
@@ -298,7 +316,10 @@ function shopRoom(P, { side, x0, z0, x1, z1, y, deep, lo, hi, spans, m, t, shop 
         const [cx, , cz] = box(k, k, deep - 0.4, deep - 0.4, y, y);
         prop(P, 'washer', cx, cz, face, { y, solid: true });
       }
-      P.box(box(a + 0.8, a + 3.8, 0.8, 1.2, y, y + 0.45), 'wood', { prop: 1 });
+      // the bench: a slatted seat on three legs, collided as one box
+      P.col(box(a + 0.8, a + 3.8, 0.8, 1.2, y, y + 0.45));
+      for (const k of [0, 1, 2]) P.vbox(box(a + 0.8, a + 3.8, 0.82 + k * 0.13, 0.93 + k * 0.13, y + 0.4, y + 0.45), 'wood', { prop: 1 });
+      for (const k of [a + 0.95, a + 2.3, a + 3.65]) P.vbox(box(k - 0.04, k + 0.04, 0.85, 1.15, y, y + 0.4), 'ironDark', { prop: 1, noShadow: 1 });
       P.box(box(b - 3.4, b - 0.6, deep - 1.6, deep - 1.0, y, y + 0.9), 'counterTop', { prop: 1 });
     } else if (kind === 'cafe') {
       // a counter with its machine at one end, little round tables and their chairs along the glass

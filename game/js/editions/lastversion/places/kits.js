@@ -17,8 +17,9 @@ const _mats = new Map();
 function mat(color, o = {}) {
   const k = `${color}|${JSON.stringify(o)}`;
   if (!_mats.has(k)) {
-    const map = o.tex ? texOf(o.tex) : null;
-    const m = o.basic ? new THREE.MeshBasicMaterial({ color, transparent: !!o.opacity, opacity: o.opacity ?? 1 }) : new THREE.MeshStandardMaterial({ color, map, roughness: o.rough ?? 0.75, metalness: o.metal ?? 0, emissive: o.emissive ?? 0, transparent: !!o.opacity, opacity: o.opacity ?? 1, depthWrite: !o.opacity });
+    // (a piece with no texture of its own wears its finish's: brushed metal, worn paint, grimy matte; a lit one none)
+    const map = o.tex ? texOf(o.tex) : o.basic || o.opacity ? null : texOf((o.metal ?? 0) > 0.5 ? 'metal' : (o.rough ?? 0.75) > 0.85 ? 'matte' : 'satin');
+    const m = o.basic ? new THREE.MeshBasicMaterial({ color, map, transparent: !!o.opacity, opacity: o.opacity ?? 1 }) : new THREE.MeshStandardMaterial({ color, map, roughness: o.rough ?? 0.75, metalness: o.metal ?? 0, emissive: o.emissive ?? 0, transparent: !!o.opacity, opacity: o.opacity ?? 1, depthWrite: !o.opacity });
     m.userData.keep = true;
     _mats.set(k, m);
   }
@@ -62,10 +63,10 @@ const KITS = {
   carvedStone(g) { box(g, 0.7, 0.5, 0.5, 0xd8d0c0, 0, 0, 0, { ...STONE, ry: 0.3 }); notches(g, 0.6, 0.3, 0.26, 0x3a342a, 0.15); },
   stele(g) { box(g, 1.6, 2.6, 0.4, 0xd0c8b8, 0, 0, 0, STONE); notches(g, 1.4, 2.0, 0.21, 0x3a342a, 0.6); },
   altar(g) { box(g, 1.4, 0.8, 0.9, 0xc8c0b0, 0, 0, 0, STONE); box(g, 1.5, 0.08, 1.0, 0xb8b0a0, 0, 0.8, 0, STONE); },
-  riverStone(g) { const m = new THREE.Mesh(new THREE.SphereGeometry(0.42, 10, 8), mat(0x7a7a70, { rough: 0.9 })); m.scale.set(1.2, 0.7, 1); m.position.y = 0.3; g.add(m); },
+  riverStone(g) { const m = new THREE.Mesh(new THREE.SphereGeometry(0.42, 10, 8), mat(0xb0b0a4, STONE)); m.scale.set(1.2, 0.7, 1); m.position.y = 0.3; g.add(m); },
   sluice(g) { box(g, 0.25, 1.6, 0.25, 0xb08a60, -0.7, 0, 0, WOOD); box(g, 0.25, 1.6, 0.25, 0xb08a60, 0.7, 0, 0, WOOD); box(g, 1.6, 0.25, 0.25, 0xb08a60, 0, 1.5, 0, WOOD); box(g, 1.2, 0.9, 0.06, 0xa07a50, 0, 0.4, 0.02, WOOD); cyl(g, 0.08, 1.0, 0x6a4a2a, 0, 0.5, 0.2); },
   muralPanel(g) { box(g, 1.4, 1.6, 0.12, 0xffffff, 0, 0, 0, { rough: 0.9, tex: 'mural' }); },
-  cairn(g) { for (let i = 0; i < 4; i++) { const m = new THREE.Mesh(new THREE.SphereGeometry(0.4 - i * 0.07, 8, 6), mat(0x8a8478, { rough: 0.95 })); m.scale.y = 0.6; m.position.y = 0.2 + i * 0.26; g.add(m); } },
+  cairn(g) { for (let i = 0; i < 4; i++) { const m = new THREE.Mesh(new THREE.SphereGeometry(0.4 - i * 0.07, 8, 6), mat(0xc0bab0, STONE)); m.scale.y = 0.6; m.position.y = 0.2 + i * 0.26; m.rotation.y = i * 1.3; g.add(m); } },
   // the observatory: a bronze plate on a stone post, a shard, the dates ring
   bronzePlate(g) { box(g, 0.4, 1.0, 0.4, 0xd0c4ac, 0, 0, 0, STONE); box(g, 0.9, 0.06, 0.6, 0xa8743a, 0, 1.0, 0, { metal: 0.8, rough: 0.35, rx: -0.4 }); },
   bronzeShard(g) { box(g, 0.5, 0.06, 0.3, 0x7a5a38, 0, 0.6, 0, { metal: 0.7, rough: 0.45, ry: 0.6 }); box(g, 0.6, 0.6, 0.6, 0xd0c4ac, 0, 0, 0, STONE); },
@@ -73,13 +74,13 @@ const KITS = {
   // Rain City: a news box, a phone booth, an ad board
   newsBox(g) { box(g, 0.5, 0.95, 0.45, 0x4a7aaa, 0, 0, 0, PANEL); box(g, 0.42, 0.3, 0.02, 0xffffff, 0, 0.55, 0.23, PAPER); },
   phoneBooth(g) { box(g, 1.0, 2.3, 1.0, 0x4a5058, 0, 0, 0, PANEL); box(g, 0.8, 1.3, 0.02, 0x9fd8ff, 0, 0.8, 0.51, { basic: true, opacity: 0.4 }); },
-  adBoard(g) { box(g, 0.2, 2.2, 0.2, 0x2a2e34); box(g, 1.8, 1.0, 0.12, 0xbfe4ff, 0, 1.6, 0, { basic: true }); },
+  adBoard(g) { box(g, 0.2, 2.2, 0.2, 0x4a4e54, 0, 0, 0, { metal: 0.6, rough: 0.4 }); box(g, 1.96, 1.16, 0.16, 0x3a3e44, 0, 1.52, -0.02, { metal: 0.6, rough: 0.4 }); box(g, 1.8, 1.0, 0.04, 0xffffff, 0, 1.6, 0.06, { basic: true, tex: 'poster' }); box(g, 1.8, 1.0, 0.04, 0xffffff, 0, 1.6, -0.1, { basic: true, tex: 'poster', ry: Math.PI }); },
   // Helix: a lectern with a file, a recorder on a stand, a glass case, a staff badge on a peg
   lectern(g) { box(g, 0.5, 1.0, 0.4, 0xf0f2f4, 0, 0, 0, PANEL); box(g, 0.7, 0.05, 0.5, 0xe0e4e8, 0, 1.0, 0, { ...PANEL, rx: -0.35 }); box(g, 0.4, 0.03, 0.3, 0xffffff, 0, 1.06, 0.03, { ...PAPER, rx: -0.35 }); },
   recorder(g) { box(g, 0.35, 1.0, 0.35, 0x5a5e64, 0, 0, 0, PANEL); box(g, 0.5, 0.18, 0.35, 0x2a2d32, 0, 1.0); ring(g, 0.06, 0.015, 0x9aa0a6, -0.1, 1.2, 0.0, { metal: 0.6 }); ring(g, 0.06, 0.015, 0x9aa0a6, 0.1, 1.2, 0.0, { metal: 0.6 }); box(g, 0.08, 0.06, 0.02, 0xff6a48, 0.15, 1.08, 0.18, { basic: true }); },
   fileFolder(g) { box(g, 0.32, 0.03, 0.42, 0xd8c08a, 0, 0.78); box(g, 0.28, 0.01, 0.38, 0xffffff, 0, 0.81, 0, PAPER); },
   glassCase(g) { box(g, 0.9, 1.0, 0.6, 0xe8ecf0, 0, 0, 0, PANEL); box(g, 0.86, 0.6, 0.56, 0xcfe4ff, 0, 1.0, 0, { basic: true, opacity: 0.25 }); },
-  badge(g) { box(g, 0.1, 0.14, 0.02, 0xeef0f2, 0, 1.4); },
+  badge(g) { box(g, 0.06, 1.5, 0.06, 0x8a9096, 0, 0, 0, { metal: 0.6, rough: 0.4 }); box(g, 0.5, 0.06, 0.12, 0x8a9096, 0, 1.5, 0.04, { metal: 0.6, rough: 0.4 }); box(g, 0.1, 0.14, 0.02, 0xffffff, 0.12, 1.3, 0.1, PAPER); cyl(g, 0.006, 0.2, 0x3f6aa8, 0.12, 1.4, 0.1); box(g, 0.1, 0.14, 0.02, 0xffffff, -0.12, 1.32, 0.1, PAPER); },
   // Old Town: a ledger on a shop counter, a brass plate, a clock case, the escapement on its bench
   ledger(g) { box(g, 1.2, 0.95, 0.6, 0x9a7050, 0, 0, 0, WOOD); box(g, 0.5, 0.06, 0.36, 0x6a2a1a, 0, 0.95); box(g, 0.46, 0.02, 0.34, 0xffffff, 0, 1.0, 0, PAPER); },
   brassPlate(g) { box(g, 0.5, 0.35, 0.03, 0xc89a4a, 0, 1.1, 0, { metal: 0.85, rough: 0.3 }); },
@@ -100,19 +101,19 @@ const KITS = {
   tagPlate(g) { box(g, 0.9, 0.9, 0.1, 0x7a8088, 0, 0, 0, PANEL); box(g, 0.3, 0.2, 0.02, 0xffc44a, 0, 0.7, 0.06); },
   switchPanel(g) { box(g, 1.2, 1.8, 0.5, 0x8a9098, 0, 0, 0, PANEL); box(g, 0.2, 0.4, 0.1, 0xff6a48, -0.3, 1.1, 0.28); box(g, 0.2, 0.4, 0.1, 0x9fd8ff, 0.3, 1.1, 0.28); },
   // the hospital: a chart board on wheels, a whiteboard, a wristband in a tray, a bedside cabinet
-  chartBoard(g) { box(g, 0.6, 0.06, 0.4, 0xd0d4d8, 0, 0.1); box(g, 0.06, 1.2, 0.06, 0xd0d4d8, 0, 0.1); box(g, 0.5, 0.65, 0.04, 0xf4f6f8, 0, 1.0, 0, { rx: -0.2 }); },
-  whiteboard(g) { box(g, 1.8, 1.1, 0.06, 0xf8f8f8, 0, 0.9); box(g, 1.9, 0.06, 0.12, 0x9aa0a6, 0, 0.85); box(g, 0.08, 0.9, 0.08, 0x9aa0a6, -0.8); box(g, 0.08, 0.9, 0.08, 0x9aa0a6, 0.8); },
-  wristband(g) { box(g, 0.5, 0.8, 0.4, 0xe8eef0); box(g, 0.2, 0.02, 0.06, 0x3f9cff, 0, 0.81); },
-  bedside(g) { box(g, 0.6, 0.8, 0.5, 0xe8eef0); box(g, 0.5, 0.04, 0.4, 0xc8d0d4, 0, 0.8); cyl(g, 0.05, 0.25, 0xe86a9c, 0.1, 0.82, 0); },
+  chartBoard(g) { box(g, 0.6, 0.06, 0.4, 0xd0d4d8, 0, 0.1, 0, { metal: 0.6, rough: 0.4 }); for (const x of [-0.25, 0.25]) for (const z of [-0.15, 0.15]) cyl(g, 0.04, 0.04, 0x2a2e34, x, 0.02, z, { rx: Math.PI / 2 }); box(g, 0.06, 1.2, 0.06, 0xd0d4d8, 0, 0.1, 0, { metal: 0.6, rough: 0.4 }); box(g, 0.5, 0.65, 0.04, 0xf4f6f8, 0, 1.0, 0, { ...PANEL, rx: -0.2 }); box(g, 0.42, 0.56, 0.01, 0xffffff, 0, 1.04, 0.03, { ...PAPER, rx: -0.2 }); },
+  whiteboard(g) { box(g, 1.8, 1.1, 0.06, 0xffffff, 0, 0.9, 0, { tex: 'whiteboard', rough: 0.3 }); box(g, 1.9, 0.06, 0.12, 0x9aa0a6, 0, 0.85, 0, { metal: 0.6, rough: 0.4 }); box(g, 0.08, 0.9, 0.08, 0x9aa0a6, -0.8, 0, 0, { metal: 0.6, rough: 0.4 }); box(g, 0.08, 0.9, 0.08, 0x9aa0a6, 0.8, 0, 0, { metal: 0.6, rough: 0.4 }); },
+  wristband(g) { for (const y of [0.25, 0.8]) box(g, 0.6, 0.03, 0.42, 0xd8dce0, 0, y, 0, { metal: 0.6, rough: 0.35 }); for (const x of [-0.28, 0.28]) for (const z of [-0.19, 0.19]) box(g, 0.03, 0.83, 0.03, 0xc0c4c8, x, 0, z, { metal: 0.6, rough: 0.35 }); box(g, 0.4, 0.04, 0.28, 0xe8f0f4, 0, 0.83, 0, PANEL); ring(g, 0.06, 0.012, 0x3f9cff, 0, 0.88, 0, { rx: Math.PI / 2 }); box(g, 0.14, 0.01, 0.1, 0xffffff, 0.1, 0.87, 0.05, PAPER); box(g, 0.3, 0.12, 0.2, 0xb8d8f0, 0, 0.28, 0, { rough: 0.6 }); },
+  bedside(g) { box(g, 0.6, 0.8, 0.5, 0xe8eef0, 0, 0, 0, PANEL); for (const y of [0.32, 0.6]) { box(g, 0.54, 0.01, 0.02, 0x9aa0a6, 0, y, 0.25); box(g, 0.14, 0.03, 0.03, 0x9aa0a6, 0, y - 0.1, 0.26, { metal: 0.6, rough: 0.35 }); } box(g, 0.5, 0.04, 0.4, 0xc8d0d4, 0, 0.8, 0, PANEL); cyl(g, 0.05, 0.25, 0xe86a9c, 0.1, 0.82, 0); box(g, 0.16, 0.02, 0.12, 0xffffff, -0.12, 0.84, 0.05, PAPER); },
   // the port: a field-order board on an easel among sandbags, a sign on sandbags, a helmet, a device case
   fieldBoard(g) { box(g, 1.4, 0.5, 0.8, 0xc8b88a, 0, 0, 0, CANVAS); box(g, 0.08, 1.8, 0.08, 0x5a4a3a, -0.5, 0.3, -0.2, { rx: 0.15 }); box(g, 0.08, 1.8, 0.08, 0x5a4a3a, 0.5, 0.3, -0.2, { rx: 0.15 }); box(g, 1.1, 0.8, 0.03, 0xffffff, 0, 1.1, -0.05, { ...PAPER, rx: -0.15 }); },
   sandbagSign(g) { box(g, 1.8, 0.9, 0.9, 0xc8b88a, 0, 0, 0, CANVAS); box(g, 1.4, 0.7, 0.04, 0xd8c8a0, 0, 1.0, 0.1, WOOD); },
-  helmet(g) { box(g, 0.7, 0.6, 0.7, 0x5a5048); const m = new THREE.Mesh(new THREE.SphereGeometry(0.17, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2), mat(0x4a5a64, { rough: 0.6 })); m.position.y = 0.6; g.add(m); },
+  helmet(g) { for (const [x, y, z, ry] of [[-0.3, 0, 0, 0.05], [0.3, 0, 0.02, -0.04], [0, 0.26, 0, 0.1]]) { const m = new THREE.Mesh(new THREE.SphereGeometry(0.3, 10, 6), mat(0xc8b88a, CANVAS)); m.scale.set(1.1, 0.45, 0.75); m.position.set(x, y + 0.14, z); m.rotation.y = ry; g.add(m); } const m = new THREE.Mesh(new THREE.SphereGeometry(0.17, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2), mat(0x4a5a46, { rough: 0.6 })); m.position.y = 0.52; g.add(m); ring(g, 0.17, 0.015, 0x3a4a36, 0, 0.52, 0, { rx: Math.PI / 2 }); },
   deviceCase(g) { box(g, 0.9, 0.5, 0.6, 0x4a5058, 0, 0, 0, PANEL); box(g, 0.5, 0.04, 0.3, 0xffc44a, 0, 0.5, 0, { emissive: 0x442200 }); },
   // the lagoon city: a beacon case, a warden's sign, a stack of stones, the memorial's core plinth
   beaconCase(g) { box(g, 0.8, 0.8, 0.5, 0xb09a78, 0, 0, 0, WOOD); box(g, 0.6, 0.1, 0.3, 0x9fff7a, 0, 0.8, 0, { emissive: 0x204010 }); },
   wardenSign(g) { box(g, 0.1, 2.0, 0.1, 0x7a4a2a); box(g, 1.4, 0.8, 0.05, 0xe8d8b8, 0, 1.5, 0.05, { ...WOOD, rz: 0.05 }); box(g, 1.4, 0.12, 0.06, 0xb83a2a, 0, 1.85, 0.05, { rz: 0.05 }); },
-  stackedStones(g) { for (let i = 0; i < 4; i++) box(g, 0.5 - i * 0.08, 0.16, 0.4 - i * 0.06, 0x8a8a7a, (i % 2) * 0.04, i * 0.16, 0, { ry: i * 0.6 }); },
+  stackedStones(g) { for (let i = 0; i < 4; i++) box(g, 0.5 - i * 0.08, 0.16, 0.4 - i * 0.06, 0xc8c8b8, (i % 2) * 0.04, i * 0.16, 0, { ...STONE, ry: i * 0.6 }); },
   memorialCore(g) { box(g, 1.2, 1.0, 1.2, 0xe0dcd0, 0, 0, 0, STONE); cyl(g, 0.2, 0.3, 0xc9b8ff, 0, 1.0, 0, { emissive: 0x302050 }); },
   // the lock city: a timetable board, the archive's card cabinet, the register on a lectern, the lock console
   timetable(g) { box(g, 0.12, 2.6, 0.12, 0x5a5a60, -1.0); box(g, 0.12, 2.6, 0.12, 0x5a5a60, 1.0); box(g, 2.2, 1.0, 0.12, 0x1a1c22, 0, 1.6); for (let i = 0; i < 4; i++) box(g, 1.9, 0.12, 0.02, 0xffc860, 0, 1.7 + i * 0.2, 0.07); },
@@ -125,7 +126,7 @@ const KITS = {
   curioBox(g) { box(g, 0.6, 0.9, 0.6, 0xa08a6a, 0, 0, 0, WOOD); box(g, 0.3, 0.2, 0.25, 0x9a7a4a, 0, 0.9, 0, { metal: 0.5, rough: 0.5 }); },
   reelStand(g) { box(g, 0.5, 1.0, 0.4, 0x7a6a5a, 0, 0, 0, WOOD); ring(g, 0.22, 0.05, 0x4a3a2a, -0.13, 1.25, 0); ring(g, 0.22, 0.05, 0x4a3a2a, 0.13, 1.25, 0); },
   // the desert array: a rack of recording drums, a tag on a dish rail, an evidence tray, a reel player
-  drumRack(g) { box(g, 1.6, 2.0, 0.6, 0x3a3e44, 0, 0, 0, { metal: 0.5 }); for (let i = 0; i < 3; i++) cyl(g, 0.2, 0.5, 0xc89a4a, -0.5 + i * 0.5, 1.2, 0.2, { rz: Math.PI / 2, metal: 0.7 }); },
+  drumRack(g) { box(g, 1.6, 2.0, 0.6, 0x5a5e64, 0, 0, 0, PANEL); for (let i = 0; i < 3; i++) cyl(g, 0.2, 0.5, 0xc89a4a, -0.5 + i * 0.5, 1.2, 0.2, { rz: Math.PI / 2, metal: 0.7 }); for (let i = 0; i < 3; i++) box(g, 0.2, 0.08, 0.02, 0xff3a2a, -0.5 + i * 0.5, 0.5, 0.31, { basic: true }); },
   recordingTag(g) { box(g, 0.12, 1.4, 0.12, 0x8a9096); box(g, 0.6, 0.4, 0.03, 0xff3a2a, 0, 1.2, 0.07); },
   evidenceTray(g) { box(g, 1.0, 0.85, 0.6, 0x8a8078, 0, 0, 0, PANEL); box(g, 0.9, 0.06, 0.5, 0x9aa0a6, 0, 0.85); box(g, 0.3, 0.01, 0.4, 0xffffff, -0.2, 0.91, 0, PAPER); },
   reelPlayer(g) { box(g, 0.9, 1.0, 0.5, 0x8a7058, 0, 0, 0, WOOD); ring(g, 0.2, 0.04, 0x2a2420, -0.2, 1.25, 0.1); ring(g, 0.2, 0.04, 0x2a2420, 0.2, 1.25, 0.1); },
@@ -137,18 +138,18 @@ const KITS = {
   // the Unwritten Second: a symbol stone, a mirror plate, a chalk mark, a door frame standing alone
   symbolStone(g) { box(g, 0.9, 1.1, 0.4, 0xfffcf4, 0, 0, 0, STONE); ring(g, 0.25, 0.04, 0xd8b060, 0, 0.75, 0.21); },
   mirrorPlate(g) { box(g, 1.6, 0.06, 1.0, 0xe8e4f8, 0, 0.02); box(g, 0.1, 1.0, 0.1, 0xd8b060, -0.75); },
-  chalkMark(g) { box(g, 0.6, 0.4, 0.6, 0xe4e0d8, 0, 0, 0, { ry: 0.4 }); },
-  doorFrame(g) { box(g, 0.12, 2.3, 0.15, 0xf4f4f0, -0.55); box(g, 0.12, 2.3, 0.15, 0xf4f4f0, 0.55); box(g, 1.22, 0.12, 0.15, 0xf4f4f0, 0, 2.3); },
+  chalkMark(g) { box(g, 0.9, 0.18, 0.7, 0xe8e4dc, 0, 0, 0, { ...STONE, ry: 0.4 }); for (const [x, z, w, d, ry] of [[0, 0, 0.6, 0.03, 0.4], [0, 0, 0.03, 0.5, 0.4], [-0.18, 0.1, 0.2, 0.03, 1.2]]) box(g, w, 0.005, d, 0xffffff, x, 0.18, z, { basic: true, ry }); ring(g, 0.16, 0.012, 0xffffff, 0.1, 0.185, -0.05, { rx: Math.PI / 2, basic: true }); },
+  doorFrame(g) { const W = { rough: 0.7, tex: 'wood' }; box(g, 0.12, 2.3, 0.15, 0xf4f0e8, -0.55, 0, 0, W); box(g, 0.12, 2.3, 0.15, 0xf4f0e8, 0.55, 0, 0, W); box(g, 1.22, 0.12, 0.15, 0xf4f0e8, 0, 2.3, 0, W); box(g, 1.3, 0.06, 0.3, 0xd8d0c0, 0, 0, 0, STONE); cyl(g, 0.03, 0.03, 0xc89a4a, 0.42, 1.0, 0.09, { rx: Math.PI / 2, metal: 0.8, rough: 0.3 }); },
   // Mira's memory: a note on a fridge, the drawing in a frame, a keepsake box, a child's chair
   fridgeNote(g) { box(g, 0.7, 1.8, 0.6, 0xf8f8f4, 0, 0, 0, PANEL); box(g, 0.25, 0.3, 0.01, 0xfff0a0, 0.1, 1.2, 0.305, PAPER); box(g, 0.04, 0.4, 0.03, 0x9aa0a6, -0.28, 1.0, 0.31, { metal: 0.6 }); },
   drawingFrame(g) { box(g, 0.1, 1.2, 0.1, 0x8a6a4a); box(g, 0.9, 0.7, 0.04, 0xffffff, 0, 1.2, 0.04, { rough: 0.9, tex: 'mural' }); },
   keepsake(g) { box(g, 0.5, 0.75, 0.4, 0xffffff, 0, 0, 0, { rough: 0.9, tex: 'cardboard' }); box(g, 0.3, 0.12, 0.2, 0xffd040, 0, 0.75); },
-  memoryChair(g) { box(g, 0.45, 0.45, 0.45, 0xffd040); box(g, 0.45, 0.5, 0.06, 0xffd040, 0, 0.45, -0.2); },
+  memoryChair(g) { const Y = { rough: 0.6, tex: 'wood' }; box(g, 0.42, 0.05, 0.4, 0xffd860, 0, 0.3, 0, Y); for (const x of [-0.18, 0.18]) for (const z of [-0.17, 0.17]) box(g, 0.04, 0.3, 0.04, 0xffd860, x, 0, z, Y); for (const x of [-0.18, 0.18]) box(g, 0.04, 0.42, 0.04, 0xffd860, x, 0.35, -0.17, Y); for (const y of [0.5, 0.68]) box(g, 0.4, 0.07, 0.03, 0xffd860, 0, y, -0.17, Y); },
   // the Spire: a black lectern, an order screen, an elite's badge on a plinth, the citadel console
-  commandLectern(g) { box(g, 0.5, 1.0, 0.4, 0x2a2c32, 0, 0, 0, { metal: 0.4 }); box(g, 0.7, 0.05, 0.5, 0x1a3a6a, 0, 1.0, 0, { rx: -0.35, emissive: 0x0a1a30 }); },
-  orderScreen(g) { box(g, 0.12, 1.4, 0.12, 0x2a2c32); box(g, 1.6, 1.0, 0.06, 0x0a1a30, 0, 1.4, 0, { emissive: 0x0a2040 }); },
-  eliteBadge(g) { box(g, 0.6, 0.9, 0.6, 0x2a2c32); ring(g, 0.14, 0.03, 0xffc44a, 0, 1.05, 0, { metal: 0.8 }); },
-  citadelConsole(g) { box(g, 1.6, 1.0, 0.8, 0x2a2c32, 0, 0, 0, { metal: 0.5 }); box(g, 1.2, 0.04, 0.5, 0x9fd8ff, 0, 1.0, 0, { emissive: 0x103040 }); },
+  commandLectern(g) { box(g, 0.5, 1.0, 0.4, 0x5a5c62, 0, 0, 0, PANEL); box(g, 0.6, 0.06, 0.5, 0x2a2c32, 0, 0, 0, { metal: 0.6, rough: 0.4 }); box(g, 0.7, 0.05, 0.5, 0x1a3a6a, 0, 1.0, 0, { rx: -0.35, emissive: 0x0a1a30 }); box(g, 0.08, 0.6, 0.02, 0xc8a040, 0, 0.3, 0.21, { metal: 0.8, rough: 0.3 }); },
+  orderScreen(g) { box(g, 0.12, 1.4, 0.12, 0x4a4c52, 0, 0, 0, { metal: 0.6, rough: 0.4 }); box(g, 0.8, 0.06, 0.5, 0x4a4c52, 0, 0, 0, { metal: 0.6, rough: 0.4 }); box(g, 1.7, 1.1, 0.08, 0x2a2c32, 0, 1.35, -0.02, PANEL); box(g, 1.6, 1.0, 0.06, 0x0a1a30, 0, 1.4, 0, { emissive: 0x0a2040 }); for (let i = 0; i < 4; i++) box(g, 1.2 - i * 0.2, 0.06, 0.01, 0x9fd8ff, -0.1, 2.15 - i * 0.18, 0.035, { basic: true }); },
+  eliteBadge(g) { box(g, 0.6, 0.9, 0.6, 0x5a5a62, 0, 0, 0, STONE); box(g, 0.7, 0.08, 0.7, 0x3a3a42, 0, 0.9, 0, STONE); ring(g, 0.14, 0.03, 0xffc44a, 0, 1.12, 0, { metal: 0.8 }); },
+  citadelConsole(g) { box(g, 1.6, 1.0, 0.8, 0x4a4c52, 0, 0, 0, PANEL); box(g, 1.2, 0.04, 0.5, 0x9fd8ff, 0, 1.0, 0, { emissive: 0x103040 }); for (let i = 0; i < 6; i++) box(g, 0.08, 0.04, 0.08, [0xff6a48, 0xffc44a, 0x7fe0a8][i % 3], -0.6 + i * 0.24, 1.0, 0.32, { basic: true }); },
   // the composites: the evidence table, the chain wall, a quote stone, a seal plinth
   evidenceTable(g) { box(g, 2.0, 0.85, 0.9, 0x8a6a4a, 0, 0, 0, WOOD); for (let i = 0; i < 4; i++) box(g, 0.3, 0.02, 0.4, 0xffffff, -0.7 + i * 0.47, 0.86, 0, { ...PAPER, ry: (i - 1.5) * 0.15 }); },
   chainWall(g) { box(g, 2.4, 2.0, 0.4, 0xd0c8b8, 0, 0, 0, STONE); box(g, 2.0, 1.4, 0.02, 0xffffff, 0, 0.4, 0.21, PAPER); },

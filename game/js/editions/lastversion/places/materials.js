@@ -130,6 +130,9 @@ export const MATS = {
   chamberPanel: D('chamberPanel', 0xffffff), chamberGrid: D('chamberGrid', 0xffffff, 'ground'), chamberLights: D('chamberCeiling', 0xf4f8ff), pencil: D('matte', 0x30323a),
   // Mission 11's rain in the discontinuity court: streaks falling on its west half, rising on its east (animated: tickSurfaces)
   rainUp: D('rainUp', 0xe0d4ff), rainDown: D('rainDown', 0xd0e4f4),
+  // Mission 22's 2049 beam from the ring into the eclipse: its sheath of light (unlit, faint: a lit grey smoke had drawn a
+  // dark line down the sky)
+  beamHalo: D('halo', 0x9fd8ff, 'modern'),
   // the years of Mission 22's chamber: 2026's site hoarding round the concrete half
   siteHoarding: D('hoarding', 0xffffff, 'modern'),
 };
@@ -137,7 +140,10 @@ export const MATS = {
 // the shared surfaces: a finish, and a painter (or a scan) for the textured ones
 //   tile: metres per texture repeat; cast: whether it casts shadows
 export const SURFACES = {
-  matte: { rough: 0.92 }, satin: { rough: 0.5, metal: 0.08 }, metal: { rough: 0.36, metal: 0.72 }, cloth: { rough: 0.95, side: 2 },
+  // (closing: visuals) the plain finishes are never flat colour: matte with its grime, satin paint with its wear, metal
+  // brushed and scratched, cloth with its weave and folds (each near white, so the tint keeps its colour)
+  matte: { paint: 'wearMatte', tile: 2.2, rough: 0.92 }, satin: { paint: 'wearSatin', tile: 2.4, rough: 0.5, metal: 0.08 }, metal: { paint: 'wearMetal', tile: 1.8, rough: 0.36, metal: 0.72 },
+  cloth: { paint: 'wearCloth', tile: 1.6, rough: 0.95, side: 2 },
   glow: { basic: true, cast: false }, glass: { rough: 0.06, metal: 0.25, opacity: 0.32, cast: false }, smoke: { rough: 1, opacity: 0.22, cast: false },
   water: { rough: 0.06, metal: 0.15, opacity: 0.86, water: true, cast: false },
   mirror: { rough: 0.03, metal: 0.25, opacity: 0.5, cast: false }, // (M19's salt mirror: what stands below it shows through as its reflection)
@@ -168,7 +174,9 @@ export const SURFACES = {
   chamberCeiling: { paint: 'lightGrid', tile: [7, 7], basic: true, cast: false },
   rainUp: { paint: 'rainRise', tile: [1.5, 3], basic: true, opacity: 0.85, cast: false, scroll: [0, -0.5] },
   rainDown: { paint: 'rainStreaks', tile: [1.5, 3], basic: true, opacity: 0.75, cast: false, scroll: [0, 1.4] },
-  hoarding: { paint: 'hoarding', tile: [6, 2.4], rough: 0.8 },
+  hoarding: { paint: 'hoarding', tile: [6, 2.4], rough: 0.8 }, halo: { basic: true, opacity: 0.18, cast: false, side: 2 },
+  // a sheet of paper with its writing, a whiteboard in marker, a lit advertisement (each face of a kit carries one)
+  paper: { paint: 'paper', fit: true, rough: 0.9 }, whiteboard: { paint: 'whiteboard', fit: true, rough: 0.3 }, poster: { paint: 'poster', fit: true, basic: true, cast: false },
 };
 
 export function surfaceOf(name) {
@@ -678,7 +686,73 @@ const PAINT = {
     for (let q = 0; q < 3; q++) { const x = w * (0.08 + q * 0.32) + r() * 10; g.fillStyle = ['#e8d8b0', '#d8e0e8', '#f0c8b0'][q]; g.fillRect(x, h * 0.5, w * 0.16, h * 0.42); g.fillStyle = 'rgba(40,40,40,0.6)'; for (let k = 0; k < 4; k++) g.fillRect(x + 6, h * 0.56 + k * h * 0.08, w * 0.12 * (0.5 + r() * 0.5), 3); }
     speckle(g, w, h, 600, r, 0.08, false);
   },
+  // --- (closing: visuals) the plain finishes' wear: near white (the tint is the colour), tileable (each mark drawn again
+  // across the edges it crosses), so a box of paint, a steel cabinet or a canvas wall reads as made and used ------------
+  wearMatte(g, s, r) {
+    g.fillStyle = '#efefef'; g.fillRect(0, 0, s, s);
+    for (let i = 0; i < 36; i++) blot(g, s, r() * s, r() * s, 12 + r() * 46, 8 + r() * 30, r() * 3, `rgba(${r() < 0.6 ? '110,100,90' : '255,255,255'},${0.035 + r() * 0.06})`);
+    speckle(g, s, s, 1400, r, 0.12, false); speckle(g, s, s, 500, r, 0.08);
+  },
+  wearSatin(g, s, r) {
+    g.fillStyle = '#f5f5f5'; g.fillRect(0, 0, s, s);
+    for (let i = 0; i < 22; i++) blot(g, s, r() * s, r() * s, 20 + r() * 60, 14 + r() * 40, r() * 3, `rgba(120,118,112,${0.025 + r() * 0.04})`);
+    for (let i = 0; i < 9; i++) { g.fillStyle = `rgba(100,98,92,${0.03 + r() * 0.04})`; g.fillRect(r() * s, 0, 1 + r() * 3, s); } // runs the full height: they tile
+    g.lineWidth = 1;
+    for (let i = 0; i < 40; i++) { const x = r() * s, y = r() * s, a = r() * 3; g.strokeStyle = `rgba(${r() < 0.5 ? '80,80,80' : '255,255,255'},${0.06 + r() * 0.1})`; g.beginPath(); g.moveTo(x, y); g.lineTo(x + Math.cos(a) * (4 + r() * 16), y + Math.sin(a) * (4 + r() * 16)); g.stroke(); }
+    speckle(g, s, s, 500, r, 0.06, false);
+  },
+  wearMetal(g, s, r) {
+    g.fillStyle = '#e4e4e4'; g.fillRect(0, 0, s, s);
+    for (let i = 0; i < 260; i++) { g.fillStyle = `rgba(${r() < 0.5 ? '255,255,255' : '60,60,60'},${0.03 + r() * 0.06})`; g.fillRect(0, r() * s, s, 1); } // brushed, across the whole tile
+    g.lineWidth = 1;
+    for (let i = 0; i < 30; i++) { const x = r() * s, y = r() * s, a = r() * 3; g.strokeStyle = `rgba(${r() < 0.5 ? '40,40,40' : '255,255,255'},${0.1 + r() * 0.12})`; g.beginPath(); g.moveTo(x, y); g.lineTo(x + Math.cos(a) * (6 + r() * 26), y + Math.sin(a) * (6 + r() * 26)); g.stroke(); }
+    for (let i = 0; i < 10; i++) blot(g, s, r() * s, r() * s, 6 + r() * 20, 4 + r() * 12, r() * 3, `rgba(90,74,60,${0.05 + r() * 0.07})`);
+  },
+  wearCloth(g, s, r) {
+    g.fillStyle = '#f2f2f2'; g.fillRect(0, 0, s, s);
+    for (let y = 0; y < s; y += 2) { g.fillStyle = `rgba(90,90,90,${0.04 + r() * 0.05})`; g.fillRect(0, y, s, 1); }
+    for (let x = 0; x < s; x += 2) { g.fillStyle = `rgba(255,255,255,${0.03 + r() * 0.05})`; g.fillRect(x, 0, 1, s); }
+    for (let i = 0; i < 6; i++) { const x = r() * s, w = 10 + r() * 30, gr = g.createLinearGradient(x, 0, x + w, 0); gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(0.5, `rgba(60,60,60,${0.05 + r() * 0.05})`); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.fillRect(x, 0, w, s); if (x + w > s) g.fillRect(x - s, 0, w, s); } // folds
+    for (let i = 0; i < 8; i++) blot(g, s, r() * s, r() * s, 10 + r() * 24, 6 + r() * 16, r() * 3, `rgba(110,96,70,${0.04 + r() * 0.05})`);
+  },
+  // a sheet of paper: off-white, a heading, rows of writing, a stamp or a signature (a kit's file, notice or order)
+  paper(g, s, r) {
+    g.fillStyle = '#f4f0e4'; g.fillRect(0, 0, s, s);
+    g.fillStyle = 'rgba(40,44,52,0.85)'; g.fillRect(s * 0.1, s * 0.08, s * (0.35 + r() * 0.3), s * 0.06);
+    for (let y = s * 0.2; y < s * 0.86; y += s * 0.055) { let x = s * 0.1; while (x < s * 0.88) { const w = s * (0.04 + r() * 0.12); if (x + w > s * 0.9) break; g.fillStyle = `rgba(50,54,62,${0.5 + r() * 0.3})`; g.fillRect(x, y, w, s * 0.018); x += w + s * 0.02; } }
+    if (r() < 0.5) { g.strokeStyle = 'rgba(180,40,40,0.6)'; g.lineWidth = 3; g.beginPath(); g.arc(s * 0.74, s * 0.8, s * 0.09, 0, Math.PI * 2); g.stroke(); }
+    else { g.strokeStyle = 'rgba(30,40,90,0.7)'; g.lineWidth = 2; g.beginPath(); g.moveTo(s * 0.6, s * 0.86); for (let i = 0; i < 6; i++) g.quadraticCurveTo(s * (0.62 + i * 0.04), s * (0.8 + (i % 2) * 0.08), s * (0.64 + i * 0.04), s * 0.86); g.stroke(); }
+    g.strokeStyle = 'rgba(120,110,90,0.4)'; g.lineWidth = 2; g.strokeRect(1, 1, s - 2, s - 2);
+  },
+  // a whiteboard: marker writing and a diagram, magnets, a smudge where it was wiped
+  whiteboard(g, s, r) {
+    g.fillStyle = '#f8f8f6'; g.fillRect(0, 0, s, s);
+    blot(g, s, s * 0.6, s * 0.5, s * 0.25, s * 0.12, 0.2, 'rgba(120,130,150,0.08)');
+    const ink = ['#2a3a8a', '#b02a2a', '#1a1a1a', '#2a7a3a'];
+    for (let row = 0; row < 6; row++) { let x = s * 0.06; const y = s * (0.12 + row * 0.1); g.strokeStyle = ink[row % 4]; g.lineWidth = 2.5; g.beginPath(); while (x < s * 0.55) { const w = s * (0.03 + r() * 0.07); g.moveTo(x, y); for (let k = 0; k < 4; k++) g.lineTo(x + (w * (k + 1)) / 4, y + (r() - 0.5) * 8); x += w + s * 0.02; } g.stroke(); }
+    g.strokeStyle = '#2a3a8a'; g.lineWidth = 3; g.strokeRect(s * 0.62, s * 0.14, s * 0.3, s * 0.22); g.beginPath(); g.moveTo(s * 0.77, s * 0.36); g.lineTo(s * 0.77, s * 0.52); g.stroke(); g.strokeRect(s * 0.64, s * 0.52, s * 0.26, s * 0.18);
+    for (const [x, y, c] of [[0.1, 0.8, '#e8c040'], [0.3, 0.84, '#d84a3a'], [0.85, 0.82, '#3a7ac8']]) { g.fillStyle = c; g.beginPath(); g.arc(s * x, s * y, s * 0.025, 0, Math.PI * 2); g.fill(); }
+    g.fillStyle = '#9aa0a6'; g.fillRect(0, 0, s, 4); g.fillRect(0, s - 4, s, 4); g.fillRect(0, 0, 4, s); g.fillRect(s - 4, 0, 4, s);
+  },
+  // a lit advertisement: a city poster (a skyline, a train, a slogan), drawn unlit: it is its own light
+  poster(g, s, r) {
+    const gr = g.createLinearGradient(0, 0, 0, s); gr.addColorStop(0, '#2a5a9a'); gr.addColorStop(1, '#c8e4ff'); g.fillStyle = gr; g.fillRect(0, 0, s, s);
+    g.fillStyle = 'rgba(20,30,50,0.55)'; for (let x = 0; x < s;) { const w = 10 + r() * 24, h = s * (0.2 + r() * 0.3); g.fillRect(x, s * 0.72 - h, w - 2, h); x += w; }
+    g.fillStyle = '#f4f4f0'; g.fillRect(0, s * 0.72, s, s * 0.28);
+    g.fillStyle = '#c83a2a'; g.fillRect(s * 0.1, s * 0.58, s * 0.6, s * 0.1); g.fillStyle = '#f8f8f8'; for (let k = 0; k < 4; k++) g.fillRect(s * (0.14 + k * 0.13), s * 0.6, s * 0.08, s * 0.04);
+    g.fillStyle = '#1a2a4a'; g.font = `bold ${(s * 0.09) | 0}px sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillText(['LINE 41', 'RAIN CITY', 'ON TIME'][(r() * 3) | 0], s * 0.5, s * 0.82); g.font = `${(s * 0.05) | 0}px sans-serif`; g.fillText('EVERY MORNING, EVERY STOP', s * 0.5, s * 0.92);
+  },
 };
+
+// a soft mark drawn again across each edge it crosses (the wear painters tile)
+function blot(g, s, x, y, rx, ry, a, fill) {
+  g.fillStyle = fill;
+  for (const dx of [0, -s, s]) for (const dy of [0, -s, s]) {
+    if ((dx && (x + dx + rx < 0 || x + dx - rx > s)) || (dy && (y + dy + ry < 0 || y + dy - ry > s))) continue;
+    g.beginPath(); g.ellipse(x + dx, y + dy, rx, ry, a, 0, Math.PI * 2); g.fill();
+  }
+}
 
 // the year a vertex belongs to (Scenery.js bakes a mask per vertex: PRESENT 1, PAST 2, FUTURE 4, and
 // 8 for a small prop): the vertex shader drops what is not of this year, and props beyond 90 m
@@ -827,10 +901,12 @@ export function namedMaterial(name) {
     map.needsUpdate = true;
     m = new THREE.MeshStandardMaterial({ map, roughness: 0.45, metalness: 0.3 });
   }
-  else if (name === 'gateSteel') m = new THREE.MeshStandardMaterial({ color: 0x5a626c, roughness: 0.5, metalness: 0.6 });
+  else if (name === 'gateSteel') m = new THREE.MeshStandardMaterial({ color: 0x5a626c, map: surfaceMaterial('metal').map, roughness: 0.5, metalness: 0.6 });
   else {
     const s = SURFACES[d?.s] || SURFACES.matte;
-    m = s.basic ? new THREE.MeshBasicMaterial({ color: d?.c ?? 0x888888 }) : new THREE.MeshStandardMaterial({ color: d?.c ?? 0x888888, roughness: s.rough ?? 0.8, metalness: s.metal ?? 0, transparent: s.opacity !== undefined, opacity: s.opacity ?? 1 });
+    // (closing: visuals) a door or a train wears its surface's picture too (a tiled one: DeckWorld's boxes repeat it every 2 m)
+    const map = s.basic || s.fit ? null : s.paint ? surfaceMaterial(d?.s in SURFACES ? d.s : 'matte').map : s.scan ? pbrTex(s.scan, 'color', 1) : null;
+    m = s.basic ? new THREE.MeshBasicMaterial({ color: d?.c ?? 0x888888 }) : new THREE.MeshStandardMaterial({ color: d?.c ?? 0x888888, map, roughness: s.rough ?? 0.8, metalness: s.metal ?? 0, transparent: s.opacity !== undefined, opacity: s.opacity ?? 1 });
   }
   m.userData.keep = true;
   _named.set(name, m);
