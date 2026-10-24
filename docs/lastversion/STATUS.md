@@ -522,6 +522,51 @@ Every line the edition says, once each: 554 lines and 7,295 words in v2.0, 2,727
   180k triangles in the scene pass (262 draw calls and 343–350k triangles for the whole frame,
   11.4–11.5 ms of JavaScript on average, 15.0–16.4 ms p95), Mission 4's THE VILLAGE 25 and 86k
   (8.0 ms) and BEFORE THE FIRE 20 and 22k (4.1 ms): all within §4.7.
+- **Voice and score after the closing pass** (2026-10-24; `git log 5d877ca..`; the player's point 1; DESIGN.md "Voice
+  and score"). SKIP and Enter skip one line and the shot it is in, never the whole opening or the mission's spoken card
+  (a tap once ended the whole opening, so a player who tapped to pass one line never heard the card): the unit test taps
+  Mission 12's cold open through line by line, the card still said; the bot presses Mission 2's cold open through to
+  its card and the card's logline, and taps one line of the PREVIOUSLY card. The score plays written music
+  (`themes.js`): the bible's nine cues as themes, note for note, each in its act or for its character (the Prologue
+  Kai's theme, Act I the Past, Act II the Nine-Minute War in 7/8 against 4/4, Act III 2196, Act IV the Unwritten
+  Second, the Finale the Final Choice, Mira's in Missions 11 and 20, the Witness's in 12, 17 and 21, the museum's
+  exhibits in 16), every one stating the bible's three-note motif; a place keeps its tune in every year on other
+  instruments, a chapter's card announces its act's theme, a mission's card the first bar of its own, and Ending A's
+  cadence is the only full major cadence in the game. `tools/score-render.mjs` renders it offline to WAV for a person
+  to hear (26 renders) and measures it: no render silent or clipping (peaks 0.04-0.24), and the tune's own pitch among
+  the two strongest at 72% of its notes or more (it found the string leads buried, at 12-28% strongest, and they now
+  sit over their chords). The ear check is Whisper's (small.en through sherpa-onnx, `tools/voice-ear.py`), not
+  pocketsphinx's: 929 distinct clips across the seven packs that have recordings (599 sampled, numbers and names first;
+  every "seventeen"; every clip recorded again, heard after it was): every "seventeen" was heard as 17 (U5's "seventy"
+  was the old recogniser's), every year, time and 41-B as the lexicon reads them. What it and a reading of every name's
+  phonemes found, fixed and recorded again (289 recordings): a -teen number now carries its stress on the -teen
+  ("seven-teen": the voice model read SEV-en-teen, close to seventy; 114 clips); Rhea was one syllable ("Ree", now
+  "Reeya") and Odile was OH-dile (now "Oh-deel"); 66 clips peaked at full scale once decoded at 48 kHz (the renderer
+  now decodes each recording back and levels it lower while it peaks above -0.5 dBFS; afterwards none of the 5,143 is
+  at full scale, the highest 0.9989); the children's voices spoke 25-40% faster than the adults round them (their
+  speed is now set back by their pitch factor; 107 clips). Still flagged by the machine: 15 clips of one to three words
+  ("Kai" heard as "Kyle", "Anja." as "Liania", "The north loggia." as "The Norse Logia"), their phonemes all as written
+  and their onsets unclipped, for a person's ear (below). The packs: 18.87 MB, the largest 3.37
+  MB, all eight up to date byte for byte, Station Zero's untouched. Each mission's crowd says its own lines
+  (`barks.js`, 3d2e463; its unit test finds no crowd line in two missions): the critic's repeated pools were already
+  gone. The bot now plays Endings A and B as well as C: from a save taken as the Finale's choice comes up, loaded from
+  the title, the choice clicked, and each ending run by the wall clock in real time while the AudioContext plays it
+  (the game's update without the drawing, which SwiftShader cannot keep up with): its shots with Kai off screen, every
+  line's decoded clips started from the packs, the voice's output and the mix sampled, its cue and the voice in every
+  speaker. It found a crowd line said over the flash before every ending's first shot (now hushed). The title and the
+  edition's APK read v2.0 / 2.0.0 again (3587bfb had set them to 2.1): the release step decides them.
+  Checked: `npm test` 160/160; the whole bot (`node tests/lastversion.mjs`, 2026-10-24, on `7a6bd38`) 358 passed, 0
+  failed, with no page error, in 33.7 minutes: Endings A and B in real time (84.3 and 86.7 s; 24 and 23 lines, every
+  line's decoded clips started from the packs, the voice heard in 2,347 of 2,975 and 2,470 of 3,139 samples), Ending C
+  with no crowd line over it, SKIP a line at a time in the PREVIOUSLY card and Mission 2's opening, every line said
+  (1,966) from the packs, `speechSynthesis` never asked, the survey's 1,657 pairs of views at least 23 bits apart. The
+  first full run (355 of 358) failed only the bot's own new crowd-line check, which counted the epilogue's people
+  (who speak as CREW) as the crowd; it now looks for the place's crowd barks. The real-time audio check (`node
+  tests/lastversion-audio.mjs`) 10/10: the Prologue's card, the cold open, Mission 1's card and the florist heard from
+  the packs, scored. `node tools/score-render.mjs <dir>` 26/26. No shared runtime file changed in this pass (only the
+  edition, its packs, the tools and the tests; Station Zero's pack keeps its sha256 in `npm test`), so `tests/smoke.mjs`
+  and `tests/qa.mjs` were not run for it. The ear check's playable page and the score's WAVs are written by the tools
+  (this pass's are in the session's scratchpad, not shipped).
 - **Longer chapters and a stronger story after the closing pass** (2026-10-24; `git log 3d2e463..`; the player's
   points 4 and 5; DESIGN.md "The closing pass, longer chapters and a stronger story"). The missions the critic
   measured as short got played threads, not narration: Mission 10 the guard post, Lin's interview reel, a prisoner
@@ -627,7 +672,8 @@ Every line the edition says, once each: 554 lines and 7,295 words in v2.0, 2,727
   APK (`EDITION=lastversion bash android/build-apk.sh`, 2026-10-21) carries `voice/lv/**` and no other
   voice: 39,995,471 bytes (U4's was 45,712,284 with Station Zero's 14 MB pack in it), its preview 47.6 MB
   with no file over 14 MB; Station Zero's APK carries its own `voice.json` and `voice.ogg` (sha256
-  unchanged) and no edition pack. The ear check
+  unchanged) and no edition pack. U5's ear check (superseded by the closing pass's: "Voice and score after the closing
+  pass" above)
   (2026-10-21) was a machine's, not a person's (this container has no audio output): the audition page
   (`tools/voice-audition.py`) took 40 of the 1,026 clips rendered for U5, half of them years, times, Jun
   and the Acts, and checked each one's length for its text, level, gaps, the phonemes Kokoro read it as,
@@ -783,16 +829,19 @@ Every line the edition says, once each: 554 lines and 7,295 words in v2.0, 2,727
   a long session keeps the models of every chapter it has visited (at most the edition's 45).
 - **Faction support** changes who answers in Mission 21 and what people say; it does not change
   patrol responses or open safe routes elsewhere (Jun's line in the Finale is the one safe route).
-- **A human ear check** of the U5 voices (the audition page above), and of the score's regions and cues,
-  has not been done: nothing in this container can play sound to a listener. The machine check above
-  stands in for it. Both U5 reviews ask for it before the preview or the APK is published again: at least the 9
-  clips the machine flagged (one heard 'seventeen' as 'seventy', which the Version 17 and 17/117 reveals rest on),
-  the clips the review found peaking at full scale once decoded (23 of U5's 1,026; each is levelled to -1 dB before
-  Opus, and the playback chain has headroom, so one the voice model clipped would need re-rendering, not a limiter),
-  the Zero Second,
-  the card and ending cues, and one region of each kind.
-- **The score** is procedural (Synth's oscillators and noise, 0 bytes of assets): the bible's cues are
-  there by name and shape, not as composed music; the crowd walla is the crowds' own barks far off.
+- **A human ear check** of the voices and the score has still not been done: nothing in this container can play
+  sound to a listener. Since the closing pass the machine's ear is wider and fairer (Built, "Voice and score after the
+  closing pass": Whisper over 929 clips of the seven packs, every "seventeen" heard as 17, nothing at full scale, 15
+  very short clips still flagged with phonemes that read as written), and a person has what they need to listen: the
+  ear check's playable page (flagged clips first) and the score's renders (`tools/score-render.mjs`: each act's
+  theme, a place in its three years, the character themes, the cards, the Zero Second and the three endings). The U5
+  reviews asked for a person's listen before the preview or the APK is published again: at least the 15 clips still
+  flagged, the Zero Second, the cards' and endings' cues and one region of each kind.
+- **The score** is written but synthesised: themes.js holds a theme per act and per character, note for note (melody,
+  harmony bar by bar, form), all from the bible's motif, and score.js plays them live through Synth's oscillators and
+  noise (0 bytes of assets). It is not a recorded score: no player or orchestra, and timbres a synthesiser makes
+  (piano, strings, flute, brass and glass are approximations), which a composer's recorded stems could replace region
+  by region (the bible §7 asks for stems). The crowd walla is the crowds' own barks far off.
 - **Cold opens** of every mission are authored (shots, lines, hooks); since the closing pass the cold opens of
   Missions 6, 10, 11, 12, 13, 17, 18, 21, 22 and the Finale go on with lines of their own (the Witness, Sera, Mira,
   the settlement's voices) and Missions 10, 12, 17, 21, 22 and the Finale have a second shot; since the U7 review Missions 4, 6, 7, 9 and 12
@@ -806,8 +855,9 @@ Every line the edition says, once each: 554 lines and 7,295 words in v2.0, 2,727
   been done; the bot stands in for it.
 - **Device testing** of the Android build on phones has not been done in this session.
 - **The edition's APK** was not rebuilt in the closing pass. It was last measured at 49,040,014 bytes with 15 MB of
-  voice; the packs are 19.1 MB now, so it would come to about 52.5 MB, over the 50 MB budget, until the packs' bitrate
-  or the models give some of it back. Each pack is far under the 15 MB a file the build script enforces.
+  voice; the packs are 18.9 MB now (after the audio closing pass's re-recordings: 18,872,161 bytes of Opus), so it
+  would come to about 52.5 MB, over the 50 MB budget, until the packs' bitrate or the models give some of it back. Each
+  pack is far under the 15 MB a file the build script enforces (the largest, act2, 3.37 MB). The release step builds it.
 - **Mission 11's discontinuity court** shows its rain as still filaments (falling on the west half, rising on the
   east is drawn, not animated; only the clouds drift backwards there), and Mission 14's arrival view was not
   recomposed to frame the 2196 lagoon (U3 review nits, deferred).

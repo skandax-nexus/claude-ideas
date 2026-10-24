@@ -13,7 +13,7 @@ bible's inversion: hold one process backwards for a few seconds), the Witness, M
 
 v2.1 in one paragraph: 23 missions in 23 authored open places, each one map with soft quarters, threads and
 side stories, a cold open and a hook; REVERSE, three years, Echo Step; 31 cast people, crowds and watchers;
-every line spoken from the edition's own packs, with a procedural score; three endings with an epilogue line
+every line spoken from the edition's own packs, with a score of written themes played live; three endings with an epilogue line
 per choice that mattered; and the CASE FILES, fourteen side stories and quest chains replayable from their
 places. The code is in `game/js/editions/lastversion/` (`prologue.js`, `act1.js` … `act4.js`, `finale.js`,
 `cases.js`, `Threads.js`, `ledger.js`, `Runtime.js`, `places/`).
