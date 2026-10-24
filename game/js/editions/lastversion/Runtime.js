@@ -6,7 +6,7 @@
 // Kai's verbs are. Three years switch (Q, 1 2 3); nothing flips gravity, and
 // there are no laws.
 import * as THREE from '../../../vendor/three.module.min.js';
-import { setChapters, latestFor, describeSave, listSaves, latestSave } from '../../ui/Saves.js';
+import { setChapters, latestFor, describeSave, listSaves, latestSave, writeSave } from '../../ui/Saves.js';
 import { makeCastModel, setCrewDresser } from '../../world/People.js';
 import { PROLOGUE } from './prologue.js';
 import { ACTS, ENDINGS, CASE_FILES, CASE_STATES, caseState } from './acts.js';
@@ -24,6 +24,7 @@ import { VoiceFx } from './voicefx.js';
 import { choiceLine, chapterCardLines, missionCardLines, endingLines, POSTCREDIT } from './voicelines.js';
 import { Threads, placeThreads, isRewritten, sidesOf, sideState, coldFact, threadsOf, factOf, playFact } from './Threads.js';
 import { QUESTIONS, PREVIOUSLY, CHOSEN } from './ledger.js';
+import { ROAM, reachedPlaces, roamSave, roamMeta, storyFromRoam, finished, roamFree, fragmentFound, placeName, yearName, ROAM_ONLY } from './roam.js';
 
 // the edition's voice packs: common to every chapter, then one per chapter (OVERHAUL.md §8.3)
 export const voicePack = (group) => `assets/voice/lv/${group}/`;
@@ -36,9 +37,14 @@ export const CHAPTERS = {
   act4: { name: 'ACT IV', sub: 'The Unwritten Second', question: 'Can Mira be saved without repeating the catastrophe?', say: 'Act Four. The Unwritten Second.' },
   finale: { name: 'FINALE', sub: 'Afterzero', question: 'What must be accepted rather than fixed?', say: 'The Finale. Afterzero.' },
   cases: { name: 'CASE FILES', sub: 'The stories the main road walked past, replayed from their places', question: 'Whose record do you believe, and what does it cost them?', say: 'The Case Files. The stories the main road walked past.' },
+  // a trip, beside the story (roam.js): never in the chapter list; a trip's save is under its story's chapter
+  roam: { name: 'FREE ROAM', sub: 'The places you have reached, in the years you opened there', question: 'What else did these places keep?', say: '' },
 };
 export const ORDER = ['prologue', 'act1', 'act2', 'act3', 'act4', 'finale'];
 export const MISSIONS = { prologue: PROLOGUE, ...ACTS };
+// a chapter's missions: the story's, the CASE FILES', or a trip's (free roam: one roam deck per story mission, roam.js,
+// kept out of MISSIONS so that nothing walks them as the story)
+export const missionsOf = (ch) => (ch === 'roam' ? ROAM : MISSIONS[ch]);
 
 // main.js's own sun offset (main.js _sunOff): the shadows' sun outside a place
 const DEFAULT_SUN = Object.freeze([6, 24, 9]);
@@ -126,6 +132,7 @@ function ownFacts(chapter, d) {
 export function reverseEarned(campaign) {
   const ch = campaign?.chapter;
   if (ch === 'cases') return 12; // (the case files come after the Finale)
+  if (ch === 'roam') return reverseEarned(campaign.roam?.back?.campaign); // (a trip: what its story has earned)
   const i = ORDER.indexOf(ch), act2 = ORDER.indexOf('act2');
   if (i < act2) return 0;
   if (i === act2) return (campaign.deck ?? 0) > MISSIONS.act2.findIndex((m) => m.n === 11) ? 8 : 0;
@@ -241,12 +248,15 @@ const EV_LABELS = {
 const _v = new THREE.Vector3();
 // the facts a replay starts from, handed over the page reload (sessionStorage)
 const CASE_FACTS = 'afterzero.lv.caseFacts';
+// after an ending, BACK TO THE STORY on a trip comes back to the CASE FILES (the title opens them once: sessionStorage)
+const OPEN_CASES = 'afterzero.lv.openCases';
 // a CASE FILES replay saves in a slot of its own, never listed and never a campaign's (Saves.js keys it like slot N):
 // it never writes over the finished campaign it was opened from, nor over the autosave a full set of slots falls back to
 export const CASE_SLOT = 'case';
 // whose people a chapter loads behind its card: a replay's are its own mission's chapter's (cases.js voiceGroup), not
 // every replay's at once
-export const castKeyOf = (chapter, di = 0) => (chapter === 'cases' && MISSIONS.cases[di]?.voiceGroup) || chapter;
+// (and a trip's are its mission's chapter's)
+export const castKeyOf = (chapter, di = 0) => (chapter === 'cases' && MISSIONS.cases[di]?.voiceGroup) || (chapter === 'roam' && ROAM[di]?.voiceGroup) || chapter;
 // how long a chapter waits behind its card for its people before it starts with what arrived (Runtime.waitForCast)
 export const CAST_WAIT_MS = 90000;
 // how long the station chime (score.js 'pa': two tones 0.42 s apart) sounds before an announcement is said
@@ -372,6 +382,13 @@ export class LastVersion {
     loadCast(castKeyOf(likely, latest?.data.campaign.deck));
     this.g.voice?.usePacks?.(this.packsFor(likely, latest?.data.campaign.deck ?? 0));
     this.sound();
+    // back from a trip taken after an ending: the CASE FILES, as THE CASES opened them (after main.js shows the title)
+    let cases = false;
+    try {
+      cases = window.sessionStorage.getItem(OPEN_CASES) === '1';
+      window.sessionStorage.removeItem(OPEN_CASES);
+    } catch { /* storage blocked: the title */ }
+    if (cases) setTimeout(() => !this.g.started && this.caseFiles(), 0);
   }
 
   // --- sound: the score, the first tap, the mix, what each line sounds like (OVERHAUL.md §8.7, §8.9) -----------
@@ -516,7 +533,7 @@ export class LastVersion {
 
   // --- starting and resuming ------------------------------------------------------------------
   makeStory(chapter) {
-    const ms = MISSIONS[chapter];
+    const ms = missionsOf(chapter);
     // a generated puzzle may only use what this place's years can do: PAST holds the residue
     // (no gravity, ceilings or zero-g: those were Station Zero's laws)
     const fits = (m) => (k) => MECHS.includes(k) && (k !== 'echo' || m.states.includes('PAST'));
@@ -544,7 +561,8 @@ export class LastVersion {
       replay = chapter.slice(6);
       chapter = 'cases';
     }
-    if (!CHAPTERS[chapter]) chapter = 'prologue';
+    // (a trip is only ever a saved campaign: roam.js roamSave)
+    if (!CHAPTERS[chapter] || (chapter === 'roam' && !saved?.roam?.back)) chapter = 'prologue';
     const di = replay ? Math.max(0, MISSIONS.cases.findIndex((m) => m.key === replay)) : saved?.deck ?? 0;
     this.ownLook();
     // the chapter's voices load with its people (a new game opens on the chapter's card)
@@ -560,12 +578,16 @@ export class LastVersion {
     // (a replay saves in its own slot: a new one always; a saved one loaded from it, which main.js leaves slotless)
     if (chapter === 'cases' && (replay || g.slot == null)) g.slot = CASE_SLOT;
     g.mode = 'deck';
-    g.run = chapter;
+    // (a trip's save is under its story's chapter: CONTINUE on that chapter's card takes the player back on the trip)
+    g.run = chapter === 'roam' ? saved.roam.meta?.run || g.run : chapter;
     this.chapter = chapter;
     g.story = this.makeStory(chapter);
     g.facts.rulesEnabled = false;
     g.facts.set('has_tick'); // the THINK button
     g.facts.set('lv_chapter', chapter);
+    // (on a trip, where: roam.js ROAM_ONLY, never carried back to the story)
+    if (chapter === 'roam') g.facts.set('lv_roam', saved.roam.key);
+    else for (const k of ROAM_ONLY) delete g.facts.facts[k];
     if (!saved) {
       // everything before this chapter counts as played
       const upTo = chapter === 'cases' ? ['cases'] : ORDER.slice(0, ORDER.indexOf(chapter) + 1);
@@ -590,9 +612,10 @@ export class LastVersion {
   // the voice packs a mission speaks from: the common pack, its chapter's, and for a case file that replays a
   // side story, the pack of the mission it lives in (voiceGroup)
   packsFor(chapter, di = 0) {
-    const vg = MISSIONS[chapter]?.[di]?.voiceGroup;
-    // (the cases pack has no recordings: every replay speaks from its own mission's pack, so it is not fetched)
-    return [voicePack('common'), ...(chapter === 'cases' ? [] : [voicePack(chapter)]), ...(vg && vg !== chapter ? [voicePack(vg)] : [])];
+    const vg = missionsOf(chapter)?.[di]?.voiceGroup;
+    // (the cases pack has no recordings: every replay speaks from its own mission's pack, so it is not fetched; nor has
+    // a trip a pack: it speaks from its mission's)
+    return [voicePack('common'), ...(chapter === 'cases' || chapter === 'roam' ? [] : [voicePack(chapter)]), ...(vg && vg !== chapter ? [voicePack(vg)] : [])];
   }
 
   // a replay starts from the facts the player had (the CASE FILES screen hands them over; else the latest save's),
@@ -626,9 +649,24 @@ export class LastVersion {
       const st = caseState(f, c);
       return `<div class="caseFile" data-state="${st}"><b>${c.name}</b><small>${c.where} · ${CASE_STATES[st]}</small>${c.key ? `<button data-case="${c.key}">REPLAY</button>` : '<small class="dim">part of the main story</small>'}</div>`;
     }).join('');
-    $('#ending .body').innerHTML = `<h2>CASE FILES</h2><p class="dim">The stories the main road walked past. A replay starts from its place, with the facts you had.</p>
-      <div class="caseFiles">${rows}</div>
+    // FREE ROAM: the places reached (in a game, its own; from the title, the latest save's), each year a trip
+    const log = g.campaign?.lv ? g.log : latestSave()?.data?.log || [];
+    const trips = reachedPlaces(f, log);
+    this.travelCss();
+    const tabs = trips.length ? `<div class="lvtabs"><button class="on" data-tab="cases">CASE FILES</button><button data-tab="roam">FREE ROAM · ${trips.length} PLACES</button></div>` : '';
+    const roam = trips.length ? `<div class="lvtab" data-of="roam" hidden><p class="dim">Walk a place you have reached, in a year you opened there: no story gates, its side stories and fragments still there.</p>
+      <div class="caseFiles">${this.travelRows(trips, (t) => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;'), null, 'div')}</div></div>` : '';
+    $('#ending .body').innerHTML = `<h2>CASE FILES</h2>${tabs}
+      <div class="lvtab" data-of="cases"><p class="dim">The stories the main road walked past. A replay starts from its place, with the facts you had.</p>
+      <div class="caseFiles">${rows}</div></div>
+      ${roam}
       <button id="lvTitle">BACK TO THE TITLE</button>`;
+    for (const b of document.querySelectorAll('#ending [data-tab]')) {
+      b.onclick = () => {
+        for (const x of document.querySelectorAll('#ending [data-tab]')) x.classList.toggle('on', x === b);
+        for (const t of document.querySelectorAll('#ending .lvtab')) t.hidden = t.dataset.of !== b.dataset.tab;
+      };
+    }
     if (!$('#lvCaseCss')) {
       const st = document.createElement('style');
       st.id = 'lvCaseCss';
@@ -643,9 +681,23 @@ export class LastVersion {
         g.begin(`lv:cases/${b.dataset.case}`, null, CASE_SLOT);
       };
     }
+    for (const b of document.querySelectorAll('#ending [data-travel]')) {
+      b.onclick = () => (g.started && g.campaign?.lv ? this.travel(b.dataset.travel, b.dataset.year) : this.travelFromTitle(b.dataset.travel, b.dataset.year));
+    }
     $('#lvTitle').onclick = () => location.reload();
     if (g.campaign?.lv && g.started) g.saveTo('auto');
     g.openMenu('ending');
+  }
+
+  // a trip from the title (the CASE FILES opened there): the latest save becomes a trip, in its own slot, and loads
+  travelFromTitle(key, year) {
+    const g = this.g;
+    const latest = latestSave();
+    if (!latest?.data?.campaign?.lv) return false;
+    const { data, meta } = roamSave(latest.data, latest.data.meta, { key, year, format: SAVE_FORMAT });
+    if (!writeSave(latest.slot, data, meta)) return false;
+    g.begin('load', latest.slot);
+    return true;
   }
 
   // the edition offers Kai's own look only (LV.looks): an older save's look is put back to his
@@ -734,6 +786,8 @@ export class LastVersion {
     this.mounted = null;
     const story = g.story;
     const deck = story.decks[c.deck];
+    // a trip (free roam, roam.js): the place in the years opened there, nobody watching, no way on, no gate
+    const roam = deck.roam ? c.roam || { year: deck.home || 'PRESENT', years: deck.states, fresh: true } : null;
     story.after.dark = deck.dark || 0;
     let level;
     // every mission stands in an open place (OVERHAUL.md §4): sector i loads the whole map and activates quarter i
@@ -742,15 +796,30 @@ export class LastVersion {
     else if (deck.build) level = deck.build(story, c.sector, this);
     else throw new Error(`mission ${deck.mkey} has no place`);
     level.deckName = deck.name;
+    if (roam) {
+      level.exit = null;
+      level.elements = level.elements.filter((e) => !/^gate_/.test(e.id || ''));
+      if (level.map) level.map.gate = undefined;
+    }
     const states = level.states || deck.states || ['PRESENT'];
     for (const id of level.order) {
       const room = level.rooms[id];
-      g.engine.setAvailable(id, (room.states || states).filter((s) => this.def.states.includes(s)));
+      const own = (room.states || states).filter((s) => this.def.states.includes(s));
+      // (on a trip only the years opened there: a room that has none of them keeps its first)
+      const opened = roam ? own.filter((s) => roam.years.includes(s)) : own;
+      const avail = opened.length ? opened : own.slice(0, 1);
+      g.engine.setAvailable(id, avail);
       for (const ch of room.challenges || []) ch.hints = HINTS[ch.key] || ch.hints;
-      // a room starts in the mission's home year until the player switches it (saves restore the rest)
+      // a room starts in the mission's home year until the player switches it (saves restore the rest); a trip arrives
+      // in the year it was taken to, and a trip's save keeps the year Kai switched to
+      if (roam) {
+        if (roam.fresh || !avail.includes(g.engine.state(id))) g.engine.setState(id, avail.includes(roam.year) ? roam.year : avail[0], { force: true });
+        continue;
+      }
       const home = (room.states || states).includes(deck.home) ? deck.home : g.engine.baseline;
       if (!c.flags || !Object.keys(c.flags).length || !this.def.states.includes(g.engine.state(id))) g.engine.setState(id, home, { force: true });
     }
+    if (roam) roam.fresh = false;
     // nothing of Station Zero: no law tokens, no gravity effects
     level.tokens = [];
     level.effects = (level.effects || []).filter((e) => EFFECTS.includes(e));
@@ -788,6 +857,7 @@ export class LastVersion {
       if (real.length && here.some((s) => real.includes(s)) && here.some((s) => !real.includes(s))) n.temporal = real;
     }
     deck.adjust?.(level, this); // a consequence of an earlier choice can change the place
+    if (roam) level.sentinels = []; // (nobody watches a trip: no drone, trooper, scavenger or mimic)
     // REVERSE processes, scenes, doors and reversed wards at the mission's landmarks (§5); a rewritten mission's
     // threads: their triggers, scenes, records, deductions, a playback's echoes and the chase's path (Threads.js)
     // (before the casting, so the people they place are cast with everyone else)
@@ -808,6 +878,12 @@ export class LastVersion {
     }
     // the records (said through the recording chain)
     this.recordTexts = new Set(level.interactables.filter((i) => i.kind === 'terminal' && i.log?.text).map((i) => i.log.text));
+    // a trip: a rule that has already happened does not happen again, and a fragment already read is not laid again
+    if (roam) {
+      c.flags ||= {};
+      for (const r of deck.rules || []) if (g.facts.test(r.when)) c.flags[`rule_${r.id}`] = true;
+      for (const it of level.interactables) if (it.kind === 'fragment' && fragmentFound(g.facts, g.log, it.id, it.text)) c.flags[`done_${it.id}`] = true;
+    }
     this.threads.attach(deck, level);
     for (const k of Object.keys(g.engine.overrides)) g.engine.setOverride(k, null);
     for (const rid of level.reversedRooms) g.engine.setOverride(rid, { timeReverse: true });
@@ -886,7 +962,7 @@ export class LastVersion {
     this.score.enter(deck, this.placeYear || g.engine.state(start) || 'PRESENT', this.level);
     this.inv?.load(this.level);
     // the next chapter's people start loading in this chapter's last mission, so its card does not wait
-    const next = this.chapter === 'cases' ? null : ORDER[ORDER.indexOf(this.chapter) + 1];
+    const next = this.chapter === 'cases' || this.chapter === 'roam' ? null : ORDER[ORDER.indexOf(this.chapter) + 1];
     if (next && c.deck === g.story.decks.length - 1) {
       loadCast(next);
       g.voice?.usePacks?.([voicePack('common'), voicePack(this.chapter)], [voicePack(next)]); // and its voices
@@ -900,7 +976,119 @@ export class LastVersion {
     // (and a playback's echoes, which stand only while it plays: a save taken during one loads without them)
     if (isRewritten(deck)) for (const t of threadsOf(deck)) if (t.kind === 'playback' && g.facts.get(playFact(deck, t))) g.facts.set(playFact(deck, t), false);
     if (opening) this.openMission(deck, opening);
+    else if (deck.roam) this.roamCard(); // (a trip has no opening and no PREVIOUSLY: where it is, and that the story waits)
+    else if (resumed && this.backFromRoam) this.backCard();
     else if (resumed) this.previously();
+    this.backFromRoam = false;
+    // (a trip's fade, travelled to or back from in the page: the new place is up)
+    if (this.travelFade) {
+      this.travelFade = false;
+      g.hud.fade(false);
+    }
+  }
+
+  // --- free roam (roam.js): a trip to a place already reached, beside the story -------------------------------------
+  get roaming() {
+    return !!this.deck?.roam && this.g.campaign?.chapter === 'roam';
+  }
+
+  // the card a trip arrives under (shown, not said: a trip is not a cinematic)
+  roamCard() {
+    const g = this.g, deck = this.deck;
+    g.hud.card('FREE ROAM', placeName(deck), `${yearName(deck, g.engine.state(this.level.outdoorRoom) || g.campaign.roam?.year)} · no story gates · the story waits where you left it`, 4200);
+  }
+
+  backCard() {
+    const d = this.deck;
+    this.g.hud.card('BACK TO THE STORY', d?.name || '', `${typeof d?.n === 'number' ? `Mission ${d.n}` : ''}`, 3000);
+  }
+
+  // where a trip can go now: the missions done, with the years opened there (none in a CASE FILES replay, or while a
+  // staged moment, a transition or a catch holds the game)
+  travelList() {
+    const g = this.g;
+    if (!g.campaign?.lv || g.campaign.chapter === 'cases') return [];
+    return reachedPlaces(g.facts, g.log);
+  }
+
+  canTravel() {
+    const g = this.g;
+    return !!g.campaign?.lv && g.campaign.chapter !== 'cases' && !this.opening && !this.cinema?.active && !g.transitioning && !g.catching && !this.castWaitFor;
+  }
+
+  // TRAVEL: to mission `key`'s place in `year`, in the page (a fade, the place's people if they are not here yet, the
+  // place). The trip's campaign carries the story to come back to (roam.js roamSave); the slot it saves in is the
+  // story's own, so a save taken on the trip loads on it
+  travel(key, year) {
+    const g = this.g;
+    const entry = this.travelList().find((e) => e.key === key);
+    if (!entry || !entry.years.includes(year) || !this.canTravel()) {
+      g.audio?.deny?.();
+      if (entry && !this.canTravel()) g.hud.toast('<small>TRAVEL</small><br>Not now.', 1600);
+      return false;
+    }
+    const { data } = roamSave(g.snapshot(), { ...g.saveMeta(), run: g.run }, { key, year, format: SAVE_FORMAT });
+    this.inv?.release?.('travel');
+    g.log.push(`I went back to ${entry.placeName}, ${entry.names[year] || year}. The story would wait.`);
+    this.go(data.campaign);
+    return true;
+  }
+
+  // BACK TO THE STORY: the story as it was kept, with what the trip found; after an ending, the CASE FILES
+  leaveRoam() {
+    const g = this.g;
+    if (!this.roaming) return false;
+    if (!this.canTravel()) {
+      g.audio?.deny?.();
+      g.hud.toast('<small>BACK TO THE STORY</small><br>Not now.', 1600);
+      return false;
+    }
+    const { data, meta } = storyFromRoam(g.snapshot());
+    for (const k of ROAM_ONLY) delete g.facts.facts[k];
+    if (finished(data.facts.facts)) {
+      // (the finished campaign's save, as the ending left it but for what the trip found; then the CASE FILES, on the
+      // title, as THE CASES opens them)
+      writeSave(g.slot == null ? 'auto' : g.slot, data, meta);
+      try { window.sessionStorage.setItem(OPEN_CASES, '1'); } catch { /* the title, then */ }
+      location.reload();
+      return true;
+    }
+    this.inv?.release?.('travel');
+    this.backFromRoam = true;
+    this.go(data.campaign, data.engine);
+    return true;
+  }
+
+  // in the page, behind a fade: a saved campaign started where it stands (a trip, or the story back from one), as a load
+  // starts it (Runtime.resume), with the engine's rooms as they were kept when it is the story's
+  go(campaign, engine = null) {
+    const g = this.g;
+    // (what the place left behind was saying ends with it, its end callbacks still run; and the menu closing over it
+    // does not say it again)
+    g.hud.skipAll?.();
+    g.hud.cur = null;
+    g.voice?.stop?.();
+    g.closeMenu?.();
+    this.cinema.end(true);
+    g.transitioning = true;
+    g.hud.fade(true);
+    this.score.cut();
+    g.audio?.chime?.();
+    setTimeout(() => {
+      try {
+        g.hud.skipAll?.();
+        if (engine) g.engine.restore(engine);
+        g.held = campaign.held || null;
+        this.travelFade = true;
+        this.resume(campaign);
+      } catch (e) {
+        // (never a black screen: the fade lifts on whatever stands)
+        console.warn('travel failed', e);
+        this.travelFade = false;
+        g.transitioning = false;
+        g.hud.fade(false);
+      }
+    }, 900);
   }
 
   // the PREVIOUSLY card (ledger.PREVIOUSLY): three lines when a chapter starts or a save loads (a load in a mission
@@ -1044,6 +1232,7 @@ export class LastVersion {
     const g = this.g;
     const deck = this.deck;
     if (!deck) return ['', ''];
+    if (this.roaming) return this.roamObjective();
     if (this.threads.on) {
       if (g.deckWorld.flags.beat_done) return [deck.autoExit != null ? '' : LINES.next_open, ''];
       const t = this.threads.current();
@@ -1060,6 +1249,20 @@ export class LastVersion {
     const beat = this.beat;
     if (done) return ['The way on is open. Walk to the gate.', ''];
     return [beat.goal || 'Look around. Someone left something here.', ''];
+  }
+
+  // a trip's objective: where Kai is, what is still open here, and the way back (shown, never said)
+  roamObjective() {
+    const g = this.g, deck = this.deck, f = g.facts;
+    const year = yearName(deck, g.engine.state(g.room) || g.campaign.roam?.year);
+    const open = (this.threads.sides || []).filter((s) => {
+      const st = sideState(f, deck, s);
+      return st === 'active' || (st === 'open' && (!s.when || f.test(s.when)));
+    }).length;
+    const frags = (this.level?.interactables || []).filter((i) => i.kind === 'fragment');
+    const found = frags.filter((i) => g.deckWorld.flags[`done_${i.id}`]).length;
+    const what = [open ? `${open} side ${open === 1 ? 'story' : 'stories'} still open here` : 'No side story left open here', frags.length ? `${found} of ${frags.length} fragments found` : ''].filter(Boolean).join(' · ');
+    return [`Free roam: ${placeName(deck)}, ${year}.`, `${what}. The story waits where you left it: BACK TO THE STORY on the case board.`];
   }
 
   objectiveText() {
@@ -1160,6 +1363,11 @@ export class LastVersion {
     }
     if (!f.id.startsWith('deck:')) return false;
     const it = f.it;
+    // a memory fragment read stays read (main.js reads it out; a trip lays only those not yet found: roam.js)
+    if (it.kind === 'fragment') {
+      if (!g.deckWorld.flags[`done_${it.id}`]) g.facts.set(`fr_${it.id}`, true);
+      return false;
+    }
     if (it.kind === 'scene') {
       this.scene(it);
       return true;
@@ -1323,6 +1531,9 @@ export class LastVersion {
   // lines, then (maybe) a choice, then what follows
   playNode(node, n = null, id = null) {
     const g = this.g;
+    // on a trip, the story's own scenes and conversations are said again and change nothing (roam.js roamFree): a
+    // decision is not made twice, a moment not played twice. A side story's act as they do in the mission
+    if (this.deck?.roam && !roamFree(this.deck, node)) node = { lines: node.lines, after: node.after, show: node.show };
     const lines = this.voiced(node.lines, n);
     if (node.show) g.facts.set(node.show, true);
     const after = () => {
@@ -1468,6 +1679,7 @@ export class LastVersion {
   exitReached() {
     const g = this.g;
     const c = g.campaign;
+    if (this.roaming) return; // (a trip has no way on: BACK TO THE STORY)
     if (!g.deckWorld.flags.beat_done) {
       if (!this.gateWarned) this.say(LINES[this.beat.kind === 'custom' ? 'gate_custom' : 'gate_scene']);
       this.gateWarned = true;
@@ -1591,7 +1803,7 @@ export class LastVersion {
     // missions that belong to another year: 2196's city, Mira's memory), comes back in it; but not while a REVERSE hold
     // in an unstable place is draining it (inversion.js, OVERHAUL.md §7.5), or the hold would gain stability on balance
     const state = g.engine.state(g.room);
-    const out = state !== this.home();
+    const out = !this.roaming && state !== this.home(); // (a trip costs the Chronolith nothing)
     const outdoors = this.deck?.stableOutdoors && g.room === this.level.outdoorRoom;
     const draining = out && this.unstable && !outdoors && !this.opening; // (a cold open shot in another year costs nothing)
     const holding = this.unstable && !!this.inv?.active && !this.inv.active.lock;
@@ -1747,7 +1959,8 @@ export class LastVersion {
   // the year a mission belongs to (its states' first, when it says so: deck.home): where it starts, where stability
   // comes back, where a snap back takes Kai (the engine's baseline, 2049, for every other mission)
   home() {
-    const h = this.deck?.home, g = this.g;
+    const g = this.g;
+    const h = this.roaming ? g.campaign.roam?.year : this.deck?.home; // (a trip's home is the year it went to)
     return h && (!g.room || g.engine.statesOf(g.room).includes(h)) ? h : g.engine.baseline;
   }
 
@@ -1947,7 +2160,9 @@ export class LastVersion {
     const can = (text, who) => !!game.voice?.plan?.(text, who);
     const play = (attr, i) => ` <button class="lvplay" data-${attr}="${i}" aria-label="Hear it">▶</button>`;
     // THE QUESTIONS: this chapter's and every earlier one's; the clues found under each; answered once its mission is done
-    const upTo = this.chapter === 'cases' ? ORDER.length : ORDER.indexOf(this.chapter) + 1;
+    // (on a trip, the story's chapter: the questions are the story's)
+    const storyCh = this.roaming ? campaign.roam?.back?.campaign?.chapter || game.run : this.chapter;
+    const upTo = storyCh === 'cases' ? ORDER.length : ORDER.indexOf(storyCh) + 1;
     const qs = QUESTIONS.filter((q) => ORDER.indexOf(q.chapter) >= 0 && ORDER.indexOf(q.chapter) < Math.max(1, upTo));
     const qHtml = qs.map((q, i) => {
       const answered = facts.get(`${q.answer}_done`);
@@ -1956,7 +2171,8 @@ export class LastVersion {
       return `<li><b>${esc(q.text)}</b>${can(q.text, 'NONE') ? play('q', i) : ''} <small class="dim">${answered ? 'ANSWERED' : partly ? 'PARTLY ANSWERED' : 'OPEN'}</small>${found ? `<ul class="board">${found}</ul>` : ''}</li>`;
     }).join('');
     // SIDE STORIES: the chapter's so far, and this mission's, with a track button
-    const missions = MISSIONS[this.chapter] || [];
+    // (on a trip, the side stories of the place Kai is in)
+    const missions = this.roaming ? [deck] : missionsOf(this.chapter) || [];
     const here = deck ? missions.findIndex((m) => m.key === deck.key) : -1; // (this.deck is the story's copy of its mission)
     const sideRows = [];
     missions.forEach((m, mi) => {
@@ -1994,8 +2210,13 @@ export class LastVersion {
         + ' body.lastversion .board.questions > li > ul.board li { border-bottom: 0; padding: 2px 0; justify-content: flex-start; gap: 6px; }';
       document.head.appendChild(st);
     }
+    const where = this.roaming
+      ? `<h3>WHERE YOU ARE</h3><p><b>FREE ROAM &middot; ${esc(placeName(deck))}</b><br><span class="dim">${esc(yearName(deck, game.engine.state(game.room)))} &middot; as Mission ${deck.n} left it${quarter ? ` &middot; ${esc(quarter)}` : ''}</span><br><span class="dim">The story waits at ${esc(String(campaign.roam?.meta?.where || '').replace(/^THE LAST VERSION · /, '') || 'its checkpoint')}.</span></p>
+        <button class="lvback" id="lvBack">BACK TO THE STORY</button>`
+      : `<h3>WHERE YOU ARE</h3><p><b>${chapter.name} &middot; ${deck?.name || ''}</b><br><span class="dim">${deck?.title || ''}${quarter ? ` &middot; ${quarter}` : deck?.sectors > 1 ? ` &middot; part ${campaign.sector + 1} of ${deck.sectors}` : ''} &middot; stability ${Math.round(this.stability * 100)}%</span></p>`;
     el.innerHTML = `
-      <h3>WHERE YOU ARE</h3><p><b>${chapter.name} &middot; ${deck?.name || ''}</b><br><span class="dim">${deck?.title || ''}${quarter ? ` &middot; ${quarter}` : deck?.sectors > 1 ? ` &middot; part ${campaign.sector + 1} of ${deck.sectors}` : ''} &middot; stability ${Math.round(this.stability * 100)}%</span></p>
+      ${where}
+      ${this.travelHtml(esc)}
       <h3>THE QUESTIONS</h3><ul class="board questions">${qHtml}</ul>
       ${this.inv?.abilitiesHtml() || ''}
       <h3>SIDE STORIES</h3><ul class="board sides">${sideRows.join('') || '<li class="dim">None yet.</li>'}</ul>
@@ -2010,6 +2231,19 @@ export class LastVersion {
         else game.voice.speak(rev[+b.dataset.log], 'KAI');
       };
     }
+    for (const b of el.querySelectorAll('[data-travel]')) {
+      b.onclick = (e) => {
+        e.stopPropagation();
+        this.travel(b.dataset.travel, b.dataset.year);
+      };
+    }
+    const back = el.querySelector('#lvBack');
+    if (back) {
+      back.onclick = (e) => {
+        e.stopPropagation();
+        this.leaveRoam();
+      };
+    }
     for (const b of el.querySelectorAll('.lvtrack')) {
       b.onclick = (e) => {
         e.stopPropagation();
@@ -2020,14 +2254,75 @@ export class LastVersion {
     }
   }
 
+  // TRAVEL on the case board: every place reached, the years opened there, what is still open in each (free roam)
+  travelHtml(esc = (t) => String(t)) {
+    this.travelCss();
+    const g = this.g;
+    if (!g.campaign?.lv || g.campaign.chapter === 'cases') return '';
+    const list = this.travelList();
+    const intro = 'Free roam: walk a place you have reached, in a year you opened there. No story gates; its side stories and fragments are still there. The story waits where you left it.';
+    if (!list.length) return `<h3 id="lvTravel">TRAVEL</h3><p class="dim">${intro} Finish a mission to travel back to its place.</p>`;
+    const here = this.roaming ? this.deck.key : null;
+    return `<h3 id="lvTravel">TRAVEL</h3><p class="dim">${intro}</p><ul class="board travel">${this.travelRows(list, esc, here, 'li')}</ul>`;
+  }
+
+  // the travel list's rows (the case board's list items; the CASE FILES' cards)
+  travelRows(list, esc = (t) => String(t), here = null, tag = 'li') {
+    return list.map((e) => `<${tag} class="${tag === 'li' ? '' : 'caseFile lvroam '}${e.key === here ? 'here' : ''}"><span><b>${esc(e.placeName)}</b> <small>Mission ${e.n} &middot; ${esc(e.mission)}${e.sides ? ` &middot; ${e.open ? `${e.open} side ${e.open === 1 ? 'story' : 'stories'} open` : 'side stories resolved'}` : ''}${e.fragments ? ` &middot; fragments ${e.found}/${e.fragments}` : ''}</small></span>`
+      + `<span class="yrs">${e.years.map((y) => `<button class="lvgo" data-travel="${e.key}" data-year="${y}">${esc(e.names[y] || y)}</button>`).join('')}</span></${tag}>`).join('');
+  }
+
+  travelCss() {
+    if (typeof document !== 'undefined' && !document.querySelector('#lvTravelCss')) {
+      const st = document.createElement('style');
+      st.id = 'lvTravelCss';
+      st.textContent = 'body.lastversion .board.travel > li { flex-wrap: wrap; gap: 4px 8px; } body.lastversion .board.travel .yrs { display: flex; flex-wrap: wrap; gap: 4px; flex: 1 0 100%; }'
+        + ' body.lastversion .board.travel button, body.lastversion .lvback { margin: 0; padding: 4px 9px; font-size: 11.5px; } body.lastversion .lvback { margin: 2px 0 6px; }'
+        + ' body.lastversion .board.travel li.here b::after { content: " · YOU ARE HERE"; font-size: 10px; letter-spacing: .12em; opacity: .7; }'
+        + ' body.lastversion #map header .lvmaptravel { margin-left: auto; margin-right: 8px; padding: 4px 10px; font-size: 12px; }'
+        + ' body.lastversion .caseFile.lvroam { grid-template-columns: 1fr; } body.lastversion .caseFile.lvroam .yrs { grid-row: auto; grid-column: 1; display: flex; flex-wrap: wrap; gap: 4px; margin-top: 3px; }'
+        + ' body.lastversion .caseFile.lvroam .yrs button { grid-row: auto; grid-column: auto; padding: 4px 9px; font-size: 11.5px; }'
+        + ' body.lastversion .lvtabs { display: flex; gap: 6px; margin: 4px 0 2px; } body.lastversion .lvtabs button { margin: 0; padding: 6px 12px; font-size: 12px; opacity: .6; } body.lastversion .lvtabs button.on { opacity: 1; }';
+      document.head.appendChild(st);
+    }
+  }
+
+  // the map's TRAVEL button: to the case board's TRAVEL (shown once a mission is done)
+  travelButton() {
+    if (typeof document === 'undefined') return;
+    this.travelCss();
+    const head = document.querySelector('#map header');
+    if (!head) return;
+    let b = head.querySelector('.lvmaptravel');
+    if (!b) {
+      b = document.createElement('button');
+      b.className = 'lvmaptravel';
+      b.textContent = 'TRAVEL';
+      b.setAttribute('aria-label', 'Travel to a place you have reached');
+      head.insertBefore(b, head.querySelector('[data-close]'));
+      b.onclick = (e) => {
+        e.stopPropagation();
+        this.g.openMenu('journal');
+        document.querySelector('#lvTravel')?.scrollIntoView?.({ block: 'start' });
+      };
+    }
+    b.style.display = this.travelList().length ? '' : 'none';
+  }
+
   saveMeta() {
     const d = this.deck;
+    if (this.roaming) {
+      const m = roamMeta(this.g.campaign, this.g.engine.state(this.level?.outdoorRoom) || this.g.campaign.roam.year);
+      return { where: m.where, chapter: m.chapter };
+    }
     const q = this.threads.on ? this.level?.quarters?.[this.g.campaign.quarter || 0]?.name : null;
     return { where: `THE LAST VERSION · ${d?.name || ''}`, chapter: `${typeof d?.n === 'number' ? `Mission ${d.n}` : `Case ${d?.n}`}${q ? ` · ${q}` : d?.sectors > 1 ? ` · ${this.g.campaign.sector + 1}/${d.sectors}` : ''}` };
   }
 
   mapTitle() {
     const d = this.deck;
+    this.travelButton();
+    if (this.roaming) return `FREE ROAM · ${placeName(d)}`;
     return `${d?.name || 'THE LAST VERSION'}${d?.sectors > 1 ? ` · PART ${this.g.campaign.sector + 1}/${d.sectors}` : ''}`;
   }
 

@@ -239,6 +239,16 @@ export function placeThreads(deck, level) {
       }
     }
   }
+  // free roam (roam.js): the story's own threads of a mission already done stand as the props they are, and answer
+  // nothing (r 0, never offered): the appointment book still lies on the counter, the brass clocks still hang
+  for (const t of quartersOf(deck).flatMap((q) => q.inert || [])) {
+    const prop = (s) => spot({ ...s, r: 0, kitYears: yearsOf(s.when) }, t);
+    for (const s of t.spots || []) if (s.kit || s.model) prop(s);
+    if (t.spot && (t.spot.kit || t.spot.model)) prop({ id: t.scene || t.id, scene: t.scene, ...t.spot });
+    if (t.kind === 'residue' && t.at && t.record && (t.record.kit || t.record.model)) prop({ id: `residue_${t.id}`, scene: `residue:${t.id}`, kit: t.record.kit, model: t.record.model, offset: t.record.offset, when: t.record.when });
+    if (t.kind === 'playback' && t.at && (t.kit || t.model)) prop({ id: `playback_${t.id}`, scene: `playback:${t.id}`, model: t.model, kit: t.kit, offset: t.offset, when: t.spotWhen });
+    if (t.kind === 'hold') for (const [i, po] of (t.posts || []).entries()) if (po.kit || po.model) prop({ id: `hold_${t.id}_${i}`, at: po.at, offset: po.offset || [0, 1.3, 1.4], model: po.model, kit: po.kit });
+  }
   // the cold open's cast: people who stand in the shot only while the opening plays (coldOpen.cast: { crew, at,
   // off, turn, variant, hologram, ambient? (a person cast by who they are, crowds.js AMBIENT_CAST), seed? }; the fact
   // co_<mkey>, which the runtime holds for the opening and clears at a load)
