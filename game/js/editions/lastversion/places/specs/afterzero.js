@@ -19,6 +19,9 @@ export default {
   key: 'afterzero', style: 'composite', sameAs: ['rain_south', 'valley_upper', 'helix', 'drowned'], name: 'AFTERZERO',
   bounds: [-50, -180, 50, 180],
   linear: true, // (one road: §4.7's 100 x 360 m, exempt from the short-side rule)
+  // (closing: the road carries the people Kai's choices changed, and the Witness and Mira each stand in five places of it,
+  // one at a time by the story: its hand-placed entries are not people at once, so the crowd keeps its share within 34)
+  people: 34,
   edges: { N: 'hill', E: 'slope', W: 'slope', S: 'blocks' },
   killY: -4,
   primary: 'originalRing',

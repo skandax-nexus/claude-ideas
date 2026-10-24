@@ -63,6 +63,7 @@ const M09_HINTS = {
   reset: ['08:14.', 'It is coming.', 'Let it come.'],
   warn: ['People head for the tower.', 'The order is wrong.', 'Quote the cancelled order.'],
   child: ['She does not loop.', 'The loop\'s edge.', 'Hum her song.'],
+  brask: ['A soldier who remembers.', 'By the funicular station.', 'Talk to the sergeant.'],
 };
 const EVAC = AMB('CROWD_F2');
 // each reset moves the patrols (the watchers of quarters 1 and 2: their ids end _q1s0, _q2s0)
@@ -120,7 +121,9 @@ export const M09 = {
           record: { official: 'EVACUATION ORDER: ALL CIVILIANS TO THE TOWER.', echo: 'Under it: ORDER CANCELLED 08:09. TOWER COMPROMISED. DO NOT GO UP.', hint: 'The loop kept the old order.',
             after: [K('The loop keeps the lie. Every nine minutes they walk up the tower.')], prompt: 'READ THE ORDER BOARD', offset: [0, 1.4, 0.4], model: 'none', log: 'The tower order was cancelled at 08:09. The loop forgot.' },
           goal: 'Read the order board.', because: 'Everyone is walking the same way.', ev: 'order_cancelled', hints: M09_HINTS.order, minutes: 3 },
-        { id: 'clockB', kind: 'scene', scene: 'clockB', at: 'clockB', after: ['order'], spot: { prompt: 'CLOCK B', offset: [0, 1.4, 0.6], r: 2.8, model: NO_MODEL },
+        // (the closing pass: the Continuum's sergeant, who keeps every loop, in person before Missions 13 and 21)
+        { id: 'brask', kind: 'talk', npc: 'brask9', at: 'funicularStation', after: ['order'], goal: 'A Continuum sergeant is watching me, not the street.', because: 'He looks at me the way I look at the clocks.', done: 'm09_brask', hints: M09_HINTS.brask },
+        { id: 'clockB', kind: 'scene', scene: 'clockB', at: 'clockB', after: ['brask'], spot: { prompt: 'CLOCK B', offset: [0, 1.4, 0.6], r: 2.8, model: NO_MODEL },
           goal: 'Stop clock B, on the patrol\'s route.', because: 'They walk past it every forty seconds.', done: 'clk_b', hints: M09_HINTS.clockB, minutes: 2 },
       ],
     },
@@ -165,6 +168,19 @@ export const M09 = {
         ],
       },
       { when: 'rhea_freed', lines: [CREW('Go up. Look across the river at 08:13.')] },
+    ],
+    soldier: [
+      {
+        when: '!m09_brask',
+        lines: [CREW('You again. The eleventh time round, you always come up the funicular steps.'), K('You remember the loops.'),
+          CREW('Every one. My orders reset. I don\'t. That is the Continuum\'s whole argument, Varen. Imagine everyone like me.')],
+        choices: [
+          intent('investigate', 'Who sent them to the tower?', { lines: [CREW('Helix North, at five past eight. The cancellation came at nine past. Nobody in a loop reads past five past.')], set: { m09_brask: 'asked' } }),
+          intent('challenge', 'Then help me break it.', { lines: [CREW('Break it, and I still remember everything. Go on. I\'ll be looking the other way at clock B.')], set: { m09_brask: 'help' } }),
+          intent('withdraw', 'Let me pass.', { lines: [CREW('Pass. You will anyway. You always do.')], set: { m09_brask: 'passed' } }),
+        ],
+      },
+      { when: 'm09_brask', lines: [CREW('Clock B. Go.')] },
     ],
     m9_evac: [
       { when: 'warned_evacuees', lines: [EVAC('Down to the quay. We heard you.')] },
@@ -220,7 +236,7 @@ export const M09 = {
     })));
     // (a step clear of the fence round the mast: she stood in its panel)
     person(P, { id: 'engineer', crew: 'engineer', at: 'towerBase', off: [2.3, 0, 2.1], turn: Math.PI, prompt: 'TALK TO RHEA' });
-    person(P, { id: 'brask9', crew: 'soldier', at: 'funicularStation', off: [-2.4, 0, -2], turn: 0.6, silent: true, barks: ['You did that already. No—you\'re about to do it. I hate that I know the difference.'] });
+    person(P, { id: 'brask9', crew: 'soldier', at: 'funicularStation', off: [-2.4, 0, -2], turn: 0.6, prompt: 'TALK TO THE SERGEANT', barks: ['You did that already. No—you\'re about to do it. I hate that I know the difference.'] });
     person(P, { id: 'm9_evac', crew: 'm9_evac', first: 'Evacuee', seed: 901, ambient: true, at: 'headlandStair', off: [2.2, 0, 2.4], turn: Math.PI, when: '!warned_evacuees', prompt: 'TALK TO THE EVACUEES' });
     person(P, { id: 'm9_evac_safe', crew: 'm9_evac', first: 'Evacuee', seed: 901, ambient: true, at: 'ferryQuay', off: [-6, 0, -2], when: 'warned_evacuees', prompt: 'TALK TO THE EVACUEES' });
     person(P, { id: 'child9', crew: 'child', at: 'loopEdge', off: [0, 0, -0.6], turn: Math.PI, hologram: true, silent: true, when: '!child_step2' });
@@ -243,7 +259,13 @@ const M10_HINTS = {
   yard: ['Out under the sky.', 'One trooper by the water.', 'Behind him, to Sera\'s skiff.'],
   intake: ['Earlier intakes.', 'The intake desk.', 'Read them.'],
   office: ['The Director\'s office.', 'Up on the crest.', 'Look inside.'],
+  interview: ['They interviewed Helix\'s people.', 'A reel on the crest.', 'Play the interview.'],
+  looper: ['A prisoner who remembers.', 'The loop cells.', 'Listen through his loops.'],
+  skiff: ['Sera.', 'By the skiff.', 'Talk to her.'],
+  flood: ['A flood pole.', 'On the yard\'s roof.', 'Read it now, then in 2026.'],
 };
+// the prisoner in the loop cells who remembers: four seconds a loop, and a few words in each
+const LOOPER = AMB('CROWD_M2');
 
 export const M10 = {
   key: 'm10', n: 10, chapter: 'act2', name: 'ENEMIES WHO REMEMBER', title: 'The Continuum\'s detention block', subtitle: 'They believe time must be controlled. Sera helps you out.',
@@ -260,14 +282,18 @@ export const M10 = {
     'Snow on the parapet, falling up for a second, then down.',
   ]],
   beats: [{ kind: 'custom', goal: 'Get out of the dam.' }],
-  // the Director watches the Loop City capture: whoever rook_fate made them
+  // the Director watches the Loop City capture: whoever rook_fate made them; then the guard at the gallery post below,
+  // who is Sera under a Continuum helmet, reads his intake and tells nobody (the closing pass: a cold open from the
+  // other side of the bars)
   coldOpen: {
     first: true, minutes: 2, cue: 'card',
-    shots: [{ cam: 'directorOffice', look: 'crestYard', t: 10 }],
+    shots: [{ cam: 'directorOffice', look: 'crestYard', t: 8 }, { cam: [7, 2.4, -2.5], to: [4.6, 2.1, -4.4], look: [0.6, 1.5, -9.6], t: 9 }],
     lines: [N('A capture feed from Loop City. A man who did not reset.'),
       L('ROOK', 'He didn\'t reset. Every version resets. Bring me the one who doesn\'t.', 'rook_fate == "persuade"'),
       SAYS('THE DIRECTOR', 'PRYCE', 'The director said nobody could keep their memory through a reset. I\'m the director now.', 'rook_fate == "expose"'),
-      FX(SAYS('THE DIRECTOR', 'DIRECTOR', 'Hold him.', '!(rook_fate == "persuade") && !(rook_fate == "expose")'), 'radio')],
+      FX(SAYS('THE DIRECTOR', 'DIRECTOR', 'Hold him.', '!(rook_fate == "persuade") && !(rook_fate == "expose")'), 'radio'),
+      FX(SAYS('THE GUARD', 'SERA', 'Gallery post. Prisoner is awake. Fifth intake of the same man, it says here.'), 'radio'),
+      SAYS('THE GUARD', 'SERA', 'Four times they caught you, and four times you walked out. Show me how.')],
   },
   quarters: [
     {
@@ -291,8 +317,19 @@ export const M10 = {
             { id: 'sw26', scene: 'sw26', at: 'switch2026', prompt: 'THE 2026 SWITCH', offset: [0, 1.3, 0.8], r: 2.8, model: NO_MODEL },
           ],
           goal: 'Cut the power run in 2049 and in 2026.', because: 'Sera says the guards\' lamps are fed through both years.', set: { power_cut: true }, hints: M10_HINTS.power, minutes: 5 },
+        // (the closing pass: the Continuum questioned everyone Helix employed after the Zero Second; the woman with no
+        // past was one of them. Adult Mira, as Lin, in her own voice, on a reel)
+        { id: 'interview', kind: 'scene', scene: 'interview', at: 'crestYard', after: ['power'], spot: { prompt: 'THE INTERVIEW REEL', offset: [6, 1.1, 3], r: 2.6, kit: 'reelPlayer' },
+          goal: 'An interview reel on the crest.', because: 'Sera says they questioned everyone Helix ever paid.', done: 'ev_lin_interview', hints: M10_HINTS.interview },
       ],
       sides: [
+        // (the closing pass: a flood pole the 2026 refurbishment marked at the crest, initialled by the man who knew)
+        { id: 'flood', name: 'THE FLOOD POLE', done: 'ev_flood_mark', minutes: 2,
+          threads: [{ id: 'floodRead', kind: 'residue', at: 'floodPole',
+            record: { official: 'FLOOD POLE. HIGHEST WATER: 2031. NOTHING HAS EVER COME ABOVE THE GALLERY.', echo: 'At the very top, a mark painted by hand, still wet: THIS HIGH, ONE DAY. W.',
+              hint: 'Old paint, under the Continuum\'s.', after: [K('W. In twenty twenty-six. Somebody already knew how high the water comes.')], prompt: 'THE FLOOD POLE', offset: [0, 1.4, 0.6], kit: 'tagPlate',
+              log: 'The dam\'s flood pole: in 2026 somebody marked a flood at the crest, and signed it W.' },
+            goal: 'A flood pole on the yard\'s roof.', because: 'Its marks go higher than any water here.', ev: 'flood_mark', hints: M10_HINTS.flood }] },
         { id: 'office', name: 'THE DIRECTOR\'S OFFICE', done: 'ev_director_office', minutes: 3,
           threads: [{ id: 'officeLook', kind: 'scene', scene: 'office', at: 'directorOffice', spot: { prompt: 'THE DIRECTOR\'S DESK', offset: [0, 1.1, 1.2], r: 2.8, model: NO_MODEL },
             goal: 'The Director\'s office is empty.', because: 'Whoever sits there knows my name.', done: 'ev_director_office', hints: M10_HINTS.office, minutes: 3 }] },
@@ -301,9 +338,11 @@ export const M10 = {
     {
       name: 'THE TESTING CHAMBER',
       threads: [
-        { id: 'projector', kind: 'scene', scene: 'projector', at: 'projector', after: ['power'], spot: { prompt: 'THE CAPTURED WEAPON', offset: [0, 1.2, 1.4], r: 3, model: kit('deviceCase') },
+        { id: 'projector', kind: 'scene', scene: 'projector', at: 'projector', after: ['interview'], spot: { prompt: 'THE CAPTURED WEAPON', offset: [0, 1.2, 1.4], r: 3, model: kit('deviceCase') },
           goal: 'The testing chamber: what they took from me.', because: 'Sera says they keep captured weapons there.', done: 'echo_step', hints: M10_HINTS.projector, minutes: 2 },
-        { id: 'prisoners', kind: 'choice', scene: 'prisoners', at: 'loopCells', after: ['projector'], spot: { prompt: 'THE LOOP CELLS', offset: [0, 1.2, 2], r: 3.4, model: NO_MODEL },
+        // (a prisoner whose loop let him keep a little: each time Kai speaks to him he gets four seconds, and a few words)
+        { id: 'looper', kind: 'talk', npc: 'm10_looper', at: 'loopCells', after: ['projector'], goal: 'A prisoner in the loop cells is trying to tell me something.', because: 'He gets four seconds at a time.', done: 'm10_l4', hints: M10_HINTS.looper },
+        { id: 'prisoners', kind: 'choice', scene: 'prisoners', at: 'loopCells', after: ['looper'], spot: { prompt: 'THE LOOP CELLS', offset: [0, 1.2, 2], r: 3.4, model: NO_MODEL },
           goal: 'Twelve prisoners in unstable loops.', because: 'Four seconds, over and over.', done: 'ev_prisoners', hints: M10_HINTS.prisoners, minutes: 4 },
         // (the chamber has troopers of its own: an Echo Step's afterimage draws them off; the crossing counts once Kai has
         // stepped ahead of himself)
@@ -314,6 +353,7 @@ export const M10 = {
       name: 'THE YARD',
       threads: [
         { id: 'yard', kind: 'stealth', at: 'seraSkiff', r: 4, after: ['cross', 'prisoners'], goal: 'Down the spillway to Sera\'s skiff, past the yard\'s trooper.', because: 'Under the open sky, for the first time tonight.', hints: M10_HINTS.yard, minutes: 4 },
+        { id: 'skiff', kind: 'talk', npc: 'sera_skiff', at: 'seraSkiff', after: ['yard'], goal: 'Sera, at the skiff.', because: 'She took her helmet off. She is waiting for me to say something.', done: 'm10_skiff', hints: M10_HINTS.skiff },
       ],
     },
   ],
@@ -330,8 +370,40 @@ export const M10 = {
       },
       { when: 'sera_met', lines: [L('SERA', 'Two switches. 2049, then 2026. Go.')] },
     ],
+    // (four seconds a loop: each time Kai speaks to him, the loop gives him a few words, then takes him back)
+    m10_looper: [
+      { when: '!m10_l1', lines: [LOOPER('Four seconds. Listen. Don\'t talk. Every time you talk, I lose one.')], set: { m10_l1: true } },
+      { when: 'm10_l1 && !m10_l2', lines: [LOOPER('A woman. No shadow. They kept her here two nights, then they let her go.')], set: { m10_l2: true } },
+      { when: 'm10_l2 && !m10_l3', lines: [LOOPER('She asked for a hospital. Rain City General. A ward with a number she would not say.')], set: { m10_l3: true } },
+      { when: 'm10_l3 && !m10_l4', lines: [LOOPER('She said: tell the one who comes to stop looking for me where I was.'), K('Where she was. Helix. The cube.'), LOOPER('Four seconds. That is all I get. Let me out, or let me keep them.')], set: { m10_l4: true } },
+      { when: 'm10_l4', lines: [LOOPER('Four seconds.')] },
+    ],
+    // Sera at her skiff, her helmet off (the closing pass: she gets a say before the hook)
+    sera_skiff: [
+      {
+        when: '!m10_skiff',
+        lines: [L('SERA', 'Get in. Keep your head below the gunwale. They count heads on the water.'), K('You said my face is on every memorial.'), L('SERA', 'Every memorial I have ever scrubbed the moss off.')],
+        choices: [
+          intent('challenge', 'Then why get me out?', { lines: [L('SERA', 'Because they want you more than I hate you. That is how I choose sides.')], set: { m10_skiff: true } }),
+          intent('comfort', 'Thank you.', { lines: [L('SERA', 'Don\'t. I\'ll want something for it, and you won\'t like what.')], set: { m10_skiff: true } }),
+          intent('investigate', 'What is it like, in your time?', { lines: [L('SERA', 'Rain that falls up on Tuesdays. Children who learn your name first. Get in the boat.')], set: { m10_skiff: true } }),
+        ],
+      },
+      { when: 'm10_skiff', lines: [L('SERA', 'In. Now.')] },
+    ],
   },
   scenes: {
+    // (the Continuum's interview of Dr. Lin, the night of the Zero Second: Sergeant Brask asks, she answers in her own voice)
+    interview: {
+      lines: [FX(SAYS('SERGEANT BRASK', 'SERGEANT', 'State your name.'), 'recording'),
+        FX(SAYS('DR. LIN', 'LIN', 'Lin. That is what the badge says. It is the only thing that says anything about me.'), 'recording'),
+        FX(SAYS('SERGEANT BRASK', 'SERGEANT', 'No birth record. No schooling. Helix hired you on a date that never happened.'), 'recording'),
+        FX(SAYS('DR. LIN', 'LIN', 'I know. I remember a kitchen. A boy who stopped a song too early. That is all I have.'), 'recording'),
+        FX(SAYS('SERGEANT BRASK', 'SERGEANT', 'Where will you go?'), 'recording'),
+        FX(SAYS('DR. LIN', 'LIN', 'Wherever they put me back together.'), 'recording'),
+        K('Up, up, and stop. I always stopped it.')],
+      set: { ev_lin_interview: true }, log: 'The Continuum interviewed Lin: no birth, no past, a kitchen and a boy who stopped a song too early.',
+    },
     intake: { lines: [N('Four earlier intakes of VAREN, K. Four photographs of the same face. In the last, his hair is grey.'), K('They have been catching me for years. Some of me.')], set: { ev_intakes: true }, log: 'Four earlier intakes of Varen. One of them grey.' },
     office: {
       lines: [N('A chair facing the capture feed.'), N('On the desk, an old junior programme badge. ROOK, E.', 'rook_fate == "persuade"'), N('On the desk, an officer\'s cap. PRYCE.', 'rook_fate == "expose"'),
@@ -369,7 +441,10 @@ export const M10 = {
   step: m10Step,
   overlay(P) {
     person(P, { id: 'm10_guard', crew: 'm10_guard', first: 'Guard', seed: 1001, ambient: true, at: 'guardPost', off: [1.4, 0, 1.6], turn: Math.PI, when: '!t_m10_power', prompt: 'TALK TO THE GUARD' });
-    person(P, { id: 'sera', crew: 'sera', at: 'seraSkiff', off: [-1.6, 0, 1.2], turn: Math.PI, silent: true });
+    person(P, { id: 'sera', crew: 'sera', at: 'seraSkiff', off: [-1.6, 0, 1.2], turn: Math.PI, silent: true, when: '!t_m10_yard' });
+    person(P, { id: 'sera_skiff', crew: 'sera', at: 'seraSkiff', off: [-1.6, 0, 1.2], turn: Math.PI, prompt: 'TALK TO SERA', when: 't_m10_yard' });
+    // (the prisoner who remembers, at the glass of the second cell: his loop flickers him, like the rest, until they are let go)
+    person(P, { id: 'm10_looper', crew: 'm10_looper', first: 'A prisoner', seed: 1003, ambient: true, at: 'loopCells', off: [-11.6, 0, -2.2], turn: Math.PI, flicker: true, when: '!prisoners_freed', prompt: 'LISTEN' });
     person(P, { id: 'dale_cell', crew: 'dale', at: 'loopCells', off: [-2.4, 0, 2.2], turn: Math.PI, hologram: true, silent: true, when: 'officer_trusted && !prisoners_freed' });
     person(P, { id: 'rook_cell', crew: 'rook', variant: 'old', at: 'loopCells', off: [2.4, 0, 2.2], turn: Math.PI, hologram: true, silent: true, when: 'rook_fate == "expose" && !prisoners_freed' });
   },
@@ -377,7 +452,7 @@ export const M10 = {
     cue: 'cliff', minutes: 1,
     lines: [L('SERA', 'Somebody at Rain City General is being put back together every morning. The readings come from Ward 32.'), K('Thirty-two.'), L('SERA', 'Means something to you?'), K('It\'s her age. It would be her age.')],
   },
-  done: 't_m10_yard',
+  done: 't_m10_skiff',
 };
 M10.outro = M10.hook.lines;
 
@@ -483,6 +558,7 @@ const M11_HINTS = {
   arrive: ['The intercom.', 'Past the atrium.', 'Go in to triage.'],
   music: ['A music box.', 'It gets quieter as I get closer.', 'Follow it east, to the quietest point.'],
   youngKai: ['Someone on the bench.', 'Outside the children\'s wing.', 'Look at him.'],
+  boy: ['He is drawing.', 'On the bench, beside the music box.', 'Sit with him.'],
   hazards: ['Things go back where they were.', 'Watch the cycle, then cross.', 'Past the IV stand to the records.'],
   rhythm: ['The file keeps un-burning.', 'The annex desk.', 'Watch the file.'],
   practise: ['Practise.', 'The tray, the glass, the door.', 'Reverse one of them.'],
@@ -624,7 +700,8 @@ export const M11 = {
     // (2026, inside the Ward 32 station: Odile at her desk, as the ward kept her)
     shots: [{ cam: [11, 2.1, -46], to: [9.5, 1.9, -44.5], look: [5.2, 1.3, -39.6], t: 9 }],
     year: 'PAST',
-    lines: [N('2026. A nurse writes on the ward whiteboard: VAREN, M., 9.'), N('The ink lifts off the board, letter by letter, back into the marker.')],
+    lines: [N('2026.'), SAYS('NURSE ODILE', 'ODILE', 'Bed two. Varen, Mira. Nine years old. Fever, they said.'), N('The ink lifts off the whiteboard, letter by letter, back into the marker.'),
+      SAYS('NURSE ODILE', 'ODILE', 'Not again. Please, not tonight.')],
   },
   quarters: [
     {
@@ -634,7 +711,10 @@ export const M11 = {
         { id: 'music', kind: 'go', at: 'musicBox', r: 3, after: ['arrive'], goal: 'Follow the sound that gets quieter as you approach.', because: 'A music box. Her song. It is quietest where it is.', hints: M11_HINTS.music, minutes: 4 },
         { id: 'youngKai', kind: 'scene', scene: 'young_kai', at: 'youngKaiBench', after: ['music'], spot: { prompt: 'THE BOY ON THE BENCH', offset: [0, 1.0, 1.2], r: 2.8, model: NO_MODEL },
           goal: 'Someone is sitting by the music box.', because: 'The song is his.', done: 'ev_young_kai', hints: M11_HINTS.youngKai, minutes: 1 },
-        { id: 'hazards', kind: 'go', at: 'recordsGate', r: 4, after: ['youngKai'], goal: 'Back across the courts to the records hall.', because: 'Things here go back to where they were, hard.', hints: M11_HINTS.hazards, minutes: 3 },
+        // (the closing pass: sit with him; the drawing is hers, and the sun on it is his to finish)
+        { id: 'boy', kind: 'scene', scene: 'boy', at: 'youngKaiBench', after: ['youngKai'], spot: { prompt: 'SIT WITH HIM', offset: [1.4, 1.0, 1.0], r: 2.6, model: NO_MODEL },
+          goal: 'Sit with the boy on the bench.', because: 'He is waiting for a doctor. He has waited here before.', done: 'm11_boy', hints: M11_HINTS.boy },
+        { id: 'hazards', kind: 'go', at: 'recordsGate', r: 4, after: ['boy'], goal: 'Back across the courts to the records hall.', because: 'Things here go back to where they were, hard.', hints: M11_HINTS.hazards, minutes: 3 },
       ],
     },
     {
@@ -692,6 +772,19 @@ export const M11 = {
   },
   scenes: {
     young_kai: { lines: [N('A boy of twelve on the bench, a drawing on his knees, the music box beside him. He does not look up.')], set: { ev_young_kai: true }, log: 'Outside the children\'s wing: me at twelve, with her drawing.' },
+    boy: {
+      lines: [N('You sit down beside him. He does not move up. He is twelve, and he is waiting for a doctor.'),
+        SAYS('KAI, TWELVE', 'KAI12', 'They said wait here. I\'ve waited here four times.'), K('What are you drawing?'),
+        SAYS('KAI, TWELVE', 'KAI12', 'It\'s hers. She did the ring and I\'m doing the sun, because she always does the sun wrong. She puts a face on it.'),
+        FX(L('MIRA9', 'Kai! The sun has to have a face, or how does it see us?'), 'echo'),
+        N('Down the corridor, behind a door that is not open, a nine-year-old laughs. The boy\'s pencil stops.'),
+        SAYS('KAI, TWELVE', 'KAI12', 'If she gets better, I\'ll let her do the sun.')],
+      choices: [
+        intent('comfort', 'Tell him she gets better.', { say: 'She gets better.', lines: [SAYS('KAI, TWELVE', 'KAI12', 'You don\'t know that.'), K('No. I\'ve been trying to find out for a long time.')], set: { m11_boy: 'told' } }),
+        intent('withdraw', 'Draw the face on the sun for him.', { say: 'Here. Like she does it.', lines: [N('You take his pencil and give the sun two eyes and a smile. He looks at it for a long time.'), SAYS('KAI, TWELVE', 'KAI12', 'That\'s wrong. That\'s how she does it.')], set: { m11_boy: 'drew' } }),
+      ],
+      log: 'I sat with myself at twelve, outside her ward. He was finishing her drawing.',
+    },
     lock: { when: 'inv_m11lock_done', lines: [N('The last bolt backs out and stays out. Nothing pushes it back in. The door to Ward 32 slides up.')], set: { lock_open: true }, log: 'The lock came apart the way it went together, last bolt first.' },
     lock_no: { lines: [K('Forwards, it only tightens. Last bolt first.')] },
     charredFile: { when: 'rev_charredFile', lines: [N('For as long as Kai holds it, the file is paper. Ward 32, the fourteenth of March 2026. VAREN, M., nine. At the bottom, in an older hand:'), N('ADMITTED BY: K. VAREN.'), K('My name. Not my handwriting. Not yet.')], set: { ev_admitted_by: true }, log: 'Mira, nine, Ward 32. ADMITTED BY: K. VAREN, in an older hand.' },
@@ -750,7 +843,13 @@ const M12_HINTS = {
   rook: ['Rook, in 2026.', 'The gangway gate.', 'Look at the gate.'],
   bouquet: ['Florist\'s paper.', 'On the gangway.', 'Look at it.'],
   whiteboard: ['The lunch room.', 'In 2026.', 'Read the board.'],
+  glazier: ['Somebody is shouting.', 'On the roof\'s edge, where he went through.', 'Her, or him.'],
+  holdGlass: ['The frame fell across her way.', 'Fallen things rise.', 'REVERSE the frame and hold it.'],
+  gangway: ['He stopped on the gangway.', 'In 2026, where the flowers were.', 'Look at him. Look under him.'],
+  camp: ['Where he has been living.', 'In the ruin, by the east wing.', 'The cot, the cup, the wall.'],
+  ring: ['The second ring is humming.', 'Listen to it.', 'Stay.'],
 };
+const GLAZIER = AMB('CROWD_F');
 const M12_SAY = {
   stair: [N('He raises his wrist. The fallen stair lifts back into place, in your colour, with your sound.'), K('That\'s my… he does it the way I do it.'), N('He goes down it, and lets it fall behind him.')],
 };
@@ -772,6 +871,17 @@ const M12_PROCESSES = [
     id: 'witnessSteps', kind: 'recording', at: 'eastRuin', label: 'HIS FOOTSTEPS', weight: 0.5, grain: 'pen', aim: [0, 1.2, 1.4],
     clip: { who: 'NONE', text: 'His steps, forwards: the roof, the glass, the gangway, the glass, the stair. At every pane, he stops.' },
     hints: ['His steps, backwards.', 'A recording runs forwards once.', 'REVERSE his footsteps.'],
+  },
+  // (the closing pass) the glazier's sunshade frame on the roof, down across the walkway where he tore into 2026: held,
+  // it stands back up while she gets clear (2049 only)
+  {
+    id: 'roofFrame', kind: 'fall', at: 'glassPanes', label: 'THE FALLEN FRAME', weight: 1, when: '@PRESENT', grain: 'metal', creak: 0.5,
+    parts: [
+      { shape: 'box', size: [3.4, 2.6, 0.18], mat: 'steel', at: [-4, 1.3, 3], rest: { at: [-4, 0.2, 4.4], rot: [1.45, 0, 0.12] }, solid: true },
+      { shape: 'box', size: [3.4, 0.5, 0.9], mat: 'wood', at: [-4, 2.75, 3], rest: { at: [-3.4, 0.28, 6], rot: [0.3, 0.5, 0] } },
+    ],
+    aim: [-4, 0.5, 4.6],
+    hints: ['The frame fell across her way.', 'Fallen things rise.', 'REVERSE the frame, and hold it while she gets clear.'],
   },
   // a Helix drone over the court: held, it walks its last seconds backwards and forgets it saw Kai
   { id: 'droneCourt', kind: 'patrol', target: 'm12_helix_q0s0', label: 'THE DRONE', weight: 1,
@@ -799,22 +909,33 @@ export const M12 = {
   coldOpen: {
     first: true, minutes: 1, cue: 'card',
     // (2196, where the north wing fell: the Witness on the sinkhole's rim, from behind, looking down where Kai will come)
-    year: 'FUTURE', shots: [{ cam: [0.8, 2.6, -29], to: [0.4, 2.2, -30.5], look: [0, -4, -50], t: 9 }],
+    // (the closing pass: he speaks for himself, and a second shot comes in close on his hands, the flowers and the wrist)
+    year: 'FUTURE', shots: [{ cam: [0.8, 2.6, -29], to: [0.4, 2.2, -30.5], look: [0, -4, -50], t: 7 }, { cam: [1.5, 1.3, -33.1], to: [1.2, 1.25, -33.4], look: [0, 1.0, -34.3], t: 8 }],
     cast: [{ crew: 'witness', at: 'sinkTerraces', off: [0, 0, 2.6], turn: Math.PI }],
-    lines: [N('2196. On the rim where Helix\'s north wing stood, a man holds white chrysanthemums and waits for a younger Kai.'), REV(N('He is seen from behind. On his wrist, a scar.')), N('He whistles three notes, slowly.')],
+    lines: [N('2196. On the rim where Helix\'s north wing stood, a man waits with white chrysanthemums.'), L('WITNESS', 'He comes up the east stair. He always comes up the east stair.'),
+      L('WITNESS', 'White ones. She liked the yellow ones. I bring the white ones anyway.'), REV(N('On his wrist, a scar.')), N('He whistles three notes, slowly.')],
   },
   quarters: [
     {
       name: 'THE CHASE — 2049',
       threads: [
         { id: 'chase', kind: 'chase', npc: 'witness_chase', path: [[-24, 13.5, -41], [-8, 13.5, -42], 'northWing', 'plantDecks', 'glassPanes'], at: 'northRoofs', goal: 'Chase the figure across the roofs.', because: 'He has my walk.', hints: M12_HINTS.chase, minutes: 5 },
-        { id: 'follow', kind: 'go', at: 'gangway2026', r: 4, after: ['chase'], goal: 'He stepped off the roof into 2026. Follow.', because: 'In 2026 there was a way across.', hints: M12_HINTS.follow, minutes: 3 },
+        // (the closing pass: Act II's question, played: the man Kai has chased for three missions, or the person in front of
+        // him. She is seen again at the Spire, Mission 21, and on the Finale's road)
+        { id: 'glazier', kind: 'choice', scene: 'glazier', at: 'glassPanes', after: ['chase'], spot: { prompt: 'THE GLAZIER', offset: [-4, 1.2, 1.8], r: 3, model: NO_MODEL, when: '@PRESENT' },
+          goal: 'Somebody is shouting on the roof\'s edge.', because: 'The roof cracked where he went through it.', done: 'm12_glazier', hints: M12_HINTS.glazier },
+        { id: 'holdGlass', kind: 'tasks', of: ['rev_roofFrame'], at: 'glassPanes', after: ['glazier'], when: 'm12_glazier == "saved"', until: 'm12_glazier == "left"',
+          say: [GLAZIER('Eleven years on this roof. It never moved before tonight.'), GLAZIER('Go on, then. Whoever he is, he stood at the glass and waited for you.')],
+          goal: 'Hold the fallen frame up while she gets clear.', because: 'It only has to stand for a few seconds.', hints: M12_HINTS.holdGlass },
+        { id: 'follow', kind: 'go', at: 'gangway2026', r: 4, after: ['holdGlass'], goal: 'He stepped off the roof into 2026. Follow.', because: 'In 2026 there was a way across.', hints: M12_HINTS.follow, minutes: 3 },
       ],
     },
     {
       name: 'THE CORRIDOR THAT WAS — 2026',
       threads: [
         { id: 'corridor', kind: 'go', at: 'bouquet', r: 3, after: ['follow'], goal: 'Across Corridor B, the gangway that only existed in 2026.', because: 'He uses the building the way I know it.', hints: M12_HINTS.corridor, minutes: 4 },
+        // (he waits for Kai on the gangway, in a year in which he casts no shadow: C9)
+        { id: 'gangway', kind: 'talk', npc: 'witness_gangway', at: 'bouquet', after: ['corridor'], goal: 'He has stopped at the far end of the gangway.', because: 'He is letting me catch up.', done: 'm12_no_shadow', hints: M12_HINTS.gangway },
       ],
       sides: [
         { id: 'rook', name: 'ROOK IN THE CORRIDOR', done: 'ev_corridor_b', minutes: 2,
@@ -831,14 +952,22 @@ export const M12 = {
     {
       name: 'THE RUIN — 2196',
       threads: [
-        { id: 'ruin', kind: 'go', at: 'eastRuin', r: 5, after: ['corridor'], goal: 'Into 2196, where the north wing fell.', because: 'His steps go on there.', hints: M12_HINTS.ruin, minutes: 2 },
+        { id: 'ruin', kind: 'go', at: 'eastRuin', r: 5, after: ['gangway'], goal: 'Into 2196, where the north wing fell.', because: 'His steps go on there.', hints: M12_HINTS.ruin, minutes: 2 },
         { id: 'panes', kind: 'clue', need: 2, of: ['ev_pane_roof', 'ev_pane_gangway', 'ev_steps'], after: ['ruin'],
           spots: [
             { id: 'pane_roof', scene: 'pane_roof', at: 'glassPanes', prompt: 'THE GLASS', offset: [0, 1.2, 0.6], r: 2.8, model: NO_MODEL, when: '@PRESENT' },
             { id: 'pane_gangway', scene: 'pane_gangway', at: 'gangway2026', prompt: 'THE HOARDING', offset: [-2.2, 1.2, 1], r: 2.8, model: NO_MODEL, when: '@PAST' },
           ],
           goal: 'Where he stopped, every time.', because: 'The same stop, in every year.', hints: M12_HINTS.panes, minutes: 2 },
-        { id: 'route', kind: 'deduce', deduction: 'route', at: 'eastRuin', after: ['panes'], spotOpts: { offset: [2, 1.2, 0], r: 3 }, goal: 'Reconstruct his route.', because: 'He repeats it.', hints: M12_HINTS.route, minutes: 3 },
+        // (where he has been living, in the ruin: his bed made the way Kai makes one, one cup, a wall of small handprints)
+        { id: 'camp', kind: 'tasks', of: ['ev_camp_cot', 'ev_camp_cup', 'ev_camp_wall'], after: ['panes'],
+          spots: [
+            { id: 'campCot', scene: 'campCot', at: 'eastRuin', prompt: 'A COT', offset: [12, 0.5, -4], r: 2.4, kit: 'bedside', when: '@FUTURE' },
+            { id: 'campCup', scene: 'campCup', at: 'eastRuin', prompt: 'A CAMP STOVE', offset: [14, 0.9, -1.6], r: 2.2, kit: 'keepsake', when: '@FUTURE' },
+            { id: 'campWall', scene: 'campWall', at: 'eastRuin', prompt: 'THE WALL', offset: [9.6, 1.4, -6.4], r: 2.6, kit: 'drawingFrame', when: '@FUTURE' },
+          ],
+          goal: 'Where he has been living, in the ruin.', because: 'Somebody has slept here, more than once.', hints: M12_HINTS.camp },
+        { id: 'route', kind: 'deduce', deduction: 'route', at: 'eastRuin', after: ['camp'], spotOpts: { offset: [2, 1.2, 0], r: 3 }, goal: 'Reconstruct his route.', because: 'He repeats it.', hints: M12_HINTS.route, minutes: 3 },
       ],
     },
     {
@@ -850,7 +979,12 @@ export const M12 = {
         { id: 'voicemail', kind: 'cinema', after: ['beam'], lines: [N('In his pocket the phone plays the voicemail on its own. Received 05:40.'), FX(L('WITNESS', 'Kai Varen. If you are hearing this, you went in anyway. You always go in anyway.'), 'radio')],
           goal: 'The phone in my pocket.', because: 'Received 05:40.', hints: M12_HINTS.voicemail, minutes: 1 },
         { id: 'face', kind: 'talk', npc: 'witness_face', at: 'secondRing', after: ['voicemail'], goal: 'The second Chronolith. He is waiting by it.', because: 'Face to face, for once.', done: 'm12_faced', hints: M12_HINTS.face, minutes: 4 },
-        { id: 'escape', kind: 'cinema', after: ['face'], lines: [N('He steps back into a fracture. It closes behind him like water.')], goal: 'He is leaving.', because: 'He always leaves.', hints: M12_HINTS.escape, minutes: 2 },
+        // (the closing pass: the second ring speaks, in a woman's voice, waking; the mystery is left standing)
+        { id: 'ring', kind: 'cinema', after: ['face'], shots: [{ cam: [7, -8.6, -47], to: [5, -8.9, -49], look: [0, -6.4, -57], t: 14 }],
+          lines: [FX(L('MIRA', 'Kai? Is that you? It\'s so dark in here.'), 'echo'), L('WITNESS', 'She always wakes up asking for you.'), K('Who is she?'),
+            L('WITNESS', 'Ask me again in thirty years.'), FX(L('MIRA', 'Kai?'), 'echo')],
+          goal: 'The second ring is humming.', because: 'Somebody inside it said my name.', hints: M12_HINTS.ring },
+        { id: 'escape', kind: 'cinema', after: ['ring'], lines: [N('He steps back into a fracture. It closes behind him like water.')], goal: 'He is leaving.', because: 'He always leaves.', hints: M12_HINTS.escape, minutes: 2 },
       ],
     },
   ],
@@ -863,6 +997,14 @@ export const M12 = {
         set: { m12_faced: true },
       },
       { when: 'm12_faced', lines: [L('WITNESS', 'Go home, Kai.')] },
+    ],
+    witness_gangway: [
+      {
+        when: '!m12_no_shadow',
+        lines: [L('WITNESS', 'Look down, Kai.'), K('You have no shadow.'), L('WITNESS', 'Not in this year. In this year I haven\'t happened yet.'), L('WITNESS', 'Neither have you, quite. Keep up.')],
+        set: { m12_no_shadow: true },
+      },
+      { when: 'm12_no_shadow', lines: [L('WITNESS', 'Keep up.')] },
     ],
   },
   deductions: {
@@ -885,6 +1027,18 @@ export const M12 = {
       set: { ev_corridor_b: true },
     },
     bouquet: { lines: [N('White chrysanthemums in florist\'s paper. The receipt says 08:04.')], set: { ev_bouquet: true } },
+    glazier: {
+      lines: [GLAZIER('Hey! You! The frame came down when he went through the glass. The roof is cracking under me!'), K('He\'s getting away.')],
+      choices: [
+        intent('comfort', 'Hold the frame up for her.', { consequence: true, lines: [K('Stay where you are. I can hold it.')], set: { m12_glazier: 'saved' } }),
+        intent('investigate', 'Go after him.', { consequence: true, lines: [GLAZIER('Hey! Hey!'), N('Behind Kai she climbs down the cradle ropes on her own, slowly, and does not look up.'),
+          N('At the gangway he has dropped a page, still warm from his pocket.'), K('My handwriting, older. HE CHASES. HE ALWAYS CHASES. LET HIM SEE THE STAIR.')],
+        set: { m12_glazier: 'left', ev_witness_page: true }, log: 'I went after him and left the glazier. He dropped a page: HE CHASES. HE ALWAYS CHASES.' }),
+      ],
+    },
+    campCot: { when: '@FUTURE', lines: [K('A cot, made with hospital corners. I make a bed like that. Nobody taught me.')], set: { ev_camp_cot: true } },
+    campCup: { when: '@FUTURE', lines: [K('One cup, one spoon, coffee, black. He has been drinking it the way I drink it for a long time.')], set: { ev_camp_cup: true } },
+    campWall: { when: '@FUTURE', lines: [N('A ruined wall covered in handprints in paint, every one at a nine-year-old\'s height, every one the same hand.'), K('He did these one at a time. From memory.')], set: { ev_camp_wall: true }, log: 'His camp in the ruin: my bed, my cup, a wall of one child\'s handprints.' },
     whiteboard: { lines: [N('On the 2026 lunch-room whiteboard: SITE ZERO JUNIOR TOUR. SATURDAY 14 MARCH. 6 KIDS.')], set: { ev_junior_tour: true } },
   },
   rules: [
@@ -918,6 +1072,11 @@ export const M12 = {
   overlay(P) {
     // (he starts south of the lift's overrun, along the parapet, and leads Kai east across the roof)
     person(P, { id: 'witness_chase', crew: 'witness', at: 'northRoofs', off: [-6, 0, 8], turn: -Math.PI / 2 });
+    // the glazier on the roof's edge, where he tore into 2026; once Kai has held the frame, by the stair core, safe
+    person(P, { id: 'm12_glazier', crew: 'm12_glazier', first: 'A glazier', seed: 1201, ambient: true, at: 'glassPanes', off: [-4, 0, 0.8], turn: Math.PI, silent: true, when: '@PRESENT && t_m12_chase && !t_m12_holdGlass && !(m12_glazier == "left")' });
+    person(P, { id: 'm12_glazier_safe', crew: 'm12_glazier', first: 'A glazier', seed: 1201, ambient: true, at: 'glassPanes', off: [-9, 0, 8], turn: -Math.PI / 2, silent: true, when: '@PRESENT && t_m12_holdGlass' });
+    // (in 2026, at the gangway's far end, where the flowers fall: no shadow)
+    person(P, { id: 'witness_gangway', crew: 'witness', at: 'bouquet', off: [0, 0, 3], turn: 0, prompt: 'TALK TO HIM', when: '@PAST && t_m12_corridor && !m12_no_shadow' });
     person(P, { id: 'witness_ruin', crew: 'witness', at: 'collapsedStair', off: [0, 3, 5.5], silent: true, when: 't_m12_route && !m12_stair_shown' });
     person(P, { id: 'witness_face', crew: 'witness', at: 'secondRing', off: [0, 0, 4], turn: Math.PI, when: 't_m12_voicemail && !t_m12_escape', prompt: 'TALK TO HIM' });
     // (Rook, persuaded, holds the 2026 gate himself: in person, not his echo)
@@ -944,6 +1103,7 @@ const M13_HINTS = {
   burial: ['Who buried it?', 'The burial site.', 'REVERSE the soil.'],
   listeners: ['People who listened.', 'The listeners\' route.', 'Talk to them.'],
   rollcall: ['The roll-call wall.', 'By the frozen block.', 'Hold the wall up.'],
+  block: ['The frozen block.', 'East of the stabilizer, behind the glass.', 'Look in, in 2049.'],
 };
 const M13_PROCESSES = [
   // two shells in flight over the shell zone, each on its own cycle: held, each climbs back into the gun that fired it
@@ -1017,7 +1177,9 @@ export const M13 = {
   coldOpen: {
     first: true, minutes: 1, cue: 'card',
     shots: [{ cam: 'quayTrench', look: 'shellZone', t: 9 }],
-    lines: [N('A Continuum gun and an Unwritten gun fire in the same second.'), REV(N('Both shells hang in the air. One of them runs backwards.'))],
+    // (the closing pass: both sides give the same order, a second apart, before anyone fires)
+    lines: [FX(SAYS('SERGEANT BRASK', 'SERGEANT', 'Ninth minute. They\'re about to fire. Fire first.'), 'radio'), FX(L('SERA', 'Ninth minute. They\'re about to fire. Fire first.'), 'radio'),
+      N('A Continuum gun and an Unwritten gun fire in the same second.'), REV(N('Both shells hang in the air. One of them runs backwards.'))],
   },
   quarters: [
     {
@@ -1062,13 +1224,18 @@ export const M13 = {
     {
       name: 'THE STABILIZER',
       threads: [
-        { id: 'stabilizer', kind: 'choice', scene: 'stabilizer', at: 'stabilizer', after: ['devices'], spot: { prompt: 'THE STABILIZER', offset: [0, 1.2, 2.2], r: 3.4, model: NO_MODEL },
+        // (the closing pass: the people the choice is about, close enough to see, and one of them is Sera's)
+        { id: 'block', kind: 'scene', scene: 'block', at: 'frozenBlock', after: ['devices'], spot: { prompt: 'THE FROZEN BLOCK', offset: [10, 1.2, 18.5], r: 3, model: NO_MODEL, when: '@PRESENT' },
+          goal: 'Look into the frozen block.', because: 'Two hundred and twelve people. The stabilizer can free them, or end the war.', done: 'ev_block', hints: M13_HINTS.block },
+        { id: 'stabilizer', kind: 'choice', scene: 'stabilizer', at: 'stabilizer', after: ['block'], spot: { prompt: 'THE STABILIZER', offset: [0, 1.2, 2.2], r: 3.4, model: NO_MODEL },
           goal: 'The stabilizer: destroy it, or free the people in the frozen block.', because: 'It is what both sides are fighting for.', done: 'stabilizer_destroyed || civilians_freed', hints: M13_HINTS.stabilizer, minutes: 4 },
         // (shot from over the channel onto the frozen block: it stays frozen with its people still inside, or it has come
         // down and they walk out past the silos; warport.js builds both)
         { id: 'district', kind: 'cinema', after: ['stabilizer'], shots: [{ cam: [30, 7, -45], to: [36, 6, -50], look: [64, 5, -72], t: 9 }],
           lines: [N('The frozen block stays frozen, its people still inside. Around it the guns go on, but nothing repeats.', 'faction == "unwritten"'),
-            N('The block thaws. Two hundred and twelve people walk out into the smoke. The Continuum holds the district now.', 'faction == "continuum"')],
+            N('The block thaws. Two hundred and twelve people walk out into the smoke. The Continuum holds the district now.', 'faction == "continuum"'),
+            N('Three floors up, the steam still stands over the kettle.', 'faction == "unwritten" && ev_block'),
+            N('In the smoke, a woman with a tea towel over her shoulder is looking for her daughter.', 'faction == "continuum" && ev_block')],
           goal: 'Watch the district.', because: 'It will remember what I chose.', hints: M13_HINTS.district, minutes: 2 },
       ],
       sides: [
@@ -1107,6 +1274,17 @@ export const M13 = {
     dev_crater: { when: '@FUTURE', lines: [N('The third is a ruin in 2196, and still running. Kai switches it off.')], set: { dev_crater: true } },
     dev_crater_no: { lines: [K('It answers in 2196.')] },
     casing: { lines: [N('The casing, under the 2026 mud: HELIX. PROPERTY OF K. VAREN.')], set: { ev_casing: true } },
+    block: {
+      when: '@PRESENT',
+      lines: [N('Behind the frozen glass, every floor stopped halfway through something. A man tying a shoe. Two children on a stair, mid-argument.'),
+        N('Three floors up, hanging in the air where it broke away, a kitchen: a woman at a stove, the steam standing over her kettle like glass.'),
+        FX(L('SERA', 'Third floor. The woman at the stove.'), 'radio'), K('You know her?'),
+        FX(L('SERA', 'She was making tea when the block stopped. She has been making it for nine years. She is my mother.'), 'radio'),
+        K('Why didn\'t you tell me?'),
+        FX(L('SERA', 'Because you would choose her. Choose the way you would if she was nobody\'s.'), 'radio')],
+      set: { ev_block: true }, log: 'Sera\'s mother is in the frozen block. She has been making tea for nine years.',
+    },
+    block_no: { lines: [K('In this year the block is whole, or a green mound. It froze in 2049.')] },
     stabilizer: {
       lines: [N('The stabilizer can freeze the district, and the war with it, or spend itself freeing the two hundred and twelve people locked in the frozen block.')],
       choices: [

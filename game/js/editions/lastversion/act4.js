@@ -10,7 +10,7 @@
 // (D16); in Mission 22 the speakers of the Prologue's warnings are fixed: it was always the Witness.
 import { intent } from './npcs.js';
 import { NO_MODEL } from './processes.js';
-import { L, N, K, CREW, REV, FX, C, SAYS, person, song } from './act3.js';
+import { L, N, K, CREW, REV, FX, C, SAYS, AMB, person, song } from './act3.js';
 
 // =============================================================================================================
 // Mission 19: THE PLACE OUTSIDE TIME
@@ -26,6 +26,7 @@ const M19_HINTS = {
   orren: ['Orren.', 'He keeps sweeping.', 'Ask him.'],
   gallery: ['The clockmaker\'s gallery.', 'It stands in 2026 and in 2196.', 'Climb to it.'],
   arm: ['The brass arm.', 'In the gallery.', 'Read what is cut under the mark.'],
+  reflection: ['Someone walks in the water.', 'Only in the reflection, north of the bridge.', 'Follow her to the door.'],
 };
 
 const M19_PROCESSES = [
@@ -99,7 +100,13 @@ export const M19 = {
     {
       name: 'THE DOOR THAT IS EVERYWHERE',
       threads: [
-        { id: 'doors', kind: 'clue', need: 2, of: ['ev_door_shadow', 'ev_door_bare'], after: ['bridge'],
+        // (the closing pass: Mira's reflection walks ahead across the water to a door, and it is the wrong one)
+        { id: 'reflection', kind: 'chase', npc: 'mira19_echo', path: [[-6, 0, -52], [-16, 0, -66], [-26, 0, -82], 'door3'], leash: 14, ahead: 5, speed: 1.3, after: ['bridge'],
+          say: [N('At the blue door the woman in the water stops, and looks up at you out of the reflection. Nobody stands over her.'),
+            FX(L('MIRA', 'You always follow the one in the water. She\'s the one who waits for you.'), 'echo'), K('Mira. Which one are you?'),
+            FX(L('MIRA', 'The one who walks away. Look at the doors, Kai. Not at me.'), 'echo')],
+          goal: 'A woman walks ahead of me across the water. Only in the reflection.', because: 'Mira\'s walk. She doesn\'t look back.', hints: M19_HINTS.reflection },
+        { id: 'doors', kind: 'clue', need: 2, of: ['ev_door_shadow', 'ev_door_bare'], after: ['reflection'],
           spots: [
             ...['door1', 'door2', 'door3', 'door4'].map((at) => ({ id: `look_${at}`, scene: 'doorShadow', at, prompt: 'A BLUE DOOR', offset: [0, 1.2, 1.4], r: 2.4, model: NO_MODEL })),
             { id: 'look_door5', scene: 'doorBare', at: 'door5', prompt: 'A BLUE DOOR', offset: [0, 1.2, 1.4], r: 2.4, model: NO_MODEL },
@@ -137,7 +144,8 @@ export const M19 = {
     ],
   },
   scenes: {
-    markRoad: { lines: [N('The clockmaker\'s mark, chalked on the road. Under it the stone is real stone.')], set: { ev_mark_road: true } },
+    markRoad: { lines: [N('The clockmaker\'s mark, chalked on the road. Under it the stone is real stone.'),
+      FX(L('MIRA', 'You used to chalk arrows on the pavement for me, all the way home from school. I still follow chalk.'), 'echo')], set: { ev_mark_road: true } },
     markGallery: { lines: [N('The mark again, cut into the gallery\'s rail by the light well.')], set: { ev_mark_gallery: true } },
     markEnd: { lines: [N('No mark here. The road runs on a few metres more, and stops in the sky.')], set: { ev_mark_end: true } },
     arm: {
@@ -167,6 +175,7 @@ export const M19 = {
     person(P, { id: 'orren1', crew: 'orren', at: 'orrenRoad', off: [2, 0, -3], turn: Math.PI, prompt: 'TALK TO ORREN', when: '!m19_orren1' });
     person(P, { id: 'orren2', crew: 'orren', at: 'observatoryPattern', off: [3, 0, 0], turn: Math.PI / 2, prompt: 'TALK TO ORREN', when: 'm19_orren1 && !m19_orren2' });
     person(P, { id: 'orren3', crew: 'orren', at: 'bridgeFar', off: [3, 0, -2], turn: Math.PI, prompt: 'TALK TO ORREN', when: 'm19_orren2 && !m19_orren3' });
+    person(P, { id: 'mira19_echo', crew: 'mira', at: 'bridgeFar', off: [-2, 0, -6], turn: Math.PI, hologram: true, silent: true, when: 't_m19_bridge && !t_m19_reflection' });
     person(P, { id: 'mira19', crew: 'mira', at: 'miraMeet', off: [0, 0, 0], turn: 0, prompt: 'TALK TO MIRA', when: 'ev_real_door' });
   },
   hook: {
@@ -189,6 +198,7 @@ const M20_HINTS = {
   child: ['The Child.', 'In the sea garden.', 'Listen.'],
   sister: ['Mira.', 'In the sea garden.', 'Talk to her.'],
   house: ['A house at the corner.', 'Nobody owns it on record. In 2196.', 'Look at the door, the window, the letterbox.'],
+  note: ['She keeps stopping.', 'Mira, planting, in the world without me.', 'Hum it for her, or let her find it.'],
 };
 // R6: nothing here can be reversed; the first try, Mira answers it herself
 const MEMORY = (id, at, label, aim) => ({ id, kind: 'refusal', refuse: 'A MEMORY', at, label, line: 'Don\'t. Let it happen the way it happened.', lineWho: 'MIRA', once: 'm20_refused', aim });
@@ -288,7 +298,11 @@ export const M20 = {
           ],
           say: [K('I\'m not in this one. The 41 is late, and she\'s fine.')],
           goal: 'The world where she survives and I do not.', because: 'The sea where the street was.', hints: M20_HINTS.without, minutes: 6 },
-        { id: 'align', kind: 'scene', scene: 'align', at: 'alignBoard', after: ['without'], spot: { prompt: 'THREE MEMORIES', offset: [0, 1.2, 1.2], r: 3, kit: 'chartBoard' },
+        // (the closing pass: in the world without him, she hums and stops a note short. The one thing he can give her here is
+        // the note; or he can let her find it. She looks up at him, or she never knows he was there)
+        { id: 'note', kind: 'choice', scene: 'note', at: 'miraPlanting', after: ['without'], spot: { prompt: 'MIRA, HUMMING', offset: [1.4, 1.2, 1.6], r: 2.8, model: NO_MODEL, when: '@FUTURE' },
+          goal: 'In the world without me, she is humming a song with a note missing.', because: 'It is my song. It is her song.', done: 'm20_note', hints: M20_HINTS.note },
+        { id: 'align', kind: 'scene', scene: 'align', at: 'alignBoard', after: ['note'], spot: { prompt: 'THREE MEMORIES', offset: [0, 1.2, 1.2], r: 3, kit: 'chartBoard' },
           goal: 'Align three memories without forcing them into one.', because: 'They disagree. They are all hers.', done: 'm20_aligned', hints: M20_HINTS.align, minutes: 6 },
         { id: 'child', kind: 'cinema', after: ['align'],
           lines: [N('The Child walks out of the house with the blue door, across all three memories, to the woman in the garden.'), L('CHILD', 'Up, up...'), L('MIRA', 'And then down.'),
@@ -320,9 +334,19 @@ export const M20 = {
     ],
   },
   scenes: {
-    drawing: { lines: [N('Crayon on the fridge: KAI + MIRA beside a black circle. She drew it. He kept it.')], set: { ev_fridge_drawing: true } },
+    drawing: { lines: [N('Crayon on the fridge: KAI + MIRA beside a black circle. She drew it. He kept it.'),
+      N('Over the circle, a sun with a face: two eyes and a smile in pencil, not crayon. A grown man\'s pencil.', 'm11_boy == "drew"')], set: { ev_fridge_drawing: true } },
     boots: { lines: [N('Yellow boots by the back door, still muddy from the dig on the hill.')], set: { ev_yellow_boots: true } },
     nightBadge: { lines: [N('Their mother\'s badge: RAIN CITY GENERAL, NIGHT SHIFT. Left on the hall table, every morning, for a week.')], set: { ev_night_badge: true } },
+    note: {
+      when: '@FUTURE',
+      lines: [L('MIRA', 'Up, up...'), N('She stops, and frowns at the soil, as if she has dropped something small in it.')],
+      choices: [
+        intent('comfort', 'Hum the last note for her.', { consequence: true, lines: [K('...and then down.'), L('MIRA', 'Oh. That\'s it. That\'s the one.'), L('MIRA', 'Have we met? You look like somebody I keep almost remembering.')], set: { m20_note: 'sung' } }),
+        intent('withdraw', 'Let her find it.', { consequence: true, lines: [N('Kai says nothing. She hums it again, stops again, and goes back to her planting.'), K('She\'ll find it. It\'s hers to find.')], set: { m20_note: 'left' } }),
+      ],
+    },
+    note_no: { lines: [K('Not here. In the world without me, by the sea.')] },
     late41: { lines: [N('The 41 stop. The timetable says 8:14. The bus is late, and nobody minds.')], set: { ev_late41: true } },
     memorialNobody: { lines: [N('A memorial with no name on it, and fresh flowers. FOR NOBODY IN PARTICULAR.')], set: { ev_memorial_nobody: true } },
     planting: { lines: [N('Mira at thirty-two, planting. She hums up, up, and stops, and frowns, as if a note is missing.')], set: { ev_mira_planting: true } },
@@ -343,7 +367,9 @@ export const M20 = {
   },
   overlay(P) {
     person(P, { id: 'mira20a', crew: 'mira', at: 'garden', off: [1.6, 0, 1.4], turn: Math.PI, prompt: 'TALK TO MIRA', when: 't_m20_childhood && !m20_song' });
-    person(P, { id: 'mira_plant', crew: 'mira', at: 'miraPlanting', off: [0, 0, 0], turn: 0, silent: true, when: '@FUTURE && !t_m20_align' });
+    person(P, { id: 'mira_plant', crew: 'mira', at: 'miraPlanting', off: [0, 0, 0], turn: 0, silent: true, when: '@FUTURE && !t_m20_align && !(m20_note == "sung")' });
+    // (given her note, she has stood up from the bed and turned to look at the stranger who knew it)
+    person(P, { id: 'mira_turned', crew: 'mira', at: 'miraPlanting', off: [0.6, 0, 0.8], turn: Math.PI * 0.75, silent: true, when: '@FUTURE && !t_m20_align && m20_note == "sung"' });
     person(P, { id: 'mira20', crew: 'mira', at: 'seaGarden', off: [0, 0, 1.2], turn: Math.PI, prompt: 'TALK TO MIRA', when: 't_m20_align' });
     person(P, { id: 'child20', crew: 'child', at: 'seaGarden', off: [1.4, 0, 1.6], turn: Math.PI, silent: true, when: 't_m20_align' });
   },
@@ -372,7 +398,12 @@ const M21_HINTS = {
   orders: ['What is the Witness building?', 'The halls, the elite ramps, the Director\'s desk.', 'Read what they left: the wall, the orders, the desk.'],
   plan: ['What is he building up here?', 'A console, a stool, a child\'s chair.', 'Not a timeline. A room.'],
   cellDoor: ['An elite at the cells.', 'It walks across the way to the arena.', 'REVERSE its rewind, and go while it is stuck.'],
+  chamber: ['What he built up here.', 'On the summit, before the ring.', 'The console, the stool, the chair.'],
+  mira: ['Mira.', 'In the chair he built.', 'Talk to her.'],
+  glazier: ['Someone on the glider deck.', 'In a work uniform, on the west deck.', 'Talk to her.'],
+  brask: ['Brask.', 'On the elite ramps.', 'Talk to him.'],
 };
+const GLAZIER21 = AMB('CROWD_F');
 const M21_SAY = {
   snap: [K('It jumped back to where it stood five seconds ago. They rewind themselves.')],
   stuck: [K('Its rewind, run forwards. It\'s stuck where it stands.')],
@@ -448,9 +479,11 @@ export const M21 = {
   beats: [{ kind: 'custom', goal: 'Reach the Witness.' }],
   coldOpen: {
     first: true, minutes: 1, cue: 'card',
-    shots: [{ cam: 'arrival', look: 'mast', t: 9 }],
-    cast: [{ crew: 'director', at: 'arrival', off: [0, 0, 12], turn: Math.PI, hologram: true }],
-    lines: [L('ROOK', DIRECTOR_LINE, 'rook_fate == "persuade"'), SAYS('THE DIRECTOR', 'PRYCE', DIRECTOR_LINE, 'rook_fate == "expose"'),
+    // (the closing pass: first the summit, where the Witness is talking to someone inside his ring; then the broadcast)
+    shots: [{ cam: [-30, 26.2, -50], to: [-32, 26.4, -53], look: [-50, 30, -64], t: 11 }, { cam: 'arrival', look: 'mast', t: 9 }],
+    cast: [{ crew: 'witness', at: 'witnessStand', off: [-2, 0, 0], turn: Math.PI / 2 }, { crew: 'director', at: 'arrival', off: [0, 0, 12], turn: Math.PI, hologram: true }],
+    lines: [L('WITNESS', 'One more, Mira.'), FX(L('MIRA', 'You said that a hundred times. In a hundred voices. All of them yours.'), 'echo'), L('WITNESS', 'This is the last one.'), FX(L('MIRA', 'You said that too.'), 'echo'),
+      L('ROOK', DIRECTOR_LINE, 'rook_fate == "persuade"'), SAYS('THE DIRECTOR', 'PRYCE', DIRECTOR_LINE, 'rook_fate == "expose"'),
       FX(SAYS('THE DIRECTOR', 'DIRECTOR', DIRECTOR_LINE, '!(rook_fate == "persuade") && !(rook_fate == "expose")'), 'recording'), N('Above the clouds, every elite on the Spire turns toward the stairs.')],
   },
   quarters: [
@@ -465,6 +498,9 @@ export const M21 = {
         { id: 'radio', name: 'MARA ON THE RADIO', done: 'ev_mara_radio', minutes: 2,
           threads: [{ id: 'radioListen', kind: 'scene', scene: 'radio', at: 'lightBridge', spot: { prompt: 'A RADIO', offset: [2.4, 1.0, -2], r: 2.6, kit: 'recorder' },
             goal: 'A radio, by the light bridge.', because: 'It is on Mara\'s frequency.', done: 'ev_mara_radio', hints: M21_HINTS.radio, minutes: 2 }] },
+        // (the closing pass: Mission 12's glazier, working on the Spire's glass now; she remembers what Kai did on Helix's roof)
+        { id: 'glazier', name: 'THE GLAZIER', when: 'm12_glazier', done: 'm21_glazier', minutes: 2,
+          threads: [{ id: 'glazierTalk', kind: 'talk', npc: 'm21_glazier', at: 'gliderDeck', goal: 'A glazier on the glider deck.', because: 'I know her face. From a roof.', done: 'm21_glazier', hints: M21_HINTS.glazier }] },
       ],
     },
     {
@@ -486,6 +522,11 @@ export const M21 = {
         { id: 'cellDoor', kind: 'tasks', of: ['m21_door'], at: 'cells', after: ['plan'],
           goal: 'An elite stands between the cells and the arena\'s bridge.', because: 'It rewinds whatever I do to it. Unless I run its rewind forwards.', hints: M21_HINTS.cellDoor, minutes: 2 },
       ],
+      sides: [
+        // (the closing pass: the Continuum's loop-aware sergeant, from Missions 9 and 13: why one timeline)
+        { id: 'brask', name: 'BRASK\'S LAST ROUND', done: 'm21_brask', minutes: 2,
+          threads: [{ id: 'braskTalk', kind: 'talk', npc: 'brask21', at: 'eliteRamps', goal: 'Sergeant Brask, on the elite ramps.', because: 'He remembers me. All of me.', done: 'm21_brask', hints: M21_HINTS.brask }] },
+      ],
     },
     {
       name: 'THE ARENA',
@@ -502,7 +543,17 @@ export const M21 = {
     {
       name: 'THE WITNESS',
       threads: [
-        { id: 'confront', kind: 'talk', npc: 'witness21', at: 'witnessStand', after: ['gapTwo'], goal: 'Confront the Witness.', because: 'He is at the citadel\'s ring.', done: 'm21_wrists', hints: M21_HINTS.confront, minutes: 5 },
+        // (the closing pass: Chamber One rebuilt on the summit, from the requisition; and Mira in the chair, which she has
+        // outgrown)
+        { id: 'chamber', kind: 'tasks', of: ['ev_m21_console', 'ev_m21_stool', 'ev_m21_chair'], after: ['gapTwo'],
+          spots: [
+            { id: 'm21Console', scene: 'm21Console', at: 'witnessStand', prompt: 'A 2026 CONSOLE', offset: [10, 1.2, -8], r: 2.4, kit: 'citadelConsole' },
+            { id: 'm21Stool', scene: 'm21Stool', at: 'witnessStand', prompt: 'A STEP STOOL', offset: [9, 0.5, -10], r: 2, model: NO_MODEL },
+            { id: 'm21Chair', scene: 'm21Chair', at: 'witnessStand', prompt: 'A CHILD\'S CHAIR', offset: [12, 0.6, -6], r: 2.2, kit: 'memoryChair' },
+          ],
+          goal: 'What he has built on the summit.', because: 'The requisition, delivered.', hints: M21_HINTS.chamber },
+        { id: 'mira', kind: 'talk', npc: 'mira21', at: 'witnessStand', after: ['chamber'], goal: 'Mira, in the chair he built.', because: 'She is a light in it, not a girl.', done: 'm21_mira', hints: M21_HINTS.mira },
+        { id: 'confront', kind: 'talk', npc: 'witness21', at: 'witnessStand', after: ['mira'], goal: 'Confront the Witness.', because: 'He is at the citadel\'s ring.', done: 'm21_wrists', hints: M21_HINTS.confront, minutes: 5 },
       ],
     },
   ],
@@ -519,6 +570,36 @@ export const M21 = {
       },
       { when: 'm21_wrists', lines: [L('WITNESS', 'The ring, Kai.')] },
     ],
+    mira21: [
+      {
+        when: '!m21_mira',
+        lines: [L('MIRA', 'He built me a chair I don\'t fit any more.'), K('Mira.'), L('MIRA', 'He\'s going to do it again. One more world, with me nine in it, laughing, and you at the console.'),
+          L('MIRA', 'Don\'t let him do it for me. And Kai. Don\'t you do it for me either.')],
+        choices: [
+          intent('comfort', 'I\'ll get you out.', { lines: [L('MIRA', 'Out isn\'t a place, Kai. You\'ll see. Ask me later what I want. Nobody ever has.')], set: { m21_mira: 'out' } }),
+          intent('investigate', 'What does he need me for?', { lines: [L('MIRA', 'Your hand on the button. It was always your hand. He can\'t press it. He\'s too old to be the boy.')], set: { m21_mira: 'why' } }),
+          intent('challenge', 'Then tell me how to stop him.', { lines: [L('MIRA', 'You don\'t stop him. You stand next to him and you don\'t press it. That\'s all he ever needed to see.')], set: { m21_mira: 'how' } }),
+        ],
+      },
+      { when: 'm21_mira', lines: [L('MIRA', 'Go and talk to him. He\'s frightened of you.')] },
+    ],
+    m21_glazier: [
+      { when: '!m21_glazier && m12_glazier == "saved"', lines: [GLAZIER21('You. The roof. I never got your name, and I told everyone about you anyway.'), GLAZIER21('They have me doing the Spire\'s glass now. If you need a pair of hands up there, shout. I don\'t fall off things any more.')], set: { m21_glazier: true } },
+      { when: '!m21_glazier && m12_glazier == "left"', lines: [GLAZIER21('You walked past me on a roof once. I climbed down on my own.'), K('I\'m sorry.'), GLAZIER21('Don\'t be sorry. Be quicker.')], set: { m21_glazier: true } },
+      { when: 'm21_glazier', lines: [GLAZIER21('Mind the glass up there. It remembers weight.')] },
+    ],
+    soldier: [
+      {
+        when: '!m21_brask',
+        lines: [CREW('Varen. I remember every loop of the war at the delta. I remember you in all of them.'), CREW('They promised me one timeline. One. So that I would only have to remember one.'),
+          CREW('Stand down my elites, they say, and I lose the only thing I was promised.', 'faction == "continuum"'), CREW('You freed the district. My people hate you for it. I don\'t, yet.', 'faction == "unwritten"')],
+        choices: [
+          intent('comfort', 'Then remember this one.', { lines: [CREW('I will. That is the trouble with me.')], set: { m21_brask: 'remember' } }),
+          intent('investigate', 'What is the Witness to you?', { lines: [CREW('A man who pays in cash and asks for children\'s furniture. I stopped asking questions at the chair.')], set: { m21_brask: 'witness' } }),
+        ],
+      },
+      { when: 'm21_brask', lines: [CREW('Go up. My elites will look the other way for as long as I can make them.')] },
+    ],
     m21_cook: [{ when: 'true', lines: [SAYS('A COOK', 'CROWD_F', 'You told us to get out of the tower, back then. We did. The kitchen door\'s open. Go on.')] }],
   },
   scenes: {
@@ -531,6 +612,9 @@ export const M21 = {
         N('On the desk, a requisition signed W.: ONE CONSOLE, 2026 PATTERN. ONE STEP STOOL. ONE CHAIR, CHILD-SIZED.')],
       set: { ev_director_office21: true, ev_requisition: true }, log: 'The Witness requisitioned a 2026 console, a step stool and a child\'s chair.',
     },
+    m21Console: { lines: [N('A Helix console of the 2026 pattern, bolted to the summit, its button at a grown man\'s chest.'), K('He found the same scratch on the casing. Or he made it.')], set: { ev_m21_console: true } },
+    m21Stool: { lines: [K('A step stool. Yellow paint on one corner. He had to paint that himself.')], set: { ev_m21_stool: true } },
+    m21Chair: { lines: [N('A child\'s chair, facing the ring.'), K('Nine years old. He built the whole room around the chair.')], set: { ev_m21_chair: true }, log: 'On the summit the Witness has rebuilt Chamber One: the console, the stool, the child\'s chair.' },
     timelineWall: { lines: [N('A wall of one hundred and seventeen timelines, each one struck through but one. The one left has no date on it.'), K('One permanent timeline. Theirs, or his?')], set: { ev_one_line: true } },
     fieldOrders: { lines: [N('Orders on a lectern: HOLD THE ARENA UNTIL THE RING TURNS. VAREN IS NOT TO BE HARMED. THE WITNESS WILL NEED HIM.')], set: { ev_field_orders: true } },
     ally: {
@@ -540,6 +624,7 @@ export const M21 = {
         intent('investigate', 'Anja.', { when: '!ally && (city_freed || city_stabilized)', lines: [L('ANJA', 'A lock can hold a slab as easily as a city. Thirty seconds. Run.')], set: { ally: 'anja' }, then: 'allyHold' }),
         intent('investigate', 'Iven.', { when: '!ally && (last_signal || iven_team_saved)', lines: [L('IVEN', 'I owe you a route. Thirty seconds. Go.')], set: { ally: 'iven' }, then: 'allyHold' }),
         intent('investigate', 'Rook.', { when: '!ally && rook_fate == "persuade"', lines: [L('ROOK', 'I held a gate for you once. A bridge is a gate lying down.')], set: { ally: 'rook' }, then: 'allyHold' }),
+        intent('comfort', 'The glazier.', { when: '!ally && m12_glazier == "saved" && m21_glazier', lines: [SAYS('THE GLAZIER', 'CROWD_F', 'A slab is only a big pane. Thirty seconds. Go.')], set: { ally: 'glazier' }, then: 'allyHold' }),
         intent('comfort', 'The people who listened.', { when: '!ally && warned_evacuees', lines: [SAYS('A LISTENER', 'CROWD_F2', 'You told us to get out. We got out. Now you get across.')], set: { ally: 'listeners' }, then: 'allyHold' }),
         intent('withdraw', 'Nobody. I go alone.', { when: '!ally', lines: [K('Alone, then. In 2196 a girder lies across that gap.')], set: { ally: 'none' } }),
         intent('investigate', 'Once more.', { when: 'ally && !(ally == "none")', lines: [K('Once more. Hold it.')], then: 'allyHold' }),
@@ -582,6 +667,10 @@ export const M21 = {
     for (const [id, crew, when, o] of [['sera21', 'sera', 'ally == "sera" && !@PAST', {}], ['anja21', 'anja', 'ally == "anja" && !@PAST', {}], ['iven21', 'iven', 'ally == "iven" && !@PAST', {}], ['rook21', 'rook', 'ally == "rook" && !@PAST', { variant: 'old' }]]) {
       person(P, { id, crew, at: 'arenaGap2', off: [3.6, 0, 9.4], turn: Math.PI, silent: true, when, ...o });
     }
+    person(P, { id: 'm21_glazier_gap', crew: 'm12_glazier', first: 'The glazier', seed: 1201, ambient: true, at: 'arenaGap2', off: [3.6, 0, 9.4], turn: Math.PI, silent: true, when: 'ally == "glazier" && !@PAST' });
+    person(P, { id: 'm21_glazier', crew: 'm12_glazier', first: 'The glazier', seed: 1201, ambient: true, at: 'gliderDeck', off: [1.6, 0, 2.4], turn: Math.PI, prompt: 'TALK TO HER', when: 'm12_glazier && !@PAST' });
+    person(P, { id: 'brask21', crew: 'soldier', at: 'eliteRamps', off: [-3, 0, 2], turn: Math.PI, prompt: 'TALK TO BRASK', when: '!@PAST' });
+    person(P, { id: 'mira21', crew: 'mira', at: 'witnessStand', off: [13.5, 0, -5], turn: -Math.PI / 2, hologram: true, prompt: 'TALK TO MIRA', when: 't_m21_chamber && !m21_wrists' });
     person(P, { id: 'm21_listener', crew: 'm21_listener', first: 'One who listened', seed: 2102, ambient: true, at: 'arenaGap2', off: [3.6, 0, 9.4], turn: Math.PI, silent: true, when: 'ally == "listeners" && !@PAST' });
     person(P, { id: 'rook_office', crew: 'rook', variant: 'old', at: 'directorOffice', off: [0, 0, -1.2], silent: true, when: 'rook_fate == "persuade"' });
     person(P, { id: 'pryce_office', crew: 'guard', at: 'directorOffice', off: [0, 0, -1.2], silent: true, when: 'rook_fate == "expose"' });
@@ -609,6 +698,9 @@ const M22_HINTS = {
   chamber: ['The final chamber.', 'Behind the seals.', 'Open it.'],
   orren: ['Orren.', 'In the court wedge, 2196.', 'Ask him.'],
   record: ['The unwritten record.', 'Orren keeps it.', 'Read it.'],
+  microphone: ['The station wedge.', 'The microphone he used.', 'Stand where he stood.'],
+  sign: ['Chamber One\'s log.', 'On the evidence table.', 'Sign it, or leave it.'],
+  herVoice: ['Somebody is beyond the chamber.', 'Listen.', 'Go when you\'re ready.'],
 };
 const M22_PROCESSES = [
   // the activation sequence: the arm answers only on its counted beat (Ezra's count)
@@ -648,10 +740,11 @@ export const M22 = {
   beats: [{ kind: 'custom', goal: 'Open the final chamber.' }],
   coldOpen: {
     first: true, minutes: 1, cue: 'card',
-    shots: [{ cam: 'wedgeStation', look: 'paMic', t: 9 }],
+    shots: [{ cam: 'wedgeStation', look: 'paMic', t: 9 }, { cam: [31.4, 2.7, -41.2], to: [32, 2.6, -42], look: [34, 2.5, -45.2], t: 8 }],
     // (on the platform, behind the microphone's stand and facing the tracks: a metre down he stood sunk to the waist in it)
     cast: [{ crew: 'witness', at: 'paMic', off: [2.4, 0, 1.2], turn: Math.PI }],
-    lines: [N('The station at 8:14, replayed in a wedge of rain. A man at the public-address microphone.'), REV(FX(L('WITNESS', 'Kai Varen. Do not build the machine.'), 'pa'))],
+    lines: [N('The station at 8:14, replayed in a wedge of rain. A man at the public-address microphone.'), REV(FX(L('WITNESS', 'Kai Varen. Do not build the machine.'), 'pa')),
+      L('WITNESS', 'Every time I say it, he goes in. Every single time.'), L('WITNESS', 'Say it softer, then. Say it the way she would.')],
   },
   quarters: [
     {
@@ -679,7 +772,10 @@ export const M22 = {
     {
       name: 'THE FINAL CHAMBER',
       threads: [
-        { id: 'seals', kind: 'invert', target: 'finalSeals', at: 'finalSeals', after: ['odile'], goal: 'Undo the final seals.', because: 'The chain, fitted as seals, river first.', hints: M22_HINTS.seals, minutes: 3 },
+        // (the closing pass: where the warnings came from: Kai at the station wedge's microphone, over the platform of 8:14)
+        { id: 'microphone', kind: 'scene', scene: 'microphone', at: 'paMic', after: ['odile'], spot: { prompt: 'THE MICROPHONE', offset: [0, 0.6, 0.8], r: 2.6, model: NO_MODEL },
+          goal: 'The microphone in the station wedge.', because: 'Every warning I ever heard came out of it.', done: 'm22_mic', hints: M22_HINTS.microphone },
+        { id: 'seals', kind: 'invert', target: 'finalSeals', at: 'finalSeals', after: ['microphone'], goal: 'Undo the final seals.', because: 'The chain, fitted as seals, river first.', hints: M22_HINTS.seals, minutes: 3 },
         { id: 'table', kind: 'clue', need: 2, of: ['ev_iven_statement', 'ev_memory_card'], after: ['seals'],
           spots: [
             { id: 'ivenStatement', scene: 'ivenStatement', at: 'evidenceTable', prompt: 'A STATEMENT', offset: [0, 1.0, 0.8], r: 2.2, kit: 'logbook' },
@@ -690,8 +786,16 @@ export const M22 = {
         { id: 'evidence', kind: 'deduce', deduction: 'evidence', at: 'evidenceTable', after: ['logs'], spotOpts: { offset: [-1.6, 1.2, 0.8], r: 3, kit: 'evidenceTable' },
           goal: 'Distinguish reliable evidence from subjective memory.', because: 'Which of them keeps the second?', hints: M22_HINTS.evidence, minutes: 3 },
         { id: 'reveal', kind: 'talk', npc: 'witness22', at: 'twinChamber', after: ['evidence'], goal: 'The Witness, in the twin chamber.', because: 'A second early.', done: 'm22_reveal', hints: M22_HINTS.reveal, minutes: 3 },
-        { id: 'chamber', kind: 'scene', scene: 'chamber', at: 'finalSeals', after: ['reveal'], spot: { prompt: 'THE FINAL CHAMBER', offset: [0, 1.2, 1.6], r: 3, kit: 'sealPlinth' },
+        // (the closing pass: Chamber One's log has an operator's line nobody filled in; what Kai does with it is cut in the
+        // log here, and on the memorial at the end of the road)
+        { id: 'sign', kind: 'choice', scene: 'sign', at: 'evidenceTable', after: ['reveal'], spot: { prompt: 'CHAMBER ONE\'S LOG', offset: [1.2, 1.0, -0.8], r: 2.2, kit: 'logbook',
+          texts: [{ text: 'OPERATOR: VAREN, K.', at: [1.2, 1.08, -0.6], size: 0.07, color: '#2a3442', when: 'm22_signed == "signed"' }] },
+          goal: 'Chamber One\'s log, with its operator\'s line left blank.', because: 'Nobody ever signed for it.', done: 'm22_signed', hints: M22_HINTS.sign },
+        { id: 'chamber', kind: 'scene', scene: 'chamber', at: 'finalSeals', after: ['sign'], spot: { prompt: 'THE FINAL CHAMBER', offset: [0, 1.2, 1.6], r: 3, kit: 'sealPlinth' },
           goal: 'Open the Chronolith\'s final chamber.', because: 'The seals are out.', done: 'm22_chamber', hints: M22_HINTS.chamber, minutes: 3 },
+        { id: 'herVoice', kind: 'cinema', after: ['chamber'], shots: [{ cam: [5, 2.2, 6], to: [3.5, 2.1, 3], look: [0, 1.6, -8], t: 12 }],
+          lines: [FX(L('MIRA', 'I\'m here. Come up when you\'re ready. Not before.'), 'echo'), L('WITNESS', 'She never once said that to me.'), K('You never once waited.')],
+          goal: 'Somebody is beyond the chamber.', because: 'Her voice.', hints: M22_HINTS.herVoice },
       ],
       sides: [
         { id: 'record', name: 'THE UNWRITTEN RECORD', giver: 'orren', case: 'c_record', done: 'ev_unwritten_record', minutes: 8,
@@ -728,6 +832,18 @@ export const M22 = {
   scenes: {
     ivenStatement: { lines: [N('A typed statement. IVEN MARR: THE RING TURNED BEFORE THE BUTTON. I SAID A SECOND LATE, BECAUSE LATE WAS MY FAULT.')], set: { ev_iven_statement: true } },
     memoryCard: { lines: [N('A card from the museum: MEMORY THREE. NOBODY AT THE CONSOLE. Filed under SUBJECTIVE.')], set: { ev_memory_card: true } },
+    microphone: {
+      lines: [N('From the station wedge\'s microphone the whole platform of 8:14 is in view: the canopy, the 41, the doors.'), K('He could see me from here. Every time. Running for the 41.'),
+        K('He said it to make me stop. Every time I heard it, I ran.')],
+      set: { m22_mic: true }, log: 'From the station\'s microphone he watched me run for the 41, every time he warned me.',
+    },
+    sign: {
+      lines: [N('Chamber One\'s log, the fourteenth of March, 2026. OPERATOR: a line nobody ever filled in.')],
+      choices: [
+        intent('comfort', 'Sign it.', { consequence: true, lines: [N('VAREN, K. In his own hand, under twenty-three years of nothing.'), L('WITNESS', 'I never signed it. Not in a hundred and seventeen worlds.')], set: { m22_signed: 'signed' } }),
+        intent('withdraw', 'Leave it blank.', { consequence: true, lines: [K('Not on a page. Some other way.'), L('WITNESS', 'That is what I said. Every time.')], set: { m22_signed: 'blank' } }),
+      ],
+    },
     chamber: { lines: [N('The final chamber opens. No door, and a door. Beyond it, the original Chronolith, and morning.')], set: { m22_chamber: true } },
     record: {
       lines: [L('ORREN', 'If the ring is destroyed, the fractures close, and Mira is released.'), L('ORREN', 'If the years are split, she lives, and the boundaries are fought over.'),
@@ -759,7 +875,7 @@ export const M22 = {
     cue: 'cliff', minutes: 2,
     lines: [L('WITNESS', 'Then help me hold it open. Once. For her.'), K('Not for her. For her to choose.')],
   },
-  done: 'm22_chamber',
+  done: 't_m22_herVoice',
 };
 M22.outro = M22.hook.lines;
 

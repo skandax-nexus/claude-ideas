@@ -141,7 +141,9 @@ export const CONSEQUENCES = [
   { facts: ['warned_evacuees'], set: 'm09', shown: ['m13', 'm21'], what: 'a safe route; the kitchen door' },
   { facts: ['prisoners_freed', 'prisoners_held'], set: 'm10', shown: ['m13', 'm21'], what: 'eleven more Unwritten, the field orders; the cells' },
   { facts: ['odile_released'], set: 'm11', shown: ['m16', 'm23'], what: 'the watch case; she waves' },
+  { facts: ['m12_glazier'], set: 'm12', shown: ['m21', 'm23'], what: 'the glazier on Helix\'s roof: at the Spire she remembers, and can hold the second gap; at the lab on the road' },
   { facts: ['faction', 'stabilizer_destroyed', 'civilians_freed'], set: 'm13', shown: ['m13', 'm18', 'm21', 'm23'], what: 'the district at once; the pylons; the allies' },
+  { facts: ['m14_ticket'], set: 'm14', shown: ['m23'], what: 'the ticket keeper is on the 41\'s platform when it comes back' },
   { facts: ['trust_sera'], set: 'm14', shown: ['m18', 'm23'], what: 'her line; AND HE CAME BACK' },
   { facts: ['garden_restored'], set: 'm14', shown: ['m18', 'm23'], what: 'shelter; Sera\'s garden' },
   { facts: ['city_freed', 'city_stabilized'], set: 'm15', shown: ['m18', 'm21', 'm23'], what: 'helpers, or a lock corridor; a line' },
@@ -166,6 +168,8 @@ export const CHOSEN = {
   ally: 'Your ally at the Spire.',
   ending: 'The ending you chose.',
   prisoners_freed: 'You freed the prisoners.',
+  m12_glazier: { saved: 'On Helix\'s roof you stopped for the glazier, and lost him.', left: 'On Helix\'s roof you went after him, and left the glazier to climb down alone.' },
+  m14_ticket: 'You talked to the man who keeps a ticket for the 41.',
   city_freed: 'You let the city\'s tomorrow come.',
   city_stabilized: 'You kept the city at one day.',
 };

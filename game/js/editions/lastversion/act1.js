@@ -492,6 +492,7 @@ const M06_HINTS = {
   spring: ['The loop has a spring.', 'On the roof, in 2196.', 'Find it in the ruin.'],
   debt: ['Ezra owes fifty years.', 'Take him the spring.', 'Talk to Ezra.'],
   gauge: ['Ezra mended something.', 'The 2026 workbench.', 'Look at the bench.'],
+  ledger: ['His appointment book.', 'On the counter.', 'Read it now, then in 2026.'],
 };
 
 // a brass clock of the escapement: in its own year (and once the window has been read), a choice of hour; the right one
@@ -521,7 +522,8 @@ export const M06 = {
     minutes: 1, shots: [{ cam: 'shopWindows', to: 'shopFloor', look: 'repeatArm', t: 9 }],
     // (what the shop kept of 1999, a residue in its oldest year: the hooded man at the counter, Ezra's echo behind it)
     year: 'PAST', cast: [{ crew: 'witness', variant: 'hooded', hologram: true, at: 'shopFloor', off: [1.4, 0, 0.4], turn: Math.PI }],
-    lines: [N('1999. A man in a hood pays the clockmaker in advance. His wrist is scarred.'), FX(L('WITNESS', 'Set the arm to repeat. He\'ll need to learn it.'), 'echo')],
+    lines: [N('1999. A man in a hood pays the clockmaker in advance. His wrist is scarred.'), FX(L('WITNESS', 'Set the arm to repeat. He\'ll need to learn it.'), 'echo'),
+      FX(EZRA('Repeat for how long?'), 'echo'), FX(L('WITNESS', 'Until he comes. He will be early. He is always early.'), 'echo')],
   },
   quarters: [
     {
@@ -534,6 +536,12 @@ export const M06 = {
           goal: 'Watch the repeating arm.', because: 'He set it repeating for somebody.', done: 'ev_arm_count', hints: M06_HINTS.arm, minutes: 2 },
         { id: 'windows', kind: 'scene', scene: 'windows', at: 'shopWindows', after: ['ezra'], spot: { prompt: 'THE THREE FACES', offset: [0, 0, 1.6], r: 3, model: NO_MODEL },
           goal: 'Read the three clock faces in the shop window.', because: 'A clockmaker\'s window is his notebook.', done: 'ev_window_faces', hints: M06_HINTS.windows, minutes: 1 },
+        // (the closing pass: fifty years of Tuesdays, written down: the appointment he kept for Kai, and who paid for it)
+        { id: 'ledger', kind: 'residue', at: 'shopFloor', after: ['ezra'],
+          record: { official: 'APPOINTMENTS. TUESDAY, FOUR IN THE AFTERNOON: V. The same line on every page, back to 1999.', echo: 'In 2026, the first page: TUESDAY: V. PAID IN ADVANCE. DO NOT ASK HIS NAME. HE WILL NOT KNOW IT YET.',
+            hint: 'The same appointment, on every page.', after: [K('Every Tuesday for fifty years, he wrote me in.')], prompt: 'THE APPOINTMENT BOOK', offset: [2.6, 1.0, -0.4], kit: 'ledger',
+            log: 'Ezra\'s appointment book: V., every Tuesday since 1999, paid in advance.' },
+          goal: 'The appointment book on the counter.', because: 'A clockmaker writes down who is coming.', ev: 'tuesdays', hints: M06_HINTS.ledger },
         { id: 'cross', kind: 'go', at: 'galleryLanding', r: 3, after: ['arm'], when: 'ev_arm_count', goal: 'Get past the arm to the stair.', because: 'It sweeps the whole floor. It always comes back.', hints: M06_HINTS.cross, minutes: 3 },
       ],
       sides: [
@@ -561,7 +569,7 @@ export const M06 = {
       threads: [
         // the escapement (the sheet's [6]): three brass clocks, each answering in one year only, each to be set to the hour
         // the shop window gives that year (2026 morning, 2049 evening, 2196 noon); a wrong hour slips back
-        { id: 'clocks', kind: 'tasks', of: ['clk_26', 'clk_49', 'clk_96'], after: ['stair', 'windows'],
+        { id: 'clocks', kind: 'tasks', of: ['clk_26', 'clk_49', 'clk_96'], after: ['stair', 'windows', 'ledger'],
           spots: [
             { id: 'clock26', scene: 'clock26', at: 'clock2026', prompt: 'THE BRASS CLOCK', offset: [0, -0.4, 1.2], r: 2.6, model: NO_MODEL },
             { id: 'clock49', scene: 'clock49', at: 'clock2049', prompt: 'THE BRASS CLOCK', offset: [0, -0.4, 1.2], r: 2.6, model: NO_MODEL },
@@ -674,7 +682,9 @@ const M07_HINTS = {
   tape: ['Something is buried at the foot of the ring.', 'In 2049, by the outer ring.', 'Dig up the tin at the ring\'s foot.'],
   cache: ['The scavengers keep a cache.', 'East of their camp.', 'Look in the cache.'],
   extra: ['Niko has more to say about the star.', 'The river taught him.', 'Talk to Niko.'],
+  astro: ['The astronomer is still turning the ring.', 'At the first sky, by the horizon ring.', 'Talk to the astronomer at the first sky.'],
 };
+const ASTRO = (t) => SAYS('THE ASTRONOMER', 'CROWD_OLD_M', t);
 export const M07 = {
   key: 'm07', n: 7, chapter: 'act1', name: 'THE BROKEN OBSERVATORY', title: 'Bronze rings under an open sky', subtitle: 'An ancient observatory, tracking alignments that include your birth.',
   logline: 'Bronze rings on the Ridge, aligned to a birth.',
@@ -740,7 +750,10 @@ export const M07 = {
         { id: 'ring', kind: 'go', at: 'outerRingWalk', r: 5, after: ['scav'], when: 'align_star', goal: 'Walk the great ring\'s outer walkway.', because: 'From up there the last instrument is in sight.', hints: M07_HINTS.ring, minutes: 3 },
         { id: 'tape', kind: 'scene', scene: 'tape', at: 'tinSpot', after: ['ring'], spot: { prompt: 'A TIN IN THE GROUND', offset: [0, 0.2, 0], r: 2.6, model: tin, when: '@PRESENT && !mira_tape' },
           goal: 'Something is buried at the foot of the great ring.', because: 'The bronze says a child stood here.', done: 'mira_tape', hints: M07_HINTS.tape, minutes: 2 },
-        { id: 'newstar', kind: 'scene', scene: 'newstar', at: 'horizonRing', after: ['tape'], spot: { prompt: 'SIGHT THE HORIZON RING', offset: [0, 1.2, -2], r: 3.4, model: NO_MODEL },
+        // (the closing pass: the astronomer who cut the name, and who asked him to; adult Mira, before Kai, with no shadow)
+        { id: 'astro', kind: 'scene', scene: 'astro', at: 'horizonRing', after: ['tape'], spot: { prompt: 'THE ASTRONOMER', offset: [2.2, 1.2, 0.6], r: 2.8, model: NO_MODEL },
+          goal: 'At the first sky, the astronomer is still turning the great ring.', because: 'He cut my name into it. Somebody told him to.', done: 'ev_astro', hints: M07_HINTS.astro },
+        { id: 'newstar', kind: 'scene', scene: 'newstar', at: 'horizonRing', after: ['astro'], spot: { prompt: 'SIGHT THE HORIZON RING', offset: [0, 1.2, -2], r: 3.4, model: NO_MODEL },
           goal: 'Align the third instrument: the new star of 2196.', because: 'The horizon ring was cut for a star that wasn\'t up yet.', done: 'align_new', hints: M07_HINTS.newstar, minutes: 2 },
       ],
     },
@@ -759,6 +772,18 @@ export const M07 = {
     star_no: { lines: [K('Too bright. Or too early. The blue hour of 2049.')] },
     newstar: { when: '@FUTURE', lines: [N('In 2196 a new star stands over the Notch: the light of the Fracture. The horizon ring was cut for it.'), K('Three instruments. Three years. One line through all of them.')], set: { align_new: true }, then: 'bell3' },
     newstar_no: { lines: [K('Nothing there yet. The star this ring waits for comes later.')] },
+    astro: {
+      when: '@PAST',
+      lines: [N('The astronomer does not stop turning the ring. He speaks over his shoulder, as if you were here yesterday.'),
+        ASTRO('You came back with no dust on you. The woman said you would.'), K('What woman?'),
+        ASTRO('She came up the hill in the rain season, in a coat the colour of the river. At noon she had no shadow. We thought she was a spirit, and fed her anyway.'),
+        ASTRO('She would not give us her name. She gave us yours. Cut it where he will stand, she said, so he knows somebody waited.'),
+        K('What did she look like?'),
+        ASTRO('Like you, if you had slept. She laughed at the star tube. She said her brother would look through it the wrong way round.'),
+        N('Beside your name on the outer ring there is a second mark, smaller, cut by another hand: a circle, and inside it the letter M.')],
+      set: { ev_astro: true }, log: 'At the first sky a woman with no shadow asked them to cut my name. Beside it, an M.',
+    },
+    astro_no: { lines: [K('The ring is still. At the first sky an old man stood here turning it, and he was talking to somebody.')] },
     cache: { lines: [N('Your keys. The florist\'s receipt for 08:04. A yellow button from a raincoat.'), N('A trade tag: FROM A MAN WHO LOOKED LIKE YOU, BUT TIRED.')], set: { ev_cache: true } },
     tape: {
       lines: [N('A biscuit tin, rusted shut, buried at the ring\'s foot. Inside: a cassette, and a label in crayon. FOR KAI.')],

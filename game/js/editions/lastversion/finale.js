@@ -8,7 +8,7 @@
 // one epilogue line per fact the player set (ledger.EPILOGUE), four clock ticks and the voice in every speaker.
 import { intent } from './npcs.js';
 import { NO_MODEL } from './processes.js';
-import { L, N, K, REV, FX, C, SAYS, person } from './act3.js';
+import { L, N, K, REV, FX, C, SAYS, person, scarModel } from './act3.js';
 
 // after the epilogue: four clock ticks, then the voice in every speaker (voicelines.js re-exports it)
 export const POSTCREDIT = [{ who: 'VOICE', text: 'Version one hundred and eighteen.', voice: { fx: 'pa' } }];
@@ -23,9 +23,27 @@ const M23_HINTS = {
   mira: ['Mira.', 'At the original Chronolith.', 'Ask her.'],
   choose: ['The ring.', 'Destroy it, split the years, or become the anchor.', 'Choose.'],
   gallery: ['The people my choices changed.', 'Along the road.', 'Visit three of them.'],
+  speakers: ['The speakers.', 'Listen.', 'Walk north.'],
+  pillar: ['A storm stood on its end.', 'Something in it is talking backwards.', 'REVERSE it: it runs forwards once.'],
+  farewell: ['The Witness, at the lab gate.', 'He has stopped walking.', 'Talk to him.'],
+  meet: ['Mira, at the foot of the hill.', 'She came down to meet me.', 'Talk to her.'],
+  climb: ['Up the hill with her.', 'She walks at my pace.', 'Walk with her.'],
+  count: ['Count it with her.', 'The ring\'s arm turns on the third count.', 'REVERSE it on the turn.'],
 };
 
+// (the closing pass) three storms stood on their ends along the road, each a world of hers: held, one plays forwards once
+// in her voice; and the ring's own arm, which turns on the third count, the second she and Kai count together
+const PILLAR = (id, at, aim, text) => ({ id, kind: 'recording', at, label: 'A STORM ON ITS END', weight: 0.5, grain: 'pen', aim, clip: { who: 'MIRA', text }, hints: M23_HINTS.pillar });
 const M23_PROCESSES = [
+  PILLAR('pillarA', 'tellingStone', [10, 1.6, 13], 'In one world I was born here. I kept the first fire. I was never once cold.'),
+  PILLAR('pillarB', 'labGate', [-5, 1.6, -24], 'In one world I worked at Helix with no past, and hummed in the corridors. You walked past me every morning.'),
+  PILLAR('pillarC', 'labGate', [-2.5, 1.6, 18], 'In one world I planted a garden by the sea and wrote letters to a brother I never had.'),
+  {
+    id: 'ringArm', kind: 'mechanism', at: 'originalRing', label: 'THE RING\'S SECOND', weight: 1, settle: 'settled', grain: 'metal', spin: [0, 0, 1, 1.4],
+    beat: { period: 3, on: 0.9 }, offBeat: 'Off the count. With her, this time.',
+    parts: [{ shape: 'box', size: [0.14, 1.8, 0.1], mat: 'brass', at: [0, 1.0, 2.4] }], aim: [0, 1.0, 2.4],
+    hints: ['The ring has an arm, like the clockmaker\'s.', 'It turns on the third count.', 'Count three with her, and REVERSE on the turn.'],
+  },
   // the street that fell: the Witness holds its far half (his REVERSE, scripted); Kai may hold it himself as well
   // (it answers Kai only once the Witness has it: before, it is his to hold, and he takes it as Kai reaches the pit)
   {
@@ -86,30 +104,37 @@ export const M23 = {
   beats: [{ kind: 'custom', goal: 'Reach Mira at the original Chronolith.' }],
   coldOpen: {
     first: true, minutes: 1, cue: 'card',
-    shots: [{ cam: 'platform41', look: 'streetCollapse', t: 9 }],
-    lines: [N('Rain City, the first fire, the lab and 2196, all at once. The 41 arrives on time.'), L('JUN', 'On time. I don\'t know what to do with myself.', 'jun_line || jun_evidence'),
+    // (the closing pass: her first, at the ring, before the road)
+    shots: [{ cam: [7, 6.4, -134], to: [5, 6.6, -138], look: [2.2, 5.4, -146], t: 9 }, { cam: 'platform41', look: 'streetCollapse', t: 9 }],
+    cast: [{ crew: 'mira', at: 'miraStands', off: [0, 0, 0], turn: Math.PI }],
+    lines: [FX(L('MIRA', 'Kai. If you can hear me, don\'t run. Walk. I want to see you come.'), 'echo'), N('Rain City, the first fire, the lab and 2196, all at once. The 41 arrives on time.'), L('JUN', 'On time. I don\'t know what to do with myself.', 'jun_line || jun_evidence'),
       N('The platform is empty. Somebody has turned off the announcement.', '!jun_line && !jun_evidence')],
   },
   quarters: [
     {
       name: 'THE OPENING STREETS',
       threads: [
+        // (the voice in every speaker, the last time: hers, not his)
+        { id: 'speakers', kind: 'cinema', lines: [FX(L('MIRA', 'Kai Varen. Build nothing. Walk north, to the hill.'), 'pa'), K('Not his voice. Hers.'), L('WITNESS', 'She was always going to be better at it than me.')],
+          goal: 'The speakers on the platform.', because: 'There is a voice in every one of them again.', hints: M23_HINTS.speakers },
         // (the line across the whole avenue before the fallen street, pavements and all: whichever way Kai comes, the
         // Witness takes the street as he gets there; the strips beside the pit are closed by fallen facades)
-        { id: 'streets', kind: 'stealth', at: [0, 0, 141, 0], box: [-50, 137, 50, 147], goal: 'Cross the opening streets.', because: 'The avenue from the first morning, and the watchers on it.',
+        { id: 'streets', kind: 'stealth', at: [0, 0, 141, 0], box: [-50, 137, 50, 147], after: ['speakers'], goal: 'Cross the opening streets.', because: 'The avenue from the first morning, and the watchers on it.',
           say: [L('WITNESS', 'I will hold the route. Go to her.'), K('Why now?'), REV(L('WITNESS', 'Because this is the version where I ask.'))], hints: M23_HINTS.streets, minutes: 6 },
         { id: 'street', kind: 'go', at: [0, 0, 114, 0], box: [-50, 104, 50, 119], after: ['streets'], goal: 'Over the street that fell.', because: 'He is holding it. In his ring, my colour.',
           say: [N('Behind Kai, the street goes down into the dark without a sound.')], hints: M23_HINTS.street, minutes: 4 },
       ],
       sides: [
         { id: 'gallery', name: 'THE CONSEQUENCES GALLERY', done: 'ev_gallery', minutes: 10,
-          threads: [{ id: 'galleryVisit', kind: 'clue', need: 3, of: ['ev_gal_jun', 'ev_gal_ezra', 'ev_gal_listeners', 'ev_gal_prisoners', 'ev_gal_odile'], set: { ev_gallery: true },
+          threads: [{ id: 'galleryVisit', kind: 'clue', need: 3, of: ['ev_gal_jun', 'ev_gal_ezra', 'ev_gal_listeners', 'ev_gal_prisoners', 'ev_gal_odile', 'ev_gal_keeper', 'ev_gal_scav'], set: { ev_gallery: true },
             spots: [
-              { id: 'galJun', scene: 'galJun', at: 'junPassengers', prompt: 'JUN\'S PASSENGERS', offset: [1.6, 1.2, 0], r: 2.6, model: NO_MODEL },
-              { id: 'galListeners', scene: 'galListeners', at: 'busField', prompt: 'THE 41 IN THE FIELD', offset: [0, 1.2, 2.4], r: 2.6, model: NO_MODEL },
-              { id: 'galEzra', scene: 'galEzra', at: 'tellingStone', prompt: 'A CLOCK ON A POST', offset: [0, 1.2, 4], r: 2.4, kit: 'clockPost' },
-              { id: 'galPrisoners', scene: 'galPrisoners', at: 'labDoor', prompt: 'THE LAB STEPS', offset: [3, 1.0, 1], r: 2.6, model: NO_MODEL },
+              { id: 'galScav', scene: 'galScav', at: 'seraGarden', prompt: 'A LAMP', offset: [-3, 1.2, 4], r: 2.4, model: NO_MODEL },
               { id: 'galOdile', scene: 'galOdile', at: 'labGate', prompt: 'A BENCH', offset: [3, 1.0, 1], r: 2.4, model: NO_MODEL },
+              { id: 'galPrisoners', scene: 'galPrisoners', at: 'labDoor', prompt: 'THE LAB STEPS', offset: [3, 1.0, 1], r: 2.6, model: NO_MODEL },
+              { id: 'galEzra', scene: 'galEzra', at: 'tellingStone', prompt: 'A CLOCK ON A POST', offset: [0, 1.2, 4], r: 2.4, kit: 'clockPost' },
+              { id: 'galListeners', scene: 'galListeners', at: 'busField', prompt: 'THE 41 IN THE FIELD', offset: [0, 1.2, 2.4], r: 2.6, model: NO_MODEL },
+              { id: 'galJun', scene: 'galJun', at: 'junPassengers', prompt: 'JUN\'S PASSENGERS', offset: [1.6, 1.2, 0], r: 2.6, model: NO_MODEL },
+              { id: 'galKeeper', scene: 'galKeeper', at: 'platform41', prompt: 'A TICKET', offset: [2.4, 1.0, 0.6], r: 2.4, model: NO_MODEL },
             ],
             goal: 'Visit the people your choices changed.', because: 'They stand along the road.', hints: M23_HINTS.gallery, minutes: 10 }] },
       ],
@@ -120,7 +145,9 @@ export const M23 = {
         { id: 'settlement', kind: 'clue', need: 1, of: ['ev_telling_line', 'ev_tala23'], after: ['street'],
           spots: [{ id: 'tellingLine', scene: 'tellingLine', at: 'tellingStone', prompt: 'THE TELLING-STONE', offset: [0, 1.3, 1.4], r: 2.6, model: NO_MODEL }],
           goal: 'The settlement, again.', because: 'Niko\'s stone, with a new line on it.', hints: M23_HINTS.settlement, minutes: 4 },
-        { id: 'bridge', kind: 'tasks', of: ['m23_witness_across', 'm23_across'], at: 'settlementBridge', after: ['settlement'],
+        { id: 'pillarA', kind: 'invert', target: 'pillarA', scene: 'pillarLook', at: 'tellingStone', after: ['settlement'], spot: { id: 'pillarA_look', prompt: 'A STORM ON ITS END', offset: [10, 1.6, 11.6], r: 2.6, model: scarModel },
+          goal: 'A storm stands on its end in the meadow.', because: 'Something in it is talking backwards, in her voice.', hints: M23_HINTS.pillar },
+        { id: 'bridge', kind: 'tasks', of: ['m23_witness_across', 'm23_across'], at: 'settlementBridge', after: ['pillarA'],
           say: [REV(L('WITNESS', 'And, Kai. For once, you are on time.'))],
           goal: 'Hold the bridge while he crosses.', because: 'Now we swap.', hints: M23_HINTS.bridge, minutes: 4 },
       ],
@@ -134,6 +161,10 @@ export const M23 = {
             { id: 'ivenSigned', scene: 'ivenSigned', at: 'ivenStatement', prompt: 'IVEN', offset: [0, 1.2, 1.2], r: 2.6, model: NO_MODEL },
           ],
           goal: 'The Helix laboratory.', because: 'Rook left a last transmission. Iven is waiting.', hints: M23_HINTS.lab, minutes: 4 },
+        { id: 'pillarB', kind: 'invert', target: 'pillarB', scene: 'pillarLook', at: 'labGate', after: ['lab'], spot: { id: 'pillarB_look', prompt: 'A STORM ON ITS END', offset: [-5, 1.6, -22.6], r: 2.6, model: scarModel },
+          goal: 'Another storm on its end, in the lab.', because: 'Her voice again. Another world.', hints: M23_HINTS.pillar },
+        // (the closing pass: the Witness stops at the lab gate; the ring would turn for his hand, so he holds the road instead)
+        { id: 'farewell', kind: 'talk', npc: 'witness_lab', at: 'labGate', after: ['pillarB'], goal: 'The Witness has stopped at the lab gate.', because: 'He is not coming any further.', done: 'm23_farewell', hints: M23_HINTS.farewell },
       ],
     },
     {
@@ -142,18 +173,49 @@ export const M23 = {
         { id: 'city', kind: 'clue', need: 2, of: ['ev_memorial23', 'ev_sera23', 'ev_anja23'], after: ['lab'],
           spots: [{ id: 'memorial23', scene: 'memorial23', at: 'memorial2196', prompt: 'THE MEMORIAL', offset: [0, 1.2, 1.8], r: 2.6, kit: 'memorialCore' }],
           goal: 'The future city.', because: 'The memorial, Sera, Anja.', hints: M23_HINTS.city, minutes: 5 },
+        { id: 'pillarC', kind: 'invert', target: 'pillarC', scene: 'pillarLook', at: 'labGate', after: ['city'], spot: { id: 'pillarC_look', prompt: 'A STORM ON ITS END', offset: [-2.5, 1.6, 19.4], r: 2.6, model: scarModel },
+          goal: 'The last storm on its end, on the causeway.', because: 'Where the rain rises.', hints: M23_HINTS.pillar },
       ],
     },
     {
       name: 'THE ORIGINAL CHRONOLITH',
       threads: [
-        { id: 'mira', kind: 'talk', npc: 'mira23', at: 'miraStands', after: ['city'], goal: 'Reach Mira at the original Chronolith.', because: 'She is not waiting. She is choosing.', done: 'm23_asked', hints: M23_HINTS.mira, minutes: 4 },
-        { id: 'choose', kind: 'choice', scene: 'ending', at: 'endingChoice', after: ['mira'], spot: { prompt: 'THE ORIGINAL CHRONOLITH', offset: [0, 1.2, 0], r: 3, model: NO_MODEL },
+        // (the closing pass: she comes down the hill to meet him, and walks back up it beside him)
+        { id: 'meet', kind: 'talk', npc: 'mira_foot', at: 'hillFoot', after: ['pillarC'], goal: 'Mira, at the foot of the hill.', because: 'She came down to meet me.', done: 'm23_met', hints: M23_HINTS.meet },
+        { id: 'climb', kind: 'chase', npc: 'mira_walk', path: [[0, 0, -110], [0, 2, -116], [0, 4, -126], [2, 4, -136], 'miraStands'], leash: 14, ahead: 4, speed: 1.2, after: ['meet'],
+          goal: 'Up the hill, beside her.', because: 'She wants to walk it.', hints: M23_HINTS.climb },
+        { id: 'mira', kind: 'talk', npc: 'mira23', at: 'miraStands', after: ['climb'], goal: 'Reach Mira at the original Chronolith.', because: 'She is not waiting. She is choosing.', done: 'm23_asked', hints: M23_HINTS.mira, minutes: 4 },
+        { id: 'count', kind: 'invert', target: 'ringArm', at: 'originalRing', after: ['mira'],
+          say: [L('MIRA', 'That one was ours. Nobody else\'s.'), K('What happens to it now?'), L('MIRA', 'Now you choose. I already did.')],
+          goal: 'Count a second with her.', because: 'The ring\'s arm turns on the third count.', hints: M23_HINTS.count },
+        { id: 'choose', kind: 'choice', scene: 'ending', at: 'endingChoice', after: ['count'], spot: { prompt: 'THE ORIGINAL CHRONOLITH', offset: [0, 1.2, 0], r: 3, model: NO_MODEL },
           goal: 'Choose what to preserve and what to release.', because: 'Three things the ring can do, and only one of them.', done: 'ending', hints: M23_HINTS.choose, minutes: 3 },
       ],
     },
   ],
   talks: {
+    witness_lab: [
+      {
+        when: '!m23_farewell',
+        lines: [L('WITNESS', 'This is as far as I go. The ring knows my hand. It would turn for me.'), L('WITNESS', 'Let me hold the storm off the road. Let me fix one thing.'),
+          K('Don\'t fix it. Look at it.'), N('He turns, and looks back down the road: the 41 in its field, the first fire, the rain.'), L('WITNESS', 'It\'s beautiful. Why is it beautiful?')],
+        choices: [
+          intent('comfort', 'Thank you.', { lines: [L('WITNESS', 'Don\'t. I did all of it. Go and undo a little.')], set: { m23_farewell: 'thanked' } }),
+          intent('investigate', 'Will I become you?', { lines: [L('WITNESS', 'Which version of the question are you asking?'), K('The one where you get to rest.'), L('WITNESS', 'Then no.')], set: { m23_farewell: 'asked' } }),
+          intent('challenge', 'You don\'t get to stay behind.', { lines: [L('WITNESS', 'Somebody has to hold the gate. I am very good at waiting.')], set: { m23_farewell: 'stayed' } }),
+        ],
+      },
+      { when: 'm23_farewell', lines: [L('WITNESS', 'Go on. She is counting.')] },
+    ],
+    mira_foot: [
+      {
+        when: '!m23_met',
+        lines: [L('MIRA', 'You walked. Good. I wanted to see you come.'), K('You look like her.'), L('MIRA', 'I am her. I\'m also everyone else I was. You heard some of them on the way.'),
+          L('MIRA', 'Walk with me. Not ahead. With.')],
+        set: { m23_met: true },
+      },
+      { when: 'm23_met', lines: [L('MIRA', 'With me, Kai.')] },
+    ],
     tala23: [{ when: 'true', lines: [L('TALA', 'The river knows the way now. So did you.')], set: { ev_tala23: true } }],
     sera23: [
       {
@@ -178,12 +240,15 @@ export const M23 = {
         lines: [L('MIRA', 'Ask me.'), K('Ask you what?'), L('MIRA', 'What I want. Nobody has. Not in a hundred and seventeen worlds.'), K('What do you want?'),
           REV(L('MIRA', 'A second that is mine. Not saved. Not fixed. Mine. Count it with me.')),
           K('I thought the answer was to find the right world.'), L('MIRA', 'And now?'), K('Now I think we kept asking the world to pay for our answer.'),
+          // (the closing pass: what he did in her memory, Mission 20)
+          L('MIRA', 'In the world without you, a stranger hummed my last note in the garden. I knew it was you. I didn\'t know how.', 'm20_note == "sung"'),
+          L('MIRA', 'In the world without you, I found my last note by myself. It took years. Thank you for letting me.', 'm20_note == "left"'),
           // (the letter Kai kept in Mission 17: she knows)
           L('MIRA', 'You kept my letter. Did you ever read it?', 'letter == "kept"'), K('No. It was yours to send.', 'letter == "kept"'),
           L('MIRA', 'Then I will. Afterwards.', 'letter == "kept"')],
         set: { m23_asked: true },
       },
-      { when: 'm23_asked', lines: [L('MIRA', 'Count it with me, Kai.')] },
+      { when: 'm23_asked', lines: [L('MIRA', 'Count it with me, Kai. The arm, on the third.')] },
     ],
   },
   scenes: {
@@ -195,7 +260,13 @@ export const M23 = {
       set: { ev_rook_last: true },
     },
     ivenSigned: { lines: [L('IVEN', 'Statement of Iven Marr. I signed for it.')], set: { ev_iven_signed: true } },
-    memorial23: { lines: [N('The memorial. KAI VAREN.'), N('Under it, newly cut: AND HE CAME BACK.', 'trust_sera == "accept"')], set: { ev_memorial23: true } },
+    memorial23: { lines: [N('The memorial. KAI VAREN.'), N('Under it, newly cut: AND HE CAME BACK.', 'trust_sera == "accept"'), N('And at its foot, in a different hand: HE SIGNED FOR IT.', 'm22_signed == "signed"'), N('At its foot, a space somebody keeps clear, as if for a name.', 'm22_signed == "blank"')], set: { ev_memorial23: true } },
+    pillarLook: { lines: [K('A storm, turned on its end. Inside it, something is talking backwards. Held, it would run forwards once.')] },
+    galScav: {
+      lines: [SAYS('A GIRL WITH A LAMP', 'CROWD_CHILD', 'My lamp still works! Dad says thank you. He says it every night.', 'm18_scav == "shared"'),
+        N('A scavenger\'s lamp in the reeds, dark, and nobody by it.', 'm18_scav == "refused"'), N('A lamp on a post in the garden, unlit.', '!m18_scav')],
+      set: { ev_gal_scav: true },
+    },
     galJun: {
       lines: [L('JUN', 'They all got off. Every one of them.', 'jun_line'), L('JUN', 'The evidence went in. Somebody read it.', 'jun_evidence'), N('Jun\'s booth, empty. The 41 runs without him.', '!jun_line && !jun_evidence')],
       set: { ev_gal_jun: true },
@@ -213,6 +284,12 @@ export const M23 = {
       lines: [N('Twelve people from the dam\'s loops, on the lab steps, arguing about breakfast.', 'prisoners_freed || m21_cells'), N('Twelve empty chairs on the lab steps.', '!prisoners_freed && !m21_cells')],
       set: { ev_gal_prisoners: true },
     },
+    galKeeper: {
+      lines: [SAYS('THE TICKET KEEPER', 'CROWD_M', 'It came. Eight fourteen, on time. I made them punch it.', 'm14_ticket == "kept"'),
+        SAYS('THE TICKET KEEPER', 'CROWD_M', 'It came, and I was late for it. Of course I was. It runs in the family.', 'm14_ticket == "asked"'),
+        N('A ticket for the 41 on the shelter\'s bench, a hundred and forty-seven years old, not punched.', '!m14_ticket')],
+      set: { ev_gal_keeper: true },
+    },
     galOdile: {
       lines: [SAYS('NURSE ODILE', 'ODILE', 'My shift finished. Thirty-two went home.', 'odile_released'), N('A nurse\'s watch on a bench, still running.', '!odile_released')],
       set: { ev_gal_odile: true },
@@ -220,9 +297,13 @@ export const M23 = {
     ending: {
       lines: [N('Three things the ring can do, and only one of them.'), N('Orren\'s record: released. Fought over. A person.', 'ev_unwritten_record')],
       choices: [
-        intent('challenge', 'Destroy the Chronolith.', { set: { ending: 'A' }, ending: 'A' }),
-        intent('investigate', 'Separate the states into independent branches.', { set: { ending: 'B' }, ending: 'B' }),
-        intent('comfort', 'Become the anchor. Absorb the contradictions.', { set: { ending: 'C' }, ending: 'C' }),
+        // (the closing pass: each choice is seen before the ending: the sky changes with it, and she answers)
+        intent('challenge', 'Destroy the Chronolith.', { set: { ending: 'A' }, ending: 'A', lines: [L('MIRA', 'Then let me watch it go. Hold my hand while it does.'),
+          N('The ring comes apart in rings of light. Her hand is in his, and then it is only light, and then it is morning.')] }),
+        intent('investigate', 'Separate the states into independent branches.', { set: { ending: 'B' }, ending: 'B', lines: [L('MIRA', 'Then I\'ll live in one of them. Write to me. You never write.'),
+          N('The sky breaks into panes, each a different sky. She walks into one of them and turns round to wave.')] }),
+        intent('comfort', 'Become the anchor. Absorb the contradictions.', { set: { ending: 'C' }, ending: 'C', lines: [L('MIRA', 'Kai, what are you doing?'), K('Counting. You first.'),
+          N('He steps into the ring. Down at the lab gate a man with a scarred wrist looks up, and is not there any more.')] }),
       ],
     },
   },
@@ -235,10 +316,19 @@ export const M23 = {
   },
   overlay(P) {
     person(P, { id: 'jun23', crew: 'jun', at: 'platform41', off: [-2, 0, 1], turn: Math.PI / 2, silent: true, when: 'jun_line || jun_evidence', temporal: EVERY });
+    // (the closing pass: Mission 14's ticket keeper, on the platform the 41 has come back to; Mission 12's glazier at the lab)
+    person(P, { id: 'm23_keeper', crew: 'm14_keeper', first: 'The ticket keeper', seed: 1404, ambient: true, at: 'platform41', off: [2.4, 0, 2.2], turn: -Math.PI / 2, silent: true, when: 'm14_ticket', temporal: EVERY });
+    person(P, { id: 'm23_glazier', crew: 'm12_glazier', first: 'The glazier', seed: 1201, ambient: true, at: 'labDoor', off: [-3.2, 0, 1.6], turn: Math.PI, silent: true, when: 'm12_glazier == "saved"', temporal: EVERY });
     person(P, { id: 'm23_passenger', crew: 'm23_passenger', first: 'A passenger', seed: 2301, ambient: true, at: 'junPassengers', off: [0, 0, 2], turn: Math.PI / 2, silent: true, when: 'jun_line' });
     person(P, { id: 'witness_street', crew: 'witness', at: 'streetCollapse', off: [5, 0, 13], turn: Math.PI, silent: true, when: 't_m23_streets && !t_m23_street' });
     person(P, { id: 'witness_bridge', crew: 'witness', at: 'settlementBridge', off: [2.6, 0, -8], turn: 0, silent: true, when: 't_m23_street && !m23_witness_across' });
     person(P, { id: 'witness_far', crew: 'witness', at: 'settlementBridge', off: [2.6, 0, 8.4], turn: Math.PI, silent: true, when: 'm23_witness_across && !t_m23_lab' });
+    // (at the lab gate: he stops, talks, and stays there holding the road while Kai goes on; in Ending C he is not)
+    person(P, { id: 'witness_lab', crew: 'witness', at: 'labGate', off: [-2.4, 0, 1.4], turn: Math.PI, prompt: 'TALK TO HIM', when: 't_m23_lab && !m23_farewell' });
+    person(P, { id: 'witness_gate', crew: 'witness', at: 'labGate', off: [-2.4, 0, -1.2], turn: 0, silent: true, when: 'm23_farewell && !(ending == "C")' });
+    // Mira: down the hill to meet him, then up it beside him
+    person(P, { id: 'mira_foot', crew: 'mira', at: 'hillFoot', off: [0, 0, -4], turn: 0, prompt: 'TALK TO MIRA', when: 't_m23_pillarC && !m23_met' });
+    person(P, { id: 'mira_walk', crew: 'mira', at: 'hillFoot', off: [0, 0, -5], turn: Math.PI, when: 'm23_met && !t_m23_climb' });
     person(P, { id: 'tala23', crew: 'tala', at: 'tala', off: [0, 0, 1.2], turn: Math.PI, prompt: 'TALK TO TALA', when: 'water_route', temporal: EVERY });
     person(P, { id: 'ezra23', crew: 'clockmaker', at: 'tellingStone', off: [1.6, 0, 4], turn: Math.PI, silent: true, when: 'ezra_debt' });
     person(P, { id: 'm23_listener', crew: 'm23_listener', first: 'One who listened', seed: 2302, ambient: true, at: 'busField', off: [-1.6, 0, 2], turn: Math.PI, silent: true, when: 'warned_evacuees' });
@@ -246,7 +336,7 @@ export const M23 = {
     person(P, { id: 'iven23', crew: 'iven', at: 'ivenStatement', off: [0, 0, 1.6], turn: Math.PI, silent: true, temporal: EVERY });
     person(P, { id: 'sera23', crew: 'sera', at: 'seraGarden', off: [0, 0, 1.6], turn: Math.PI, prompt: 'TALK TO SERA', temporal: EVERY });
     person(P, { id: 'anja23', crew: 'anja', at: 'anja', off: [2.4, 0, 0], turn: -Math.PI / 2, prompt: 'TALK TO ANJA', temporal: EVERY });
-    person(P, { id: 'mira23', crew: 'mira', at: 'miraStands', off: [0, 0, 0], turn: 0, prompt: 'TALK TO MIRA', when: 't_m23_city' });
+    person(P, { id: 'mira23', crew: 'mira', at: 'miraStands', off: [0, 0, 0], turn: 0, prompt: 'TALK TO MIRA', when: 't_m23_climb' });
     // the endings' people (Runtime.ending stages them; Kai himself is not on screen): A, Kai under the 41's board; B,
     // Sera at the seam where one world ends, and someone on the other side; C, Mira at a window box in Rain City
     person(P, { id: 'kai_end', crew: 'kai', at: 'board41', silent: true, when: 'ending == "A"', temporal: EVERY });

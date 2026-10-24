@@ -58,8 +58,9 @@ if (ARGS.includes('--edition')) {
     fs.writeFileSync(path.join(out, g, 'script.json'), JSON.stringify(list, null, 0));
     const chars = list.reduce((a, p) => a + p.say.length, 0);
     const sec = chars / 14.5;
-    // measured on the packs: about 1.15 x the bitrate, plus an Ogg header per clip
-    const mb = list.reduce((a, p) => a + (p.say.length / 14.5) * p.br * 1000 / 8 * 1.15 + 700, 0) / 1e6;
+    // measured on the packs: about 0.85 x the bitrate, plus an Ogg header per clip (2026-10-23: the seven packs were
+    // 15.7 MB where 1.15 x projected 21.2; Kokoro's pauses and trimmed silences encode below the nominal rate)
+    const mb = list.reduce((a, p) => a + (p.say.length / 14.5) * p.br * 1000 / 8 * 0.85 + 700, 0) / 1e6;
     groups[g] = { recordings: list.length, chars, minutes: +(sec / 60).toFixed(1), projectedMB: +mb.toFixed(2), voices: [...new Set(list.map((p) => p.voice))].sort() };
     if (mb > 12) fail = true;
   }

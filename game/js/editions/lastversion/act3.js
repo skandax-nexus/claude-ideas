@@ -74,7 +74,12 @@ const M14_HINTS = {
   scar: ['Where they begin.', 'In the air.', 'Look.'],
   rhyme: ['A child, reciting.', 'The schoolroom.', 'Listen.'],
   book: ['A schoolbook.', 'On a desk.', 'Read it.'],
+  warden: ['The warden.', 'Where the street flickers.', 'Talk to him.'],
+  voice: ['Something on the beacon\'s frequency.', 'Listen.', 'Answer it.'],
+  keeper: ['A man on the old platform.', 'He is holding something like a relic.', 'Talk to him.'],
+  departures: ['The 41\'s last board.', 'On the platform.', 'Read it.'],
 };
+const KEEPER = AMB('CROWD_M');
 // the street's unstable zones: shimmering patches where the street flickers between years (stability drains in them)
 const M14_ZONES = [[6, -10, 5], [-30, 8, 4], [56, 30, 4.5], [-6, -30, 3.5]];
 const PUPIL = AMB('CROWD_CHILD');
@@ -166,6 +171,16 @@ export const M14 = {
         { id: 'capacitor', kind: 'scene', scene: 'capacitor', at: 'roofGarden', after: ['lift'], spot: { prompt: 'THE WEATHER STATION', offset: [0, 1.0, 2], r: 2.8, kit: 'beaconCase' },
           goal: 'Take the capacitor.', because: 'The first of three parts.', done: 'm14_capacitor', hints: M14_HINTS.capacitor, minutes: 1 },
       ],
+      sides: [
+        // (the closing pass: a man who keeps a ticket for the 41 on the platform it never came back to; on the Finale's road
+        // the 41 comes, and he is there with it)
+        { id: 'ticket', name: 'THE LAST TICKET', done: 'm14_ticket', minutes: 3,
+          threads: [
+            { id: 'departures', kind: 'scene', scene: 'departures', at: 'arrivalPlatform', spot: { prompt: 'THE LAST BOARD', offset: [-2.2, 1.3, -6], r: 2.4, kit: 'timetable', when: '@FUTURE' },
+              goal: 'A departures board on the old platform.', because: 'Somebody keeps it clean.', done: 'ev_last_board', hints: M14_HINTS.departures },
+            { id: 'keeper', kind: 'talk', npc: 'm14_keeper', at: 'arrivalPlatform', after: ['departures'], goal: 'The man who keeps the board.', because: 'He is holding a ticket as if it might be checked.', done: 'm14_ticket', hints: M14_HINTS.keeper },
+          ] },
+      ],
     },
     {
       name: 'THE TRANSIT LINE',
@@ -178,7 +193,9 @@ export const M14 = {
           ],
           say: [K('They went south under the gap. When the water was low.')],
           goal: 'Track the survivors by their stacked stones.', because: 'Somebody went this way, and marked it.', hints: M14_HINTS.stones, minutes: 3 },
-        { id: 'warning', kind: 'residue', at: 'unstableZones', after: ['stones'],
+        // (the closing pass: the man who painted over Sera's path, in person: why a safe path can kill you)
+        { id: 'warden', kind: 'talk', npc: 'warden', at: 'unstableZones', after: ['stones'], goal: 'The warden at the flickering street.', because: 'He has stood on this corner a long time.', done: 'm14_warden', hints: M14_HINTS.warden },
+        { id: 'warning', kind: 'residue', at: 'unstableZones', after: ['warden'],
           record: { official: 'WARDEN\'S NOTICE. UNSTABLE ZONE ON FOURTH. DO NOT CROSS BEFORE NOON. IT IS ALWAYS BEFORE NOON.', echo: 'Under the paint, the first words ever written on the board: SAFE PATH WHEN THE WATER IS LOW. SERA.',
             hint: 'Fresh paint, over older paint.', after: [K('She left a way through, and somebody painted over it.'), K('Low water. In twenty twenty-six there was no water here at all.')],
             prompt: 'THE WARDEN\'S NOTICE', offset: [0, 1.4, 0.4], kit: 'wardenSign', log: 'Sera marked a safe path for low water. The warden painted over it.' },
@@ -200,6 +217,13 @@ export const M14 = {
         { id: 'sera', kind: 'talk', npc: 'sera', at: 'seraSteps', after: ['memorial'], goal: 'Sera is waiting by the steps.', because: 'She watched me read it.', done: 'trust_sera', hints: M14_HINTS.sera, minutes: 4 },
         { id: 'beacon', kind: 'scene', scene: 'beacon', at: 'seraSteps', after: ['sera'], spot: { prompt: 'BUILD THE BEACON', offset: [3, 1.0, 1.0], r: 2.6, kit: 'beaconCase' },
           goal: 'Build the return beacon.', because: 'Three parts. Then east, where a bell is ringing.', done: 'beacon_built', hints: M14_HINTS.beacon, minutes: 1 },
+        // (the closing pass: adult Mira, a hundred and forty years early, on the frequency the beacon wakes to)
+        { id: 'voice', kind: 'cinema', after: ['beacon'], shots: [{ cam: 'seraSteps', look: 'memorial', t: 16 }],
+          lines: [N('The beacon wakes, and finds a voice already on its frequency.'), FX(L('MIRA', 'Kai? It\'s raining where you are. It\'s always raining where you are.'), 'radio'),
+            FX(L('MIRA', 'Is it still Saturday?'), 'radio'), L('SERA', 'That channel has been calling for a hundred and forty years. Nobody has ever answered it.'),
+            K('I know that voice.'), L('SERA', 'Then answer it.'), K('Mira?'), N('Static, and under it, very faint, three notes.')],
+          set: { ev_beacon_voice: true }, log: 'The beacon woke on a channel that has called for 140 years, in a voice I know: "Is it still Saturday?"',
+          goal: 'The beacon has found a voice.', because: 'Somebody is on its frequency.', hints: M14_HINTS.voice },
       ],
       sides: [
         { id: 'garden', name: 'THE SURVIVOR\'S GARDEN', giver: 'gardener', case: 'c_garden', done: 'garden_restored', minutes: 4,
@@ -242,6 +266,31 @@ export const M14 = {
       { when: 'garden_restored', lines: [CREW('Water, and something to put it on. That is an economy, here.')] },
       { when: 'true', lines: [CREW('The culvert.')] },
     ],
+    warden: [
+      {
+        when: '!m14_warden',
+        lines: [CREW('Stop. Nobody crosses Fourth before noon.'), K('It\'s the afternoon.'), CREW('It is always before noon on Fourth. That is the rule, and the rule is why anyone here is alive.'),
+          CREW('And you have the face from the plaza. They will want you dead, or sorry. I haven\'t decided which I want.')],
+        choices: [
+          intent('investigate', 'Who made the rule?', { lines: [CREW('A woman who came through when the water was low. She wrote a safe path on my board. I painted over it.'), K('Why?'), CREW('Because the water is never low any more. A safe path that drowns you is worse than no path.')], set: { m14_warden: 'asked' } }),
+          intent('challenge', 'Then I\'ll cross anyway.', { lines: [CREW('Then read my board first. Everyone who drowned there read it afterwards.')], set: { m14_warden: 'crossed' } }),
+          intent('comfort', 'You\'ve kept people alive.', { lines: [CREW('Thirty-eight of them. I count them every morning. I count them again at night.')], set: { m14_warden: 'thanked' } }),
+        ],
+      },
+      { when: 'm14_warden', lines: [CREW('Read the board. Then cross, if you must.')] },
+    ],
+    m14_keeper: [
+      {
+        when: '!m14_ticket',
+        lines: [KEEPER('My great-great-grandmother bought this for the 41 the morning it fell. Eight fourteen. She was late, and she never got on.'),
+          KEEPER('We keep it for the day the 41 comes back. Somebody ought to have a ticket.')],
+        choices: [
+          intent('comfort', 'It will come back.', { consequence: true, lines: [KEEPER('Then I\'ll be first on, and I\'ll make them punch it.')], set: { m14_ticket: 'kept' } }),
+          intent('investigate', 'Why keep it, if it never comes?', { consequence: true, lines: [KEEPER('Because she was late. Being late kept us alive. You keep the thing that kept you.')], set: { m14_ticket: 'asked' } }),
+        ],
+      },
+      { when: 'm14_ticket', lines: [KEEPER('Eight fourteen. Any day now.')] },
+    ],
     m14_pupil: [
       {
         when: '!ev_rhyme',
@@ -272,6 +321,8 @@ export const M14 = {
       lines: [N('The prints begin at a tear in the air. Caught in it: a white petal, and a florist\'s receipt. 08:04, 2049.'), K('Somebody stepped out of twenty forty-nine with flowers. For my name.')],
       set: { ev_receipt_0804: true }, log: 'The flowers came through a fracture from 2049, bought at 08:04.',
     },
+    departures: { when: '@FUTURE', lines: [N('The 41\'s departures board, wiped clean by hand. One line still lit in paint: 08:14, ON TIME.'), K('Somebody repaints it.')], set: { ev_last_board: true } },
+    departures_no: { lines: [K('In this year the board is a board. In twenty-one ninety-six somebody keeps it.')] },
     schoolbook: { lines: [N('A schoolbook: THE FRACTURE AND THE MAN WHO MADE IT. My photograph, with a moustache drawn on and rubbed out.')], set: { ev_schoolbook: true } },
   },
   step: m14Step,
@@ -279,7 +330,8 @@ export const M14 = {
     person(P, { id: 'sera', crew: 'sera', at: 'seraSteps', off: [0, 0, 1.6], turn: Math.PI, prompt: 'TALK TO SERA' });
     person(P, { id: 'gardener', crew: 'gardener', at: 'gardenChannel', off: [1.6, 0, 1.0], turn: -Math.PI / 2, prompt: 'TALK TO THE GARDENER', when: '@FUTURE' });
     person(P, { id: 'kai_statue', crew: 'kai', at: 'kaiStatue', off: [0, 1.6, 0], turn: 0, silent: true, statue: true, freezeWhen: 'm14_statue', temporal: ['PRESENT', 'PAST', 'FUTURE'], when: '@FUTURE' }); // (the memorial is 2196's)
-    person(P, { id: 'warden', crew: 'warden', at: 'unstableZones', off: [3, 0, 2], turn: Math.PI, silent: true, when: '@FUTURE', barks: ['Do not cross before noon. It is always before noon.'] });
+    person(P, { id: 'warden', crew: 'warden', at: 'unstableZones', off: [3, 0, 2], turn: Math.PI, when: '@FUTURE', prompt: 'TALK TO THE WARDEN', barks: ['Do not cross before noon. It is always before noon.'] });
+    person(P, { id: 'm14_keeper', crew: 'm14_keeper', first: 'The ticket keeper', seed: 1404, ambient: true, at: 'arrivalPlatform', off: [1.8, 0, -4], turn: Math.PI, when: '@FUTURE', prompt: 'TALK TO HIM' });
     person(P, { id: 'm14_pupil', crew: 'm14_pupil', first: 'A child', seed: 1401, ambient: true, at: 'seraSchool', off: [2, 0, 3], turn: Math.PI, when: '@FUTURE', prompt: 'TALK TO THE CHILD' });
     person(P, { id: 'm14_pupilA', crew: 'm14_pupilA', first: 'A child', seed: 1402, ambient: true, at: 'seraSchool', off: [-2, 0, 1.5], turn: Math.PI, when: '@FUTURE', silent: true });
     person(P, { id: 'm14_pupilB', crew: 'm14_pupilB', first: 'A child', seed: 1403, ambient: true, at: 'seraSchool', off: [-5, 0, 1.5], turn: Math.PI, when: '@FUTURE', silent: true });
@@ -291,7 +343,7 @@ export const M14 = {
       K('And the fifth?', 'trust_sera == "deny"'), L('SERA', 'He said it too. But he looked first.', 'trust_sera == "deny"'),
       N('A bell rings from the east. Somewhere over there, a city has missed noon.')],
   },
-  done: 'beacon_built',
+  done: 't_m14_voice',
 };
 M14.outro = M14.hook.lines;
 
@@ -361,7 +413,7 @@ export const M15 = {
   coldOpen: {
     first: true, minutes: 1, cue: 'card',
     shots: [{ cam: 'anjaDesk', look: 'lockConsole', t: 9 }],
-    lines: [L('ANJA', 'Check the lock at noon.'), N('She reads her own note. YOU HAVE WRITTEN THIS NOTE 3,112 TIMES.'), N('She writes it again.')],
+    lines: [L('ANJA', 'Check the lock at noon.'), N('She reads her own note. YOU HAVE WRITTEN THIS NOTE 3,112 TIMES.'), L('ANJA', 'Three thousand one hundred and twelve. Then I have been very careful.'), N('She writes it again.')],
   },
   quarters: [
     {
@@ -521,6 +573,7 @@ const M16_HINTS = {
   names: ['Names on the wall.', 'Three of them I know.', 'Read them.'],
   choiceCases: ['Cases on the floor.', 'By the lens.', 'Look.'],
   case41: ['A shattered case.', 'In the third cave.', 'REVERSE it.'],
+  mara: ['Mara keeps the museum.', 'At the rim gate.', 'Talk to her.'],
 };
 const M16_PROCESSES = [
   // memory two runs backwards on its reel: held, it plays forwards once (R5)
@@ -568,7 +621,9 @@ export const M16 = {
       threads: [
         { id: 'hall', kind: 'scene', scene: 'hall', at: 'entranceHall', spot: { prompt: 'THE ENTRANCE HALL', offset: [0, 1.2, 1.4], r: 2.8, kit: 'museumLabel', when: '@FUTURE' },
           goal: 'The museum\'s entrance hall.', because: 'Mara said they keep the failed worlds here.', done: 'ev_unfinished', hints: M16_HINTS.hall, minutes: 3 },
-        { id: 'memory1', kind: 'playback', at: 'alcove1', after: ['hall'], prompt: 'MEMORY ONE', kit: 'reelStand', offset: [0, 1.0, 0.6],
+        // (the closing pass: the keeper, the guest book, and the woman who stands at the raincoat case)
+        { id: 'mara', kind: 'talk', npc: 'mara', at: 'rimGate', after: ['hall'], goal: 'Mara keeps the museum.', because: 'She dusts every case. She has seen who comes.', done: 'm16_mara', hints: M16_HINTS.mara },
+        { id: 'memory1', kind: 'playback', at: 'alcove1', after: ['mara'], prompt: 'MEMORY ONE', kit: 'reelStand', offset: [0, 1.0, 0.6],
           echoes: [{ crew: 'kai', offset: [-1.2, 0, 0.2] }, { ...M16_MIRA, offset: [1.2, 0, -0.4], yaw: 0 }],
           lines: [N('Memory one. Version four.'), N('Kai at the console. Mira in the chair, laughing at something. The ring turns. The lights go.')],
           set: { ev_memory_one: true }, log: 'Memory one, version four: me at the console.',
@@ -635,7 +690,20 @@ export const M16 = {
     },
   ],
   talks: {
-    mara: [{ when: 'true', lines: [L('MARA', 'Seventeen halls. A hundred cases. I dust them all. Someone keeps adding.'), L('MARA', 'And a photograph behind the falls that I never hung. I dust round it.')] }],
+    mara: [
+      {
+        when: '!m16_mara',
+        lines: [L('MARA', 'Seventeen halls. A hundred cases. I dust them all. Someone keeps adding.'), K('Who?'),
+          L('MARA', 'I never see him. I see the guest book. One name every morning, in the same hand, a little older every page.'),
+          L('MARA', 'And sometimes a woman. She doesn\'t sign. She stands at the raincoat case and doesn\'t touch the glass.'), K('What does she look like?'),
+          L('MARA', 'Like somebody waiting to be told off. Like a sister.'), L('MARA', 'And there is a photograph behind the falls that I never hung.')],
+        choices: [
+          intent('investigate', 'Show me the guest book.', { lines: [N('Page after page: K. VAREN. K. VAREN. The hand gets older. On the last page, under his name, another hand: STOP BRINGING ME HERE. M.')], set: { m16_mara: 'book' } }),
+          intent('comfort', 'Has she ever said anything?', { lines: [L('MARA', 'Once. She said he thinks a museum is a way of saying sorry.'), K('Is it?'), L('MARA', 'I dust it. I don\'t ask it questions.')], set: { m16_mara: 'her' } }),
+        ],
+      },
+      { when: 'm16_mara', lines: [L('MARA', 'The photograph behind the falls. I never hung it. I dust round it.')] },
+    ],
   },
   deductions: {
     museum: {
@@ -654,7 +722,8 @@ export const M16 = {
     hall: { when: '@FUTURE', lines: [N('Seventeen halls, one for each finished world. Then a hundred cases, each holding one object, each labelled UNFINISHED.'), K('A hundred worlds that never finished.'), K('And seventeen that did. This is the seventeenth.')], set: { ev_unfinished: true }, log: 'Seventeen finished worlds. A hundred unfinished.' },
     hall_no: { lines: [K('In this year it is a quarry. The museum is in twenty-one ninety-six.')] },
     reelStand: { lines: [N('A memory reel on a stand, running backwards. The voice on it speaks in reverse.')] },
-    coatCase: { when: '@FUTURE', lines: [N('A child\'s yellow raincoat. VERSION 17. The newest case in the museum.')], set: { ev_case_coat: true } },
+    coatCase: { when: '@FUTURE', lines: [N('A child\'s yellow raincoat. VERSION 17. The newest case in the museum.'),
+      N('Nobody stands at the case now. On the glass, at a grown woman\'s height, a breath is fading.', 'm16_mara')], set: { ev_case_coat: true } },
     coatCase_no: { lines: [K('The cases are in twenty-one ninety-six.')] },
     barge: { when: '@PRESENT', lines: [N('The Helix barge\'s manifest, twenty forty-nine: ONE CHILD\'S RAINCOAT, YELLOW. RECOVERED SOUTH SQUARE, THIS MORNING.')], set: { ev_barge_coat: true } },
     barge_no: { lines: [K('The barge was here in twenty forty-nine, when the quarry was a lake.')] },
@@ -681,6 +750,8 @@ export const M16 = {
   },
   overlay(P) {
     person(P, { id: 'mara', crew: 'mara', at: 'rimGate', off: [4, 0, -3], turn: Math.PI, prompt: 'TALK TO MARA', when: '@FUTURE' });
+    // (the woman at the raincoat case: across the hall once Mara has spoken of her, gone when Kai reaches the glass)
+    person(P, { id: 'mira16', ...M16_MIRA, at: 'alcove2Case', off: [0.9, 0, 2.4], turn: Math.PI, silent: true, hologram: true, when: '@FUTURE && m16_mara && !ev_case_coat' });
   },
   hook: {
     cue: 'cliff', minutes: 2,
@@ -705,6 +776,8 @@ const M17_HINTS = {
   memory: ['The memory.', 'At the console.', 'Play it.'],
   letter: ['An envelope.', 'On the desk in the hall.', 'Decide.'],
   mimic: ['A mimic.', 'A patrol walks its last seconds back.', 'REVERSE it.'],
+  hers: ['The far dishes are tagged too.', 'Eighty-eight, a hundred and two, a hundred and seventeen.', 'Listen to her.'],
+  plaque: ['Who paid for all this?', 'The plaque by the cable trenches.', 'Read it now, then in 2026.'],
 };
 const M17_ROUTE = { area: [-20, -60, 130, 50] };
 const M17_PROCESSES = [
@@ -793,14 +866,32 @@ export const M17 = {
   beats: [{ kind: 'custom', goal: 'Find what the archive kept.' }],
   coldOpen: {
     first: true, minutes: 1, cue: 'card',
-    shots: [{ cam: 'reconstruction', look: 'controlHall', t: 9 }],
-    lines: [N('RECORDING 117 OF 117.'), FX(L('WITNESS', 'Version one hundred and seventeen. She woke. She asked where you were. I did not have an answer she would accept. Beginning again.'), 'recording')],
+    // (the closing pass: she is heard first, waking, before he files her)
+    shots: [{ cam: 'reconstruction', look: 'controlHall', t: 7 }, { cam: 'arrival', look: 'dish8', t: 8 }],
+    lines: [N('RECORDING 117 OF 117.'), FX(L('MIRA', 'Where is he? Not you. Where\'s Kai?'), 'recording'), FX(L('WITNESS', 'Version one hundred and seventeen. She woke. She asked where you were. I did not have an answer she would accept. Beginning again.'), 'recording')],
   },
   quarters: [
     {
       name: 'THE SHIFTING CORRIDOR',
       threads: [
-        { id: 'corridor', kind: 'go', at: 'corridorEnd', r: 5, goal: 'Through the shifting corridors, to the dishes.', because: 'The racks stand differently in every year. Somewhere they line up.', hints: M17_HINTS.corridor, minutes: 5 },
+        // (the closing pass: the far dishes keep her side: adult Mira in three of the worlds he made, in her own voice)
+        { id: 'hers', kind: 'clue', need: 3, of: ['ev_her88', 'ev_her102', 'ev_her117'],
+          spots: [
+            { id: 'her88', scene: 'her88', at: 'dish7', prompt: '88 OF 117', offset: [0, 1.2, 0.6], r: 2.8, kit: 'recordingTag' },
+            { id: 'her102', scene: 'her102', at: 'dish8', prompt: '102 OF 117', offset: [0, 1.2, 0.6], r: 2.8, kit: 'recordingTag' },
+            { id: 'her117', scene: 'her117', at: 'dish9', prompt: '117 OF 117', offset: [0, 1.2, 0.6], r: 2.8, kit: 'recordingTag' },
+          ],
+          say: [K('A different woman every time. Herself every time. He kept every one of them.')],
+          goal: 'The far dishes, tagged with other numbers.', because: 'They are not my recordings. The voice on them is a woman\'s.', hints: M17_HINTS.hers },
+        { id: 'corridor', kind: 'go', at: 'corridorEnd', r: 5, after: ['hers'], goal: 'Through the shifting corridors, to the dishes.', because: 'The racks stand differently in every year. Somewhere they line up.', hints: M17_HINTS.corridor, minutes: 5 },
+      ],
+      sides: [
+        { id: 'plaque', name: 'WHO PAID FOR THE ARRAY', done: 'ev_array_paid', minutes: 2,
+          threads: [{ id: 'plaqueRead', kind: 'residue', at: 'drumRacks',
+            record: { official: 'THE RAIN CITY ARRAY. BUILT BY PUBLIC SUBSCRIPTION, 2031.', echo: 'Under it, in 2026, a foreman\'s ledger page: PAID IN CASH. ONE MAN, GREY. A SCAR ON HIS WRIST. ASKED THAT EVERY DISH FACE THE HILL.',
+              hint: 'A plaque, and a page pinned under it.', after: [K('He paid for somewhere to listen to her.')], prompt: 'THE PLAQUE', offset: [-3, 1.3, 1.2], kit: 'bronzePlate',
+              log: 'The array was paid for in cash in 2026, by a grey man with a scarred wrist.' },
+            goal: 'A plaque by the drum racks.', because: 'Somebody is paying for all this. Nobody will say who.', ev: 'array_paid', hints: M17_HINTS.plaque }] },
       ],
     },
     {
@@ -866,6 +957,9 @@ export const M17 = {
     ],
   },
   scenes: {
+    her88: { lines: [FX(L('MIRA', 'You keep calling me by her name. I think I am her. Am I? Say yes slower.'), 'recording')], set: { ev_her88: true } },
+    her102: { lines: [FX(L('MIRA', 'I was a cellist in this one. You came to every concert and never clapped. You only watched my hands.'), 'recording')], set: { ev_her102: true } },
+    her117: { lines: [FX(L('MIRA', 'Stop bringing me flowers. Bring me a door.'), 'recording')], set: { ev_her117: true }, log: 'The far dishes kept her side: Mira in three of his worlds. "Bring me a door."' },
     rec20: { lines: [FX(K('Twenty. I come here on her birthday. I bring the yellow ones. The white ones are for funerals.'), 'recording')], set: { ev_rec20: true } },
     rec30: { lines: [FX(K('Thirty. The activation system passed its first test tonight. Rook says it is for clocks. I let him say it.'), 'recording')], set: { ev_rec30: true } },
     rec45: { lines: [FX(L('WITNESS', 'Forty-five. Nobody comes here any more. I talk to the dish, because it answers in her voice. A little.'), 'recording')], set: { ev_rec45: true } },
@@ -913,7 +1007,9 @@ const M18_HINTS = {
   iven: ['Iven.', 'In the pocket.', 'Get him out.'],
   porch: ['The potter\'s porch.', 'It fell over his kiln.', 'REVERSE it.'],
   kiln: ['The kiln.', 'Behind the porch.', 'Open it.'],
+  scavengers: ['A man at the third pylon.', 'He wants one of its cells.', 'Decide.'],
 };
+const SCAV = AMB('CROWD_M2');
 const M18_PROCESSES = [
   // the core's slabs, fallen into the street: held, they come back last fallen first, a stair to the ramp at 9 m
   {
@@ -960,7 +1056,8 @@ export const M18 = {
   coldOpen: {
     first: true, minutes: 1, cue: 'card',
     shots: [{ cam: 'chronolithBench', look: 'anchorMast', t: 9 }],
-    lines: [N('Storms stand on the horizon like pillars, each one a different hour.'), L('SERA', 'This page is wrong. So is the next one.')],
+    lines: [N('Storms stand on the horizon like pillars, each one a different hour.'), SAYS('A WATER KEEPER', 'CROWD_F', 'Sera. The anchor light is red again.'),
+      L('SERA', 'This page is wrong. So is the next one.'), L('SERA', 'Then we go tonight. Everybody. Not most of you. Everybody.')],
   },
   quarters: [
     {
@@ -1007,9 +1104,13 @@ export const M18 = {
           L('SERA', 'And keep the scavengers off them. They think it\'s food.'),
           N('Unwritten fighters take the first pylon. They will hold it.', 'faction == "unwritten"'), N('People from the lock city come up the road. They brought tools.', 'city_freed')],
           goal: 'Sera is at the stabilizer.', because: 'She can make the Chronolith hold longer.', done: 'm18_repair', hints: M18_HINTS.repair, minutes: 1 },
-        { id: 'hold', kind: 'hold', at: 'stabilizer', r: 46, after: ['repair'], secs: 120, drift: 20, window: 18, label: 'THE STABILIZER',
+        // (the closing pass: a scavenger father asks for one of the pylons' cells for his daughter's lamp; giving it costs the
+        // hold, and the two of them are seen again: at the pylon, and on the Finale's road)
+        { id: 'scavengers', kind: 'choice', scene: 'scavs', at: 'pylon3', after: ['repair'], spot: { prompt: 'THE MAN AT THE PYLON', offset: [-2.2, 1.2, 1.6], r: 3, model: NO_MODEL },
+          goal: 'A man and a girl at the third pylon.', because: 'He is not stealing. He is asking.', done: 'm18_scav', hints: M18_HINTS.scavengers },
+        { id: 'hold', kind: 'hold', at: 'stabilizer', r: 46, after: ['scavengers'], secs: 120, drift: 20, window: 18, label: 'THE STABILIZER',
           posts: PYLONS,
-          allies: { 'faction == "unwritten"': 0 }, slow: 'city_freed', lapse: [L('SERA', 'Kai! A pylon\'s out!')],
+          allies: { 'faction == "unwritten"': 0 }, slow: 'city_freed || m18_scav == "refused"', lapse: [L('SERA', 'Kai! A pylon\'s out!')],
           set: { inv_cap: 12, m18_stabilized: true },
           say: [L('SERA', 'Done. You can say you didn\'t do this, too. It holds twelve seconds now.', 'trust_sera == "deny"'),
             L('SERA', 'Done. I wrote it down, by the way. I came back. It holds twelve seconds now.', 'trust_sera == "accept"'),
@@ -1056,6 +1157,14 @@ export const M18 = {
     houseC: { lines: [N('Eleven children and a teacher counting them twice. The anchor light over the door is red.'), SAYS('THE TEACHER', 'CROWD_F2', 'Eleven. Eleven. Go on, then.')], set: { m18_houseC: true } },
     kiln: { when: 'rev_porch', lines: [N('While the porch stands, the kiln\'s door opens. One pot, still warm: a bowl with three notes painted round it.')], set: { ev_kiln: true } },
     kiln_no: { lines: [K('The porch is across the door.')] },
+    scavs: {
+      lines: [SCAV('Please. One cell off the pylon. My girl\'s lamp has been dark a week, and the dark out here has things in it.'),
+        L('SERA', 'Every cell he takes, the pylons drift faster while I work. Your call, Varen.')],
+      choices: [
+        intent('comfort', 'Take one. Take the lamp\'s worth.', { consequence: true, lines: [SCAV('Thank you. Thank you.'), SAYS('HIS DAUGHTER', 'CROWD_CHILD', 'It\'s lit! Dad, look, it\'s lit!'), L('SERA', 'Then hold them harder.')], set: { m18_scav: 'shared' } }),
+        intent('challenge', 'Not tonight. I need every one of them.', { consequence: true, lines: [SCAV('Then we\'ll find a way to take it.'), N('He takes the girl\'s hand and walks back into the storm without looking round.'), L('SERA', 'He will, too.')], set: { m18_scav: 'refused' } }),
+      ],
+    },
     plan: { lines: [N('A floor plan from the skyscraper. The floors are numbered not by height, but in the order they fell.'), K('Last fallen, first back. Like the hospital\'s lock.')], set: { ev_fall_order: true }, log: 'The skyscraper\'s floors are numbered in the order they fell.' },
   },
   overlay(P) {
@@ -1064,6 +1173,10 @@ export const M18 = {
     person(P, { id: 'iven', crew: 'iven', at: 'pocket', off: [0, 0, 1.6], turn: Math.PI, hologram: true, when: '!last_signal', prompt: 'TALK TO IVEN' });
     person(P, { id: 'm18_fighter', crew: 'm18_fighter', first: 'An Unwritten fighter', seed: 1801, ambient: true, at: 'pylon1', off: [1.6, 0, 1.6], turn: Math.PI, silent: true, when: 'faction == "unwritten" && m18_evacuated' });
     person(P, { id: 'm18_citizen', crew: 'm18_citizen', first: 'From the lock city', seed: 1802, ambient: true, at: 'pylon2', off: [1.6, 0, 1.6], turn: Math.PI, silent: true, when: 'city_freed && m18_evacuated' });
+    // the scavenger and his daughter at the third pylon: asking; then, given a cell, sitting by it under her lamp; refused,
+    // gone back into the storm
+    person(P, { id: 'm18_scav', crew: 'm18_scav', first: 'A scavenger', seed: 1803, ambient: true, at: 'pylon3', off: [-2.2, 0, 2.6], turn: Math.PI, silent: true, when: 't_m18_repair && !(m18_scav == "refused")' });
+    person(P, { id: 'm18_scavgirl', crew: 'm18_scavgirl', first: 'His daughter', seed: 1804, ambient: true, at: 'pylon3', off: [-3.4, 0, 2], turn: Math.PI * 0.8, silent: true, when: 't_m18_repair && !(m18_scav == "refused")' });
     person(P, { id: 'mira_msg', crew: 'mira', at: 'transmissionScreen', off: [0, 0, 1.2], turn: Math.PI, hologram: true, silent: true, when: 't_m18_climb' });
   },
   hook: {

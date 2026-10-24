@@ -167,6 +167,8 @@ export const AMBIENT_CAST = {
   // Act II (U7): an evacuee in Loop City, Sera disguised as a Continuum guard, the people who listened, a freed prisoner
   m9_evac: { model: 'rb_civ_f2', variant: 'dust', height: 1.66, pronoun: 'f' },
   m10_guard: { model: 'rb_sera', variant: 'guard', height: 1.7, pronoun: 'f' },
+  m10_looper: { model: 'rb_civ_m3', variant: 'detention', height: 1.77, pronoun: 'm' }, // (closing: the prisoner whose loop let him keep a few words)
+  m12_glazier: { model: 'rb_medic_f', variant: 'helix tech', height: 1.67, pronoun: 'f' }, // (closing: the glazier on Helix's roof, M12; at the Spire, M21; on the road, M23)
   m13_listener: { model: 'rb_civ_m1', variant: 'dust', height: 1.78, pronoun: 'm' },
   m13_freed: { model: 'rb_civ_m2', variant: 'detention', height: 1.76, pronoun: 'm' },
   // Act III (U8): Sera's schoolchildren (M14), an Unwritten fighter and a lock-city volunteer at the pylons (M18)
@@ -174,8 +176,12 @@ export const AMBIENT_CAST = {
   m14_pupil: { model: 'rb_child_m2', variant: 'patched2', height: 1.3, pronoun: 'm' },
   m14_pupilA: { model: 'rb_child_f2', variant: 'faded', height: 1.24, pronoun: 'f' },
   m14_pupilB: { model: 'rb_child_m2', variant: 'patched', height: 1.34, pronoun: 'm' },
+  m14_keeper: { model: 'rb_trader', variant: 'faded', height: 1.76, pronoun: 'm' }, // (closing: the ticket keeper on the 41's old platform, M14; the Finale's road)
   m18_fighter: { model: 'rb_scav', variant: 'unwritten', height: 1.78, pronoun: 'm' },
   m18_citizen: { model: 'rb_civ_f3', variant: 'moss', height: 1.66, pronoun: 'f' },
+  // (closing: the scavenger father and daughter who ask for a pylon's cell, M18; she is in Sera's garden on the Finale's road)
+  m18_scav: { model: 'rb_scav', variant: 'rust', height: 1.77, pronoun: 'm' },
+  m18_scavgirl: { model: 'rb_child_f2', variant: 'faded', height: 1.22, pronoun: 'f' },
   m21_cook: { model: 'rb_civ_f2', variant: 'cook', height: 1.67, pronoun: 'f' }, // (the Loop City evacuee, years on, cooking: a white top and an apron)
   m21_listener: { model: 'rb_civ_f1', variant: 'teal', height: 1.66, pronoun: 'f' },
   m23_listener: { model: 'rb_civ_f2', variant: 'rose', height: 1.67, pronoun: 'f' },
