@@ -5,29 +5,73 @@ creator's bible. The bible describes a 25–30 hour campaign; this is a playable
 AFTERZERO engine, all 23 missions written by hand on threads (the Prologue in U6, Acts I and II in U7, Acts III and IV
 and the Finale in U8), with the CASE FILES after an ending. How it works: [`DESIGN.md`](DESIGN.md).
 
-**Each chapter's length** (minutes; the model is the length model of §9.8, main path + side stories, which is each
-sheet's target; the floor is what a player cannot go under who hears every line of a mission's own (its threads, side
-stories, people, records and cards, measured from the recordings' lengths in the packs; not hints, barks or the shared
-conversations of `npcs.js`) and walks its main route in straight lines at Kai's walking 3.9 m/s; the bot's is the game's
-own telemetry for the full run of `tests/lastversion.mjs` in the play-through audit, 2026-10-23: 335 checks, 335 passed;
-the words are each mission's own as v2.0 had them, the build the player found short, and as they are now):
+**Each chapter's length, measured** (the closing pass on the player's points 4 and 5, 2026-10-24). Minutes of game
+time against the bible's own targets (each mission's "Target duration"; a chapter's is the sum of its missions', with
+the hours of its heading beside it). The bot's minutes are the game's own telemetry (`time_<mkey>`; the Finale's from
+its start to the ending) in the full run of `tests/lastversion.mjs` on `3eb6767` with this pass's bot (2026-10-24: 337 checks, 337 passed, every
+line said (1,974) from the packs). Speech is each mission's own lines, each
+once, measured from the recordings in the packs (threads, side stories, people, records and cards; not hints or barks);
+words are those lines counted the same way before the closing pass (`3d2e463`) and now:
 
-| Chapter | Target (model) | Floor (speech + walk) | The bot | Words (v2.0 → now) |
-| --- | --- | --- | --- | --- |
-| Prologue | 97 (74 + 23) | 25.3 (21.3 + 4.0 for 930 m) | 13.5 (Mission 1 walked in 10.9; Missions 2 and 3 placed beat to beat with their lines skipped) | 1,033 → 3,482 |
-| Act I | 192 (151 + 41) | 32.7 (24.7 + 8.0 for 1,871 m) | 42.9 | 701 → 4,285 |
-| Act II | 199 (162 + 37) | 28.2 (19.2 + 9.0 for 2,117 m) | 35.0 | 810 → 3,196 |
-| Act III | 194 (154 + 40) | 32.1 (22.1 + 10.0 for 2,342 m) | 44.1 | 542 → 3,701 |
-| Act IV | 158 (130 + 28) | 21.0 (14.6 + 6.4 for 1,489 m) | 29.2 | 346 → 2,599 |
-| Finale | 50 (40 + 10; the sheet allows 90) | 4.9 (3.5 + 1.4 for 317 m) | 10.1 | 110 → 599 |
-| The campaign | 890 (711 + 179), about 15 hours | 144.2 (105.4 + 38.8 for 9,066 m) | 174.8, under 3 hours | 3,542 → 17,862 |
+| Chapter | The bible (minutes) | The bot | Of the bible | Speech of its own | Words (before → now) |
+| --- | --- | --- | --- | --- | --- |
+| Prologue | 120 (2 h in its heading) | 13.5 | 11% | 19.6 | 3,286 → 3,286 |
+| Act I | 260 (5 h in its heading) | 44.0 | 17% | 22.7 | 3,681 → 4,017 |
+| Act II | 320 (6 h in its heading) | 44.7 | 14% | 22.6 | 2,611 → 3,912 |
+| Act III | 300 (6 h in its heading) | 52.2 | 17% | 23.0 | 3,229 → 3,972 |
+| Act IV | 240 (5 h in its heading) | 35.0 | 15% | 17.4 | 2,246 → 3,180 |
+| Finale | 90 (1.5 h in its heading) | 11.6 | 13% | 8.1 | 516 → 1,494 |
+| The campaign | 1,330 (22.2 h; the bible's own total: about 25.5 h of main story) | 201.0 | 15% | 113.4 | 15,569 → 19,861 |
 
-Every line the edition says, once each: 554 lines and 7,295 words in v2.0, 2,692 and 22,350 now. Each mission's place
-is 1.7-6.8 ha (v2.0's generated rooms: 0.2-0.8 ha a sector).
+| Mission | | The bible | The bot (before → now) | Speech | Words (before → now) |
+| --- | --- | --- | --- | --- | --- |
+| 1 | The Last Normal Day | 35 | 10.9 → 10.9 | 8.2 | 1,408 → 1,408 |
+| 2 | Helix Goes Dark | 45 | (placed, lines skipped) | 6.5 | 1,069 → 1,069 |
+| 3 | The First Switch | 40 | (placed, lines skipped) | 4.9 | 809 → 809 |
+| 4 | The Man from the Last Day | 50 | 8.6 → 9.2 | 4.1 | 767 → 767 |
+| 5 | The Village That Never Existed | 55 | 10.8 → 9.1 | 4.1 | 832 → 832 |
+| 6 | The Clockmaker's House | 45 | 6.0 → 6.6 | 5.5 | 728 → 879 |
+| 7 | The Broken Observatory | 65 | 7.3 → 9.9 | 3.9 | 537 → 722 |
+| 8 | The First Death | 45 | 8.8 → 9.3 | 5.1 | 817 → 817 |
+| 9 | Nine Minutes to Zero | 60 | 9.2 → 10.0 | 3.7 | 524 → 621 |
+| 10 | Enemies Who Remember | 65 | 4.9 → 8.7 | 4.5 | 433 → 784 |
+| 11 | The Inverted Hospital | 50 | 7.9 → 7.2 | 4.7 | 625 → 793 |
+| 12 | The Man Behind the Glass | 70 | 7.0 → 8.4 | 5.0 | 378 → 894 |
+| 13 | The Nine-Minute War | 75 | 7.8 → 10.5 | 4.7 | 651 → 820 |
+| 14 | Welcome to 2196 | 50 | 7.0 → 10.6 | 6.1 | 777 → 1,108 |
+| 15 | The City That Forgot Tomorrow | 65 | 11.3 → 9.4 | 4.4 | 745 → 757 |
+| 16 | The Museum of Failed Worlds | 55 | 8.4 → 10.3 | 4.9 | 640 → 783 |
+| 17 | The Witness's Archive | 70 | 7.6 → 10.8 | 3.7 | 495 → 645 |
+| 18 | The Fracture | 60 | 10.4 → 11.1 | 3.9 | 572 → 679 |
+| 19 | The Place Outside Time | 60 | 8.6 → 11.0 | 3.2 | 545 → 621 |
+| 20 | Mira's Memory | 55 | 6.7 → 7.1 | 4.0 | 577 → 766 |
+| 21 | The Last Battle of the Continuum | 75 | 6.1 → 9.2 | 5.7 | 620 → 1,048 |
+| 22 | The First Second | 50 | 8.3 → 7.7 | 4.5 | 504 → 745 |
+| 23 | Afterzero | 90 | 10.4 → 11.7 | 8.1 | 516 → 1,494 |
 
+"Before" is the bot's earlier runs as this file recorded them (Missions 4–13 on 2026-10-22, 14–23 and the Finale on
+2026-10-23, Mission 1 in the audit). Those runs carried a fault of the bot's that the closing pass found and fixed: when
+a mission ended inside its own last step (a staged moment that plays itself, or a set piece whose end is the mission's),
+the bot's loop went on into the next mission's first threads, and its wait for the next mission then let game time run
+idle on that mission's clock. Some earlier minutes were too high for it: Missions 5, 11, 15 and 22 measure lower now
+(11 and 22 with more in them), and this pass's own first run, still with the fault, gave the Finale 10.4 where the
+same Finale measured 9.8 once it was fixed. Missions 2 and 3 are placed beat to beat with their lines skipped, so they
+are not measures.
+
+What the numbers say. The bot plays the campaign in 201.0 minutes of game time, about a seventh of the bible's 22.2 hours of
+mission targets; every mission is below its target. Under ten bot minutes after this pass: Missions 4 (9.2), 5 (9.1), 6 (6.6), 7 (9.9), 8 (9.3), 10 (8.7), 11 (7.2), 12 (8.4), 15 (9.4), 20 (7.1), 21 (9.2), 22 (7.7).
 The bot knows every coordinate, reads nothing twice, never looks around or gets lost, asks for no hint and plays one
-or two side stories a mission; the model, not the bot, is the estimate of a player's time, and neither has been
-measured with a player.
+to four side stories a mission; a player will take longer, and no player has been measured.
+
+The length model is gone. Earlier versions of this file set each chapter's "target (model)" beside the bot: the sum of
+each thread's authored minutes, 890 minutes or about 15 hours. Those minutes were set by their authors and never
+measured, and they ran about five times the bot's; nothing here or in DESIGN.md gives them as an estimate any more.
+`Threads.js` keeps `minutes` as authoring weights only, the unit tests no longer assert the model, and the bot no
+longer measures Mission 1 against it (it needs nine minutes or more). Older entries below that cite "the model" are
+history.
+
+Every line the edition says, once each: 554 lines and 7,295 words in v2.0, 2,727 and 22,781 before the closing pass,
+3,215 and 27,593 now. Each mission's place is 1.7-6.8 ha (v2.0's generated rooms: 0.2-0.8 ha a sector).
 
 ## Built (by hand, playable, tested)
 
@@ -478,6 +522,35 @@ measured with a player.
   180k triangles in the scene pass (262 draw calls and 343–350k triangles for the whole frame,
   11.4–11.5 ms of JavaScript on average, 15.0–16.4 ms p95), Mission 4's THE VILLAGE 25 and 86k
   (8.0 ms) and BEFORE THE FIRE 20 and 22k (4.1 ms): all within §4.7.
+- **Longer chapters and a stronger story after the closing pass** (2026-10-24; `git log 3d2e463..`; the player's
+  points 4 and 5; DESIGN.md "The closing pass, longer chapters and a stronger story"). The missions the critic
+  measured as short got played threads, not narration: Mission 10 the guard post, Lin's interview reel, a prisoner
+  whose loop lets him say a little more each time, Sera at her skiff and the flood pole; Mission 12 the glazier's
+  fallen frame (`m12_glazier`), Lin's planter on the north roof, the Witness on the gangway with no shadow, his camp
+  and his tape recorder (REVERSE), a question face to face and Mira's voice in the second ring; Mission 14 the warden
+  in person, the beacon calling in Mira's voice and THE LAST TICKET; Mission 17 Mira's side of the far dishes and WHO
+  PAID FOR THE ARRAY; Mission 21 Chamber One rebuilt on the summit, Mira in the chair, the glazier and Brask's last
+  round; and Missions 6, 7, 9, 11, 13, 16, 19, 20 and 22 a played thread each (Ezra's book and his 2026 echo, the
+  astronomer who cut the name, Brask who remembers, the boy on the bench, the frozen block and Sera's mother, Mara's
+  guest book and the woman at the raincoat case, Mira's reflection walking to the wrong door, the sister's
+  conversation, Ezra's echo after the arm). The Finale plays in scenes: Mira at the ring in the cold open, her voice in
+  the speakers, the 41 back at its platform, three storms of her worlds reversed, the Witness at the lab gate, Sera
+  and the frozen block, Mira walking the hill with Kai and talking, what he carried, "Ask me.", the second counted
+  on the ring's arm, and each ending's consequence (the sky, and her answer) before its sequence. A real choice in
+  Missions 12, 18, 20 and 22, each seen again in a person or a place (the glazier at the Spire and on the road; the
+  scavenger's lamp in Sera's garden; Mira at the ring; HE SIGNED FOR IT on the memorial), and in Missions 11 and 13
+  (the sun on the fridge, the kettle in the district). Adult Mira says 997 words in her own voice and 135 as Lin (303
+  and 93 before), the Witness 577 (244); the campaign's own lines grew from 15,569 words to 19,861, and every line the
+  edition says from 22,781 to 27,593. Every mission's crowd says lines of its own (`barks.js`). Mission 1's glimpse
+  of the woman stays distant and in rain (3587bfb). Recorded with `tools/voice-lv.sh`: all eight packs up to date,
+  checked byte for byte, 19.1 MB in all (common 2.41, prologue 2.46, act1 3.32, act2 3.36, act3 3.35, act4 2.52,
+  finale 1.41 MB; budget 15 MB a file). The bot found and fixed in itself: a mission that ends inside its last step
+  no longer lets the bot's loop run into the next mission, Iven's statement is taken from him in person, Mission 16's
+  case is read once it is whole, Mission 18's kiln is opened while the porch is held, and a side story named before a
+  thread that was finished on the way is still played. Checked: `npm test` 159/159; `node tests/smoke.mjs` passed and
+  `node tests/qa.mjs` 26/26 (the only shared file changed, `tools/voice-pack.mjs`, changed only its edition branch's
+  size projection); the full bot (`node tests/lastversion.mjs`, on `3eb6767`) 337 of 337, every line said
+  (1,974) from the packs, `speechSynthesis` never asked, the survey's 1,657 pairs of views at least 23 bits apart.
 - **Casting after the closing pass** (2026-10-23; `git log 3587bfb..`; the player's point 3, casting, and the crowd
   half of point 6): the settlement (Missions 4, 5, 7, 22, 23 and Case B) dresses as people did three thousand years
   ago. The robe, kurta, hijab and abaya avatars that both U4 reviews and the player read as present-day Gulf and
@@ -682,13 +755,11 @@ measured with a player.
 
 ## Planned / not done
 
-- **Scale.** The bible's campaign is 25–30 hours. The length model of this edition is 890 minutes (about 15
-  hours, 711 of them the main path), the bot plays it in 174.1 minutes of game time (the table at the top), and
-  no player has been measured. The model's minutes are each thread's own, set by its author (the U6 review: Mission
-  1 walked by the bot in 10.4 minutes against 35); the bot now fails Mission 1 if its walk falls under a third of the
-  model's main path (0.40, 10.1 minutes, on 2026-10-23, after the pursuit grew to 180 m) and logs Missions 2 and 3
-  beside their models (placed there, with their lines skipped, so not measures), but making the chapters as long as the
-  model says is content still to write, mission by mission, and a player's time still to measure.
+- **Scale.** The bible's campaign is 25–30 hours (its missions' own targets add up to 22.2). The bot plays this
+  edition in about 201 minutes of game time (the table at the top), about a seventh of the targets; every mission is
+  below its target, twelve of the nineteen Act missions still under ten minutes in the bot, and the Finale at 11.7 of
+  its 90. Making the chapters as long as the bible asks is content still to write, and a player's time is still to
+  measure. The length model the earlier entries quote (890 minutes) is not an estimate and is no longer given as one.
 - **What the set pieces are not.** The game has no combat and no fail states: Mission 9's reset, Mission 18's hold
   and Mission 21's arena never fail (a lapse or a fall is a setback to the last anchor); Mission 13's battle and
   Mission 18's storms are watchers and weather; Mission 21's elites are watchers that rewind, not fighters; Mission
@@ -722,16 +793,21 @@ measured with a player.
   the card and ending cues, and one region of each kind.
 - **The score** is procedural (Synth's oscillators and noise, 0 bytes of assets): the bible's cues are
   there by name and shape, not as composed music; the crowd walla is the crowds' own barks far off.
-- **Cold opens** of every mission are authored (shots, lines, hooks); since the U7 review Missions 4, 6, 7, 9 and 12
+- **Cold opens** of every mission are authored (shots, lines, hooks); since the closing pass the cold opens of
+  Missions 6, 10, 11, 12, 13, 17, 18, 21, 22 and the Finale go on with lines of their own (the Witness, Sera, Mira,
+  the settlement's voices) and Missions 10, 12, 17, 21, 22 and the Finale have a second shot; since the U7 review Missions 4, 6, 7, 9 and 12
   and three of Act IV's stage their own people (`coldOpen.cast`) and Missions 6, 7, 11 and 12 are shot in their own year
   (`coldOpen.year`); the others use whoever already stands in the shot, in the mission's starting year and light (no
   night or grade of their own: Mission 4's "at night" is the afternoon's); the case files' replays have none of their own.
 - **Mission 9** has no 08:05-08:14 clock on the HUD (the tower's "08:13" is said, not timed), and Mission 4's cold open
   has no sleeping Kai in its shot (the edition has no lying pose; he is in the blanket house when the title comes).
 - **A human playtest** of the rewritten campaign (do the deductions read fairly, do the chases feel like pursuits,
-  does Mission 18's hold read as a defence and Mission 20's board as an alignment, are the model's minutes what a
-  player takes) has not been done; the bot and the length model stand in for it.
+  does Mission 18's hold read as a defence and Mission 20's board as an alignment, how long a player takes) has not
+  been done; the bot stands in for it.
 - **Device testing** of the Android build on phones has not been done in this session.
+- **The edition's APK** was not rebuilt in the closing pass. It was last measured at 49,040,014 bytes with 15 MB of
+  voice; the packs are 19.1 MB now, so it would come to about 52.5 MB, over the 50 MB budget, until the packs' bitrate
+  or the models give some of it back. Each pack is far under the 15 MB a file the build script enforces.
 - **Mission 11's discontinuity court** shows its rain as still filaments (falling on the west half, rising on the
   east is drawn, not animated; only the clouds drift backwards there), and Mission 14's arrival view was not
   recomposed to frame the 2196 lagoon (U3 review nits, deferred).

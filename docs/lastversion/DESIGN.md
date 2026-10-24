@@ -271,7 +271,7 @@ no mission or case uses it (chains B and C are replays of Missions 5 and 15).
 
 | Module | What it does |
 | --- | --- |
-| `Threads.js` | The fifteen kinds (`go`, `talk`, `clue`, `residue`, `deduce`, `scene`, `choice`, `tasks`, `stealth`, `chase`, `cinema`, `invert`, since U7 `loop` and `playback`, and since U8 `hold`) and their default minutes (`MINUTES`); `quartersOf` (the mission's quarters or the shim's), `threadsOf`, `sidesOf`, `estimate` (the length model: cold open + main threads + hook = main; side stories = optional); `placeThreads` (what a kind needs at its landmark: triggers, spots, deduction and record scenes, the chase's path; with the mission's `gateAfter` (every rewritten mission from Act I on, since the U7 review) a thread's own spot, trigger, deduction, record or playback answers only once every thread it comes after is done, and every thread those come after (a thread a player may walk past counts once its `until` holds), while the evidence a clue lists stays free to find; the cold open's `cast`, people who stand in its shot only while it plays); and the runtime class: the objective and its because line, the tracked side story, completion (each thread's fact `t_<mkey>_<id>`; what the thread carries is paid out once, `_paid`, even when its kind sets the fact itself), the year carried out of a room into the open place (`carryOut`), THINK's tiers, the furthest quarter (a toast and an autosave at each new one), the chase (DeckWorld's own path walker, paced so she keeps 10 m ahead and waits beyond 14 m; it never fails), staged `cinema` moments (each started once per load, never marked in the saved flags: a save taken while one plays loads with it still to come), deductions (a wrong answer is said and the question stays open; a right one without its evidence is not yet provable) and residue records (what a record says now, and in the past what it said first); `loop` (done once its resets happen while it is the objective) and `playback` (the recovered pieces put in order, one a use, then echoes that stand only while it plays re-enact the scene); `hold` (Mission 18's pylons: progress while Kai stays by it, one post at a time drifting out of phase and lapsing unless re-anchored in its own year, allies holding a post, a slower drift for the freed city; a chip under the objective; its seconds saved). A thread's completion is re-tested on every fact change and four times a second. A main thread a player can leave undone (a look at a photo, a clue set) carries an `until`, a fact the story sets once Kai has moved on: from then it is walked past, neither the objective nor THINK's, and it no longer holds the furthest quarter back (U6 review: Mission 1's photo, Mission 2's lobby, Mission 3's excavation office; a unit test walks Missions 1-3 with every such thread undone). |
+| `Threads.js` | The fifteen kinds (`go`, `talk`, `clue`, `residue`, `deduce`, `scene`, `choice`, `tasks`, `stealth`, `chase`, `cinema`, `invert`, since U7 `loop` and `playback`, and since U8 `hold`) and their default minutes (`MINUTES`); `quartersOf` (the mission's quarters or the shim's), `threadsOf`, `sidesOf`, `estimate` (what was the length model: cold open + main threads + hook = main; side stories = optional. Since the closing pass these minutes are authoring weights and nothing more: they overstated a player's time about five times against the bot's measured walks, so no length is claimed from them, and a mission's length is measured instead, "Lengths, measured" below); `placeThreads` (what a kind needs at its landmark: triggers, spots, deduction and record scenes, the chase's path; with the mission's `gateAfter` (every rewritten mission from Act I on, since the U7 review) a thread's own spot, trigger, deduction, record or playback answers only once every thread it comes after is done, and every thread those come after (a thread a player may walk past counts once its `until` holds), while the evidence a clue lists stays free to find; the cold open's `cast`, people who stand in its shot only while it plays); and the runtime class: the objective and its because line, the tracked side story, completion (each thread's fact `t_<mkey>_<id>`; what the thread carries is paid out once, `_paid`, even when its kind sets the fact itself), the year carried out of a room into the open place (`carryOut`), THINK's tiers, the furthest quarter (a toast and an autosave at each new one), the chase (DeckWorld's own path walker, paced so she keeps 10 m ahead and waits beyond 14 m; it never fails), staged `cinema` moments (each started once per load, never marked in the saved flags: a save taken while one plays loads with it still to come), deductions (a wrong answer is said and the question stays open; a right one without its evidence is not yet provable) and residue records (what a record says now, and in the past what it said first); `loop` (done once its resets happen while it is the objective) and `playback` (the recovered pieces put in order, one a use, then echoes that stand only while it plays re-enact the scene); `hold` (Mission 18's pylons: progress while Kai stays by it, one post at a time drifting out of phase and lapsing unless re-anchored in its own year, allies holding a post, a slower drift for the freed city; a chip under the objective; its seconds saved). A thread's completion is re-tested on every fact change and four times a second. A main thread a player can leave undone (a look at a photo, a clue set) carries an `until`, a fact the story sets once Kai has moved on: from then it is walked past, neither the objective nor THINK's, and it no longer holds the furthest quarter back (U6 review: Mission 1's photo, Mission 2's lobby, Mission 3's excavation office; a unit test walks Missions 1-3 with every such thread undone). |
 | `ledger.js` | The campaign's ledgers in one place (§9.3–§9.7): `QUESTIONS` (each with the mission that opens it and the one that answers it; the case board shows the open ones as THE QUESTIONS), `CLUES` (C1–C12: plant, reinforce, payoff, each step a fact or a line of text in a named mission), `CONSEQUENCES` (every consequence fact, where it is set and where it is read), `CHOSEN` (what WHAT YOU CHOSE says for each), `PREVIOUSLY` (three lines per chapter, for a chapter's start and a loaded save), `EPILOGUE` (a line per consequence, read by the ending: Pryce, Dale and Iven's team since U6; nineteen lines since U8, Ending C's own letter among them). Unit tests hold them to the missions: every clue planted before its payoff, every consequence read later or listed as an epilogue line. |
 | `Runtime.js` | A rewritten mission loads once (all its quarters), opens on its `coldOpen` (with `first` before the mission's card, the rest after), offers SKIP for the whole opening (the button, or Enter while the pointer is locked), and ends on its hook (`autoExit` where the story ends the mission rather than a gate; armed once a load, on the runtime, never in the saved flags). A load puts Kai at the checkpoint he saved at, in its room, after a PREVIOUSLY card (a mission's own, `PREVIOUSLY.<mkey>`, where it has one); only a save with no position (a mission the save format restarted) starts at the furthest quarter's spawn. A mission's `resumes` ({ when, until, fx }) replay, once a load's card is over, a moment that sets its facts in callbacks and that the save cut off (`afterResume`; each fx skips what is already set). A cold open with `stage` holds `co_<mkey>` while it plays, so the place can stage it (Mission 1's 05:40: a sky `preset`, a pulsing `beacon` window in Helix's crescent, crowds `!co_m01`). The case board has THE QUESTIONS, SIDE STORIES (a TRACK button puts that story's next thread under the objective), WHAT YOU CHOSE and ABILITIES. `time_<mkey>` stores each mission's play time (the ending sums them per chapter). Save format 24 (`campaign.lvFormat`; 22 for the Prologue's rewrite, 23 for Acts I and II, 24 for Acts III, IV, the Finale and the case files): an older save inside a mission rewritten since restarts it at its first quarter with its facts. A mission may have a home year (`home`: its rooms start in it, and stability drains away from it), scenes built when used (`nodes`), watchers that answer an afterimage (`onEcho`), and talks keyed by a person's own id (one person standing in several places). The CASE FILES screen (`caseFiles`) lists the fourteen stories with their state and replays one: `cases/<key>` starts the cases chapter at that replay, with the facts the player had (handed over the reload in `sessionStorage`, else the latest save's) and the story's own facts cleared, in the quarter it lives in, speaking from its mission's pack. Starting a chapter from the menu primes the facts a player would carry into it (`PRIMES`). A loop (`deck.loop: { period, variants, upward, until }`) resets the place every `period` seconds until `until` holds: the patrols walk the next variant's rounds, the crowds restart further along their routes, the rain falls upward for a second. While an opening or a staged moment plays, the watchers walk their rounds but see nobody. Authored triggers may ask for a year (`@FUTURE`). |
 
@@ -384,6 +384,99 @@ on the South Square's shopfront), then the road for the quote and the epilogue, 
 voice; Kai himself is never on screen (`cinema` `hidePlayer`: the game camera, which shows him by its distance, does
 not run while a shot holds the view).
 
+The closing pass, longer chapters and a stronger story (the player's points 4 and 5; 2026-10-24). The missions the
+critic measured as short were given played threads, not narration: talks, records read in two years, REVERSE set pieces,
+walks across the places' far ends, and side stories the bot plays. A real choice in Missions 12, 18, 20 and 22, each seen
+again in a person or a place. Adult Mira speaks across the campaign (997 words in her own voice and 135 as Lin, from 303
+and 93 before the pass), the Witness more (577 words, from 244), every word counted once; the campaign's own lines
+grew from 15,569 words to 19,861. Every mission's crowd says lines of its own (`barks.js`).
+- Mission 6: the cold open hears Ezra ask the Witness "Repeat for how long?" and the answer ("Until he comes. He will
+  be early."); Ezra's appointment book on the counter, a record read in two years (V., every Tuesday since 1999; in
+  2026, "PAID IN ADVANCE. DO NOT ASK HIS NAME."), and Ezra's echo at sixty-five in 2026, talking to the spot where
+  Kai will stand (Mira came in once, at nine, for a watch that went backwards), before the clocks.
+- Mission 7: at the first sky the astronomer who cut KAI into the outer ring tells who asked him to: a woman with no
+  shadow at noon, "like you, if you had slept", and beside the name an M cut by another hand.
+- Mission 9: Sergeant Brask at the funicular, the one soldier who remembers every loop, in person (who sent Rhea's team
+  to the tower; three answers), before clock B.
+- Mission 11: on the bench by the music box Kai sits with himself at twelve, finishing Mira's drawing while she laughs
+  behind a door that is not open; he tells the boy she gets better, or draws the face on the sun the way she does
+  (`m11_boy`; drawn, the face is on the fridge's drawing in Mission 20).
+- Mission 13: before the stabilizer, the frozen block close to: every floor stopped halfway through something, and on
+  the third, hanging where it broke away, a woman at a stove. Sera, on the radio: she is her mother ("Choose the way
+  you would if she was nobody's."). The district after the choice shows the kettle: still steaming, or the woman in the
+  smoke looking for her daughter.
+- Mission 16: Mara at the rim, in a conversation of her own: the guest book (one name every morning, older each page,
+  and under the last one STOP BRINGING ME HERE. M.) or the woman who stands at the raincoat case; then the woman is
+  there across the hall, and gone when Kai reaches the glass.
+- Mission 19: Mira's reflection walks ahead of Kai across the water from the bridge to a blue door (a walk at her
+  pace), and it is the wrong one ("You always follow the one in the water. Look at the doors, Kai. Not at me."); her
+  voice at the first chalk mark.
+- Mission 10: the cold open goes on to the guard post, where the guard (Sera under a Continuum helmet) reads his fifth
+  intake over the radio; on the crest an interview reel, Sergeant Brask questioning Dr. Lin the night of the Zero Second
+  in their own voices ("I remember a kitchen. A boy who stopped a song too early."), which Kai now recognises; in the loop
+  cells a prisoner whose loop lets him say a few words each time Kai speaks to him (four times: the woman with no shadow
+  they held there, the hospital she asked for, her message "stop looking for me where I was"), before the prisoners'
+  choice; Sera at her skiff, helmet off, with a choice of what Kai says; the flood pole (a side story): marked at the
+  crest in 2026 by hand, signed W.
+- Mission 12: the cold open is the Witness's own voice ("He comes up the east stair."), a second shot close on the
+  flowers and the scar. The choice: where he tears into 2026 the roof cracks and a glazier's sunshade frame comes down
+  across her way; Kai holds the frame up by REVERSE and loses him, or goes after him and finds the page he dropped (HE
+  CHASES. HE ALWAYS CHASES. LET HIM SEE THE STAIR.) while she climbs down alone (`m12_glazier`). She is at the Spire in
+  Mission 21 (a talk either way; saved, she can hold the second gap as the ally) and on the Finale's road at the lab. On
+  the 2026 gangway he waits for Kai and casts no shadow (C9, "In this year I haven't happened yet"); his camp in the
+  2196 ruin (a cot made with hospital corners, one cup, a wall of one child's handprints) and his tape recorder by the
+  cot, running backwards: held, it is him rehearsing what he will say to Kai ("You were always early, and I was always
+  late, and she was nine."); on the north roof the one planter he runs past without looking, Lin's (yellow
+  chrysanthemums; in 2026, a nine-year-old's chalk sun with a face); on the gangway and face to face Kai asks him
+  something (why he waits; the flowers, why he runs, or nothing); after it the
+  second ring speaks in a woman's voice, waking ("Kai? Is that you? It's so dark in here.").
+- Mission 14: the warden at the flickering street, in person: why he painted over Sera's safe path; the return beacon,
+  built, wakes on a channel that has called for a hundred and forty years in Mira's voice ("Is it still Saturday?");
+  THE LAST TICKET (a side story): the departures board on the 41's old platform and the man who keeps a ticket for the
+  day it comes back; on the Finale's platform the 41 has come, and he is on it (`m14_ticket`).
+- Mission 17: the far dishes keep her side, adult Mira in three of his worlds in her own voice ("Stop bringing me
+  flowers. Bring me a door."), walked across the plateau before the corridors; the cold open hears her first; WHO PAID
+  FOR THE ARRAY (a side story): a plaque, and under it in 2026 the foreman's page: cash, a grey man with a scarred wrist.
+- Mission 18: the cold open has the settlement's own voices; the choice: a scavenger and his daughter ask for one of the
+  pylons' cells for her lamp. Given, the hold's drift is as it was and the two of them sit by the third pylon; refused,
+  the drift is slower and they walk back into the storm. On the Finale's road the lamp is in Sera's garden, lit or dark
+  (`m18_scav`).
+- Mission 20: the choice: in the world without him Mira hums the song and stops a note short; Kai hums the last note for
+  her (she stands, turns, and asks if they have met) or lets her find it (`m20_note`). At the ring in the Finale she
+  tells him which. "I remember being your sister" is a conversation now: a hundred and seventeen brothers, every one
+  sorry, and what she wants instead (it is enough; who she is when she is not his sister; or "I don't know").
+- Mission 21: the cold open begins on the summit, the Witness talking to Mira inside his ring ("You said that a hundred
+  times. In a hundred voices. All of them yours."); Chamber One rebuilt on the summit from the requisition (the console,
+  the stool, the child's chair), and Mira in the chair as a light, which she has outgrown, before the confrontation; THE
+  GLAZIER and BRASK'S LAST ROUND (side stories; Brask is the loop-aware sergeant of Missions 9 and 13).
+- Mission 22: the cold open goes on ("Every time I say it, he goes in."); the station wedge's microphone, from which he
+  watched Kai run for the 41; the choice: Chamber One's log has an operator's line nobody signed; Kai signs it (VAREN,
+  K. is written on the log, and HE SIGNED FOR IT at the foot of the memorial on the Finale's road) or leaves it blank
+  (`m22_signed`); Ezra's echo after the arm, as Mission 6 left him (his Wednesday, his finished clock, or still
+  Tuesday); beyond the opened chamber, Mira: "Come up when you're ready. Not before."
+- The Finale plays as a climax in scenes: Mira at the ring in the cold open ("Don't run. Walk. I want to see you
+  come."); the voice in every speaker is hers this time ("Kai Varen. Build nothing. Walk north."); the 41 back at its
+  platform, with whoever Kai got off it waiting there; three storms stand
+  on their ends along the road, each a world of hers that REVERSE runs forwards once in her voice; the Witness stops at
+  the lab gate, where the ring would turn for his hand, and holds the road ("Don't fix it. Look at it." / "It's
+  beautiful. Why is it beautiful?"); Mira comes down to the foot of the hill and walks back up it beside Kai (a walk, at
+  his pace, talking on the way: a zone and a rule at two places on the path), at the top asks what he carried up (the
+  tape, the photograph, Ezra's watch, the sun with a face, each as he chose), asks to be asked, and counts a second
+  with him on the ring's arm (REVERSE on the third count); Sera in 2196 says how she lives with the frozen block
+  (Mission 13), the Witness at the gate what Mira once told him ("I said: her. She said: wrong answer."); the choice,
+  and before the ending's sequence its consequence: the sky turns with it, and Mira answers it (A, the ring comes apart
+  in her hand; B, the sky breaks into panes and she walks into one; C, Kai steps into the ring and at the lab gate the
+  Witness is not there any more). The consequences gallery has the ticket keeper and the scavenger's lamp.
+- Mission 6: the cold open answers ("Repeat for how long?" / "Until he comes."); Ezra's appointment book, read now and in
+  2026: V., every Tuesday since 1999, paid in advance. Cold opens with the characters' own voices in Missions 11 (Odile
+  at the whiteboard), 13 (both sides giving the same order a second apart), 15 (Anja counting her notes) and 18.
+
+Lengths, measured. A mission's length is what the browser bot measures with the game's own telemetry (`time_<mkey>`,
+the full run of `tests/lastversion.mjs`): it walks every main thread, plays every line at its own length and the side
+stories named for it, knows every coordinate and reads nothing twice, so a player will take longer. The bible's targets
+(35 to 75 minutes a mission, 90 for the Finale, 25 to 30 hours in all) are not met: STATUS.md gives each mission's
+measured minutes against its target.
+
 ## Authored and generated
 
 **Written by hand**
@@ -428,30 +521,36 @@ not run while a shot holds the view).
 | 3 | The First Switch | Prologue | Helix, east wing (`helix`) | 2049 2026 2196 | The switch, cable/power, the parked lift, chain D, the anchor, the fracture |
 | 4 | The Man from the Last Day | I | The Ring Hill (`valley_upper`) | THE VILLAGE, BEFORE THE FIRE | Pictograms, the telling-stone, the meal at the first fire, the stele, three stones, the Elder, the panels; the access card |
 | 5 | The Village That Never Existed | I | The river bend and the gorge (`valley_river`) | THRIVING, ABANDONED, FLOODED | River (thriving), why they left (abandoned), wall, mural, gate (flooded); the machine buried or left; chain B |
-| 6 | The Clockmaker's House | I | Old Town and the light-well house (`oldtown`) | 2026 2049 2196 | Ezra Moll, the arm, the hidden stair, three clocks; the recording; the Debt |
-| 7 | The Broken Observatory | I | The Ridge (`observatory`) | THE FIRST SKY, 2049, 2196 | Three instruments in three years, the dates, the scavengers; Mira's tape |
+| 6 | The Clockmaker's House | I | Old Town and the light-well house (`oldtown`) | 2026 2049 2196 | Ezra Moll, his appointment book, his 2026 echo, the arm, the hidden stair, three clocks; the recording; the Debt |
+| 7 | The Broken Observatory | I | The Ridge (`observatory`) | THE FIRST SKY, 2049, 2196 | Three instruments in three years, the dates, the scavengers, the astronomer who cut the name; Mira's tape |
 | 8 | The First Death | I | Helix in VERSION 17 (`helix_v17`) | 2049 (V17), 2026 | What changed, the log, Rook confronted (`rook_fate`), the boot print, the last ten minutes, Lin; VERSION 17 |
-| 9 | Nine Minutes to Zero | II | Northbank (`northbank`) | 2049 2026 | Two loops (90 s), three clocks, the cancelled order, the transmitter, Rhea, the tower at 08:13 |
-| 10 | Enemies Who Remember | II | The dam (`dam`) | 2049 2026 | The Director, the cell block, Sera, the power runs, the projector (Echo Step), the prisoners |
-| 11 | The Inverted Hospital | II | Rain City General (`hospital`) | 2049 2026 (+ reversed wards) | The quieter sound, returning hazards, REVERSE taught, the records compared, Odile, the lock; Mira's file |
-| 12 | The Man Behind the Glass | II | Helix, north wing (`helix`) | all three | The chase, Corridor B, the route, his stair then Kai's, the voicemail, the second Chronolith |
-| 13 | The Nine-Minute War | II | The delta port (`warport`) | all three | Field orders, shells reversed (`ev_both_sides`), who fired first, three devices, the stabilizer (faction) |
-| 14 | Welcome to 2196 | III | Downtown (`drowned`) | 2196 (home) 2049 2026 | The lift car ridden up the bank, the beacon's parts, the warning's residue, the transit bridge held, the memorial (`trust_sera`); the Survivor's Garden |
+| 9 | Nine Minutes to Zero | II | Northbank (`northbank`) | 2049 2026 | Two loops (90 s), three clocks, the cancelled order, Brask who remembers, the transmitter, Rhea, the tower at 08:13 |
+| 10 | Enemies Who Remember | II | The dam (`dam`) | 2049 2026 | The Director, the cell block, Sera, the power runs, Lin's interview reel, the projector (Echo Step), the prisoner who remembers, the prisoners, the yard, Sera at the skiff; the flood pole |
+| 11 | The Inverted Hospital | II | Rain City General (`hospital`) | 2049 2026 (+ reversed wards) | The quieter sound, the boy on the bench (`m11_boy`), returning hazards, REVERSE taught, the records compared, Odile, the lock; Mira's file |
+| 12 | The Man Behind the Glass | II | Helix, north wing (`helix`) | all three | The chase, the glazier or him (`m12_glazier`), Corridor B, no shadow in 2026, his camp and his tape recorder, the route, his stair then Kai's, the voicemail, face to face, the second Chronolith and the voice in it |
+| 13 | The Nine-Minute War | II | The delta port (`warport`) | all three | Field orders, shells reversed (`ev_both_sides`), who fired first, three devices, the frozen block and Sera's mother, the stabilizer (faction) |
+| 14 | Welcome to 2196 | III | Downtown (`drowned`) | 2196 (home) 2049 2026 | The lift car ridden up the bank, the beacon's parts, the warden, the warning's residue, the transit bridge held, the memorial (`trust_sera`), the beacon's voice; the Last Ticket, the Survivor's Garden |
 | 15 | The City That Forgot Tomorrow | III | The lock city (`lockcity`) | 2196 (home) 2026 2049 | Noon resets (120 s), the fourteenth's flood, the card un-written and the dual archive (chain C), Anja's lock; the Train That Arrives Yesterday |
-| 16 | The Museum of Failed Worlds | III | The sinkhole (`sinkhole`) | 2196 (home) 2026 2049 | The spiral, three memories (one reversed on its reel), the Witness's museum, the photograph; the Names beneath the City |
-| 17 | The Witness's Archive | III | The array (`array`) | all three | Recordings matched to Kai's route, red copies of him, Recording 117 of 117, the two logs, "They became the price.", "I pressed it."; the Unsent Letter |
-| 18 | The Fracture | III | The traverse to the coast (`fracture`) | 2196 (home) 2026 2049 | Three houses, the canyon in 2026, the highway in 2049, the pylons held (12 s), the slab stair, Mira's message; the Last Signal |
-| 19 | The Place Outside Time | IV | The salt mirror (`unwritten`) | all three | The marks, the bridge in the reflection, the door with no shadow, Mira (`m20_lead`); Orren's three conversations |
-| 20 | Mira's Memory | IV | One plot, three memories (`memory`) | 2026 (home) 2049 2196 | Nothing reversible; her side of the experiment, the world without Kai, three memories aligned, the Child, "I remember being your sister."; the House with No Owner |
-| 21 | The Last Battle of the Continuum | IV | The Continuum Spire (`spire`) | all three | Elites who rewind, the arena's gaps, the ally you earned (`ally`), the wrists side by side |
-| 22 | The First Second | IV | The Ring Hill's wedges (`firstsecond`) | all three | The chain, the arm's beat, the seals, the logs' second, "I was a second early.", the final chamber; the Unwritten Record |
-| 23 | Afterzero | Finale | The road to the ring (`afterzero`) | all three | Two holds (his street, Kai's bridge), the people Kai changed, "Ask me.", Endings A, B, C, the epilogue |
+| 16 | The Museum of Failed Worlds | III | The sinkhole (`sinkhole`) | 2196 (home) 2026 2049 | Mara and the guest book, the woman at the raincoat case, the spiral, three memories (one reversed on its reel), the Witness's museum, the photograph; the Names beneath the City |
+| 17 | The Witness's Archive | III | The array (`array`) | all three | Her recordings on the far dishes, recordings matched to Kai's route, red copies of him, Recording 117 of 117, the two logs, "They became the price.", "I pressed it."; who paid for the array, the Unsent Letter |
+| 18 | The Fracture | III | The traverse to the coast (`fracture`) | 2196 (home) 2026 2049 | Three houses, the canyon in 2026, the highway in 2049, the scavenger's cell (`m18_scav`), the pylons held (12 s), the slab stair, Mira's message; the kiln, the Last Signal |
+| 19 | The Place Outside Time | IV | The salt mirror (`unwritten`) | all three | The marks, the bridge in the reflection, Mira's reflection walking to the wrong door, the door with no shadow, Mira (`m20_lead`); Orren's three conversations |
+| 20 | Mira's Memory | IV | One plot, three memories (`memory`) | 2026 (home) 2049 2196 | Nothing reversible; her side of the experiment, the world without Kai, her last note (`m20_note`), three memories aligned, the Child, "I remember being your sister." (a conversation with a choice); the House with No Owner |
+| 21 | The Last Battle of the Continuum | IV | The Continuum Spire (`spire`) | all three | Elites who rewind, the command structure read, the arena's gaps, the ally you earned (`ally`, the glazier among them), Chamber One rebuilt on the summit, Mira in the chair, the wrists side by side; the glazier, Brask |
+| 22 | The First Second | IV | The Ring Hill's wedges (`firstsecond`) | all three | The chain, the arm's beat, Ezra's echo after it, the microphone, the seals, the logs' second, "I was a second early.", Chamber One's log signed or blank (`m22_signed`), the final chamber, her voice beyond it; the Unwritten Record |
+| 23 | Afterzero | Finale | The road to the ring (`afterzero`) | all three | Her voice in the speakers, the 41 at its platform, two holds (his street, Kai's bridge), three storms of her worlds, the Witness stays at the lab gate, Sera and the frozen block, Mira meets Kai and walks the hill with him talking, what he carried, "Ask me.", the second they count, Endings A, B, C each answered by her, the epilogue |
 | B, C | The Water That Remembers; Two Records, One Disaster | CASE FILES | Mission 5's gorge (`c_b`); Mission 15's press tower (`c_c`) | their missions' years | Chains B and C replayed from their missions (the gates low, high, middle; the dual archive); old saves load into them |
 | E–N | Ten side stories | CASE FILES | their missions' places | their missions' years | The Child, the Train, the Letter, the House, the Signal, the Names, the Debt, the Ninth Minute, the Garden, the Record, each replayed from its place with the facts the player had |
 
 ## Tests
 
-- `tests/lastversion.test.mjs` (in `npm test`), since U8 also: nothing that ends a mission of Acts III, IV or the
+- `tests/lastversion.test.mjs` (in `npm test`), since the closing pass also: no crowd line is said in two missions (each
+  mission's own pool, `barks.js`; a case replays its own); the Finale's processes (three storms of hers, the ring's
+  counted arm) and its ending choices, each answered by Mira before the ending; the per-mission speech cap is 1,600 words
+  with a crowd line counted once, the Finale's 2,600 (its endings, epilogue and post-credit among them); the length-model assertions (the Prologue 75–100 model minutes, each mission 25–42, the
+  Finale 90 or less, declared minutes the model's) are gone, as the model no longer claims a length; up to 20 main
+  threads a mission (the lengthened ones are fuller); the Finale's road may hold 34 people (its Witness and Mira stand in
+  five places each, one at a time). Since U8: nothing that ends a mission of Acts III, IV or the
   Finale answers at its start (from each chapter's PRIMES, every spot, trigger and person that sets the mission's end is
   closed, and each thread's own interaction names the threads it comes after); every line authored in the missions'
   files is one `spokenLines()` walks (so a line said from code is recorded); the consequence ledger is global (every
