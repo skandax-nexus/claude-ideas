@@ -15,8 +15,11 @@ v2.1 in one paragraph: 23 missions in 23 authored open places, each one map with
 side stories, a cold open and a hook; REVERSE, three years, Echo Step; 31 cast people, crowds and watchers;
 every line spoken from the edition's own packs, with a score of written themes played live; three endings with an epilogue line
 per choice that mattered; and the CASE FILES, fourteen side stories and quest chains replayable from their
-places. The code is in `game/js/editions/lastversion/` (`prologue.js`, `act1.js` … `act4.js`, `finale.js`,
-`cases.js`, `Threads.js`, `ledger.js`, `Runtime.js`, `places/`).
+places. Free roam (the closing pass on "make it open world"): once a mission is done, TRAVEL on the case board (or
+the map) goes back to its place, in any year opened there, to walk it with no story gates, its side stories and
+fragments still there, and BACK TO THE STORY returns to where the story waits; after an ending, from the CASE FILES.
+The code is in `game/js/editions/lastversion/` (`prologue.js`, `act1.js` … `act4.js`, `finale.js`,
+`cases.js`, `roam.js`, `Threads.js`, `ledger.js`, `Runtime.js`, `places/`).
 
 Build: `EDITION=lastversion bash android/build-apk.sh` (app "AFTERZERO: Last Version",
 its own saves; 46.7 MB on 2026-10-22, with the eight voice packs under `assets/voice/lv/`); the default build stays

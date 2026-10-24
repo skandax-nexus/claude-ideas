@@ -522,6 +522,39 @@ Every line the edition says, once each: 554 lines and 7,295 words in v2.0, 2,727
   180k triangles in the scene pass (262 draw calls and 343–350k triangles for the whole frame,
   11.4–11.5 ms of JavaScript on average, 15.0–16.4 ms p95), Mission 4's THE VILLAGE 25 and 86k
   (8.0 ms) and BEFORE THE FIRE 20 and 22k (4.1 ms): all within §4.7.
+- **Free roam after the open-world closing pass** (2026-10-24; `git log b7f5b3d..`; the player's point 2, "make it
+  open world"; DESIGN.md "Free roam"). Each of the critic's gaps was checked against the code first. *One bounded map per
+  mission, story-gated quarters, a linear order and no travel* (real): the story keeps its order and its gates, and free
+  roam is beside it (`roam.js`). Once a mission is done, the case board's TRAVEL (the map's TRAVEL button opens it) lists
+  its place, in story order, with a button for each year opened there (Rain City and Helix's west wing in 2049 only:
+  the Zero Second came before the Chronolith) and what is still there (side stories open, fragments found). A trip is
+  that place as the story left it, in the page behind a fade: its people, side stories, fragments, records and REVERSE
+  processes, with no way on, no gate, no watchers, no cold open, loop, frame code or stability drain, the story's own
+  threads standing as props and its own nodes said without acting (a choice is not made twice). A trip saves in the
+  story's slot with the story inside it, so a save taken on a trip loads on it; BACK TO THE STORY returns to the
+  checkpoint left, the rooms in their years, with what the trip found; a trip travels on to another place; after an
+  ending the CASE FILES have a FREE ROAM tab (from the title too) and BACK brings back the CASE FILES and the finished
+  save as it was. No line is new (cards and objectives are shown, not said), so no pack was recorded. *Mission 1's
+  shopfronts are facades you cannot enter* (stale in part): since the visual closing pass every shop is a room behind its
+  glass and the laundromat is walked into; now the 24-hour pharmacy, the café and the plaza's grocer are walked into too,
+  their shelves, tables and chairs solid (a doorway can be given per side). *Missions 10 and 2 mostly interior and dark on
+  a phone* (already closed by the visual closing pass, f002096; checked): Mission 10 is the dam's face, its gallery ledge,
+  crest and gorge under an open night sky, with the cells cut into the face; Mission 2 is Helix, the bible's facility,
+  with windows, the court it opens onto, the lobby's glass roof and the roof terrace. Measured at 915 × 412, medium
+  quality, SwiftShader (mean luminance of the frame, 0–1): Mission 2's lobby 0.28, dark corridor 0.24, west gallery 0.31, staff
+  lounge 0.25; Mission 10's cell 0.17, gallery 0.11, guard post 0.10, cell block 0.13; Rain City's plaza in its 2049
+  storm light 0.21 for comparison; each picture reads (the snow moonlit, the face's lamps, Helix's ceiling lights). *Mission 11's reversed
+  rain as still filaments* (already closed by the visual closing pass; checked in the code: the court's rain surfaces
+  scroll with the frame's time, `materials.js` `tickSurfaces` from `Scenery.update`, down in the west and up in the
+  east). *Kai's own gravity never changes* (not a fault: the player's point 2 asked for no gravity inversion, OVERHAUL.md
+  D1; the bible's "gravity changing only in readable zones" is honoured by things whose fall reverses under REVERSE).
+  Found and fixed on the way, by the full bot's free-roam check: from Mission 14 on the case board did not open at all
+  (Sera's standing, `trust_sera`, is a word, 'accept', 'deny' or 'ask', and the board's PEOPLE read every standing as a
+  number: `TRUST['accept']` threw), so TRAVEL could not be reached there either; a word now reads as a standing, and a
+  unit test opens the board after every mission of a walked campaign with everyone met, and on a trip.
+  Checked: `npm test` NPM_RESULT; `node tests/lastversion.mjs` FULL_RESULT. The free-roam check alone (`LV_ONLY=roam`, about
+  four minutes, from a new game taken to Mission 16) was run as it was built; the full run includes it. Edition files and tests only; no shared engine file changed (Station Zero is
+  untouched, so `tests/smoke.mjs` and `tests/qa.mjs` were not run for it).
 - **Visuals after the closing pass** (2026-10-24; `git log f498f2d..`; the player's point 6 and the visual half of point 2;
   DESIGN.md "Places under an open sky", "Surfaces and props"). Each of the critic's gaps was checked against the code and
   a frame of it first (a survey of all 23 missions at 640 × 360 and close views of each gap, looked at in the pass), then
@@ -897,6 +930,11 @@ Every line the edition says, once each: 554 lines and 7,295 words in v2.0, 2,727
   voice; the packs are 18.9 MB now (after the audio closing pass's re-recordings: 18,872,161 bytes of Opus), so it
   would come to about 52.5 MB, over the 50 MB budget, until the packs' bitrate or the models give some of it back. Each
   pack is far under the 15 MB a file the build script enforces (the largest, act2, 3.37 MB). The release step builds it.
+- **Free roam's limits.** A trip is a mission's place, so a place two missions used is two trips (Helix's three wings
+  are three); it arrives at the mission's first quarter's spawn (Mission 6's is its cellar stair); its people say what
+  the story left them saying (the story's own conversations are said again without acting, never a new line); it has
+  no watchers, quests or recordings of its own; and shops are walked into only in Rain City (the laundromat, the pharmacy,
+  the café, the grocer): elsewhere they are rooms behind glass.
 - **Mission 14's arrival view** was not recomposed to frame the 2196 lagoon (a U3 review nit, deferred); since the
   visual closing pass the water shows through the viaduct's open railings, between the overgrown towers. (Mission 11's
   rain, the other half of that nit, moves since the same pass.)

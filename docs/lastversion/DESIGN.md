@@ -13,7 +13,7 @@ The Last Version is a separate game built from the same sources as the Station Z
 | Which game a page is | `game/js/core/Edition.js`: `window.AZ_EDITION = 'lastversion'` (set by the edition's build) or `?edition=lastversion` on the URL. Without either, the page is the Station Zero game, unchanged. |
 | Its own saves and settings | Every key under `afterzero.lv.` (`Edition.js` `NS`, used by `ui/Saves.js` and `ui/Settings.js`). The two games never see each other's saves. |
 | Its own app | `EDITION=lastversion bash android/build-apk.sh` builds "AFTERZERO: Last Version" (`com.afterzero.lastversion`, versionName 2.0.0, `AFTERZERO-LastVersion-v2.0.apk`) into `android/build-lastversion/`, with a preview `index.html` that sets `window.AZ_EDITION='lastversion'`. Each game carries only its own people: the edition the 41 character files of `casting.js` `MANIFEST` (its 37 Rocketbox people and the 4 shared models it uses), Station Zero every model but the edition's 37; the same lists go into each preview as glTF JSON. |
-| Everything the edition changes | `game/js/editions/lastversion/`: `index.js` (title, states, labels, looks, speakers, engine options), `Runtime.js` (chapters, missions, objectives, scenes, choices, stability, Echo Step, anchors, the case board, endings), `prologue.js` (Missions 1–3), `act1.js` … `act4.js` and `finale.js` (Acts I–IV, the Finale, the endings; `acts.js` gathers them), `cases.js` (the CASE FILES), `Threads.js` and `ledger.js` (threads, quarters and the story's ledgers), `npcs.js` (the people), `Build.js` (hand-built interiors and props), `inversion.js` (REVERSE: input, targeting, charge, the rules, its HUD and sounds), `processes.js` (the things REVERSE can hold, and the mission landmarks they stand at), `casting.js` / `wardrobe.js` / `garments.js` / `crowds.js` / `watchers.js` (who is built from which model, what they wear, the clothes made for them, the crowds, the watchers), `voicelines.js` / `themes.js` / `score.js` / `cinema.js` / `voicefx.js` (every line the edition speaks and its lexicon, the score's written themes, the score and cues, staged moments, the voice's effect chains), `places/` (the open places under a real sky: the builder, the archetypes, the styles and materials, the years and skies, the horizon, the scenery, one spec per place). |
+| Everything the edition changes | `game/js/editions/lastversion/`: `index.js` (title, states, labels, looks, speakers, engine options), `Runtime.js` (chapters, missions, objectives, scenes, choices, stability, Echo Step, anchors, the case board, endings), `prologue.js` (Missions 1–3), `act1.js` … `act4.js` and `finale.js` (Acts I–IV, the Finale, the endings; `acts.js` gathers them), `cases.js` (the CASE FILES), `roam.js` (free roam: a trip to a place already reached, beside the story), `Threads.js` and `ledger.js` (threads, quarters and the story's ledgers), `npcs.js` (the people), `Build.js` (hand-built interiors and props), `inversion.js` (REVERSE: input, targeting, charge, the rules, its HUD and sounds), `processes.js` (the things REVERSE can hold, and the mission landmarks they stand at), `casting.js` / `wardrobe.js` / `garments.js` / `crowds.js` / `watchers.js` (who is built from which model, what they wear, the clothes made for them, the crowds, the watchers), `voicelines.js` / `themes.js` / `score.js` / `cinema.js` / `voicefx.js` (every line the edition speaks and its lexicon, the score's written themes, the score and cues, staged moments, the voice's effect chains), `places/` (the open places under a real sky: the builder, the archetypes, the styles and materials, the years and skies, the horizon, the scenery, one spec per place). |
 | Hooks in the shared code | `main.js` hands the game to the edition's runtime where the edition is on (`this.edition`), and nowhere else. `RealityEngine` takes a configurable state set. The generators take a few optional fields (`zone.themes`, `zone.names`, `zone.drones`, `zone.overlay`, `deck.mechs`, `story.mechDeck`, beat kinds `scene`, `choice`). Each hook is a no-op for the Station Zero game; `npm test` and the default suites prove it. The v2.1 overhaul's hooks so far: `main.js` settings text, comfort mode reads "Steadier camera, no flashes" when the edition is on (1 line, U1); `main.js` `updateTheme` takes the light from `edition.themeFor(state)` when it returns one (1 line, U2) and the sun's direction from `edition.sunDir()` (U2; since the 1.1.1 merge the sun's shadow frame is texel-snapped, so the hook re-aims that frame when the direction changes: 9 lines, none of which run without an edition). `entities/Player.js` is not changed: since 1.1.1 the engine itself climbs a ledge up to 0.35 m from the ground and follows the ground down a drop as deep, in both games, so the places are built to that rule (stair rises of 0.34 m, ramps in 0.25 m steps, kerbs of 0.15 m) and the edition's own `stepUp` hook is gone. REVERSE's moving colliders are edition-owned entries in `DeckWorld.temps` (`t: Infinity`, removed by the edition), so `DeckWorld.js` is not changed for them. U7 review: a `Sentinel` stands on `def.y` when its def has one (its eye 1.6 m above it) and then sees and catches only on that floor (`onFloor`): Mission 10's troopers on the testing chamber's floor under the yard, Mission 8's island drone on its terrace (12 lines added, 5 changed; Station Zero's sentinels have no `y`, so every one of its checks is the old one). U4 (casting): `world/People.js` takes a person's own `crew.model` first when it is loaded, calls a dresser the edition registers with `setCrewDresser(fn)` for everyone it builds (holograms too), uses `crew.height` when a person has one, and no longer lists the edition's people in `BY_NAME` (8 lines; Station Zero's crew carry no `model`, `height` or dresser); `main.js` filters the character screen's looks by `editionDef.looks` (3 lines), and at boot the edition loads Kai's model first whatever look an older v2.0 save chose and does not preload Station Zero's crew (its people load per chapter: 3 changed lines, each a no-op without `EDITION === 'lastversion'`). DeckWorld is not changed: watchers are swapped inside each sentinel after the level is built. U5 (voice and score): `audio/Voice.js` loads packs per base with progress (`loadVoicePack(base, onProgress, vocab)`), takes the edition's packs from `usePacks(bases, prefetch)` (`ready()`, `loading`), looks a line up across its packs (first hit wins; `get pack()` is the first), lets a line name its recorded voice (`extra.id`) and an effect chain (`extra.fx`: `pa`, `radio`, `recording`, `echo`; the chains are the edition's own, `voicefx.js`, handed over as `voice.effects`, and only the edition routes a line through them), plays through `audio.voiceBus` (`output()`), and, with the edition on only, never reads `speechSynthesis` or `AndroidTTS`, waits up to 2 s for a pack still loading and records a miss in `window.__voiceMiss`; `speak()` returns the line's length. Station Zero's path is the same: one pack, no `extra.id`, no fx, device speech as before, the 64-clip LRU kept. `audio/Synth.js` gains an ambience bus and a voice bus (gain 1: the same sound as straight to the master), mix levels (all 1 unless the edition sets them), `unlock()` (with `visibilitychange` suspend and resume and the iOS audio session), a `composer` hook (null: the built-in loop as before) that never bursts after a stall, and a `silence()` that ducks music, effects and ambience but not the voices and restores each to its own level (it no longer touches the master: the +3 dB and un-mute bugs are gone; only the edition calls it). `audio/voiceKey.js`: an empty vocab splices nothing (2 lines). `ui/Settings.js`: the edition's default mix (1 line, gated). `android/build-apk.sh`: the edition copies `voice/lv/**` only, the preview's 15 MB check runs per pack. (U5 in all: `Voice.js` 161 code lines added and 45 removed, `Synth.js` 65 and 9, `voiceKey.js` 2, `Settings.js` 1; `npm test`, `tests/smoke.mjs`, `tests/qa.mjs` and `tests/cradle.mjs` show Station Zero unchanged, and its `voice.json` and `voice.ogg` keep their sha256.) |
 
 Its own look: the title reads AFTERZERO / THE LAST VERSION OF EARTH in front of rain, a city's
@@ -23,6 +23,45 @@ the years: 2049, 2026, 2196 (at most three pips, only the mission's own years). 
 law-writing device and no TICK in this edition: the dock says THINK, ECHO STEP and CASE, the
 touch SHIFT button is YEAR (coloured by the year it will switch to), `L` and `J` open the CASE
 BOARD. From Mission 11 a REVERSE chip sits beside the year card, with a ⟲ button on touch.
+
+## Free roam (the open-world closing pass)
+
+The bible's world is "connected open regions with authored missions rather than one giant undirected map", and the
+player asked for an open world. The story keeps its order (twenty-three missions, one after another, each gated on its
+own threads); free roam is beside it (`roam.js`, wired in `Runtime.js`).
+
+- **Travel.** Once a mission is done (`<mkey>_done`; the Finale's road once an ending is reached) its place is on the
+  case board's TRAVEL list, in story order, with a button for each year opened there; the map's TRAVEL button opens it.
+  A year is opened at a place if Kai could stand in it there: Missions 1 and 2 came before the Chronolith (Mission 3), so
+  Rain City and Helix's west wing are 2049 only; every later place has all its mission's years (`roamYears`). Each row
+  says what is still there: side stories open, fragments found (from the case log, which has kept every fragment read
+  since v2.0, or `fr_<id>`). Travel happens in the page behind a fade (`Runtime.go`), waiting behind a card for the
+  place's chapter's people if they are not loaded; the arrival card and the objective ("Free roam: OLD TOWN, 2026.",
+  what is open, the way back) are shown, never said, so no line is new. A trip can travel on to another place.
+- **A trip** (`roamDeck`, one per story mission, kept out of `MISSIONS`): the mission's place as the story left it, with
+  its people (their `when`s read the facts the story set), side stories, fragments, REVERSE processes and records. Gone:
+  the way on and its gate, the watchers, the cold open, the hook, the moments a load plays again, the mission's frame
+  code, its loop, its end, the stability drain (a trip's home year is the year it went to). The story's own threads stand
+  as the props they are (`placeThreads` places a thread marked `inert` with `r: 0`, never offered: the appointment book
+  still lies on the counter). A side story's threads wait only on its own threads (the story's are done). A node of the
+  story's own said on a trip changes nothing (`roamFree`, read by `Runtime.playNode`): a decision is not made twice, a
+  moment not played twice; the nodes a side story plays, or that set what a side story waits for, act as in the mission.
+  A rule or zone stays only if it sets what a side story waits for, and one that has already happened is marked fired
+  at the load; a fragment read before is laid as read.
+- **Saves.** A trip saves in the story's own slot, with the story inside it (`campaign.roam.back`: the story's save
+  without its facts, case log, timeline and play time, which the trip carries on; `campaign.roam.meta`: how the story's
+  save was described). A save taken on a trip loads on the trip (Runtime.resume → start('roam')), and it is described
+  as FREE ROAM · the place, under its story's chapter, so CONTINUE on that chapter's card goes back on the trip. BACK
+  TO THE STORY (the case board) puts the story back in the page as it was kept, the engine's rooms in their years, with
+  the trip's facts but its own (`lv_roam`), its case log and play time (`storyFromRoam`), and a card instead of
+  PREVIOUSLY. After an ending the CASE FILES have a FREE ROAM tab (from the title too: the latest save becomes a trip in
+  its own slot and loads); BACK then writes the finished campaign's save back as it was (with what the trip found) and
+  the title opens the CASE FILES again.
+- **What a trip proves** (tests): every story mission has a trip; every place in every opened year has no way on, no
+  gate, no watchers and no main thread; a free player on each trip finishes every side story a player can finish in its
+  mission and changes nothing outside the side stories, fragments and REVERSE; every place on a trip is walked from where
+  the trip arrives, in its opened years, to everything it offers (`tests/lastversion-reach.mjs`, `allRoams`); the saves
+  round trip; the bot travels to three places and back, through a save and a reload on the way.
 
 ## Places under an open sky
 
@@ -554,12 +593,23 @@ measured minutes against its target.
 | 21 | The Last Battle of the Continuum | IV | The Continuum Spire (`spire`) | all three | Elites who rewind, the command structure read, the arena's gaps, the ally you earned (`ally`, the glazier among them), Chamber One rebuilt on the summit, Mira in the chair, the wrists side by side; the glazier, Brask |
 | 22 | The First Second | IV | The Ring Hill's wedges (`firstsecond`) | all three | The chain, the arm's beat, Ezra's echo after it, the microphone, the seals, the logs' second, "I was a second early.", Chamber One's log signed or blank (`m22_signed`), the final chamber, her voice beyond it; the Unwritten Record |
 | 23 | Afterzero | Finale | The road to the ring (`afterzero`) | all three | Her voice in the speakers, the 41 at its platform, two holds (his street, Kai's bridge), three storms of her worlds, the Witness stays at the lab gate, Sera and the frozen block, Mira meets Kai and walks the hill with him talking, what he carried, "Ask me.", the second they count, Endings A, B, C each answered by her, the epilogue |
+| FREE ROAM | Every place reached | beside the story | Each done mission's place, as the story left it | the years opened there (2049 only in Missions 1 and 2) | Walked with no story gates: its people, side stories, fragments, records and REVERSE; TRAVEL from the case board or the map, BACK TO THE STORY to the checkpoint left; after an ending, from the CASE FILES |
 | B, C | The Water That Remembers; Two Records, One Disaster | CASE FILES | Mission 5's gorge (`c_b`); Mission 15's press tower (`c_c`) | their missions' years | Chains B and C replayed from their missions (the gates low, high, middle; the dual archive); old saves load into them |
 | E–N | Ten side stories | CASE FILES | their missions' places | their missions' years | The Child, the Train, the Letter, the House, the Signal, the Names, the Debt, the Ninth Minute, the Garden, the Record, each replayed from its place with the facts the player had |
 
 ## Tests
 
-- `tests/lastversion.test.mjs` (in `npm test`), since the visual closing pass: Kai walks through Mission 1's laundromat door to within reach of the shop camera's feed, and the corner shop's glass stops him; the shops have their rooms and the laundromat its machines; the plain finishes carry wear; Mission 11's court rain is the falling and rising surfaces; Mission 20's 2049 is Chamber One (panels, ceiling of light, grid, pencil) with no white void; Mission 22 has a sky of soft wedges for each year, each lighting its own. Since the closing pass also: no crowd line is said in two missions (each
+- `tests/lastversion.test.mjs` (in `npm test`), since the open-world closing pass: a trip for every story mission, kept
+  out of `MISSIONS`, with nothing that tells or ends the story; TRAVEL lists the missions done in story order, in their
+  opened years, with what is still there; every place in every opened year built as a trip (no way on, no gate, no
+  watchers, only side threads, the story's spots as `r: 0` props); a free player on each trip finishes every side story a
+  player can finish in its mission (44 of 44) and changes nothing outside side stories, fragments and REVERSE (without
+  `roamFree` it fails on Mission 11's first meeting with Odile); a story node said without acting, read fragments and past
+  rules not laid again, a trip's save keeping the year switched to; the saves round trip (a trip, a trip from a trip,
+  BACK with what was found, the format, REVERSE's cap); the case board opens after every mission of a campaign a free
+  player walks, with everyone met (a standing may be a word: Sera's), and on a trip; and Kai walks into Rain City's
+  pharmacy, café and grocer by their doors (their glass beside the door is glass). `tests/lastversion-reach.test.mjs` floods every trip from its arrival in
+  its opened years too. Since the visual closing pass: Kai walks through Mission 1's laundromat door to within reach of the shop camera's feed, and the corner shop's glass stops him; the shops have their rooms and the laundromat its machines; the plain finishes carry wear; Mission 11's court rain is the falling and rising surfaces; Mission 20's 2049 is Chamber One (panels, ceiling of light, grid, pencil) with no white void; Mission 22 has a sky of soft wedges for each year, each lighting its own. Since the closing pass also: no crowd line is said in two missions (each
   mission's own pool, `barks.js`; a case replays its own); the Finale's processes (three storms of hers, the ring's
   counted arm) and its ending choices, each answered by Mira before the ending; the per-mission speech cap is 1,600 words
   with a crowd line counted once, the Finale's 2,600 (its endings, epilogue and post-credit among them); the length-model assertions (the Prologue 75–100 model minutes, each mission 25–42, the
@@ -663,7 +713,15 @@ measured minutes against its target.
   game run by the wall clock in real time while the AudioContext plays it: its shots with Kai off screen (A: Kai in a
   body of his own under the 41's board; B: Sera on guard at the seam), every line's decoded clips started from the
   `finale` and `common` packs, the voice's output and the mix sampled (the voice heard, the music under it and between
-  its lines), its cue quoting the Main Theme, the clock's ticks, the voice in every speaker and its overlay. The
+  its lines), its cue quoting the Main Theme, the clock's ticks, the voice in every speaker and its overlay; then (the
+  open-world closing pass) free roam: from the run's own save as Mission 16 arrived, loaded from the title, the map's and
+  the case board's TRAVEL (fifteen places, Rain City and Helix's west wing in 2049 only), trips to Old Town in 2026 (no
+  way on, no watchers, no gate, the story's threads as props; walked, a fragment read, 2196 by its key; a save taken on
+  the trip, the page reloaded and the save loaded on the trip), the Broken Observatory and Rain City, each arriving under
+  its FREE ROAM card, every line said from the packs, and BACK TO THE STORY at the checkpoint left with the objective as it
+  was and the fragments kept; then, after an ending, a trip from the CASE FILES on the title and back to them with the
+  finished save as it was (`LV_ONLY=roam` runs this alone from a new game taken to Mission 16; `LV_ROAM_SHOTS` keeps
+  pictures). The
   Prologue's routes start at the places' landmarks, and Helix's glass lift carries Kai down into
   the chamber. A survey renders quarter 0 of all 23 missions in every year (61 views): a 16×16 average hash per
   view (logged), at least 18 bits between missions that are not the same place, and a sky in the
