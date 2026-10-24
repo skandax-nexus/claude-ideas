@@ -274,6 +274,45 @@ const opening = async () => {
   await az(() => { LVB.step(0.2); LVB.skip(); });
 };
 
+// LV_ONLY=roam: only free roam (roamTrips, at the end of this file), from a new game taken to Mission 16 with Missions
+// 1-15 done (their main threads paid, as a player who walked them has them; the full run uses its own campaign's save)
+if (process.env.LV_ONLY === 'roam') {
+  await page.mouse.click(480, 120);
+  await page.waitForFunction(() => AZ.audio.ctx?.state === 'running', null, { timeout: 20000 }).catch(() => {});
+  await page.evaluate(() => setTimeout(() => AZ.begin('lv:prologue', null, 0), 0));
+  await page.waitForFunction(() => AZ.started && AZ.mode === 'deck' && AZ.level?.place, null, { timeout: 300000 });
+  await az(() => { AZ.renderer.setAnimationLoop(null); });
+  await opening();
+  await startChapter('act3');
+  await az(() => LVB.goMission(2));
+  await opening();
+  const story = await az(() => {
+    const f = AZ.facts;
+    for (const ch of ['prologue', 'act1', 'act2', 'act3']) {
+      for (const m of AZ.edition.makeStory(ch).decks) {
+        if (m.key === 'm16') break;
+        f.set(`${m.key}_done`, true);
+        for (const q of m.quarters || []) for (const t of q.threads || []) { f.set(`t_${m.key}_${t.id}`, true); f.set(`t_${m.key}_${t.id}_paid`, true); }
+      }
+    }
+    AZ.saveTo(0);
+    return localStorage.getItem('afterzero.lv.slot.0');
+  });
+  // a finished campaign's save: the same facts, the missions after it done, an ending reached, in the Finale
+  const fin = JSON.parse(story);
+  for (let n = 16; n <= 22; n++) fin.facts.facts[`m${n}_done`] = true;
+  fin.facts.facts.ending = 'C';
+  Object.assign(fin.campaign, { chapter: 'finale', deck: 0, sector: 0, quarter: 0, flags: {}, visited: [] });
+  fin.meta = { ...fin.meta, run: 'finale' };
+  await roamTrips(story, JSON.stringify(fin));
+  check(errors.length === 0, 'no page errors', [...new Set(errors)].join(' | '));
+  await browser.close();
+  server.close();
+  console.log(`\n${passed} passed, ${failures.length} failed`);
+  if (failures.length) console.log(failures.map((f) => ' - ' + f).join('\n'));
+  process.exit(failures.length ? 1 : 0);
+}
+
 // --- the title -----------------------------------------------------------------------------
 console.log('The title');
 const title = await az(() => ({
@@ -2016,6 +2055,8 @@ const spiral = await az(() => {
   return r;
 });
 check(spiral.n === spiral.of && !spiral.setbacks && Math.abs(spiral.y + 12) < 0.6, `the Museum's spiral, ${spiral.of} waypoints from the rim at 26 m down to the floor at -12 m`, JSON.stringify(spiral));
+// (free roam starts from here at the end of the run: a story save in Mission 16 as it arrived, Missions 1-15 done)
+const m16Save = await page.evaluate(() => localStorage.getItem('afterzero.lv.slot.0'));
 const m16 = await playMission('m16', { sides: ['cases', 'names'] });
 const m16f = await az(() => LVB.f('ev_memory_one', 'ev_memory_two', 'ev_memory_three', 'ev_museum_his', 'm16_photo', 'ev_erased'));
 check(Object.values(m16f).every(Boolean), 'Mission 16: three memories (the second on its reel, REVERSEd), the Witness\'s museum, the photograph; the Names beneath the city', JSON.stringify(m16f));
@@ -2313,6 +2354,192 @@ async function survey() {
   check(views.length >= want && (pairs.length || ONLY.length) && (pairs[0]?.d ?? 99) >= 18, `no two missions look alike: ${pairs.length} pairs of views in different places differ by 18 bits or more (closest ${pairs[0]?.d})`, JSON.stringify(pairs.slice(0, 5)));
 }
 
+// --- FREE ROAM (the closing pass on the player's point 2, "make it open world"): three places and back ----------------
+// From a story save in Mission 16 (Missions 1-15 done; nothing of 16 on), loaded from the title as a player loads it: the
+// map's TRAVEL opens the case board's, which lists the fifteen places reached, each in the years opened there (Rain City
+// in 2049 only: before the Chronolith). A trip to Old Town in 2026: no way on, nobody watching, no gate, the story's
+// threads only props, the side stories live; walked with real movement, a year switched with its key, a fragment read.
+// A save taken on the trip, the page reloaded and the save loaded from the title: still on the trip, in the year switched
+// to, the fragment still read. On to the Broken Observatory and Rain City, each from the case board; BACK TO THE STORY:
+// Mission 16 at the checkpoint it was left at, its objective as it was, no PREVIOUSLY, the fragment kept, the slot the
+// story's again. After an ending: a trip from the CASE FILES on the title, and BACK to them, the finished save put back.
+// LV_ROAM_SHOTS=<folder> keeps a screenshot of the case board's TRAVEL, each arrival, the return and the CASE FILES.
+async function roamTrips(storyJson, finishedJson) {
+  console.log('Free roam: three places and back');
+  const SLOT = 6;
+  const SHOTS = process.env.LV_ROAM_SHOTS || null;
+  if (SHOTS) fs.mkdirSync(SHOTS, { recursive: true });
+  const shot = async (name) => {
+    if (!SHOTS) return;
+    await az(() => { AZ.tickFrame?.(1 / 30); AZ.tickFrame?.(1 / 30); return 'ok'; });
+    await page.screenshot({ path: path.join(SHOTS, `${name}.png`), timeout: 240000 }).catch((e) => console.log(`  (screenshot ${name}: ${e.message.split('\n')[0]})`));
+  };
+  const loadSlot = async (slot, until, arg) => {
+    await page.reload();
+    await page.waitForFunction(() => window.AZ && document.querySelector('#title') && AZ.edition, null, { timeout: 400000 });
+    await az(() => { AZ.changeSetting('quality', 'low'); AZ.changeSetting('smart', false); });
+    await page.mouse.click(480, 120);
+    await page.waitForFunction(() => AZ.audio.ctx?.state === 'running', null, { timeout: 20000 }).catch(() => {});
+    await page.evaluate((s) => setTimeout(() => AZ.begin('load', s), 0), slot);
+    await page.waitForFunction(until, arg, { timeout: 300000 });
+    await az(() => { AZ.renderer.setAnimationLoop(null); });
+    await az(HANDS);
+  };
+  if (!storyJson) { check(false, 'free roam: a story save to start from'); return; }
+  // the story save: Mission 16, with Missions 1-15 done and nothing of 16-23 (so the mission does not end on its own)
+  await page.evaluate(([s, slot]) => {
+    const d = JSON.parse(s);
+    const f = d.facts.facts;
+    for (const k of Object.keys(f)) if (k === 'ending' || /^(t_|side_|time_|hold_|pb_|co_|fr_frag_)?m(1[6-9]|2[0-3])_/.test(k)) delete f[k];
+    for (const k of ['room', 'pos', 'track', 'restarted', 'roam']) delete d.campaign[k];
+    Object.assign(d.campaign, { lv: true, chapter: 'act3', deck: 2, sector: 0, quarter: 0, flags: {}, visited: [] });
+    d.meta = { ...(d.meta || {}), run: 'act3', savedAt: Date.now() };
+    localStorage.setItem(`afterzero.lv.slot.${slot}`, JSON.stringify(d));
+  }, [storyJson, SLOT]);
+  await loadSlot(SLOT, () => AZ.started && AZ.mode === 'deck' && AZ.edition.deck?.mkey === 'm16' && !AZ.edition.castWaitFor && AZ.level?.place);
+  await opening();
+  const before = await az(() => ({ chapter: AZ.campaign.chapter, deck: AZ.campaign.deck, quarter: AZ.campaign.quarter, cp: AZ.checkpoint.slice(0, 3), objective: AZ.edition.objectiveText(),
+    fragments: AZ.facts.get('fragments') || 0, slot: AZ.slot, said: LVB.said.length }));
+  // the map's TRAVEL, then the case board's
+  const ui = await az(() => {
+    AZ.openMenu('map');
+    const btn = document.querySelector('#map .lvmaptravel');
+    const shown = !!btn && btn.style.display !== 'none';
+    btn?.click();
+    const keys = [...new Set([...document.querySelectorAll('#journal [data-travel]')].map((b) => b.dataset.travel))];
+    const yrs = (k) => [...document.querySelectorAll(`#journal [data-travel="${k}"]`)].map((b) => b.dataset.year);
+    return { menu: AZ.menu, shown, heading: !!document.querySelector('#journal #lvTravel'), keys, m01: yrs('m01'), m02: yrs('m02'), m06: yrs('m06'), m07: yrs('m07'), rows: document.querySelectorAll('#journal .board.travel > li').length };
+  });
+  await shot('1_travel');
+  check(ui.shown && ui.menu === 'journal' && ui.heading && ui.rows === 15 && ui.keys.length === 15 && ui.keys[0] === 'm01' && ui.keys[14] === 'm15' && !ui.keys.includes('m16'),
+    'free roam: the map\'s TRAVEL opens the case board\'s: the fifteen places reached, none the story has not', JSON.stringify(ui));
+  check(ui.m01.join() === 'PRESENT' && ui.m02.join() === 'PRESENT' && ui.m06.length === 3 && ui.m07.length === 3,
+    'free roam: each place in the years opened there (Rain City and Helix\'s west wing in 2049 only, before the Chronolith)', JSON.stringify({ m01: ui.m01, m02: ui.m02, m06: ui.m06, m07: ui.m07 }));
+  // a trip, by its button on the case board; then what the place is on a trip
+  const state = () => az(() => {
+    const g = AZ, rt = g.edition, lv = g.level, deck = rt.deck, T = rt.threads;
+    const mainIds = new Set();
+    for (const q of deck.quarters || []) for (const t of q.inert || []) {
+      for (const sp of t.spots || []) mainIds.add(sp.id);
+      if (t.spot) mainIds.add(t.scene || t.id);
+      for (const k of ['residue', 'deduce', 'playback']) mainIds.add(`${k}_${t.id}`);
+    }
+    const saved = JSON.parse(localStorage.getItem(`afterzero.lv.slot.${g.slot}`) || 'null');
+    return {
+      chapter: g.campaign.chapter, key: deck?.key, place: lv?.place, year: g.engine.state(lv.outdoorRoom), years: g.engine.statesOf(lv.outdoorRoom),
+      exit: !!lv.exit, watchers: g.deckWorld.sentinels.length, gate: g.deckWorld.dynamic.some((d) => /^gate_/.test(d.el.id || '')),
+      objective: document.querySelector('#objective .txt')?.textContent || '', why: document.querySelector('#objective .lvwhy')?.textContent || '',
+      mains: T.list.filter((t) => !t.side).length, sides: T.list.filter((t) => t.side).length,
+      inertLive: [...mainIds].filter((id) => lv.interactables.some((i) => i.id === id && i.r !== 0)), props: lv.interactables.filter((i) => i.r === 0).length,
+      back: g.campaign.roam?.back?.campaign ? [g.campaign.roam.back.campaign.chapter, g.campaign.roam.back.campaign.deck] : null,
+      saved: saved ? [saved.campaign?.chapter, saved.campaign?.roam?.key || null, saved.meta?.run, saved.meta?.where] : null,
+      card: document.querySelector('#card')?.textContent || '', slot: g.slot, menu: g.menu, transitioning: !!g.transitioning,
+    };
+  });
+  const travel = async (key, year, name = null) => {
+    await page.evaluate(([k, y]) => { if (AZ.menu !== 'journal') AZ.openMenu('journal'); setTimeout(() => document.querySelector(`#journal [data-travel="${k}"][data-year="${y}"]`)?.click(), 0); }, [key, year]);
+    // (the arrival's card, read as it arrives: it is up for 4.2 s)
+    const ok = await page.waitForFunction((k) => {
+      if (!(AZ.campaign?.chapter === 'roam' && AZ.edition.deck?.key === k && AZ.level?.place && !AZ.transitioning && !AZ.edition.castWaitFor && !AZ.edition.travelFade)) return false;
+      const c = document.querySelector('#card');
+      return { on: c.classList.contains('on'), text: c.textContent };
+    }, key, { timeout: 300000 }).then((h) => h.jsonValue(), () => null);
+    if (name) await shot(name);
+    await az(() => { AZ.simulate(0.3); LVB.skip(); });
+    return { arrived: !!ok, arrivalCard: ok, ...(await state()) };
+  };
+  const tripOk = (s, key, place, year) => s.arrived && (!s.arrivalCard || (s.arrivalCard.on && /FREE ROAM/.test(s.arrivalCard.text))) && s.chapter === 'roam' && s.key === key && s.place === place && s.year === year && !s.exit && !s.watchers && !s.gate && !s.mains && !s.inertLive.length
+    && /^Free roam: /.test(s.objective) && /BACK TO THE STORY/.test(s.why) && s.back?.[0] === 'act3' && s.back?.[1] === 2 && s.saved?.[0] === 'roam' && s.saved?.[1] === key && s.saved?.[2] === 'act3' && /^FREE ROAM/.test(s.saved?.[3] || '') && s.slot === SLOT;
+  // walk with real movement towards a fragment not yet read, and read it (a trip finds what the place kept)
+  const walkAndRead = () => az(() => {
+    const g = AZ, B = LVB, p0 = g.player.pos.clone();
+    const left = g.level.interactables.filter((i) => i.kind === 'fragment' && !i.when && !g.deckWorld.flags[`done_${i.id}`]);
+    left.sort((a, b) => Math.hypot(a.pos[0] - p0.x, a.pos[2] - p0.z) - Math.hypot(b.pos[0] - p0.x, b.pos[2] - p0.z));
+    const fr = left[0];
+    const route = fr ? B.route([[fr.pos[0], fr.pos[2]]], 25) : B.route([[p0.x + 6, p0.z]], 8);
+    const moved = +Math.hypot(g.player.pos.x - p0.x, g.player.pos.z - p0.z).toFixed(1);
+    if (!fr) return { moved, route, read: null, left: 0 };
+    B.go(fr.id);
+    const n0 = g.facts.get('fragments') || 0;
+    const used = B.use(fr.id);
+    B.skip();
+    return { moved, route: { n: route.n, left: route.left }, read: { id: fr.id, text: fr.text, used, n: (g.facts.get('fragments') || 0) - n0, fact: !!g.facts.get(`fr_${fr.id}`), flag: !!g.deckWorld.flags[`done_${fr.id}`] }, left: left.length };
+  });
+  // trip 1: Old Town in 2026
+  const t1 = await travel('m06', 'PAST', '2_trip1_oldtown_2026');
+  check(tripOk(t1, 'm06', 'oldtown', 'PAST') && t1.sides >= 1 && t1.props >= 1 && /FREE ROAM/.test(t1.card),
+    'trip 1: Old Town in 2026 from the case board: no way on, nobody watching, no gate, the story\'s threads only props, its side stories live, saved as a trip', JSON.stringify(t1));
+  const w1 = await walkAndRead();
+  check(w1.moved > 2 && w1.read?.used === 'ok' && w1.read.n === 1 && w1.read.fact && w1.read.flag, 'trip 1: walked with real movement to a memory fragment, and read it (it stays read: fr_<id>)', JSON.stringify(w1));
+  await press('Digit3');
+  // (the objective as the HUD will show it: its rewrite animation may still be running in the DOM)
+  const y1 = await az(() => ({ year: AZ.engine.state(AZ.level.outdoorRoom), objective: AZ.edition.objectiveText(), stability: AZ.edition.stability }));
+  check(y1.year === 'FUTURE' && /2196/.test(y1.objective) && y1.stability === 1, 'trip 1: 3 switches the place to 2196, and the trip costs the Chronolith nothing', JSON.stringify(y1));
+  // a save on the trip, the page reloaded, the save loaded from the title: still on the trip
+  await az((slot) => { AZ.saveTo(slot); return 'ok'; }, SLOT);
+  await loadSlot(SLOT, () => AZ.started && AZ.mode === 'deck' && AZ.campaign?.chapter === 'roam' && AZ.edition.deck?.key === 'm06' && !AZ.edition.castWaitFor && AZ.level?.place);
+  const r1 = { arrived: true, ...(await state()) };
+  const keptRead = await az((id) => !!(id && AZ.deckWorld.flags[`done_${id}`] && AZ.facts.get(`fr_${id}`)), w1.read?.id);
+  check(tripOk({ ...r1, year: r1.year }, 'm06', 'oldtown', 'FUTURE') && keptRead && /FREE ROAM/.test(r1.card) && !(await az(() => !!AZ.edition.opening)),
+    'a save taken on the trip loads on the trip: Old Town, in 2196 as switched, the fragment still read, the story still waiting', JSON.stringify({ r1, keptRead }));
+  // trip 2 and 3, each from the case board on the trip before: the Broken Observatory, then Rain City (2049 only)
+  const t2 = await travel('m07', 'PRESENT', '3_trip2_observatory_2049');
+  check(tripOk(t2, 'm07', 'observatory', 'PRESENT') && t2.years.length === 3, 'trip 2: the Broken Observatory in 2049, from the trip before; the story still waits at Mission 16', JSON.stringify(t2));
+  const w2 = await walkAndRead();
+  const t3 = await travel('m01', 'PRESENT', '4_trip3_rain_city_2049');
+  await az(() => { AZ.openMenu('journal'); return 'ok'; });
+  await shot('5_trip3_case_board');
+  await az(() => { AZ.closeMenu(); return 'ok'; });
+  check(tripOk(t3, 'm01', 'rain_south', 'PRESENT') && t3.years.join() === 'PRESENT', 'trip 3: Rain City in 2049, its only year opened (the Zero Second came before the Chronolith)', JSON.stringify(t3));
+  const w3 = await walkAndRead();
+  check(w2.moved > 2 && w3.moved > 2, 'trips 2 and 3: walked with real movement', JSON.stringify({ w2, w3 }));
+  const reads = [w1, w2, w3].filter((w) => w.read?.n === 1).length;
+  // BACK TO THE STORY
+  await page.evaluate(() => { AZ.openMenu('journal'); setTimeout(() => document.querySelector('#journal #lvBack')?.click(), 0); });
+  const home = await page.waitForFunction(() => AZ.campaign?.chapter === 'act3' && AZ.edition.deck?.mkey === 'm16' && AZ.level?.place && !AZ.transitioning && !AZ.edition.castWaitFor && !AZ.edition.travelFade, null, { timeout: 300000 }).then(() => true, () => false);
+  await az(() => { AZ.simulate(0.3); });
+  await shot('6_back_to_the_story');
+  const after = await az((cp) => {
+    const s = JSON.parse(localStorage.getItem(`afterzero.lv.slot.${AZ.slot}`) || 'null');
+    return { chapter: AZ.campaign.chapter, deck: AZ.campaign.deck, quarter: AZ.campaign.quarter, dist: +Math.hypot(AZ.player.pos.x - cp[0], AZ.player.pos.z - cp[2]).toFixed(2), objective: AZ.edition.objectiveText(),
+      fragments: AZ.facts.get('fragments') || 0, fr: Object.keys(AZ.facts.facts).filter((k) => k.startsWith('fr_') && AZ.facts.get(k)).length, roam: !!AZ.campaign.roam, lvRoam: AZ.facts.get('lv_chapter'),
+      saved: s ? [s.campaign?.chapter, s.campaign?.deck, !!s.campaign?.roam, s.meta?.run] : null, previously: !!AZ.edition.opening?.previously, card: document.querySelector('#card')?.textContent || '', slot: AZ.slot,
+      said: AZ.hud.talking ? AZ.hud.cur?.text || '(waiting)' : null };
+  }, before.cp);
+  // (nothing a trip's place was saying goes on over the story: the fragments read on the trips)
+  const tripLine = [w1, w2, w3].some((w) => w.read?.text && w.read.text === after.said) ? after.said : null;
+  check(home && after.chapter === 'act3' && after.deck === 2 && after.quarter === before.quarter && after.dist < 1 && after.objective === before.objective && !after.roam && after.lvRoam === 'act3' && after.slot === before.slot,
+    'BACK TO THE STORY: Mission 16 at the checkpoint it was left at, its objective as it was (the story kept its order)', JSON.stringify({ home, before, after }));
+  check(after.fragments === before.fragments + reads && after.fr >= reads && reads >= 2 && after.saved?.[0] === 'act3' && after.saved?.[1] === 2 && !after.saved?.[2] && !after.previously && /BACK TO THE STORY/.test(after.card) && !tripLine,
+    `what the trips found stays found (${reads} fragments), the slot is the story's again, no PREVIOUSLY and no line of the trip over the return`, JSON.stringify({ reads, tripLine, after }));
+  const voice = await az((n) => ({ said: LVB.said.length - n, planMiss: LVB.planMiss.slice(0, 6), misses: (window.__voiceMiss || []).length, synth: window.__synthCalls }), 0);
+  check(!voice.planMiss.length && !voice.misses && !voice.synth, 'free roam: every line said on the trips is in the packs; no device speech', JSON.stringify(voice));
+  // after an ending: a trip from the CASE FILES on the title, and back to them
+  if (!finishedJson || !JSON.parse(finishedJson)?.facts?.facts?.ending) { check(false, 'free roam: a finished campaign\'s save to start from', String(finishedJson).slice(0, 80)); return; }
+  await page.evaluate((s) => { const d = JSON.parse(s); d.meta = { ...d.meta, savedAt: Date.now() + 1000 }; localStorage.setItem('afterzero.lv.slot.8', JSON.stringify(d)); }, finishedJson);
+  await page.reload();
+  await page.waitForFunction(() => window.AZ && document.querySelector('#title') && AZ.edition, null, { timeout: 400000 });
+  await az(() => { AZ.changeSetting('quality', 'low'); AZ.changeSetting('smart', false); });
+  await page.mouse.click(480, 120);
+  const cf = await az(() => {
+    AZ.edition.caseFiles();
+    document.querySelector('#ending [data-tab="roam"]')?.click();
+    return { menu: AZ.menu, roam: document.querySelectorAll('#ending .caseFile.lvroam').length, keys: [...new Set([...document.querySelectorAll('#ending [data-travel]')].map((b) => b.dataset.travel))] };
+  });
+  await shot('7_case_files_free_roam');
+  check(cf.menu === 'ending' && cf.roam >= 20 && cf.keys.includes('m14') && cf.keys.includes('m23'), 'after an ending, the CASE FILES offer FREE ROAM: every place reached, the Finale\'s road too', JSON.stringify(cf));
+  await page.evaluate(() => setTimeout(() => document.querySelector('#ending [data-travel="m14"][data-year="FUTURE"]')?.click(), 0));
+  const pg = await page.waitForFunction(() => AZ.started && AZ.campaign?.chapter === 'roam' && AZ.edition.deck?.key === 'm14' && AZ.level?.place && !AZ.edition.castWaitFor, null, { timeout: 300000 }).then(() => true, () => false);
+  await az(() => { AZ.renderer.setAnimationLoop(null); });
+  await az(HANDS);
+  const p1 = await az(() => ({ place: AZ.level.place, year: AZ.engine.state(AZ.level.outdoorRoom), slot: AZ.slot, ending: AZ.facts.get('ending'), back: AZ.campaign.roam?.back?.campaign?.chapter }));
+  check(pg && p1.place === 'drowned' && p1.year === 'FUTURE' && p1.slot === 8 && !!p1.ending && p1.back === 'finale', 'a trip from the title: 2196\'s drowned downtown, in the finished campaign\'s own slot, the campaign kept inside it', JSON.stringify({ pg, p1 }));
+  await page.evaluate(() => { window.__before = true; AZ.openMenu('journal'); setTimeout(() => document.querySelector('#journal #lvBack')?.click(), 0); });
+  const back = await page.waitForFunction(() => !window.__before && window.AZ && AZ.edition && AZ.menu === 'ending' && !!document.querySelector('#ending .caseFiles') && !AZ.started, null, { timeout: 400000 }).then(() => true, () => false);
+  const kept = await page.evaluate((s) => { const a = JSON.parse(localStorage.getItem('afterzero.lv.slot.8') || 'null'), b = JSON.parse(s); return { chapter: a?.campaign?.chapter, roam: !!a?.campaign?.roam, ending: a?.facts?.facts?.ending, was: b.campaign.chapter, wasEnding: b.facts.facts.ending }; }, finishedJson);
+  check(back && kept.chapter === kept.was && !kept.roam && kept.ending === kept.wasEnding, 'BACK after an ending: the CASE FILES again, and the finished campaign\'s save as it was', JSON.stringify({ back, kept }));
+}
+
 // --- the voices, over the whole run ------------------------------------------------------------------------------
 const heardAll = await az(() => ({ miss: (window.__voiceMiss || []).slice(0, 12), misses: (window.__voiceMiss || []).length, planMiss: LVB.planMiss.slice(0, 12), plans: LVB.planMiss.length, pending: LVB.pending, synth: window.__synthCalls, said: LVB.said.length, cues: [...new Set(AZ.edition.score.heard)] }));
 check(heardAll.misses === 0 && heardAll.plans === 0 && heardAll.said > 200, `every line said (${heardAll.said}) is in the packs: no voice misses`, JSON.stringify(heardAll));
@@ -2542,6 +2769,8 @@ const playEnding = async (key) => {
 };
 await playEnding('A');
 await playEnding('B');
+// free roam: from the story save taken as Mission 16 arrived (Missions 1-15 done), and from the save Ending B left
+await roamTrips(m16Save || endSave, await page.evaluate(() => localStorage.getItem('afterzero.lv.slot.8')));
 await page.close();
 await survey();
 check(errors.length === 0, 'no page errors', [...new Set(errors)].join(' | '));

@@ -188,11 +188,14 @@ export function reachability(level, deck, o = {}) {
     return ok.length && ok.length < states.length ? ok : null;
   };
   const missing = [];
+  // (o.years, a trip's: what answers only in a year not opened there is not offered on it)
+  const offered = (when) => !o.years || !when || states.some((st) => holds(when, st, false) || holds(when, st, true));
   for (const it of level.interactables) {
-    if (!(it.r > 0)) continue;
+    if (!(it.r > 0) || !offered(it.when)) continue;
     if (!near(it.pos, it.r, yearsOf(it.when))) missing.push({ what: 'interaction', id: it.id, kind: it.kind, at: it.pos, r: it.r });
   }
   for (const n of level.npcs) {
+    if (!offered(n.when)) continue;
     if (!near([n.pos[0], n.pos[1] + 1.5, n.pos[2]], 3.2)) missing.push({ what: n.crowd ? 'crowd' : n.silent ? 'silent person' : 'person', id: n.id, crew: n.crew, at: n.pos });
   }
   for (const t of level.triggers || []) {
@@ -238,12 +241,30 @@ export async function checkMissions(jobs) {
     }
     const rt = stories[ch];
     const deck = rt.g.story.decks[d];
+    if (ch === 'roam') {
+      // a trip (free roam): from where it arrives (quarter 0's spawn), in the years opened there, with no drain
+      const { roamYears } = await import('../game/js/editions/lastversion/roam.js');
+      const years = roamYears(deck);
+      rt.g.engine = new RealityEngine(LV.engineOptions());
+      const level = rt.buildLevel({ lv: true, chapter: ch, deck: d, sector: 0, flags: {}, roam: { key: deck.key, year: years[0], years, fresh: true } });
+      const q = level.quarters?.[0]?.spawn;
+      const t0 = Date.now();
+      const r = reachability(level, deck, { years, state: years[0], ...(q ? { from: [q[0], q[1] + 0.86, q[2]] } : {}) });
+      out.push({ mkey: `roam:${deck.mkey}`, unstable: false, nodes: r.nodes, ms: Date.now() - t0, missing: r.missing, floating: floating(level) });
+      continue;
+    }
     const level = rt.buildLevel({ lv: true, chapter: ch, deck: d, sector: 0, flags: {} });
     const t0 = Date.now();
     const r = reachability(level, deck, deck.unstable ? { budget: DRAIN_BUDGET } : {});
     out.push({ mkey: deck.mkey, unstable: !!deck.unstable, nodes: r.nodes, ms: Date.now() - t0, missing: r.missing, floating: floating(level) });
   }
   return out;
+}
+
+// every trip (free roam: one per story mission), as ['roam', deck] pairs
+export async function allRoams() {
+  const { ROAM } = await import('../game/js/editions/lastversion/roam.js');
+  return ROAM.map((_, d) => ['roam', d]);
 }
 
 // every mission and case file, as [chapter, deck] pairs
@@ -259,7 +280,7 @@ if (!isMainThread && workerData?.reach) parentPort.postMessage(await checkMissio
 // the report
 if (isMainThread && import.meta.url === `file://${process.argv[1]}`) {
   const only = process.argv[2] ? process.argv[2].split(',') : null;
-  for (const r of await checkMissions(await allMissions())) {
+  for (const r of await checkMissions([...await allMissions(), ...(process.env.REACH_ROAM ? await allRoams() : [])])) {
     if (only && !only.includes(r.mkey)) continue;
     console.log(`${r.mkey}: ${r.nodes} nodes, ${r.ms} ms${r.unstable ? ` (at most ${DRAIN_BUDGET} m at a stretch outside its home year)` : ''}${r.missing.length + r.floating.length ? '' : ' ok'}`);
     for (const m of r.missing) console.log(`   - ${m.what} ${m.id}${m.crew ? ` (${m.crew})` : ''} at ${m.at.map((v) => +(+v).toFixed(1))}`);

@@ -46,6 +46,8 @@ import { voicePieces } from '../game/js/audio/voiceKey.js';
 import { KINDS as THREAD_KINDS, MINUTES, threadsOf, sidesOf, quartersOf as threadQuarters, factOf, isRewritten, estimate, doneCond, sideState, isDone, roomAt, Threads, placedFact, playFact } from '../game/js/editions/lastversion/Threads.js';
 import { QUESTIONS, CLUES, CONSEQUENCES, PREVIOUSLY, EPILOGUE, MISSION_ORDER, missionIndex } from '../game/js/editions/lastversion/ledger.js';
 import { SAVE_FORMAT } from '../game/js/editions/lastversion/Runtime.js';
+import { reverseEarned } from '../game/js/editions/lastversion/Runtime.js';
+import { ROAM, roamIndex, reachedPlaces, roamYears, roamSave, storyFromRoam, roamFree, finished, placeName, ROAM_ONLY } from '../game/js/editions/lastversion/roam.js';
 
 const INTENTS = ['challenge', 'comfort', 'investigate', 'withdraw'];
 const engine = () => new RealityEngine(LV.engineOptions());
@@ -3353,7 +3355,8 @@ test('Acts I to IV and the Finale: nothing that ends a mission answers before th
 // answers, until nothing new happens. Withholding what completes one main thread must leave the mission unfinished: no
 // interaction done out of order, and no thread paid out of order, opens what ends it.
 const YEARS3 = ['PRESENT', 'PAST', 'FUTURE'];
-function freePlay(m, level0, facts0, withhold = null) {
+// (opts.guard: whether a node may act, Runtime.playNode's rule on a trip: roam.js roamFree; a node it refuses is only said)
+function freePlay(m, level0, facts0, withhold = null, opts = {}) {
   const deck = { ...m, mkey: m.key };
   const f = new FactStore({ ...facts0 });
   const game = { facts: f, hud: { say() {}, toast() {} }, log: [], deckWorld: { flags: {}, npcs: [] }, campaign: {} };
@@ -3373,7 +3376,7 @@ function freePlay(m, level0, facts0, withhold = null) {
   };
   // a node, its first choice that answers (choices are alternatives: the first one the player is offered)
   const node = (x) => {
-    if (!x) return;
+    if (!x || (opts.guard && !opts.guard(x))) return;
     if (x.set && !apply(x.set)) return;
     const c = (x.choices || []).find((ch) => open(ch.when) && !Object.keys(ch.set || {}).some((k) => held.has(k)));
     if (c?.set) apply(c.set);
@@ -3395,7 +3398,8 @@ function freePlay(m, level0, facts0, withhold = null) {
   for (let round = 0; round < 60; round++) {
     const before = JSON.stringify(f.facts);
     for (const it of level.interactables) {
-      if (it.kind !== 'scene' || !open(it.when)) continue;
+      // (r 0: a prop, never offered, DeckWorld.focusCandidates)
+      if (it.kind !== 'scene' || it.r === 0 || !open(it.when)) continue;
       const sc = it.scene || '';
       if (sc.startsWith('deduce:')) {
         const d = deck.deductions?.[sc.slice(7)];
@@ -4025,4 +4029,237 @@ test('CASE FILES: fourteen stories with their bible state; twelve replays, each 
   // the old saves' cases load where they were
   assert.deepEqual([MISSIONS.cases[0].key, MISSIONS.cases[1].key], ['c_b', 'c_c']);
   assert.ok(CHAPTERS.cases.name === 'CASE FILES');
+});
+
+// --- FREE ROAM (roam.js; the closing pass on the player's point 2, "make it open world") ---------------------------------
+// After a mission is done its place can be travelled to (TRAVEL on the case board, the map, the CASE FILES), in any year
+// opened there, and walked with no story gates; the story keeps its order and waits where it was left.
+const roamGame = () => {
+  const game = { engine: engine(), facts: new FactStore(), story: null, log: [] };
+  const rt = Object.assign(Object.create(LastVersion.prototype), { g: game, def: LV });
+  game.story = rt.makeStory('roam');
+  return { game, rt };
+};
+// the facts a mission's side stories own: what playing them sets (cleared to have them still to play on a trip)
+const sideOwn = (m) => {
+  const deck = { ...m, mkey: m.key }, out = new Set();
+  for (const s of sidesOf(deck)) {
+    out.add(`side_${m.key}_${s.id}`);
+    for (const t of s.threads || []) {
+      for (const k of [factOf(deck, t), `${factOf(deck, t)}_paid`, ...Object.keys(t.set || {}), ...(t.ev ? [`ev_${t.ev}`] : []), ...(t.of || []), ...IDS(doneCond(deck, t) || '')]) out.add(k);
+    }
+    for (const k of IDS(s.done)) out.add(k);
+  }
+  const r = ROAM[roamIndex(m.key)];
+  for (const n of r.roamNodes) for (const k of [...Object.keys(n.set || {}), ...(n.choices || []).flatMap((c) => Object.keys(c.set || {}))]) out.add(k);
+  return out;
+};
+
+test('free roam: a roam deck for every story mission, beside the story (never in MISSIONS); nothing in it tells or ends the story', () => {
+  assert.equal(ROAM.length, main.length);
+  ROAM.forEach((r, i) => {
+    const m = main[i];
+    assert.equal(r.key, m.key);
+    assert.ok(r.roam && r.chapter === 'roam' && r.voiceGroup === m.chapter && r.origin === m.key, m.key);
+    assert.ok(r.place === m.place && r.wing === m.wing && r.fragments === m.fragments && r.overlay === m.overlay && r.talks === m.talks && r.processes === m.processes, `${m.key}: its place, people, fragments and processes`);
+    for (const k of ['coldOpen', 'hook', 'outro', 'intro', 'resumes', 'step', 'loop', 'onLoop', 'watch', 'done']) assert.ok(!(k in r), `${m.key}: no ${k}`);
+    assert.ok(r.autoExit === null && r.unstable === false && r.drones.every((n) => n === 0), `${m.key}: no way on, no drain, nobody watching`);
+    assert.equal(r.quarters.length, m.quarters.length);
+    r.quarters.forEach((q, qi) => {
+      assert.deepEqual(q.threads, [], `${m.key}: no main thread to play`);
+      assert.deepEqual(q.inert.map((t) => t.id), m.quarters[qi].threads.map((t) => t.id), `${m.key}: the story's threads stay as props`);
+      assert.deepEqual(q.sides.map((s) => s.id), (m.quarters[qi].sides || []).map((s) => s.id), `${m.key}: its side stories`);
+      const own = new Set(q.sides.flatMap((s) => s.threads.map((t) => t.id)));
+      for (const s of q.sides) for (const t of s.threads) assert.ok((t.after || []).every((a) => own.has(a)), `${m.key}: ${t.id} waits only on its own side story`);
+    });
+    for (const x of [...r.rules, ...r.zones]) assert.ok(Object.keys(x.set || {}).some((k) => r.roamCore.has(k)), `${m.key}: a rule or zone kept only for a side story`);
+  });
+  assert.ok(!Object.values(MISSIONS).flat().some((m) => m.roam), 'no roam deck is walked as the story');
+  assert.ok(CHAPTERS.roam && !ORDER.includes('roam'), 'FREE ROAM is a chapter of saves only, not of the chapter list');
+});
+
+test('free roam: TRAVEL lists every mission done, in story order, in the years opened there (one before the Chronolith)', () => {
+  assert.deepEqual(reachedPlaces(new FactStore()), []);
+  const f = new FactStore({ m01_done: true, m02_done: true, m03_done: true, m06_done: true });
+  const list = reachedPlaces(f);
+  assert.deepEqual(list.map((e) => e.key), ['m01', 'm02', 'm03', 'm06']);
+  const by = Object.fromEntries(list.map((e) => [e.key, e]));
+  assert.deepEqual(by.m01.years, ['PRESENT'], 'Rain City: the Zero Second came before the Chronolith');
+  assert.deepEqual(by.m02.years, ['PRESENT']);
+  assert.deepEqual(by.m03.years, ['PRESENT', 'PAST', 'FUTURE'], 'Mission 3 gives Kai the Chronolith');
+  assert.deepEqual(by.m06.years, main.find((m) => m.key === 'm06').states);
+  assert.ok(by.m02.placeName === 'HELIX · WEST WING' && by.m03.placeName === 'HELIX · EAST WING' && by.m06.placeName === 'OLD TOWN');
+  assert.equal(placeName(main.find((m) => m.key === 'm20')), 'MIRA\'S MEMORY');
+  // what is still there: side stories open, fragments found (the case log keeps every one read since v2.0)
+  assert.ok(by.m06.sides === 2 && by.m06.open === 2 && by.m06.fragments === 2 && by.m06.found === 0, JSON.stringify(by.m06));
+  f.set('ev_rook_gauge', true);
+  const text = main.find((m) => m.key === 'm06').fragments[0][1];
+  const again = reachedPlaces(f, [`<b>Memory fragment.</b> ${text}`]).find((e) => e.key === 'm06');
+  assert.ok(again.open === 1 && again.found === 1, JSON.stringify(again));
+  // the Finale's road once an ending is reached; for a mission, its own end
+  assert.ok(!reachedPlaces(new FactStore({ m22_done: true })).some((e) => e.key === 'm23'));
+  assert.deepEqual(reachedPlaces(new FactStore({ m22_done: true, ending: 'C' })).map((e) => e.key), ['m22', 'm23']);
+  for (const m of main) assert.deepEqual(roamYears(m), m.n < 3 ? [m.states.includes(m.home) ? m.home : 'PRESENT'] : m.states, m.key);
+});
+
+test('free roam: every place on a trip, in every year opened there: no way on, no gate, nobody watching, the story\'s threads only props', () => {
+  const { game, rt } = roamGame();
+  let levels = 0;
+  ROAM.forEach((r, di) => {
+    const m = main[di];
+    const years = roamYears(m);
+    for (const y of years) {
+      game.engine = engine();
+      const c = { lv: true, chapter: 'roam', deck: di, sector: 0, quarter: 0, flags: {}, roam: { key: r.key, year: y, years, fresh: true } };
+      const lv = rt.buildLevel(c);
+      levels++;
+      assert.ok(!lv.exit && !lv.elements.some((e) => /^gate_/.test(e.id || '')) && !lv.map?.gate, `${m.key} ${y}: no way on and no gate`);
+      assert.equal(lv.sentinels.length, 0, `${m.key} ${y}: nobody watching`);
+      assert.equal(c.roam.fresh, false);
+      assert.equal(game.engine.state(lv.outdoorRoom), y, `${m.key}: arrives in ${y}`);
+      for (const id of lv.order) {
+        const av = game.engine.statesOf(id);
+        assert.ok(av.length && (av.every((s) => years.includes(s)) || av.length === 1), `${m.key} ${id}: only the years opened there (${av})`);
+      }
+      // the story's own threads: their props stand (r 0), nothing of them answers; the side stories' threads are the trip's
+      const inert = new Set();
+      for (const q of r.quarters) for (const t of q.inert) {
+        for (const sp of t.spots || []) inert.add(sp.id);
+        if (t.spot) inert.add(t.scene || t.id);
+        for (const k of ['residue', 'deduce', 'playback']) inert.add(`${k}_${t.id}`);
+      }
+      for (const it of lv.interactables) if (inert.has(it.id)) assert.equal(it.r, 0, `${m.key}: ${it.id} is a prop on a trip`);
+      assert.ok(rt.threads.list.every((t) => t.side), `${m.key}: no main thread on a trip`);
+      assert.ok(!lv.triggers.some((tr) => Object.keys(tr.set || {}).some((k) => k.startsWith(`t_${m.key}_`) && !rt.threads.byId[k.slice(`t_${m.key}_`.length)])), `${m.key}: no trigger of the story's`);
+    }
+  });
+  assert.ok(levels >= 55, `${levels} places and years built`);
+});
+
+test('free roam: a free player on a trip plays the side stories the place still has, and changes nothing the story decided', () => {
+  const { game, rt } = roamGame();
+  let finishedSides = 0, offered = 0;
+  for (const ch of ORDER) {
+    const f0 = new FactStore();
+    for (const c of ORDER.slice(0, ORDER.indexOf(ch) + 1)) for (const k of PRIMES[c] || []) (Array.isArray(k) ? f0.set(k[0], k[1]) : f0.set(k));
+    f0.set('faction', 'neutral');
+    for (const m of MISSIONS[ch]) {
+      const { level } = LEVELS.find((l) => l.deck.mkey === m.key && !l.adjusted);
+      // the mission played by a player who does everything it offers: its end, with the side stories it could finish
+      const end = freePlay(m, level, f0.facts);
+      const deck = { ...m, mkey: m.key };
+      const could = sidesOf(deck).filter((s) => s.done && end.test(s.done));
+      // the same end with the side stories still to play: the trip
+      const own = sideOwn(m);
+      const start = Object.fromEntries(Object.entries(end.facts).filter(([k]) => !own.has(k)));
+      start[`${m.key}_done`] = true;
+      const di = roamIndex(m.key), r = ROAM[di];
+      game.engine = engine();
+      game.facts = new FactStore({ ...start });
+      const rl = rt.buildLevel({ lv: true, chapter: 'roam', deck: di, sector: 0, quarter: 0, flags: {}, roam: { key: m.key, year: roamYears(m)[0], years: roamYears(m), fresh: true } });
+      const trip = freePlay(r, rl, start, null, { guard: (x) => roamFree(r, x) });
+      for (const s of could) {
+        offered++;
+        if (trip.test(s.done)) finishedSides++;
+        else assert.fail(`${m.key}: side story ${s.id} could be finished in the mission, not on a trip`);
+      }
+      // nothing the story decided changes: whatever the trip changed is a side story's, a fragment's or REVERSE's
+      for (const [k, v] of Object.entries(trip.facts)) {
+        if (start[k] === v || (start[k] === undefined && v === false)) continue;
+        assert.ok(r.roamCore.has(k) || own.has(k) || /^(inv_|rev_|fr_|stuck_)/.test(k), `${m.key}: the trip changed ${k} (${JSON.stringify(start[k])} -> ${JSON.stringify(v)})`);
+      }
+      const paid = Object.keys(trip.facts).filter((k) => k.startsWith(`t_${m.key}_`) && !start[k] && trip.facts[k] && !r.roamCore.has(k.replace(/_paid$/, '')));
+      assert.deepEqual(paid, [], `${m.key}: no story thread is paid on a trip`);
+    }
+  }
+  console.log(`  (free roam: ${finishedSides} of ${offered} side stories a player can finish in their mission finished on trips)`);
+  assert.ok(offered >= 25 && finishedSides === offered, `${finishedSides} of ${offered} side stories finished on trips`);
+});
+
+test('free roam: a story node on a trip is said and changes nothing; a side story\'s acts; read fragments and past rules are not laid again', () => {
+  const { game, rt } = roamGame();
+  const m06 = main.find((m) => m.key === 'm06'), r06 = ROAM[roamIndex('m06')];
+  assert.equal(roamFree(r06, m06.scenes.arm), false, 'the arm\'s count is the story\'s');
+  assert.equal(roamFree(r06, m06.scenes.spring), true, 'the spring is the debt\'s');
+  assert.equal(roamFree(r06, m06.talks.clockmaker.find((n) => /has_spring/.test(n.when || ''))), true, 'the debt\'s conversation');
+  assert.equal(roamFree(r06, m06.talks.clockmaker[0]), false, 'the first meeting is not made again');
+  assert.equal(roamFree(r06, { lines: [{ who: 'KAI', text: 'x' }] }), true, 'lines alone');
+  assert.equal(roamFree(m06, m06.scenes.arm), true, 'in the story, every node acts');
+  // played through Runtime.playNode
+  const said = [];
+  game.campaign = { lv: true, chapter: 'roam', deck: roamIndex('m06'), sector: 0, flags: {}, roam: { key: 'm06', year: 'FUTURE', years: ['PRESENT', 'PAST', 'FUTURE'] } };
+  game.hud = { say: (ls, f, done) => { said.push(...ls.map((l) => l.text)); done?.(); }, toast() {} };
+  game.deckWorld = { flags: {} };
+  rt.playNode(m06.scenes.arm);
+  assert.ok(said.length >= 2 && !game.facts.get('ev_arm_count') && !game.log.length, 'said, not counted again');
+  rt.playNode(m06.scenes.spring);
+  assert.ok(game.facts.get('has_spring'), 'the spring is taken');
+  // a trip's level: fragments read before (the case log, or fr_) are laid as read; a rule that has happened does not again
+  game.facts = new FactStore({ inv_departureBoard_done: true });
+  game.engine = engine();
+  game.log = [`<b>Memory fragment.</b> ${m06.fragments[0][0]}`];
+  const c = { lv: true, chapter: 'roam', deck: roamIndex('m06'), sector: 0, flags: {}, roam: { key: 'm06', year: 'PAST', years: ['PRESENT', 'PAST', 'FUTURE'], fresh: true } };
+  const lv = rt.buildLevel(c);
+  const fr = lv.interactables.filter((i) => i.kind === 'fragment');
+  assert.ok(fr.length === 2 && c.flags[`done_${fr[0].id}`] && !c.flags[`done_${fr[1].id}`], 'the first read, the second still to find');
+  game.facts.set(`fr_${fr[1].id}`, true);
+  const c2 = { ...c, flags: {}, roam: { ...c.roam, fresh: false } };
+  game.engine.setState(lv.outdoorRoom, 'FUTURE', { force: true });
+  const lv2 = rt.buildLevel(c2);
+  assert.ok(c2.flags[`done_${fr[1].id}`], 'a fragment read on a trip stays read');
+  assert.equal(game.engine.state(lv2.outdoorRoom), 'FUTURE', 'a trip\'s save keeps the year switched to');
+  const ci = roamIndex('m15');
+  const c3 = { lv: true, chapter: 'roam', deck: ci, sector: 0, flags: {}, roam: { key: 'm15', year: 'FUTURE', years: ['FUTURE', 'PAST', 'PRESENT'], fresh: true } };
+  rt.buildLevel(c3);
+  assert.ok(c3.flags.rule_flaps, 'the board\'s flaps have run forwards already: the rule is not said again');
+});
+
+test('free roam: saves: a trip saves in the story\'s slot with the story inside it; a trip from a trip keeps it; BACK puts it back with what the trip found', () => {
+  const eng = engine();
+  eng.setAvailable('m16_sinkhole', ['FUTURE', 'PAST', 'PRESENT']);
+  eng.setState('m16_sinkhole', 'PAST', { force: true });
+  const story = {
+    v: '2.0', edition: 'lastversion', mode: 'deck', facts: { facts: { m06_done: true, m07_done: true, lv_chapter: 'act3', faction: 'neutral' }, fired: [] }, engine: eng.serialize(), log: ['one'], timeline: [], playTime: 100,
+    campaign: { lv: true, chapter: 'act3', deck: 2, sector: 0, quarter: 1, flags: { rule_x: true }, visited: [], room: 'm16_sinkhole', pos: [1, 2, 3, 0], held: null, inv: { cap: 10, charge: 4 }, lvFormat: SAVE_FORMAT, stability: 1 },
+    meta: { where: 'THE LAST VERSION · THE MUSEUM OF FAILED WORLDS', chapter: 'Mission 16 · THE RIM', run: 'act3', savedAt: 1 },
+  };
+  const { data, meta } = roamSave(story, story.meta, { key: 'm06', year: 'PAST', format: SAVE_FORMAT });
+  const c = data.campaign;
+  assert.ok(c.chapter === 'roam' && c.deck === roamIndex('m06') && c.roam.year === 'PAST' && c.roam.fresh && c.lvFormat === SAVE_FORMAT && !c.pos && c.quarter === 0);
+  assert.deepEqual(c.roam.years, main.find((m) => m.key === 'm06').states);
+  assert.deepEqual(c.roam.back.campaign, story.campaign, 'the story to come back to, as it stood');
+  assert.deepEqual(c.roam.back.engine, story.engine);
+  for (const k of ['facts', 'log', 'playTime', 'meta', 'timeline']) assert.ok(!(k in c.roam.back), `the story kept without its ${k} (the trip carries them on)`);
+  assert.deepEqual(data.facts, story.facts);
+  assert.ok(meta.where === 'FREE ROAM · OLD TOWN' && meta.run === 'act3' && /2026/.test(meta.chapter) && /THE MUSEUM OF FAILED WORLDS/.test(meta.chapter), JSON.stringify(meta));
+  assert.ok(!('meta' in data), 'the meta is written beside the data');
+  assert.equal(roamSave(story, story.meta, { key: 'm01', year: 'PAST' }).data.campaign.roam.year, 'PRESENT', 'a year not opened there: the first that is');
+  assert.throws(() => roamSave(story, story.meta, { key: 'nope' }));
+  // through storage, and on: a trip from a trip keeps the story
+  const stored = JSON.parse(JSON.stringify(data));
+  stored.facts.facts = { ...stored.facts.facts, fr_frag_x: true, side_m06_debt: true, ezra_debt: 'release', lv_roam: true, lv_chapter: 'roam' };
+  stored.log = ['one', 'two'];
+  stored.playTime = 160;
+  stored.campaign.inv = { cap: 10, charge: 9 };
+  const on = roamSave(stored, meta, { key: 'm07', year: 'FUTURE' });
+  assert.deepEqual(on.data.campaign.roam.back, stored.campaign.roam.back);
+  assert.deepEqual(on.data.campaign.roam.meta, stored.campaign.roam.meta);
+  assert.equal(on.meta.run, 'act3');
+  // BACK TO THE STORY
+  const back = storyFromRoam(on.data);
+  assert.deepEqual(back.data.campaign, { ...story.campaign, inv: { cap: 10, charge: 9 } }, 'the same mission, checkpoint, quarter and flags');
+  assert.deepEqual(back.data.engine, story.engine, 'the rooms in the years they were in');
+  assert.ok(back.data.facts.facts.fr_frag_x && back.data.facts.facts.side_m06_debt && back.data.facts.facts.ezra_debt === 'release', 'what the trip found stays found');
+  for (const k of ROAM_ONLY) assert.ok(!(k in back.data.facts.facts));
+  assert.equal(back.data.facts.facts.lv_chapter, 'act3');
+  assert.ok(back.data.log.join() === 'one,two' && back.data.playTime === 160);
+  assert.deepEqual(back.meta, { where: story.meta.where, chapter: story.meta.chapter, run: 'act3' });
+  assert.throws(() => storyFromRoam(story), 'a story save is not a trip');
+  assert.ok(!finished(back.data.facts.facts) && finished({ ending: 'B' }));
+  // a load: the format leaves a trip as it is; REVERSE is what its story has earned
+  const camp = JSON.parse(JSON.stringify(on.data.campaign));
+  migrateSave(engine(), camp, LV, new FactStore(on.data.facts.facts));
+  assert.ok(camp.chapter === 'roam' && !camp.restarted && camp.lvFormat === SAVE_FORMAT && camp.roam.back);
+  assert.equal(reverseEarned(camp), reverseEarned(story.campaign));
+  assert.equal(reverseEarned(camp), 10);
 });
