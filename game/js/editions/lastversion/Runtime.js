@@ -2266,9 +2266,9 @@ export class LastVersion {
     return `<h3 id="lvTravel">TRAVEL</h3><p class="dim">${intro}</p><ul class="board travel">${this.travelRows(list, esc, here, 'li')}</ul>`;
   }
 
-  // the travel list's rows (the case board's list items; the CASE FILES' cards)
+  // the travel list's rows (the case board's list items; the CASE FILES' cards, which are not case files: roamFile)
   travelRows(list, esc = (t) => String(t), here = null, tag = 'li') {
-    return list.map((e) => `<${tag} class="${tag === 'li' ? '' : 'caseFile lvroam '}${e.key === here ? 'here' : ''}"><span><b>${esc(e.placeName)}</b> <small>Mission ${e.n} &middot; ${esc(e.mission)}${e.sides ? ` &middot; ${e.open ? `${e.open} side ${e.open === 1 ? 'story' : 'stories'} open` : 'side stories resolved'}` : ''}${e.fragments ? ` &middot; fragments ${e.found}/${e.fragments}` : ''}</small></span>`
+    return list.map((e) => `<${tag} class="${tag === 'li' ? '' : 'roamFile '}${e.key === here ? 'here' : ''}"><span><b>${esc(e.placeName)}</b> <small>Mission ${e.n} &middot; ${esc(e.mission)}${e.sides ? ` &middot; ${e.open ? `${e.open} side ${e.open === 1 ? 'story' : 'stories'} open` : 'side stories resolved'}` : ''}${e.fragments ? ` &middot; fragments ${e.found}/${e.fragments}` : ''}</small></span>`
       + `<span class="yrs">${e.years.map((y) => `<button class="lvgo" data-travel="${e.key}" data-year="${y}">${esc(e.names[y] || y)}</button>`).join('')}</span></${tag}>`).join('');
   }
 
@@ -2280,8 +2280,9 @@ export class LastVersion {
         + ' body.lastversion .board.travel button, body.lastversion .lvback { margin: 0; padding: 4px 9px; font-size: 11.5px; } body.lastversion .lvback { margin: 2px 0 6px; }'
         + ' body.lastversion .board.travel li.here b::after { content: " · YOU ARE HERE"; font-size: 10px; letter-spacing: .12em; opacity: .7; }'
         + ' body.lastversion #map header .lvmaptravel { margin-left: auto; margin-right: 8px; padding: 4px 10px; font-size: 12px; }'
-        + ' body.lastversion .caseFile.lvroam { grid-template-columns: 1fr; } body.lastversion .caseFile.lvroam .yrs { grid-row: auto; grid-column: 1; display: flex; flex-wrap: wrap; gap: 4px; margin-top: 3px; }'
-        + ' body.lastversion .caseFile.lvroam .yrs button { grid-row: auto; grid-column: auto; padding: 4px 9px; font-size: 11.5px; }'
+        + ' body.lastversion .roamFile { padding: 6px 8px; border: 1px solid rgba(255,255,255,.12); border-radius: 6px; text-align: left; }'
+        + ' body.lastversion .roamFile b { font-size: 13px; } body.lastversion .roamFile small { font-size: 11px; opacity: .75; }'
+        + ' body.lastversion .roamFile .yrs { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 3px; } body.lastversion .roamFile .yrs button { margin: 0; padding: 4px 9px; font-size: 11.5px; }'
         + ' body.lastversion .lvtabs { display: flex; gap: 6px; margin: 4px 0 2px; } body.lastversion .lvtabs button { margin: 0; padding: 6px 12px; font-size: 12px; opacity: .6; } body.lastversion .lvtabs button.on { opacity: 1; }';
       document.head.appendChild(st);
     }

@@ -2524,10 +2524,10 @@ async function roamTrips(storyJson, finishedJson) {
   const cf = await az(() => {
     AZ.edition.caseFiles();
     document.querySelector('#ending [data-tab="roam"]')?.click();
-    return { menu: AZ.menu, roam: document.querySelectorAll('#ending .caseFile.lvroam').length, keys: [...new Set([...document.querySelectorAll('#ending [data-travel]')].map((b) => b.dataset.travel))] };
+    return { menu: AZ.menu, roam: document.querySelectorAll('#ending .roamFile').length, cases: document.querySelectorAll('#ending .caseFile').length, keys: [...new Set([...document.querySelectorAll('#ending [data-travel]')].map((b) => b.dataset.travel))] };
   });
   await shot('7_case_files_free_roam');
-  check(cf.menu === 'ending' && cf.roam >= 20 && cf.keys.includes('m14') && cf.keys.includes('m23'), 'after an ending, the CASE FILES offer FREE ROAM: every place reached, the Finale\'s road too', JSON.stringify(cf));
+  check(cf.menu === 'ending' && cf.roam >= 20 && cf.cases === 14 && cf.keys.includes('m14') && cf.keys.includes('m23'), 'after an ending, the CASE FILES offer FREE ROAM (a tab beside the fourteen stories): every place reached, the Finale\'s road too', JSON.stringify(cf));
   await page.evaluate(() => setTimeout(() => document.querySelector('#ending [data-travel="m14"][data-year="FUTURE"]')?.click(), 0));
   const pg = await page.waitForFunction(() => AZ.started && AZ.campaign?.chapter === 'roam' && AZ.edition.deck?.key === 'm14' && AZ.level?.place && !AZ.edition.castWaitFor, null, { timeout: 300000 }).then(() => true, () => false);
   await az(() => { AZ.renderer.setAnimationLoop(null); });
