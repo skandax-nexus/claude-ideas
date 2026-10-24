@@ -162,7 +162,7 @@ export const AMBIENT_CAST = {
   // (U7 review) Ezra's 2026 echo at sixty-five (M6; and the clockmaker of its 1999 cold open), Niko older at the first sky
   // (M7's cold open): their own meshes in another wardrobe, apart from the named person the mission also places
   ezra26: { model: 'rb_ezra', variant: 'ezra65', height: 1.74, pronoun: 'm' },
-  m7_oldniko: { model: 'rb_niko', variant: 'older', height: 1.74, pronoun: 'm' },
+  m7_oldniko: { model: 'rb_niko_old', variant: 'older', height: 1.74, pronoun: 'm' },
   m8_tech: { model: 'rb_contractor', variant: 'helix slate', height: 1.79, pronoun: 'm' },
   // Act II (U7): an evacuee in Loop City, Sera disguised as a Continuum guard, the people who listened, a freed prisoner
   m9_evac: { model: 'rb_civ_f2', variant: 'dust', height: 1.66, pronoun: 'f' },

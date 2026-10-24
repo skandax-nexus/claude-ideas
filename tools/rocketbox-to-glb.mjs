@@ -13,7 +13,7 @@
 //   children's cf001_ / cm012_, the soldiers' sm024_); children are rigged as Bip02 and their bones
 //   are renamed Bip01_ (the game's rig, and the eye bones); RB_DROP lists parts whose triangles are
 //   left out (the pistols); an LV_AVATARS entry's `edit` names an edit tools/rocketbox-textures.py makes to that
-//   output's own maps (EDITS: the Elder's face aged, Tomas's own hair and freckles).
+//   output's own maps (EDITS: the Elder's and old Niko's faces aged, Tomas's own hair and freckles).
 //
 // - Geometry: the FBX's single skinned mesh, centimetres -> metres, vertex colours
 //   dropped, UVs flipped to glTF's top-left origin, triangles sorted so each
@@ -63,6 +63,8 @@ export const LV_AVATARS = {
   rb_child_f: { src: 'Children/Female_Child_01', px: 1024 }, // the Child in the Station
   rb_rook: { src: 'Professions/Business_Male_04', px: 1024 }, // Dr. Elias Rook
   rb_niko: { src: 'Adults/Male_Adult_09', px: 1024 }, // Niko: his own hair, long and tied back (castfix: Male_Adult_15 wore a woven prayer cap)
+  // Niko, an old man (Mission 7's cold open): the same face aged in its maps (salt-and-pepper hair, lines, a short grey beard)
+  rb_niko_old: { src: 'Adults/Male_Adult_09', px: 1024, edit: 'age_m' },
   rb_jun: { src: 'Professions/Business_Male_02', px: 1024 }, // Jun Park
   rb_tala: { src: 'Adults/Female_Adult_11', px: 1024 }, // Tala: her hair tied up (closing: Female_Adult_06 wore a hijab)
   rb_security_f: { src: 'Professions/Security_Female_01', px: 1024 }, // Officer Pryce

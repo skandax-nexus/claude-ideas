@@ -8,17 +8,18 @@
 import { MODELS, loadActors, actorLoaded, makeActor } from '../../world/Actors.js';
 import { dress, afterPose, WARDROBE } from './wardrobe.js';
 
-// the 45 new people: named characters at 1024 px (Tomas and Haig, only ever of light, at 512), crowds at 512 px
+// the 47 new people: named characters at 1024 px (Tomas and Haig, only ever of light, at 512), crowds at 512 px
 // (tools/rocketbox-to-glb.mjs LV_AVATARS)
 // sex: the model's, for pronouns; child: a child's body; px: the size of its colour maps
 const rb = (height, sex, o = {}) => ({ rig: 'rb', height, sex, px: 1024, ...o });
 export const LV_MODELS = {
-  // named (24)
+  // named (25)
   rb_child_m: rb(1.42, 'm', { child: true }),
   rb_mira: rb(1.68, 'f'),
   rb_child_f: rb(1.24, 'f', { child: true }),
   rb_rook: rb(1.8, 'm'),
   rb_niko: rb(1.76, 'm'),
+  rb_niko_old: rb(1.74, 'm'), // (Niko as an old man, Mission 7's cold open: his face aged in its own maps)
   rb_jun: rb(1.74, 'm'),
   rb_tala: rb(1.66, 'f'),
   rb_security_f: rb(1.7, 'f'),
@@ -43,7 +44,7 @@ export const LV_MODELS = {
   rb_haig: rb(1.67, 'f', { px: 512 }),
   // (castfix) the glazier of Helix's roof (M12), the Spire's glass (M21) and the road (M23): a face of her own
   rb_glazier: rb(1.67, 'f'),
-  // crowd (21)
+  // crowd (22)
   rb_civ_f1: rb(1.66, 'f', { px: 512, crowd: true }),
   rb_civ_f2: rb(1.67, 'f', { px: 512, crowd: true }),
   rb_civ_f3: rb(1.66, 'f', { px: 512, crowd: true }),
@@ -96,7 +97,7 @@ export const COMMON = ['xbot', 'rb_ren_m'];
 // (exactly the models the chapter's levels cast today; the story units add the people they place)
 export const CHAPTER_CAST = {
   prologue: ['rb_child_m2', 'rb_florist', 'rb_security_f', 'rb_jun', 'rb_civ_f1', 'rb_courier', 'rb_child_f', 'rb_mira', 'rb_civ_f4', 'rb_civ_m1', 'rb_civ_f2', 'rb_civ_m3', 'rb_civ_m2', 'rb_contractor', 'rb_medic_f', 'rb_iven', 'rb_haig', 'rb_security_m', 'rb_rook'],
-  act1: ['rb_elder', 'rb_vill_f2', 'rb_elder_m', 'rb_child_m2', 'rb_niko', 'rb_vill_f', 'rb_vill_m', 'rb_vill_m2', 'rb_tala', 'rb_ezra', 'rb_courier', 'rb_civ_m3', 'rb_civ_f4', 'rb_civ_f2', 'rb_civ_m1', 'rb_civ_f1', 'rb_sage_m', 'rb_medic_f', 'rb_contractor', 'rb_scav', 'rb_desk_f', 'rb_rook', 'rb_security_f', 'rb_security_m', 'rb_iven', 'rb_mira', 'rb_doctor_m', 'rb_civ_m2'],
+  act1: ['rb_elder', 'rb_vill_f2', 'rb_elder_m', 'rb_child_m2', 'rb_niko', 'rb_niko_old', 'rb_vill_f', 'rb_vill_m', 'rb_vill_m2', 'rb_tala', 'rb_ezra', 'rb_courier', 'rb_civ_m3', 'rb_civ_f4', 'rb_civ_f2', 'rb_civ_m1', 'rb_civ_f1', 'rb_sage_m', 'rb_medic_f', 'rb_contractor', 'rb_scav', 'rb_desk_f', 'rb_rook', 'rb_security_f', 'rb_security_m', 'rb_iven', 'rb_mira', 'rb_doctor_m', 'rb_civ_m2'],
   act2: ['rb_engineer_f', 'rb_soldier_m', 'rb_civ_f2', 'rb_child_f', 'rb_civ_f4', 'rb_civ_m1', 'rb_civ_m2', 'rb_civ_f1', 'rb_courier', 'rb_civ_m3', 'rb_contractor', 'rb_medic_f', 'rb_trooper', 'rb_sera', 'rb_security_m', 'rb_rook', 'rb_odile', 'rb_child_m', 'rb_mira', 'rb_doctor_m', 'rb_scav', 'rb_trader', 'rb_glazier'],
   act3: ['rb_sera', 'rb_gardener_f', 'rb_warden', 'rb_child_m2', 'rb_child_f2', 'rb_surv_f', 'rb_scav', 'rb_civ_f3', 'rb_civ_f4', 'rb_civ_f1', 'rb_civ_m1', 'rb_civ_f2', 'rb_courier', 'rb_civ_m2', 'rb_civ_m3', 'rb_contractor', 'rb_doctor_f', 'rb_mara', 'rb_jun', 'rb_tomas', 'rb_trader', 'rb_mira', 'rb_child_m', 'rb_child_f', 'rb_doctor_m', 'rb_iven'],
   act4: ['rb_soldier_m', 'rb_mira', 'rb_ezra', 'rb_elder', 'rb_security_f', 'rb_iven', 'rb_odile', 'rb_child_f', 'rb_child_m', 'rb_civ_f1', 'rb_civ_m2', 'rb_courier', 'rb_civ_m3', 'rb_trader', 'rb_surv_f', 'rb_civ_f2', 'rb_sera', 'rb_doctor_f', 'rb_rook', 'rb_trooper', 'rb_elder_m', 'rb_vill_m', 'rb_vill_f', 'rb_civ_m1', 'rb_civ_f4', 'rb_civ_f3', 'rb_child_m2', 'rb_glazier'],

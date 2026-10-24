@@ -16,7 +16,7 @@
 // The recoloured map leaves with the people who wear it (DeckWorld.freeLeft disposes it) and is made
 // again the next time someone needs it.
 import * as THREE from '../../../vendor/three.module.min.js';
-import { clothe, hairdo } from './garments.js';
+import { clothe, hairdo, hairMass } from './garments.js';
 
 const RAIN_DARK = 0.85; // Rain City's crowds: wet clothes read about 15% darker
 
@@ -83,7 +83,9 @@ export const WARDROBE = {
   // --- the new named people ---------------------------------------------------------------------
   rb_child_m: {
     // young Kai at twelve: brown hair, a faded tee
-    kai12: { body: [{ hue: [0.6, 0.1], smin: 0.35, sat: 0.6, light: 1.05 }] },
+    // (his hair is painted on the boy's head: his echoes, of one light, read bald, so they wear a short crop of their own,
+    // close to the head, the brow clear: garments.js hairMass. Solid, his painted brown hair is his own)
+    kai12: { body: [{ hue: [0.6, 0.1], smin: 0.35, sat: 0.6, light: 1.05 }], hairMass: { dye: '#3a2a20', fringe: 0.86, side: 1.5, nape: 1.95, lift: 0.007, locks: 0.07, seed: 3, holoOnly: true } },
   },
   rb_mira: {
     // Mira: a rose tunic, denim trousers, blonde hair (the tunic is the middle of the map; the trouser legs
@@ -295,8 +297,9 @@ export const SETTLEMENT = {
   ash: [['grey', 'black', 'undyed', 'black'], ['undyed', 'grey', 'brown', 'brown'], ['brown', 'undyed', 'grey', 'black'], ['oat', 'brown', 'black', 'grey'], ['black', 'oat', 'grey', 'brown']],
 };
 const D = (n) => DYE[n];
-// Male_Adult_09's (Niko's) hair on his head map: over the crown, at the temples and behind the ears, the tail's pieces
-const NIKO_HAIR = [[0, 0, 1, 0.235], [0, 0.235, 0.3, 0.62], [0.7, 0.235, 1, 0.62], [0.55, 0.64, 1, 1]];
+// Female_Adult_09's (the Elder's) body map: the cardigan and its shirt (the middle, the sides under her hands' corners),
+// then her hands' corners, where her skin is kept
+const ELDER_BODY = [[0.25, 0, 0.75, 1], [0, 0.27, 0.25, 1], [0.75, 0.27, 1, 1], [0, 0, 0.25, 0.27], [0.75, 0, 1, 0.27]];
 // the cuts: a man's tunic to the shin, a woman's and an elder's to the ankle (wider), a child's narrower; a boy's to the knee
 const CUT = {
   man: (t, o, st, b, i) => ({ skirt: { dye: D(t), stripe: D(st), hem: 0.14, flare: 1.12 }, bodice: { dye: D(t) }, ...(i % 2 ? { cloak: { dye: D(o), stripe: D(st), open: 0.55 } } : { mantle: { dye: D(o), stripe: D(st) } }), belt: { dye: D(b) } }),
@@ -337,10 +340,12 @@ Object.assign(WARDROBE, {
     // read as a present-day prayer cap and is gone): an undyed linen tunic to the shin, a woad mantle
     niko: { body: [dyeRule('flax')],
       garb: { skirt: { dye: D('flax'), stripe: D('walnut'), hem: 0.12, flare: 1.12 }, bodice: { dye: D('flax') }, mantle: { dye: D('woad'), stripe: D('undyed') }, belt: { dye: D('walnut') } } },
-    // Niko, older (M7's cold open): his hair gone to salt and pepper, the tied-back tail with it (the hair painted on the
-    // head map: over the crown, at the temples and behind the ears, and its tail's pieces), a staff
-    older: { body: [dyeRule('oat')], hair: [{ sset: 0.03, lrange: [0.36, 0.66], skin: false }],
-      head: NIKO_HAIR.map((band) => ({ band, lmax: 0.3, sset: 0.03, lrange: [0.36, 0.62], skin: false })),
+  },
+  rb_niko_old: {
+    // Niko, an old man (M7's cold open): the same face aged in his model's own maps (tools/rocketbox-textures.py 'age_m':
+    // salt-and-pepper hair and tail, lines at the brow, the eyes and the mouth, a short grey beard, paler skin; greying
+    // the young man's black hair alone left a man of thirty with grey hair), in oat wool and a woad cloak, a staff
+    older: { body: [dyeRule('oat')],
       garb: { skirt: { dye: D('oat'), stripe: D('walnut'), hem: 0.1, flare: 1.12 }, bodice: { dye: D('oat') }, cloak: { dye: D('woad'), stripe: D('undyed') }, belt: { dye: D('walnut') } }, props: ['staff'] },
   },
   rb_tala: {
@@ -353,7 +358,9 @@ Object.assign(WARDROBE, {
     // her model's own maps (tools/rocketbox-textures.py 'age': silver hair, lines at the brow, the eyes, the mouth and the
     // neck, paler skin); the wardrobe keeps her hair cards silver whatever the light. In an echo (M19, M22) her staff is
     // of its light (holoProps), her back as bent, and her silver hair cards a pale light where a dark head of hair is dim
-    elder: { body: [dyeRule('madder')], hair: [{ sset: 0.03, light: 1.06, skin: false }], stoop: 0.28, holoProps: true,
+    // (her body map's cardigan and shirt are dyed as cloth, not kept as skin, everywhere but her hands: her face's paler
+    // skin, which the dye's skin guard is sampled from, is near enough the cardigan's brown to have left squares of it)
+    elder: { body: ELDER_BODY.map((band, i) => dyeRule('madder', { band, ...(i < 3 ? { skin: false } : {}) })), hair: [{ sset: 0.03, light: 1.06, skin: false }], stoop: 0.28, holoProps: true,
       garb: { skirt: { dye: D('madder'), stripe: D('weld'), hem: 0.03, flare: 1.15 }, bodice: { dye: D('madder') }, cloak: { dye: D('brown'), stripe: D('weld'), hem: 0.08 }, belt: { dye: D('weld') } }, props: ['staff'] },
   },
 });
@@ -426,7 +433,8 @@ WARDROBE.rb_haig = { home: {} };
 // Tomas Vale, thirteen, in the lock city's school of 2196 (an echo): a boy's body (Male_Child_01, his own sandy hair and
 // freckles in his model's maps), a brick-red school jersey under a grey-green wool coat to the knee, buttoned (a fitted
 // coat: garments.js), which his echo wears too: no crowd child of 2196 wears a coat, nor young Kai
-WARDROBE.rb_tomas = { school: { body: [{ hue: [0.6, 0.1], smin: 0.3, to: 0.025, sset: 0.42, lrange: [0.2, 0.42] }], garb: { cloak: { dye: '#56604f', stripe: '#3c4238', hem: 0.36, open: 0.3, fit: true } } } };
+WARDROBE.rb_tomas = { school: { body: [{ hue: [0.6, 0.1], smin: 0.3, to: 0.025, sset: 0.42, lrange: [0.2, 0.42] }], garb: { cloak: { dye: '#56604f', stripe: '#3c4238', hem: 0.36, open: 0.3, fit: true } },
+  hairMass: { dye: '#d2ac78', fringe: 1.28, side: 1.9, nape: 2.25, lift: 0.019, locks: 0.24, seed: 7 } } };
 // The glazier Kai holds the frame for on Helix's roof (M12), who is at the Spire's glass (M21) and on the road (M23): a face
 // of her own (Business_Female_04), her hair dyed copper, a petrol work jacket (the suit's jacket dyed, its pinstripe
 // gone to a twill), charcoal work trousers, a leather bib apron and tool belt, and a suction lifter for the panes. No one
@@ -884,10 +892,61 @@ export function dress(actor, crew, opts = {}) {
   // coat, an apron; and the settlement's girls' hair
   if (v.garb) clothe(actor, model, v.garb, { hologram: holo, glow: U.spec.glow });
   if (v.hairdo) hairdo(actor, model, v.hairdo.from, { ...v.hairdo, hologram: holo, glow: U.spec.glow });
+  // a head of hair of its own over a painted one (garments.js hairMass): Tomas's mop, young Kai's crop (on his echo only)
+  if (v.hairMass && (holo || !v.hairMass.holoOnly)) hairMass(actor, model, v.hairMass, { hologram: holo, glow: U.spec.glow });
+  if (holo) holoDepth(actor);
   // an old back (the Elder's): bent forward at the spine after every pose, the head raised again (afterPose)
   U.stoop = v.stoop || 0;
   U.lvVariant = variant;
   return actor;
+}
+
+// An echo shows its nearest surface only: each of its skinned parts is drawn first into the depth buffer alone (no colour),
+// then in its light where it is nearest. Every surface of an echo was blended before: the inside of the mouth through
+// the lips (an open grin), the backs of the eyes, the far side of the head (a hollow face), the body through its clothes.
+// The depth passes come after everything solid and every other see-through thing (renderOrder 1, the light 2), so
+// nothing behind an echo is cut out of the scene; hair cards and a hair mass, cut out by their maps, are left out of them
+// (they would write depth over the face where they are empty) and drawn over the head in their light. Seen once, not
+// through its own layers, an echo's surface is denser (HOLO_DENSITY: world/Actors.js's 0.55 was for a figure seen
+// through two or three of its own surfaces, about 0.8 together), through its flicker too.
+const HOLO_DEPTH = new Map();
+export const HOLO_DENSITY = 0.72 / 0.55;
+function holoDepthMat(side) {
+  if (!HOLO_DEPTH.has(side)) HOLO_DEPTH.set(side, keepMat(new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: true, transparent: true, side })));
+  return HOLO_DEPTH.get(side);
+}
+export function holoDepth(actor) {
+  const parts = [];
+  actor.traverse((o) => {
+    if (!o.isMesh || o.name === 'holodepth') return;
+    o.renderOrder = 2;
+    if (o.isSkinnedMesh && ![].concat(o.material).some((m) => m.alphaTest > 0)) parts.push(o);
+  });
+  // (each material's own opacity kept once, so a material shared by many echoes is never thickened twice; the parts'
+  // materials as they are now, a flickering garment's own copy among them)
+  const thicken = (a = 1) => {
+    for (const o of parts) for (const m of [].concat(o.material)) {
+      if (!m.transparent) continue;
+      m.userData.holoBase ??= m.opacity;
+      m.opacity = Math.min(1, m.userData.holoBase * HOLO_DENSITY * a);
+    }
+  };
+  thicken();
+  const U = actor.userData, fade = U.setOpacity;
+  if (fade) U.setOpacity = (a) => { fade(a); thicken(a); };
+  for (const o of parts) {
+    const d = new THREE.SkinnedMesh(o.geometry, holoDepthMat([].concat(o.material)[0].side));
+    d.name = 'holodepth';
+    d.bind(o.skeleton, o.bindMatrix);
+    d.position.copy(o.position);
+    d.quaternion.copy(o.quaternion);
+    d.scale.copy(o.scale);
+    d.frustumCulled = false;
+    d.castShadow = d.receiveShadow = false;
+    d.renderOrder = 1;
+    o.parent.add(d);
+  }
+  return parts.length;
 }
 
 // Hang something on a person: 'head', 'chest', 'handL', 'handR' or the root. It is held in a frame that

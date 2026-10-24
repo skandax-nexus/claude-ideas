@@ -28,6 +28,7 @@ Each file is one avatar from `Assets/Avatars/` of the library, converted from it
 | `rb_child_f.glb` | `Children/Female_Child_01` | THE LAST VERSION: the Child in the Station |
 | `rb_rook.glb` | `Professions/Business_Male_04` | THE LAST VERSION: Dr. Elias Rook |
 | `rb_niko.glb` | `Adults/Male_Adult_09` | THE LAST VERSION: Niko (his own hair, long and tied back) |
+| `rb_niko_old.glb` | `Adults/Male_Adult_09` | THE LAST VERSION: Niko as an old man, Mission 7's cold open (the same face aged in its maps: salt-and-pepper hair, lines, a short grey beard: `tools/rocketbox-textures.py` EDITS `age_m`) |
 | `rb_jun.glb` | `Professions/Business_Male_02` | THE LAST VERSION: Jun Park |
 | `rb_tala.glb` | `Adults/Female_Adult_11` | THE LAST VERSION: Tala, the water keeper |
 | `rb_security_f.glb` | `Professions/Security_Female_01` | THE LAST VERSION: Officer Pryce (the pistol is left out) |

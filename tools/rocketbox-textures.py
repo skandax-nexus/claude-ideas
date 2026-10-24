@@ -21,8 +21,9 @@ Parts listed in the optional fifth argument (comma-separated, e.g. "pistol") are
 converter drops their triangles (RB_DROP).
 The optional sixth argument names an edit (EDITS) made to one output's maps before they are shrunk:
 'age' makes a face old (the Elder: her hair silvered, lines at the brow, the eyes, the mouth and the
-neck in the colour and the normal map, the skin paler and less rosy, the lips paler), 'tomas' gives a
-boy his own hair and freckles (Tomas Vale, on the body young Kai has too).
+neck in the colour and the normal map, the skin paler and less rosy, the lips paler), 'age_m' the same for
+a man (Niko, older: salt-and-pepper hair, a short grey beard), 'tomas' gives a boy his own hair and freckles
+(Tomas Vale, on the body young Kai has too).
 Prints one JSON object: {part: {color, normal, rough, alpha}} with the file names.
 """
 import json
@@ -164,12 +165,24 @@ def _lines(size, strokes, k):
     return H
 
 
-def _hair_mask(a, k, face, keep, dark=(0.31, 0.39), all_hair=()):
+def _main_piece(a, seed, painted=0.12, n=512):
+    # the island of the map a point lies on (the face's: the face, the scalp, the neck and the chest), by a flood fill of
+    # what is painted at n px: 1 on it, 0 elsewhere (the separate islands: a bun, the tail's pieces, the eyes, the mouth)
+    covered = (a.sum(2) > painted).astype(np.uint8) * 255
+    small = Image.fromarray(covered, 'L').resize((n, n), Image.NEAREST)
+    ImageDraw.floodfill(small, (round(seed[0] / 2048 * n), round(seed[1] / 2048 * n)), 128)
+    return (np.asarray(small.resize((a.shape[1], a.shape[0]), Image.NEAREST)) == 128).astype(np.float32)
+
+
+def _hair_mask(a, k, face, keep, dark=(0.31, 0.39), all_hair=(), seed=None, painted=0.12):
     # the hair painted on a head map: what is darker than skin, outside the face and the parts kept (ears, neck, the
-    # eyes' and mouth's pieces), and all of the pieces that are only hair (a bun)
-    covered = (a.sum(2) > 0.12).astype(np.float32)
+    # eyes' and mouth's pieces), and all of the pieces that are only hair (a bun: in those boxes only what is off the
+    # face's own piece, which a point of the face finds, so the neck and chest under a box keep their skin). painted: the
+    # sum of a texel's RGB above which it is painted, not the black between the islands (black hair's shadows are darker)
+    covered = (a.sum(2) > painted).astype(np.float32)
     m = _ramp(_lum(a), dark[1], dark[0]) * covered * (1 - _blur(_boxes(a.shape, list(face) + list(keep), k), 4 * k))
-    m = np.maximum(m, _boxes(a.shape, all_hair, k) * covered)
+    off_face = 1 - _main_piece(a, seed, painted) if seed else 1
+    m = np.maximum(m, _boxes(a.shape, all_hair, k) * covered * off_face)
     return _blur(m, 1.5 * k) * covered
 
 
@@ -189,7 +202,9 @@ def _teal(a):
 F009 = {
     # (the eyes, nostrils and mouth, the ears, the neck and the eyes' and mouth's pieces are not hair, however dark)
     'face': [(790, 530, 1260, 900)], 'keep': [('e', 495, 740, 92, 118), ('e', 1550, 740, 92, 118), (600, 1080, 1450, 1500), (0, 1180, 780, 2048)],
-    'bun': [(1080, 1470, 2048, 2048)], 'brows': [(795, 478, 960, 528), (1055, 478, 1240, 528)], 'lips': [(915, 795, 1135, 875)],
+    # (the bun's box runs into the bottom of the neck's and chest's piece: only its own islands are hair, the face's piece
+    # found from the seed; the whole box silvered a corner of her breastbone, a white patch in her robe's neck)
+    'bun': [(1080, 1470, 2048, 2048)], 'seed': (1025, 700), 'brows': [(795, 478, 960, 528), (1055, 478, 1240, 528)], 'lips': [(915, 795, 1135, 875)],
     'lashes': [(1650, 1280, 2030, 1760)],
     'lines': [
         # the brow: three lines across the forehead, two between the brows
@@ -211,12 +226,57 @@ F009 = {
     'spots': [(880, 420, 7), (1170, 330, 6), (1210, 470, 8), (840, 700, 7), (1240, 720, 6), (1300, 560, 9), (760, 500, 8), (1120, 760, 5)],
 }
 
+# Male_Adult_09 (Niko, older: Mission 7's cold open): his face, read off m017_head_color. A wide, round face; his black
+# hair over the crown and the temples, the tail's pieces at the bottom right. Salt and pepper rather than the Elder's
+# silver, the lines of a man of seventy, and a short grey beard (stubble on the cheeks, denser at the lip and the chin)
+M017 = {
+    'face': [(800, 520, 1250, 880)], 'keep': [('e', 520, 725, 70, 100), ('e', 1530, 725, 70, 100), (600, 1000, 1450, 1500), (0, 1220, 760, 2048)],
+    'bun': [(1040, 980, 2048, 2048)], 'seed': (1025, 700), 'brows': [(785, 480, 960, 525), (1085, 480, 1265, 530)], 'lips': [(905, 796, 1130, 866)],
+    'lashes': [], 'silver': (0.42, 0.9), 'cards': (0.47, 0.88), 'painted': 0.02,
+    'lines': [
+        # the brow: three long lines across the forehead, two between the brows
+        (_curve((830, 405), (1020, 388), (1215, 405)), 8, 0.6), (_curve((845, 440), (1020, 426), (1200, 440)), 8, 0.65),
+        (_curve((870, 472), (1020, 462), (1175, 472)), 7, 0.5), ([(1000, 500), (994, 550)], 7, 0.55), ([(1044, 500), (1050, 550)], 7, 0.55),
+        # the eyes: crow's feet at the outer corners, the hollows and the bags beneath
+        ([(826, 570), (796, 556)], 5, 0.45), ([(824, 585), (790, 587)], 5, 0.5), ([(826, 599), (797, 615)], 5, 0.45),
+        ([(1224, 570), (1254, 556)], 5, 0.45), ([(1226, 585), (1260, 587)], 5, 0.5), ([(1224, 599), (1253, 615)], 5, 0.45),
+        (_curve((840, 612), (885, 640), (940, 618)), 9, 0.5), (_curve((1105, 618), (1160, 640), (1210, 612)), 9, 0.5),
+        (_curve((846, 646), (888, 672), (942, 650)), 8, 0.4), (_curve((1103, 650), (1157, 672), (1204, 646)), 8, 0.4),
+        # the mouth: deep folds from the nose, the lines down from its corners, the chin
+        (_curve((962, 722), (906, 776), (893, 872)), 13, 0.8), (_curve((1088, 722), (1144, 776), (1145, 872)), 13, 0.8),
+        ([(902, 862), (886, 950)], 10, 0.5), ([(1134, 862), (1150, 950)], 10, 0.5),
+        (_curve((962, 945), (1017, 933), (1072, 945)), 9, 0.35), ([(850, 905), (868, 1000)], 22, 0.3), ([(1190, 905), (1172, 1000)], 22, 0.3),
+        # the neck
+        (_curve((790, 1110), (1020, 1140), (1250, 1110)), 9, 0.45), (_curve((810, 1200), (1020, 1228), (1235, 1200)), 9, 0.4),
+    ],
+    'spots': [(860, 420, 8), (1180, 360, 7), (1230, 480, 9), (820, 690, 8), (1260, 700, 7), (1320, 560, 10), (740, 520, 9), (1150, 760, 6)],
+    # the beard (ellipses): full at the upper lip, the chin and along the jaw, stubble over the lower cheeks; the lips bare
+    'beard': [('e', 1017, 780, 118, 34), ('e', 1017, 960, 165, 105), ('e', 845, 930, 120, 105), ('e', 1190, 930, 120, 105)],
+    'stubble': [('e', 735, 850, 100, 130), ('e', 1300, 850, 100, 130), ('e', 1017, 1000, 260, 120)],
+    'groove': 0.32,
+}
+
+
+def _beard(a, f, k):
+    # a short grey beard: the skin under it shaded by the roots, then a stipple of grey-white hairs, full at the lip, the
+    # chin and along the jaw ('beard'), thinning to stubble over the rest of its reach ('stubble')
+    lips = 1 - _blur(_boxes(a.shape, f['lips'], k), 3 * k)
+    full = _blur(_boxes(a.shape, f['beard'], k), 14 * k) * lips
+    reach = np.maximum(full, _blur(_boxes(a.shape, f.get('stubble', []), k), 24 * k) * 0.55) * lips
+    rng = np.random.default_rng(29)
+    dots = _arr(Image.fromarray((rng.random(a.shape[:2]) * 255).astype(np.uint8), 'L').filter(ImageFilter.GaussianBlur(0.7 * k)), 'L')
+    # (a hair where the noise passes a threshold that falls as the beard thickens: three in four texels at its fullest)
+    hairs = np.clip((dots - 0.62 + 0.3 * reach) * 10, 0, 1) * np.clip(reach * 1.8, 0, 1)
+    a = a * (1 - 0.1 * reach)[..., None]
+    grey = (0.62 + 0.24 * rng.random(a.shape[:2]).astype(np.float32))[..., None] * np.array([1.0, 0.99, 0.97], np.float32)
+    return a * (1 - hairs[..., None] * 0.9) + grey * hairs[..., None] * 0.9
+
 
 def age_head(img, f):
     k = img.width / 2048
     a = _arr(img)
     covered = (a.sum(2) > 0.12).astype(np.float32)
-    hair = _hair_mask(a, k, f['face'], f['keep'], all_hair=f['bun'])
+    hair = _hair_mask(a, k, f['face'], f['keep'], dark=f.get('dark', (0.31, 0.39)), all_hair=f['bun'], seed=f.get('seed'), painted=f.get('painted', 0.12))
     brows = _blur(_ramp(_lum(a), 0.52, 0.36) * _boxes(a.shape, f['brows'], k), k)
     tie = _teal(a)
     # the skin paler and less rosy, the lips paler
@@ -230,7 +290,7 @@ def age_head(img, f):
     a = a * (1 - lips) + (L + (a - L) * 0.72) * lips
     # the lines: each a darker groove (the normal map gives it its edge in the light)
     H = _lines(img.size, f['lines'], k)
-    a = a * (1 - 0.24 * H)[..., None]
+    a = a * (1 - f.get('groove', 0.24) * H)[..., None]
     # a few age spots
     spots = Image.new('L', img.size, 0)
     d = ImageDraw.Draw(spots)
@@ -238,8 +298,10 @@ def age_head(img, f):
         d.ellipse([(x - r) * k, (y - r) * k, (x + r) * k, (y + r) * k], fill=255)
     sp = _arr(spots.filter(ImageFilter.GaussianBlur(3 * k)), 'L')[..., None] * 0.3
     a = a * (1 - sp) + a * np.array([0.78, 0.68, 0.58], np.float32) * sp
-    # the hair silver, the brows grey, the hair tie a dark cord
-    a = _silver(a, hair)
+    if f.get('beard'):
+        a = _beard(a, f, k)
+    # the hair silver (or salt and pepper), the brows grey, the hair tie a dark cord
+    a = _silver(a, hair, *f.get('silver', (0.44, 0.93)))
     a = _silver(a, brows * 0.75, lo=0.42, hi=0.6)
     a = a * (1 - tie[..., None]) + np.array([0.22, 0.15, 0.1], np.float32) * tie[..., None]
     return _img(a)
@@ -265,7 +327,7 @@ def age_hair(img, f):
     rgb, alpha = a[..., :3], a[..., 3:]
     tie = _teal(rgb)
     lashes = _boxes(a.shape, f['lashes'], k)
-    rgb = _silver(rgb, (1 - lashes) * (1 - tie))
+    rgb = _silver(rgb, (1 - lashes) * (1 - tie), *f.get('cards', (0.44, 0.93)))
     rgb = _silver(rgb, lashes, lo=0.3, hi=0.62)
     rgb = rgb * (1 - tie[..., None]) + np.array([0.22, 0.15, 0.1], np.float32) * tie[..., None]
     return _img(np.concatenate([rgb, alpha], axis=2), 'RGBA')
@@ -300,6 +362,7 @@ def tomas_head(img, f):
 # edit -> colour-file stem (or normal / opacity file) -> what is done to it, with the face it is done to
 EDITS = {
     'age': {'f009_head_color': (age_head, F009), 'f009_head_normal': (age_normal, F009), 'f009_opacity_color': (age_hair, F009)},
+    'age_m': {'m017_head_color': (age_head, M017), 'm017_head_normal': (age_normal, M017), 'm017_opacity_color': (age_hair, M017)},
     'tomas': {'cm001_head_color': (tomas_head, CM001)},
 }
 

@@ -593,6 +593,214 @@ export function clothe(actor, model, garb, { hologram = false, glow = null } = {
 }
 export const garmentStats = () => ({ shapes: SHAPES.size, geometries: GEO.size, bodies: INFO.size });
 
+// ---------------------------------------------------------------------------------------------------------------------
+// A head of hair of its own, over a head whose hair is only painted (Children/Male_Child_01's: young Kai's and Tomas's).
+// An echo is drawn in one light, its maps unseen, so a boy whose hair is painted on read bald, and two boys on the one body
+// read as one boy. The mass is a shell over the skull from the crown to a hairline, each direction a little out from the
+// head's own surface there, thickest at the crown; its lower edge is cut into locks by its map. A style:
+//   { dye: '#rrggbb' (sRGB; an echo's is its light), fringe: the hairline at the brow, in radians down from the crown
+//     (1.2: a fringe to the brows; 0.85: a short crop's), side: over the ears (1.75: half over them), nape: at the back
+//     (2.1), lift: m at the crown (0.016), locks: the locks' share of the length (0.18), seed }
+// One geometry per model and style (skinned to the head bone alone), kept; one map per style.
+const MASS = new Map(), MASS_MAT = new Map();
+export const MASS_DEFAULT = { fringe: 1.2, side: 1.75, nape: 2.1, lift: 0.016, locks: 0.18, seed: 1 };
+function massShape(P, model, s) {
+  const info = bodyInfo(model, P.body, P.root);
+  const dh = boxOf(P.head, P.root);
+  const hb = info.at.Bip01_Head;
+  const pos = P.head.geometry.attributes.position;
+  const q = [], v = new THREE.Vector3();
+  for (let i = 0; i < pos.count; i++) {
+    v.fromBufferAttribute(pos, i).applyMatrix4(dh.T);
+    if (v.y > hb.y - 0.01) q.push(v.x, v.y, v.z);
+  }
+  const top = dh.b.max.y;
+  // the skull's middle: over the head bone, half way to the crown, centred front to back on the head at that height
+  const cy = hb.y + 0.5 * (top - hb.y);
+  let z0 = Infinity, z1 = -Infinity;
+  for (let i = 0; i < q.length; i += 3) if (Math.abs(q[i + 1] - cy) < 0.012) { z0 = Math.min(z0, q[i + 2]); z1 = Math.max(z1, q[i + 2]); }
+  const c = new THREE.Vector3(hb.x, cy, isFinite(z0) ? (z0 + z1) / 2 : hb.z);
+  // the head's surface in each direction from there (the furthest vertex in each cell of azimuth and angle from the top),
+  // the empty cells filled from their neighbours, smoothed
+  const NA = 40, NE = 30, EMAX = 2.6;
+  const R = new Float32Array(NA * NE);
+  for (let i = 0; i < q.length; i += 3) {
+    const dx = q[i] - c.x, dy = q[i + 1] - c.y, dz = q[i + 2] - c.z, r = Math.hypot(dx, dy, dz);
+    const e = Math.acos(Math.max(-1, Math.min(1, dy / r))), a = Math.atan2(dx, dz);
+    if (e >= EMAX) continue;
+    const k = Math.floor((e / EMAX) * NE) * NA + (Math.floor(((a + Math.PI) / (2 * Math.PI)) * NA) % NA);
+    R[k] = Math.max(R[k], r);
+  }
+  for (let pass = 0; pass < 12; pass++) {
+    for (let e = 0; e < NE; e++) for (let a = 0; a < NA; a++) {
+      const k = e * NA + a;
+      if (R[k]) continue;
+      let sum = 0, n = 0;
+      for (const [de, da] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) {
+        const ee = e + de;
+        if (ee < 0 || ee >= NE) continue;
+        const kk = ee * NA + ((a + da + NA) % NA);
+        if (R[kk] > 0) { sum += R[kk]; n++; }
+      }
+      if (n) R[k] = -sum / n; // (filled after the pass, so a pass fills one ring of cells)
+    }
+    for (let k = 0; k < R.length; k++) if (R[k] < 0) R[k] = -R[k];
+  }
+  const S = new Float32Array(R.length);
+  for (let e = 0; e < NE; e++) for (let a = 0; a < NA; a++) {
+    let sum = 0, n = 0;
+    for (let de = -1; de <= 1; de++) for (let da = -1; da <= 1; da++) {
+      const ee = e + de;
+      if (ee < 0 || ee >= NE) continue;
+      const r = R[ee * NA + ((a + da + NA) % NA)];
+      if (r) { sum += r; n++; }
+    }
+    S[e * NA + a] = n ? sum / n : 0.09;
+  }
+  const cell = (a, e) => {
+    // bilinear in the smoothed cells (a: -pi..pi, e: 0..EMAX)
+    const fa = (((a + Math.PI) / (2 * Math.PI)) * NA - 0.5 + NA) % NA, fe = Math.max(0, Math.min(NE - 1.001, (e / EMAX) * NE - 0.5));
+    const a0 = Math.floor(fa), e0 = Math.floor(fe), ta = fa - a0, te = fe - e0, a1 = (a0 + 1) % NA;
+    const g = (ee, aa) => S[ee * NA + aa];
+    return lerp(lerp(g(e0, a0), g(e0, a1), ta), lerp(g(e0 + 1, a0), g(e0 + 1, a1), ta), te);
+  };
+  // (below the temples the hair falls past the ears rather than over them: no further out than the head at the temple)
+  const surf = (a, e) => (e > 1.25 ? Math.min(cell(a, e), cell(a, 1.25) + 0.004) : cell(a, e));
+  // the hairline: from the brow (a = 0, the face) by the temples and over the ears to the nape (a = pi)
+  const line = (a) => {
+    const t = Math.abs(a) / Math.PI;
+    const k = [[0, s.fringe], [0.17, s.fringe * 0.97 + 0.05], [0.3, (s.fringe + s.side) / 2], [0.5, s.side], [0.72, (s.side + s.nape) / 2 + 0.05], [1, s.nape]];
+    for (let i = 0; i < k.length - 1; i++) if (t <= k[i + 1][0]) { const u = (t - k[i][0]) / (k[i + 1][0] - k[i][0]); return lerp(k[i][1], k[i + 1][1], u * u * (3 - 2 * u)); }
+    return s.nape;
+  };
+  // the grid: columns round the head (the first repeated at the end for the map's seam), rings from the crown to the edge
+  const NC = 64, NR = 14, REP = 3;
+  const toBind = new THREE.Matrix4().copy(P.root.matrixWorld).invert().multiply(P.body.matrixWorld).multiply(P.body.bindMatrix).invert();
+  const p = [], uv = [], idx = [];
+  for (let r = 0; r <= NR; r++) {
+    const f = r / NR;
+    for (let j = 0; j <= NC; j++) {
+      const a = -Math.PI + (2 * Math.PI * j) / NC;
+      const e = line(a) * f; // (the first ring is the crown, one point)
+      // (thickest at the crown; at the edge it lies on the head; a fringe stands a little off the brow)
+      const front = Math.max(0, Math.cos(a));
+      const off = s.lift * (1 - 0.72 * f * f) + 0.003 + 0.004 * front * f;
+      const rr = surf(a, e) + off;
+      v.set(Math.sin(e) * Math.sin(a), Math.cos(e), Math.sin(e) * Math.cos(a)).multiplyScalar(rr).add(c).applyMatrix4(toBind);
+      p.push(v.x, v.y, v.z);
+      uv.push((j / NC) * REP, f);
+    }
+  }
+  for (let r = 0; r < NR; r++) for (let j = 0; j < NC; j++) {
+    const A = r * (NC + 1) + j, B = A + 1, C = A + NC + 1, D2 = C + 1;
+    idx.push(A, C, B, B, C, D2); // (wound outward: an echo draws only its front faces)
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(p, 3));
+  g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  g.setIndex(idx);
+  g.computeVertexNormals();
+  const n = p.length / 3, hi = P.body.skeleton.bones.findIndex((b) => b.name === 'Bip01_Head');
+  g.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(new Uint16Array(n * 4).map((_, i) => (i % 4 ? 0 : hi)), 4));
+  g.setAttribute('skinWeight', new THREE.Float32BufferAttribute(new Float32Array(n * 4).map((_, i) => (i % 4 ? 0 : 1)), 4));
+  g.computeBoundingSphere();
+  g.userData.keep = true;
+  return g;
+}
+// the mass's map: strands from the crown down, in locks of a few strands each whose tips end at their own length (alpha),
+// the colour the dye with each strand a little lighter or darker (an echo's: grey, its light multiplied by it)
+function massMap(s, dye) {
+  const W = 256, H = 128;
+  const c = document.createElement('canvas');
+  c.width = W; c.height = H;
+  const g = c.getContext('2d');
+  const img = g.createImageData(W, H);
+  let seed = s.seed * 9301 + 49297;
+  const rnd = () => ((seed = (seed * 9301 + 49297) % 233280) / 233280);
+  const base = col(dye || '#9a9a9a');
+  const lock = [];
+  for (let x = 0; x < W;) {
+    // (a lock is 4-11 degrees of the head: wide enough for its tip to show at a talk's distance)
+    const w = 9 + Math.floor(rnd() * 16), len = 1 - s.locks * (0.15 + 0.85 * rnd());
+    for (let k = 0; k < w && x < W; k++, x++) lock.push({ len, at: k / w, tone: rnd() < 0.3 ? 0.62 + rnd() * 0.2 : 0.85 + rnd() * 0.3 });
+  }
+  for (let x = 0; x < W; x++) {
+    const L = lock[x];
+    // (a lock tapers to a point: its middle strands the longest)
+    const tip = L.len - s.locks * 0.6 * Math.abs(L.at - 0.5) ** 1.5;
+    // (and between two locks a darker parting)
+    const part = Math.min(L.at, 1 - L.at) < 0.12 ? 0.62 : 1;
+    for (let y = 0; y < H; y++) {
+      const v = y / (H - 1), i = (y * W + x) * 4;
+      const shade = L.tone * part * (0.88 + 0.12 * Math.sin(v * 30 + x * 1.7)) * (0.8 + 0.2 * Math.min(1, v * 3));
+      img.data[i] = Math.min(255, base.r * 255 * shade);
+      img.data[i + 1] = Math.min(255, base.g * 255 * shade);
+      img.data[i + 2] = Math.min(255, base.b * 255 * shade);
+      img.data[i + 3] = v < tip ? 255 : 0;
+    }
+  }
+  g.putImageData(img, 0, 0);
+  const t = new THREE.CanvasTexture(c);
+  t.flipY = false; // (v runs from the crown, the canvas's top row, to the tips)
+  t.wrapS = THREE.RepeatWrapping;
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = 4;
+  t.userData.keep = true;
+  return t;
+}
+function massMat(s, hologram, glow) {
+  const k = `${JSON.stringify(s)}|${hologram ? glow || 0x8fe0ff : 'solid'}`;
+  if (!MASS_MAT.has(k)) {
+    let m;
+    if (hologram) {
+      // (of the echo's light, brighter and denser than the face under it, so the hair reads as hair and not as more head,
+      // from the front too, its locks and partings drawn in it)
+      const c2 = glow || 0x8fe0ff;
+      m = new THREE.MeshStandardMaterial({ color: c2, emissive: c2, emissiveIntensity: 1.35, transparent: true, opacity: 0.78, depthWrite: false, roughness: 0.3, map: massMap(s, '#ffffff'), alphaTest: 0.5 });
+      m.emissiveMap = m.map; // (its locks and partings in its light too)
+    } else {
+      m = new THREE.MeshStandardMaterial({ map: massMap(s, s.dye), alphaTest: 0.5, roughness: 0.72, metalness: 0, side: THREE.DoubleSide, envMapIntensity: 0.4 });
+      m.name = 'hairmass';
+    }
+    m.userData.keep = true;
+    MASS_MAT.set(k, m);
+  }
+  return MASS_MAT.get(k);
+}
+export function hairMass(actor, model, style = {}, { hologram = false, glow = null } = {}) {
+  const P = partsOf(actor);
+  if (!P.head || !P.body) return null;
+  const s = { ...MASS_DEFAULT, ...style };
+  const key = `${model}|${JSON.stringify({ ...s, dye: 0 })}`;
+  let g = MASS.get(key);
+  if (!g) {
+    g = massShape(P, model, s);
+    MASS.set(key, g);
+  }
+  const m = new THREE.SkinnedMesh(g, massMat(s, hologram, glow));
+  m.name = 'hairmass';
+  m.bind(P.body.skeleton, P.body.bindMatrix);
+  m.position.copy(P.body.position);
+  m.quaternion.copy(P.body.quaternion);
+  m.scale.copy(P.body.scale);
+  m.frustumCulled = false;
+  m.castShadow = !hologram;
+  m.onBeforeRender = (r, scene, cam, geo) => { geo.drawRange.count = scene.overrideMaterial ? 0 : Infinity; }; // (as Actors draws hair cards)
+  P.body.parent.add(m);
+  // (an echo that flickers flickers its hair)
+  const U = actor.userData, fade = U.setOpacity;
+  if (fade) {
+    let own = null;
+    U.setOpacity = (a) => {
+      fade(a);
+      if (!own) { own = m.material.clone(); m.material = own; }
+      own.transparent = hologram || a < 1;
+      own.opacity = (hologram ? 0.78 : 1) * a;
+    };
+  }
+  return m;
+}
+
 // Another person's hair on this one: the hair cards of a loaded model (src), moved from its head to this one's (centred
 // on the head, its crown on this head's crown, scaled to this head's width) and skinned to the head bone alone. A girl of
 // the settlement wears a woman's tied-back hair on the one child's body Rocketbox has without a head cloth. One geometry
@@ -605,7 +813,7 @@ function partsOf(a) {
   root.updateMatrixWorld(true);
   const out = { root };
   const all = [];
-  a.traverse((o) => { if (o.isSkinnedMesh && o.name !== 'garment' && o.name !== 'hairdo') { all.push(o); const n = [].concat(o.material)[0]?.name; if (n) out[n] = o; } });
+  a.traverse((o) => { if (o.isSkinnedMesh && !['garment', 'hairdo', 'hairmass', 'holodepth'].includes(o.name)) { all.push(o); const n = [].concat(o.material)[0]?.name; if (n) out[n] = o; } });
   if (!out.body && all.length >= 2) { out.body = all[0]; out.head = all[1]; }
   return out;
 }

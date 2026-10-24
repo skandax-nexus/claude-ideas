@@ -36,9 +36,9 @@ import { KIT_NAMES } from '../game/js/editions/lastversion/places/kits.js';
 import { STYLES } from '../game/js/editions/lastversion/places/styles.js';
 import { Player } from '../game/js/entities/Player.js';
 import { LV_MODELS, SHARED_MODELS, MANIFEST, CHAPTER_CAST, COMMON, sexOf, isChild, castOf } from '../game/js/editions/lastversion/casting.js';
-import { WARDROBE, hasVariant, packRules, SETTLEMENT, PRESENT_PALETTES } from '../game/js/editions/lastversion/wardrobe.js';
+import { WARDROBE, hasVariant, packRules, SETTLEMENT, PRESENT_PALETTES, holoDepth } from '../game/js/editions/lastversion/wardrobe.js';
 import { ERAS, EXCEPTIONS, AMBIENT_CAST, eraModels, MAX_PEOPLE, MET, CAP, OLD, PALETTE, PALETTE_ROLES, ROLE_NAMES } from '../game/js/editions/lastversion/crowds.js';
-import { PIECES } from '../game/js/editions/lastversion/garments.js';
+import { PIECES, MASS_DEFAULT } from '../game/js/editions/lastversion/garments.js';
 import { MISSION_BARKS } from '../game/js/editions/lastversion/barks.js';
 import { M01, m01Shots } from '../game/js/editions/lastversion/prologue.js';
 import { WATCHERS, HUMAN, watcherModels, kindsOf } from '../game/js/editions/lastversion/watchers.js';
@@ -1758,7 +1758,7 @@ test('the settlement\'s people are dressed as people of three thousand years ago
     const g = garbOf(n.model, n.variant);
     assert.ok(g?.skirt && (g.mantle || g.cloak || g.sash) && g.belt, `${id} wears a tunic, a mantle or cloak and a belt: ${JSON.stringify(g)}`);
   }
-  assert.ok(garbOf('rb_niko', 'older')?.skirt, 'Niko, older');
+  assert.ok(garbOf('rb_niko_old', 'older')?.skirt, 'Niko, older');
   let people = 0;
   for (const { deck, s, level } of LEVELS.filter((l) => SETTLEMENT_MISSIONS.includes(l.deck.origin || l.deck.mkey))) {
     for (const n of level.npcs) {
@@ -1961,6 +1961,75 @@ test('castfix: no cap or head cloth in the settlement, Tomas on a child\'s body,
   assert.ok(young.silver / young.all < 0.2, `Tala's hair is not silver (${((100 * young.silver) / young.all).toFixed(1)}%)`);
   const elder = WARDROBE.rb_elder.elder;
   assert.ok(elder.stoop > 0.1 && elder.props.includes('staff') && elder.holoProps && NPCS.elder.walk < 1, 'a stoop, a staff and a slow walk');
+});
+
+// (castfix round 2) what the follow-up check found: Tomas's echo had young Kai's face and a bald head (one body,
+// Children/Male_Child_01, whose hair is only painted, and an echo shows none of its maps); every echo showed the inside of
+// its mouth and the backs of its eyes; the Elder's aged head map had silvered a corner of her breastbone (a white patch in
+// her robe's neck) and her paler skin left her cardigan's dye in squares; Niko as an old man was a young face, grey-haired
+test('castfix round 2: the two boys of one body are two boys as echoes, echoes show only their nearest surface, the Elder clean, Niko old', () => {
+  const conv = fs.readFileSync('tools/rocketbox-to-glb.mjs', 'utf8');
+  const tex = fs.readFileSync('tools/rocketbox-textures.py', 'utf8');
+  const srcOf = (m) => new RegExp(`\\b${m}: \\{ src: '([^']+)'`).exec(conv)?.[1];
+  // Tomas and young Kai: the one body, its hair painted (no cards); each boy's echo wears a head of hair of his own
+  // (garments.js hairMass), and not the same: Tomas a mop over his brow and his ears, Kai a short crop, his brow clear
+  assert.equal(srcOf('rb_tomas'), srcOf('rb_child_m'));
+  assert.ok(!matsOf('rb_tomas').includes('hair') && !matsOf('rb_child_m').includes('hair'), 'the boy\'s hair is only painted');
+  for (const [m, vs] of [['rb_tomas', WARDROBE.rb_tomas], ['rb_child_m', WARDROBE.rb_child_m]]) {
+    for (const [name, v] of Object.entries(vs)) assert.ok(v.hairMass && !v.hairMass.holoOnly === (m === 'rb_tomas'), `${m}/${name}: hair of its own on an echo`);
+  }
+  const tomas = { ...MASS_DEFAULT, ...WARDROBE.rb_tomas.school.hairMass }, kai = { ...MASS_DEFAULT, ...WARDROBE.rb_child_m.kai12.hairMass };
+  assert.ok(tomas.fringe - kai.fringe >= 0.3 && tomas.side - kai.side >= 0.25 && tomas.nape > kai.nape, 'a mop to the brow and over the ears; a crop');
+  assert.ok(tomas.lift >= 2 * kai.lift && tomas.locks >= 2 * kai.locks, 'the mop thicker, its locks longer');
+  assert.ok(NPCS.tomas.hologram && Math.abs(NPCS.tomas.height - NPCS.kai12.height) >= 0.08, 'Tomas the taller');
+  // an echo is drawn as its nearest surface: each of its skinned parts first into the depth buffer alone, after everything
+  // solid (renderOrder 1, colour off), then in its light (2); cut-out hair and its props are drawn in its light only
+  const bone = new THREE.Bone();
+  const skinned = (mat) => {
+    const g = new THREE.BoxGeometry(0.2, 0.2, 0.2);
+    const n = g.attributes.position.count;
+    g.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(new Uint16Array(n * 4), 4));
+    g.setAttribute('skinWeight', new THREE.Float32BufferAttribute(new Float32Array(n * 4).map((_, i) => (i % 4 ? 0 : 1)), 4));
+    const m = new THREE.SkinnedMesh(g, mat);
+    m.bind(new THREE.Skeleton([bone]));
+    return m;
+  };
+  const light = () => new THREE.MeshStandardMaterial({ color: 0x8fe0ff, transparent: true, opacity: 0.55, depthWrite: false });
+  const body = skinned(light()), head = skinned(light()), cards = skinned(Object.assign(light(), { alphaTest: 0.35 }));
+  const prop = new THREE.Mesh(new THREE.BoxGeometry(0.02, 1.6, 0.02), light());
+  const actor = new THREE.Group(), root = new THREE.Group();
+  actor.add(root);
+  root.add(bone, body, head, cards, prop);
+  assert.equal(holoDepth(actor), 2, 'the body and the head have depth passes; the hair cards do not');
+  const depth = [];
+  actor.traverse((o) => { if (o.name === 'holodepth') depth.push(o); });
+  assert.equal(depth.length, 2);
+  for (const d of depth) {
+    assert.ok(d.isSkinnedMesh && [body, head].some((o) => o.geometry === d.geometry && o.skeleton === d.skeleton), 'the part\'s own geometry and skeleton');
+    assert.ok(d.material.colorWrite === false && d.material.depthWrite && d.material.transparent && d.renderOrder === 1 && !d.castShadow, 'depth only, after the solid scene');
+  }
+  for (const o of [body, head, cards, prop]) assert.equal(o.renderOrder, 2, 'the light after the depth');
+  // (seen once, not through its own layers, the surface is denser; a material is thickened once, however many share it)
+  assert.ok(Math.abs(body.material.opacity - 0.72) < 1e-6 && cards.material.opacity === 0.55, `the echo's surface at ${body.material.opacity}`);
+  holoDepth(new THREE.Group().add(new THREE.Group().add(Object.assign(skinned(body.material), {}))));
+  assert.ok(Math.abs(body.material.opacity - 0.72) < 1e-6, 'thickened once');
+  assert.ok(/if \(holo\) holoDepth\(actor\)/.test(fs.readFileSync('game/js/editions/lastversion/wardrobe.js', 'utf8')), 'every echo is dressed with it');
+  // the Elder: the 'age' edit's bun silvers only its own islands of the head map (found off the face's piece), not the
+  // neck's and chest's piece under its box; her cardigan and shirt are dyed as cloth everywhere but her hands' corners
+  assert.ok(/'bun': \[\(1080, 1470, 2048, 2048\)\], 'seed': \(1025, 700\)/.test(tex) && /off_face = 1 - _main_piece/.test(tex), 'the Elder\'s bun is its own islands');
+  const eb = WARDROBE.rb_elder.elder.body;
+  assert.ok(eb.some((r) => r.skin === false && r.band?.[0] <= 0.25 && r.band?.[2] >= 0.75 && r.band?.[1] === 0 && r.band?.[3] === 1), 'her cardigan dyed as cloth');
+  assert.ok(eb.filter((r) => r.skin !== false).every((r) => r.band && (r.band[2] <= 0.25 || r.band[0] >= 0.75) && r.band[3] <= 0.3), 'skin kept only at her hands');
+  // Niko as an old man (Mission 7's cold open): Niko's own face (the same avatar), aged in its maps (salt-and-pepper hair,
+  // lines, a short grey beard), his hair cards grey, the young Niko's black
+  assert.equal(srcOf('rb_niko_old'), srcOf('rb_niko'));
+  assert.ok(/\brb_niko_old: \{ src: 'Adults\/Male_Adult_09', px: 1024, edit: 'age_m' \}/.test(conv), 'old Niko\'s maps are aged');
+  assert.ok(/'age_m': \{'m017_head_color': \(age_head, M017\)/.test(tex) && /'beard': \[/.test(tex), 'lines and a beard on his face');
+  assert.equal(AMBIENT_CAST.m7_oldniko.model, 'rb_niko_old');
+  assert.ok(!WARDROBE.rb_niko.older && WARDROBE.rb_niko_old.older.props.includes('staff'));
+  const old = hairTexels('rb_niko_old'), young = hairTexels('rb_niko');
+  assert.ok(old.silver / old.all > 0.6, `old Niko's hair cards: ${((100 * old.silver) / old.all).toFixed(1)}% grey`);
+  assert.ok(young.silver / young.all < 0.1, `young Niko's hair is black (${((100 * young.silver) / young.all).toFixed(1)}% grey)`);
 });
 
 test('named faces stay out of crowds (but for the listed exceptions), and crowd faces never cross eras', () => {
@@ -2203,14 +2272,16 @@ test('the manifest carries only the edition\'s models, each with a credit and a 
   const lvFiles = Object.values(LV_MODELS).map((m) => m.file);
   // (closing: the settlement's own six, Tomas, the receptionist and Officer Haig with faces of their own; the robe, hijab,
   // abaya and the second robe gone)
-  assert.equal(Object.keys(LV_MODELS).length, 46, '46 new people');
-  assert.equal(Object.values(LV_MODELS).filter((m) => m.px === 1024).length, 22, '22 named at 1024 px');
+  // (castfix: the glazier; round 2: Niko as an old man, his face aged in its own maps)
+  assert.equal(Object.keys(LV_MODELS).length, 47, '47 new people');
+  assert.equal(Object.values(LV_MODELS).filter((m) => m.px === 1024).length, 23, '23 named at 1024 px');
   assert.deepEqual(Object.entries(LV_MODELS).filter(([, m]) => m.px === 512 && !m.crowd).map(([k]) => k).sort(), ['rb_haig', 'rb_tomas'], 'two named only ever seen as light, at 512 px');
   assert.equal(Object.values(LV_MODELS).filter((m) => m.crowd).length, 22, '22 crowd at 512 px');
   for (const m of Object.values(LV_MODELS).filter((x) => x.crowd)) assert.equal(m.px, 512);
-  // (closing) mind the APK: the edition's people within 30 MB, and no FBXLoader extras in the edition's own files
+  // (closing) mind the APK: the edition's people within 31 MB (30 until castfix round 2 gave old Niko his own aged face,
+  // 0.7 MB; the APK stays within its 50 MB: android/build-apk.sh), and no FBXLoader extras in the edition's own files
   const bytes = MANIFEST.reduce((a, f) => a + fs.statSync(`game/assets/characters/${f}`).size, 0);
-  assert.ok(bytes < 30e6, `the edition's people: ${(bytes / 1e6).toFixed(2)} MB`);
+  assert.ok(bytes < 31e6, `the edition's people: ${(bytes / 1e6).toFixed(2)} MB`);
   for (const f of lvFiles) {
     const b = fs.readFileSync(`game/assets/characters/${f}`);
     assert.ok(!b.subarray(20, 20 + b.readUInt32LE(12)).toString('utf8').includes('"extras"'), `${f} carries node extras`);
@@ -2258,6 +2329,15 @@ test('every wardrobe variant is a valid recolour: at most 8 rules, numbers in ra
           continue;
         }
         if (k === 'hairdo') { assert.ok(LV_MODELS[rules.from] && !LV_MODELS[rules.from].child, `${model}/${name}: hair from ${rules.from}`); continue; }
+        // (castfix round 2) a head of hair of its own (garments.js hairMass): its dye, its hairline and its thickness
+        if (k === 'hairMass') {
+          const s = { ...MASS_DEFAULT, ...rules };
+          assert.ok(DYE_RE.test(s.dye), `${model}/${name}.hairMass: dye ${s.dye}`);
+          assert.ok(s.fringe > 0.5 && s.fringe < s.side && s.side < s.nape && s.nape < 2.6, `${model}/${name}.hairMass: the hairline, brow to nape`);
+          assert.ok(s.lift > 0 && s.lift < 0.04 && s.locks >= 0 && s.locks < 0.5, `${model}/${name}.hairMass: lift and locks`);
+          assert.ok(Object.keys(rules).every((x) => ['dye', 'fringe', 'side', 'nape', 'lift', 'locks', 'seed', 'holoOnly'].includes(x)), `${model}/${name}.hairMass: ${Object.keys(rules)}`);
+          continue;
+        }
         if (k === 'sex') { assert.ok(['f', 'm'].includes(rules), `${model}/${name}: sex ${rules}`); continue; }
         if (k === 'holoProps') { assert.equal(rules, true, `${model}/${name}.holoProps`); assert.ok(v.props?.length, `${model}/${name}: holoProps with props`); continue; }
         // (castfix) an old back's bend, in radians
