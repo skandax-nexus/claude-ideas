@@ -508,13 +508,11 @@ const coat = await az(() => { LVB.walk([[1.0, -221.4]]); LVB.use('raincoat'); LV
 check(coat.raincoat && coat.beat_done && coat.gate === false, 'the raincoat is Kai\'s now (raincoat); the staff gate opens', JSON.stringify(coat));
 const m1t1 = await az(() => AZ.time);
 const m1min = +((m1t1 - m1t0) / 60).toFixed(1);
-const m1model = await az(() => AZ.edition.deck.minutes);
-const proModels = await az(() => Object.fromEntries(AZ.story.decks.map((d) => [d.key, d.minutes?.main || 0]))); // (the Prologue's three models, logged beside its walk times)
-const m1ratio = +(m1min / m1model.main).toFixed(2);
-console.log(`  (Mission 1 walked by the bot: ${m1min} min of game time, lines at their own length, with the florist and Last Train Home: ${m1ratio} of the model's ${m1model.main}-minute main path)`);
+console.log(`  (Mission 1 walked by the bot: ${m1min} min of game time, lines at their own length, with the florist and Last Train Home)`);
 // (the bot knows every coordinate and reads nothing twice: it is no player. What this guards is the mission itself: a
-// Mission 1 that shrank, a pursuit cut back to a walk, would fall under a third of the model's main path)
-check(m1ratio >= 0.33, `Mission 1, walked: ${m1min} min of game time, ${m1ratio} of the model's main path`, String(m1min));
+// Mission 1 that shrank, a pursuit cut back to a walk, would fall under the nine minutes it measured. Closing: the length
+// model it was once held to overstated a player's time about five times, and is no longer a length claim)
+check(m1min >= 9, `Mission 1, walked: ${m1min} min of game time (nine or more)`, String(m1min));
 // a save and a load: the mission comes back where Kai saved (in LINE 41, its quarter's spawn), after a PREVIOUSLY card
 // (loaded during the mission's outro: a load in the page drops the outro, and the gates must still open after it
 // (U5 review; a player's load reloads the page first: main.begin); the exit below is the proof)
@@ -751,7 +749,7 @@ const times = await az(() => ({ m01: AZ.facts.get('time_m01'), m02: AZ.facts.get
 check(times.m01 > 0 && times.m02 > 0 && times.m03 > 0, 'telemetry: each mission\'s time is stored as it ends (time_<mkey>)', JSON.stringify(times));
 // (Missions 2 and 3 beside their models, as the U6 review asked; the bot places Kai and skips the lines there, so their
 // times are logged, not held to the model: only Mission 1 is walked with every line at its own length)
-for (const k of ['m02', 'm03']) console.log(`  (${k}, placed by the bot with its lines skipped: ${(times[k] / 60).toFixed(1)} min of game time; the model's main path is ${proModels[k]} minutes)`);
+for (const k of ['m02', 'm03']) console.log(`  (${k}, placed by the bot with its lines skipped: ${(times[k] / 60).toFixed(1)} min of game time, not a measure of its length)`);
 // the case board: THE QUESTIONS, SIDE STORIES (with a track button), WHAT YOU CHOSE, ABILITIES
 const board = await az(() => { const el = document.createElement('div'); AZ.edition.renderJournal(AZ, el); const h = [...el.querySelectorAll('h3')].map((x) => x.textContent); return { h, q: el.querySelector('.questions')?.textContent || '', chose: el.innerHTML.includes('Officer Pryce let you through on a long morning.') }; });
 check(['THE QUESTIONS', 'ABILITIES', 'SIDE STORIES', 'WHAT YOU CHOSE'].every((x) => board.h.includes(x)) && /How can the machine predate its inventors\?/.test(board.q) && /Who used my card at 05:40/.test(board.q) && board.chose,
@@ -949,6 +947,9 @@ const PLAYER = () => {
       const sc = P.deck().scenes?.[t.scene];
       const years = P.yearsOf(t.spot?.when, sc?.when);
       for (let i = 0; i < 3 && !P.done(t); i++) P.use(id, years, P.at(t)?.[1]);
+      // (a scene a person gives when its spot is not out: Mission 8's Iven, in person once his team was saved)
+      const n = !P.done(t) && g.deckWorld.npcs.find((x) => x.n.scene === t.scene && x.model.visible && !x.isEcho);
+      if (n) P.use(n.n.id, [g.engine.state(g.room)], n.model.position.y);
     },
     choice: (t) => P.kinds.scene(t),
     clue: (t) => {
@@ -983,7 +984,11 @@ const PLAYER = () => {
       }
       P.pick = was;
     },
-    invert: (t) => P.revDone(`inv_${t.target}_done`),
+    invert: (t) => {
+      P.revDone(`inv_${t.target}_done`);
+      // (a thread done by what the settled thing then shows: Mission 16's case, read once it is whole)
+      for (const s of P.done(t) ? [] : (P.deck().spots || []).filter((x) => x.at === t.at)) P.use(s.id, null, P.at(t)?.[1]);
+    },
     loop: (t) => P.wait(() => P.done(t), 300, 0.5),
     cinema: (t) => P.wait(() => P.done(t), 90),
     chase: (t) => {
@@ -1128,7 +1133,9 @@ await az(PLAYER);
 const WALK = {};
 // one mission: its main threads in order (the side stories named, before the thread `before`, else before its last main
 // thread: the mission ends with that one)
+let PLAYED = null; // (the mission playMission last played: finish() knows when the next one is already in)
 const playMission = async (mkey, { sides = [], before = null, at = {} } = {}) => {
+  PLAYED = mkey;
   const here = await az(() => AZ.edition.deck?.mkey);
   check(here === mkey, `${mkey} begins`, String(here));
   if (here !== mkey) return { steps: [], ok: false };
@@ -1137,15 +1144,21 @@ const playMission = async (mkey, { sides = [], before = null, at = {} } = {}) =>
   const sidesDone = new Set();
   let sideSecs = 0;
   for (let i = 0; i < 40; i++) {
-    const cur = await az(() => {
-      const T = AZ.edition.threads, c = T.current();
+    // (only this mission's threads: once it ends and the next one has come in, the next mission is not played here)
+    const cur = await az((mk) => {
+      const T = AZ.edition.threads;
+      if (AZ.edition.deck?.mkey !== mk || T.deck?.mkey !== mk) return null;
+      const c = T.current();
       const mains = T.list.filter((t) => !t.side);
-      return c ? { id: c.id, last: !mains.some((t) => t !== c && !T.done(t) && mains.indexOf(t) > mains.indexOf(c)) } : null;
-    });
+      return c ? { id: c.id, last: !mains.some((t) => t !== c && !T.done(t) && mains.indexOf(t) > mains.indexOf(c)), done: mains.filter((t) => T.done(t)).map((t) => t.id) } : null;
+    }, mkey);
     if (!ok(cur) || !cur) break;
-    if (before ? cur.id === before : cur.last) {
-      for (const s of sides) {
-        if (sidesDone.has(s)) continue;
+    // (a side story may name the thread it is played before: [id, before]; else the mission's `before`, else its last)
+    {
+      for (const sd of sides) {
+        const [s, at] = Array.isArray(sd) ? sd : [sd, before];
+        // (or once that thread is already behind Kai: a step before it can finish it on the way)
+        if (sidesDone.has(s) || !(at ? cur.id === at || cur.done.includes(at) : cur.last)) continue;
         sidesDone.add(s);
         await page.waitForFunction(() => !AZ.catching && !AZ.transitioning, null, { timeout: 30000 }).catch(() => {});
         const r = await az((s) => { const a = AZ.time; const out = LVP.side(s); return { out, secs: AZ.time - a }; }, s);
@@ -1169,9 +1182,9 @@ const playMission = async (mkey, { sides = [], before = null, at = {} } = {}) =>
     return { left, beat: !!AZ.deckWorld.flags.beat_done || AZ.edition.deck.mkey !== mk, placed: LVP.placed, walked: LVP.walked, metres: Math.round(LVP.metres), short: Math.round(LVP.short), log: LVP.log.slice(-6) };
   }, mkey);
   // (every side story named was played: one the mission's end overtook is not counted as played)
-  const sidesOk = sides.every((sd) => steps.some((s) => s.side === sd)) && steps.filter((s) => s.side).every((s) => Array.isArray(s.r) && s.r.every((x) => typeof x === 'object' && x.done));
+  const sidesOk = sides.map((sd) => (Array.isArray(sd) ? sd[0] : sd)).every((sd) => steps.some((s) => s.side === sd)) && steps.filter((s) => s.side).every((s) => Array.isArray(s.r) && s.r.every((x) => typeof x === 'object' && x.done));
   check(end.left.length === 0 && end.beat, `${mkey}: every main thread done, in order, to its end`, JSON.stringify({ left: end.left, steps: steps.filter((s) => !s.done).slice(0, 3), log: end.log }));
-  if (sides.length) check(sidesOk, `${mkey}: its side stories (${sides.join(', ')}) played to their outcome`, JSON.stringify(steps.filter((s) => s.side)));
+  if (sides.length) check(sidesOk, `${mkey}: its side stories (${sides.map((sd) => (Array.isArray(sd) ? sd[0] : sd)).join(', ')}) played to their outcome`, JSON.stringify({ sides: steps.filter((s) => s.side), steps: steps.map((s) => (s.side ? `side:${s.side}` : `${s.id}${s.done ? '' : ' (not done)'}`)) }));
   WALK[mkey] = { sideSecs: Math.round(sideSecs), setbacks: steps.reduce((a, x) => a + (x.setbacks || 0), 0), ...end };
   const fell = steps.flatMap((x) => (x.side ? (Array.isArray(x.r) ? x.r : []) : [x])).filter((x) => x.setbacks);
   if (fell.length) console.log(`  (${mkey}: setbacks in ${fell.map((x) => `${x.id} ${x.setbacks}`).join(', ')}; the last: ${await az(() => LVB.lastSetback)})`);
@@ -1180,7 +1193,10 @@ const playMission = async (mkey, { sides = [], before = null, at = {} } = {}) =>
 // on to the next mission: its hook plays out (lines at their own length), the gate's fade, the next place, its opening
 const finish = async () => {
   const from = await az(() => `${AZ.campaign.chapter}:${AZ.campaign.deck}`);
-  for (let i = 0; i < 400; i++) {
+  // (a mission whose last step ended it: the next one may have come in already, and is not waited out here)
+  const gone = PLAYED && (await az(() => AZ.edition.deck?.mkey)) !== PLAYED;
+  PLAYED = null;
+  for (let i = 0; i < 400 && !gone; i++) {
     const r = await az(() => { AZ.simulate(0.2); LVB.talkOut(30); return { at: `${AZ.campaign.chapter}:${AZ.campaign.deck}`, tr: !!AZ.transitioning }; });
     if (!ok(r) || (r.at !== from && !r.tr)) break;
     if (r.tr) await page.waitForTimeout(150);
@@ -1241,7 +1257,7 @@ check(m5f.water_route === true, 'chain B in the gorge: Tala\'s three gates in th
 await finish();
 
 // --- Mission 6: Ezra Moll, the arm, the hidden stair, the escapement, the recording; the Clockmaker's Debt --------------
-const m6 = await playMission('m06', { sides: ['debt'] });
+const m6 = await playMission('m06', { sides: ['gauge', 'debt'] });
 check(order(m6.steps, 'ezra', 'arm', 'boards', 'stair', 'clocks', 'recording') && (await az(() => AZ.facts.get('clock_set') && ['release', 'finish'].includes(AZ.facts.get('ezra_debt')) && LVB.said.includes('CREW: Which version of the question are you asking?'))),
   'Mission 6: "Which version of the question are you asking?"; the stair deduced from the boards in two years; three clocks in three years; the Debt settled', JSON.stringify(m6.steps.map((s) => s.id || s.side)));
 await finish();
@@ -1273,14 +1289,14 @@ const turning = await az(() => {
   return r;
 });
 check(typeof turning === 'object' && turning.bridged && turning.swept > 6 && turning.left < 0.6 && Math.abs(turning.y - 4) < 0.3 && turning.seized, 'Mission 7: at the first sky the turntable\'s gangway sweeps round, stops across the gap, and Kai walks over it up onto the next platform; in 2049 it is seized', JSON.stringify(turning));
-const m7 = await playMission('m07', { sides: ['cache'] });
+const m7 = await playMission('m07', { sides: ['extra', 'cache'] });
 const m7f = await az(() => ({ ...LVB.f('align_sun', 'align_star', 'align_new', 'mira_tape', 'ev_cache'), said: LVB.said.includes('NIKO: They didn\'t know when. They knew who.'), tape: LVB.voices.find((v) => v.who === 'MIRA9')?.fx }));
 check(m7f.align_sun && m7f.align_star && m7f.align_new && m7f.said && ['kept', 'left'].includes(m7f.mira_tape) && m7f.ev_cache, 'Mission 7: the sun, a star, the new star; "They didn\'t know when. They knew who."; Mira\'s tape kept or left', JSON.stringify(m7f));
 await finish();
 check(await az(() => LVB.voices.some((v) => v.who === 'MIRA9' && v.fx === 'recording' && v.text.startsWith('Kai, it\'s me. It\'s Friday.'))), 'its hook: Mira\'s tape, a nine-year-old\'s voice through the recording chain');
 
 // --- Mission 8: the confrontation sets rook_fate; the boot print; the last ten minutes played back; VERSION 17 ------
-const m8 = await playMission('m08', { sides: ['photo'], before: 'containment' });
+const m8 = await playMission('m08', { sides: ['photo', 'iven'], before: 'containment' });
 const m8f = await az(() => ({ fate: AZ.facts.get('rook_fate'), ...LVB.f('ev_boot_mine', 'ev_ninth_minute', 'lin_gone', 'version_17'),
   rook: LVB.said.includes('ROOK: By me. Write it down. I have waited twenty-three years for somebody to make me say it.'),
   v17: LVB.said.includes('NONE: TIMELINE: VERSION 17. PRIOR VERSIONS: NO SURVIVING RECORD.'), lin: LVB.said.includes('CREW: Because I am not the one who died.') }));
@@ -1339,9 +1355,9 @@ check(m10.mkey === 'm10' && m10.models.length >= 1 && m10.models.every((m) => m 
 check(m10.seen >= 1 && m10.mode === 'chase' && m10.eye === 'ff8a70' && m10.cone > 0.1, 'a trooper\'s cone sees Kai in front of it: suspicion, then the chase', JSON.stringify(m10));
 check(m10.caught && remember.n >= 1 && remember.range > m10.range0 && remember.said, 'Enemies who remember: after a catch the patrols start their rounds elsewhere and look further ("They moved.")', JSON.stringify({ m10, remember }));
 check(m10.director.length === 1, 'the cold open: the Director, as rook_fate made them, watches the capture feed', JSON.stringify(m10.director));
-const m10p = await playMission('m10', { sides: ['intake'], before: 'power' });
-check(order(m10p.steps, 'escape', 'sera', 'power', 'projector', 'prisoners', 'yard') && (await az(() => AZ.facts.get('echo_step') && (AZ.facts.get('prisoners_freed') || AZ.facts.get('prisoners_held')) && LVB.said.includes('SERA: For ending it.'))),
-  'Mission 10: Sera ("For ending it."), the two years\' power runs, the captured projector (Echo Step), the prisoners\' choice, the yard', JSON.stringify(m10p.steps.map((s) => s.id || s.side)));
+const m10p = await playMission('m10', { sides: ['intake', 'office', 'flood'], before: 'interview' });
+check(order(m10p.steps, 'escape', 'sera', 'power', 'interview', 'projector', 'looper', 'prisoners', 'yard', 'skiff') && (await az(() => AZ.facts.get('echo_step') && (AZ.facts.get('prisoners_freed') || AZ.facts.get('prisoners_held')) && LVB.said.includes('SERA: For ending it.'))),
+  'Mission 10: Sera ("For ending it."), the two years\' power runs, Lin\'s interview reel, the captured projector (Echo Step), the prisoner in the loop, the prisoners\' choice, the yard, Sera at the skiff', JSON.stringify(m10p.steps.map((s) => s.id || s.side)));
 await finish();
 
 // --- Mission 11: THE INVERTED HOSPITAL: the sound that is quieter as you approach, the hazards that go back where they
@@ -1568,7 +1584,7 @@ const chase12 = await az(() => {
   r.s0 = LVB.setbacks;
   return r;
 });
-const m12 = await playMission('m12', { sides: ['flowers', 'board'], before: 'ruin' });
+const m12 = await playMission('m12', { sides: ['flowers', 'board', 'rook'], before: 'ruin' });
 const m12f = await az(() => ({ ...LVB.f('t_m12_chase', 'm12_stair_shown', 't_m12_stair', 'm12_faced', 'route_known'), scar: LVB.said.includes('WITNESS: The person you become when you refuse to let go.'),
   vm: LVB.voices.some((v) => v.who === 'WITNESS' && v.fx === 'radio' && v.text.startsWith('Kai Varen. If you are hearing this')), setbacks: LVB.setbacks }));
 check(chase12.waited && m12f.t_m12_chase && m12.steps.find((s) => s.id === 'chase')?.done && m12.steps.find((s) => s.id === 'chase')?.setbacks === 0, 'Mission 12: the chase across the roofs never fails: he waits while Kai is far, and is never caught', JSON.stringify({ chase12, m12f }));
@@ -1581,7 +1597,7 @@ const quay = await az(() => { const at = AZ.player.pos.toArray(); AZ.edition.shi
 check(quay.n === quay.of && !quay.setbacks, 'Mission 13, walked: from the quay trench through the gap in the sandbags, past the container canyons to their gate', JSON.stringify(quay));
 // (U7 review) before the devices: each refused in a year not its own
 let m13wrong = null;
-const m13 = await playMission('m13', { sides: ['evidence'], before: 'stabilizer', at: { devices: async () => {
+const m13 = await playMission('m13', { sides: ['evidence', 'listeners', 'rollcall'], before: 'stabilizer', at: { devices: async () => {
   m13wrong = await az(() => [['dev_rail', 'PRESENT'], ['dev_crane', 'PAST'], ['dev_crater', 'PRESENT']].map(([id, y]) => ({ id, year: y, use: LVP.use(id, [y]), year2: AZ.engine.state(AZ.room), refused: !AZ.facts.get(id) })));
 } } });
 check(Array.isArray(m13wrong) && m13wrong.every((d) => d.use === 'ok' && d.refused), 'Mission 13: each device is refused in a year not its own (2026, 2049, 2196 each its own)', JSON.stringify(m13wrong));
@@ -1681,6 +1697,14 @@ await az(() => {
     echoes: (t) => { P.year('PAST'); P.go(lm(t.at), 2); g.simulate(0.4); },
   };
   P.own.m18 = {
+    // the potter's kiln opens only while the porch is held: hold it, then open the kiln behind it
+    kilnOpen: (t) => {
+      P.ready();
+      g.edition.inv.state.charge = g.edition.inv.cap;
+      P.log.push(`  reverse porch: ${P.rev('porch')}`);
+      P.use(t.scene, null, P.at(t)?.[1]);
+      P.release();
+    },
     // the core's slabs: from the stump, hold them (they come back last fallen first) and climb the stair while it holds
     slabStair: (t) => {
       P.ready();
@@ -1819,26 +1843,27 @@ await az(() => {
       P.present();
     },
   };
-  P.own.m22 = {
-    // the arm answers only on its counted beat: off the beat it jams; Kai tries again, on the turn
-    // (U8 review: as a player counts it: the arm stands for two clicks and turns on the third, with a bell; Kai waits for
-    // the bell and REVERSEs while it turns. No charge is given back between tries)
-    arm: (t) => {
+  // an arm that answers only on its counted beat: off the beat it jams; Kai tries again, on the turn
+  // (U8 review: as a player counts it: the arm stands for two clicks and turns on the third, with a bell; Kai waits for
+  // the bell and REVERSEs while it turns. No charge is given back between tries). Mission 22's clockmaker's arm, and
+  // (closing) the Finale's ring, counted with Mira
+  P.beatRev = (id) => {
       let jams = 0, tries = 0, heard = 0;
-      const inv = g.edition.inv, p = B.proc('clockArm'), b = p.rec.beat;
-      const said0 = B.said.length;
+      const inv = g.edition.inv, p = B.proc(id), b = p.rec.beat;
+      const done = `inv_${id}_done`;
+      const y0 = Math.max(0, p.rec.anchor?.pos?.[1] ?? 0);
       // stand where the arm is in view (as P.rev does), without pressing
       P.year(P.yearsOf(p.rec.when)[0]);
       for (const [dx, dz] of [[0, 3], [2.4, 1.6], [-2.4, 1.6], [0, -3], [3, 0], [-3, 0]]) {
         const a = inv.aimOf(p);
-        B.place(a[0] + dx, a[2] + dz, 0.9);
+        B.place(a[0] + dx, a[2] + dz, y0 + 0.9);
         g.simulate(0.1);
-        if (B.aim(inv.aimOf(p)) === 'clockArm') break;
+        if (B.aim(inv.aimOf(p)) === id) break;
       }
       // (how far the arm has turned between two moments: the angle between its two poses)
       const pose = () => p.meshes[0].quaternion.toArray();
       const moved = (a, c) => 2 * Math.acos(Math.min(1, Math.abs(a[0] * c[0] + a[1] * c[1] + a[2] * c[2] + a[3] * c[3])));
-      for (let k = 0; k < 6 && !P.f('inv_clockArm_done'); k++) {
+      for (let k = 0; k < 6 && !P.f(done); k++) {
         // the counts: the arm still between them (a tick each), then the turn (it swings, and a bell rings)
         P.wait(() => (inv.time % b.period) > b.on + 0.15 && (inv.time % 1) < 0.5, 4, 0.05);
         const a0 = pose();
@@ -1850,14 +1875,16 @@ await az(() => {
         if (moved(a1, pose()) > 0.05 && still < 0.02) heard++;
         tries++;
         const j0 = P.f('inv_jams') || 0;
-        P.log.push(`  reverse clockArm on the turn: ${P.holdHere('clockArm')}`);
+        P.log.push(`  reverse ${id} on the turn: ${P.holdHere(id)}`);
         if ((P.f('inv_jams') || 0) > j0) jams++;
-        P.wait(() => P.f('inv_clockArm_done') || !inv.active, 4, 0.2);
+        P.wait(() => P.f(done) || !inv.active, 4, 0.2);
         P.release();
         g.simulate(0.3);
       }
-      P.checks.arm = { done: P.f('inv_clockArm_done'), jams, tries, turnsSeen: heard, charge: +inv.state.charge.toFixed(1) };
-    },
+      return { done: P.f(done), jams, tries, turnsSeen: heard, charge: +inv.state.charge.toFixed(1) };
+  };
+  P.own.m22 = {
+    arm: () => { P.checks.arm = P.beatRev('clockArm'); },
     // the seals: last fitted, first out (MACHINE, GATE, WALL, RIVER)
     seals: () => {
       for (const b of ['MACHINE', 'GATE', 'WALL', 'RIVER']) {
@@ -1870,6 +1897,8 @@ await az(() => {
     },
   };
   P.own.m23 = {
+    // (closing) the ring's second, counted with Mira: the same beat as the clockmaker's arm
+    count: () => { P.checks.count = P.beatRev('ringArm'); },
     // the street that fell: he holds its far half; in 2026 its near half still stands
     street: (t) => {
       P.ready();
@@ -1929,7 +1958,7 @@ const drain14 = await az(() => {
   return { a, b };
 });
 check(drain14.b < drain14.a, 'in a shimmering patch of the 2196 street, the Chronolith\'s stability drains', JSON.stringify(drain14));
-const m14 = await playMission('m14', { sides: ['garden'] });
+const m14 = await playMission('m14', { sides: [['ticket', 'stones'], 'garden', 'flowers', 'school'], before: 'beacon' });
 const lift14 = await az(() => LVP.checks.lift);
 check(lift14?.held === 'held' && lift14.top > 22 && Math.abs(lift14.y - 24) < 0.8 && !lift14.setbacks && lift14.done, 'Mission 14: Kai stands in the fallen lift car, REVERSEs it, rides it 24 m up the bank and steps off onto the roof', JSON.stringify(lift14));
 const m14f = await az(() => ({ ...LVB.f('beacon_built', 'ev_memorial', 'ev_fresh_flowers', 'garden_restored'), sera: AZ.facts.get('trust_sera') }));
@@ -1962,21 +1991,21 @@ const spiral = await az(() => {
   return r;
 });
 check(spiral.n === spiral.of && !spiral.setbacks && Math.abs(spiral.y + 12) < 0.6, `the Museum's spiral, ${spiral.of} waypoints from the rim at 26 m down to the floor at -12 m`, JSON.stringify(spiral));
-const m16 = await playMission('m16', { sides: ['names'] });
+const m16 = await playMission('m16', { sides: ['cases', 'names'] });
 const m16f = await az(() => LVB.f('ev_memory_one', 'ev_memory_two', 'ev_memory_three', 'ev_museum_his', 'm16_photo', 'ev_erased'));
 check(Object.values(m16f).every(Boolean), 'Mission 16: three memories (the second on its reel, REVERSEd), the Witness\'s museum, the photograph; the Names beneath the city', JSON.stringify(m16f));
 await finish();
 
 // --- Mission 17 ------------------------------------------------------------------------------------------------------
 console.log('Act III, Mission 17: The Witness\'s Archive');
-const m17 = await playMission('m17', { sides: ['letter'] });
+const m17 = await playMission('m17', { sides: ['plaque', 'letter'] });
 const m17f = await az(() => ({ ...LVB.f('ev_two_logs', 'm17_price', 'ev_i_pressed'), letter: AZ.facts.get('letter'), said: LVB.said.includes('WITNESS: They became the price.') }));
 check(m17f.ev_two_logs && m17f.m17_price && m17f.ev_i_pressed && m17f.said && m17f.letter, 'Mission 17: the two logs (sealed), "They became the price.", the memory at the console; the Unsent Letter', JSON.stringify(m17f));
 await finish();
 
 // --- Mission 18 ------------------------------------------------------------------------------------------------------
 console.log('Act III, Mission 18: The Fracture');
-const m18 = await playMission('m18', { sides: ['signal'], before: 'climb' });
+const m18 = await playMission('m18', { sides: [['kiln', 'canyon'], 'signal'], before: 'climb' });
 const m18f = await az(() => ({ hold: LVP.checks.hold, slabs: LVP.checks.slabs, climb: LVP.checks.climb, ...LVB.f('m18_stabilized', 'ev_mira_message', 'last_signal'), cap: AZ.edition.inv.cap }));
 check(m18f.hold?.done && m18f.hold.anchored >= 2 && m18f.m18_stabilized && m18f.cap === 12, 'Mission 18: the pylons held in phase, each re-anchored in its own year; the Chronolith holds twelve seconds', JSON.stringify(m18f.hold));
 check(m18f.hold?.watchers > 0 && m18f.hold.setbacks === 0, 'Mission 18: the hold with the scavengers on their patrols: none walks by a pylon, nobody is caught at one', JSON.stringify(m18f.hold));
@@ -1995,7 +2024,7 @@ await az(() => { const at = AZ.player.pos.toArray(); AZ.edition.stability = 1; L
 await page.waitForTimeout(1200);
 await page.waitForFunction(() => !AZ.catching, null, { timeout: 90000 }).catch(() => {});
 await az(() => { const b = LVP.checks.mirror.back; LVB.place(b[0], b[2], b[1]); });
-const m19 = await playMission('m19', { sides: ['orren'] });
+const m19 = await playMission('m19', { sides: ['orren', 'gallery'] });
 const mirror19 = await az(() => LVP.checks.mirror);
 check(mirror19?.past.n === mirror19.past.of && !mirror19.past.setbacks && Math.abs(mirror19.past.y) < 0.6 && mirror19.present.setbacks > 0, 'the bridge in the reflection: in 2049 only water; in 2026 walked over it', JSON.stringify(mirror19));
 const m19f = await az(() => ({ ...LVB.f('ev_real_door', 'm19_orren3'), lead: AZ.facts.get('m20_lead'), said: LVB.said.some((l) => l.includes('the version of me that would forgive you')) }));
@@ -2024,7 +2053,7 @@ await finish();
 
 // --- Mission 21 ------------------------------------------------------------------------------------------------------
 console.log('Act IV, Mission 21: The Last Battle of the Continuum');
-const m21 = await playMission('m21', { sides: ['radio'] });
+const m21 = await playMission('m21', { sides: ['radio', 'glazier', 'brask'] });
 const m21f = await az(() => ({ elites: LVP.checks.elites, gapOne: LVP.checks.gapOne, gapTwo: LVP.checks.gapTwo, cellDoor: LVP.checks.cellDoor, ...LVB.f('arena_fallen', 'm21_wrists', 'ev_witness_plan', 'ev_requisition', 'm21_door'), ally: AZ.facts.get('ally') }));
 check(order(m21.steps, 'infiltrate', 'orders', 'plan', 'cellDoor', 'arena') && m21f.ev_witness_plan && m21f.ev_requisition && m21f.m21_door && m21f.cellDoor?.still < 0.3,
   'Mission 21 (U8 review): the command structure read (the wall, the orders, the Director\'s desk), what he is building deduced, and the elite at the cells stuck by its own rewind', JSON.stringify({ steps: m21.steps.map((x) => x.id || x.side), door: m21f.cellDoor }));
@@ -2036,7 +2065,8 @@ await finish();
 
 // --- Mission 22 ------------------------------------------------------------------------------------------------------
 console.log('Act IV, Mission 22: The First Second');
-const m22 = await playMission('m22', { sides: ['record'] });
+// (the side story before the final chamber: the chamber's own staged moment ends the mission as it plays)
+const m22 = await playMission('m22', { sides: ['record'], before: 'chamber' });
 const m22f = await az(() => ({ arm: LVP.checks.arm, ...LVB.f('ev_chain', 'inv_finalSeals_done', 'inv_twoLogs_done', 'ev_second_early', 'm22_reveal', 'm22_chamber', 'ev_unwritten_record'),
   logs: LVB.said.includes('NONE: Two logs, one second apart. RING: 16:02:00. CONSOLE BUTTON: 16:02:01.'), early: LVB.said.includes('WITNESS: …No. I was a second early.'), pa: LVB.voices.find((v) => v.text === 'Kai Varen. Do not build the machine.' && v.who === 'WITNESS')?.fx }));
 check(m22f.ev_chain && m22f.arm?.done && m22f.inv_finalSeals_done, 'Mission 22: the chain inferred; the arm reversed on its beat; the seals undone last fitted first', JSON.stringify(m22f));
@@ -2057,6 +2087,7 @@ await az(() => {
   c.step = (dt) => {
     step(dt);
     const a = c.active;
+    if (a && a !== window.__lastCine) { window.__lastCine = a; (window.__cines ||= []).push({ shots: a.shots?.length ?? null, ending: AZ.facts.get('ending') || null, lines: (a.lines || []).length }); }
     if (!a?.shots || !AZ.facts.get('ending')) return;
     const m = AZ.deckWorld.npcs.find((n) => n.n.id === 'mira_end');
     const st = (window.__stage ||= { shots: a.shots.length, maxI: 0, playerSeen: false, mira: false });
@@ -2065,14 +2096,14 @@ await az(() => {
     st.mira ||= !!m?.model.visible;
   };
 });
-const m23 = await playMission('m23', { sides: ['gallery'], before: 'mira' });
+const m23 = await playMission('m23', { sides: ['gallery'], before: 'meet' });
 const m23f = await az(() => ({ street: LVP.checks.street, bridge: LVP.checks.bridge, ...LVB.f('m23_asked'), ask: LVB.said.includes('MIRA: Ask me.'), time: LVB.said.includes('WITNESS: And, Kai. For once, you are on time.') }));
 check(m23f.street?.held === 'witness' && m23f.street.route.n === m23f.street.route.of && m23f.street.y > -0.5, 'the street that fell: he holds its far half; in 2026 Kai walks the near half and steps onto what he holds', JSON.stringify(m23f.street));
 check(m23f.bridge?.held === 'held' && m23f.bridge.witness && m23f.bridge.route.n === m23f.bridge.route.of && m23f.time, 'the swap: Kai holds the settlement\'s bridge, the Witness crosses, then Kai: "For once, you are on time."', JSON.stringify(m23f.bridge));
 check(m23f.m23_asked && m23f.ask, 'Mira: "Ask me."', JSON.stringify(m23f));
 for (let i = 0; i < 60 && !(await az(() => AZ.menu === 'ending')); i++) await az(() => { LVB.talkOut(30); AZ.simulate(0.5); });
 const staged = await az(() => window.__stage);
-check(staged?.shots === 5 && staged.maxI >= 3 && !staged.playerSeen && staged.mira, 'Ending C is staged: the ring, the 41\'s stop, Mira at a window box, then the road; Kai is never on screen', JSON.stringify(staged));
+check(staged?.shots === 5 && staged.maxI >= 3 && !staged.playerSeen && staged.mira, 'Ending C is staged: the ring, the 41\'s stop, Mira at a window box, then the road; Kai is never on screen', JSON.stringify({ staged, cines: await az(() => (window.__cines || []).slice(-8)) }));
 const ending = await az(() => ({ menu: AZ.menu, text: document.querySelector('#ending .body')?.textContent || '', ending: AZ.facts.get('ending') }));
 const endSaid = await az(() => ({ heard: AZ.edition.score.heard.filter((c) => /ending|postcredit/.test(c)), said: LVB.said.slice(-40) }));
 check(endSaid.heard.includes('ending:C') && endSaid.heard.includes('postcredit') && endSaid.said.includes('KAI: I finally found a second that belongs to nobody.') && endSaid.said.includes('NONE: Rain City, a Tuesday. The 41 is late.') && endSaid.said.includes('KAI: Live.'),
