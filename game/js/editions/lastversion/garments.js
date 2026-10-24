@@ -69,6 +69,83 @@ function bodyInfo(model, mesh, root) {
   return info;
 }
 
+// (castfix round 3) A body as it stands: a fresh actor's own pose (every converted model's, the arms down at 71.5 degrees
+// below the shoulders, where the bind pose has them at 42-44), once per model. Clothes are cut round this body, so they fit
+// the body as it is seen, and each point of them is then taken back to the bind pose through the very skinning it is
+// given (unskin), so that posed again it comes back where it was cut. (Cut round the bind pose, a cape over the shoulders
+// met the arms where they no longer are: the arms came down through it.)
+const REST = new Map();
+function restInfo(model) {
+  if (REST.has(model)) return REST.get(model);
+  const a = makeActor({ model });
+  if (a.userData.spec?.model !== model) return null;
+  // (standing as the people of a place stand: the first frames of its idle)
+  for (let f = 0; f < 3; f++) a.userData.animate?.(1 / 30, 0, f / 30, false);
+  a.updateMatrixWorld(true);
+  const root = a.userData.model || a;
+  let mesh = null;
+  a.traverse((o) => { if (o.isSkinnedMesh && !mesh && [].concat(o.material)[0]?.name === 'body') mesh = o; });
+  if (!mesh) a.traverse((o) => { if (o.isSkinnedMesh && !mesh) mesh = o; });
+  if (!mesh) return null;
+  const toRoot = new THREE.Matrix4().copy(root.matrixWorld).invert();
+  const toModel = toRoot.clone().multiply(mesh.matrixWorld);
+  const g = mesh.geometry;
+  const pos = g.attributes.position, si = g.attributes.skinIndex, sw = g.attributes.skinWeight;
+  const n = pos.count;
+  const q = new Float32Array(n * 3);
+  const v = new THREE.Vector3();
+  let floor = Infinity, top = -Infinity;
+  for (let i = 0; i < n; i++) {
+    mesh.applyBoneTransform(i, v.fromBufferAttribute(pos, i)).applyMatrix4(toModel);
+    q[i * 3] = v.x; q[i * 3 + 1] = v.y; q[i * 3 + 2] = v.z;
+    floor = Math.min(floor, v.y);
+    top = Math.max(top, v.y);
+  }
+  const bones = mesh.skeleton.bones, names = bones.map((b) => b.name);
+  const dom = new Int16Array(n);
+  for (let i = 0; i < n; i++) {
+    let best = 0;
+    for (let k = 1; k < 4; k++) if (sw.getComponent(i, k) > sw.getComponent(i, best)) best = k;
+    dom[i] = si.getComponent(i, best);
+  }
+  const at = {};
+  bones.forEach((b, i) => { at[names[i]] = new THREE.Vector3().setFromMatrixPosition(b.matrixWorld).applyMatrix4(toRoot); });
+  const skinI = new Uint16Array(n * 4), skinW = new Float32Array(n * 4);
+  for (let i = 0; i < n; i++) for (let c = 0; c < 4; c++) { skinI[i * 4 + c] = si.getComponent(i, c); skinW[i * 4 + c] = sw.getComponent(i, c); }
+  // a point of the model's frame back to the mesh's bind space under given weights, the inverse of three.js's skinning
+  // (local = bindMatrixInverse * B * bindMatrix * position, B the weights' blend of each bone's matrixWorld *
+  // boneInverse; bindMatrixInverse as the mesh keeps it, which an attached mesh sets from its matrixWorld):
+  // position = bindMatrix^-1 * B^-1 * bindMatrixInverse^-1 * matrixWorld^-1 * root * p
+  const K = bones.map((b, i) => new THREE.Matrix4().multiplyMatrices(b.matrixWorld, mesh.skeleton.boneInverses[i]));
+  const L = new THREE.Matrix4().copy(mesh.bindMatrixInverse).invert().multiply(new THREE.Matrix4().copy(mesh.matrixWorld).invert()).multiply(root.matrixWorld);
+  const R = new THREE.Matrix4().copy(mesh.bindMatrix).invert();
+  const B = new THREE.Matrix4(), e = new Float32Array(16);
+  // (and a normal, through the same chain's turn: the skinning turns normals by its own matrix, so they are cut in the
+  // pose the clothes are cut in; normals worked out on the unskinned shape, which can fold where neighbouring points take
+  // other bones, were shaded dark in creases that are not there)
+  const M = new THREE.Matrix4(), N3 = new THREE.Matrix3();
+  const unskin = (p, ji, wi, nrm = null) => {
+    e.fill(0);
+    for (let c = 0; c < 4; c++) if (wi[c] > 0) { const m = K[ji[c]].elements; for (let k = 0; k < 16; k++) e[k] += m[k] * wi[c]; }
+    B.fromArray(e).invert();
+    M.copy(R).multiply(B).multiply(L);
+    if (nrm) nrm.applyMatrix3(N3.setFromMatrix4(M)).normalize();
+    return p.applyMatrix4(M);
+  };
+  // (the hair's and the eyes' vertices, which share the body's buffer: a strap round the neck goes round the neck and a
+  // collar, not round a ponytail)
+  const hair = new Uint8Array(n);
+  a.traverse((o) => {
+    if (!o.isSkinnedMesh || o.geometry.attributes.position !== pos || !['hair', 'eye'].includes([].concat(o.material)[0]?.name)) return;
+    const ix = o.geometry.index;
+    if (ix) for (let k = 0; k < ix.count; k++) hair[ix.getX(k)] = 1;
+  });
+  a.traverse((o) => { if (o.userData.ownGeometry) o.geometry.dispose(); });
+  const info = { q, n, dom, names, at, floor, top, si: skinI, sw: skinW, unskin, hair, sets: new Map() };
+  REST.set(model, info);
+  return info;
+}
+
 // the body's vertices whose main bone matches, with a grid over them for nearest-vertex queries
 const CELL = 0.06;
 const cellKey = (i, j, k) => ((i + 512) * 1024 + (j + 512)) * 1024 + (k + 512);
@@ -94,6 +171,7 @@ const SETS = {
   torso: /^Bip01_(Spine1?|Spine2|Neck|[LR]_Clavicle)$/,
   shoulders: /^Bip01_([LR]_(Clavicle|UpperArm)|Spine2|Neck)$/,
   back: /^Bip01_(Pelvis|Spine1?|Spine2|Neck|[LR]_(Clavicle|Thigh|Calf))$/,
+  arms: /^Bip01_[LR]_UpperArm$/,
 };
 
 // the k nearest vertices of a subset to a point, searching out shell by shell of cells (kept in _nd/_nv, nearest first)
@@ -182,11 +260,120 @@ function outline(info, s, y, band, cx, cz) {
 }
 const grow = (R, prev) => (prev ? { ...R, l: Math.max(R.l, prev.l), r: Math.max(R.r, prev.r), f: Math.max(R.f, prev.f), b: Math.max(R.b, prev.b) } : R);
 
+// --- the body's surface direction by direction (castfix round 3) --------------------------------------------------------
+// A cloak cut from four extents (left, right, front, back) at each height is an ellipse round the body's widest points:
+// over the shoulders it stood off them like a shell, and a bib apron held its bust depth to the waist like a board. These
+// follow the body: a cut through it at a height, as cloth stretched round it would lie (the convex hull of its vertices
+// there), met by a ray from the centre in each direction.
+// the convex hull of points [x, z], anticlockwise (Andrew's monotone chain)
+function hull2(pts) {
+  if (pts.length < 3) return pts.slice();
+  const p = pts.slice().sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+  const cross = (o, a, b) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
+  const lo = [], hi = [];
+  for (const q of p) { while (lo.length >= 2 && cross(lo[lo.length - 2], lo[lo.length - 1], q) <= 0) lo.pop(); lo.push(q); }
+  for (let i = p.length - 1; i >= 0; i--) { const q = p[i]; while (hi.length >= 2 && cross(hi[hi.length - 2], hi[hi.length - 1], q) <= 0) hi.pop(); hi.push(q); }
+  return lo.slice(0, -1).concat(hi.slice(0, -1));
+}
+// how far from (cx, cz) a ray in direction a (0: the front, +z; pi/2: the body's left, +x) leaves a convex polygon (from
+// outside it, the polygon's furthest reach that way)
+function rayOut(poly, cx, cz, a) {
+  const ux = Math.sin(a), uz = Math.cos(a);
+  let best = 0, sup = 0;
+  for (let i = 0; i < poly.length; i++) {
+    const p = poly[i], q = poly[(i + 1) % poly.length];
+    const ex = q[0] - p[0], ez = q[1] - p[1], px = p[0] - cx, pz = p[1] - cz;
+    sup = Math.max(sup, px * ux + pz * uz);
+    const den = ux * ez - uz * ex;
+    if (Math.abs(den) < 1e-9) continue;
+    const t = (px * ez - pz * ex) / den, s = (px * uz - pz * ux) / den;
+    if (s >= -1e-6 && s <= 1 + 1e-6 && t > best) best = t;
+  }
+  return best || sup;
+}
+// a cut through the body at a height: the hull of the subsets' vertices within bandH of it and of any extra points
+// (null where nothing is there)
+function cut(info, sets, y, bandH, extra = []) {
+  const pts = extra.slice();
+  for (const s of sets) for (const i of s.idx) if (Math.abs(info.q[i * 3 + 1] - y) <= bandH) pts.push([info.q[i * 3], info.q[i * 3 + 2]]);
+  return pts.length < 3 ? null : hull2(pts);
+}
+// a cut's reach in each direction of `angles`
+function ringReach(info, sets, y, bandH, cx, cz, angles, extra = []) {
+  const poly = cut(info, sets, y, bandH, extra);
+  return poly ? angles.map((a) => rayOut(poly, cx, cz, a)) : null;
+}
+// how far forward (+z) a convex polygon reaches at a lateral x (held within its sides)
+function frontAt(poly, x) {
+  let lo = Infinity, hi = -Infinity;
+  for (const p of poly) { lo = Math.min(lo, p[0]); hi = Math.max(hi, p[0]); }
+  x = Math.min(hi - 1e-4, Math.max(lo + 1e-4, x));
+  let z = -Infinity;
+  for (let i = 0; i < poly.length; i++) {
+    const p = poly[i], q = poly[(i + 1) % poly.length];
+    if ((p[0] - x) * (q[0] - x) > 0 || p[0] === q[0]) continue;
+    z = Math.max(z, lerp(p[1], q[1], (x - p[0]) / (q[0] - p[0])));
+  }
+  return z;
+}
+const centroid = (poly) => poly.reduce((c, p) => [c[0] + p[0] / poly.length, c[1] + p[1] / poly.length], [0, 0]);
+// a sheet of rows of points [x, y, z] from the top down, each row as long as the others
+function sheet(out, piece, rows, skin, uvk = 1) {
+  const c = PIECES.indexOf(piece) * 2;
+  const base = out.pos.length / 3, cols = rows[0].length;
+  for (const row of rows) for (const [x, y, z] of row) {
+    out.pos.push(x, y, z);
+    out.uv.push(x * 4 * uvk, -y * 4 * uvk);
+    out.paint.push(c);
+    const [ji, wi] = skin(x, y, z);
+    out.ji.push(...ji);
+    out.wi.push(...wi);
+  }
+  for (let k = 0; k < rows.length - 1; k++) for (let j = 0; j < cols - 1; j++) {
+    const a = base + k * cols + j, b = a + 1, d = a + cols, e = d + 1;
+    out.idx.push(a, d, b, b, d, e);
+  }
+}
+// the directions of a band's columns (as band() lays them: an opening at the front of half-angle `open`, turned)
+const colAngles = (segs, open, turn = 0) => Array.from({ length: open ? segs + 1 : segs }, (_, j) => open + ((Math.PI * 2 - 2 * open) * j) / segs + turn);
+// an ellipse ring's reach in a direction
+const ellReach = (R, a) => Math.hypot(Math.sin(a) * (Math.sin(a) >= 0 ? R.l : R.r), Math.cos(a) * (Math.cos(a) >= 0 ? R.f : R.b));
+// a strap: a flat strip w wide along a path of points p [x, y, z], each with the outward direction n it lies on
+function strap(out, piece, path, w, skin, uvk = 1) {
+  const c = PIECES.indexOf(piece) * 2;
+  const base = out.pos.length / 3;
+  const n = path.length;
+  for (let k = 0; k < n; k++) {
+    const { p, n: nn } = path[k];
+    const A = path[Math.max(0, k - 1)].p, B = path[Math.min(n - 1, k + 1)].p;
+    const t = [B[0] - A[0], B[1] - A[1], B[2] - A[2]];
+    let ax = t[1] * nn[2] - t[2] * nn[1], ay = t[2] * nn[0] - t[0] * nn[2], az = t[0] * nn[1] - t[1] * nn[0];
+    const L = Math.hypot(ax, ay, az) || 1;
+    ax /= L; ay /= L; az /= L;
+    for (const sg of [-1, 1]) {
+      const x = p[0] + (ax * w * sg) / 2, y = p[1] + (ay * w * sg) / 2, z = p[2] + (az * w * sg) / 2;
+      out.pos.push(x, y, z);
+      out.uv.push(k * 0.25 * uvk, sg * 0.05 * uvk);
+      out.paint.push(c);
+      const [ji, wi] = skin(x, y, z);
+      out.ji.push(...ji);
+      out.wi.push(...wi);
+    }
+  }
+  for (let k = 0; k < n - 1; k++) {
+    const a = base + 2 * k;
+    out.idx.push(a, a + 2, a + 1, a + 1, a + 2, a + 3);
+  }
+}
+
 // A band of rings round the body. rings: [{ y, l, r, f, b }] from the top down (extents about cx, cz); the lowest ring's
 // height may depend on the angle (low(a)); an opening at the front (open: half-angle); pleats; the dye, and a stripe of
 // its own colour along the lower edge (a hard edge: the stripe's top ring is doubled). a = 0 is the front (+z), a = pi/2
 // the body's left (+x). skin(a, x, y, z) gives a vertex's [joints, weights].
-function band(out, { piece, rings, cx, cz, segs = 28, open = 0, turn = 0, pleats = 0, pleat = 0, stripe = false, stripeW = 0.04, low = null, skin }) {
+// (castfix round 3) A ring may instead give its reach column by column (rad: one per column, as colAngles lays them for
+// the ring's own opening), each column's own height (ys), and an opening of its own (open: a cloak fastened at the throat
+// opens wider down the chest); uvk scales the woven map (a small one: a smooth leather).
+function band(out, { piece, rings, cx, cz, segs = 28, open = 0, turn = 0, pleats = 0, pleat = 0, stripe = false, stripeW = 0.04, low = null, uvk = 1, skin }) {
   const c0 = PIECES.indexOf(piece) * 2, c1 = stripe ? c0 + 1 : null;
   const nR = rings.length;
   const yLast = rings[nR - 1].y;
@@ -198,20 +385,28 @@ function band(out, { piece, rings, cx, cz, segs = 28, open = 0, turn = 0, pleats
     const s = { R: last.R, edge: stripeW, t: 1 };
     plan.push({ ...s, c: c0 }, { ...s, c: c1, dup: true }, { ...last, c: c1, edge: 0 });
   }
-  const a0 = open, a1 = Math.PI * 2 - open;
   const cols = open ? segs + 1 : segs;
   const base = out.pos.length / 3;
   for (const P of plan) {
     const R = P.R;
+    const o = open ? R.open ?? open : 0;
+    const a0 = o, a1 = Math.PI * 2 - o;
     for (let j = 0; j < cols; j++) {
       const a = a0 + ((a1 - a0) * j) / segs + turn; // (turned half round, an opening at the front is one at the back)
       const sx = Math.sin(a), czz = Math.cos(a);
-      const ex = sx >= 0 ? R.l : R.r, ez = czz >= 0 ? R.f : R.b;
       const fold = pleats ? 1 + pleat * P.t * Math.sin(a * pleats) : 1;
-      const x = cx + sx * ex * fold, z = cz + czz * ez * fold;
-      const y = P.edge != null ? yLow(a) + P.edge : R.y + (yLow(a) - yLast) * P.t;
+      let x, z;
+      if (R.rad) {
+        x = cx + sx * R.rad[j] * fold;
+        z = cz + czz * R.rad[j] * fold;
+      } else {
+        const ex = sx >= 0 ? R.l : R.r, ez = czz >= 0 ? R.f : R.b;
+        x = cx + sx * ex * fold;
+        z = cz + czz * ez * fold;
+      }
+      const y = R.ys ? R.ys[j] + (P.edge ?? 0) : P.edge != null ? yLow(a) + P.edge : R.y + (yLow(a) - yLast) * P.t;
       out.pos.push(x, y, z);
-      out.uv.push((a / (Math.PI * 2)) * 6, -y * 4);
+      out.uv.push((a / (Math.PI * 2)) * 6 * uvk, -y * 4 * uvk);
       out.paint.push(P.c);
       const [ji, wi] = skin(a, x, y, z);
       out.ji.push(...ji);
@@ -271,6 +466,73 @@ function build(info, garb) {
     const s = skirtAt(y);
     return s ? { ...R, l: Math.max(R.l, s.l + e), r: Math.max(R.r, s.r + e), f: Math.max(R.f, s.f + e), b: Math.max(R.b, s.b + e) } : R;
   };
+  // (castfix round 3) the base of the neck: down from the neck's joint, the first height where a cut through the body is
+  // half as wide again as the neck (the shoulders' slope begins there)
+  let yNeck = null;
+  const neckBase = () => {
+    if (yNeck != null) return yNeck;
+    const half = (y) => {
+      let w = 0;
+      for (const i of S('torso').idx) if (Math.abs(info.q[i * 3 + 1] - y) < 0.006) w = Math.max(w, Math.abs(info.q[i * 3] - cx));
+      return w;
+    };
+    const y0 = Math.max(neck.y, yArm + 0.05) + 0.02, w0 = half(y0) || 0.06;
+    yNeck = yArm + 0.04;
+    for (let y = y0; y > yArm; y -= 0.004) if (half(y) > w0 * 1.5) { yNeck = y + 0.004; break; }
+    return yNeck;
+  };
+  // the arms near their roots (within r of the shoulder joint), for a cape's or a mantle's sides
+  const nearArm = (r) => ({ idx: S('arms').idx.filter((i) => { const x = info.q[i * 3], j = x > cx ? shL : shR; return Math.hypot(x - j.x, info.q[i * 3 + 1] - j.y, info.q[i * 3 + 2] - j.z) < r; }) });
+  // a piece that lies on the shoulders and hangs (the cloak's cape, a mantle): N rings from yTop down to low(a), each point
+  // at its own height on the cut through the body there (the hull of `sets` and of the clothes under it), e(t, a) out from
+  // it, and down each column never nearer in than the point above (cloth hangs); open(t): the opening at the front
+  const drape = ({ yTop, low, sets, segs, open = () => 0, N = 10, e }) => {
+    const cuts = new Map();
+    const cutAt = (y) => {
+      const key = Math.round(y * 400);
+      if (!cuts.has(key)) cuts.set(key, cut(info, sets, key / 400, 0.018, under(key / 400, 0.012)));
+      return cuts.get(key);
+    };
+    const rings = [];
+    let prev = null;
+    for (let k = 0; k < N; k++) {
+      const t = k / (N - 1), o = open(t), angs = colAngles(segs, o);
+      const ys = angs.map((a) => lerp(yTop, low(a), Math.pow(t, 1.15)));
+      const rad = angs.map((a, j) => {
+        const poly = cutAt(ys[j]);
+        const r = poly ? rayOut(poly, cx, cz, a) + e(t, a) : prev ? prev.rad[j] : 0.12;
+        return Math.max(r, prev ? prev.rad[j] : 0);
+      });
+      prev = { y: ys[0], ys, rad, open: o };
+      rings.push(prev);
+    }
+    return rings;
+  };
+  // the neck and the top of the chest with whatever collar is on them (the head's vertices too, not its hair or eyes)
+  const collar = () => {
+    if (info.sets.has('collar')) return info.sets.get('collar');
+    const re = /^Bip01_(Spine2|Neck|Head|[LR]_Clavicle)$/, idx = [];
+    for (let i = 0; i < info.n; i++) if (re.test(info.names[info.dom[i]]) && !info.hair?.[i]) idx.push(i);
+    const c = { idx };
+    info.sets.set('collar', c);
+    return c;
+  };
+  // the clothes a cloak goes over, as points round the body at a height: the skirt's ring, and the bodice's (and the belt
+  // a little under its lowest ring)
+  let bodice = null;
+  const bodiceAt = (y) => {
+    if (!bodice || y > bodice[0].y + 0.01) return null;
+    for (let k = 0; k < bodice.length - 1; k++) if (y >= bodice[k + 1].y) return grow(bodice[k], bodice[k + 1]);
+    return y >= bodice[bodice.length - 1].y - 0.035 ? bodice[bodice.length - 1] : null;
+  };
+  const under = (y, e) => {
+    const pts = [];
+    for (const R of [skirtAt(y), bodiceAt(y)]) {
+      if (!R) continue;
+      for (let q = 0; q < 24; q++) { const a = (q / 24) * Math.PI * 2, r = ellReach(R, a) + e; pts.push([cx + Math.sin(a) * r, cz + Math.cos(a) * r]); }
+    }
+    return pts;
+  };
 
   if (garb.skirt) {
     // a tunic's skirt from the waist to the ankles: round the hips, then falling straight past the legs, wider at the hem
@@ -306,34 +568,79 @@ function build(info, garb) {
     const top = yWaist + 0.02, hem = info.floor + (s.hem ?? 0.42);
     const rings = [];
     let prev = null;
-    const N = 8;
+    const N = 12;
+    // (castfix round 3: and round the legs' own cut, direction by direction, the convex hull of it and that ellipse: the
+    // legs stand apart, and an ellipse through their widest points alone passes inside the front of each)
+    const angs = colAngles(14, Math.PI - (s.wide ?? 1.1), Math.PI);
     for (let k = 0; k < N; k++) {
       const t = k / (N - 1);
       const y = lerp(top, hem, t);
       const o = outline(info, k < 2 ? S('hips') : S('legs'), y, 0.03, cx, cz) || prev;
-      const e = 0.03 + 0.03 * t;
+      // (a bib apron is tied close at the waist)
+      const e = s.bib != null ? 0.018 + 0.04 * t : 0.03 + 0.03 * t;
       const R = outside(grow({ y, l: o.l + e, r: o.r + e, f: o.f + e, b: o.b + e }, prev), y, 0.012);
+      const ell = [];
+      for (let q = 0; q < 32; q++) { const a = (q / 32) * Math.PI * 2, r = ellReach(R, a) - e; ell.push([cx + Math.sin(a) * r, cz + Math.cos(a) * r]); }
+      const cutR = ringReach(info, [k < 2 ? S('hips') : S('legs')], y, 0.03, cx, cz, angs, [...ell, ...under(y, 0.012 - e)]);
+      R.rad = angs.map((a, j) => Math.max(cutR ? cutR[j] + e : ellReach(R, a), prev ? prev.rad[j] : 0));
       rings.push(R);
       prev = R;
     }
     const pel = bone('Bip01_Pelvis');
-    band(out, { piece: 'apron', rings, cx, cz, segs: 14, open: Math.PI - (s.wide ?? 1.1), turn: Math.PI,
+    const uvk = s.leather ? 0.015 : 1; // (leather: the weave drawn so large it is only a shading)
+    band(out, { piece: 'apron', rings, cx, cz, segs: 14, open: Math.PI - (s.wide ?? 1.1), turn: Math.PI, uvk,
       skin: (a, x, y, z) => transfer(info, [[S('hips'), 1]], x, y, z, 14, [pel, Math.min(0.5, Math.max(0, (top - y) / (top - hem)) * 0.5)]) });
     if (s.bib != null) {
-      // the bib: up the front of the chest from the apron's top, over the jacket, narrower than the skirt
-      // (down into the apron's top, and never in nearer than the ring above it: a jacket's skirts flare at the hips)
+      // the bib: up the front of the chest from the apron's top, over the jacket, narrower than the skirt. (castfix round
+      // 3) It lies on the chest, direction by direction, and spans its hollows as stiff cloth would (the hull of the
+      // body's cuts, then of the bib's own profile down each column: from its top edge over the bust and in to the waist,
+      // where it goes down behind the apron's top), held up by a strap round the back of the neck. (Four extents a ring
+      // made it a board, standing out at the throat and holding its bust depth to the waist.)
       const yTop = yArm - s.bib, yBot = top - 0.03;
-      const bib = [];
-      const NB = 7;
-      for (let k = 0; k < NB; k++) {
-        const t = k / (NB - 1);
-        const y = lerp(yTop, yBot, t);
-        const o = outline(info, y > lerp(pelvis.y, spine2.y, 0.5) ? S('torso') : S('hips'), y, 0.025, cx, cz) || bib[k - 1];
-        const e = 0.028 + 0.03 * t * t;
-        bib.push(grow({ y, l: o.l + e, r: o.r + e, f: o.f + e, b: o.b + e }, t > 0.5 ? bib[k - 1] : null));
+      const bw = s.bibWide ?? 0.7, NB = 12, NC = 11;
+      // as wide as the old cut's (its half-angle round the chest at the bust), in straight columns
+      const yBust = yArm - 0.13;
+      const hw = (outline(info, S('torso'), yBust, 0.02, cx, cz) || { l: 0.15, r: 0.15 });
+      const W = Math.sin(bw) * (hw.l + hw.r + 0.056);
+      const xs = Array.from({ length: NC }, (_, j) => cx + (j / (NC - 1) - 0.5) * W);
+      const A0 = rings[0], ys = Array.from({ length: NB }, (_, k) => lerp(yTop, yBot, k / (NB - 1)));
+      const zs = ys.map((y, k) => {
+        const poly = k < NB - 1 ? cut(info, [S('torso'), S('hips')], y, 0.016) : null;
+        // (its lowest row behind the apron's top)
+        return xs.map((x) => (poly ? frontAt(poly, x) + 0.012
+          : cz + A0.f * Math.sqrt(1 - Math.min(0.96, ((x - cx) / (x > cx ? A0.l : A0.r)) ** 2)) - 0.006));
+      });
+      for (let j = 0; j < NC; j++) {
+        const z = zs.map((r) => r[j]);
+        for (let k = 1; k < NB - 1; k++) for (let i = 0; i < k; i++) for (let m = k + 1; m < NB; m++) zs[k][j] = Math.max(zs[k][j], lerp(z[i], z[m], (ys[i] - ys[k]) / (ys[i] - ys[m])));
       }
-      band(out, { piece: 'apron', rings: bib, cx, cz, segs: 10, open: Math.PI - (s.bibWide ?? 0.7), turn: Math.PI,
-        skin: (a, x, y, z) => transfer(info, [[S('torso'), 1]], x, y, z, 10) });
+      sheet(out, 'apron', ys.map((y, k) => xs.map((x, j) => [x, y, zs[k][j]])), (x, y, z) => transfer(info, [[S('torso'), 1]], x, y, z, 10), uvk);
+      // the neck strap: from the bib's top corners up the chest to the base of the neck, and round the back of it where
+      // it meets the shoulders
+      // (over the collar and the lapels of the jacket under it: the neck's, the chest's and the head's vertices, not its hair)
+      const yN = neckBase();
+      const ring = cut(info, [collar()], yN, 0.006) || [[cx - 0.06, cz], [cx + 0.06, cz], [cx, cz + 0.06], [cx, cz - 0.06]];
+      const [ncx, ncz] = centroid(ring);
+      const onNeck = (a, y) => {
+        const r = rayOut(cut(info, [collar()], y, 0.008) || ring, ncx, ncz, a) + 0.007;
+        return { p: [ncx + Math.sin(a) * r, y, ncz + Math.cos(a) * r], n: [Math.sin(a), 0.5, Math.cos(a)] };
+      };
+      const side = 0.95, path = [];
+      for (const sg of [-1, 1]) {
+        const j = sg < 0 ? 0 : NC - 1;
+        const P0 = [xs[j] - sg * 0.012, ys[0] - 0.018, zs[0][j] + 0.004], P1 = onNeck(sg * side, yN).p;
+        const leg = [];
+        for (let k = 0; k <= 6; k++) {
+          const t = k / 6, x = lerp(P0[0], P1[0], t), y = lerp(P0[1], P1[1], t);
+          const poly = cut(info, [collar()], y, 0.009);
+          const z = Math.max(lerp(P0[2], P1[2], t), poly ? frontAt(poly, x) + 0.007 : -Infinity);
+          leg.push({ p: [x, y, z], n: [0, 0.45, 1] });
+        }
+        path.push(sg < 0 ? leg : leg.reverse());
+      }
+      const arc = [];
+      for (let k = 1; k < 14; k++) arc.push(onNeck(lerp(-side, -(Math.PI * 2 - side), k / 14), yN + 0.01 * Math.sin((Math.PI * k) / 14)));
+      strap(out, 'apron', [...path[0], ...arc, ...path[1]], 0.02, (x, y, z) => transfer(info, [[S('torso'), 1]], x, y, z, 10), uvk);
     }
   }
 
@@ -351,10 +658,51 @@ function build(info, garb) {
       rings.push({ y, l: o.l + e, r: o.r + e, f: o.f + e, b: o.b + e });
     }
     if (skirt) rings[N - 1] = { ...rings[N - 1], l: Math.max(rings[N - 1].l, skirt[0].l), r: Math.max(rings[N - 1].r, skirt[0].r), f: Math.max(rings[N - 1].f, skirt[0].f), b: Math.max(rings[N - 1].b, skirt[0].b) };
+    bodice = rings;
     band(out, { piece: 'bodice', rings, cx, cz, segs: 30, skin: (a, x, y, z) => transfer(info, [[S('torso'), 1]], x, y, z, 10) });
   }
 
-  if (garb.cloak) {
+  if (garb.cloak && !garb.cloak.fit) {
+    // (castfix round 3) a long cloak fastened at the throat, in two layers as a cloak falls: a cape gathered round the
+    // base of the neck, lying on the slope of the shoulders and over the tops of the arms (its sides go where the arms go,
+    // as a mantle's do), and under it the cloak's length, from the shoulder blades, the chest and the hips to the hem,
+    // over the tunic and open down the front, the arms coming out at its sides under the cape. Each ring follows the body
+    // direction by direction (ringReach) and only ever hangs further out below. (An ellipse from the shoulders' widest
+    // reach stood off the shoulders and the back like a shell, its top a shelf at the collarbones.)
+    const s = garb.cloak;
+    const hem = info.floor + (s.hem ?? 0.22);
+    const open = s.open ?? 0.75, clasp = Math.min(open, 0.3);
+    const yTop = neckBase() + 0.012;
+    const capArm = nearArm(0.2);
+    const yFront = yArm - 0.15, yBack = yArm - 0.2, ySide = yArm - 0.13;
+    {
+      const segs = 32;
+      const low = (a) => { const fb = lerp(yFront, yBack, (1 - Math.cos(a)) / 2); return fb + (ySide - fb) * Math.pow(Math.sin(a), 2); };
+      const rings = drape({ yTop, low, sets: [S('torso'), capArm], segs, open: (t) => lerp(clasp, open, t * t * (3 - 2 * t)), e: (t) => 0.022 + 0.026 * t });
+      band(out, { piece: 'cloak', rings, cx, cz, segs, open, pleats: 7, pleat: 0.03,
+        // (each point as the body under it moves: the arms' near the arms, the chest's and the neck's elsewhere)
+        skin: (a, x, y, z) => transfer(info, [[S('shoulders'), 1]], x, y, z, 10) });
+    }
+    {
+      const segs = 30, rings = [];
+      let prev = null;
+      const yP = yArm - 0.06, N = 14;
+      const angs = colAngles(segs, open);
+      for (let k = 0; k < N; k++) {
+        const t = k / (N - 1), y = lerp(yP, hem, t);
+        const sets = y > pelvis.y + 0.08 ? [S('torso')] : [S('torso'), S('legs')];
+        let rad = ringReach(info, sets, y, 0.03, cx, cz, angs, under(y, 0.016));
+        if (!rad) rad = prev ? prev.rad.slice() : angs.map(() => 0.15);
+        const e = y > yBack ? 0.014 : 0.022;
+        rad = rad.map((r, j) => Math.max(r + e, prev ? prev.rad[j] : 0));
+        prev = { y, rad };
+        rings.push(prev);
+      }
+      const pel = bone('Bip01_Pelvis');
+      band(out, { piece: 'cloak', rings, cx, cz, segs, open, pleats: 6, pleat: 0.05, stripe: !!s.stripe, stripeW: 0.05,
+        skin: (a, x, y, z) => transfer(info, [[S('back'), 1]], x, y, z, 14, y < pelvis.y ? [pel, Math.min(0.6, ((pelvis.y - y) / (pelvis.y - hem)) * 0.6)] : null) });
+    }
+  } else if (garb.cloak) {
     // a long cloak from the shoulders down the back, open at the front, outside the skirt
     const s = garb.cloak;
     const yTop = lerp(spine2.y, neck.y, 0.75);
@@ -384,32 +732,20 @@ function build(info, garb) {
   }
 
   if (garb.mantle) {
-    // a short mantle: round the base of the neck, over the shoulders and down over the tops of the arms (its sides go
-    // where the arms go; its front and back stay with the chest), lower at the back than at the front
+    // a short mantle: round the base of the neck, over the shoulders and down over the tops of the arms, lower at the back
+    // than at the front. (castfix round 3) Like the cloak's cape, gathered at the base of the neck and lying on the slope of
+    // the shoulders, each ring following the body direction by direction and only hanging further out below, its points
+    // moving with the body under them (cut round an ellipse of the widest reach, it stood off the shoulders as a box)
     const s = garb.mantle;
-    const yTop = lerp(spine2.y, neck.y, 0.82);
+    const yTop = neckBase() + 0.012;
     const front = s.front ?? 0.24, back = s.back ?? 0.36, reach = s.reach ?? 0.2;
     const yFront = yArm - front, yBack = yArm - back;
-    const rings = [];
-    let prev = null;
-    const N = 10;
-    for (let k = 0; k < N; k++) {
-      const t = k / (N - 1);
-      const y = lerp(yTop, yFront, t);
-      const o = outline(info, S('torso'), y, 0.03, cx, cz) || prev;
-      const arm = armReach(y, 0.03, reach);
-      const e = 0.02 + 0.016 * t;
-      let R = { y, l: Math.max(o.l, arm.l) + e, r: Math.max(o.r, arm.r) + e, f: o.f + e, b: o.b + e + 0.015 * t };
-      R = grow(outside(R, y, 0.012), prev);
-      rings.push(R);
-      prev = R;
-    }
-    band(out, { piece: 'mantle', rings, cx, cz, segs: 36, pleats: 7, pleat: 0.045, stripe: !!s.stripe, stripeW: 0.035,
-      // (lower at the back, and in a shallow point at the front: a mantle's corners hang)
-      low: (a) => lerp(yFront, yBack, (1 - Math.cos(a)) / 2) - (s.point ?? 0.07) * Math.pow(Math.max(0, Math.cos(a)), 6),
-      // (the sides with the arms, the front and back with the chest: a mantle taking the arms' weights all round folded
-      // its front through itself as they came down)
-      skin: (a, x, y, z) => { const side = Math.pow(Math.abs(Math.sin(a)), 2); return transfer(info, [[S('shoulders'), side], [S('torso'), 1 - side]], x, y, z, 10); } });
+    const segs = 36;
+    // (lower at the back, and in a shallow point at the front: a mantle's corners hang)
+    const low = (a) => lerp(yFront, yBack, (1 - Math.cos(a)) / 2) - (s.point ?? 0.07) * Math.pow(Math.max(0, Math.cos(a)), 6);
+    const rings = drape({ yTop, low, sets: [S('torso'), nearArm(reach)], segs, e: (t, a) => 0.02 + 0.016 * t + 0.015 * t * Math.max(0, -Math.cos(a)) });
+    band(out, { piece: 'mantle', rings, cx, cz, segs, pleats: 7, pleat: 0.045, stripe: !!s.stripe, stripeW: 0.035,
+      skin: (a, x, y, z) => transfer(info, [[S('shoulders'), 1]], x, y, z, 10) });
   }
 
   if (garb.sash) {
@@ -456,20 +792,27 @@ function build(info, garb) {
     band(out, { piece: 'belt', rings, cx, cz, segs: 28, skin: (a, x, y, z) => transfer(info, [[S('hips'), 1]], x, y, z, 12) });
   }
 
-  // into the mesh's own space
+  // into the mesh's own space (cut round the body as it stands: each point back to the bind pose through its own skin)
   const p = new Float32Array(out.pos);
-  const v = new THREE.Vector3();
-  for (let i = 0; i < p.length; i += 3) {
-    v.set(p[i], p[i + 1], p[i + 2]).applyMatrix4(info.fromModel);
-    p[i] = v.x; p[i + 1] = v.y; p[i + 2] = v.z;
-  }
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.BufferAttribute(p, 3));
+  g.setIndex(out.idx);
+  g.computeVertexNormals(); // (in the pose the clothes are cut in)
+  const nr = g.attributes.normal.array;
+  const v = new THREE.Vector3(), nv = new THREE.Vector3();
+  for (let i = 0; i < p.length; i += 3) {
+    v.set(p[i], p[i + 1], p[i + 2]);
+    if (info.unskin) {
+      nv.set(nr[i], nr[i + 1], nr[i + 2]);
+      info.unskin(v, out.ji.slice((i / 3) * 4, (i / 3) * 4 + 4), out.wi.slice((i / 3) * 4, (i / 3) * 4 + 4), nv);
+      nr[i] = nv.x; nr[i + 1] = nv.y; nr[i + 2] = nv.z;
+    } else v.applyMatrix4(info.fromModel);
+    p[i] = v.x; p[i + 1] = v.y; p[i + 2] = v.z;
+  }
+  if (!info.unskin) g.computeVertexNormals();
   g.setAttribute('uv', new THREE.Float32BufferAttribute(out.uv, 2));
   g.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(out.ji, 4));
   g.setAttribute('skinWeight', new THREE.Float32BufferAttribute(out.wi, 4));
-  g.setIndex(out.idx);
-  g.computeVertexNormals();
   g.computeBoundingSphere();
   return { g, paint: Uint8Array.from(out.paint) };
 }
@@ -557,7 +900,7 @@ export function clothe(actor, model, garb, { hologram = false, glow = null } = {
   const shape = `${model}|${shapeOf(garb)}`;
   let base = SHAPES.get(shape);
   if (!base) {
-    base = build(bodyInfo(model, body, actor.userData.model || actor), garb);
+    base = build(restInfo(model) || bodyInfo(model, body, actor.userData.model || actor), garb);
     SHAPES.set(shape, base);
   }
   const key = `${model}|${JSON.stringify(garb)}`;
@@ -887,3 +1230,4 @@ export function hairdo(actor, model, src, { scale = 1, lift = 0, back = 0, holog
   P.body.parent.add(m);
   return m;
 }
+export const _dbg = { restInfo, ringReach, cut, colAngles, subset, SETS, outline, ellReach };

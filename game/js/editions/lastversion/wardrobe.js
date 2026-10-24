@@ -360,7 +360,7 @@ Object.assign(WARDROBE, {
     // of its light (holoProps), her back as bent, and her silver hair cards a pale light where a dark head of hair is dim
     // (her body map's cardigan and shirt are dyed as cloth, not kept as skin, everywhere but her hands: her face's paler
     // skin, which the dye's skin guard is sampled from, is near enough the cardigan's brown to have left squares of it)
-    elder: { body: ELDER_BODY.map((band, i) => dyeRule('madder', { band, ...(i < 3 ? { skin: false } : {}) })), hair: [{ sset: 0.03, light: 1.06, skin: false }], stoop: 0.28, holoProps: true,
+    elder: { body: ELDER_BODY.map((band, i) => dyeRule('madder', { band, ...(i < 3 ? { skin: false } : {}) })), hair: [{ sset: 0.03, light: 1.06, skin: false }], stoop: 0.42, holoProps: true,
       garb: { skirt: { dye: D('madder'), stripe: D('weld'), hem: 0.03, flare: 1.15 }, bodice: { dye: D('madder') }, cloak: { dye: D('brown'), stripe: D('weld'), hem: 0.08 }, belt: { dye: D('weld') } }, props: ['staff'] },
   },
 });
@@ -446,7 +446,7 @@ WARDROBE.rb_glazier = { glazier: {
     { band: [0, 0.55, 0.33, 1], to: 0.08, sset: 0.12, lrange: [0.1, 0.26] }, { band: [0.67, 0.55, 1, 1], to: 0.08, sset: 0.12, lrange: [0.1, 0.26] }],
   hair: [{ to: 0.045, sset: 0.66, lrange: [0.24, 0.58], skin: false }],
   head: GLAZIER_HAIR.map((band) => ({ band, lmax: 0.36, to: 0.045, sset: 0.6, lrange: [0.2, 0.48], skin: false })),
-  garb: { apron: { dye: '#9a683c', hem: 0.4, wide: 1.2, bib: -0.05, bibWide: 0.62 }, belt: { dye: '#3a2a1e', w: 0.05 } },
+  garb: { apron: { dye: '#9a683c', hem: 0.4, wide: 1.2, bib: 0.02, bibWide: 0.62, leather: true }, belt: { dye: '#3a2a1e', w: 0.05 } },
   props: ['glassLifter'],
 } };
 
