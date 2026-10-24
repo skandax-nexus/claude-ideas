@@ -797,6 +797,43 @@ in 5,143 recordings. Each mission's place is 1.7-6.8 ha (v2.0's generated rooms:
   to measure it) is 45,849,315 bytes with the 50 models, 4.15 MB under the 50 MB budget; its preview 122 files and
   62,883,567 bytes. *Not changed:* an echo's face still shows its mouth and the back of its hair through it (every
   hologram's, the Elder's too: the bodies of light do not write depth); the whole browser bot was not run here.
+- **Casting, a second look** (2026-10-24, on `78503de`; independent checks of the last four): four things they found
+  are fixed. *Tomas and young Kai were one boy in light.* Tomas's child's body is young Kai's (Children/Male_Child_01),
+  and both are only ever echoes, which are drawn in one light with no maps: Tomas's sandy hair, freckles and brick
+  jersey never showed, and the boy's hair is only painted, so both read as the same bald cyan boy (Tomas only taller,
+  in a coat). Adult hair cards moved onto him (`hairdo`) were tried and are only wisps in light. Each boy's echo now
+  wears a head of hair of its own (`garments.js hairMass`: a shell over the skull from the crown to a hairline, a little
+  out from the head's own surface, its edge cut into locks by a strand map, a brighter, denser light than the face):
+  Tomas a shaggy mop with a ragged fringe to his brows and over his ears, young Kai a short crop with his brow clear
+  (on his echoes only; solid, in Mission 20's cold open, his painted brown hair is his own). *Echoes showed the insides
+  of their mouths* (an open grin on Tomas, a hollow face on the Elder's Mission 19 echo): every echo the edition dresses
+  is now drawn as its nearest surface (`wardrobe.js holoDepth`: each skinned part first into the depth buffer alone,
+  after everything solid, then in its light where it is nearest; cut-out hair is left out of the depth pass and drawn
+  over the head), and its single surface is denser (0.72, where three of its own layers at 0.55 made about 0.8), its
+  flicker too. Shared code (world/Actors.js) is untouched. *A white patch on the Elder's breastbone*, in her robe's
+  neck at face and talk distance in all three Mission 4 placements: it was on her head map, which carries the neck
+  and the upper chest; the `age` edit's box for her bun reached the bottom of that piece and silvered its corner. The
+  bun is now only the map's own hair islands (a flood fill finds the face's piece and leaves it out), and she is
+  reconverted. Her aged, paler face had also moved the skin colour the dye guards (sampled from the face) near her
+  cardigan's brown, which left squares of it in her madder robe: her body is dyed as cloth everywhere but her hands.
+  *Niko as an old man* (Mission 7's cold open) was a young face with grey hair: he is his own model of the same face
+  now (`rb_niko_old`, Adults/Male_Adult_09, `tools/rocketbox-textures.py` EDITS `age_m`: white hair and tail, a short
+  white beard thinning to stubble, lines at the brow, the eyes and the mouth, paler skin, a few age spots), so up close
+  he is an old man and still Niko. The edition's models: 47 (51 files with the four shared, 30.48 MB; the unit test's
+  budget for them is 31 MB now, from 30). *Checked:* `npm test` 171/171, with a new test (the two boys of one body each
+  with hair of his own on his echo, a mop and a crop; the depth pass on a built echo: depth only, after the solid scene,
+  for the skinned parts but not cut-out hair, its surface thickened once; the Elder's bun its own islands and her robe
+  dyed as cloth; old Niko on Niko's face with aged maps, his cards over 60% grey, the young Niko's under 10%); the cast
+  dump changes one row (Mission 7's cold open, `rb_niko_old/older`); `voice-lv.sh check` reports all eight packs up to
+  date (no line changed). Close, full-length and wide shots in each mission's own light, all looked at, with no page
+  error: Niko (Missions 4, 5, 7, the cold opens, Case B; the old man in Mission 7's), the Elder (Mission 4's three
+  placements: her crown RGB 103-144, saturation 0.04-0.05, the patch gone; her echoes in Missions 19 and 22), Tomas
+  (Mission 15, Cases C and the Train, each beginning at its own case so its own mission's people load), young Kai
+  (Mission 11) and the glazier (Missions 12, 21, 23). The edition's APK is 46,439,225 bytes with the 51 models, 3.56 MB
+  under the 50 MB budget; its preview 123 files, 63,788,421 bytes. *Not changed:* an echo still shows no maps (its
+  freckles, its clothes' colours); the whole browser bot was not run here. (The shots' first Mission 4 run lost its
+  WebGL context once: the machine's disk was full, 42 MB free; with room made, by removing the two APK build folders
+  the build script recreates, every run was clean.)
 - **The CASE FILES** (v2.1, U8; `cases.js`; replaces the Cases chapter): fourteen stories (chains A–D, the Child in
   Three Photographs, the Train That Arrives Yesterday, the Unsent Letter, the House with No Owner, the Last Signal, the
   Names Beneath the City, the Clockmaker's Debt, the Ninth Minute: Evidence, the Survivor's Garden, the Unwritten

@@ -246,11 +246,11 @@ encounter end in lethal combat".
 
 ### Casting, crowds and watchers (v2.1, U4; OVERHAUL.md §6)
 
-Every person looks like who they are: role, gender, age, era. Forty-six Microsoft Rocketbox avatars
+Every person looks like who they are: role, gender, age, era. Forty-seven Microsoft Rocketbox conversions
 (MIT; `tools/rocketbox-to-glb.mjs --edition lastversion`, credited in `game/assets/characters/CREDITS.md`)
 join the four Station Zero models the edition uses (Xbot, Kai's SHIRTSLEEVES look, two doctors' coats):
-twenty-two named people at 1024 px (Mira, who is also Dr. Lin, young Kai, the Child, Rook, Niko, Jun, Tala,
-Pryce, Dale, the Elder, Ezra, Rhea, Brask, Odile, the Florist, the Warden, Sera, Mara, Iven, the
+twenty-three named people at 1024 px (Mira, who is also Dr. Lin, young Kai, the Child, Rook, Niko, Niko as an old man,
+Jun, Tala, Pryce, Dale, the Elder, Ezra, Rhea, Brask, Odile, the Florist, the Warden, Sera, Mara, Iven, the
 Gardener, the Helix receptionist, the glazier), two only ever seen as light at 512 px (Tomas, Officer Haig) and
 twenty-two crowd bodies at 512 px. No one but Kai wears a Station Zero character's face
 (the U4 review took Juno's, Varga's, Kade's, Ren's FIELD JACKET and the airline captain out of the
@@ -260,14 +260,18 @@ eyes), parts left out (`RB_DROP`: the pistols), a painted-out sleeve flag on the
 `TRANSPLANT`: a piece of a map covered with plain cloth from the same map (the 38 on the boys' jersey), and
 `EDITS`, one output's own maps changed before they are shrunk (`age`: the Elder's hair silvered on her head map and
 hair cards, lines at the brow, eyes, mouth and neck drawn into her colour and normal maps, her skin and lips paler, a
-few age spots; `tomas`: Tomas's hair sandy and freckles on the boy's body young Kai has too).
+few age spots; its bun is only the map's own hair islands, found off the face's piece by a flood fill, since the box
+round them reaches the bottom of the neck's and chest's piece and silvered a corner of her breastbone; `age_m`: the
+same for Niko as an old man on Male_Adult_09's map, his black hair and tail salt and pepper, the lines of a man of
+seventy, a short grey beard thinning to stubble on the cheeks; `tomas`: Tomas's hair sandy and freckles on the boy's
+body young Kai has too, kept in his model though only his echo is ever seen, which shows no maps).
 
 | Module | What it does |
 | --- | --- |
 | `npcs.js` | Every entry carries `model`, `variant`, `height`, `vid` (its recorded voice, U5) and `walk`. The checkpoint officer is Officer Pryce on `rb_security_f` (Helix black), not a doctor; Dr. Lin and adult Mira share one mesh in two wardrobes (her face is the fair clue); the Witness wears Kai's; Ward 32 holds a silent, flickering figure of Mira in a gown, and Nurse Odile speaks for the ward. Pronouns match the body and never change. `AMBIENT` gives each region its crowd roles' names and voice pools. |
 | `casting.js` | `LV_MODELS` (registered into Actors' table when the runtime is built, so nothing loads at boot but Kai), `SHARED_MODELS`, `MANIFEST` (the APK's and preview's character files), `CHAPTER_CAST` (the models each chapter's people, crowds and watchers use; a unit test checks it against every level). A chapter's models load behind its card, one at a time with a frame between (`loadCast`); the title starts loading the chapter most likely to be played next, and a chapter's last mission the next chapter's. Actors has no release, so models stay loaded for the session. `lodUpdate` keeps the 16 nearest people within 40 m posing every frame, the rest within 70 m four times a second, anyone farther still. |
 | `wardrobe.js` | `WARDROBE[model][variant]`: parts hidden (the stethoscope), colour rules per material map (a UV band, a lightness window, a hue and saturation selection; a new hue, saturation and lightness), hair tint, props (umbrella, lantern, staff, trowel, clipboard, loupe, lanyard, beret, visor, badge, a raincoat's hood fitted to its wearer's head, a trooper's helmet and plate carrier for Sera's disguise, the glazier's suction lifter, built from primitives once), an old back's bend (`stoop`, after every pose). Coats are recolours, not shells: Mira's yellow rain jacket and the toy boy's red one dye the tunic or jersey and its sleeves to the wrist. A recolour runs once per model, variant and map on the GPU (one quad into a mipmapped render target) and is cached; the copy is freed with the people who wore it. Skin is protected by the person's own skin colour, sampled from their face, and by the corners of the body map that hold their hands (found once per model). Rain City's crowds are 15% darker (wet) and carry umbrellas. |
-| `garments.js` | Clothes made for a body (the settlement's people, three thousand years ago, and the few today who need a coat or an apron): a variant's `garb` lists the pieces (a tunic's `skirt` and `bodice`, a `mantle`, a `cloak`, a `sash`, a `belt`, an `apron`, with a `bib` up the chest a work apron; a cloak `fit` to the body and hemmed at the knee is a lab coat, or a boy's school coat). Each is built once per model and outfit as rings that follow the body's own outline in its bind pose, a little out from it and falling free below the knee, and skinned to the body's skeleton by weight transfer (each vertex takes the bone weights of the nearest body vertices under it, the skirt's front and back from the legs, its top from the hips), so it moves with the body; the pieces are merged into one draw call per person, their dyes vertex colours over one woven map. Shapes are cached without their dyes (about 30 ms a model and outfit), a new dye costs under a millisecond. `hairdo` moves one model's hair cards onto another's head (the settlement's girls wear its women's hair on the boy's body). Holograms are dressed the same way. |
+| `garments.js` | Clothes made for a body (the settlement's people, three thousand years ago, and the few today who need a coat or an apron): a variant's `garb` lists the pieces (a tunic's `skirt` and `bodice`, a `mantle`, a `cloak`, a `sash`, a `belt`, an `apron`, with a `bib` up the chest a work apron; a cloak `fit` to the body and hemmed at the knee is a lab coat, or a boy's school coat). Each is built once per model and outfit as rings that follow the body's own outline in its bind pose, a little out from it and falling free below the knee, and skinned to the body's skeleton by weight transfer (each vertex takes the bone weights of the nearest body vertices under it, the skirt's front and back from the legs, its top from the hips), so it moves with the body; the pieces are merged into one draw call per person, their dyes vertex colours over one woven map. Shapes are cached without their dyes (about 30 ms a model and outfit), a new dye costs under a millisecond. `hairdo` moves one model's hair cards onto another's head (the settlement's girls wear its women's hair on the boy's body). `hairMass` (castfix round 2) gives a head whose hair is only painted a head of hair of its own: a shell from the crown to a hairline (the brow, over the ears, the nape), each direction a little out from the head's own surface, thickest at the crown, its edge cut into locks by a strand map; on an echo it is a brighter, denser light than the face under it, so the hair's shape shows. Holograms are dressed the same way. |
 | `crowds.js` | `castLevel(level, deck)`: the named people in this mission's wardrobe (`story.cast` = copies of `CAST`, indices unchanged, then the level's own), the hand-placed passers-by by who they are (M1's toy child in a red raincoat, the trapped pair, M3's technicians, the settlement's craftswoman, storyteller, potter, mother, water keeper, astronomer and girls), and the crowds along `level.crowd` by era and role (present 2026/2049, ancient, 2196): no named face is ever in a crowd (`EXCEPTIONS` is empty: the settlement has six faces of its own and two old men, the receptionist and Officer Haig have their own), nor the face of someone placed by hand in the same place, one face walks at most four times a year in a place's crowds and each time in other clothes (`CAP`; troopers, prisoners and holograms aside), crowd faces never cross eras (but `rb_child_m2`), the Place Outside Time's echoes are people Kai has met in their own faces and names (`MET`), heights vary within 4% and paces within 8%, and a place's people stay within its budget (24, or its `people`). Each mission dresses its crowds from its own palette (`PALETTE`: the settlement's fire, water, sky, festival and ash dyes; today's rain, autumn, summer, ward, midday, winter, memory, grey and bright for the casual roles), so no two missions' crowds wear the same clothes; a role is cast on bodies dressed for it and named for it (`ROLE_NAMES`, unless the region names it: paramedics are the paramedic's body, researchers wear lab coats, technicians Helix's slate work clothes, never a T-shirt), and the old (`OLD`) walk slower and speak with old voices. Crowds walk their paths, bark from their region's pool and stop with the clocks where a mission says so (`crowdFreeze`). |
 | `watchers.js` | After a level is built the Observer inside each sentinel is swapped, in place, for the mission's watcher (D14): the Helix security drone built from primitives (a heavier one for the unit that rewinds its damage), a Continuum trooper with a helmet torch, a scavenger watching by lantern (with the closed-circle badge in M7), the Unwritten's rust hoods, the Spire's elites with a lit visor, or M17's red hologram of the player's own look. Cones, eyes and suspicion stay DeckWorld's; a person walks by how far its sentinel moved. M18, M22 and M23 show the drone in their present and past fragments and a scavenger in 2196. |
 
@@ -278,11 +282,15 @@ kurta, hijab and abaya avatars that read as present-day Gulf and Islamic dress a
 pass; Rocketbox has nothing that reads as ancient, so the clothes are made, not chosen). Tala and the Elder are
 reconverted from faces with their own hair, and Niko is on Adults/Male_Adult_09, his own black hair long and tied
 back (Male_Adult_15, the kurta-and-taqiyah avatar whose woven cap the wardrobe only dyed dark, is gone: it read as a
-prayer cap at talk distance); his older look (Mission 7's cold open) greys it. The Elder is old in her face as well
+prayer cap at talk distance). As the old man of Mission 7's cold open he is his own model of the same face
+(`rb_niko_old`, `EDITS` `age_m`): white hair and tail, a short white beard, the brow and eyes lined, his skin paler, a
+staff (greying the young man's hair alone left a man of thirty with grey hair). The Elder is old in her face as well
 as her bearing: her maps are aged at conversion (`EDITS` `age`), her hair cards stay silver in any light (her
 wardrobe's rule, skin protection off: in Mission 4's dusk the crown samples a neutral grey, about RGB 100-145, where it
 was near black), her back is bent after every pose (`stoop`), she walks at 0.8 with her staff, and her echoes in
-Missions 19 and 22 carry the staff of their light (`holoProps`) and her pale hair cards.
+Missions 19 and 22 carry the staff of their light (`holoProps`) and her pale hair cards. Her robe is dyed as cloth
+everywhere but her hands (her aged face's paler skin, which the dye's skin guard is sampled from, is near the
+cardigan's brown, and left it in squares).
 
 People who come back are dressed as no crowd is, anywhere in the campaign or the cases (a unit test walks every
 level): the glazier Kai holds the frame for on Helix's roof (Mission 12), who is at the Spire's glass (Mission 21)
@@ -290,10 +298,20 @@ and on the road (Mission 23), has a face of her own (`rb_glazier`, Professions/B
 each time (copper hair, a petrol work jacket, charcoal trousers, a leather bib apron and tool belt, a suction
 lifter), where she wore the technicians' paramedic body and slate; Mission 14's ticket keeper, on the Finale's road
 too, wears the 41's faded navy and the amber strap of his ticket bag, not the 'faded' khaki 2196's traders walk in.
-Tomas Vale, thirteen, is on a child's body (Children/Male_Child_01, the body young Kai has, with his own sandy hair
-and freckles in his maps) at 1.52 m, in a brick school jersey under a wool coat to the knee that his echo wears too,
-so no crowd child of 2196 and not young Kai has his outline (he was Adults/Male_Adult_01 scaled to 1.42 m, a small
-man).
+Tomas Vale, thirteen, is on a child's body (Children/Male_Child_01, the body young Kai has) at 1.52 m, under a wool
+coat to the knee (he was Adults/Male_Adult_01 scaled to 1.42 m, a small man). He is only ever an echo (Mission 15 and
+the c_c and c_train replays), and an echo is one light with no maps, so the sandy hair and freckles in his model and
+his brick school jersey never show, and the boy's hair is only painted: as light he was young Kai's bald head again.
+His echo wears a head of hair of its own (`hairMass`): a shaggy mop, a ragged fringe to the brows and over the ears;
+young Kai's echoes (Missions 11, 17, 20) wear a short crop, the brow clear (`holoOnly`: solid, in Mission 20's cold
+open, his painted brown hair is his own). Mop and crop, the coat and 10 cm tell the two boys apart in their light.
+
+Echoes show their nearest surface only (castfix round 2, `wardrobe.js holoDepth`): each skinned part of an echo is
+first drawn into the depth buffer alone, after everything solid, then in its light where it is nearest, so the inside
+of a mouth (an open grin), the backs of the eyes (a hollow face), the far side of the head and the body through its
+clothes no longer show through. Hair cards and a hair mass are left out of the depth pass (their empty texels would
+hide the face) and drawn over the head; an echo's surface is denser (0.72, from world/Actors.js's 0.55, which was seen
+through two or three of its own layers), through its flicker too. Shared code is untouched.
 
 ### Voice and score (v2.1, U5; OVERHAUL.md §8)
 
