@@ -281,7 +281,7 @@ const title = await az(() => ({
   ver: document.querySelector('#title .ver').textContent, edition: !!AZ.edition, hero: AZ.settings.hero?.id,
 }));
 check(title.h1 === 'AFTERZERO' && title.sub === 'THE LAST VERSION OF EARTH', 'the title reads AFTERZERO / THE LAST VERSION OF EARTH', JSON.stringify(title));
-check(/v2\.1/.test(title.ver) && title.edition && title.hero === 'real_m', 'v2.1, the edition is on, and you are Kai (a realistic man)', JSON.stringify(title));
+check(/v2\.0/.test(title.ver) && title.edition && title.hero === 'real_m', 'v2.0, the edition is on, and you are Kai (a realistic man)', JSON.stringify(title));
 // --- sound: the first tap (Chromium's autoplay policy: no sound before a user gesture) -----------------------
 const before = await az(() => AZ.audio.ctx?.state || 'none');
 await page.mouse.click(480, 120);

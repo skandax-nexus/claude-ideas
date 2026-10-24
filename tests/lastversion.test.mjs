@@ -155,7 +155,7 @@ test('the edition keeps its own saves and settings, and the default edition is u
   assert.equal(LV.subtitle, 'THE LAST VERSION OF EARTH');
   assert.deepEqual(Object.values(LV.labels), ['2049', '2026', '2196']);
   const build = fs.readFileSync(new URL('../android/build-apk.sh', import.meta.url), 'utf8');
-  for (const s of ['com.afterzero.lastversion', 'versionName="2.1.0"', 'versionCode="210"', 'AFTERZERO-LastVersion-v$VER.apk', 'AFTERZERO: Last Version', "window.AZ_EDITION='lastversion'"]) assert.ok(build.includes(s), `build-apk.sh: ${s}`);
+  for (const s of ['com.afterzero.lastversion', 'versionName="2.0.0"', 'versionCode="200"', 'AFTERZERO-LastVersion-v$VER.apk', 'AFTERZERO: Last Version', "window.AZ_EDITION='lastversion'"]) assert.ok(build.includes(s), `build-apk.sh: ${s}`);
 });
 
 // tools/voice-pack.py's VOICES: { speaker: [spec, speed, pitch] } (a spec may blend voices: 'a*w+b*w')
