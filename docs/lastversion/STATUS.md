@@ -90,7 +90,7 @@ in 5,143 recordings. Each mission's place is 1.7-6.8 ha (v2.0's generated rooms:
   THINK / ECHO STEP / CASE in the dock, the CASE BOARD), its own Android build (`EDITION=lastversion bash android/build-apk.sh`: app
   "AFTERZERO: Last Version 2.1", `com.afterzero.lastversion.v2_1`, versionName 2.1.0,
   `AFTERZERO-LastVersion-v2.1.apk`, preview page with `window.AZ_EDITION='lastversion'`, published
-  at (published with the release); v2.0, before the overhaul, stays its own app, "AFTERZERO: Last Version",
+  at [claude.ai/artifact/HsWBbg3ppPShrBPVPaBhaE](https://claude.ai/artifact/HsWBbg3ppPShrBPVPaBhaE); v2.0, before the overhaul, stays its own app, "AFTERZERO: Last Version",
   `com.afterzero.lastversion`, at [claude.ai/artifact/GDpG6YCybK2cj8P3gPXRrr](https://claude.ai/artifact/GDpG6YCybK2cj8P3gPXRrr)). The
   default build and every Station Zero chapter are unchanged.
 - **Three years** (2026, 2049, 2196), authored per region; per-year looks (tint, hour, weather,
@@ -1092,6 +1092,20 @@ in 5,143 recordings. Each mission's place is 1.7-6.8 ha (v2.0's generated rooms:
   views of different places 22 bits apart). Both pass, and `npm test` passes (72). (Measured
   2026-10-21 for the overhaul's U3.) U3 changed no shared file (only `game/js/editions/lastversion/`,
   its tests and docs), so the Station Zero suites were not rerun for it; they passed for U2.
+
+- **The v2.1 release (2026-10-25).** The overhaul, its closing passes and the casting passes (castfix rounds 1-3,
+  castfin rounds 1-2) merged into the release branch and labelled v2.1: app "AFTERZERO: Last Version 2.1",
+  `com.afterzero.lastversion.v2_1`, versionName 2.1.0 (versionCode 210), `AFTERZERO-LastVersion-v2.1.apk`, the title
+  reading "v2.1 · The Last Version of Earth"; v2.0 stays its own app (`com.afterzero.lastversion`) at its own link.
+  On the release commit: `npm test` 174/174; `tests/lastversion.mjs` 373/373 in 36.6 minutes (game minutes: Prologue
+  13.3, Act I 44.1, Act II 44.8, Act III 52.2, Act IV 35.1, Finale 11.7; 1,657 pairs of views of different places at
+  least 22 bits apart); `tests/lastversion-audio.mjs` 10/10; `tests/lastversion-garments.mjs` all 18 people passed;
+  Station Zero's smoke, qa, halcyon, vessel, features, layout, forge and cradle suites all passed. `voice-lv.sh check`:
+  every pack up to date (4,553 lines, 5,143 recordings; the largest file 3,371,096 bytes). The edition APK is
+  46,447,417 bytes (budget 50 MB), signed with the project key; its web preview, 123 files and 63,804,993 bytes, is
+  published at [claude.ai/artifact/HsWBbg3ppPShrBPVPaBhaE](https://claude.ai/artifact/HsWBbg3ppPShrBPVPaBhaE). Not
+  done: no phone has installed or run it, no person has played or listened to it, and the bot's 201 game minutes are
+  about 15% of the bible's mission targets.
 
 ## Generated (playable, solvable by construction, not hand-tuned)
 
