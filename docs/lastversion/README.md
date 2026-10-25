@@ -29,8 +29,8 @@ game (its APK's entries unchanged).
 Tests: `npm test` (the edition's 146 unit tests among 174: `tests/lastversion.test.mjs` 144, `tests/lastversion-reach.test.mjs` 2) and `NODE_PATH=$(npm root -g) node tests/lastversion.mjs`
 (the browser bot: NEW GAME to Ending C, Endings A and B, free roam's trips and back, the CASE FILES and a survey of the
 23 places, 373 of 373 checks in 36.7 minutes in the release check; `LV_ONLY=roam` runs free roam's alone) and
-`node tests/lastversion-audio.mjs` (the cards, the cold open and a conversation heard in real time; `LV_ROOT=` a built
-web preview to play that instead) and `node tests/lastversion-garments.mjs` (the settlement's people dressed and posed
+`NODE_PATH=$(npm root -g) node tests/lastversion-audio.mjs` (the cards, the cold open and a conversation heard in real time; `LV_ROOT=` a built
+web preview to play that instead) and `NODE_PATH=$(npm root -g) node tests/lastversion-garments.mjs` (the settlement's people dressed and posed
 by the game itself, standing and walking: no leg through a tunic, leather at the feet, no PARAMEDIC on a technician;
 `--fixtures` writes the poses the unit test wears them in).
 Recording the voices: `VOICE_WORK=<dir> bash tools/voice-lv.sh <group>` (DESIGN.md "Voice and score").

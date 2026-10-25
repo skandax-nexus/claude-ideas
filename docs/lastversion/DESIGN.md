@@ -738,12 +738,13 @@ measured minutes against its target.
   florist's conversation, each start decoded clips of the packs and carry signal on the voice's output, with the score
   under them; `speechSynthesis` is never asked and nothing misses. `LV_ROOT=<dir>` serves another build instead of
   `game/` (since the release check: `LV_ROOT=android/build-lastversion/preview`, the built web preview as published).
-- `tests/lastversion-garments.mjs` (browser, since castfin round 1): fifteen people of the settlement and the story
-  (five children on `rb_child_m2`, boys and girls, the settlement's men and women, `rb_elder_m`, `rb_sage_m`, Niko, old
+- `tests/lastversion-garments.mjs` (browser, since castfin round 1; `NODE_PATH=$(npm root -g)` to find Playwright):
+  eighteen people of the settlement and the story (five children on `rb_child_m2`, boys and girls, the settlement's men
+  and women, the potter and the craftswoman, `rb_elder_m` as the storyteller and at the fire, `rb_sage_m`, Niko, old
   Niko, Tala, the Elder) made and dressed as the game does it and posed by its own idle and walk: standing, no leg the
   body still draws lies outside a tunic's skirt between its hem and its top; in a stride's phases at most 15% of those
   points (and 2) come through it, none deeper than 16 cm; the body under a long skirt is drawn without the legs it
-  covers; every settlement person's shoes dyed a dark leather; no PARAMEDIC on a Helix technician. `--fixtures` writes
+  covers; every settlement person's shoes dyed a dark leather; no PARAMEDIC on a Helix technician; under a cloak or an apron the skirt beneath is left undrawn (castfin round 2). `--fixtures` writes
   `tests/fixtures/garment-poses.json` (the child's, a woman's and a man's bones standing and in three phases of the
   stride), in which a unit test in `tests/lastversion.test.mjs` wears the skirts of the real converted models without a
   browser: whole standing (with the old four-extent cut the child's knees come through), the legs they cover undrawn,
