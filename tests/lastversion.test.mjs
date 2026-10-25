@@ -36,7 +36,8 @@ import { KIT_NAMES } from '../game/js/editions/lastversion/places/kits.js';
 import { STYLES } from '../game/js/editions/lastversion/places/styles.js';
 import { Player } from '../game/js/entities/Player.js';
 import { LV_MODELS, SHARED_MODELS, MANIFEST, CHAPTER_CAST, COMMON, sexOf, isChild, castOf } from '../game/js/editions/lastversion/casting.js';
-import { WARDROBE, hasVariant, packRules, SETTLEMENT, PRESENT_PALETTES, holoDepth, recoloured, redye, dyeRule, LEATHER } from '../game/js/editions/lastversion/wardrobe.js';
+import { WARDROBE, hasVariant, packRules, SETTLEMENT, PRESENT_PALETTES, holoDepth, recoloured, redye, dyeRule, LEATHER, DYE, KID_LIGHT, kidOutfit } from '../game/js/editions/lastversion/wardrobe.js';
+import { Fx } from '../game/js/world/Fx.js';
 import { ERAS, EXCEPTIONS, AMBIENT_CAST, eraModels, MAX_PEOPLE, MET, CAP, OLD, PALETTE, PALETTE_ROLES, ROLE_NAMES } from '../game/js/editions/lastversion/crowds.js';
 import { PIECES, MASS_DEFAULT, clothe, _dbg as GARMENT_DBG } from '../game/js/editions/lastversion/garments.js';
 import { M21 } from '../game/js/editions/lastversion/act4.js';
@@ -2353,8 +2354,8 @@ test('castfin round 1: tunics on real bodies, a child\'s among them: whole stand
   const gz = WARDROBE.rb_glazier.glazier;
   assert.ok(gz.head.some((r) => r.band[1] >= 0.6 && r.band[1] <= 0.7 && r.band[3] <= 0.85 && r.band[2] <= 0.75 && r.skin === false), 'her chest under the collarbones cloth, not the ponytail beside it');
   assert.ok(gz.body.some((r) => r.band[0] <= 0.45 && r.band[2] >= 0.55 && r.lmin >= 0.4 && r.skin === false), 'the skin inside the lapels cloth, the lapels kept');
-  // the Elder's crown silvered in her maps' edit (tools/rocketbox-textures.py F009 crown)
-  assert.ok(/'crown': \[\('e', 7\d\d, 1\d\d,/.test(fs.readFileSync('tools/rocketbox-textures.py', 'utf8')), 'the whorl at the back of her crown silvered');
+  // the tan whorl on the top of the Elder's scalp silvered in her maps' edit (tools/rocketbox-textures.py F009 crown)
+  assert.ok(/'crown': \[\('e', 7\d\d, 1\d\d,/.test(fs.readFileSync('tools/rocketbox-textures.py', 'utf8')), 'the whorl on her scalp silvered');
   // Mission 21: the office empty, and said to be, when the persuaded Rook holds the gap
   const office = M21.scenes.office.lines, say = (facts) => office.filter((l) => !l.when || compileCondition(l.when)({ fact: (k) => facts[k] ?? null, state: 'PRESENT' })).map((l) => l.text);
   const empty = 'An empty chair, and a recorder on the desk, still running.';
@@ -2362,6 +2363,151 @@ test('castfin round 1: tunics on real bodies, a child\'s among them: whole stand
   assert.ok(say({ rook_fate: 'persuade', ally: 'sera' }).some((t) => t.startsWith('They gave me the chair')) && !say({ rook_fate: 'persuade', ally: 'sera' }).includes(empty), 'Rook in his chair');
   assert.ok(say({ rook_fate: 'expose' }).some((t) => t.includes('check badges')) && !say({ rook_fate: 'expose' }).includes(empty), 'Pryce in his chair');
   assert.ok(say({}).includes(empty), 'nobody in it');
+});
+
+// (castfin round 2) What the round-1 check found: the "tan diamond" on the back of the Elder's head was no map at all but the
+// focus marker's glow, a sprite at head height through the person it marks, whitening what lay behind its plane and leaving
+// what came forward of it (her crown, the hump of her cloak) a hard-edged patch; walking, the tunic still came through the
+// backs of the cloaks and the fronts of the aprons; a child in a dark tunic wore round 1's light shirt over it, a T-shirt and
+// a skirt rather than a tunic.
+// the skirt's points (over its drawn triangles) that lie outside the piece worn over it (a cloak's length, an apron) in a
+// posed body, 10 cm or more above that piece's hem as it hangs there (below it the skirt is longer, and shows): how many, of
+// how many, and the deepest
+function throughOver(B, base, over) {
+  const g = base.g, gp = g.attributes.position, P = PIECES;
+  const m = new THREE.SkinnedMesh(g, new THREE.MeshBasicMaterial());
+  B.mesh.parent.add(m);
+  m.bind(B.mesh.skeleton, B.mesh.bindMatrix);
+  B.root.updateMatrixWorld(true);
+  const v = new THREE.Vector3(), Q = new Float32Array(gp.count * 3);
+  for (let i = 0; i < gp.count; i++) { m.applyBoneTransform(i, v.fromBufferAttribute(gp, i)).applyMatrix4(m.matrixWorld); Q.set([v.x, v.y, v.z], i * 3); }
+  m.removeFromParent();
+  const ix = g.index, oi = [], tris = [];
+  for (let t = 0; t < ix.count; t += 3) {
+    const piece = P[base.paint[ix.getX(t)] >> 1];
+    if (piece === over) oi.push(ix.getX(t), ix.getX(t + 1), ix.getX(t + 2));
+    if (piece === 'skirt') tris.push([ix.getX(t), ix.getX(t + 1), ix.getX(t + 2)]);
+  }
+  const og = new THREE.BufferGeometry();
+  og.setAttribute('position', new THREE.BufferAttribute(Q, 3));
+  og.setIndex(oi);
+  og.computeBoundingSphere();
+  const om = new THREE.Mesh(og, new THREE.MeshBasicMaterial({ side: THREE.DoubleSide }));
+  om.updateMatrixWorld(true);
+  const pc = B.mesh.skeleton.bones.find((b) => b.name === 'Bip01_Pelvis').getWorldPosition(new THREE.Vector3());
+  const bin = (x, z) => ((Math.floor(((Math.atan2(x - pc.x, z - pc.z) + Math.PI) / (2 * Math.PI)) * 24) % 24) + 24) % 24;
+  const hem = new Float32Array(24).fill(Infinity);
+  for (const i of new Set(oi)) { const b = bin(Q[i * 3], Q[i * 3 + 2]); hem[b] = Math.min(hem[b], Q[i * 3 + 1]); }
+  const W3 = [[1, 0, 0], [0.5, 0.5, 0], [1 / 3, 1 / 3, 1 / 3], [0.5, 0, 0.5], [0, 0.5, 0.5], [0.66, 0.17, 0.17], [0.17, 0.66, 0.17], [0.17, 0.17, 0.66]];
+  const pts = [];
+  for (const [a, b, c] of tris) for (const [u, w, x] of W3) pts.push([0, 1, 2].map((k) => Q[a * 3 + k] * u + Q[b * 3 + k] * w + Q[c * 3 + k] * x));
+  const top = Math.max(...pts.map((p) => p[1]));
+  const rc = new THREE.Raycaster(), o = new THREE.Vector3();
+  let n = 0, out = 0, deep = 0;
+  for (const [x, y, z] of pts) {
+    if (y > top - 0.04) continue; // (under the belt)
+    const d = new THREE.Vector3(x - pc.x, 0, z - pc.z), L = d.length();
+    rc.set(o.set(pc.x, y, pc.z), d.normalize());
+    rc.far = L + 0.5;
+    const hits = rc.intersectObject(om, false);
+    if (!hits.length) continue; // (not under it: its opening at the front, beside an apron)
+    const b = bin(x, z);
+    if (y < Math.max(...[hem[b], hem[(b + 1) % 24], hem[(b + 23) % 24]].filter(Number.isFinite), -1) + 0.1) continue;
+    n++;
+    const h = hits[hits.length - 1].distance; // (its outermost layer that way)
+    if (L > h + 0.002) { out++; deep = Math.max(deep, L - h); }
+  }
+  return { n, out, deep };
+}
+test('castfin round 2: the focus glow behind a person, cloaks and aprons moving as the tunic under them, a child\'s tunic one colour', () => {
+  // the focus marker: its glow set back from the point, away from the camera, for a person (the ring stays round the point)
+  const had = globalThis.document;
+  globalThis.document ??= { createElement: () => ({ getContext: () => ({ createRadialGradient: () => ({ addColorStop() {} }), fillRect() {} }) }) };
+  let fx;
+  try { fx = new Fx(new THREE.Scene()); } finally { if (!had) delete globalThis.document; }
+  const cam = new THREE.PerspectiveCamera(62, 2, 0.05, 100);
+  cam.position.set(1.2, 2.1, 1.6);
+  cam.lookAt(0, 1.5, 0);
+  cam.updateMatrixWorld(true);
+  const glowAt = () => { fx.marker.updateMatrixWorld(true); return fx.glow.getWorldPosition(new THREE.Vector3()); };
+  fx.focus([0, 1.5, 0], 0xffffff, 0, cam, 0.5);
+  const p = new THREE.Vector3(0, 1.5, 0), g = glowAt();
+  assert.ok(Math.abs(g.distanceTo(cam.position) - p.distanceTo(cam.position) - 0.5) < 0.02 && g.distanceTo(p) > 0.49 && g.distanceTo(p) < 0.51, `a person's glow 0.5 m behind them (${g.distanceTo(p).toFixed(3)})`);
+  assert.ok(fx.ring.getWorldPosition(new THREE.Vector3()).distanceTo(p) < 1e-6, 'the ring at the point');
+  fx.focus([2, 1, 0], 0xffffff, 0, cam);
+  assert.ok(glowAt().distanceTo(new THREE.Vector3(2, 1, 0)) < 1e-6, 'anything else: the glow at the point');
+  fx.focus(null);
+  assert.equal(fx.marker.visible, false);
+  // a person is marked as one, in both editions (DeckWorld's people, Station Zero's Juno), and the game hands that on
+  assert.ok(/npc: n, person: true \}/.test(fs.readFileSync('game/js/world/DeckWorld.js', 'utf8')), 'DeckWorld: a person');
+  assert.ok(/prompt: 'TALK TO JUNO', person: true \}/.test(fs.readFileSync('game/js/world/Npcs.js', 'utf8')), 'Juno: a person');
+  const main = fs.readFileSync('game/js/main.js', 'utf8');
+  assert.ok(/this\.promptPerson = !!\(showFocus && this\.focus\.person\)/.test(main) && /this\.fx\.focus\(pos, 0xffffff, this\.time, this\.camera, person \? 0\.5 : 0\)/.test(main), 'main.js sets a person\'s glow behind them');
+  // cloaks and aprons over a tunic, on the real bodies in the game's own poses (tests/fixtures/garment-poses.json)
+  const W = (m, v) => WARDROBE[m][v].garb;
+  for (const [model, variant, over] of [['rb_vill_m', 'fire1', 'cloak'], ['rb_elder', 'elder', 'cloak'], ['rb_elder_m', 'fire1', 'cloak'], ['rb_niko_old', 'older', 'cloak'], ['rb_vill_m', 'potter', 'apron'], ['rb_vill_f2', 'craft', 'apron']]) {
+    const pose = POSES.poses[model];
+    assert.ok(pose?.stand && Object.keys(pose).length >= 4, `tests/fixtures/garment-poses.json: ${model}`);
+    const B = glbBody(`game/assets/characters/${model}.glb`);
+    posed(B, pose.stand);
+    const info = GARMENT_DBG.restFrom(B.mesh, B.root);
+    const garb = W(model, variant), who = `${model}/${variant}`;
+    const base = GARMENT_DBG.build(info, garb);
+    // the skirt under the piece is not drawn (its own skirt alone has every triangle)
+    const alone = GARMENT_DBG.build(info, { skirt: garb.skirt });
+    assert.ok(base.under > 80 && alone.under === 0, `${who}: ${base.under} of the skirt's triangles under the ${over} left out`);
+    // the piece from 10 cm under the skirt's top down takes the skin of the skirt straight in under it: no bone the skirt
+    // has not (its rings, as the body stood when they were cut)
+    const gp = base.g.attributes.position, si = base.g.attributes.skinIndex, sw = base.g.attributes.skinWeight;
+    const skirtBones = new Set();
+    let skirtTop = -Infinity;
+    const m = new THREE.SkinnedMesh(base.g, new THREE.MeshBasicMaterial());
+    B.mesh.parent.add(m);
+    m.bind(B.mesh.skeleton, B.mesh.bindMatrix);
+    B.root.updateMatrixWorld(true);
+    const v = new THREE.Vector3(), Y = new Float32Array(gp.count);
+    for (let i = 0; i < gp.count; i++) Y[i] = m.applyBoneTransform(i, v.fromBufferAttribute(gp, i)).applyMatrix4(m.matrixWorld).y;
+    m.removeFromParent();
+    for (let i = 0; i < gp.count; i++) {
+      if (PIECES[base.paint[i] >> 1] !== 'skirt') continue;
+      skirtTop = Math.max(skirtTop, Y[i]);
+      for (let c = 0; c < 4; c++) if (sw.getComponent(i, c) > 0) skirtBones.add(si.getComponent(i, c));
+    }
+    let low = 0, foreign = 0;
+    for (let i = 0; i < gp.count; i++) {
+      if (PIECES[base.paint[i] >> 1] !== over || Y[i] > skirtTop - 0.11) continue;
+      low++;
+      for (let c = 0; c < 4; c++) if (sw.getComponent(i, c) > 1e-3 && !skirtBones.has(si.getComponent(i, c))) foreign++;
+    }
+    assert.ok(low > 50 && foreign === 0, `${who}: ${low} points of the ${over} below the waist, ${foreign} bones the skirt has not`);
+    // standing, and three phases of the stride: no point of the skirt 10 cm or more above the piece's hem lies outside it
+    for (const [k, ps] of Object.entries(pose)) {
+      posed(B, ps);
+      const r = throughOver(B, base, over);
+      const limit = k === 'stand' ? 0 : 20;
+      assert.ok(r.n > 100 && r.out <= limit && r.deep <= 0.13, `${who} ${k}: ${r.out} of ${r.n} points of the skirt through the ${over} (${(100 * r.deep).toFixed(1)} cm)`);
+    }
+  }
+  // a settlement child's tunic: the top (the body's jersey) and the skirt one dye, light enough to read as cloth on the
+  // body's dark skin; the outfit's colours swapped, not lost
+  let kids = 0;
+  for (const [name, x] of Object.entries(WARDROBE.rb_child_m2)) {
+    if (!/^(fire|water|sky|fest|ash)_(boy|girl)\d$/.test(name)) continue;
+    kids++;
+    const dye = Object.keys(DYE).find((d) => DYE[d] === x.garb.skirt.dye);
+    const rule = dyeRule(dye), jersey = x.body[0];
+    assert.ok(dye && jersey.to === rule.to && jersey.sset === rule.sset && jersey.lrange[0] === rule.lrange[0], `${name}: the top the skirt's ${dye}`);
+    const h = {};
+    new THREE.Color(DYE[dye]).getHSL(h, THREE.SRGBColorSpace);
+    assert.ok(h.l >= KID_LIGHT, `${name}: ${dye} light enough (${h.l.toFixed(2)})`);
+    if (x.garb.sash) assert.notEqual(x.garb.sash.dye, x.garb.skirt.dye, `${name}: the sash not the tunic's colour`);
+    if (x.garb.belt) assert.notEqual(x.garb.belt.dye, x.garb.skirt.dye, `${name}: the belt not the tunic's colour`);
+    if (x.garb.skirt.stripe) assert.notEqual(x.garb.skirt.stripe, x.garb.skirt.dye, `${name}: the stripe not the tunic's colour`);
+  }
+  assert.equal(kids, 50, 'every palette\'s five boys and five girls');
+  assert.deepEqual(kidOutfit('black', 'madder', 'weld'), ['weld', 'madder', 'black'], 'a dark tunic swapped with the outfit\'s first light dye');
+  assert.deepEqual(kidOutfit('ochre', 'madder', 'walnut'), ['ochre', 'madder', 'walnut'], 'a light tunic kept');
+  assert.deepEqual(kidOutfit('walnut', 'brown', 'black'), ['oat', 'brown', 'black'], 'no light dye in the outfit: oat');
 });
 
 test('named faces stay out of crowds (but for the listed exceptions), and crowd faces never cross eras', () => {

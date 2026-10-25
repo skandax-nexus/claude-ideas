@@ -20,7 +20,7 @@ pieces listed in TRANSPLANT are covered with plain cloth from elsewhere in the s
 Parts listed in the optional fifth argument (comma-separated, e.g. "pistol") are skipped: the
 converter drops their triangles (RB_DROP).
 The optional sixth argument names an edit (EDITS) made to one output's maps before they are shrunk:
-'age' makes a face old (the Elder: her hair silvered, the whorl at the back of her crown too, lines at the
+'age' makes a face old (the Elder: her hair silvered, a tan whorl on the top of her scalp too, lines at the
 brow, the eyes, the mouth and the neck in the colour and the normal map, the skin paler and less rosy, the lips
 paler), 'age_m' the same for a man (Niko, older: his hair grey to near-white, a short grey beard), 'tomas' gives a
 boy his own hair and freckles
@@ -210,8 +210,9 @@ F009 = {
     # found from the seed; the whole box silvered a corner of her breastbone, a white patch in her robe's neck)
     'bun': [(1080, 1470, 2048, 2048)], 'seed': (1025, 700), 'brows': [(795, 478, 960, 528), (1055, 478, 1240, 528)], 'lips': [(915, 795, 1135, 875)],
     'lashes': [(1650, 1280, 2030, 1760)],
-    # (castfin round 1) the whorl at the back of her crown, where the scalp shows through: left tan among the silver, a
-    # small diamond on the back of her head above the bun wherever her hair cards let it through
+    # (castfin round 1) a whorl painted on the top of her scalp, where the map shows skin through the hair: left tan among
+    # the silver. (The tan diamond seen on the back of her head in the missions was not this, nor any map:
+    # it was the focus marker's glow, through her head; world/Fx.js now sets it behind a person)
     'crown': [('e', 778, 160, 52, 72)],
     'lines': [
         # the brow: three lines across the forehead, two between the brows

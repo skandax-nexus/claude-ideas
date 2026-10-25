@@ -62,7 +62,10 @@ export class Fx {
     scene.add(this.marker);
   }
 
-  focus(pos, color = 0xffffff, t = 0, camera = null) {
+  // behind: how far past the point (away from the camera) the glow sits. A person is marked at head height: a glow
+  // through their head washed only what lay behind its plane, and left a hard-edged unwashed patch where the head came
+  // forward of it (a dark crown on white hair, a pale rim round a face); set back, it rings them as a halo
+  focus(pos, color = 0xffffff, t = 0, camera = null, behind = 0) {
     if (!pos) {
       this.marker.visible = false;
       return;
@@ -70,6 +73,7 @@ export class Fx {
     this.marker.visible = true;
     this.marker.position.set(pos[0], pos[1], pos[2]);
     if (camera) this.marker.quaternion.copy(camera.quaternion);
+    this.glow.position.set(0, 0, camera ? -behind : 0); // (the marker faces the camera: its -z points away)
     const k = 1 + Math.sin(t * 4) * 0.08;
     this.ring.scale.setScalar(k);
     this.ring.material.color.setHex(color);

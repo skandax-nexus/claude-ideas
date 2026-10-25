@@ -47,7 +47,7 @@ if [ "$EDITION" = "lastversion" ]; then
   MANIFEST="$OUT/AndroidManifest.xml"
   sed -e 's/android:versionCode="[0-9]*"/android:versionCode="200"/' -e 's/android:versionName="[^"]*"/android:versionName="2.0.0"/' \
       -e 's/android:label="[^"]*"/android:label="AFTERZERO: Last Version"/' AndroidManifest.xml > "$MANIFEST"
-  # its 49 models deflate by a quarter (their vertex buffers; MainActivity streams an asset either way), which keeps
+  # its 51 models deflate by a quarter (their vertex buffers; MainActivity streams an asset either way), which keeps
   # the APK within the edition's 50 MB (OVERHAUL.md §10.2); the voice packs (Opus) stay stored
   STORED=(-0 ogg)
 elif [ -n "$EDITION" ]; then

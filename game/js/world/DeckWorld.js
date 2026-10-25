@@ -621,7 +621,7 @@ export class DeckWorld {
       if (n.n.silent || !n.model.visible || (n.n.ambient && !n.n.lines && !n.n.scene)) continue;
       const p = n.model.position;
       const who = (n.n.first || n.crew.first).toUpperCase();
-      out.push({ id: `dnpc:${n.n.id}`, pos: [p.x, p.y + 1.5, p.z], r: 3.2, prompt: n.isEcho ? `LISTEN TO ${who}'S ECHO` : n.n.prompt || `TALK TO ${who}`, npc: n });
+      out.push({ id: `dnpc:${n.n.id}`, pos: [p.x, p.y + 1.5, p.z], r: 3.2, prompt: n.isEcho ? `LISTEN TO ${who}'S ECHO` : n.n.prompt || `TALK TO ${who}`, npc: n, person: true });
     }
     return out;
   }

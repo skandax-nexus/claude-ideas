@@ -9,6 +9,9 @@
 //     hem) and none deeper than LV_WALK_DEPTH (16 cm). (What is left is the top of a shin the body still draws, at the
 //     hem as a stride lifts it; before this round, a stride put a fifth of the legs through, 26 cm deep.)
 //   - the body under a long skirt is drawn without the legs it covers (garments.js covered), its own buffers shared;
+//   - (castfin round 2) a cloak or an apron over the skirt: the skirt under it left out (to a ring a centimetre under its
+//     hem), and the piece below the waist skinned as the skirt straight in under it (the unit test wears these in the
+//     game's own poses, recorded here: a stride no longer pushes the tunic through the back of a cloak or an apron's front);
 //   - the settlement's feet (wardrobe.js feetOf and LEATHER): a mask on the body's map, and the texels under it dyed a
 //     dark leather (their lightness 0.3 at most on average, at most 2% of them above 0.45);
 //   - the Helix technicians on the paramedic's body: no PARAMEDIC across the back (the patch is one even slate).
@@ -32,8 +35,9 @@ const PEOPLE = [
   ['rb_child_m2', 'fire_girl1'], ['rb_child_m2', 'fire_boy2'], ['rb_child_m2', 'water_girl4'], ['rb_child_m2', 'water_boy3'], ['rb_child_m2', 'girl_m4'],
   ['rb_vill_f', 'fire1'], ['rb_vill_f2', 'water2'], ['rb_vill_m', 'fire1'], ['rb_vill_m2', 'sky2'], ['rb_elder_m', 'storyteller'], ['rb_sage_m', 'astronomer'],
   ['rb_niko', 'niko'], ['rb_niko_old', 'older'], ['rb_tala', 'tala'], ['rb_elder', 'elder'],
+  ['rb_vill_m', 'potter'], ['rb_vill_f2', 'craft'], ['rb_elder_m', 'fire1'],
 ];
-const FIXTURES = { rb_child_m2: 'fire_girl1', rb_vill_f: 'fire1', rb_vill_m: 'fire1' };
+const FIXTURES = { rb_child_m2: 'fire_girl1', rb_vill_f: 'fire1', rb_vill_m: 'fire1', rb_vill_f2: 'craft', rb_elder: 'elder', rb_elder_m: 'fire1', rb_niko_old: 'older' };
 // (LV_ONLY=rb_child_m2,rb_vill_f: those people alone)
 if (process.env.LV_ONLY) PEOPLE.splice(0, PEOPLE.length, ...PEOPLE.filter(([m, v]) => process.env.LV_ONLY.split(',').some((k) => `${m}/${v}`.startsWith(k))));
 const STRIDE = [136, 148, 160];
@@ -99,6 +103,12 @@ const out = await page.evaluate(async ([people, fixtures, stride, debug, share, 
     A.makeActor({ model }).traverse((o) => { if (o.isSkinnedMesh && !fresh && [].concat(o.material)[0]?.name === 'body') fresh = o.geometry; });
     if (!(bare.userData.covered > 0) || bare === fresh || bare.attributes.position !== fresh.attributes.position) row.fails.push('the legs under the skirt are drawn (or the body\'s buffers copied)');
     row.notes.push(`${bare.userData.covered || 0} triangles covered of ${(bare.index.count / 3 + (bare.userData.covered || 0))}`);
+    // (a cloak or an apron over the skirt: the skirt under it is not drawn)
+    if (garb.skirt && ((garb.cloak && !garb.cloak.fit) || garb.apron)) {
+      const whole = G._dbg.build(info, garb);
+      row.notes.push(`${whole.under} of the skirt's triangles under the ${garb.cloak ? 'cloak' : 'apron'}`);
+      if (!(whole.under > 80)) row.fails.push(`the skirt under the ${garb.cloak ? 'cloak' : 'apron'} is drawn (${whole.under} left out)`);
+    }
     // the skirt alone, as clothe cut it (round restInfo), on the same skeleton
     const sk = G._dbg.build(info, { skirt: garb.skirt });
     const m = new THREE.SkinnedMesh(sk.g, mat);

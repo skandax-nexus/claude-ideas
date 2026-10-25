@@ -31,6 +31,7 @@ import { makeActor, actorLoaded } from '../../world/Actors.js';
 
 export const PIECES = ['skirt', 'mantle', 'cloak', 'sash', 'belt', 'bodice', 'apron'];
 const lerp = (a, b, t) => a + (b - a) * t;
+const SKIRT_PLEAT = 0.07, CLOAK_PLEAT = 0.05; // (a skirt's and a cloak's length's folds: the share of the reach they stand out or in at the hem)
 const col = (c) => new THREE.Color(c);
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -469,6 +470,44 @@ function build(info, garb) {
     return { l, r };
   };
   let skirt = null; // its rings: a cloak, a mantle and a belt go outside it
+  // (castfin round 2) A piece worn over the skirt below the waist (a cloak's length, an apron) moves as the skirt under it
+  // does: each point takes the skin the skirt has straight in under it, wholly from a little under the skirt's top (above
+  // it, its own; between, a blend). Skinned from the body further out than the skirt, a cloak swung
+  // less with the legs and an apron hung from the hips at the knee, and a stride pushed the tunic out through the back of
+  // a cloak and the front of an apron in patches.
+  let skirtV = null; // [first vertex, end, the skirt's top, its columns, its hem]
+  // and the skirt under them is not drawn where they cover it (overs: (angle from the front, height) -> covered), short of
+  // their edges and hems, so whatever is left of a stride's push has nothing to push through
+  const overs = [];
+  const overSkirt = (own, x, y, z, hemOver = null) => {
+    if (!skirtV) return own;
+    const [v0, v1, top, cols, hemS] = skirtV;
+    const t = Math.min(1, Math.max(0, (top - y) / 0.1));
+    if (t <= 0) return own;
+    // the skirt's skin straight in under the point (the same direction from the hips' axis): its grid's four corners round
+    // there, weighed as the point lies between them; down the piece, from a little lower on the skirt the nearer its hem
+    // (its hem as the skirt's hem: the skirt below a shorter cloak swings out further than the skirt at the cloak's hem, and
+    // a heel kicked the tunic's hem out behind it)
+    if (hemOver != null && hemOver > hemS && y < top) y = top - (top - y) * ((top - hemS) / (top - hemOver));
+    const P = out.pos, rows = (v1 - v0) / cols;
+    let r0 = 0;
+    while (r0 < rows - 2 && P[(v0 + (r0 + 1) * cols) * 3 + 1] > y) r0++;
+    const ya = P[(v0 + r0 * cols) * 3 + 1], yb = P[(v0 + (r0 + 1) * cols) * 3 + 1];
+    const fy = ya - yb > 1e-5 ? Math.min(1, Math.max(0, (ya - y) / (ya - yb))) : 0;
+    const u = ((Math.atan2(x - cx, z - cz) / (Math.PI * 2)) + 1) % 1 * cols, j0 = Math.floor(u) % cols, j1 = (j0 + 1) % cols, fx = u - Math.floor(u);
+    const acc = new Map();
+    const add = (b, w) => { if (w > 0) acc.set(b, (acc.get(b) || 0) + w); };
+    for (const [r, j, w] of [[r0, j0, (1 - fy) * (1 - fx)], [r0, j1, (1 - fy) * fx], [r0 + 1, j0, fy * (1 - fx)], [r0 + 1, j1, fy * fx]]) {
+      const v = v0 + r * cols + j;
+      for (let c = 0; c < 4; c++) add(out.ji[v * 4 + c], t * w * out.wi[v * 4 + c]);
+    }
+    for (let c = 0; c < 4; c++) add(own[0][c], (1 - t) * own[1][c]);
+    const top4 = [...acc].sort((p, q) => q[1] - p[1]).slice(0, 4);
+    const sum = top4.reduce((a, [, w]) => a + w, 0) || 1;
+    const ji = [0, 0, 0, 0], wi = [0, 0, 0, 0];
+    top4.forEach(([b, w], c) => { ji[c] = b; wi[c] = w / sum; });
+    return [ji, wi];
+  };
   const skirtAt = (y) => {
     if (!skirt) return null;
     if (y > skirt[0].y) return null;
@@ -476,14 +515,15 @@ function build(info, garb) {
       const A = skirt[k], B = skirt[k + 1];
       if (y <= A.y && y >= B.y) {
         const t = (A.y - y) / Math.max(1e-4, A.y - B.y);
-        return { l: lerp(A.l, B.l, t), r: lerp(A.r, B.r, t), f: lerp(A.f, B.f, t), b: lerp(A.b, B.b, t) };
+        return { l: lerp(A.l, B.l, t), r: lerp(A.r, B.r, t), f: lerp(A.f, B.f, t), b: lerp(A.b, B.b, t), pl: lerp(A.pl || 1, B.pl || 1, t) };
       }
     }
     return skirt[skirt.length - 1];
   };
+  // (castfin round 2: out past its pleats' folds too, which stand out from its rings by up to pl - 1 of their reach)
   const outside = (R, y, e) => {
-    const s = skirtAt(y);
-    return s ? { ...R, l: Math.max(R.l, s.l + e), r: Math.max(R.r, s.r + e), f: Math.max(R.f, s.f + e), b: Math.max(R.b, s.b + e) } : R;
+    const s = skirtAt(y), k = s?.pl || 1;
+    return s ? { ...R, l: Math.max(R.l, s.l * k + e), r: Math.max(R.r, s.r * k + e), f: Math.max(R.f, s.f * k + e), b: Math.max(R.b, s.b * k + e) } : R;
   };
   // (castfix round 3) the base of the neck: down from the neck's joint, the first height where a cut through the body is
   // half as wide again as the neck (the shoulders' slope begins there)
@@ -552,7 +592,7 @@ function build(info, garb) {
     const pts = [];
     for (const R of [skirtAt(y), bodiceAt(y)]) {
       if (!R) continue;
-      for (let q = 0; q < 24; q++) { const a = (q / 24) * Math.PI * 2, r = ellReach(R, a) + e; pts.push([cx + Math.sin(a) * r, cz + Math.cos(a) * r]); }
+      for (let q = 0; q < 24; q++) { const a = (q / 24) * Math.PI * 2, r = ellReach(R, a) * (R.pl || 1) + e; pts.push([cx + Math.sin(a) * r, cz + Math.cos(a) * r]); }
     }
     return pts;
   };
@@ -566,7 +606,18 @@ function build(info, garb) {
     const rings = [];
     let prev = null;
     const N = 13, segs = 32, angs = colAngles(segs, 0);
-    const yAt = (k) => lerp(top, hem, Math.pow(k / (N - 1), 0.85));
+    const ys = Array.from({ length: N }, (_, k) => lerp(top, hem, Math.pow(k / (N - 1), 0.85)));
+    // (castfin round 2) a ring a centimetre under the hem of a piece worn over it (a cloak, an apron), so the skirt under
+    // the piece is left out to its hem and no further (overs, below): the nearest ring moved there, if it is above the hem's
+    // stripe
+    const low = hem + (s.stripe ? s.stripeW ?? 0.05 : 0) + 0.012;
+    for (const h of [garb.cloak && !garb.cloak.fit ? info.floor + (garb.cloak.hem ?? 0.22) : null, garb.apron ? info.floor + (garb.apron.hem ?? 0.42) : null]) {
+      if (h == null || h - 0.01 < low || h - 0.01 > ys[1]) continue;
+      let kb = 1;
+      for (let k = 2; k < N - 1; k++) if (Math.abs(ys[k] - (h - 0.01)) < Math.abs(ys[kb] - (h - 0.01))) kb = k;
+      ys[kb] = h - 0.01;
+    }
+    const yAt = (k) => ys[k];
     for (let k = 0; k < N; k++) {
       const t = k / (N - 1);
       const y = yAt(k);
@@ -585,6 +636,7 @@ function build(info, garb) {
       // (its four extents enclose every column, for the pieces that go over it: skirtAt, under)
       const kx = Math.max(1, ...angs.map((a, j) => R.rad[j] / Math.max(1e-4, ellReach(R, a))));
       if (kx > 1) Object.assign(R, { l: R.l * kx, r: R.r * kx, f: R.f * kx, b: R.b * kx });
+      R.pl = 1 + SKIRT_PLEAT * t; // (its pleats' folds stand out this far at this ring, as band() lays them)
       rings.push(R);
       prev = R;
     }
@@ -594,8 +646,10 @@ function build(info, garb) {
     out.cover = { top, lo: hem + (s.hem > 0.2 ? 0.06 : 0.02) };
     // (the hips carry a share of the hem, so it does not split into two trouser legs as they stride)
     const pel = bone('Bip01_Pelvis');
-    band(out, { piece: 'skirt', rings, cx, cz, segs, pleats: 9, pleat: 0.07, stripe: !!s.stripe, stripeW: s.stripeW ?? 0.05,
+    const v0 = out.pos.length / 3;
+    band(out, { piece: 'skirt', rings, cx, cz, segs, pleats: 9, pleat: SKIRT_PLEAT, stripe: !!s.stripe, stripeW: s.stripeW ?? 0.05,
       skin: (a, x, y, z) => transfer(info, [[S('hips'), 1]], x, y, z, 14, [pel, Math.min(0.5, Math.max(0, (top - y) / (top - hem)) * 0.5)]) });
+    skirtV = [v0, out.pos.length / 3, top, segs, hem];
   }
 
   if (garb.apron) {
@@ -614,10 +668,11 @@ function build(info, garb) {
       const o = outline(info, k < 2 ? S('hips') : S('legs'), y, 0.03, cx, cz) || prev;
       // (a bib apron is tied close at the waist)
       const e = s.bib != null ? 0.018 + 0.04 * t : 0.03 + 0.03 * t;
-      const R = outside(grow({ y, l: o.l + e, r: o.r + e, f: o.f + e, b: o.b + e }, prev), y, 0.012);
+      // (castfin round 2: 2.2 cm out from a skirt's folds, not 1.2: a stride's turn of the legs moves the two a little apart)
+      const R = outside(grow({ y, l: o.l + e, r: o.r + e, f: o.f + e, b: o.b + e }, prev), y, 0.022);
       const ell = [];
       for (let q = 0; q < 32; q++) { const a = (q / 32) * Math.PI * 2, r = ellReach(R, a) - e; ell.push([cx + Math.sin(a) * r, cz + Math.cos(a) * r]); }
-      const cutR = ringReach(info, [k < 2 ? S('hips') : S('legs')], y, 0.03, cx, cz, angs, [...ell, ...under(y, 0.012 - e)]);
+      const cutR = ringReach(info, [k < 2 ? S('hips') : S('legs')], y, 0.03, cx, cz, angs, [...ell, ...under(y, 0.022 - e)]);
       R.rad = angs.map((a, j) => Math.max(cutR ? cutR[j] + e : ellReach(R, a), prev ? prev.rad[j] : 0));
       rings.push(R);
       prev = R;
@@ -625,7 +680,9 @@ function build(info, garb) {
     const pel = bone('Bip01_Pelvis');
     const uvk = s.leather ? 0.015 : 1; // (leather: the weave drawn so large it is only a shading)
     band(out, { piece: 'apron', rings, cx, cz, segs: 14, open: Math.PI - (s.wide ?? 1.1), turn: Math.PI, uvk,
-      skin: (a, x, y, z) => transfer(info, [[S('hips'), 1]], x, y, z, 14, [pel, Math.min(0.5, Math.max(0, (top - y) / (top - hem)) * 0.5)]) });
+      skin: (a, x, y, z) => overSkirt(transfer(info, [[S('hips'), 1]], x, y, z, 14, [pel, Math.min(0.5, Math.max(0, (top - y) / (top - hem)) * 0.5)]), x, y, z) });
+    const wide = s.wide ?? 1.1;
+    overs.push((a, y) => a <= wide - 0.3 && y >= hem - 0.012 && y <= top - 0.02);
     if (s.bib != null) {
       // the bib: up the front of the chest from the apron's top, over the jacket, narrower than the skirt. (castfix round
       // 3) It lies on the chest, direction by direction, and spans its hollows as stiff cloth would (the hull of the
@@ -735,13 +792,16 @@ function build(info, garb) {
         let rad = ringReach(info, sets, y, 0.03, cx, cz, angs, under(y, 0.01));
         if (!rad) rad = prev ? prev.rad.slice() : angs.map(() => 0.15);
         const e = y > yBack ? 0.01 : 0.018;
-        rad = rad.map((r, j) => Math.max(r + e, prev ? prev.rad[j] : 0));
+        // (castfin round 2: and its own folds, which come in by up to CLOAK_PLEAT of its reach at the hem, no nearer in)
+        const fold = 1 - CLOAK_PLEAT * t;
+        rad = rad.map((r, j) => Math.max((r + e) / fold, prev ? prev.rad[j] : 0));
         prev = { y, rad };
         rings.push(prev);
       }
       const pel = bone('Bip01_Pelvis');
-      band(out, { piece: 'cloak', rings, cx, cz, segs, open, pleats: 6, pleat: 0.05, stripe: !!s.stripe, stripeW: 0.05,
-        skin: (a, x, y, z) => transfer(info, [[S('back'), 1]], x, y, z, 14, y < pelvis.y ? [pel, Math.min(0.6, ((pelvis.y - y) / (pelvis.y - hem)) * 0.6)] : null) });
+      band(out, { piece: 'cloak', rings, cx, cz, segs, open, pleats: 6, pleat: CLOAK_PLEAT, stripe: !!s.stripe, stripeW: 0.05,
+        skin: (a, x, y, z) => overSkirt(transfer(info, [[S('back'), 1]], x, y, z, 14, y < pelvis.y ? [pel, Math.min(0.6, ((pelvis.y - y) / (pelvis.y - hem)) * 0.6)] : null), x, y, z, hem) });
+      overs.push((a, y) => a >= open + 0.35 && y >= hem - 0.012);
     }
   } else if (garb.cloak) {
     // a long cloak from the shoulders down the back, open at the front, outside the skirt
@@ -833,6 +893,18 @@ function build(info, garb) {
     band(out, { piece: 'belt', rings, cx, cz, segs: 28, skin: (a, x, y, z) => transfer(info, [[S('hips'), 1]], x, y, z, 12) });
   }
 
+  if (skirtV && overs.length) {
+    const [v0, v1] = skirtV, P = out.pos;
+    const hid = (i) => i >= v0 && i < v1 && overs.some((c) => c(Math.abs(Math.atan2(P[i * 3] - cx, P[i * 3 + 2] - cz)), P[i * 3 + 1]));
+    const idx = [];
+    for (let k = 0; k < out.idx.length; k += 3) {
+      const a = out.idx[k], b = out.idx[k + 1], c = out.idx[k + 2];
+      if (!(hid(a) && hid(b) && hid(c))) idx.push(a, b, c);
+    }
+    out.under = (out.idx.length - idx.length) / 3;
+    out.idx = idx;
+  }
+
   // into the mesh's own space (cut round the body as it stands: each point back to the bind pose through its own skin)
   const p = new Float32Array(out.pos);
   const g = new THREE.BufferGeometry();
@@ -855,7 +927,7 @@ function build(info, garb) {
   g.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(out.ji, 4));
   g.setAttribute('skinWeight', new THREE.Float32BufferAttribute(out.wi, 4));
   g.computeBoundingSphere();
-  return { g, paint: Uint8Array.from(out.paint), cover: out.cover ? { ...out.cover, info } : null };
+  return { g, paint: Uint8Array.from(out.paint), cover: out.cover ? { ...out.cover, info } : null, under: out.under || 0 };
 }
 
 // (castfin round 1) A body under a long skirt, its legs not drawn: the body's geometry (its own attributes, shared) with

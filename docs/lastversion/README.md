@@ -26,7 +26,7 @@ its own saves; 46,447,417 bytes when castfin round 1 built it, 2026-10-25 (45,25
 `assets/voice/lv/`, the cases' empty one left out; not yet run on a phone); the default build stays the Station Zero
 game (its APK's entries unchanged).
 
-Tests: `npm test` (the edition's 145 unit tests among 173: `tests/lastversion.test.mjs` 143, `tests/lastversion-reach.test.mjs` 2) and `NODE_PATH=$(npm root -g) node tests/lastversion.mjs`
+Tests: `npm test` (the edition's 146 unit tests among 174: `tests/lastversion.test.mjs` 144, `tests/lastversion-reach.test.mjs` 2) and `NODE_PATH=$(npm root -g) node tests/lastversion.mjs`
 (the browser bot: NEW GAME to Ending C, Endings A and B, free roam's trips and back, the CASE FILES and a survey of the
 23 places, 373 of 373 checks in 36.7 minutes in the release check; `LV_ONLY=roam` runs free roam's alone) and
 `node tests/lastversion-audio.mjs` (the cards, the cold open and a conversation heard in real time; `LV_ROOT=` a built

@@ -884,8 +884,9 @@ in 5,143 recordings. Each mission's place is 1.7-6.8 ha (v2.0's generated rooms:
   leather (`wardrobe.js` `feetOf`, `LEATHER`); a woman's raised heel keeps its shape, dark. *Mission 7's Helix
   technicians wore PARAMEDIC across their backs*: the patch and the badges are dyed out, on every technician and
   surveyor in that slate, named or in a crowd (the paramedics, responders and ward staff in the paramedic's own uniform
-  keep it). *The Elder had a tan diamond on the back of her crown*: her maps silver it (`rocketbox-textures.py`,
-  `rb_elder.glb` converted again). *The glazier's jacket hung open in a V over bare skin*: she wears a grey work top
+  keep it). *The Elder had a tan diamond on the back of her crown*: a tan whorl on the top of her scalp is silvered in
+  her maps (`rocketbox-textures.py`, `rb_elder.glb` converted again), which did not take the diamond away: it was the
+  focus marker's glow through her head, not her maps (castfin round 2, below). *The glazier's jacket hung open in a V over bare skin*: she wears a grey work top
   under it. *Mission 21's office was silent with Rook away*: when the persuaded Rook holds the gap as Kai's ally, the
   office's empty-chair narration is said (its condition; its text unchanged). *Checked:* `npm test` 173/173, with a new
   test (the skirts of the real child's, woman's and man's models worn in the poses the game gives them, recorded by the
@@ -898,6 +899,44 @@ in 5,143 recordings. Each mission's place is 1.7-6.8 ha (v2.0's generated rooms:
   Station Zero's build packs its same 28 models. *Not changed:* a woman's raised heel stays a heel; walking, a cloak and
   the tunic under it still meet at the back as before; a striding shin top can show at a hem; the whole browser bot was
   not run here.
+- **Casting, castfin round 2** (2026-10-25, on `6384fbf`; the check of round 1, by eye in the missions): what it found is
+  fixed. *The tan patch on the back of the Elder's head was still there in Mission 4*, seen from behind and above at
+  0.5 to 2.6 m, and the re-edited maps changed nothing. It was never in her maps: taking her hair cards, her head, the
+  shadows and the focus marker's glow away in turn, only the glow made a difference. The marker (`world/Fx.js`, shared
+  with Station Zero: a ring and a soft white glow at whatever Kai can use) marks a person at head height, and its glow,
+  a sprite through their head, whitened what lay behind its plane and left what came forward of it unwashed: a
+  hard-edged darker patch on her silver crown, and the "dark blob" on the hump of her cloak. A person's glow now sits
+  0.5 m behind them, away from the camera, a halo (`person: true` on DeckWorld's people and on Station Zero's Juno;
+  `main.js` hands it to `Fx.focus`); anything else is marked as before. In Mission 4 at the round-1 check's five
+  distances her crown is one silver and her cloak its own brown. *The docs said her crown was fixed*: they now say
+  what was edited (a tan whorl on the top of her scalp, in her maps) and what the patch was. *The children's light
+  shirt over a dark skirt read as a T-shirt and a skirt*: a settlement child's tunic is one colour again, top and skirt,
+  and light enough to read as cloth on the body's dark skin (`wardrobe.js` `kidOutfit`: a dark tunic changes places with
+  the outfit's first light dye, which keeps every colour of the outfit; 50 variants). *Walking, the tunic came through
+  the backs of cloaks and the fronts of aprons* (the settlement's cloaked men, `rb_elder_m`, old Niko, the Elder, the
+  craftswoman, the potter): a cloak's length and an apron over a tunic now take the skin of the tunic straight in under
+  them (a cloak's hem the skin of the tunic's hem), the tunic has a ring a centimetre under their hem and is not drawn
+  under them, and they clear its pleats (`garments.js`; standing they are as they were, side by side in the lab). In the
+  game's own walk (frames 136 to 166, from behind, from three-quarters and from the sides), the backs of the cloaks and
+  the fronts of the aprons are clean where round 1 showed the tunic in patches; what is left is at a hem: a heel can kick
+  the tunic's hem out a little past a cloak's hem, and an apron's corner can show the tunic beside it for a frame.
+  `build-apk.sh`'s comment counts the edition's 51 models. *Checked:* `npm test` 174/174, with a new test (the focus
+  glow 0.5 m behind a person and at the point otherwise, a person marked as one in both editions; cloaks and aprons on
+  the real bodies in the game's own poses: the tunic under them left out, their lower points skinned only to the tunic's
+  bones, and no sampled point of the tunic 10 cm or more above their hem through them, standing or in three phases of the
+  stride, where round 1's garments put 21 to 95 through in 13 of the 18 strides; every settlement child's top the skirt's dye);
+  `tests/lastversion-garments.mjs` passes for all eighteen people (now with the potter, the craftswoman and a cloaked old
+  man, and their poses recorded for the unit test); `voice-lv.sh check` reports all eight packs up to date; Station
+  Zero's smoke test passes. Shots, all looked at (castfin/round2): the children of Missions 4 and 5 and Case B standing
+  and walking (talk, full, face, knee, walking full, side, knee and at talk distance), boys and girls, and in the lab
+  beside round 1's; the settlement's men and women, `rb_elder_m`, `rb_sage_m`, Niko, old Niko, the Elder and the
+  glazier's bib standing beside round 1's (the same) and in Missions 4, 5 and 7; the settlement's feet walking (dark
+  leather, no trainer); Mission 7's and Mission 3's technicians from behind (no lettering); the Elder from behind in
+  Mission 4; the glazier close in Missions 12 and 21. Missions 3, 4, 5, 7, 12, 21 (the glazier the ally), 22, 23 and
+  Case B loaded with no page error. The edition's APK is 46,447,417 bytes, 3.55 MB under the 50 MB budget; its preview
+  123 files, 63,804,993 bytes; Station Zero's build packs its same 28 models. *Not changed:* the tunic's own front can
+  fold in on itself at a stride, its inside showing darker for a frame (as before); a girl's long skirt can show a small
+  dark crease at the knee mid-stride (as before); the whole browser bot was not run here.
 - **The CASE FILES** (v2.1, U8; `cases.js`; replaces the Cases chapter): fourteen stories (chains A–D, the Child in
   Three Photographs, the Train That Arrives Yesterday, the Unsent Letter, the House with No Owner, the Last Signal, the
   Names Beneath the City, the Clockmaker's Debt, the Ninth Minute: Evidence, the Survivor's Garden, the Unwritten

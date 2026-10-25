@@ -2456,6 +2456,7 @@ class Game {
     const showFocus = this.focus && !this.hud.talking;
     this.hud.prompt(showFocus ? this.focus.prompt : '');
     this.promptPos = showFocus ? this.focus.pos : null; // placed by placeFocus, after the camera moves
+    this.promptPerson = !!(showFocus && this.focus.person);
     const it = this.heldItem();
     this.hud.held(it?.label, it?.echo);
     if (this.edition) this.hud.setState(!!facts.get('has_chronolith'), this.room, engine.state(this.room), room.name, engine.locked.has(this.room), engine.statesOf(this.room));
@@ -2481,11 +2482,11 @@ class Game {
   // for this frame, so neither trails the object by a frame when you look around.
   placeFocus() {
     this.camera.updateMatrixWorld();
-    this.placePrompt(this.promptPos ?? null);
+    this.placePrompt(this.promptPos ?? null, this.promptPerson);
   }
 
-  placePrompt(pos) {
-    this.fx.focus(pos, 0xffffff, this.time, this.camera);
+  placePrompt(pos, person = false) {
+    this.fx.focus(pos, 0xffffff, this.time, this.camera, person ? 0.5 : 0); // (a person's glow behind them: a halo)
     const v = pos && new THREE.Vector3(pos[0], pos[1] + 0.55, pos[2]).project(this.camera);
     const el = this.hud.el.prompt;
     // behind the camera: hidden by a class of its own, so HUD.prompt's record of what it shows

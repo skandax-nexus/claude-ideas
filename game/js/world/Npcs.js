@@ -66,7 +66,7 @@ export class Npcs {
   focusCandidates() {
     if (!this.junoHere || this.dropT >= 0) return [];
     const p = this.juno.position;
-    return [{ id: 'npc:juno', pos: [p.x, p.y + 1.5, p.z], r: 3.2, prompt: 'TALK TO JUNO' }];
+    return [{ id: 'npc:juno', pos: [p.x, p.y + 1.5, p.z], r: 3.2, prompt: 'TALK TO JUNO', person: true }];
   }
 
   update(dt, t) {

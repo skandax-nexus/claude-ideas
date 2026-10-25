@@ -312,11 +312,18 @@ const CUT = {
 };
 // the one boy's body's jersey and sleeves (rb_child_m2): only those bands are dyed, his skin is the jersey's hue
 const JERSEY_DYE = (name) => JERSEY(dyeRule(name));
-// (castfin round 1) the child's shirt under the tunic: the tunic's dye if it is light enough to read as cloth on the body's
-// dark skin, else the outfit's next light dye, else oat (a girl in walnut wool to the waist read bare-chested in the first
-// fire's evening light)
+// (castfin round 2) a child's tunic, its top (the body's jersey, dyed) and its skirt one colour: the outfit's tunic dye if it
+// is light enough to read as cloth on the body's dark skin, else the outfit's first light dye in its place (the tunic's
+// dye takes that one's: a stripe, a sash), else oat (a girl in walnut wool to the waist read bare-chested in the first
+// fire's evening light; round 1's light shirt over the dark skirt read as a T-shirt and a skirt, not a tunic)
 const lightOf = (name) => { const h = {}; new THREE.Color(DYE[name]).getHSL(h, THREE.SRGBColorSpace); return h.l; };
-const SHIRT = (...names) => names.find((n) => lightOf(n) >= 0.43) || 'oat';
+export const KID_LIGHT = 0.43;
+export function kidOutfit(t, o, st) {
+  const out = [t, o, st], k = out.findIndex((n) => lightOf(n) >= KID_LIGHT);
+  if (k > 0) [out[0], out[k]] = [out[k], out[0]];
+  else if (k < 0) out[0] = 'oat';
+  return out;
+}
 // (Female_Adult_05's blazer is pink, a colour the dye would take for her skin and leave: dyed all over but for the map's
 // top corners, where her hands are; castfin round 1: her jeans' hems in the bottom corners too, which showed blue at her
 // ankles as she walked)
@@ -333,9 +340,11 @@ function settlementVariants() {
         const j = m.endsWith('2') ? i + 1 : i;
         out[m][`${pal}${i}`] = { body: BODY_DYE[m] ? BODY_DYE[m](t) : [dyeRule(t)], garb: CUT[kd](t, o, st, b, j), ...(kd === 'elder' ? { props: ['staff'] } : {}) };
       }
-      out.rb_child_m2[`${pal}_boy${i}`] = { body: JERSEY_DYE(SHIRT(t, o, st)), garb: CUT.boy(t, o, st, b, i) };
+      // (a belt of the tunic's new colour is the dark it took the place of)
+      const [kt, ko, kst] = kidOutfit(t, o, st), kb = b === kt ? t : b;
+      out.rb_child_m2[`${pal}_boy${i}`] = { body: JERSEY_DYE(kt), garb: CUT.boy(kt, ko, kst, kb, i) };
       // a girl wears one of the settlement's women's hair (tied back, or loose to the shoulder)
-      out.rb_child_m2[`${pal}_girl${i}`] = { body: JERSEY_DYE(SHIRT(t, o, st)), garb: CUT.girl(t, o, st, b, i), hairdo: { from: i % 2 ? 'rb_vill_f2' : 'rb_vill_f' } };
+      out.rb_child_m2[`${pal}_girl${i}`] = { body: JERSEY_DYE(kt), garb: CUT.girl(kt, ko, kst, kb, i), hairdo: { from: i % 2 ? 'rb_vill_f2' : 'rb_vill_f' } };
     });
   }
   return out;
