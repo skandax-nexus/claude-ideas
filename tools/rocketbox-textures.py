@@ -20,9 +20,10 @@ pieces listed in TRANSPLANT are covered with plain cloth from elsewhere in the s
 Parts listed in the optional fifth argument (comma-separated, e.g. "pistol") are skipped: the
 converter drops their triangles (RB_DROP).
 The optional sixth argument names an edit (EDITS) made to one output's maps before they are shrunk:
-'age' makes a face old (the Elder: her hair silvered, lines at the brow, the eyes, the mouth and the
-neck in the colour and the normal map, the skin paler and less rosy, the lips paler), 'age_m' the same for
-a man (Niko, older: salt-and-pepper hair, a short grey beard), 'tomas' gives a boy his own hair and freckles
+'age' makes a face old (the Elder: her hair silvered, the whorl at the back of her crown too, lines at the
+brow, the eyes, the mouth and the neck in the colour and the normal map, the skin paler and less rosy, the lips
+paler), 'age_m' the same for a man (Niko, older: his hair grey to near-white, a short grey beard), 'tomas' gives a
+boy his own hair and freckles
 (Tomas Vale, on the body young Kai has too).
 Prints one JSON object: {part: {color, normal, rough, alpha}} with the file names.
 """
@@ -174,15 +175,18 @@ def _main_piece(a, seed, painted=0.12, n=512):
     return (np.asarray(small.resize((a.shape[1], a.shape[0]), Image.NEAREST)) == 128).astype(np.float32)
 
 
-def _hair_mask(a, k, face, keep, dark=(0.31, 0.39), all_hair=(), seed=None, painted=0.12):
+def _hair_mask(a, k, face, keep, dark=(0.31, 0.39), all_hair=(), seed=None, painted=0.12, crown=()):
     # the hair painted on a head map: what is darker than skin, outside the face and the parts kept (ears, neck, the
     # eyes' and mouth's pieces), and all of the pieces that are only hair (a bun: in those boxes only what is off the
     # face's own piece, which a point of the face finds, so the neck and chest under a box keep their skin). painted: the
-    # sum of a texel's RGB above which it is painted, not the black between the islands (black hair's shadows are darker)
+    # sum of a texel's RGB above which it is painted, not the black between the islands (black hair's shadows are darker).
+    # crown: places on the scalp that are hair whatever their light (a whorl where the scalp shows through, lighter than
+    # the dark hair it was painted among)
     covered = (a.sum(2) > painted).astype(np.float32)
     m = _ramp(_lum(a), dark[1], dark[0]) * covered * (1 - _blur(_boxes(a.shape, list(face) + list(keep), k), 4 * k))
     off_face = 1 - _main_piece(a, seed, painted) if seed else 1
     m = np.maximum(m, _boxes(a.shape, all_hair, k) * covered * off_face)
+    m = np.maximum(m, _blur(_boxes(a.shape, crown, k), 6 * k) * covered)
     return _blur(m, 1.5 * k) * covered
 
 
@@ -206,6 +210,9 @@ F009 = {
     # found from the seed; the whole box silvered a corner of her breastbone, a white patch in her robe's neck)
     'bun': [(1080, 1470, 2048, 2048)], 'seed': (1025, 700), 'brows': [(795, 478, 960, 528), (1055, 478, 1240, 528)], 'lips': [(915, 795, 1135, 875)],
     'lashes': [(1650, 1280, 2030, 1760)],
+    # (castfin round 1) the whorl at the back of her crown, where the scalp shows through: left tan among the silver, a
+    # small diamond on the back of her head above the bun wherever her hair cards let it through
+    'crown': [('e', 778, 160, 52, 72)],
     'lines': [
         # the brow: three lines across the forehead, two between the brows
         (_curve((860, 365), (1025, 350), (1190, 365)), 7, 0.55), (_curve((870, 405), (1025, 392), (1180, 405)), 7, 0.6),
@@ -227,7 +234,7 @@ F009 = {
 }
 
 # Male_Adult_09 (Niko, older: Mission 7's cold open): his face, read off m017_head_color. A wide, round face; his black
-# hair over the crown and the temples, the tail's pieces at the bottom right. Salt and pepper rather than the Elder's
+# hair over the crown and the temples, the tail's pieces at the bottom right. Grey to near-white rather than the Elder's
 # silver, the lines of a man of seventy, and a short grey beard (stubble on the cheeks, denser at the lip and the chin)
 M017 = {
     'face': [(800, 520, 1250, 880)], 'keep': [('e', 520, 725, 70, 100), ('e', 1530, 725, 70, 100), (600, 1000, 1450, 1500), (0, 1220, 760, 2048)],
@@ -275,8 +282,9 @@ def _beard(a, f, k):
 def age_head(img, f):
     k = img.width / 2048
     a = _arr(img)
+    lum0 = _lum(a)
     covered = (a.sum(2) > 0.12).astype(np.float32)
-    hair = _hair_mask(a, k, f['face'], f['keep'], dark=f.get('dark', (0.31, 0.39)), all_hair=f['bun'], seed=f.get('seed'), painted=f.get('painted', 0.12))
+    hair = _hair_mask(a, k, f['face'], f['keep'], dark=f.get('dark', (0.31, 0.39)), all_hair=f['bun'], seed=f.get('seed'), painted=f.get('painted', 0.12), crown=f.get('crown', ()))
     brows = _blur(_ramp(_lum(a), 0.52, 0.36) * _boxes(a.shape, f['brows'], k), k)
     tie = _teal(a)
     # the skin paler and less rosy, the lips paler
@@ -300,8 +308,13 @@ def age_head(img, f):
     a = a * (1 - sp) + a * np.array([0.78, 0.68, 0.58], np.float32) * sp
     if f.get('beard'):
         a = _beard(a, f, k)
-    # the hair silver (or salt and pepper), the brows grey, the hair tie a dark cord
+    # the hair silver (or grey to near-white), the brows grey, the hair tie a dark cord
     a = _silver(a, hair, *f.get('silver', (0.44, 0.93)))
+    if f.get('crown'):
+        # (the whorl's scalp was lighter than the hair round it, and silvered by its light it stood out white: as light as
+        # the silver round it)
+        spot = _blur(_boxes(a.shape, f['crown'], k), 6 * k) * _ramp(lum0, 0.31, 0.39)
+        a = a * (1 - 0.16 * spot)[..., None]
     a = _silver(a, brows * 0.75, lo=0.42, hi=0.6)
     a = a * (1 - tie[..., None]) + np.array([0.22, 0.15, 0.1], np.float32) * tie[..., None]
     return _img(a)

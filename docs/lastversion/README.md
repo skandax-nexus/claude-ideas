@@ -12,7 +12,7 @@ bible's inversion: hold one process backwards for a few seconds), the Witness, M
   "As built" notes say where the build differs).
 
 v2.1 in one paragraph: 23 missions in 23 authored open places, each one map with soft quarters, threads and
-side stories, a cold open and a hook; REVERSE, three years, Echo Step; 45 people of its own (Rocketbox-based) and
+side stories, a cold open and a hook; REVERSE, three years, Echo Step; 47 people of its own (Rocketbox-based) and
 4 shared models, crowds and watchers; every line spoken from the edition's own packs, with a score of written themes played live; three endings with an epilogue line
 per choice that mattered; and the CASE FILES, fourteen side stories and quest chains replayable from their
 places. Free roam (the closing pass on "make it open world"): once a mission is done, TRAVEL on the case board (or
@@ -22,13 +22,15 @@ The code is in `game/js/editions/lastversion/` (`prologue.js`, `act1.js` … `ac
 `cases.js`, `roam.js`, `Threads.js`, `ledger.js`, `Runtime.js`, `places/`).
 
 Build: `EDITION=lastversion bash android/build-apk.sh` (app "AFTERZERO: Last Version",
-its own saves; 46,443,321 bytes when the third casting pass built it, 2026-10-24 (45,259,406 in the release check before the casting passes), its models deflated, with seven voice packs under
+its own saves; 46,447,417 bytes when castfin round 1 built it, 2026-10-25 (45,259,406 in the release check before the casting passes), its models deflated, with seven voice packs under
 `assets/voice/lv/`, the cases' empty one left out; not yet run on a phone); the default build stays the Station Zero
 game (its APK's entries unchanged).
 
-Tests: `npm test` (the edition's 142 unit tests among 170) and `NODE_PATH=$(npm root -g) node tests/lastversion.mjs`
+Tests: `npm test` (the edition's 145 unit tests among 173: `tests/lastversion.test.mjs` 143, `tests/lastversion-reach.test.mjs` 2) and `NODE_PATH=$(npm root -g) node tests/lastversion.mjs`
 (the browser bot: NEW GAME to Ending C, Endings A and B, free roam's trips and back, the CASE FILES and a survey of the
 23 places, 373 of 373 checks in 36.7 minutes in the release check; `LV_ONLY=roam` runs free roam's alone) and
 `node tests/lastversion-audio.mjs` (the cards, the cold open and a conversation heard in real time; `LV_ROOT=` a built
-web preview to play that instead).
+web preview to play that instead) and `node tests/lastversion-garments.mjs` (the settlement's people dressed and posed
+by the game itself, standing and walking: no leg through a tunic, leather at the feet, no PARAMEDIC on a technician;
+`--fixtures` writes the poses the unit test wears them in).
 Recording the voices: `VOICE_WORK=<dir> bash tools/voice-lv.sh <group>` (DESIGN.md "Voice and score").

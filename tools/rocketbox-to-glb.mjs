@@ -63,7 +63,7 @@ export const LV_AVATARS = {
   rb_child_f: { src: 'Children/Female_Child_01', px: 1024 }, // the Child in the Station
   rb_rook: { src: 'Professions/Business_Male_04', px: 1024 }, // Dr. Elias Rook
   rb_niko: { src: 'Adults/Male_Adult_09', px: 1024 }, // Niko: his own hair, long and tied back (castfix: Male_Adult_15 wore a woven prayer cap)
-  // Niko, an old man (Mission 7's cold open): the same face aged in its maps (salt-and-pepper hair, lines, a short grey beard)
+  // Niko, an old man (Mission 7's cold open): the same face aged in its maps (grey to near-white hair, lines, a short grey beard)
   rb_niko_old: { src: 'Adults/Male_Adult_09', px: 1024, edit: 'age_m' },
   rb_jun: { src: 'Professions/Business_Male_02', px: 1024 }, // Jun Park
   rb_tala: { src: 'Adults/Female_Adult_11', px: 1024 }, // Tala: her hair tied up (closing: Female_Adult_06 wore a hijab)

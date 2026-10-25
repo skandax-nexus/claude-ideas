@@ -871,6 +871,33 @@ in 5,143 recordings. Each mission's place is 1.7-6.8 ha (v2.0's generated rooms:
   bytes. *Not changed:* a cloak's cape still ends in a small step over the cloak at the back (two layers of wool); the
   fitted coats are as they were; the whole browser bot was not run here. (The machine's disk had about 0.6 GB free:
   browser runs used a temporary folder in memory, and the round's own scratch renders were pruned.)
+- **Casting, castfin round 1** (2026-10-25, on `887a35d`; a player's look at the settlement's people): what it found is
+  fixed. *The settlement children's tunics broke at the knees* (all of `rb_child_m2`'s variants, Missions 4–7 and the
+  cases): round 3's cut, worn standing, left grey shards of leg through the skirt. The skirt is now cut, ring by ring,
+  round the legs' own cut direction by direction as the body stands (as the cloaks are), and the legs it covers are no
+  longer drawn under it (`garments.js` `covered`: the triangles of thighs, calves and feet wholly inside it, the body's
+  buffers shared); standing, no leg comes through on any child, man or woman checked; walking, what is left is the top of
+  a shin at the hem as a stride lifts it, a few centimetres (before, a fifth of the legs came through, 26 cm deep). A
+  short skirt's stripe no longer zigzags in grey teeth over its hem, and a girl in a dark tunic no longer reads bare:
+  the children's jerseys are dyed a light shirt under it. *The settlement wore pale modern trainers*: every person with
+  a tunic, named or in a crowd, has the shoes on their body's map (a mask from the model's own feet) dyed a dark
+  leather (`wardrobe.js` `feetOf`, `LEATHER`); a woman's raised heel keeps its shape, dark. *Mission 7's Helix
+  technicians wore PARAMEDIC across their backs*: the patch and the badges are dyed out, on every technician and
+  surveyor in that slate, named or in a crowd (the paramedics, responders and ward staff in the paramedic's own uniform
+  keep it). *The Elder had a tan diamond on the back of her crown*: her maps silver it (`rocketbox-textures.py`,
+  `rb_elder.glb` converted again). *The glazier's jacket hung open in a V over bare skin*: she wears a grey work top
+  under it. *Mission 21's office was silent with Rook away*: when the persuaded Rook holds the gap as Kai's ally, the
+  office's empty-chair narration is said (its condition; its text unchanged). *Checked:* `npm test` 173/173, with a new
+  test (the skirts of the real child's, woman's and man's models worn in the poses the game gives them, recorded by the
+  new browser test: whole standing, failing with the old cut; the covered legs undrawn; leather at the feet; no lettered
+  technician); `tests/lastversion-garments.mjs` passes for all fifteen people; `voice-lv.sh check` reports all eight
+  packs up to date. Shots (standing and mid-stride, close and at talk distance, from behind), all looked at: the
+  children of Missions 4–7, boys and girls, the settlement's men and women, `rb_elder_m`, `rb_sage_m`, Niko, old Niko,
+  the Elder and the glazier; Missions 3, 4, 5, 7, 12, 21 (Rook the ally), 22, 23 and Case B loaded with no page error.
+  The edition's APK is 46,447,417 bytes, 3.55 MB under the 50 MB budget; its preview 123 files, 63,802,719 bytes;
+  Station Zero's build packs its same 28 models. *Not changed:* a woman's raised heel stays a heel; walking, a cloak and
+  the tunic under it still meet at the back as before; a striding shin top can show at a hem; the whole browser bot was
+  not run here.
 - **The CASE FILES** (v2.1, U8; `cases.js`; replaces the Cases chapter): fourteen stories (chains A–D, the Child in
   Three Photographs, the Train That Arrives Yesterday, the Unsent Letter, the House with No Owner, the Last Signal, the
   Names Beneath the City, the Clockmaker's Debt, the Ninth Minute: Evidence, the Survivor's Garden, the Unwritten
@@ -1065,7 +1092,8 @@ in 5,143 recordings. Each mission's place is 1.7-6.8 ha (v2.0's generated rooms:
   avatar, went in the castfix pass (Built, "Casting, the last four"). A person's look at the render sheets of the made
   clothes is still welcome; nothing else of it is open.
 - **Models stay loaded.** Each chapter loads its people behind its card, but Actors has no release, so
-  a long session keeps the models of every chapter it has visited (at most the edition's 46).
+  a long session keeps the models of every chapter it has visited (at most the edition's 51: its 47 people and the 4
+  shared models it uses).
 - **Faction support** changes who answers in Mission 21 and what people say; it does not change
   patrol responses or open safe routes elsewhere (Jun's line in the Finale is the one safe route).
 - **A human ear check** of the voices and the score has still not been done: nothing in this container can play

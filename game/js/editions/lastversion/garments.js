@@ -387,11 +387,21 @@ function band(out, { piece, rings, cx, cz, segs = 28, open = 0, turn = 0, pleats
   const nR = rings.length;
   const yLast = rings[nR - 1].y;
   const yLow = (a) => (low ? low(a) : yLast);
-  // the stripe: a doubled ring stripeW above the lower edge
-  const plan = rings.map((R, i) => ({ R, t: i / (nR - 1), c: c0 }));
+  // the stripe: a doubled ring stripeW above the lower edge (castfin round 1: and no ring of the band inside it, where the
+  // rings are closer together than the stripe is deep, near a short skirt's hem: the band folded back over the stripe in
+  // a zigzag, its inside showing through as grey teeth along the stripe's top)
+  const plan = rings.map((R, i) => ({ R, t: i / (nR - 1), c: c0 }))
+    .filter((P, i) => c1 == null || i === 0 || i === nR - 1 || P.R.ys || low || P.R.y > yLast + stripeW + 0.006);
   if (c1 != null) {
-    const last = plan.pop();
-    const s = { R: last.R, edge: stripeW, t: 1 };
+    const last = plan.pop(), prev = plan[plan.length - 1];
+    // (its top ring on the line from the ring above down to the hem, not as wide as the hem: a hem flared out over the feet
+    // made a shelf of the stripe's top)
+    let ER = last.R;
+    if (prev && !low && !last.R.ys && !prev.R.ys && prev.R.y > yLast + stripeW) {
+      const k = stripeW / (prev.R.y - yLast), L = (key) => lerp(last.R[key], prev.R[key], k);
+      ER = { ...last.R, l: L('l'), r: L('r'), f: L('f'), b: L('b'), ...(last.R.rad && prev.R.rad ? { rad: last.R.rad.map((r, j) => lerp(r, prev.R.rad[j], k)) } : {}) };
+    }
+    const s = { R: ER, edge: stripeW, t: 1 };
     plan.push({ ...s, c: c0 }, { ...s, c: c1, dup: true }, { ...last, c: c1, edge: 0 });
   }
   const cols = open ? segs + 1 : segs;
@@ -555,23 +565,36 @@ function build(info, garb) {
     const ease = s.ease ?? 0.022;
     const rings = [];
     let prev = null;
-    const N = 13;
+    const N = 13, segs = 32, angs = colAngles(segs, 0);
+    const yAt = (k) => lerp(top, hem, Math.pow(k / (N - 1), 0.85));
     for (let k = 0; k < N; k++) {
       const t = k / (N - 1);
-      const y = lerp(top, hem, Math.pow(t, 0.85));
+      const y = yAt(k);
       const o = outline(info, k < 3 ? S('hips') : S('legs'), y, 0.03, cx, cz) || prev;
       const fl = k ? 1 + ((s.flare ?? 1.3) - 1) * t * t : 1;
       let R = grow({ y, l: (o.l + ease) * fl, r: (o.r + ease) * fl, f: (o.f + ease) * fl, b: (o.b + ease) * fl }, prev);
       // a skirt is round: no side much nearer than the furthest
       const m = Math.max(R.l, R.r, R.f, R.b);
       R = { y, l: Math.max(R.l, m * 0.82), r: Math.max(R.r, m * 0.82), f: Math.max(R.f, m * 0.72), b: Math.max(R.b, m * 0.72) };
+      // (castfin round 1) and round the body's own cut, direction by direction, over the whole height between this ring
+      // and its neighbours: an ellipse through the four widest points passes inside the body between them (a child's
+      // knees, standing together, came through it at the front corners as grey shards of the shorts under the tunic)
+      const bandH = Math.max(0.03, (Math.abs(yAt(Math.max(0, k - 1)) - yAt(Math.min(N - 1, k + 1))) / 2) * 0.6 + 0.01);
+      const reach = ringReach(info, [k < 3 ? S('hips') : S('legs')], y, bandH, cx, cz, angs);
+      R.rad = angs.map((a, j) => Math.max(ellReach(R, a), reach ? (reach[j] + ease) * fl : 0, prev ? prev.rad[j] : 0));
+      // (its four extents enclose every column, for the pieces that go over it: skirtAt, under)
+      const kx = Math.max(1, ...angs.map((a, j) => R.rad[j] / Math.max(1e-4, ellReach(R, a))));
+      if (kx > 1) Object.assign(R, { l: R.l * kx, r: R.r * kx, f: R.f * kx, b: R.b * kx });
       rings.push(R);
       prev = R;
     }
     skirt = rings;
+    // (castfin round 1) the legs it covers, from the waist to a little above the hem, are not drawn (clothe): however it
+    // is cut, a stride's knee came through the front of it (Rocketbox's jeans and a child's grey shorts, in patches)
+    out.cover = { top, lo: hem + (s.hem > 0.2 ? 0.06 : 0.02) };
     // (the hips carry a share of the hem, so it does not split into two trouser legs as they stride)
     const pel = bone('Bip01_Pelvis');
-    band(out, { piece: 'skirt', rings, cx, cz, segs: 32, pleats: 9, pleat: 0.07, stripe: !!s.stripe, stripeW: s.stripeW ?? 0.05,
+    band(out, { piece: 'skirt', rings, cx, cz, segs, pleats: 9, pleat: 0.07, stripe: !!s.stripe, stripeW: s.stripeW ?? 0.05,
       skin: (a, x, y, z) => transfer(info, [[S('hips'), 1]], x, y, z, 14, [pel, Math.min(0.5, Math.max(0, (top - y) / (top - hem)) * 0.5)]) });
   }
 
@@ -832,7 +855,39 @@ function build(info, garb) {
   g.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(out.ji, 4));
   g.setAttribute('skinWeight', new THREE.Float32BufferAttribute(out.wi, 4));
   g.computeBoundingSphere();
-  return { g, paint: Uint8Array.from(out.paint) };
+  return { g, paint: Uint8Array.from(out.paint), cover: out.cover ? { ...out.cover, info } : null };
+}
+
+// (castfin round 1) A body under a long skirt, its legs not drawn: the body's geometry (its own attributes, shared) with
+// only the triangles that show, once per model and outfit. Left out: every triangle wholly on the thighs and the calves
+// between the skirt's top and a little above its hem, and on the hips below the waist, as the body stands; the feet, the
+// ankles and the shins under a boy's knee-length tunic are drawn, so a stride still steps out from under the hem.
+// (A foot's bone carries the trouser leg's hem above the ankle: those are covered too, above the same height.)
+const LEG = /^Bip01_[LR]_(Thigh|Calf|Foot|Toe0)$/;
+function covered({ info, top, lo }, geo) {
+  const ix = geo.index;
+  if (!ix) return null;
+  const hid = (i) => {
+    const y = info.q[i * 3 + 1], n = info.names[info.dom[i]];
+    return y >= lo && (LEG.test(n) ? y <= top - 0.03 : n === 'Bip01_Pelvis' && y <= top - 0.06);
+  };
+  const keep = [];
+  for (let k = 0; k < ix.count; k += 3) {
+    const a = ix.getX(k), b = ix.getX(k + 1), c = ix.getX(k + 2);
+    if (!(hid(a) && hid(b) && hid(c))) keep.push(a, b, c);
+  }
+  if (keep.length === ix.count) return null;
+  const g = new THREE.BufferGeometry();
+  for (const [k, a] of Object.entries(geo.attributes)) g.setAttribute(k, a);
+  g.morphAttributes = geo.morphAttributes;
+  g.morphTargetsRelative = geo.morphTargetsRelative;
+  g.setIndex(keep);
+  g.boundingSphere = geo.boundingSphere;
+  g.boundingBox = geo.boundingBox;
+  g.name = `${geo.name || 'body'}:covered`;
+  g.userData.keep = true; // (shared by everyone of this model in this outfit: DeckWorld leaves it)
+  g.userData.covered = (ix.count - keep.length) / 3;
+  return g;
 }
 
 // an outfit's shape (what the geometry depends on: no dyes) and its colours, a vertex colour per piece and stripe
@@ -908,7 +963,7 @@ function clothMat(holo, glow) {
   return CLOTH;
 }
 
-const GEO = new Map(), SHAPES = new Map();
+const GEO = new Map(), SHAPES = new Map(), BARE = new Map();
 // Put an outfit on a person (an actor of the given model): its pieces as one skinned mesh beside the body's, posed by
 // the same skeleton. A person who fades (a flickering echo) fades their clothes with them.
 export function clothe(actor, model, garb, { hologram = false, glow = null } = {}) {
@@ -923,6 +978,12 @@ export function clothe(actor, model, garb, { hologram = false, glow = null } = {
     const bind = () => bodyInfo(model, body, actor.userData.model || actor);
     base = build(garb.cloak?.fit ? bind() : restInfo(model) || bind(), garb);
     SHAPES.set(shape, base);
+  }
+  // (castfin round 1) the legs under a long skirt left out of the body (covered)
+  if (base.cover) {
+    if (!BARE.has(shape)) BARE.set(shape, covered(base.cover, body.geometry));
+    const bare = BARE.get(shape);
+    if (bare && bare.attributes.position === body.geometry.attributes.position) body.geometry = bare;
   }
   const key = `${model}|${JSON.stringify(garb)}`;
   let geo = GEO.get(key);
@@ -955,7 +1016,7 @@ export function clothe(actor, model, garb, { hologram = false, glow = null } = {
   }
   return m;
 }
-export const garmentStats = () => ({ shapes: SHAPES.size, geometries: GEO.size, bodies: INFO.size });
+export const garmentStats = () => ({ shapes: SHAPES.size, geometries: GEO.size, bodies: INFO.size, covered: BARE.size });
 
 // ---------------------------------------------------------------------------------------------------------------------
 // A head of hair of its own, over a head whose hair is only painted (Children/Male_Child_01's: young Kai's and Tomas's).
@@ -1251,4 +1312,4 @@ export function hairdo(actor, model, src, { scale = 1, lift = 0, back = 0, holog
   P.body.parent.add(m);
   return m;
 }
-export const _dbg = { restInfo, restFrom, bodyInfo, build, ringReach, cut, colAngles, subset, SETS, outline, ellReach, hull2, rayOut, frontAt };
+export const _dbg = { restInfo, restFrom, bodyInfo, build, covered, ringReach, cut, colAngles, subset, SETS, outline, ellReach, hull2, rayOut, frontAt };

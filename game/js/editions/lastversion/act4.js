@@ -619,7 +619,7 @@ export const M21 = {
     office: {
       lines: [L('ROOK', 'They gave me the chair. I signed nothing in it. Go up.', 'rook_fate == "persuade" && !(ally == "rook")'),
         SAYS('OFFICER PRYCE', 'PRYCE', 'They gave me his chair. I check badges from it. Not yours.', 'rook_fate == "expose"'),
-        N('An empty chair, and a recorder on the desk, still running.', '!(rook_fate == "persuade") && !(rook_fate == "expose")'),
+        N('An empty chair, and a recorder on the desk, still running.', '(!(rook_fate == "persuade") || ally == "rook") && !(rook_fate == "expose")'),
         N('On the desk, a requisition signed W.: ONE CONSOLE, 2026 PATTERN. ONE STEP STOOL. ONE CHAIR, CHILD-SIZED.')],
       set: { ev_director_office21: true, ev_requisition: true }, log: 'The Witness requisitioned a 2026 console, a step stool and a child\'s chair.',
     },

@@ -9,7 +9,7 @@
 
 ## Microsoft Rocketbox avatars
 
-Each file is one avatar from `Assets/Avatars/` of the library, converted from its FBX and TGA textures: metres, welded vertices, colour textures 1024 px JPEG, normal and roughness maps 512 px, hair and lashes 1024 px PNG with alpha, accessories at half size. THE LAST VERSION OF EARTH's people (`node tools/rocketbox-to-glb.mjs --edition lastversion`) are converted the same way, its named characters at those sizes and its crowds at half (colour 512 px, normal and roughness 256 px); no one carries a gun (the pistols are left out), the soldiers' sleeve flags are painted out as blank patches, and the number 38 on `Male_Child_02`'s jersey is covered with plain cloth from the same map (`tools/rocketbox-textures.py` TRANSPLANT), and two outputs have their own maps edited (EDITS: the Elder's face aged, her hair silvered; Tomas's hair sandy and freckles on young Kai's body). FBXLoader's node extras are left out of the edition's files. The settlement's people (three thousand years ago) wear wool and linen made for their bodies in the game (`game/js/editions/lastversion/garments.js`) over these avatars' clothes.
+Each file is one avatar from `Assets/Avatars/` of the library, converted from its FBX and TGA textures: metres, welded vertices, colour textures 1024 px JPEG, normal and roughness maps 512 px, hair and lashes 1024 px PNG with alpha, accessories at half size. THE LAST VERSION OF EARTH's people (`node tools/rocketbox-to-glb.mjs --edition lastversion`) are converted the same way, its named characters at those sizes and its crowds at half (colour 512 px, normal and roughness 256 px); no one carries a gun (the pistols are left out), the soldiers' sleeve flags are painted out as blank patches, and the number 38 on `Male_Child_02`'s jersey is covered with plain cloth from the same map (`tools/rocketbox-textures.py` TRANSPLANT), and three outputs have their own maps edited (EDITS: the Elder's face aged, her hair silvered, the whorl at the back of her crown with it; old Niko's face aged, his hair grey to near-white and a short grey beard; Tomas's hair sandy and freckles on young Kai's body). FBXLoader's node extras are left out of the edition's files. The settlement's people (three thousand years ago) wear wool and linen made for their bodies in the game (`game/js/editions/lastversion/garments.js`) over these avatars' clothes, and the avatars' shoes are dyed dark leather in the game (`game/js/editions/lastversion/wardrobe.js`).
 
 | File | Rocketbox avatar | Used for |
 | --- | --- | --- |
@@ -28,12 +28,12 @@ Each file is one avatar from `Assets/Avatars/` of the library, converted from it
 | `rb_child_f.glb` | `Children/Female_Child_01` | THE LAST VERSION: the Child in the Station |
 | `rb_rook.glb` | `Professions/Business_Male_04` | THE LAST VERSION: Dr. Elias Rook |
 | `rb_niko.glb` | `Adults/Male_Adult_09` | THE LAST VERSION: Niko (his own hair, long and tied back) |
-| `rb_niko_old.glb` | `Adults/Male_Adult_09` | THE LAST VERSION: Niko as an old man, Mission 7's cold open (the same face aged in its maps: salt-and-pepper hair, lines, a short grey beard: `tools/rocketbox-textures.py` EDITS `age_m`) |
+| `rb_niko_old.glb` | `Adults/Male_Adult_09` | THE LAST VERSION: Niko as an old man, Mission 7's cold open (the same face aged in its maps: grey to near-white hair, lines, a short grey beard: `tools/rocketbox-textures.py` EDITS `age_m`) |
 | `rb_jun.glb` | `Professions/Business_Male_02` | THE LAST VERSION: Jun Park |
 | `rb_tala.glb` | `Adults/Female_Adult_11` | THE LAST VERSION: Tala, the water keeper |
 | `rb_security_f.glb` | `Professions/Security_Female_01` | THE LAST VERSION: Officer Pryce (the pistol is left out) |
 | `rb_security_m.glb` | `Professions/Security_Male_01` | THE LAST VERSION: Officer Dale |
-| `rb_elder.glb` | `Adults/Female_Adult_09` | THE LAST VERSION: the Elder (her face aged and her hair silvered in her maps: `tools/rocketbox-textures.py` EDITS `age`) |
+| `rb_elder.glb` | `Adults/Female_Adult_09` | THE LAST VERSION: the Elder (her face aged and her hair silvered in her maps, the whorl at the back of her crown with it: `tools/rocketbox-textures.py` EDITS `age`) |
 | `rb_ezra.glb` | `Adults/Male_Adult_03` | THE LAST VERSION: Ezra Moll, the Clockmaker |
 | `rb_engineer_f.glb` | `Professions/Construction_Female_01` | THE LAST VERSION: Rhea Odum |
 | `rb_soldier_m.glb` | `Professions/Military_Male_02` | THE LAST VERSION: Sergeant Brask (the sleeve flag is painted out) |
@@ -51,7 +51,7 @@ Each file is one avatar from `Assets/Avatars/` of the library, converted from it
 | `rb_civ_m2.glb` | `Adults/Male_Adult_13` | THE LAST VERSION: shopkeepers, the Helix cleaner (2026/2049) |
 | `rb_courier.glb` | `Professions/Delivery_Male_01` | THE LAST VERSION: couriers (2026/2049); the trapped man |
 | `rb_contractor.glb` | `Professions/Construction_Male_07` | THE LAST VERSION: contractors, 2026 builders, Helix technicians |
-| `rb_medic_f.glb` | `Professions/Medical_Female_03` | THE LAST VERSION: paramedics and responders; Helix technicians in slate |
+| `rb_medic_f.glb` | `Professions/Medical_Female_03` | THE LAST VERSION: paramedics and responders; Helix technicians in slate (their PARAMEDIC patch and badges dyed out in the game) |
 | `rb_child_m2.glb` | `Children/Male_Child_02` | THE LAST VERSION: children (2049, 2196 and the settlement's boys, and its girls with a woman's hair); the toy child (the jersey's number painted out) |
 | `rb_child_f2.glb` | `Children/Female_Child_02` | THE LAST VERSION: a schoolgirl of 2196 |
 | `rb_trooper.glb` | `Professions/Military_Male_04` | THE LAST VERSION: Continuum troops and patrols (the sleeve flag is painted out) |

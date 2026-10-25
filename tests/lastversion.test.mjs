@@ -36,9 +36,10 @@ import { KIT_NAMES } from '../game/js/editions/lastversion/places/kits.js';
 import { STYLES } from '../game/js/editions/lastversion/places/styles.js';
 import { Player } from '../game/js/entities/Player.js';
 import { LV_MODELS, SHARED_MODELS, MANIFEST, CHAPTER_CAST, COMMON, sexOf, isChild, castOf } from '../game/js/editions/lastversion/casting.js';
-import { WARDROBE, hasVariant, packRules, SETTLEMENT, PRESENT_PALETTES, holoDepth, recoloured, redye, dyeRule } from '../game/js/editions/lastversion/wardrobe.js';
+import { WARDROBE, hasVariant, packRules, SETTLEMENT, PRESENT_PALETTES, holoDepth, recoloured, redye, dyeRule, LEATHER } from '../game/js/editions/lastversion/wardrobe.js';
 import { ERAS, EXCEPTIONS, AMBIENT_CAST, eraModels, MAX_PEOPLE, MET, CAP, OLD, PALETTE, PALETTE_ROLES, ROLE_NAMES } from '../game/js/editions/lastversion/crowds.js';
-import { PIECES, MASS_DEFAULT, _dbg as GARMENT_DBG } from '../game/js/editions/lastversion/garments.js';
+import { PIECES, MASS_DEFAULT, clothe, _dbg as GARMENT_DBG } from '../game/js/editions/lastversion/garments.js';
+import { M21 } from '../game/js/editions/lastversion/act4.js';
 import { MISSION_BARKS } from '../game/js/editions/lastversion/barks.js';
 import { M01, m01Shots } from '../game/js/editions/lastversion/prologue.js';
 import { WATCHERS, HUMAN, watcherModels, kindsOf } from '../game/js/editions/lastversion/watchers.js';
@@ -2182,6 +2183,185 @@ test('castfix round 3: clothes cut round the body as it stands, the bib on the c
     }
     assert.ok(level.npcs.some((x) => x.id === 'm21_glazier') && level.npcs.some((x) => x.id === 'm21_glazier_gap'));
   }
+});
+
+// (castfin round 1) what the round-3 check found: cut round the body as it stands, a child's tunic came apart at the knees
+// (the ellipse through the legs' four widest points passed inside them between, and the grey shorts showed through in
+// shards standing still), and every tunic let a stride's knee through (jeans, shorts); the settlement walked in Rocketbox's
+// trainers; the Helix technicians wore PARAMEDIC across the back; the glazier's jacket was open to the breastbone; in
+// Mission 21 a persuaded Rook chosen to hold the gap left his office with nobody in it and nothing to say so.
+// A converted model's body as glTF holds it (its nodes, its skeleton, the body's own primitive), without textures: what
+// garments.js cuts round in the game, without a browser
+function glbBody(file) {
+  const b = fs.readFileSync(file);
+  const jl = b.readUInt32LE(12), J = JSON.parse(b.subarray(20, 20 + jl).toString('utf8'));
+  const bin = b.subarray(28 + jl);
+  const acc = (i) => {
+    const a = J.accessors[i], bv = J.bufferViews[a.bufferView];
+    const T = { 5126: Float32Array, 5125: Uint32Array, 5123: Uint16Array, 5121: Uint8Array }[a.componentType];
+    const n = { SCALAR: 1, VEC2: 2, VEC3: 3, VEC4: 4, MAT4: 16 }[a.type];
+    const off = bin.byteOffset + (bv.byteOffset || 0) + (a.byteOffset || 0);
+    const arr = new T(b.buffer.slice(off, off + a.count * n * T.BYTES_PER_ELEMENT));
+    return a.normalized ? Float32Array.from(arr, (x) => x / (T === Uint8Array ? 255 : 65535)) : arr;
+  };
+  const skin = J.skins[0];
+  const nodes = J.nodes.map((nd, i) => {
+    const o = skin.joints.includes(i) ? new THREE.Bone() : new THREE.Group();
+    o.name = nd.name || '';
+    if (nd.matrix) new THREE.Matrix4().fromArray(nd.matrix).decompose(o.position, o.quaternion, o.scale);
+    if (nd.translation) o.position.fromArray(nd.translation);
+    if (nd.rotation) o.quaternion.fromArray(nd.rotation);
+    if (nd.scale) o.scale.fromArray(nd.scale);
+    return o;
+  });
+  J.nodes.forEach((nd, i) => (nd.children || []).forEach((c) => nodes[i].add(nodes[c])));
+  const root = new THREE.Group();
+  for (const i of J.scenes[J.scene || 0].nodes) root.add(nodes[i]);
+  const at = J.nodes.findIndex((nd) => nd.mesh != null);
+  const prim = J.meshes[J.nodes[at].mesh].primitives.find((p) => J.materials[p.material].name === 'body');
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(acc(prim.attributes.POSITION), 3));
+  g.setAttribute('skinIndex', new THREE.BufferAttribute(Uint16Array.from(acc(prim.attributes.JOINTS_0)), 4));
+  g.setAttribute('skinWeight', new THREE.BufferAttribute(acc(prim.attributes.WEIGHTS_0), 4));
+  g.setIndex(new THREE.BufferAttribute(Uint32Array.from(acc(prim.indices)), 1));
+  const mat = new THREE.MeshBasicMaterial();
+  mat.name = 'body';
+  const mesh = new THREE.SkinnedMesh(g, mat);
+  nodes[at].add(mesh);
+  root.updateMatrixWorld(true);
+  const ib = acc(skin.inverseBindMatrices);
+  // (bound as GLTFLoader binds it, before the scene's matrices are worked out: the bind matrix the identity, the mesh
+  // node's own turn ignored, as glTF's skins do)
+  mesh.bind(new THREE.Skeleton(skin.joints.map((j) => nodes[j]), skin.joints.map((_, k) => new THREE.Matrix4().fromArray(ib, k * 16))), new THREE.Matrix4());
+  return { root, mesh };
+}
+// the bones as the game poses them (tests/fixtures/garment-poses.json, written by tests/lastversion-garments.mjs)
+const POSES = JSON.parse(fs.readFileSync('tests/fixtures/garment-poses.json', 'utf8'));
+function posed(B, pose) {
+  for (const bn of B.mesh.skeleton.bones) {
+    const p = pose[bn.name];
+    if (p) { bn.quaternion.fromArray(p, 0); bn.position.fromArray(p, 4); }
+  }
+  B.root.updateMatrixWorld(true);
+}
+// a skirt (its geometry in the bind pose, skinned) worn on a posed body: the body's leg points between the skirt's top and
+// 5 cm above its hem there that lie outside it (a ray from the hips' axis crossing it an odd number of times) and have it
+// under them (through it, not a foot stepping out from under the hem): how many of how many, and the deepest
+function legsThrough(B, g, only = null) {
+  const m = new THREE.SkinnedMesh(g, new THREE.MeshBasicMaterial());
+  B.mesh.parent.add(m);
+  m.bind(B.mesh.skeleton, B.mesh.bindMatrix);
+  B.root.updateMatrixWorld(true);
+  const v = new THREE.Vector3(), gp = g.attributes.position, P = new Float32Array(gp.count * 3);
+  let top = -Infinity;
+  for (let i = 0; i < gp.count; i++) { m.applyBoneTransform(i, v.fromBufferAttribute(gp, i)).applyMatrix4(m.matrixWorld); P.set([v.x, v.y, v.z], i * 3); top = Math.max(top, v.y); }
+  m.removeFromParent();
+  const sg = new THREE.BufferGeometry();
+  sg.setAttribute('position', new THREE.BufferAttribute(P, 3));
+  sg.setIndex(g.index);
+  sg.computeBoundingSphere();
+  const skirt = new THREE.Mesh(sg, new THREE.MeshBasicMaterial({ side: THREE.DoubleSide }));
+  skirt.updateMatrixWorld(true);
+  const sk = B.mesh.skeleton, names = sk.bones.map((x) => x.name), pc = sk.bones[names.indexOf('Bip01_Pelvis')].getWorldPosition(new THREE.Vector3());
+  const bin = (x, z) => ((Math.floor(((Math.atan2(x - pc.x, z - pc.z) + Math.PI) / (2 * Math.PI)) * 16) % 16) + 16) % 16;
+  const hem = new Float32Array(16).fill(Infinity);
+  for (let i = 0; i < gp.count; i++) { const k = bin(P[i * 3], P[i * 3 + 2]); hem[k] = Math.min(hem[k], P[i * 3 + 1]); }
+  const bg = B.mesh.geometry, si = bg.attributes.skinIndex, sw = bg.attributes.skinWeight, bp = bg.attributes.position;
+  const rc = new THREE.Raycaster(), o = new THREE.Vector3(), down = new THREE.Vector3(0, -1, 0);
+  let n = 0, out = 0, deep = 0;
+  for (let i = 0; i < bp.count; i++) {
+    if (only && !only[i]) continue;
+    let best = 0;
+    for (let c = 1; c < 4; c++) if (sw.getComponent(i, c) > sw.getComponent(i, best)) best = c;
+    if (!/^Bip01_(Pelvis|[LR]_(Thigh|Calf))$/.test(names[si.getComponent(i, best)])) continue;
+    B.mesh.applyBoneTransform(i, v.fromBufferAttribute(bp, i)).applyMatrix4(B.mesh.matrixWorld);
+    const k = bin(v.x, v.z);
+    if (v.y > top - 0.04 || v.y < Math.max(...[hem[k], hem[(k + 1) % 16], hem[(k + 15) % 16]].filter(Number.isFinite), -1) + 0.05) continue;
+    n++;
+    const d = new THREE.Vector3(v.x - pc.x, 0, v.z - pc.z), L = d.length();
+    rc.set(o.set(pc.x, v.y, pc.z), d.normalize());
+    rc.far = L;
+    const hits = rc.intersectObject(skirt, false);
+    if (!(hits.length % 2)) continue;
+    rc.set(o.copy(v), down);
+    rc.far = 2;
+    if (!rc.intersectObject(skirt, false).length) continue;
+    out++;
+    deep = Math.max(deep, L - hits[hits.length - 1].distance);
+  }
+  return { n, out, deep };
+}
+test('castfin round 1: tunics on real bodies, a child\'s among them: whole standing, the legs they cover undrawn, leather at the feet, no paramedic technicians', () => {
+  const W = (m, v) => WARDROBE[m][v].garb;
+  for (const [model, variant] of [['rb_child_m2', 'fire_girl1'], ['rb_child_m2', 'fire_boy2'], ['rb_child_m2', 'girl_m4'], ['rb_vill_f', 'fire1'], ['rb_vill_m', 'fire1'], ['rb_vill_m', 'potter']]) {
+    const pose = POSES.poses[model];
+    assert.ok(pose?.stand && Object.keys(pose).length >= 4, `tests/fixtures/garment-poses.json: ${model}`);
+    const B = glbBody(`game/assets/characters/${model}.glb`);
+    posed(B, pose.stand);
+    // cut round the body as the game stands it (restInfo's own way back to the bind pose)
+    const info = GARMENT_DBG.restFrom(B.mesh, B.root);
+    const base = GARMENT_DBG.build(info, { skirt: W(model, variant).skirt });
+    const who = `${model}/${variant}`;
+    // standing: every leg point inside the skirt, whatever the body still draws (the cut itself)
+    const stand = legsThrough(B, base.g);
+    assert.ok(stand.n > 30 && stand.out === 0, `${who} standing: ${stand.out} of ${stand.n} leg points through the skirt (${(100 * stand.deep).toFixed(1)} cm)`);
+    // the legs it covers are left out of the body, its buffers its own model's; the feet and ankles are kept
+    const bare = GARMENT_DBG.covered(base.cover, B.mesh.geometry);
+    assert.ok(bare && bare.attributes.position === B.mesh.geometry.attributes.position && bare.userData.covered > 100, `${who}: ${bare?.userData.covered} triangles covered`);
+    const drawn = new Uint8Array(B.mesh.geometry.attributes.position.count);
+    for (let k = 0; k < bare.index.count; k++) drawn[bare.index.getX(k)] = 1;
+    const ix = B.mesh.geometry.index, q = info.q, low = (i) => q[i * 3 + 1] < base.cover.lo - 1e-6;
+    for (let k = 0; k < ix.count; k += 3) if (low(ix.getX(k)) && low(ix.getX(k + 1)) && low(ix.getX(k + 2))) assert.ok(drawn[ix.getX(k)] && drawn[ix.getX(k + 1)] && drawn[ix.getX(k + 2)], `${who}: a triangle under the hem is drawn`);
+    // a stride (three phases of the game's walk): what the body draws stays inside, but for a little at the hem
+    for (const [k, p] of Object.entries(pose).filter(([k]) => k.startsWith('stride'))) {
+      posed(B, p);
+      const w = legsThrough(B, base.g, drawn);
+      assert.ok(w.out <= Math.max(2, 0.15 * w.n) && w.deep <= 0.16, `${who} ${k}: ${w.out} of ${w.n} drawn leg points through the skirt (${(100 * w.deep).toFixed(1)} cm)`);
+    }
+  }
+  // dressed by clothe (here, with no actor's own pose to stand in, round the bind pose): the body drawn without its legs
+  {
+    const B = glbBody('game/assets/characters/rb_child_m2.glb');
+    const actor = new THREE.Group();
+    actor.add(B.root);
+    actor.userData.model = B.root;
+    // (the woven map is drawn on a canvas: a stand-in for one, for this call alone)
+    const had = globalThis.document;
+    globalThis.document ??= { createElement: () => ({ getContext: () => ({ createImageData: (w, h) => ({ data: new Uint8ClampedArray(w * h * 4) }), putImageData() {} }) }) };
+    let m = null;
+    const own = B.mesh.geometry;
+    try { m = clothe(actor, 'rb_child_m2', W('rb_child_m2', 'fire_girl1')); } finally { if (!had) delete globalThis.document; }
+    assert.ok(m?.isSkinnedMesh && m.skeleton === B.mesh.skeleton && actor.userData.garment === m, 'clothed');
+    assert.ok(B.mesh.geometry !== own && B.mesh.geometry.userData.covered > 100 && B.mesh.geometry.attributes.position === own.attributes.position, 'the body drawn without the legs the skirt covers');
+  }
+  // the settlement's feet: everyone in a tunic's skirt (and no one else) dyed dark leather over their feet, after all else
+  let n = 0;
+  for (const [model, vs] of Object.entries(WARDROBE)) for (const [name, v] of Object.entries(vs)) {
+    const has = !!v.body?.includes(LEATHER);
+    assert.equal(has, !!v.garb?.skirt, `${model}/${name}: leather at the feet ${has}`);
+    if (has) { assert.equal(v.body.at(-1), LEATHER, `${model}/${name}: the leather last`); n++; }
+  }
+  assert.ok(n > 100 && LEATHER.feet && LEATHER.skin === false && LEATHER.lrange[1] <= 0.25 && packRules([LEATHER])[0].win[2] === 1, `${n} variants in leather`);
+  assert.ok(/feetOf\(model, actor\)/.test(fs.readFileSync('game/js/editions/lastversion/wardrobe.js', 'utf8')), 'the dresser hands the feet mask to the recolour');
+  // the technicians: the paramedic's back patch (and the badges) slate, flat; the paramedics keep theirs
+  const tech = WARDROBE.rb_medic_f['helix tech'].body;
+  const patch = tech.find((r) => r.band && r.band[0] <= 0.4 && r.band[2] >= 0.594 && r.band[1] <= 0.285 && r.band[3] >= 0.333);
+  assert.ok(patch && patch.lset != null && patch.skin === false && patch.lmin < 0, 'PARAMEDIC across the back dyed out, its black letters too');
+  assert.equal(tech.filter((r) => r.lset != null).length, 3, 'the patch and the two badges');
+  for (const v of ['default', 'dust', 'night']) assert.ok(!WARDROBE.rb_medic_f[v].body?.some((r) => r.lset != null), `the paramedics (${v}) keep their lettering`);
+  // the glazier: a work top under the jacket (the open neckline dyed as cloth on her head map and her body map)
+  const gz = WARDROBE.rb_glazier.glazier;
+  assert.ok(gz.head.some((r) => r.band[1] >= 0.6 && r.band[1] <= 0.7 && r.band[3] <= 0.85 && r.band[2] <= 0.75 && r.skin === false), 'her chest under the collarbones cloth, not the ponytail beside it');
+  assert.ok(gz.body.some((r) => r.band[0] <= 0.45 && r.band[2] >= 0.55 && r.lmin >= 0.4 && r.skin === false), 'the skin inside the lapels cloth, the lapels kept');
+  // the Elder's crown silvered in her maps' edit (tools/rocketbox-textures.py F009 crown)
+  assert.ok(/'crown': \[\('e', 7\d\d, 1\d\d,/.test(fs.readFileSync('tools/rocketbox-textures.py', 'utf8')), 'the whorl at the back of her crown silvered');
+  // Mission 21: the office empty, and said to be, when the persuaded Rook holds the gap
+  const office = M21.scenes.office.lines, say = (facts) => office.filter((l) => !l.when || compileCondition(l.when)({ fact: (k) => facts[k] ?? null, state: 'PRESENT' })).map((l) => l.text);
+  const empty = 'An empty chair, and a recorder on the desk, still running.';
+  assert.ok(say({ rook_fate: 'persuade', ally: 'rook' }).includes(empty) && !say({ rook_fate: 'persuade', ally: 'rook' }).some((t) => t.startsWith('They gave me')), 'Rook at the gap: the chair empty');
+  assert.ok(say({ rook_fate: 'persuade', ally: 'sera' }).some((t) => t.startsWith('They gave me the chair')) && !say({ rook_fate: 'persuade', ally: 'sera' }).includes(empty), 'Rook in his chair');
+  assert.ok(say({ rook_fate: 'expose' }).some((t) => t.includes('check badges')) && !say({ rook_fate: 'expose' }).includes(empty), 'Pryce in his chair');
+  assert.ok(say({}).includes(empty), 'nobody in it');
 });
 
 test('named faces stay out of crowds (but for the listed exceptions), and crowd faces never cross eras', () => {

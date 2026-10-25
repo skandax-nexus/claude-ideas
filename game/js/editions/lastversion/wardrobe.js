@@ -8,7 +8,9 @@
 //     to: hue                  the new hue (0..1)
 //     sat | sset               saturation multiplied | set
 //     light | lset | lrange    lightness multiplied | set | lmin..lmax mapped onto [a, b]
-//     skin: false              also recolour texels that look like this person's skin }
+//     skin: false              also recolour texels that look like this person's skin
+//     feet: true               only texels on the body's feet and ankles (feetOf: the triangles on the feet and the lowest
+//                              part of the calves, as the body's own mesh lays them on its map) }
 // Skin is protected with the avatar's own skin colour, sampled from the middle of its head map (a
 // fixed skin mask takes ochre and red cloth for skin), and anything skin-hued in the map's corners,
 // where every Rocketbox layout puts the hands. Each model and variant is recoloured once, on
@@ -310,9 +312,15 @@ const CUT = {
 };
 // the one boy's body's jersey and sleeves (rb_child_m2): only those bands are dyed, his skin is the jersey's hue
 const JERSEY_DYE = (name) => JERSEY(dyeRule(name));
+// (castfin round 1) the child's shirt under the tunic: the tunic's dye if it is light enough to read as cloth on the body's
+// dark skin, else the outfit's next light dye, else oat (a girl in walnut wool to the waist read bare-chested in the first
+// fire's evening light)
+const lightOf = (name) => { const h = {}; new THREE.Color(DYE[name]).getHSL(h, THREE.SRGBColorSpace); return h.l; };
+const SHIRT = (...names) => names.find((n) => lightOf(n) >= 0.43) || 'oat';
 // (Female_Adult_05's blazer is pink, a colour the dye would take for her skin and leave: dyed all over but for the map's
-// corners, where her hands are)
-const OUT_OF_CORNERS = [[0.25, 0, 0.75, 1], [0, 0.17, 0.25, 0.83], [0.75, 0.17, 1, 0.83]];
+// top corners, where her hands are; castfin round 1: her jeans' hems in the bottom corners too, which showed blue at her
+// ankles as she walked)
+const OUT_OF_CORNERS = [[0.25, 0, 0.75, 1], [0, 0.17, 0.25, 1], [0.75, 0.17, 1, 1]];
 const BODY_DYE = { rb_vill_f: (t) => OUT_OF_CORNERS.map((band) => dyeRule(t, { band, skin: false })) };
 function settlementVariants() {
   const out = { rb_vill_m: {}, rb_vill_m2: {}, rb_vill_f: {}, rb_vill_f2: {}, rb_elder_m: {}, rb_sage_m: {}, rb_child_m2: {} };
@@ -325,9 +333,9 @@ function settlementVariants() {
         const j = m.endsWith('2') ? i + 1 : i;
         out[m][`${pal}${i}`] = { body: BODY_DYE[m] ? BODY_DYE[m](t) : [dyeRule(t)], garb: CUT[kd](t, o, st, b, j), ...(kd === 'elder' ? { props: ['staff'] } : {}) };
       }
-      out.rb_child_m2[`${pal}_boy${i}`] = { body: JERSEY_DYE(t), garb: CUT.boy(t, o, st, b, i) };
+      out.rb_child_m2[`${pal}_boy${i}`] = { body: JERSEY_DYE(SHIRT(t, o, st)), garb: CUT.boy(t, o, st, b, i) };
       // a girl wears one of the settlement's women's hair (tied back, or loose to the shoulder)
-      out.rb_child_m2[`${pal}_girl${i}`] = { body: JERSEY_DYE(t), garb: CUT.girl(t, o, st, b, i), hairdo: { from: i % 2 ? 'rb_vill_f2' : 'rb_vill_f' } };
+      out.rb_child_m2[`${pal}_girl${i}`] = { body: JERSEY_DYE(SHIRT(t, o, st)), garb: CUT.girl(t, o, st, b, i), hairdo: { from: i % 2 ? 'rb_vill_f2' : 'rb_vill_f' } };
     });
   }
   return out;
@@ -343,7 +351,7 @@ Object.assign(WARDROBE, {
   },
   rb_niko_old: {
     // Niko, an old man (M7's cold open): the same face aged in his model's own maps (tools/rocketbox-textures.py 'age_m':
-    // salt-and-pepper hair and tail, lines at the brow, the eyes and the mouth, a short grey beard, paler skin; greying
+    // his hair and tail grey to near-white, lines at the brow, the eyes and the mouth, a short grey beard, paler skin; greying
     // the young man's black hair alone left a man of thirty with grey hair), in oat wool and a woad cloak, a staff
     older: { body: [dyeRule('oat')],
       garb: { skirt: { dye: D('oat'), stripe: D('walnut'), hem: 0.1, flare: 1.12 }, bodice: { dye: D('oat') }, cloak: { dye: D('woad'), stripe: D('undyed') }, belt: { dye: D('walnut') } }, props: ['staff'] },
@@ -381,6 +389,12 @@ Object.assign(WARDROBE.rb_child_m2, {
   girl_m4: { sex: 'f', body: JERSEY_DYE('undyed'), garb: { skirt: { dye: D('undyed'), stripe: D('madder'), hem: 0.05, flare: 1.1, ease: 0.014 }, sash: { dye: D('madder'), side: 'L', w: 0.06 } }, hairdo: { from: 'rb_vill_f2' } },
   girl_m5: { sex: 'f', body: JERSEY_DYE('sky'), garb: { skirt: { dye: D('sky'), stripe: D('undyed'), hem: 0.05, flare: 1.1, ease: 0.014 }, belt: { dye: D('walnut') } }, hairdo: { from: 'rb_vill_f' } },
 });
+// (castfin round 1) the settlement's feet: Rocketbox's trainers and shoes under the hem (white soles, laces, a tunic's dye
+// over them), dyed dark leather with the ankles above them, as wrapped leather shoes and leg wraps; for everyone who wears
+// a tunic's skirt, named or in a crowd (the settlement's people alone wear one). After the body's own rules, so nothing
+// else dyes them again
+export const LEATHER = { feet: true, lmin: -0.1, to: 0.075, sset: 0.4, lrange: [0.07, 0.2], skin: false };
+for (const vs of Object.values(WARDROBE)) for (const v of Object.values(vs)) if (v.garb?.skirt) v.body = [...(v.body || []), LEATHER];
 
 // --- today's crowds, place by place (closing) ---------------------------------------------------------------------------
 // The casual crowds of a place wear its own colours (crowds.js PALETTE), so Rain City's wet morning, Old Town's autumn,
@@ -425,7 +439,10 @@ for (const m of ['rb_civ_f1', 'rb_civ_f2', 'rb_civ_m1', 'rb_civ_m2', 'rb_courier
 const LABCOAT = { cloak: { dye: '#e4e4e0', hem: 0.5, open: 0.42, fit: true } };
 WARDROBE.rb_civ_f4.labcoat = { body: [{ band: [0.3, 0.1, 0.7, 0.62], sset: 0.03, lrange: [0.74, 0.9] }, { band: [0, 0, 0.3, 0.55], sset: 0.03, lrange: [0.7, 0.88] }, { band: [0.7, 0, 1, 0.55], sset: 0.03, lrange: [0.7, 0.88] }], garb: LABCOAT, props: ['lanyard'] };
 WARDROBE.rb_civ_m3.labcoat = { body: [{ band: [0.3, 0.15, 0.7, 0.84], sset: 0.03, lrange: [0.74, 0.9] }, { band: [0, 0.42, 0.32, 0.84], sset: 0.03, lrange: [0.74, 0.9] }, { band: [0.68, 0.42, 1, 0.84], sset: 0.03, lrange: [0.74, 0.9] }], garb: LABCOAT, props: ['clipboard'] };
-WARDROBE.rb_medic_f['helix tech'] = { body: [{ hue: [0.62, 0.1], smin: 0.2, to: 0.6, sset: 0.14, lrange: [0.16, 0.36] }] };
+// (castfin round 1) the technicians are not paramedics: the white PARAMEDIC patch across the back (its letters) and the
+// star-of-life badges on the chest and the sleeve are slate cloth like the rest (Medical_Female_03's map, 512 px)
+const UNLETTERED = [[0.392, 0.278, 0.602, 0.34], [0.548, 0.484, 0.6, 0.547], [0.828, 0.51, 0.88, 0.572]].map((band) => ({ band, lmin: -0.1, to: 0.6, sset: 0.12, lset: 0.27, skin: false })); // (lmin below 0: the letters' black, at the window's soft edge at 0, kept a quarter of itself)
+WARDROBE.rb_medic_f['helix tech'] = { body: [{ hue: [0.62, 0.1], smin: 0.2, to: 0.6, sset: 0.14, lrange: [0.16, 0.36] }, ...UNLETTERED] };
 WARDROBE.rb_civ_f2.cook = { body: [{ band: [0.3, 0, 0.7, 0.6], sset: 0.03, lrange: [0.76, 0.92] }, { hue: [0.6, 0.1], smin: 0.1, to: 0.6, sset: 0.06, lrange: [0.12, 0.24] }], garb: { apron: { dye: '#ece8dc', hem: 0.38 }, belt: { dye: '#ece8dc', w: 0.03 } } };
 // the receptionist: Helix's navy suit; Officer Haig at home (her recording)
 WARDROBE.rb_desk_f = { 'helix desk': { body: [{ lmax: 0.3, to: 0.62, sset: 0.3, lrange: [0.08, 0.2] }] } };
@@ -441,11 +458,17 @@ WARDROBE.rb_tomas = { school: { body: [{ hue: [0.6, 0.1], smin: 0.3, to: 0.025, 
 // else, crowd or named, wears her body
 const GLAZIER_HAIR = [[0, 0, 1, 0.17], [0, 0.17, 0.3, 0.55], [0.7, 0.17, 1, 0.55], [0.5, 0.64, 1, 1]];
 const PETROL = { to: 0.5, sset: 0.4, lrange: [0.18, 0.42], lmax: 0.7 };
+// (castfin round 1) and under the jacket a grey marl work top, crew-necked at the collarbones: the suit's open neckline
+// (bare skin to the breastbone, a pendant) dyed as cloth, on her head map (the chest below the base of the neck, not the
+// ponytail's pieces beside it) and her body map (the skin and the blouse's insert inside the lapels; only what is light,
+// so the lapels' petrol stays)
+const WORK_TOP = { to: 0.1, sset: 0.06, lrange: [0.42, 0.56], skin: false };
 WARDROBE.rb_glazier = { glazier: {
   body: [{ band: [0.33, 0, 0.67, 0.86], ...PETROL }, { band: [0, 0.12, 0.33, 0.48], ...PETROL }, { band: [0.67, 0.12, 1, 0.48], ...PETROL },
-    { band: [0, 0.55, 0.33, 1], to: 0.08, sset: 0.12, lrange: [0.1, 0.26] }, { band: [0.67, 0.55, 1, 1], to: 0.08, sset: 0.12, lrange: [0.1, 0.26] }],
+    { band: [0, 0.55, 0.33, 1], to: 0.08, sset: 0.12, lrange: [0.1, 0.26] }, { band: [0.67, 0.55, 1, 1], to: 0.08, sset: 0.12, lrange: [0.1, 0.26] },
+    { band: [0.43, 0.41, 0.57, 0.65], lmin: 0.5, ...WORK_TOP }],
   hair: [{ to: 0.045, sset: 0.66, lrange: [0.24, 0.58], skin: false }],
-  head: GLAZIER_HAIR.map((band) => ({ band, lmax: 0.36, to: 0.045, sset: 0.6, lrange: [0.2, 0.48], skin: false })),
+  head: [...GLAZIER_HAIR.map((band) => ({ band, lmax: 0.36, to: 0.045, sset: 0.6, lrange: [0.2, 0.48], skin: false })), { band: [0.3, 0.665, 0.74, 0.845], ...WORK_TOP }],
   garb: { apron: { dye: '#9a683c', hem: 0.4, wide: 1.2, bib: 0.02, bibWide: 0.62, leather: true }, belt: { dye: '#3a2a1e', w: 0.05 } },
   props: ['glassLifter'],
 } };
@@ -583,7 +606,8 @@ uniform vec2 corners;        // the body map's corners that hold the hands (or b
 uniform int count;
 uniform vec4 band[${MAXR}];
 uniform vec4 sel[${MAXR}];   // hue centre (-1: any), hue width, smin, skin (1 protect)
-uniform vec4 win[${MAXR}];   // lmin, lmax, -, -
+uniform vec4 win[${MAXR}];   // lmin, lmax, feet (1: only the feet's texels), -
+uniform sampler2D feet;      // the body's feet on its map (feetOf; black where there is none)
 uniform vec4 act[${MAXR}];   // to hue (-1 keep), sat mul, sat set (-1), light mul
 uniform vec4 act2[${MAXR}];  // light set (-1), lrange a (-1), lrange b, -
 varying vec2 vUv;
@@ -617,6 +641,7 @@ void main() {
   float br = sum / ssum;
   float skinW = (1.0 - smoothstep(0.022, 0.05, distance(ch, sh))) * smoothstep(0.3, 0.45, br) * (1.0 - smoothstep(1.6, 2.0, br)) * step(0.0, skin.r);
   vec3 h = hsl(c);
+  float onFeet = texture2D(feet, vUv).r;
   // the hands (and bare shins) lie in the body map's top or bottom corners in every Rocketbox layout, often
   // warmer than the face: anything skin-hued in those corners is skin too
   float corner = step(min(vUv.x, 1.0 - vUv.x), 0.25) * (step(vUv.y, 0.17) * corners.x + step(0.83, vUv.y) * corners.y);
@@ -629,6 +654,7 @@ void main() {
     vec4 b = band[i];
     float w = step(b.x, vUv.x) * step(vUv.x, b.z) * step(b.y, vUv.y) * step(vUv.y, b.w);
     w *= smoothstep(win[i].x - 0.04, win[i].x + 0.02, h.z) * (1.0 - smoothstep(win[i].y - 0.02, win[i].y + 0.04, h.z));
+    if (win[i].z > 0.5) w *= onFeet;
     if (sel[i].x >= 0.0) {
       float dh = abs(fract(h.x - sel[i].x + 0.5) - 0.5);
       w *= (1.0 - smoothstep(sel[i].y * 0.75, sel[i].y, dh)) * smoothstep(sel[i].z * 0.7, sel[i].z + 0.02, h.y);
@@ -652,7 +678,7 @@ let quad = null;
 function quadScene() {
   if (quad) return quad;
   const uniforms = {
-    map: { value: null }, skin: { value: new THREE.Vector3(-1, -1, -1) }, corners: { value: new THREE.Vector2() }, count: { value: 0 },
+    map: { value: null }, feet: { value: noFeet() }, skin: { value: new THREE.Vector3(-1, -1, -1) }, corners: { value: new THREE.Vector2() }, count: { value: 0 },
     band: { value: Array.from({ length: MAXR }, () => new THREE.Vector4()) }, sel: { value: Array.from({ length: MAXR }, () => new THREE.Vector4()) },
     win: { value: Array.from({ length: MAXR }, () => new THREE.Vector4()) }, act: { value: Array.from({ length: MAXR }, () => new THREE.Vector4()) },
     act2: { value: Array.from({ length: MAXR }, () => new THREE.Vector4()) },
@@ -673,13 +699,89 @@ export function packRules(rules) {
     rows.push({
       band: r.band || [0, 0, 1, 1],
       sel: [r.hue ? r.hue[0] : -1, r.hue ? r.hue[1] : 0, r.smin ?? 0, r.skin === false ? 0 : 1],
-      win: [r.lmin ?? 0, r.lmax ?? 1, 0, 0],
+      win: [r.lmin ?? 0, r.lmax ?? 1, r.feet ? 1 : 0, 0],
       act: [r.to ?? -1, r.sat ?? 1, r.sset ?? -1, r.light ?? 1],
       act2: [r.lset ?? -1, r.lrange ? r.lrange[0] : -1, r.lrange ? r.lrange[1] : -1, 0],
     });
   }
   return rows;
 }
+
+// (castfin round 1) The body's feet on its map: white on the triangles of the body's mesh whose three corners are on a
+// foot (their main bone a foot's or a toe's) or low on a calf (the lowest eighth of the body's height, as it is bound),
+// black elsewhere; 512 px, once per model. A rule with `feet` dyes only those texels, wherever the avatar's layout puts
+// them (Rocketbox's trainers and shoes lie in a different place on every map). From a person of that model.
+const FEET = new Map();
+let NOFEET = null;
+function noFeet() {
+  if (!NOFEET) {
+    NOFEET = new THREE.DataTexture(new Uint8Array([0, 0, 0, 255]), 1, 1);
+    NOFEET.needsUpdate = true;
+    NOFEET.userData.keep = true;
+  }
+  return NOFEET;
+}
+export function feetOf(model, actor) {
+  if (FEET.has(model)) return FEET.get(model);
+  if (!actor || typeof document === 'undefined') return null;
+  let body = null;
+  actor.traverse((o) => { if (o.isSkinnedMesh && !body && [].concat(o.material)[0]?.name === 'body') body = o; });
+  const g = body?.geometry, uv = g?.attributes.uv, ix = g?.index;
+  if (!uv || !ix || !body.skeleton) return null;
+  const pos = g.attributes.position, si = g.attributes.skinIndex, sw = g.attributes.skinWeight;
+  const root = actor.userData.model || actor;
+  root.updateMatrixWorld(true);
+  const toModel = new THREE.Matrix4().copy(root.matrixWorld).invert().multiply(body.matrixWorld).multiply(body.bindMatrix);
+  const names = body.skeleton.bones.map((b) => b.name);
+  const n = pos.count, y = new Float32Array(n), kind = new Uint8Array(n), v = new THREE.Vector3();
+  let lo = Infinity, hi = -Infinity;
+  for (let k = 0; k < ix.count; k++) {
+    const i = ix.getX(k);
+    y[i] = v.fromBufferAttribute(pos, i).applyMatrix4(toModel).y;
+    lo = Math.min(lo, y[i]);
+    hi = Math.max(hi, y[i]);
+  }
+  for (let i = 0; i < n; i++) {
+    let best = 0;
+    for (let c = 1; c < 4; c++) if (sw.getComponent(i, c) > sw.getComponent(i, best)) best = c;
+    const b = names[si.getComponent(i, best)] || '';
+    kind[i] = /_(Foot|Toe0)$/.test(b) ? 1 : /_Calf$/.test(b) ? 2 : 0;
+  }
+  const low = lo + (hi - lo) / 8;
+  const onFoot = (i) => kind[i] === 1 || (kind[i] === 2 && y[i] < low);
+  const N = 512;
+  const c = document.createElement('canvas');
+  c.width = c.height = N;
+  const x2 = c.getContext('2d');
+  x2.fillStyle = '#000';
+  x2.fillRect(0, 0, N, N);
+  x2.fillStyle = x2.strokeStyle = '#fff';
+  x2.lineWidth = 2; // (a texel over every edge: the seams of the shoes' pieces dyed too)
+  x2.lineJoin = 'round';
+  let any = 0;
+  for (let k = 0; k < ix.count; k += 3) {
+    const a = ix.getX(k), b = ix.getX(k + 1), d = ix.getX(k + 2);
+    if (!(onFoot(a) && onFoot(b) && onFoot(d))) continue;
+    x2.beginPath();
+    x2.moveTo(uv.getX(a) * N, uv.getY(a) * N);
+    x2.lineTo(uv.getX(b) * N, uv.getY(b) * N);
+    x2.lineTo(uv.getX(d) * N, uv.getY(d) * N);
+    x2.closePath();
+    x2.fill();
+    x2.stroke();
+    any++;
+  }
+  const t = any ? new THREE.CanvasTexture(c) : null;
+  if (t) {
+    t.flipY = false; // (glTF's maps are not flipped: a texel at uv (u, v) is the map's row v from the top, as the rules' bands)
+    t.generateMipmaps = false;
+    t.minFilter = t.magFilter = THREE.LinearFilter;
+    t.userData.keep = true;
+  }
+  FEET.set(model, t);
+  return t;
+}
+const needsFeet = (rules) => Array.isArray(rules) && rules.some((r) => r.feet);
 
 // The avatar's own skin: its colour (sRGB 0..1) from the middle of its face on the head map, and which
 // corners of its body map hold skin (the hands at the top or the bottom, bare shins): { rgb, corners }.
@@ -762,11 +864,12 @@ const cache = new Map(); // `${model}|${variant}|${part}` -> texture
 // target's texture, with no image behind it), and a lost GPU context (an app switch, memory pressure on a phone) takes it
 // away. three.js uploads every texture with an image again by itself; these came back black (a dyed body map: black
 // arms, hands and neckline under an undyed face). On the context's return each is drawn again from its source map.
-const made = new Map(); // key -> { rt, src, skin, corners, rows }
+const made = new Map(); // key -> { rt, src, skin, corners, rows, feet }
 const watched = new WeakSet();
-function paint(renderer, { rt, src, skin, corners, rows }) {
+function paint(renderer, { rt, src, skin, corners, rows, feet }) {
   const q = quadScene();
   q.uniforms.map.value = src;
+  q.uniforms.feet.value = feet || noFeet();
   q.uniforms.skin.value.set(...(skin || [-1, -1, -1]));
   q.uniforms.corners.value.set(...corners);
   q.uniforms.count.value = rows.length;
@@ -797,7 +900,7 @@ function watch(renderer) {
   el.addEventListener('webglcontextrestored', () => redye(renderer));
 }
 export const stats = { made: 0, ms: 0 };
-export function recoloured(renderer, src, key, rules, skin, px = 512, corners = [0, 0]) {
+export function recoloured(renderer, src, key, rules, skin, px = 512, corners = [0, 0], feet = null) {
   if (cache.has(key)) return cache.get(key);
   if (!renderer || !src?.image || !rules?.length) return src;
   const t0 = performance.now();
@@ -808,7 +911,7 @@ export function recoloured(renderer, src, key, rules, skin, px = 512, corners = 
   rt.texture.wrapS = src.wrapS;
   rt.texture.wrapT = src.wrapT;
   rt.texture.name = `lv:${key}`;
-  const job = { rt, src, skin, corners, rows: packRules(rules) };
+  const job = { rt, src, skin, corners, rows: packRules(rules), feet };
   paint(renderer, job);
   made.set(key, job);
   // when the people who wore it have left (DeckWorld.freeLeft disposes it), the copy goes too
@@ -843,11 +946,14 @@ export function prewarm(renderer, pairs, { make, px = () => 512 } = {}) {
   for (const [model, variant] of pairs) {
     const v = WARDROBE[model]?.[variant];
     if (!v) continue;
-    if (!SOURCES.has(model) && make) {
+    if ((!SOURCES.has(model) || (needsFeet(v.body) && !FEET.has(model))) && make) {
       const a = make(model);
       const mats = [];
       a?.traverse((o) => { if (o.isMesh) for (const m of [].concat(o.material)) mats.push(m); });
-      if (a?.userData.spec?.model === model) noteSources(model, mats);
+      if (a?.userData.spec?.model === model) {
+        noteSources(model, mats);
+        if (needsFeet(v.body)) feetOf(model, a);
+      }
       a?.traverse((o) => { if (o.userData.ownGeometry) o.geometry.dispose(); });
     }
     const m = SOURCES.get(model);
@@ -856,7 +962,7 @@ export function prewarm(renderer, pairs, { make, px = () => 512 } = {}) {
       if (!Array.isArray(rules) || !rules.length || !m[part]) continue;
       if (!cache.has(`${model}|${variant}|${part}`)) n++;
       const sk = skinOf(model, m.head, m.body);
-      recoloured(renderer, m[part], `${model}|${variant}|${part}`, rules, sk.rgb, px(model), part === 'body' ? sk.corners : [0, 0]);
+      recoloured(renderer, m[part], `${model}|${variant}|${part}`, rules, sk.rgb, px(model), part === 'body' ? sk.corners : [0, 0], needsFeet(rules) ? FEET.get(model) : null);
     }
   }
   return n;
@@ -885,7 +991,7 @@ export function dress(actor, crew, opts = {}) {
     const rules = v[part];
     if (Array.isArray(rules) && rules.length && src[part] && opts.renderer) {
       const sk = skinOf(model, src.head, src.body);
-      m.map = recoloured(opts.renderer, src[part], `${model}|${variant}|${part}`, rules, sk.rgb, opts.px?.(model) || 512, part === 'body' ? sk.corners : [0, 0]);
+      m.map = recoloured(opts.renderer, src[part], `${model}|${variant}|${part}`, rules, sk.rgb, opts.px?.(model) || 512, part === 'body' ? sk.corners : [0, 0], needsFeet(rules) ? feetOf(model, actor) : null);
     } else if (m.map && m.map === src[part]) worn(m.map);
     // crowds: tinted hair; Rain City's wet clothes read darker
     if (crew.hairTint && (part === 'hair') && m.color) m.color.multiply(new THREE.Color(crew.hairTint));
