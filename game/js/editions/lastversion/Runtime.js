@@ -332,7 +332,7 @@ export class LastVersion {
     }
     sub.textContent = this.def.subtitle;
     $('#title .tag').textContent = this.def.tagline;
-    $('#title .ver').textContent = 'v2.0 · The Last Version of Earth';
+    $('#title .ver').textContent = 'v2.1 · The Last Version of Earth';
     // the menus opened from the title (the chapters, the saves, the settings, the CASE FILES) stand in front of the
     // title's own backdrop, not of Station Zero's antechamber, which the 3D view keeps drifting round behind the title
     if (!$('#lvTitleMenus')) {

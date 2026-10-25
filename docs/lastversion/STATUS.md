@@ -88,9 +88,10 @@ in 5,143 recordings. Each mission's place is 1.7-6.8 ha (v2.0's generated rooms:
   settings, default look (Kai Varen, a realistic man), HUD names (the year pips 2049 / 2026 /
   2196, the REVERSE chip from Mission 11, YEAR on the touch switch button, the ⟲ touch button,
   THINK / ECHO STEP / CASE in the dock, the CASE BOARD), its own Android build (`EDITION=lastversion bash android/build-apk.sh`: app
-  "AFTERZERO: Last Version", `com.afterzero.lastversion`, versionName 2.0.0,
-  `AFTERZERO-LastVersion-v2.0.apk`, preview page with `window.AZ_EDITION='lastversion'`, published
-  at [claude.ai/artifact/GDpG6YCybK2cj8P3gPXRrr](https://claude.ai/artifact/GDpG6YCybK2cj8P3gPXRrr)). The
+  "AFTERZERO: Last Version 2.1", `com.afterzero.lastversion.v2_1`, versionName 2.1.0,
+  `AFTERZERO-LastVersion-v2.1.apk`, preview page with `window.AZ_EDITION='lastversion'`, published
+  at (published with the release); v2.0, before the overhaul, stays its own app, "AFTERZERO: Last Version",
+  `com.afterzero.lastversion`, at [claude.ai/artifact/GDpG6YCybK2cj8P3gPXRrr](https://claude.ai/artifact/GDpG6YCybK2cj8P3gPXRrr)). The
   default build and every Station Zero chapter are unchanged.
 - **Three years** (2026, 2049, 2196), authored per region; per-year looks (tint, hour, weather,
   decoration, music); the Chronolith stability meter with the snap back to PRESENT at the last
