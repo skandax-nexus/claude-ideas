@@ -26,7 +26,7 @@ function person(id, { pos = [0, 0, 0], path = null, barks = [], speed = 1, seed 
   return { n, crew: { first: id, color: '#456', pronoun: { their: 'her' } }, model, body: model, talkT: 0, cond: () => true, freeze: compileCondition('false'), wp: 0, lastBark: -99 };
 }
 function place(people) {
-  const w = Object.assign(Object.create(DeckWorld.prototype), { engine, facts: new FactStore(), flags: {}, npcs: people, barkHeard: new Map(), lastBarkText: null, barkFrom: null, storyT: -99 });
+  const w = Object.assign(Object.create(DeckWorld.prototype), { engine, facts: new FactStore(), flags: {}, npcs: people, barkHeard: new Map(), barkTimes: new Map(), lastBarkText: null, barkFrom: null, storyT: -99 });
   const hud = Object.assign(Object.create(HUD.prototype), { subs: [], subT: 0, speakers: {}, el: { subs: { innerHTML: '' }, fade: { classList: { contains: () => false } } } });
   const said = [];
   const player = { pos: new THREE.Vector3(0, 0.86, 0) };
@@ -54,10 +54,13 @@ function assertPassing(barks, label) {
     assert.ok(barks[i].t - barks[i - 1].t >= BARK.gap - 1e-6, `${label}: ${barks[i].t - barks[i - 1].t} s between two barks`);
     assert.notEqual(barks[i].text, barks[i - 1].text, `${label}: the same line twice in a row`);
   }
-  const last = new Map();
+  // a line rests lineRest after it is heard, and longer each time it comes round (lineRest times the times heard)
+  const last = new Map(), times = new Map();
   for (const b of barks) {
-    if (last.has(b.text)) assert.ok(b.t - last.get(b.text) >= BARK.lineRest - 1e-6, `${label}: "${b.text}" again after ${b.t - last.get(b.text)} s`);
+    const k = times.get(b.text) || 0;
+    if (last.has(b.text)) assert.ok(b.t - last.get(b.text) >= BARK.lineRest * k - 1e-6, `${label}: "${b.text}" again after ${b.t - last.get(b.text)} s (heard ${k} times)`);
     last.set(b.text, b.t);
+    times.set(b.text, k + 1);
   }
 }
 
@@ -103,6 +106,26 @@ test('F03: barks are rare and never loop: global and per-person cooldowns, no li
     for (let i = 1; i < mine.length; i++) assert.ok(mine[i].t - mine[i - 1].t >= BARK.person - 1e-6, `${id}: ${mine[i].t - mine[i - 1].t} s between their lines`);
     for (let i = n; i < mine.length; i += n) assert.ok(mine[i].t - mine[i - 1].t >= BARK.personRest - 1e-6, `${id} rests after all ${n} of their lines`);
   }
+});
+
+test('F03: the thinnest pools (one line, two lines) over 40 minutes beside Kai: a handful of times, never dozens', () => {
+  // Mission 3's one technician with one line; Mission 8's court with two lines between six people; Kai among them all along
+  const ring = (r, a0) => Array.from({ length: 8 }, (_, i) => [Math.cos(a0 + i * Math.PI / 4) * r, Math.sin(a0 + i * Math.PI / 4) * r]);
+  const ONE = 'Panel was installed before the drone was.';
+  const TWO = ['The court floods every spring. Always has.', 'Rack nine is a second behind.'];
+  const solo = place([person('tech', { pos: [1.5, 0, 0], barks: [ONE] })]);
+  solo.run(2400);
+  const s = barksOf(solo.said);
+  assertPassing(s, 'one line, one person');
+  assert.equal(s.length, 1, `one person with one line beside Kai for 40 minutes: said ${s.length} times (never twice in a row)`);
+  const people = Array.from({ length: 6 }, (_, i) => person(`c${i}`, { pos: [2, 0, 0], path: ring(1.5 + (i % 3) * 0.8, i), barks: [TWO[i % 2 ? 1 : 0]], seed: i, speed: 0.5 + i * 0.1 }));
+  const P = place(people);
+  P.run(2400);
+  const b = barksOf(P.said);
+  assertPassing(b, 'two lines, six people');
+  const per = TWO.map((t) => b.filter((x) => x.text === t).length);
+  // (each line: heard, then resting 4, 8, 12, 16 minutes: at most 4 times in 40 minutes, where the old code said them 260 times)
+  assert.ok(per.every((c) => c >= 1 && c <= 4), `40 minutes: ${per} times`);
 });
 
 test('F20/F16/FT-04: no bark over a story line (nor just after one), a staged moment, a menu, a fade, a load or a pack still loading; none only a caption', () => {
@@ -217,6 +240,21 @@ test('FT-12: a rule\'s lines cut off by a reload are said again on load; once sa
   said2.length = 0;
   rt2.afterResume(m01);
   assert.equal(said2.length, 0, 'never twice');
+  // still being said as the next mission opens: dropped as before (not a conversation waiting on its end), the mark
+  // cleared with them, so a later load does not say them over the wrong mission
+  const flags3 = {};
+  const hud3 = Object.assign(Object.create(HUD.prototype), { subs: [], subT: 0, speakers: {}, el: { subs: { innerHTML: '' } } });
+  hud3.onLine = () => {};
+  const m02 = MISSIONS.prologue.find((m) => m.key === 'm02');
+  const g3 = { campaign: { lv: true, deck: 1 }, story: { decks: MISSIONS.prologue }, facts, hud: hud3, deckWorld: { flags: flags3, refresh() {} }, engine: { state: () => 'PRESENT' } };
+  const rt3 = Object.assign(Object.create(LastVersion.prototype), { g: g3, level: { order: [], npcs: [] }, chapter: 'prologue', chapterStart: false,
+    whenVoices() {}, hideCard() {}, cinema: { play() {} } });
+  hud3.card = () => {};
+  rt3.sayRule(m01.rules.find((r) => r.id === 'rook_call'));
+  assert.ok(hud3.storyTalking && flags3.saying_rook_call, 'Rook is calling');
+  rt3.openMission(m02, 'MISSION 2');
+  hud3.update(0.1);
+  assert.ok(!hud3.talking && !flags3.saying_rook_call, 'the next mission\'s card drops the call, and its mark');
 });
 
 test('SYS-18: a passer-by the camera is inside of is not drawn until it is clear; it keeps walking and stays present', () => {

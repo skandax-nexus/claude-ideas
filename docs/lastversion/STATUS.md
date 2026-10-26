@@ -1107,6 +1107,34 @@ in 5,143 recordings. Each mission's place is 1.7-6.8 ha (v2.0's generated rooms:
   done: no phone has installed or run it, no person has played or listened to it, and the bot's 201 game minutes are
   about 15% of the bible's mission targets.
 
+- **v2.1 playtest fixes, unit "barks" (2026-10-26): crowd lines said in passing, and the tap prompt** (PLAYTEST-v2.1.md
+  item 3; FT-03, FT-04, FT-12, F01, F20, F03, F16, X1, SYS-07, SYS-18). What changed: the bark's distance is its own
+  numbers (`DeckWorld.updatePeople`; it was read from the scratch vector the walk had just made a unit direction, so
+  every walker barked from anywhere, every 9 s). The rules are `BARK` in `DeckWorld.js`: only someone within 4.5 m
+  on Kai's floor; one bark a place every 30 s at most, one a person every 60 s; never the line just said, nor one of a
+  person's lines before the rest of theirs; a line rests 4 minutes after it is heard, and 4 more for each time it has
+  been (a pool of one or two lines is heard a few times a mission, not dozens); someone who has said all theirs rests
+  5 minutes; nothing over any line, a staged moment, a menu, a fade, a load or a catch, for 6 s after a story line, in a
+  place's first 8 s, while a voice pack loads, or when the packs cannot say the line (no bark is only a caption). Lines
+  carry `bark` in the HUD: a story line cuts a bark and never waits behind one, a menu closed over one lets it go, and
+  only a story line hides the tap prompt (`main.js`; a tap on the prompt over a bark cuts it and acts). A rule's lines
+  are marked in the saved flags until said to the end (`Runtime.sayRule`), so a reload says them again (Rook's call),
+  and the next mission's card still drops them. A passer-by the camera comes within 1.3 m of is not drawn until 1.6 m
+  clear. No line was added or re-recorded; the thinnest pools (Mission 3's one line, Mission 8's two) are held by the
+  rests. Checked: `tests/lv-fix-barks.test.mjs` (11 tests: far walkers silent, the cooldowns and rests over 15 and 40
+  minutes, every hold, the prompt rule, FT-12's reload, the camera rule, and Missions 1, 4, 13 and 15 as built: a
+  minute standing and three walking), `npm test`, Station Zero's smoke and qa. In the browser, from the testers'
+  saves (scratch `fix/barks/`): standing 60 s where each save loads, then 60 s in its busiest crowd and 180 s walking
+  that crowd's route, in Missions 1, 4, 6, 10, 13, 14, 15 and 23: 0 to 4 barks a phase, every speaker 0.2-4.5 m from
+  Kai, the shortest gap 30 s, no line twice, none unvoiced (the playtest: one every 9.0 s from 10-285 m). Twelve minutes
+  walking with Mission 13's, 15's and 8's crowds: one bark each; with Mission 1's station crowd (22 people with lines):
+  12, six lines twice each, each repeat at least 4 minutes after. At Mission 1's plaza clock, 45 s: the prompt shown in
+  180 of 180 samples (the playtest: hidden in 29 of 60); with a commuter's bark up beside Kai it stays shown and a
+  touch tap on it opens the deduction, at 915x412 and 412x915. Rook's call cut by closing the app 1.5 s after the
+  trigger, mid-remark: said in full after CONTINUE. A walker sent through the camera on Mission 1's avenue: not drawn
+  closer than 1.30 m in 90 s. The Finale's pack held back 6 s on the way back from a trip, a commuter at Kai's side:
+  the first bark comes after it is in, voiced.
+
 ## Generated (playable, solvable by construction, not hand-tuned)
 
 - **Nothing of the places since U3.** Every mission and both cases stand in an authored open place;

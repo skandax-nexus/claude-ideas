@@ -1141,7 +1141,8 @@ export class LastVersion {
     // (a bark from the place left behind, still being said as this one loads, does not run over its cards: a line said
     // in passing, with nothing waiting on its end, is dropped. The tour found the village's 'We cook at the first fire'
     // over Mission 6's card)
-    if (g.hud.talking && !(g.hud.subs || []).some((s) => s.done)) g.hud.skipAll();
+    // (nor do a rule's lines, as before they were marked for a reload: Runtime.sayRule; their mark goes with them)
+    if (g.hud.talking && !(g.hud.subs || []).some((s) => s.done && !s.done.rule)) g.hud.skipAll();
     const token = (this.opening = { deck });
     const alive = () => this.opening === token && this.deck === deck && g.campaign?.lv;
     const steps = [];
@@ -1362,14 +1363,17 @@ export class LastVersion {
     for (const r of deck.rules || []) if (r.say && this.g.deckWorld.flags[`saying_${r.id}`]) this.sayRule(r);
   }
 
-  // a rule's lines, marked in the saved flags until their last one is over
+  // a rule's lines, marked in the saved flags until their last one is over (or cut: a skip, a staged moment, the next
+  // mission's card) (v2.1 playtest FT-12)
   sayRule(r) {
     const g = this.g, flags = g.deckWorld.flags, k = `saying_${r.id}`;
     flags[k] = true;
-    g.hud.say(r.say, g.facts, () => {
+    const done = () => {
       delete flags[k];
       g.dirty = true;
-    });
+    };
+    done.rule = r.id; // (openMission: not a conversation that waits on its end)
+    g.hud.say(r.say, g.facts, done);
   }
 
   // --- interactions --------------------------------------------------------------------------------

@@ -15,13 +15,14 @@ const _v = new THREE.Vector3(), _c = new THREE.Color();
 
 // Barks (THE LAST VERSION; DESIGN: Barks): lines said in passing. Only someone a few metres from Kai on his own floor
 // (near; their feet within `rise` of his) says one; one at a time across the place, at most one every `gap` seconds, a
-// person at most one every `person` seconds; a line is not said twice in a row (not for two `lineRest`s), nor again
-// before the rest of the speaker's lines have been heard, nor within `lineRest` seconds of being heard anywhere in
-// the place; someone who has said all theirs is quiet
-// for `personRest` seconds. Never over a story line (nor within `storyQuiet` seconds of one), a staged moment, a menu,
-// a fade or a load (`settle` seconds after a place is built), nor before the voice pack that says it is in: no bark is
-// ever only a caption. (v2.1 playtest: the distance was read from a scratch vector the walk had already overwritten
-// with a unit direction, so every walker barked from anywhere, every 9 s, and tiny pools looped dozens of times.)
+// person at most one every `person` seconds. A line is never said twice in a row, nor again before the rest of the
+// speaker's lines have been heard; once heard it rests `lineRest` seconds anywhere in the place, and longer each time
+// it comes round (twice that after its second time, three times after its third: a pool of one or two lines is
+// heard a handful of times in a long mission, not dozens); someone who has said all theirs is quiet for `personRest`
+// seconds. Never over a story line (nor within `storyQuiet` seconds of one), a staged moment, a menu, a fade or a
+// load (`settle` seconds after a place is built), nor before the voice pack that says it is in: no bark is ever only
+// a caption. (v2.1 playtest: the distance was read from a scratch vector the walk had already overwritten with a unit
+// direction, so every walker barked from anywhere, every 9 s, and tiny pools looped dozens of times.)
 export const BARK = { near: 4.5, rise: 1.8, gap: 30, person: 60, lineRest: 240, personRest: 300, storyQuiet: 6, settle: 8 };
 // Passers-by never fill the screen: one whose body (feet to crown) comes within `near` metres of the camera is not
 // drawn until it is `far` metres clear again (so they do not blink at the edge) (v2.1 playtest: a walker passing under
@@ -77,6 +78,7 @@ export class DeckWorld {
     this.lensT = 0;
     // barks: what this place has heard, and when (BARK); a new place settles before anyone speaks in passing
     this.barkHeard = new Map();
+    this.barkTimes = new Map();
     this.lastBarkText = null;
     this.barkFrom = null;
     this.storyT = -99;
@@ -672,17 +674,16 @@ export class DeckWorld {
   }
 
   // which of their lines: the one this place heard longest ago (never heard first; among those, starting somewhere else
-  // in each person's list), never the line just said, never one heard in the last lineRest seconds
+  // in each person's list), never the line just said, never one still resting (lineRest, times each time it was heard)
   nextBark(n, t) {
     const list = n.n.barks;
     const k0 = (n.n.seed || this.npcs.indexOf(n)) % list.length;
-    const again = t - (this.lastBarkT ?? -99) > 2 * BARK.lineRest; // (the last line said, long enough ago to come round)
     let pick = null, when = Infinity;
     for (let i = 0; i < list.length; i++) {
       const text = list[(k0 + (n.barkN || 0) + i) % list.length];
-      if (!text || (text === this.lastBarkText && !again)) continue;
+      if (!text || text === this.lastBarkText) continue;
       const heard = this.barkHeard?.get(text) ?? -Infinity;
-      if (t - heard < BARK.lineRest) continue;
+      if (t - heard < BARK.lineRest * Math.max(1, this.barkTimes?.get(text) || 0)) continue;
       if (heard < when) (pick = text), (when = heard);
     }
     return pick;
@@ -697,11 +698,12 @@ export class DeckWorld {
     // (a line the packs cannot say is not said at all: no bark is only a caption)
     const v = g.voice;
     if (v?.edn && v.enabled && v.plan && !v.plan(text, who, voice)) {
-      this.barkHeard.set(text, t); // (rests like one said, so the next person does not try it every frame)
+      (this.barkHeard ||= new Map()).set(text, t); // (rests like one said, so the next person does not try it every frame)
       return false;
     }
     n.lastBark = this.lastBarkT = t;
-    this.barkHeard.set(text, t);
+    (this.barkHeard ||= new Map()).set(text, t);
+    (this.barkTimes ||= new Map()).set(text, (this.barkTimes.get(text) || 0) + 1);
     this.lastBarkText = text;
     // someone who has now said each of their lines rests a while
     n.barkN = (n.barkN || 0) + 1;
