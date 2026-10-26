@@ -171,6 +171,12 @@ export class Input {
     lookEl.addEventListener('touchcancel', endLook);
 
     for (const b of ui.querySelectorAll('[data-act]')) {
+      // the floating prompt (and anything else marked data-tap) sits where a right thumb starts to look round: it acts on
+      // a tap, and a drag that starts on it turns the view
+      if (b.hasAttribute('data-tap')) {
+        this.tapOrLook(b, () => this.actions.push(b.dataset.act));
+        continue;
+      }
       b.addEventListener('touchstart', (e) => {
         this.activity();
         e.preventDefault();
@@ -184,6 +190,54 @@ export class Input {
       }, { passive: false });
       b.addEventListener('touchend', () => b.classList.remove('down'));
     }
+  }
+
+  // A control in the look area: a tap (lifted within TAP_SLOP px of where it landed) fires it on touchend; a touch that
+  // moves further is a look drag from there on, as if it had started on the look zone. (Its touches stay with the
+  // element they started on, whatever moves or hides under the thumb, so the drag is followed here.)
+  tapOrLook(el, fire) {
+    let t0 = null;
+    const pt = (e) => e.changedTouches?.[0] || { identifier: 'synthetic', clientX: 0, clientY: 0 };
+    const mine = (e) => (e.changedTouches?.length ? [...e.changedTouches].find((t) => t0 && t.identifier === t0.id) : t0 && t0.id === 'synthetic' ? pt(e) : null);
+    el.addEventListener('touchstart', (e) => {
+      this.activity();
+      e.preventDefault();
+      e.stopPropagation();
+      if (t0) return;
+      const t = pt(e);
+      t0 = { id: t.identifier, x: t.clientX, y: t.clientY, lx: t.clientX, ly: t.clientY, drag: false };
+      el.classList.add('down');
+    }, { passive: false });
+    el.addEventListener('touchmove', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const t = mine(e);
+      if (!t || t.identifier === 'synthetic') return;
+      if (!t0.drag && Math.hypot(t.clientX - t0.x, t.clientY - t0.y) > Input.TAP_SLOP) {
+        t0.drag = true;
+        el.classList.remove('down');
+      }
+      if (t0.drag) {
+        this.look.dx += (t.clientX - t0.lx) * this.touchSensitivity;
+        this.look.dy += (t.clientY - t0.ly) * this.touchSensitivity;
+        this.activity();
+      }
+      t0.lx = t.clientX;
+      t0.ly = t.clientY;
+    }, { passive: false });
+    const end = (e) => {
+      const t = mine(e);
+      if (!t) return;
+      e.stopPropagation();
+      const tap = !t0.drag && e.type === 'touchend';
+      t0 = null;
+      el.classList.remove('down');
+      if (!tap) return;
+      navigator.vibrate?.(8);
+      fire(e);
+    };
+    el.addEventListener('touchend', end);
+    el.addEventListener('touchcancel', end);
   }
 
   moveStick(t, knob, R) {
@@ -253,3 +307,6 @@ export class Input {
     if (document.pointerLockElement) document.exitPointerLock?.();
   }
 }
+
+// how far (CSS px) a thumb may wander on a tap-only control and still tap it; further, and it is looking round
+Input.TAP_SLOP = 12;

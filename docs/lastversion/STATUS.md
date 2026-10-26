@@ -1183,6 +1183,61 @@ in 5,143 recordings. Each mission's place is 1.7-6.8 ha (v2.0's generated rooms:
   check: with the crowd-barks fix in, Mission 1 measures 9.0 bot minutes (10.2 at the release, when the bot waited out
   barks), exactly the floor its check holds it to; the same 9.0 with this unit's Mission 1 or without it.
 
+- **v2.1 playtest fixes, unit "touch" (2026-10-26): touch controls, HUD readability and the phone layout**
+  (PLAYTEST-v2.1.md blocker 1 and its phone UI items; FT-01, FT-07, FT-09, FT-16, FT-19, FT-20, SYS-03, SYS-04, SYS-05,
+  SYS-08, SYS-10, SYS-11, SYS-12, SYS-13, SYS-15, X-01, acts-1-2 F08-F11, acts-3 F07, F10, F11, F12, F14). What changed:
+  - The causal anchor by touch (FT-01, the blocker): an ANCHOR button beside YEAR while Kai carries something out of
+    another year (above REVERSE when REVERSE is his; upright, above the jump button), and the CARRYING label anchors
+    too ("· TAP TO ANCHOR", then "· ANCHORED"). Each time such a thing comes into his hand, until he has anchored once,
+    a toast says how ("KEYCARD (2026) comes apart when the year changes. Tap ANCHOR first, then YEAR.") and ANCHOR
+    glows. `ui/Tips.js` (new) keeps the body classes (lvcarry, lvanchored, lvnoyear) and the one-time tips; the case
+    board's ABILITIES names the button.
+  - A tap, not a touch: the floating prompt, the CARRYING label, ANCHOR, REVERSE and REVERSE's target label act on
+    touchend when the thumb has not moved past 12 px; a drag that starts on one turns the view (`Input.tapOrLook`;
+    acts-1-2 F08, acts-3 F12). REVERSE's label sits above the look zone, which had taken its taps.
+  - Readable on any scene (FT-07, SYS-03, F14): the because line and the side story are light text with the goal's
+    halo (they were dark ink with no shadow), 11.5 px on a phone, on a dark glass plate behind the objective; the calm
+    HUD keeps the objective at 0.85 and the year card at 0.7 (it all but vanished on M19's white plain).
+  - The prompt (SYS-05, FT-20): clamped by half its measured width inside the safe area (not a fixed 90 px), wrapped
+    within the screen when longer, and it fades out with its words (no bare "TAP ·").
+  - The title (SYS-04, FT-09): on a short landscape screen CONTINUE, NEW GAME, LOAD, SETTINGS and the touch hints fit
+    above the fold; upright the hints come back; the hints name YEAR, THINK and CASE. Any panel taller than the
+    screen shows a "▾ MORE" cue until scrolled to its end.
+  - Panels (SYS-08, X-01): settings, saves, the case board, laws and chapters keep their header and × pinned while
+    they scroll, and a tap beside the panel closes it (the map too); the Sound captions toggle shows its choice in dark
+    ink like every other toggle. The case board opens on WHERE YOU ARE, THE QUESTIONS and EVIDENCE; TRAVEL comes after
+    PEOPLE, one line until a mission is done (FT-19; on a trip it stays at the top).
+  - The dock and controls (FT-09, SYS-13, FT-16, SYS-11): the dock says CASE, MAP, THINK, MENU under its icons at
+    56x48; upright it is a column by the right thumb, REVERSE and ANCHOR above YEAR clear of the stick's zone, the
+    captions left of the column and the objective under the year card; SKIP is 44 px tall; YEAR is greyed with "NOT
+    YET" until the Chronolith. One-time toasts (once per device) teach THINK after 45 s stuck on one objective and the
+    CASE board at its first evidence, each with a glow on its button.
+  - The place label follows the quarter Kai is in, as the quarter toast names it (`Runtime.placeLabel`; F09, F07); the
+    watchers' meter has an eye and a word, WATCHER NEAR / NOTICING YOU / SEEN, on a dark track (SYS-15, F10).
+  - REVERSE (SYS-10, F11): the unlock toast says how (aim, tap REVERSE, tap RELEASE) and that light things hold longer;
+    the target label says LIGHT or HEAVY beside its seconds; while a thing is held the label says HOLDING (one count,
+    on the chip); a bolt backing out is named on the chip and the label until it is out, never the next bolt.
+  - The ending card and CASE FILES (acts-3 F10, F11): THE CASES and BACK TO THE TITLE stay pinned at the card's foot;
+    REPLAY, the tabs, the year buttons, the map's and the board's TRAVEL, BACK TO THE STORY and TRACK are 44 px tall.
+    The objective clears a left notch (SYS-12).
+  No line was added or re-recorded. Not done: FT-07's card-over-objective part (not reproduced by its verifier).
+  Checked: `tests/lv-fix-touch.test.mjs` (10 tests), `npm test` (all), `node --check` on every changed file; Station
+  Zero's smoke, qa (26/26), features (83/83) and layout (no overlaps at nine sizes). `tests/lastversion.mjs`'s touch
+  REVERSE step now sends touchstart and touchend (a tap). In the browser by touch, at 915x412 and 412x915 (scratch
+  `fix/touch/`): from the tester's Mission 3 save, the keycard taken in 2026, the tip, ANCHOR tapped (and, upright, the
+  CARRYING label), YEAR to 2049 with the card kept, the lock opened by a tap on its prompt; a drag from ANCHOR turned
+  the view 0.55 rad and anchored nothing. The title with a save: all four buttons and the hints in view and answering
+  their centres in both orientations; settings scrolled to the end with its × still at the top, closed by the × and by a
+  tap beside it; the case board the same. Every HUD piece up at once in Mission 11 (a line, a toast, the objective,
+  the meter, CARRYING, ANCHOR, REVERSE, ECHO, YEAR, the dock): no overlaps, every button at least 44 px and answering
+  its centre, both orientations. Mission 1's prompt upright: x 102-405 in a 412 px screen (the playtest: 201-443).
+  Mission 11: the unlock toast, a light target's label, a hold by a tap on the label, the CRESCENT bolt named while it
+  backs out, a drag from REVERSE turning the view with no jam. Mission 13's label THE BATTLEFIELD / THE THREE DEVICES /
+  THE STABILIZER, Mission 11's WARD 32, Mission 23's THE SETTLEMENT, AGAIN; a drag from the prompt turned the view and
+  said nothing, a tap on it acted. The ending card's buttons and CASE FILES' in view and answering; M19's plain; SKIP
+  96x44; a 44 px left inset moves the objective to x 44. (Harness note: a headless window smaller than the emulated
+  portrait page drops touch scrolls below its edge; the checks ran with a 1000x1000 window.)
+
 ## Generated (playable, solvable by construction, not hand-tuned)
 
 - **Nothing of the places since U3.** Every mission and both cases stand in an authored open place;

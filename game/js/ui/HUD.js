@@ -105,15 +105,26 @@ export class HUD {
   // prompt, held and setState run every frame: each touches the DOM only when
   // what it shows has changed (rewriting it every frame cost style, layout and
   // paint work, and garbage that brought on long GC pauses)
+  // (a prompt that goes keeps its words while it fades: emptied at once, the pill faded out as a bare 'TAP ·')
   prompt(text) {
     text = text || '';
     const el = this.el.prompt;
-    if (text === this._promptText && el.classList.contains('on') === !!text) return;
-    this._promptText = text;
-    const t = el.querySelector('.txt');
-    if (t) t.textContent = text;
-    else el.textContent = text;
-    el.classList.toggle('on', !!text);
+    const on = !!text;
+    if (on === el.classList.contains('on') && (!on || text === this._promptText)) return;
+    if (on && text !== this._promptText) {
+      this._promptText = text;
+      const t = el.querySelector('.txt');
+      if (t) t.textContent = text;
+      else el.textContent = text;
+      this._promptW = 0; // measured again on its next placing
+    }
+    el.classList.toggle('on', on);
+  }
+
+  // the prompt pill's width as shown (a layout read, once per new text: main.js clamps the pill on screen by it)
+  promptWidth() {
+    if (!this._promptW) this._promptW = this.el.prompt.offsetWidth || 0;
+    return this._promptW;
   }
 
   // avail: the states this room was authored with (others are not shown)
@@ -204,9 +215,11 @@ export class HUD {
   }
 
   eye(v, visible) {
-    this.el.eye.classList.toggle('on', visible);
-    this.el.eye.style.setProperty('--v', Math.min(1, v).toFixed(3));
-    this.el.eye.classList.toggle('alert', v >= 1);
+    const el = this.el.eye;
+    el.classList.toggle('on', visible);
+    el.style.setProperty('--v', Math.min(1, v).toFixed(3));
+    el.classList.toggle('alert', v >= 1);
+    el.classList.toggle('rising', v > 0.02 && v < 1); // (its label: a watcher near, noticing, seen)
   }
 
   fade(on) {
@@ -236,6 +249,24 @@ export class HUD {
   show(id) {
     for (const o of document.querySelectorAll('.overlay')) o.classList.toggle('on', o.id === id);
     document.body.classList.toggle('menu', !!id);
+    if (id) requestAnimationFrame(() => this.scrollCue());
+  }
+
+  // a panel taller than the screen says so: a 'more' cue pinned to its lower edge until it is scrolled to the end
+  scrollCue() {
+    for (const p of document.querySelectorAll('.overlay.on .panel')) {
+      if (!p._cue) {
+        p._cue = true;
+        p.addEventListener('scroll', () => this.cueOf(p), { passive: true });
+        p.addEventListener('click', () => requestAnimationFrame(() => this.cueOf(p))); // (a tab or a re-render changes its height)
+      }
+      this.cueOf(p);
+    }
+  }
+
+  cueOf(p) {
+    const more = p.scrollHeight - p.scrollTop - p.clientHeight > 12;
+    if (more !== p.classList.contains('more')) p.classList.toggle('more', more);
   }
 
   // A big centred title card (deck arrivals, chapter breaks).

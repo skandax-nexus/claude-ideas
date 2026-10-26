@@ -586,7 +586,10 @@ export class Inversion {
       g.facts.set('has_inversion');
       this.state.charge = this.cap;
       this.snd.unlock();
-      g.hud.toast(`<small>REVERSE · ${RULES[0][0]} · ${RULES[1][0]}</small><br>${RULES[0][1]}<br>${RULES[1][1]}`, 5600);
+      // (how, first: aim, the button or R, let go; then the two rules, and why a light thing outlasts the charge)
+      const how = g.input?.touch ? 'Aim at something moving and tap ⟲ REVERSE: it runs backwards and holds. Tap RELEASE to let go.'
+        : 'Aim at something moving and press R: it runs backwards and holds. R again lets go.';
+      g.hud.toast(`<small>REVERSE</small><br>${how}<br><small>${RULES[0][0]} · ${RULES[1][0]}</small> ${RULES[0][1]} ${RULES[1][1]} Light things hold longer, heavy ones less.`, 9000);
       g.log.push('REVERSE: the Chronolith caught the ward\'s rhythm. One thing at a time, and only while it is charged.');
       g.hud.say([{ who: 'KAI', text: INV_LINES.unlock }], g.facts, () => (this.unlocking = false));
     });
@@ -615,7 +618,7 @@ export class Inversion {
     const li = [];
     if (f.get('has_chronolith')) {
       li.push('<li><b>YEAR</b> <small>Q · 1 2 3 · YEAR</small><br>Switch this place between the years it has. Out of the present, an unstable place drains the Chronolith.</li>');
-      li.push('<li><b>ANCHOR</b> <small>C</small><br>What you carry out of another year survives the switch while you hold it.</li>');
+      li.push('<li><b>ANCHOR</b> <small>C · ANCHOR</small><br>What you carry out of another year survives the switch while you hold it. The ANCHOR button (or the CARRYING label) shows while you carry one.</li>');
     }
     if (f.get('echo_step')) li.push('<li><b>ECHO STEP</b> <small>X</small><br>An afterimage the watchers follow, and a step forward. It costs stability.</li>');
     if (this.unlocked) li.push(`<li><b>REVERSE</b> <small>R · 4 · ⟲</small><br>Hold one process backwards while the charge lasts (${this.cap} s).<ul class="rules">${RULES.map(([k, t]) => `<li><b>${k}</b> ${t}</li>`).join('')}</ul></li>`);
@@ -639,18 +642,30 @@ export class Inversion {
     const st = this.state, a = this.active, t = this.target;
     const name = (p, part) => (p.rec.kind === 'lock' && part >= 0 ? `${p.rec.label} · ${p.rec.parts[part].name}` : p.rec.label);
     const holdFor = (rec) => Math.floor(Math.min(st.charge / rec.weight, rec.max));
-    // the chip: what is held and its seconds left, else the charge (an upright phone leaves the name to the label)
-    const chipName = a && !a.lock ? `${a.p.rec.label} ` : '';
+    // (the label says why its seconds are not the chip's: a light thing outlasts the charge, a heavy one does not)
+    const heft = (rec) => (rec.weight < 1 ? 'LIGHT · ' : rec.weight > 1 ? 'HEAVY · ' : '');
+    // the chip: what is held and its seconds left; a bolt backing out (or a recording playing) named until it is done;
+    // else the charge (an upright phone leaves the name to the label)
+    const chipName = a ? `${name(a.p, a.part)} ` : '';
     const chipNum = a && !a.lock ? (a.left ?? 0).toFixed(1) : `${Math.floor(st.charge)}s`;
+    // the label: over what is held while it is held (never the next bolt while one is still backing out), else the target
+    let label = '', pos = null;
+    if (a && (a.lock || !t || t.p === a.p)) {
+      label = `⟲ ${name(a.p, a.part)} · ${a.lock ? (a.part >= 0 ? 'BACKING OUT' : 'RUNNING') : 'HOLDING'}`;
+      pos = a.part >= 0 && a.p.rec.parts?.[a.part]?.rest?.p ? a.p.rec.parts[a.part].rest.p : this.aimOf(a.p);
+    } else if (t) {
+      label = t.p.rec.refuse ? `✕ ${t.p.rec.refuse}` : `⟲ ${name(t.p, t.part)} · ${heft(t.p.rec)}${holdFor(t.p.rec)} s`;
+      pos = t.pos;
+    }
     return {
       on: this.unlocked,
       frac: Math.max(0, Math.min(1, st.charge / st.cap)),
-      chip: `⟲ ${chipName}${chipNum}`, chipName, chipNum,
+      chip: `⟲ ${chipName}${a?.lock ? '' : chipNum}`, chipName, chipNum: a?.lock ? '' : chipNum,
       hold: !!(a && !a.lock),
       warn: !!(a && !a.lock && a.left < 1.5),
-      aim: !!t,
-      label: t ? (t.p.rec.refuse ? `✕ ${t.p.rec.refuse}` : `⟲ ${name(t.p, t.part)} · ${holdFor(t.p.rec)} s`) : '',
-      pos: t ? t.pos : null,
+      aim: !!t && !a?.lock,
+      label,
+      pos,
     };
   }
 }
@@ -685,7 +700,9 @@ body.lastversion #lvTarget { position: absolute; left: 0; top: 0; transform: tra
   color: #ece6ff; font: 700 11px Inter, sans-serif; letter-spacing: 0.08em; white-space: nowrap; display: none; box-shadow: 0 0 0 1px rgba(201, 184, 255, 0.7); }
 body.lastversion #lvTarget.on { display: block; }
 body.lastversion #lvTarget.no { background: rgba(60, 40, 40, 0.55); box-shadow: 0 0 0 1px rgba(255, 160, 150, 0.7); color: #ffe0dc; }
-body.lastversion.touch #lvTarget { pointer-events: auto; font-size: 12px; padding: 7px 13px; }
+body.lastversion.touch #lvTarget { pointer-events: auto; font-size: 12px; padding: 7px 13px; z-index: 3; } /* (above the look zone, which took its taps) */
+/* (on a phone the label is a button too: it says so, as the prompt does; not while a hold or a bolt is under way) */
+body.lastversion.touch #lvTarget:not(.no):not(.held)::before { content: "TAP · "; color: #c9b8ff; }
 body.lastversion #crosshair.lvAim::after, body.lastversion #crosshair.lvHold::after { content: ""; position: absolute; left: 50%; top: 50%; width: 30px; height: 30px; margin: -15px; border-radius: 50%;
   background: conic-gradient(#c9b8ff calc(var(--lvc, 1) * 360deg), rgba(255, 255, 255, 0.2) 0); -webkit-mask: radial-gradient(circle, transparent 12px, #000 13px); mask: radial-gradient(circle, transparent 12px, #000 13px); }
 body.lastversion #lvRevBtn { display: none; }
@@ -699,6 +716,8 @@ body.lastversion.touch #lvRevBtn.off { display: none; }
 body.lastversion.touch #lvRevBtn.dim { opacity: 0.45; }
 body.lastversion.touch #lvRevBtn.hold { background: radial-gradient(circle at 50% 40%, rgba(255,255,255,0.3), transparent 62%), #4f38b8; }
 body.lastversion.touch #lvRevBtn.down { transform: scale(0.93); }
+/* upright: above the YEAR button, clear of the left thumb's stick zone (beside YEAR it sat 6 px from the stick's ring) */
+@media (orientation: portrait) { body.lastversion.touch #lvRevBtn { left: 16px; bottom: 162px; } }
 body.lastversion.touch #buttons .b.shift { background: radial-gradient(circle at 50% 40%, rgba(255,255,255,0.35), transparent 60%), var(--lv-next, var(--past)); }
 body.lastversion #buttons .b.shift { background: var(--lv-next, var(--past)); }
 body.lastversion #lvVignette { position: fixed; inset: 0; pointer-events: none; z-index: 9; opacity: 0; transition: opacity 0.35s; box-shadow: inset 0 0 90px 18px rgba(150, 120, 255, 0.45); }
@@ -758,14 +777,25 @@ class ReverseUI {
       this.btn.setAttribute('aria-label', 'Reverse');
       this.btn.innerHTML = '<b>⟲</b><span>REVERSE</span>';
       this.btnText = this.btn.querySelector('span');
-      // Input binds [data-act] buttons only at startup, so this one binds its own touches
-      this.btn.addEventListener('touchstart', press, { passive: false });
+      // Input binds [data-act] buttons only at startup, so this one binds its own touches: a tap presses it, and a drag
+      // that starts on it (it sits where a right thumb starts to look round) turns the view instead
+      this.bindTap(this.btn, press);
       this.btn.addEventListener('click', press);
       buttons.appendChild(this.btn);
     }
-    this.label.addEventListener('touchstart', press, { passive: false });
+    this.bindTap(this.label, press);
     this.label.addEventListener('click', press);
     this.last = {};
+  }
+
+  // a tap on touchend (Input.tapOrLook); a page without the game's input (a test) presses on touchstart
+  bindTap(el, press) {
+    const input = this.inv.g?.input;
+    if (input?.tapOrLook) input.tapOrLook(el, () => {
+      this.touchedAt = performance.now();
+      this.inv.press();
+    });
+    else el.addEventListener('touchstart', press, { passive: false });
   }
 
   set(key, v, fn) {
@@ -811,11 +841,16 @@ class ReverseUI {
       this.label.textContent = v;
       this.label.classList.toggle('on', !!v);
       this.label.classList.toggle('no', v.startsWith('✕'));
+      this.label.classList.toggle('held', / · (HOLDING|BACKING OUT|RUNNING)$/.test(v));
+      this.labelW = 0; // measured again below
     });
     if (h.pos && g.camera) {
       const v = _p.set(...h.pos).project(g.camera);
       const W = window.innerWidth, H = window.innerHeight;
-      const x = Math.round(((v.x + 1) / 2) * W), y = Math.round(((1 - v.y) / 2) * H);
+      // (the whole label on screen: its centre clamped by half its width, as main.js does for the prompt)
+      if (!this.labelW) this.labelW = this.label.offsetWidth || 0;
+      const half = Math.min(W / 2, this.labelW / 2 + 8);
+      const x = Math.round(Math.max(half, Math.min(W - half, ((v.x + 1) / 2) * W))), y = Math.round(((1 - v.y) / 2) * H);
       this.set('lpos', `${x},${y},${v.z < 1}`, () => {
         this.label.style.left = `${x}px`;
         this.label.style.top = `${y}px`;

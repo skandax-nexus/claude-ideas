@@ -665,3 +665,129 @@ body.lastversion #title.overlay.side {
 body.lastversion #title .panel { box-shadow: 0 18px 60px rgba(0, 0, 0, 0.45); }
 /* the calm HUD steps back, but never hides a draining Chronolith */
 body.calm #state.draining, body.calm #state.low { opacity: 1; }
+
+/* v2.1 playtest: a phone, by touch --------------------------------------------------------------------------- */
+/* the floating prompt: a pill as wide as its words, never wider than the screen (it wraps), its centre clamped by its
+   own width (main.js placePrompt); a pill that fades out keeps its words (HUD.prompt), and an empty one never says TAP */
+body.touch #prompt { width: max-content; max-width: calc(100vw - 24px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)); white-space: normal; text-align: center; line-height: 1.25; }
+body.touch #prompt .txt:empty::before { content: none; }
+/* the objective clears a notch on the left, as the year card and the stick do */
+#objective { left: max(16px, env(safe-area-inset-left)); }
+/* THE LAST VERSION: the objective on a dark glass plate, so its white words and the because line (Runtime.js) read on a
+   bright window, a dark wall, water or the white salt plain alike */
+body.lastversion #objective { padding: 6px 10px 7px; border-radius: 12px; background: linear-gradient(90deg, rgba(8, 14, 22, 0.5), rgba(8, 14, 22, 0.3)); box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12); }
+body.lastversion #state { background: rgba(8, 14, 22, 0.32); }
+body.lastversion.calm #objective { opacity: 0.85; } /* (the calm HUD steps back, but the objective and the place stay readable: */
+body.lastversion.calm #state { opacity: 0.7; }             /*  at 0.38 the year card all but vanished on M19's white plain) */
+
+/* YEAR before the Chronolith: greyed and quiet (it still answers: "I can't change the year. Not yet.") */
+body.lastversion.touch.lvnoyear #buttons .b.shift { background: rgba(255, 255, 255, 0.22); color: rgba(255, 255, 255, 0.85); box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.45); opacity: 0.5; text-shadow: var(--halo); }
+body.lastversion.touch.lvnoyear #buttons .b.shift span::after { content: "NOT YET"; display: block; margin-top: 2px; font-size: 8px; letter-spacing: 0.14em; opacity: 0.85; }
+
+/* the causal anchor on a phone: a button beside YEAR while Kai carries something out of another year (Tips.js keeps
+   lvcarry / lvanchored), and the CARRYING label, which anchors too */
+#buttons .anchor { display: none; }
+body.lastversion.touch.lvcarry #buttons .b.anchor { display: flex; left: -74px; bottom: 18px; width: 60px; height: 60px; border-radius: 50%; padding: 0; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+  color: #3b2a06; font: 800 8px Inter, sans-serif; letter-spacing: 0.08em; background: radial-gradient(circle at 50% 38%, rgba(255, 255, 255, 0.5), transparent 62%), #f2bd4e; box-shadow: 0 6px 18px rgba(90, 60, 10, 0.3); }
+body.lastversion.touch.lvcarry #buttons .b.anchor svg { width: 24px; height: 24px; }
+body.lastversion.touch.lvcarry #buttons:has(#lvRevBtn:not(.off)) .b.anchor { bottom: 90px; }
+body.lastversion.touch.lvanchored #buttons .b.anchor { color: #0c3a22; background: radial-gradient(circle at 50% 38%, rgba(255, 255, 255, 0.5), transparent 62%), #7fd6a2; }
+body.lastversion.lvanchored #buttons .b.anchor span { font-size: 0; }
+body.lastversion.lvanchored #buttons .b.anchor span::after { content: "ANCHORED"; font-size: 7.5px; }
+body.lastversion.touch.lvcarry #held { pointer-events: auto; z-index: 3; padding: 10px 12px; }
+/* (sideways, under the toasts' lines, not beside them: a three-line tip ran into CARRYING) */
+@media (orientation: landscape) { body.lastversion.touch #held { top: 176px; } }
+body.lastversion.lvcarry:not(.lvanchored) #held::after { content: " · TAP TO ANCHOR"; color: #ffd27a; font-weight: 700; }
+body.lastversion.lvcarry:not(.touch):not(.lvanchored) #held::after { content: " · C TO ANCHOR"; }
+body.lastversion.lvanchored #held::after { content: " · ANCHORED"; color: #8ff0b8; font-weight: 700; }
+/* a control being taught (the anchor, THINK, the CASE board: Tips.js) glows until it is used */
+@keyframes lvteach { 0%, 100% { box-shadow: 0 0 0 2px rgba(255, 200, 90, 0.95), 0 0 0 0 rgba(255, 200, 90, 0.5); } 50% { box-shadow: 0 0 0 2px rgba(255, 200, 90, 1), 0 0 0 9px rgba(255, 200, 90, 0.25); } }
+body.lastversion .lvteach { box-shadow: 0 0 0 2px rgba(255, 200, 90, 0.95); animation: lvteach 1.1s ease-in-out infinite; }
+body.lastversion.calm #dock:has(.lvteach), body.lastversion.calm #buttons .b.lvteach { opacity: 1; }
+
+/* the dock says what its buttons are (CASE, MAP, THINK, MENU), at a thumb's size */
+body.lastversion.touch #dock { gap: 2px; padding: 3px 4px; }
+body.lastversion.touch #dock .d { flex-direction: column; justify-content: center; gap: 3px; min-width: 56px; min-height: 48px; padding: 6px 6px 5px; }
+body.lastversion.touch #dock .d span { display: block; font-size: 9px; letter-spacing: 0.1em; line-height: 1; }
+body.lastversion.touch #subs { bottom: 76px; }
+/* SKIP during a staged moment: a thumb's height (cinema.js places it) */
+body.lastversion.touch #lvSkip { min-height: 44px; min-width: 96px; padding: 0 18px; }
+
+/* upright: the dock is a column by the right thumb, above REVERSE and ANCHOR, which sit above YEAR (clear of the
+   stick's zone); the captions keep left of the column; the objective comes up under the year card */
+@media (orientation: portrait) {
+  body.lastversion.touch #dock { top: auto; left: auto; transform: none; right: max(10px, env(safe-area-inset-right)); bottom: calc(max(24px, env(safe-area-inset-bottom)) + 236px); flex-direction: column; border-radius: 30px; }
+  body.lastversion.touch #subs { left: 12px; right: 84px; width: auto; transform: none; bottom: calc(max(24px, env(safe-area-inset-bottom)) + 236px); }
+  body.lastversion.touch #toast { max-width: calc(100vw - 110px); left: calc(50% - 36px); }
+  body.lastversion.touch.lvcarry #buttons .b.anchor, body.lastversion.touch.lvcarry #buttons:has(#lvRevBtn:not(.off)) .b.anchor { left: auto; right: 2px; bottom: 162px; }
+  /* (the CARRYING label is a narrow column right of the objective, under the minimap: at full width it ran over it) */
+  body.lastversion.touch #objective { max-width: 60vw; }
+  body.lastversion.touch #held { max-width: calc(40vw - 30px); text-align: right; white-space: normal; line-height: 1.3; }
+}
+
+/* the watchers' meter says what it is: an eye, and WATCHER NEAR / NOTICING YOU / SEEN beside a dark track */
+body.lastversion #eye { overflow: visible; background: rgba(8, 14, 22, 0.5); box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.6); }
+body.lastversion #eye::before { content: ""; position: absolute; right: calc(100% + 7px); top: 50%; width: 24px; height: 16px; transform: translateY(-50%);
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 16'%3E%3Cpath d='M1.5 8C4.5 3 8 1.2 12 1.2S19.5 3 22.5 8C19.5 13 16 14.8 12 14.8S4.5 13 1.5 8Z' fill='rgba(8,14,22,0.55)' stroke='%23fff' stroke-width='1.8'/%3E%3Ccircle cx='12' cy='8' r='3.4' fill='%23fff'/%3E%3C/svg%3E") center / contain no-repeat; }
+body.lastversion #eye::after { content: "WATCHER NEAR"; position: absolute; left: calc(100% + 8px); top: 50%; transform: translateY(-50%); white-space: nowrap; font: 800 9.5px Inter, sans-serif; letter-spacing: 0.16em; color: #fff; text-shadow: var(--halo); }
+body.lastversion #eye.rising::after { content: "NOTICING YOU"; color: #ffd27a; }
+body.lastversion #eye.alert::after { content: "SEEN"; color: #ff9a80; }
+body.lastversion.touch #eye { top: max(18px, env(safe-area-inset-top)); left: calc(50% - 30px); }
+@media (orientation: portrait) { body.lastversion.touch #eye { top: calc(max(14px, env(safe-area-inset-top)) + 70px); left: calc(50% - 64px); width: 100px; } } /* (clear of the minimap) */
+
+/* side panels: the header (and its ×) stays at the top while the panel scrolls; a 'more' cue shows a panel is taller
+   than the screen (HUD.scrollCue); a tap beside the panel closes it (main.js) */
+#settings .panel > header, #saves .panel > header, #journal .panel > header, #laws .panel > header, #chapters .panel > header {
+  position: sticky; top: -18px; z-index: 2; margin: -18px -18px 6px; padding: 12px 18px 8px; background: #f3f6f9; border-radius: 20px 20px 0 0; box-shadow: 0 1px 0 var(--line); }
+body.lastversion #journal #lvTravel { scroll-margin-top: 64px; } /* (the map's TRAVEL scrolls here: below the pinned header) */
+#settings .panel > header button, #saves .panel > header button, #journal .panel > header button, #laws .panel > header button, #chapters .panel > header button { min-width: 44px; min-height: 44px; }
+.overlay:not(#hero) .panel.more::after { content: "▾  MORE"; position: sticky; bottom: -14px; z-index: 2; display: block; margin: 4px -18px -14px; padding: 22px 0 9px; text-align: center; font: 800 10px Inter, sans-serif; letter-spacing: 0.22em; color: var(--ink);
+  background: linear-gradient(180deg, rgba(247, 249, 252, 0), rgba(247, 249, 252, 0.96) 55%); pointer-events: none; border-radius: 0 0 20px 20px; }
+
+/* the title on a short (phone landscape) screen: CONTINUE, NEW GAME, LOAD and SETTINGS and the touch hints, all above
+   the fold */
+@media (max-height: 520px) and (orientation: landscape) {
+  body.lastversion #title .panel { padding: 12px 16px 10px; width: min(390px, 46vw); }
+  body.lastversion #title h1 { font-size: 30px; margin: 0 0 2px; }
+  body.lastversion #title .sub { font-size: 11px; margin: 0 0 3px; }
+  body.lastversion #title .tag { font-size: 12px; margin: 2px 0; }
+  body.lastversion #title .ver { margin: 0 0 4px; }
+  body.lastversion #title .big { padding: 8px 12px; margin: 6px 0; font-size: 15px; }
+  body.lastversion #title .big small { font-size: 11px; margin-top: 2px; }
+  body.lastversion #title .row { margin: 6px 0; }
+  body.lastversion #title .row button { padding: 8px 10px; min-height: 44px; }
+  body.lastversion #title .controls { margin: 8px 0 0; gap: 3px 10px; font-size: 11px; }
+  body.lastversion #title p.dim { display: none; }
+}
+/* upright, the hints come back, compact, under the buttons */
+@media (orientation: portrait) {
+  body.lastversion.touch #title .controls.touch-only { display: flex !important; margin: 8px 0 0; gap: 3px 10px; font-size: 11px; }
+  body.lastversion #title .panel { max-height: 62vh; padding: 14px 16px 10px; }
+  body.lastversion #title .tag { margin: 4px 0; font-size: 13px; }
+  body.lastversion #title .big { padding: 10px 12px; margin: 7px 0; }
+  body.lastversion #title .row button { min-height: 44px; }
+}
+
+/* the ending card and CASE FILES: their buttons stay in view at the panel's foot while the text scrolls */
+body.lastversion #ending #lvTitle { position: sticky; bottom: 0; z-index: 2; display: block; width: 100%; min-height: 44px; margin-top: 8px; background: #fbfcfd; box-shadow: 0 -8px 14px 4px rgba(251, 252, 253, 0.95); }
+body.lastversion #ending #lvCases { position: sticky; bottom: 52px; z-index: 2; background: #fbfcfd; box-shadow: 0 -8px 14px 4px rgba(251, 252, 253, 0.95); }
+/* (the 'more' cue rides on the pinned button here, not over it) */
+body.lastversion #ending .panel.more::after { display: none; }
+body.lastversion #ending .panel.more #lvTitle::after { content: "▾ MORE"; position: absolute; right: 16px; top: 50%; transform: translateY(-50%); font: 800 9.5px Inter, sans-serif; letter-spacing: 0.2em; color: var(--ink-soft); }
+@media (max-height: 520px) {
+  body.lastversion #ending .panel { padding: 14px 20px 10px; max-height: calc(100vh - 16px); }
+  body.lastversion #ending.overlay { padding: 8px; }
+  body.lastversion #ending h2 { font-size: 21px; margin: 2px 0 6px; }
+  body.lastversion #ending p { line-height: 1.5; margin: 6px 0; }
+  body.lastversion #ending .big { padding: 8px 12px; margin: 6px 0; }
+  body.lastversion #ending .caseFiles { max-height: none; overflow: visible; }
+}
+/* CASE FILES, free roam, the case board's TRAVEL and the map's: targets a thumb can hit (44 px) */
+body.lastversion.touch #ending .caseFile button, body.lastversion.touch .roamFile .yrs button, body.lastversion.touch .board.travel button,
+body.lastversion.touch .lvback, body.lastversion.touch .lvtabs button, body.lastversion.touch #map header .lvmaptravel, body.lastversion.touch .lvtrack {
+  min-height: 44px; min-width: 64px; }
+body.lastversion.touch #map header [data-close] { min-width: 44px; min-height: 44px; }
+body.lastversion.touch .lvplay { min-width: 36px; min-height: 36px; }
+
+/* a selected option reads as selected in every settings row (the edition's Sound captions buttons lost the dark fill) */
+.overlay.side .panel .seg button.sel:not(.chip):not(.install):not(.clear):not(.txtb) { background: var(--ink); color: #fff; border-color: var(--ink); }

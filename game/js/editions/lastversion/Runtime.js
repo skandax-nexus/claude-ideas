@@ -350,6 +350,9 @@ export class LastVersion {
     const dim = $('#title p.dim');
     if (dim) dim.textContent = 'A temporal thriller about a machine that lets you stand in different years of the same place. Twenty-three missions, three years of one world, three endings.';
     const ctl = $('#title .controls.desktop-only');
+    // (on a phone: what the thumbs do, and what the buttons are, before the first mission says it)
+    const tctl = $('#title .controls.touch-only');
+    if (tctl) tctl.innerHTML = '<span><b>Left thumb</b> move</span><span><b>Right side</b> look</span><span><b>Tap a prompt</b> use</span><span><b>YEAR</b> switch year</span><span><b>THINK</b> when stuck</span><span><b>CASE</b> your case board</span>';
     if (ctl) ctl.innerHTML = '<span><b>WASD</b> move</span><span><b>MOUSE</b> look</span><span><b>SPACE</b> jump</span><span><b>Z</b> walk / run</span><span><b>E</b> / click use</span><span><b>Q</b> switch year</span><span><b>1 2 3</b> choose a year</span><span><b>R</b> reverse</span><span><b>C</b> anchor what you carry</span><span><b>X</b> Echo Step</span><span><b>H</b> think</span><span><b>J</b> / <b>L</b> case board</span><span><b>M</b> map</span><span><b>F5</b> quick save</span><span><b>ESC</b> pause</span>';
     // you are Kai Varen, in his one look: no CHARACTER screen (Station Zero's, which calls you Ren) on the title or
     // in the pause menu
@@ -1294,6 +1297,15 @@ export class LastVersion {
     }
   }
 
+  // the place name on the HUD's year card: the quarter Kai is in, as its toast names it (an open place is one room,
+  // named for its first quarter; a quarter that is a room of its own is that room); else the room's own name
+  placeLabel(room) {
+    const lv = this.level, qs = lv?.quarters, g = this.g;
+    if (!qs?.length || !this.threads?.on) return room?.name;
+    if (g.room !== lv.outdoorRoom) return qs.find((q) => q.room === g.room)?.name || room?.name;
+    return qs[this.threads.here ?? g.campaign?.quarter ?? 0]?.name || room?.name;
+  }
+
   objectiveExtras(because, tr) {
     if (typeof document === 'undefined') return;
     const el = document.querySelector('#objective');
@@ -1301,12 +1313,14 @@ export class LastVersion {
     if (!document.querySelector('#lvObj')) {
       const st = document.createElement('style');
       st.id = 'lvObj';
-      st.textContent = `body.lastversion #objective .lvwhy { font-size: 12px; font-weight: 400; font-style: italic; opacity: 0.86; margin-top: 3px; }
-        body.lastversion #objective .lvside { font-size: 11.5px; font-weight: 500; margin-top: 7px; opacity: 0.92; }
-        body.lastversion #objective .lvside small { display: block; font-size: 9.5px; letter-spacing: 0.16em; }
+      // (the because line and the side story are light text with the goal's dark halo, on the objective's dark plate,
+      // style.css: in dark ink with no shadow they vanished over lit windows, dark walls, water and the salt plain)
+      st.textContent = `body.lastversion #objective .lvwhy { font-size: 12px; font-weight: 500; font-style: italic; color: #e8eef5; text-shadow: var(--halo); margin-top: 3px; }
+        body.lastversion #objective .lvside { font-size: 11.5px; font-weight: 500; margin-top: 7px; color: #fff; text-shadow: var(--halo); }
+        body.lastversion #objective .lvside small { display: block; font-size: 9.5px; letter-spacing: 0.16em; color: #ffd27a; }
         body.lastversion #objective .lvwhy:empty, body.lastversion #objective .lvside:empty { display: none; }
-        body.lastversion.touch #objective .lvwhy { font-size: 10.5px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-        @media (orientation: portrait) { body.lastversion.touch #objective { top: calc(max(14px, env(safe-area-inset-top)) + 150px); } }`; // (upright, under the dock, as style.css puts it; its edition top of 90 px sat behind the dock)
+        body.lastversion.touch #objective .lvwhy { font-size: 11.5px; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        @media (orientation: portrait) { body.lastversion.touch #objective { top: calc(max(14px, env(safe-area-inset-top)) + 88px); } }`; // (upright, under the year card: the dock is by the right thumb now, style.css)
       document.head.appendChild(st);
     }
     const part = (cls) => el.querySelector(`.${cls}`) || el.appendChild(Object.assign(document.createElement('div'), { className: cls }));
@@ -2241,15 +2255,18 @@ export class LastVersion {
       ? `<h3>WHERE YOU ARE</h3><p><b>FREE ROAM &middot; ${esc(placeName(deck))}</b><br><span class="dim">${esc(yearName(deck, game.engine.state(game.room)))} &middot; as Mission ${deck.n} left it${quarter ? ` &middot; ${esc(quarter)}` : ''}</span><br><span class="dim">The story waits at ${esc(String(campaign.roam?.meta?.where || '').replace(/^THE LAST VERSION · /, '') || 'its checkpoint')}.</span></p>
         <button class="lvback" id="lvBack">BACK TO THE STORY</button>`
       : `<h3>WHERE YOU ARE</h3><p><b>${chapter.name} &middot; ${deck?.name || ''}</b><br><span class="dim">${deck?.title || ''}${quarter ? ` &middot; ${quarter}` : deck?.sectors > 1 ? ` &middot; part ${campaign.sector + 1} of ${deck.sectors}` : ''} &middot; stability ${Math.round(this.stability * 100)}%</span></p>`;
+    // (the questions and what is pinned under them first: on a phone the board opened on free roam's paragraph, about
+    // a TRAVEL that Mission 1 cannot use yet. On a trip, TRAVEL stays near the top: it is what a trip is for)
     el.innerHTML = `
       ${where}
-      ${this.travelHtml(esc)}
+      ${this.roaming ? this.travelHtml(esc) : ''}
       <h3>THE QUESTIONS</h3><ul class="board questions">${qHtml}</ul>
+      <h3>EVIDENCE</h3><ul class="board">${evs}</ul>
       ${this.inv?.abilitiesHtml() || ''}
       <h3>SIDE STORIES</h3><ul class="board sides">${sideRows.join('') || '<li class="dim">None yet.</li>'}</ul>
-      <h3>EVIDENCE</h3><ul class="board">${evs}</ul>
       <h3>PEOPLE</h3><ul class="board">${people}</ul>
       ${chose.length ? `<h3>WHAT YOU CHOSE</h3><ul class="board">${chose.join('')}</ul>` : ''}
+      ${this.roaming ? '' : this.travelHtml(esc)}
       <h3>CASE LOG</h3><ul class="log">${logs}</ul>`;
     for (const b of el.querySelectorAll('.lvplay')) {
       b.onclick = (e) => {
@@ -2288,7 +2305,7 @@ export class LastVersion {
     if (!g.campaign?.lv || g.campaign.chapter === 'cases') return '';
     const list = this.travelList();
     const intro = 'Free roam: walk a place you have reached, in a year you opened there. No story gates; its side stories and fragments are still there. The story waits where you left it.';
-    if (!list.length) return `<h3 id="lvTravel">TRAVEL</h3><p class="dim">${intro} Finish a mission to travel back to its place.</p>`;
+    if (!list.length) return '<h3 id="lvTravel">TRAVEL</h3><p class="dim">Free roam opens once a mission is done: then you can walk back to its place.</p>';
     const here = this.roaming ? this.deck.key : null;
     return `<h3 id="lvTravel">TRAVEL</h3><p class="dim">${intro}</p><ul class="board travel">${this.travelRows(list, esc, here, 'li')}</ul>`;
   }

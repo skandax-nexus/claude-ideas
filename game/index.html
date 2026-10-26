@@ -23,8 +23,8 @@
     <div id="objective"><small>CURRENT UNDERSTANDING</small><div class="txt"></div></div>
     <div id="eye"><div class="iris"></div></div>
     <div id="stability"><small>CHRONOLITH</small><div class="bar"><i></i></div></div>
-    <button id="prompt" data-act="use"><kbd class="desktop-only">E</kbd><span class="txt"></span></button>
-    <div id="held"></div>
+    <button id="prompt" data-act="use" data-tap><kbd class="desktop-only">E</kbd><span class="txt"></span></button>
+    <div id="held" data-act="anchor" data-tap></div>
     <div id="subs"></div>
     <div id="toast"></div>
     <canvas id="minimap" data-act="map"></canvas>
@@ -39,6 +39,8 @@
       <button data-act="combo" class="b combo off" aria-label="Next law combo"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="4" rx="1.5" fill="currentColor"/><rect x="4" y="10" width="16" height="4" rx="1.5" fill="currentColor" opacity="0.55"/><rect x="4" y="16" width="10" height="4" rx="1.5" fill="currentColor" opacity="0.3"/><path d="M17 15l3 3-3 3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>COMBO</span></button>
       <button data-act="jump" class="b jump" aria-label="Jump"><svg viewBox="0 0 24 24"><path d="M12 19V6M6 11l6-6 6 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
       <button data-act="shift" class="b shift" aria-label="Shift the room"><span>SHIFT</span></button>
+      <!-- THE LAST VERSION: the causal anchor, shown while Kai carries something out of another year -->
+      <button data-act="anchor" data-tap class="b anchor" aria-label="Anchor what you carry"><svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="2.2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 7.2V20.5M8 11h8M4.5 14.2a7.5 7.5 0 0 0 15 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span>ANCHOR</span></button>
     </div>
     <!-- WORLD FORGE on phones: the four gear slots -->
     <div id="gearpad"><button data-act="gear:0" class="g off" aria-label="Gear 1"><i></i><span></span></button><button data-act="gear:1" class="g off" aria-label="Gear 2"><i></i><span></span></button><button data-act="gear:2" class="g off" aria-label="Gear 3"><i></i><span></span></button><button data-act="gear:3" class="g off" aria-label="Gear 4"><i></i><span></span></button></div>

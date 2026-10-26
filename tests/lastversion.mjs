@@ -1497,12 +1497,15 @@ const tap = await az(() => {
   LVB.place(p.rec.aim[0], p.rec.aim[2] + 2.2);
   const r = { aim: LVB.aim(p.rec.aim) };
   g.simulate(1.2);
+  // (a tap: it acts on touchend, so a look drag that starts on it turns the view instead, Input.tapOrLook)
   btn.dispatchEvent(new Event('touchstart', { bubbles: true, cancelable: true }));
+  btn.dispatchEvent(new Event('touchend', { bubbles: true, cancelable: true }));
   r.held = LVB.inv().active;
   g.simulate(0.2);
   r.text = btn.textContent;
   g.simulate(1.0);
   btn.dispatchEvent(new Event('touchstart', { bubbles: true, cancelable: true }));
+  btn.dispatchEvent(new Event('touchend', { bubbles: true, cancelable: true }));
   r.after = LVB.inv().active;
   g.simulate(0.2);
   r.text2 = btn.textContent;

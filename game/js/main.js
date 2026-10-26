@@ -17,6 +17,7 @@ import { Player } from './entities/Player.js';
 import { Observer } from './entities/Observer.js';
 import { Input } from './ui/Input.js';
 import { HUD } from './ui/HUD.js';
+import { Tips } from './ui/Tips.js';
 import { Synth } from './audio/Synth.js';
 import { makeDevice, makeKeyItem, makeCoreItem } from './world/models.js';
 import { Npcs } from './world/Npcs.js';
@@ -172,6 +173,7 @@ class Game {
     this.deckWorld = new DeckWorld(this.scene, this.engine, this.facts);
     this.minimap = new MiniMap(document.querySelector('#minimap'), document.querySelector('#bigmap'));
     this.edition = this.editionDef ? this.editionDef.makeRuntime(this) : null;
+    this.tips = this.edition ? new Tips(this) : null; // THE LAST VERSION's one-time tips and HUD classes
     this.wire();
     this.buildViewModels();
 
@@ -404,6 +406,7 @@ class Game {
     this.camera.fov = w < h ? Math.min(96, Math.max(this.settings.fov, hfov)) : this.settings.fov;
     this.camera.updateProjectionMatrix();
     this.postfx.resize();
+    if (document.body.classList.contains('menu')) requestAnimationFrame(() => this.hud?.scrollCue?.()); // (a turned phone: a panel's 'more' cue)
     // the big map's bitmap follows its new box (a rotation or a window resize while it is open)
     if (this.menu === 'map') requestAnimationFrame(() => this.menu === 'map' && this.minimap.drawBig(this.player, this.room, this.mapMarkers()));
   }
@@ -420,6 +423,14 @@ class Game {
     $('#settingsBtn').onclick = () => this.openSettings('title');
     for (const b of document.querySelectorAll('[data-close]')) b.onclick = () => this.closeMenu();
     for (const b of document.querySelectorAll('[data-back]')) b.onclick = () => this.back();
+    // a tap beside a side panel (on the game, or the title's backdrop) closes it as its × does: settings, saves, the
+    // case board, the chapters, the map (a scroll that ends there is no tap: no click)
+    for (const o of document.querySelectorAll('#settings, #saves, #journal, #laws, #chapters, #map')) {
+      o.addEventListener('click', (e) => {
+        if (e.target !== o || !o.classList.contains('on')) return;
+        o.querySelector('header [data-back], header [data-close]')?.click();
+      });
+    }
     $('#resume').onclick = () => this.closeMenu();
     $('#saveBtn').onclick = () => this.openSaves('save', 'pause');
     $('#loadBtn2').onclick = () => this.openSaves('load', 'pause');
@@ -2241,6 +2252,7 @@ class Game {
 
     for (let a of this.input.consumeActions()) {
       this.lastEvent = this.time;
+      this.tips?.used(a);
       if (a === 'pause') {
         this.voice.stop();
         if (['saves', 'settings', 'hero', 'chapters', 'studio', 'forge'].includes(this.menu)) {
@@ -2462,7 +2474,9 @@ class Game {
     this.promptPerson = !!(showFocus && this.focus.person);
     const it = this.heldItem();
     this.hud.held(it?.label, it?.echo);
-    if (this.edition) this.hud.setState(!!facts.get('has_chronolith'), this.room, engine.state(this.room), room.name, engine.locked.has(this.room), engine.statesOf(this.room));
+    this.tips?.update(dt);
+    // (THE LAST VERSION: the quarter Kai is in, as its toast names it; an open place is one room, named for its first)
+    if (this.edition) this.hud.setState(!!facts.get('has_chronolith'), this.room, engine.state(this.room), this.edition.placeLabel?.(room) || room.name, engine.locked.has(this.room), engine.statesOf(this.room));
     else this.hud.setState(!!facts.get('has_device'), this.room, engine.state(this.room), room.name, engine.locked.has(this.room));
 
     const kind = it ? it.kind || it.id : null;
@@ -2501,14 +2515,30 @@ class Game {
     }
     if (!v || behind) return;
     const w = window.innerWidth, h = window.innerHeight;
-    // whole pixels, written only when they change (each write costs a layout)
-    const x = Math.round(THREE.MathUtils.clamp((v.x * 0.5 + 0.5) * w, 90, w - 90));
+    // the whole pill stays on screen, clear of a notch: its centre is clamped by half its own width (measured once
+    // each time its text changes, HUD.promptWidth), not by a fixed 90 px that a 240 px label ran past in portrait
+    const half = Math.min(w / 2, this.hud.promptWidth() / 2 + 8);
+    const sa = this.safeArea();
+    const x = Math.round(THREE.MathUtils.clamp((v.x * 0.5 + 0.5) * w, half + sa.left, Math.max(half + sa.left, w - half - sa.right)));
     const y = Math.round(THREE.MathUtils.clamp((-v.y * 0.5 + 0.5) * h, 120, h - 140));
     if (x === this._promptX && y === this._promptY) return;
     this._promptX = x;
     this._promptY = y;
     el.style.left = `${x}px`;
     el.style.top = `${y}px`;
+  }
+
+  // the screen's safe-area insets (a notch or a rounded corner), read from CSS once per resize
+  safeArea() {
+    const w = window.innerWidth, h = window.innerHeight;
+    if (this._sa && this._sa.w === w && this._sa.h === h) return this._sa;
+    const probe = document.createElement('div');
+    probe.style.cssText = 'position:fixed;visibility:hidden;pointer-events:none;padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px)';
+    document.body.appendChild(probe);
+    const cs = getComputedStyle(probe);
+    this._sa = { w, h, left: parseFloat(cs.paddingLeft) || 0, right: parseFloat(cs.paddingRight) || 0 };
+    probe.remove();
+    return this._sa;
   }
 
   stepStation(dt) {
