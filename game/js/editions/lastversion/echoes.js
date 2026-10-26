@@ -25,12 +25,18 @@ export function lendLook(model, crew, height) {
   } catch {
     return false;
   }
-  const a = meshes(model), b = ref ? meshes(ref) : [];
-  const same = ref?.userData?.spec?.model === U.spec.model && a.length === b.length;
+  // (the two are not built alike: a hologram carries depth-pass copies of its meshes, the person in the flesh garments
+  // of their own; the body's meshes are paired by name, in order, and the rest left as they are)
+  const a = meshes(model).filter((o) => o.name !== 'holodepth'), b = ref ? meshes(ref) : [];
+  const same = ref?.userData?.spec?.model === U.spec.model;
   if (same) {
     const glow = new THREE.Color(U.spec.glow ?? 0x8fe0ff);
-    a.forEach((o, i) => {
-      const ms = [].concat(o.material), rs = [].concat(b[i].material);
+    const byName = new Map();
+    for (const o of b) byName.set(o.name, [...(byName.get(o.name) || []), o]);
+    a.forEach((o) => {
+      const r0 = byName.get(o.name)?.shift();
+      if (!r0) return;
+      const ms = [].concat(o.material), rs = [].concat(r0.material);
       ms.forEach((m, k) => {
         const r = rs[k];
         if (!m?.isMeshStandardMaterial || m.alphaTest > 0 || !r?.map) return;

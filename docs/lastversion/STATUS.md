@@ -1135,6 +1135,54 @@ in 5,143 recordings. Each mission's place is 1.7-6.8 ha (v2.0's generated rooms:
   closer than 1.30 m in 90 s. The Finale's pack held back 6 s on the way back from a trip, a commuter at Kai's side:
   the first bark comes after it is in, voiced.
 
+- **v2.1 playtest fixes, unit "missionsA" (2026-10-26): the Prologue and Act I, Missions 1-8** (PLAYTEST-v2.1.md;
+  FT-02, VX-01, FT-05, VX-02, FT-08, FT-13, FT-15, FT-17, FT-21, F02, X02, F12, F13, F14, F16, F17). What changed:
+  - Mission 2: the gantry stair in the plant terrace climbs from the floor (each step solid to the floor; the chiller
+    stands beside it, not over its first steps), so nothing walks under it; cell one sits at chest height in the dark
+    corridor's alcove, its prompt at the default view.
+  - Mission 1: the woman with Mira's face waits at the east end of Kai's own platform, in view of the wreck, and sets
+    off only when he is within 14 m and can see her; her way over the barrow crossing is the first thing she does (the
+    pursuit, through the depot as before, is 189 m in the bot, against 180 m at the release). The departures board is
+    lettered on its platform face too, under a lamp ("LINE 41 - 08:14 - ARRIVING YESTERDAY" once Kai is through the
+    checkpoint). The map names the quarter Kai is in (LINE 41, not HOME & MARKET) and draws the platforms, the depot
+    and the fence. After the raincoat the objective is "Go in through the staff gate." with its reason, the gate lit
+    and lettered STAFF ENTRANCE; it opens as he reaches it. The page's description is The Last Version of Earth's.
+  - Mission 6: the brass arm turns on a post in the shop's front, 2.3 m each way and slower, between the counter and
+    the stair up: the cellar steps, Ezra, his counter, the book, the gauge and the stairs are outside it; a brass ring
+    in the boards marks its reach, a bar thick enough to see with a lamp at each end, a sound as an end comes round.
+    Its first hit says what it was and how to cross it ("Go when it has passed.", a line already in the pack), and a
+    hit on the shop floor puts Kai back by the counter, not in the cellar; crossing it is still the way to the stair
+    (the well's rail and two clock cases close the other ways round), and in 2196 it is rust. The three clocks' last
+    lines come after Kai's hour and the clock's own; the boards stop offering themselves once both are read.
+  - Mission 4: Kai starts at the door of the house he woke in, facing it; its doorway is lit and the blanket and the
+    cup hang on a rail beside it, with a glint (a new kit). Mission 5: across the channel from the weir, a farmstead
+    with barley and blossom in THRIVING, the same house roofless among dead trees in ABANDONED, the channel brimming
+    and the far meadow under water in FLOODED; the gate channel has a parapet and a stair out of its south end.
+    Mission 8: five broad stepping stones each way to the island, touching, pale-topped, their footing as wide as
+    their tops; Rook's office is a room (his door with his name, glass, a roof and a light, desk, chair, cabinets);
+    the south court's drone turns 5 m further from the stones' bank. Mission 10: "The guard turns her face to the
+    light." (Sera wears no visor; the act2 pack re-recorded).
+  - The echoes of Missions 6 and 8 (Ezra at sixty-five, Lin in the cube, the morning's two, Rook's and Iven's echoes in
+    2026) wear the textures of the same person in the flesh, faint and translucent, instead of one white glow
+    (`echoes.js`, lent once as each first comes into view).
+  Checked: `tests/lv-fix-missionsA.test.mjs` (10 tests), `npm test` (all; the pursuit's length bound in
+  `lastversion.test.mjs` now 240 m, for its new start), `voice-lv.sh check` (every pack up to date).
+  In the browser by touch (scratch `fix/missionsA/`), at 915x412 (Missions 1, 2, 4, 5 and 6 at 412x915 too), from the
+  testers' saves where they had them: Mission 2's stair walked from the floor to cell two (2.6 m up, TAKE POWER CELL) and the space under it closed;
+  cell one's prompt at pitch -0.12 three times out of three; Mission 1 from s14: she waits (leash 0) while Kai stands
+  on the track bed behind the 41, sets off once he is 12.8 m off and sees her, the pursuit by stick to the gate (91.1
+  s), the board read from the platform, the map's LINE 41, the gate objective and through it to Mission 2;
+  Mission 6 from its start: up the cellar, Ezra talked to and 20 s at his counter with no hit, one deliberate hit
+  (back at the counter, the toast and Kai's line), the arm crossed behind an end with no hit and up the stair, and
+  the last clock set to Noon by touch with the lines in order; Mission 4's blanket prompt after a step; Mission 5's
+  three years from the weir (YEAR tapped), the parapet stopping Kai at the channel, the stair out of it; Mission 8's
+  stones crossed (drifting half a metre either side) with no fall, into Rook's office by his door; Mission 10's line.
+  The bot's own sections: `LV_ONLY=prologue node tests/lastversion.mjs` 85/85, and its Missions 4-8 played from Act
+  I's NEW GAME 32/32. Not done, outside this unit's files: the talk camera that puts Kai between it and Niko (F14,
+  shared), the map's objective marker (main.js), the Chronolith's drain in Mission 5 (by design). Note for the release
+  check: with the crowd-barks fix in, Mission 1 measures 9.0 bot minutes (10.2 at the release, when the bot waited out
+  barks), exactly the floor its check holds it to; the same 9.0 with this unit's Mission 1 or without it.
+
 ## Generated (playable, solvable by construction, not hand-tuned)
 
 - **Nothing of the places since U3.** Every mission and both cases stand in an authored open place;

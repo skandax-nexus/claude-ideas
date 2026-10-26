@@ -160,13 +160,13 @@ export const M01 = {
         { id: 'zero', kind: 'cinema', at: 'platform', after: ['checkpoint'], goal: 'Cross the platform to the staff gate.', because: 'The staff gate is past the station. Rook is waiting.', done: 'after_zero', hints: M01_HINTS.zero, minutes: 2 },
         { id: 'rescue', kind: 'tasks', of: ['rescued_a', 'rescued_b'], after: ['zero'], goal: 'Get the trapped people out of the wreck.', because: 'The 41 came in at full speed. The clocks stopped first.', done: 'wrist_cut', hints: M01_HINTS.rescue, minutes: 3 },
         { id: 'voice', kind: 'cinema', after: ['rescue'], goal: 'Listen.', because: 'Every speaker in the station is about to say something.', done: 'voice_heard', hints: M01_HINTS.voice, minutes: 1 },
-        // the pursuit (about 210 m): from the east end of Kai's platform over the barrow crossing, west along the north
+        // the pursuit (about 225 m): from the east end of Kai's platform over the barrow crossing, west along the north
         // platform to its stair, down it, east across the concourse through the people streaming out of the station,
         // through the bus depot between its posts, back west along the Helix fence, and into the crowd at the staff gate,
         // where she is gone (the bible: she vanishes into the crowd). Its fact is mira_gone, so a save from before the
         // threads (which had mira_gone and no chase) has it done. She sets off only once Kai can see her (step)
         { id: 'chase', kind: 'chase', npc: 'mira', after: ['voice'], done: 'mira_gone', leash: 14, ahead: 10, speed: 1.7,
-          path: [[29.5, 3.4, -163], [29.5, 3.4, -166], [29.5, 2.4, -170.5], [29.5, 2.4, -171.5], [29.5, 3.4, -176], [26, 3.4, -181], [6, 3.4, -183.6], [0, 3.4, -186.4], [0, 0.15, -193.8], [16, 0.15, -199], [40, 0.15, -203], [52, 0, -210.5], [73, 0, -210.5], [74, 0, -219], [64, 0, -219.5], [40, 0.15, -219.5], [12, 0.15, -219.5], [1, 0.15, -222.4]],
+          path: [[29.5, 3.4, -163], [29.5, 3.4, -166], [29.5, 2.4, -170.5], [29.5, 2.4, -171.5], [29.5, 3.4, -176], [26, 3.4, -181], [6, 3.4, -183.6], [0, 3.4, -186.4], [0, 0.15, -193.8], [16, 0.15, -199], [40, 0.15, -203], [52, 0, -210.5], [80, 0, -210.5], [82, 0, -219], [64, 0, -219.5], [40, 0.15, -219.5], [12, 0.15, -219.5], [1, 0.15, -222.4]],
           set: { mira_gone: true }, say: [N('By the staff gate the crowd closes round her. When it opens again she is gone. On the wet steps lies a yellow raincoat.')],
           goal: 'Follow the woman with Mira\'s face.', because: 'She has been dead for twenty-three years.', hints: M01_HINTS.chase, minutes: 3 },
         { id: 'raincoat', kind: 'scene', scene: 'raincoat', at: 'staffGate', after: ['chase'], spot: { prompt: 'THE YELLOW RAINCOAT', offset: [-1.0, 1.15, -1.8], r: 2.6, model: makeRaincoat, when: 'mira_gone && !raincoat' },
