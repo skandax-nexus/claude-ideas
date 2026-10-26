@@ -38,7 +38,9 @@ export default {
   frags: { m08: [['printCase', 'photoWall', 'groupPhoto'], ['securityOffice', 'riverWall', 'rookOffice'], ['reconstruction', 'riverCourt', 'southBridge']] },
   // (U7 review) at the lockdown the island has a drone of its own in 2049, round the cube on its terrace (past the
   // version terminal): Kai, sealed in the cube, can watch it go round before he steps into 2026 and out
-  watch: { m08: [[], [[[18, -30], [30, -30], [30, -14], [18, -14]]], [[[-20, 22], [20, 22], [20, 30], [-20, 30]],
+  // (playtest v2.1 F16: the south court's drone turned at z 22, 4 m from where the stepping stones leave the bank, and saw
+  // Kai on his way to them; its round is 5 m further south now, over the court)
+  watch: { m08: [[], [[[18, -30], [30, -30], [30, -14], [18, -14]]], [[[-20, 27], [20, 27], [20, 35], [-20, 35]],
     { y: 0.4, when: '@PRESENT && lin_gone && !version_17', path: [[-10.5, 10.5], [10.5, 10.5], [10.5, -10.5], [-10.5, -10.5]] }]] },
   crowd: [
     // (their own words in this version, U7 review: not the storm night's lockdown)
@@ -74,7 +76,14 @@ export default {
     terrace(P, [-12, -12, 12, 12], 0.4, 'courtStone', { wall: 'quayStone', base: -2.6 });
     P.reserve(...POND);
     // stepping stones from the north and south banks to the island, and the bridges at the wing arches
-    for (const sz of [-1, 1]) for (const [z, x] of [[17.0, -0.3], [15.6, 0.4], [14.2, -0.2], [12.8, 0.3]]) P.cyl(x, -1.0, sz * z, 0.8, 1.15, 'riverStone', { seg: 10, solid: true });
+    // (playtest v2.1 F16: four 0.8 m stones, dark on dark water, stood 0.7 m out of line, and each one's footing was 0.6 m
+    // each way, narrower than it looked, with gaps between: Kai stepped off them again and again. Five broad stones now,
+    // nearly in line and touching, each with a pale worn top that shows against the water, its footing as wide as the top)
+    for (const sz of [-1, 1]) for (const [z, x] of [[17.15, -0.12], [16.0, 0.14], [14.85, -0.1], [13.7, 0.12], [12.6, 0]]) {
+      P.cyl(x, -1.0, sz * z, 0.95, 1.15, 'riverStone', { seg: 14 });
+      P.disc(x, 0.16, sz * z, 0.86, 'limestone', { seg: 14, noShadow: 1 });
+      P.col([x - 0.86, -1.0, sz * z - 0.86, x + 0.86, 0.15, sz * z + 0.86]);
+    }
     for (const x of [-30, 30]) bridge(P, x, -6.6, x, 6.6, 4, 0.2, 'quayStone', { parapetMat: 'steel', parapetH: 1.0 });
     P.land('southBridge', 30, 0.2, 12, 0);
     for (const z of [-6.4, 6.4]) for (const [x0, x1] of [[-70, -32], [-28, POND[0]], [POND[2], 28], [32, 70]]) railing(P, x0, z, x1, z, 1.0, 'steel');
@@ -155,11 +164,29 @@ export default {
     P.vbox([47.9, 0, -32, 48, 4.2, -20], 'serverGlass', { noShadow: 1 });
     for (let i = 0; i < 4; i++) P.vbox([49, 0, -31 + i * 3, 50.2, 2.4, -29.4 + i * 3], 'serverRack');
     // Rook's office: a corner room at 6 m in the east wing, its window over the river; an outside stair up
+    // (playtest v2.1 F16: "his office" was an open terrace with a park bench on it. It is a room now: a wall with his
+    // door and his name over it at the stair head, glass on the court and the river, a roof with a light in it, his desk
+    // and chair against the wing's window, filing cabinets along the wall)
     P.land('rookOffice', 44, 6, -9, Math.PI / 2);
     P.box([38, 5.6, -14, 48, 6, -7.2], 'helixWhite');
-    railing(P, 38, -14, 38, -7.2, 1.1, 'steel', { y: 6 });
     P.vbox([47.95, 6, -13, 48.05, 9.8, -7.4], 'helixGlass', { noShadow: 1 });
-    prop(P, 'bench', 46.6, -10.4, -Math.PI / 2, { y: 6 });
+    P.box([41.5, 6, -14.1, 48, 9.7, -13.8], 'helixWhite');
+    P.box([38, 6, -14.1, 38.5, 9.7, -13.8], 'helixWhite');
+    P.box([38.5, 8.7, -14.1, 41.5, 9.7, -13.8], 'helixWhite');
+    P.vbox([38.5, 8.62, -14.16, 41.5, 8.7, -13.74], 'steel', { noShadow: 1 });
+    P.text('DR. E. ROOK  -  DIRECTOR', [40, 9.18, -14.14], Math.PI, { size: 0.19, color: '#22303e' });
+    P.box([37.94, 6, -13.8, 38.06, 9.7, -7.2], 'helixGlass', { noShadow: 1 });
+    P.box([38, 6, -7.32, 48, 9.7, -7.2], 'helixGlass', { noShadow: 1 });
+    for (const [x, z] of [[38, -7.26], [48, -7.26], [43, -7.26], [38, -10.5]]) P.vbox([x - 0.07, 6, z - 0.07, x + 0.07, 9.7, z + 0.07], 'steel', { noShadow: 1 });
+    P.vbox([37.9, 6, -13.86, 48.05, 6.12, -7.16], 'steel', { noShadow: 1 });
+    P.box([37.9, 9.7, -14.2, 48.1, 9.95, -7.1], 'roofLight');
+    P.vbox([40.5, 9.62, -12.2, 46.5, 9.7, -9.2], 'lightPanel', { noShadow: 1 });
+    P.box([45.7, 6, -11.9, 46.9, 6.74, -9.3], 'timber');
+    P.vbox([45.62, 6.74, -11.98, 46.98, 6.8, -9.22], 'signBoard');
+    P.box([47.2, 6, -10.95, 47.7, 6.48, -10.35], 'signBoard');
+    P.vbox([47.6, 6.48, -10.95, 47.72, 7.2, -10.35], 'signBoard');
+    for (const x of [44.6, 45.6, 46.6]) P.box([x - 0.45, 6, -13.8, x + 0.45, 7.35, -13.25], 'helixProp');
+    for (const x of [44.6, 45.6, 46.6]) for (const y of [6.5, 6.95]) P.vbox([x - 0.3, y, -13.27, x + 0.3, y + 0.04, -13.23], 'steel', { noShadow: 1 });
     stair(P, 40, -24, 0, 40, -14.2, 6, 2.4, 'helixWhite', { rail: 'steel' });
     // south wing, arched over the stair down to the city; the cube's terminal faces it
     wingBlock([-62, 48, -6, 62]);

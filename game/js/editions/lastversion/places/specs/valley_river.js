@@ -71,6 +71,11 @@ export default {
     P.vbox([-25.5, -2.6, 14, -20.5, -2.2, 34], 'riverBed');
     P.col([-25.5, -3, 14, -20.5, -2.2, 34]);
     for (const x of [-26, -20]) P.box([x - 0.5, -2.6, 14, x + 0.5, 0, 34], 'riverStone');
+    // (playtest v2.1 F17: the gate channel was a 2.2 m trench with sheer sides that Kai walked into from the south bank and
+    // could leave only by the river. Now a parapet runs along both its sides, waist-high, and a stair climbs out of its
+    // south end to the bank)
+    for (const x of [-26, -20]) P.box([x - 0.5, 0, 14.4, x + 0.5, 0.85, 34], 'riverStone');
+    stair(P, -23, 28.2, -2.2, -23, 33.9, 0, 3.4, 'riverStone');
     // --- Q0: the head-stone, the weir, the mill race and the mill -----------------------------------------
     P.land('weir', 42, 0, -20, Math.PI / 2);
     P.box([48, -1.6, -21, 62, -0.6, -19], 'riverStone');
@@ -181,6 +186,39 @@ export default {
     P.E('PRESENT', () => {
       for (let i = 0; i < 16; i++) P.tree('fern', P.rng.float(-96, 6), P.rng.float(-58, -4), P.rng.float(0.8, 1.3), { y: 2, solid: false });
       for (const [x, z, ry] of [[-66, 30, 0.3], [-12, 34, 1.2]]) P.obox(x, 0, z, 1.4, 0.4, 4.4, ry, 'timber', { rx: 0.1 });
+    });
+    // --- the far bank of the gorge channel, the first thing Kai sees from the weir, in its three years ------------------
+    // (playtest v2.1 F17: from the start the three years looked alike: the same channel, meadow and willows. Across the
+    // channel now: a farmstead with its barley and blossom in THRIVING; the same house roofless among weeds and dead trees,
+    // a boat rotting on the bank, in ABANDONED; in FLOODED the channel brims and the meadow is a sheet of water to the
+    // willows, the house drowned to its thatch)
+    const FARM = [80, -12, 3.4];
+    // (its own random numbers: the place's P.rng sequence, which places the gorge's rock, is left as it was)
+    const rnd = ((n) => () => (n = (n * 16807) % 2147483647) / 2147483647)(5005), rf = (a, b) => a + (b - a) * rnd();
+    const plant = (k, x, z, s, o = {}) => P.tree(k, x, z, s, { r: rf(0, Math.PI * 2), ...o });
+    P.E('PAST', () => {
+      roundhouse(P, { x: FARM[0], z: FARM[1], r: FARM[2], y: 0, wall: 'whitewash', roof: 'reedThatch', footing: 'riverStone' });
+      for (let i = 0; i < 26; i++) plant('barley', rf(66, 92), rf(-33, -23), rf(1.0, 1.3), { solid: false });
+      for (const [x, z] of [[68, -18], [90, -2]]) plant('blossom', x, z, 1.1);
+      prop(P, 'fishRack', 66.5, 5, 0);
+      P.vbox([84.5, 1.9, -6.2, 90.5, 1.92, -6.18], 'rope', { prop: 1 });
+      for (const x of [85.4, 87.2, 89.0]) P.vbox([x - 0.5, 1.0, -6.21, x + 0.5, 1.9, -6.17], 'linen', { prop: 1 });
+    });
+    P.E('PRESENT', () => {
+      P.cyl(FARM[0], 0, FARM[1], FARM[2] + 0.15, 0.6, 'riverStone', { seg: 12 });
+      P.cyl(FARM[0], 0.6, FARM[1], FARM[2], 1.0, 'whitewash', { seg: 12, open: 1 });
+      P.col([FARM[0] - FARM[2] * 0.75, 0, FARM[1] - FARM[2] * 0.75, FARM[0] + FARM[2] * 0.75, 1.6, FARM[1] + FARM[2] * 0.75]);
+      for (const [x, z] of [[68, -18], [90, -2]]) plant('bareTree', x, z, 1.0);
+      for (let i = 0; i < 18; i++) plant('fern', rf(65, 95), rf(-32, 10), rf(0.9, 1.5), { solid: false }); // (the place keeps to six kinds of plant)
+      P.obox(65.2, 0, -3, 1.3, 0.55, 4.0, 0.5, 'timber', { rz: 0.45 });
+    });
+    P.E('FUTURE', () => {
+      P.plane(48, -30, 62, 14, -0.12, 'floodWater', { noShadow: 1 });
+      P.plane(62.4, -34, 100, 14, 0.14, 'floodWater', { noShadow: 1 });
+      P.cone(FARM[0], 0.7, FARM[1], FARM[2] + 1.0, 2.4, 'reedThatch', { seg: 12 });
+      P.col([FARM[0] - 1.2, 0, FARM[1] - 1.2, FARM[0] + 1.2, 1.6, FARM[1] + 1.2]);
+      for (const [x, z] of [[68, -18], [90, -2]]) plant('bareTree', x, z, 1.0);
+      for (let i = 0; i < 16; i++) plant('reeds', rf(64, 96), rf(-32, 12), rf(0.8, 1.2), { y: 0.1, solid: false });
     });
     for (const [x, z] of [[-94, -56], [-70, -58], [6, -56], [-94, 64], [-40, 68], [8, 66], [92, -36], [70, 6], [94, 10]]) P.tree('willow', x, z, P.rng.float(1.1, 1.5));
     for (let i = 0; i < 12; i++) P.tree('willow', P.rng.float(-96, 4), P.rng.float(-146, -66), P.rng.float(1.0, 1.6));

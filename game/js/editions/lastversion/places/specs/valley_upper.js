@@ -28,9 +28,10 @@ export default {
       hemi: { sky: 0x5a6a8a, ground: 0x2a3446, k: 0.7 }, sunColor: 0xa8b8e0, sunK: 0.35, grade: { shadowTint: 0x1a2440, highlightTint: 0xd8e4ff, toning: 0.2, contrast: 1.06, saturation: 0.9 } },
   },
   quarters: [
-    // Kai steps out of the blanket house and looks down the lane: the first fire, the elder's house with the
-    // telling-stone on its roof, the granaries, and the Ridge beyond (in BEFORE THE FIRE: hide tents in the grass)
-    { name: 'THE FIRST FIRE', area: [-100, 62, 100, 100], spawn: [-18, 0, 80, -1.27], threshold: { at: 'stairT1', kind: 'stair' } },
+    // Kai has stepped out of the blanket house and turns back to it: its lit doorway, the blanket on its rail; behind him
+    // the lane, the first fire, the elder's house with the telling-stone on its roof, the granaries, and the Ridge beyond
+    // (in BEFORE THE FIRE: hide tents in the grass). (Playtest v2.1 F14: he stood 7.6 m off with the house behind him)
+    { name: 'THE FIRST FIRE', area: [-100, 62, 100, 100], spawn: [-23.2, 0, 80.6, 2.72], threshold: { at: 'stairT1', kind: 'stair' } },
     { name: 'THE WATER STEPS', area: [-80, 6, 80, 62], spawnAt: 'stairT1Top', threshold: { at: 'stairT3', kind: 'stair' } },
     { name: 'THE RING', area: [-60, -60, 60, 6], spawnAt: 'stairT3Top', threshold: { at: 'underChamber', kind: 'stair' } },
   ],
@@ -144,6 +145,8 @@ export default {
     P.land('pictoRing', 46, 0, 69.6, Math.PI);
     P.E('PRESENT', () => {
       roundhouse(P, { x: -24, z: 88, r: 4.2, ry: Math.PI });
+      // (the house Kai woke in: its hearth is lit, the only doorway in the lane that glows)
+      P.obox(-24, 0.02, 83.68, 0.86, 1.62, 0.04, Math.PI, 'windowWarm', { noShadow: 1 });
       roundhouse(P, { x: -46, z: 82, r: 4, ry: Math.PI });
       roundhouse(P, { x: -70, z: 76, r: 3.6, ry: Math.PI / 2 });
       roundhouse(P, { x: 60, z: 84, r: 3.8, ry: -Math.PI / 2 });

@@ -12,7 +12,8 @@ import { compileCondition } from '../game/js/core/conditions.js';
 import { LV } from '../game/js/editions/lastversion/index.js';
 import { LastVersion } from '../game/js/editions/lastversion/Runtime.js';
 import { M01 } from '../game/js/editions/lastversion/prologue.js';
-import { M06 } from '../game/js/editions/lastversion/act1.js';
+import { M04, M06, M08 } from '../game/js/editions/lastversion/act1.js';
+import { KIT_NAMES } from '../game/js/editions/lastversion/places/kits.js';
 import { threadsOf } from '../game/js/editions/lastversion/Threads.js';
 import { Player } from '../game/js/entities/Player.js';
 
@@ -23,7 +24,7 @@ function build(ch, deck) {
   game.story = rt.makeStory(ch);
   return rt.buildLevel({ lv: true, chapter: ch, deck, sector: 0, flags: {} });
 }
-const M1 = build('prologue', 0), M2 = build('prologue', 1), M6L = build('act1', 2);
+const M1 = build('prologue', 0), M2 = build('prologue', 1), M4L = build('act1', 0), M5L = build('act1', 1), M6L = build('act1', 2), M8L = build('act1', 4);
 
 const solids = (level, state = 'PRESENT', facts = {}) => level.elements.filter((e) => e.solid && (!e.when || compileCondition(e.when)({ fact: (k) => facts[k], state })));
 // Kai walks [x, z] waypoints with the game's own physics (entities/Player.js), as tests/lastversion.test.mjs walkRoute
@@ -43,6 +44,7 @@ function walk(level, start, route, facts = {}, state = 'PRESENT') {
   }
   return { at: [+p.pos.x.toFixed(2), +(p.pos.y - 0.85).toFixed(2), +p.pos.z.toFixed(2)] };
 }
+const visIn = (level, year) => level.vis.filter((v) => !v.e || v.e.includes(year));
 // is the segment a-b clear of the level's solid boxes (a slab test per box)?
 function clear(level, a, b, facts = {}) {
   const d = [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
@@ -214,4 +216,62 @@ test('FT-21: the page\'s description is The Last Version of Earth\'s, without th
   const html = fs.readFileSync(new URL('../game/index.html', import.meta.url), 'utf8');
   const d = html.match(/<meta name="description" content="([^"]*)">/)[1];
   assert.ok(/Last Version of Earth/.test(d) && !/laws/i.test(d), d);
+});
+
+test('M4 (F14): Kai starts at the door of the house he woke in, facing it, the blanket on its rail in view and in reach', () => {
+  const sp = M4L.quarters[0].spawn;
+  const wake = M4L.interactables.find((i) => i.id === 'wake');
+  assert.ok(wake && wake.kit === 'blanket' && KIT_NAMES.includes('blanket'), 'the blanket is a thing of the place');
+  const dx = wake.pos[0] - sp[0], dz = wake.pos[2] - sp[2], d = Math.hypot(dx, dz);
+  const hx = -Math.sin(sp[3]), hz = -Math.cos(sp[3]);
+  assert.ok(d < 4.2 && d > wake.r - 0.1, `the blanket ${d.toFixed(2)} m off: a step or two to its prompt`);
+  assert.ok((hx * dx + hz * dz) / d > 0.85, 'Kai faces it as he starts');
+  const [hxh, , hzh] = M4L.landmarks.blanketHouse;
+  assert.ok(Math.hypot(hxh - sp[0], hzh - sp[2]) < 4.5, 'at the house\'s door');
+  // the lit doorway: only this house's
+  assert.ok(M4L.vis.some((v) => v.m === 'windowWarm' && Math.abs(v.x - hxh) < 0.1 && v.z < hzh), 'its doorway glows');
+  // nothing stands between him and the door
+  const up = walk(M4L, [sp[0], 0, sp[2]], [[wake.pos[0] + 0.4, wake.pos[2] - 1.2]]);
+  assert.ok(!up.stuck, `he walks up to it: ${JSON.stringify(up)}`);
+});
+
+test('M5 (F17): the years differ across the channel from the start; the gate channel has a parapet and a stair out', () => {
+  // from the weir, the far bank: a whole house in THRIVING, roofless in ABANDONED, the meadow under water in FLOODED
+  const near = (v) => v.x > 74 && v.x < 86 && v.z > -18 && v.z < -6;
+  const past = visIn(M5L, 'PAST').filter(near), now = visIn(M5L, 'PRESENT').filter(near), fut = visIn(M5L, 'FUTURE').filter(near);
+  assert.ok(past.some((v) => v.r2 === 0 && v.m === 'reedThatch' && v.y >= 2), 'THRIVING: the farmstead\'s thatch');
+  assert.ok(now.some((v) => v.open) && !now.some((v) => v.m === 'reedThatch'), 'ABANDONED: its walls open to the sky');
+  assert.ok(visIn(M5L, 'FUTURE').some((v) => v.k === 'plane' && v.m === 'floodWater' && v.b[0] >= 62 && v.b[1] > -0.5), 'FLOODED: the far meadow under water');
+  assert.ok(fut.some((v) => v.m === 'reedThatch' && v.y < 1.5), 'FLOODED: the house drowned to its thatch');
+  const kinds = (y) => new Set(M5L.veg.filter((t) => (!t.e || t.e.includes(y)) && t.x > 62).map((t) => t.k));
+  assert.ok(kinds('PAST').has('barley') && kinds('PRESENT').has('bareTree') && !kinds('PRESENT').has('barley'), 'barley in THRIVING, dead trees after');
+  // the gate channel: the south bank walk does not drop Kai into it, and from its floor a stair climbs out
+  const bank = walk(M5L, [-14, 0, 24], [[-24, 24]]);
+  assert.ok(bank.stuck && bank.at[1] > -0.2, `the parapet stops him at the edge: ${JSON.stringify(bank)}`);
+  const out = walk(M5L, [-23, -2.2, 18], [[-23, 27], [-23, 36]]);
+  assert.ok(!out.stuck && Math.abs(out.at[1]) < 0.2, `up the stair out of it: ${JSON.stringify(out)}`);
+});
+
+test('M8 (F16): broad stepping stones to the island, Rook\'s office a room, the south drone off the stones\' bank, echoes with faces', () => {
+  // the stones: from either bank to the island, even drifting half a metre either side of their line
+  for (const sz of [1, -1]) {
+    const across = walk(M8L, [0.2, 0.05, sz * 19], [[0.55, sz * 16.6], [-0.55, sz * 14.6], [0.5, sz * 13.0], [0, sz * 10.5]]);
+    assert.ok(!across.stuck && across.at[1] > 0.3, `over the stones (${sz > 0 ? 'south' : 'north'}): ${JSON.stringify(across)}`);
+  }
+  const tops = M8L.vis.filter((v) => v.k === 'disc' && v.m === 'limestone');
+  assert.equal(tops.length, 10, 'each stone has a pale top');
+  // Rook's office: in at the door from the stair head, a wall and a roof round him
+  const rook = M8L.npcs.find((n) => n.id === 'rook');
+  const inside = walk(M8L, [40, 6, -15.2], [[40, -13], [rook.pos[0] - 0.9, rook.pos[2]]]);
+  assert.ok(!inside.stuck, `through his door to him: ${JSON.stringify(inside)}`);
+  const over = (e) => e.solid && e.box[0] < rook.pos[0] && e.box[3] > rook.pos[0] && e.box[2] < rook.pos[2] && e.box[5] > rook.pos[2] && e.box[1] > rook.pos[1] + 3;
+  assert.ok(M8L.elements.some(over), 'a roof over him');
+  assert.ok(M8L.texts.some((t) => /ROOK/.test(t.text) && /DIRECTOR/.test(t.text)), 'his name on the door');
+  // the south court's drone keeps 8 m from where the stones leave the bank
+  const south = M8L.sentinels.filter((s) => !s.when && s.path.every(([, z]) => z > 0));
+  assert.ok(south.length && south.every((s) => Math.min(...s.path.map(([, z]) => z)) >= 26), JSON.stringify(south.map((s) => s.path)));
+  // the echoes: Mission 8 and Mission 6 lend their holograms the textures of the people they are (echoes.js)
+  assert.equal(typeof M08.step, 'function');
+  assert.ok(/lendLooks/.test(M08.step.toString()) && /lendLooks/.test(M06.step.toString()));
+  void M04;
 });

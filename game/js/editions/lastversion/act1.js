@@ -14,6 +14,7 @@ import { CAST, WATER_HOOK, intent } from './npcs.js';
 import { makeChronolith, makeClock, makeDrawing, makePhoto, makeLogbook, makeNotebook, makeCoatPegs, makeScreen, makePanel } from './Build.js';
 import { makeKit } from './places/kits.js';
 import { NO_MODEL } from './processes.js';
+import { lendLooks } from './echoes.js';
 
 const L = (who, text, when) => (when ? { who, text, when } : { who, text });
 const N = (text, when) => L('NONE', text, when);
@@ -115,7 +116,9 @@ export const M04 = {
     {
       name: 'THE FIRST FIRE',
       threads: [
-        { id: 'wake', kind: 'scene', scene: 'wake', at: 'blanketHouse', spot: { prompt: 'THE BLANKET', offset: [0, 0.9, -0.6], r: 2.8, model: NO_MODEL },
+        // (playtest v2.1 F14: the house was 7.6 m behind Kai with nothing at it. He starts at its door now, facing it, and
+        // the blanket and the cup hang on a rail beside the door, a glint over them)
+        { id: 'wake', kind: 'scene', scene: 'wake', at: 'blanketHouse', spot: { prompt: 'THE BLANKET', offset: [1.3, 1.3, 0.5], r: 2.8, kit: 'blanket' },
           goal: 'Look round the house you woke in.', because: 'Somebody put a blanket over a stranger.', done: 'ev_village_mark', hints: M04_HINTS.wake, minutes: 2 },
         { id: 'picto', kind: 'clue', need: 3, of: ['ev_picto_fire', 'ev_picto_water', 'ev_picto_ring'], after: ['wake'],
           spots: [
@@ -689,6 +692,8 @@ export const M06 = {
   // knocks him back, what it was and how to cross it (later, that in 2196 it has rusted still)
   step(rt) {
     const g = rt.g, f = g.facts;
+    // (playtest v2.1 F16: Ezra at sixty-five, his own face and his brown hair in the echo, not a white figure)
+    lendLooks(g, (n) => /^ezra_/.test(n.id));
     const h = g.deckWorld.hazards.find((x) => x.hz.lvKit === 'brassArm');
     if (!h || g.room !== h.hz.room) return;
     const p = g.player.pos, [px, py, pz] = h.hz.pivot, R = h.hz.radius;
@@ -1084,6 +1089,11 @@ export const M08 = {
   // (a load during the lockdown keeps the drones hunting)
   adjust(level, rt) {
     if (rt?.g?.facts?.get('lin_gone') && !rt.g.facts.get('t_m08_escape')) lockdown(level.sentinels);
+  },
+  // (playtest v2.1 F16: Lin in the cube, the morning's two echoes and Rook's 2026 echo wear their own faces and clothes,
+  // faint, not one white glow: echoes.js)
+  step(rt) {
+    lendLooks(rt.g);
   },
   overlay(P) {
     // (behind her desk, facing the doors: she stood on the visitors' side with her back to them)

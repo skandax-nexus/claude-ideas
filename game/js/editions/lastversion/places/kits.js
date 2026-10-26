@@ -87,6 +87,18 @@ const KITS = {
   clockCase(g) { box(g, 0.6, 1.9, 0.4, 0x9a6a44, 0, 0, 0, WOOD); cyl(g, 0.22, 0.04, 0xf4f0e4, 0, 1.45, 0.21, { rx: Math.PI / 2 }); ring(g, 0.23, 0.02, 0xc89a4a, 0, 1.45, 0.23, { metal: 0.85, rough: 0.3 }); },
   escapement(g) { box(g, 1.2, 0.85, 0.7, 0x9a6a44, 0, 0, 0, WOOD); ring(g, 0.32, 0.03, 0xc89a4a, 0, 1.2, 0, { metal: 0.85, rough: 0.3 }); ring(g, 0.18, 0.025, 0xc89a4a, 0.3, 1.05, 0.05, { metal: 0.85, rough: 0.3 }); },
   crate(g) { box(g, 0.9, 0.8, 0.7, 0xffffff, 0, 0, 0, { rough: 0.85, tex: 'crate' }); },
+  // Mission 4's blanket, over a drying rail by the door of the house Kai woke in, and the cup of water on a stool beside
+  // it (playtest v2.1 F14: the first objective's house had nothing to say it was the one): a red weave with ochre bands,
+  // the one bright thing at a doorway in the lower village
+  blanket(g) {
+    for (const s of [-1, 1]) box(g, 0.08, 1.25, 0.08, 0x6a4a2a, s * 0.78, 0, 0, WOOD);
+    box(g, 1.72, 0.07, 0.08, 0x6a4a2a, 0, 1.18, 0, WOOD);
+    box(g, 1.34, 0.98, 0.04, 0xb4402a, 0, 0.22, 0.06, CANVAS);
+    box(g, 1.34, 0.52, 0.04, 0xb4402a, 0, 0.7, -0.06, CANVAS);
+    for (const y of [0.42, 0.86]) box(g, 1.35, 0.1, 0.045, 0xe2a63c, 0, y, 0.06, CANVAS);
+    box(g, 0.42, 0.42, 0.42, 0x7a5a3a, 1.25, 0, 0.1, WOOD);
+    cyl(g, 0.07, 0.13, 0xb06a3c, 1.25, 0.42, 0.1, { r2: 0.085, rough: 0.9, tex: 'stone' });
+  },
   // the old hall's sweeping arm: a brass bar from the pivot, both ways, on its post (the pivot is 0.75 m up)
   // (playtest v2.1 F02: a 0.12 m bar did not read in the dark shop. It is thicker now and catches the light, with a lamp
   // at each end, the first thing to see of it coming round)
