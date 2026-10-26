@@ -361,7 +361,7 @@ export const M10 = {
     m10_guard: [
       {
         when: '!sera_met',
-        lines: [N('The guard lifts her visor.'), L('SERA', 'In my time, your face is on every memorial.'), K('For saving the world?'), L('SERA', 'For ending it.')],
+        lines: [N('The guard turns her face to the light.'), L('SERA', 'In my time, your face is on every memorial.'), K('For saving the world?'), L('SERA', 'For ending it.')],
         choices: [
           intent('investigate', 'Then why help me?', { lines: [L('SERA', 'Because the record is incomplete. Cut the power in both years and their lamps go blind.')], set: { sera_met: true }, ev: 'sera_doubt' }),
           intent('challenge', 'I haven\'t ended anything.', { lines: [L('SERA', 'Not yet. Move.')], set: { sera_met: true } }),

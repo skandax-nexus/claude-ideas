@@ -206,6 +206,9 @@ export default {
     P.vbox([-1.2, 0.95, -106, -1.15, 1.0, -94], 'barrierTape', { prop: 1 });
     P.vbox([4.15, 0.95, -106, 4.2, 1.0, -94], 'barrierTape', { prop: 1 });
     // --- Q2: Line 41: the forecourt, the station on its embankment, the depot, the staff gate --------------
+    // the station on the map (playtest v2.1 FT-08: the full map showed the district's blocks and nothing of Line 41):
+    // its two platforms either side of the tracks, the depot's roof, the Helix fence either side of the staff gate
+    P.blocks.push([-35, -166, 35, -146], [-35, -186, 35, -176], [48, -216, 86, -194], [-46, -224.6, -3.4, -223.4], [3.4, -224.6, 46, -223.4]);
     // the platforms and the track bed on the brick embankment, under the ribbed canopy
     terrace(P, [-35, -166, 35, -146], PLAT, 'platformTile', { wall: 'brickWall', sides: 'SEW' });
     terrace(P, [-90, -176, 90, -166], BED, 'ballast', { wall: 'brickWall', sides: 'EW' });

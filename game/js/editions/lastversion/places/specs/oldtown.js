@@ -185,9 +185,36 @@ export default {
     P.land('recordingCase', 9.2, 16, -26, Math.PI / 2);
     P.box([8.6, 16, -27, 9.6, 17.4, -25], 'clockCaseWood');
     P.land('shopFloor', 12.4, 0, -18.4, 0);
-    P.land('repeatArm', 16, 0.75, -24, 0);
-    P.hazards.push({ kind: 'sweeper', radius: 7.2, speed: 1.1, phase: 0.6, pivot: [16, 0.75, -24], room: P.rid, lvKit: 'brassArm', stillIn: 'FUTURE' });
-    P.E('FUTURE', () => P.obox(16, 0.5, -24, 14, 0.3, 0.6, 0, 'rust', { solid: true }));
+    // the repeating arm (playtest v2.1 F02, X02): its bar swept 7.2 m round the well, the whole floor, every 2.9 s: the
+    // top of the cellar steps, Ezra, his counter, the gauge and the foot of the stair up, and each hit put Kai back in
+    // the cellar with nothing said. Now it turns on a brass post in the shop's front, between the counter and the
+    // stair up, 2.3 m each way and slower (a point is swept every 3.5 s): the cellar steps, Ezra, the counter and the
+    // stairs are outside its reach, a brass ring in the boards marks where it reaches, and the shop floor is the place
+    // a hit puts Kai back (below). Crossing it is still the way to the stair; in 2196 it has rusted still
+    const ARM = [17.6, 0.75, -18.6], ARM_R = 2.3;
+    P.land('repeatArm', ...ARM, 0);
+    P.hazards.push({ kind: 'sweeper', radius: ARM_R, speed: 0.9, phase: 0.6, pivot: ARM, room: P.rid, lvKit: 'brassArm', stillIn: 'FUTURE' });
+    P.col([ARM[0] - 0.22, 0, ARM[2] - 0.22, ARM[0] + 0.22, 1.0, ARM[2] + 0.22]); // (its post: nobody stands where the bar turns)
+    // (the ring catches the lamplight while the arm turns; in 2196, still, it is only brass)
+    P.E(['PRESENT', 'PAST'], () => P.fan(ARM[0], 0.012, ARM[2], ARM_R - 0.05, ARM_R + 0.08, 0, Math.PI * 2, 'fireGlow', { seg: 48, noShadow: 1 }));
+    P.E('FUTURE', () => P.fan(ARM[0], 0.012, ARM[2], ARM_R - 0.05, ARM_R + 0.08, 0, Math.PI * 2, 'brass', { seg: 48, noShadow: 1 }));
+    P.fan(ARM[0], 0.01, ARM[2], 0, ARM_R - 0.06, 0, Math.PI * 2, 'flagstone', { seg: 48, noShadow: 1 }); // (the stone it turns over)
+    P.E('FUTURE', () => P.obox(ARM[0], 0.5, ARM[2], ARM_R * 2, 0.3, 0.5, 0, 'rust', { solid: true }));
+    // the well's railing on the shop floor too, and the clockmaker's long-case clocks, which close the floor's other ways
+    // round to the foot of the stair (behind the well, and down the strip between the well and the stair): the stair is
+    // reached across the arm's floor, or in a year it does not turn
+    railing(P, WELL[0], WELL[1], WELL[2], WELL[1], 1.0, 'brass');
+    railing(P, WELL[0], WELL[3], WELL[2], WELL[3], 1.0, 'brass');
+    railing(P, WELL[0], WELL[1], WELL[0], WELL[3], 1.0, 'brass');
+    railing(P, WELL[2], WELL[1], WELL[2], WELL[3], 1.0, 'brass');
+    P.box([19.0, 0, -31.8, 19.7, 2.3, -27.0], 'clockCaseWood');
+    P.box([19.15, 0, -22.3, 20.42, 2.3, -21.3], 'clockCaseWood');
+    P.cyl(18.97, 1.7, -29.4, 0.24, 0.04, 'clockFaceWhite', { rz: Math.PI / 2, seg: 16 });
+    P.cyl(19.8, 1.7, -21.27, 0.24, 0.04, 'clockFaceWhite', { rx: Math.PI / 2, seg: 16 });
+    // where a setback on the shop floor puts Kai back (Mission 6's step: by the counter, out of the arm's reach, facing
+    // the shop; the quarter's checkpoint is the cellar stair's foot), and on the canal street (outside the shop door)
+    P.land('shopReturn', 10.8, 0, -17.6, -Math.PI / 2);
+    P.land('streetReturn', 16, 0, -13.6, 0);
     // the clock tower over the front, the 6 m face on the canal street
     P.box([11, 20, -20, 21, 27, -16.6], 'townhouseEzra');
     P.hip(16, 27, -18.3, 11, 4.6, 3, 0, 'slate');

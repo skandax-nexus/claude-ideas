@@ -3645,7 +3645,7 @@ test('a skipped early thread is walked past: the objective is always the next ma
   };
   // Mission 1: the photo never looked at (the avenue, the plaza, the checkpoint, the platform, the wreck, the pursuit)
   walk(0, [[[], 'photo'], [['ev_toy'], 'anomalies'], [['ev_clock', 'ev_camera'], 'deduce'], [['rook_message', 'checkpoint_passed'], 'jun'],
-    [['zero_second'], 'zero'], [['after_zero'], 'rescue'], [['rescued_a', 'rescued_b', 'wrist_cut'], 'voice'], [['voice_heard'], 'chase'], [['mira_gone'], 'raincoat'], [['raincoat'], null]]);
+    [['zero_second'], 'zero'], [['after_zero'], 'rescue'], [['rescued_a', 'rescued_b', 'wrist_cut'], 'voice'], [['voice_heard'], 'chase'], [['mira_gone'], 'raincoat'], [['raincoat'], 'gate'], [['t_m01_gate'], null]]); // (v2.1 FT-15: the staff gate is a thread)
   walk(0, [[['rook_message'], 'anomalies']]); // (Rook's call alone walks past the photo)
   // Mission 2: the intercom, the print and Dr. Lin all skipped; out into the court the lobby is behind him
   const m2 = walk(1, [[[], 'intercom'], [['left_lobby'], 'gallery'], [['cells_1'], 'cells']]);

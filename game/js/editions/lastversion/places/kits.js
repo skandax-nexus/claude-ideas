@@ -87,8 +87,16 @@ const KITS = {
   clockCase(g) { box(g, 0.6, 1.9, 0.4, 0x9a6a44, 0, 0, 0, WOOD); cyl(g, 0.22, 0.04, 0xf4f0e4, 0, 1.45, 0.21, { rx: Math.PI / 2 }); ring(g, 0.23, 0.02, 0xc89a4a, 0, 1.45, 0.23, { metal: 0.85, rough: 0.3 }); },
   escapement(g) { box(g, 1.2, 0.85, 0.7, 0x9a6a44, 0, 0, 0, WOOD); ring(g, 0.32, 0.03, 0xc89a4a, 0, 1.2, 0, { metal: 0.85, rough: 0.3 }); ring(g, 0.18, 0.025, 0xc89a4a, 0.3, 1.05, 0.05, { metal: 0.85, rough: 0.3 }); },
   crate(g) { box(g, 0.9, 0.8, 0.7, 0xffffff, 0, 0, 0, { rough: 0.85, tex: 'crate' }); },
-  // the old hall's sweeping arm: a brass bar from the pivot, both ways
-  brassArm(g, r = 7) { box(g, r * 2, 0.12, 0.16, 0xc89a4a, 0, -0.06, 0, { metal: 0.85, rough: 0.3 }); cyl(g, 0.2, 0.3, 0x8a6a3a, 0, -0.15, 0, { metal: 0.8 }); },
+  // the old hall's sweeping arm: a brass bar from the pivot, both ways, on its post (the pivot is 0.75 m up)
+  // (playtest v2.1 F02: a 0.12 m bar did not read in the dark shop. It is thicker now and catches the light, with a lamp
+  // at each end, the first thing to see of it coming round)
+  brassArm(g, r = 7) {
+    box(g, r * 2, 0.18, 0.22, 0xd8aa52, 0, -0.09, 0, { metal: 0.85, rough: 0.28, emissive: 0x5a3c0c });
+    box(g, r * 2 - 0.4, 0.03, 0.09, 0xffd08a, 0, 0.09, 0, { basic: true }); // (its polished top edge, lit)
+    for (const s of [-1, 1]) box(g, 0.2, 0.2, 0.28, 0xffc070, s * (r - 0.1), -0.1, 0, { basic: true });
+    cyl(g, 0.22, 0.32, 0x8a6a3a, 0, -0.16, 0, { metal: 0.8 });
+    cyl(g, 0.13, 0.75, 0x6a4a2a, 0, -0.75, 0, { metal: 0.7, rough: 0.5 });
+  },
   // --- Acts II-IV and the Finale (U3) -----------------------------------------------------------------
   // Northbank: an iron-framed notice board, the evacuation order board, an enamel street sign, a clock on a post
   noticeBoard(g) { box(g, 0.1, 1.9, 0.1, 0x2e3238, -0.7); box(g, 0.1, 1.9, 0.1, 0x2e3238, 0.7); box(g, 1.5, 1.0, 0.06, 0x5a7a6a, 0, 0.9, 0, PANEL); box(g, 1.3, 0.8, 0.02, 0xffffff, 0, 1.0, 0.04, PAPER); },

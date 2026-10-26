@@ -496,6 +496,12 @@ const M06_HINTS = {
   echo26: ['Ezra, in 2026.', 'His echo at the counter, in 2026.', 'Listen to him in 2026.'],
 };
 
+// what Mission 6's code says (fx.agree and step; voicelines.js walks them for the packs)
+const M06_SAY = {
+  agree: [N('Three clocks, three years. The escapement catches. Every clock agrees.'), N('The house chimes: up, up, and a stop.')],
+  // (the cross thread's own hint, said when the arm first knocks Kai back: already in the pack)
+  armHit: [K('Go when it has passed.')],
+};
 // a brass clock of the escapement: in its own year (and once the window has been read), a choice of hour; the right one
 // holds, a wrong one slips back. In another year its hands will not move.
 const HOURS = [['investigate', 'Morning.', 'morning'], ['comfort', 'Evening.', 'evening'], ['challenge', 'Noon.', 'noon']];
@@ -522,7 +528,7 @@ export const M06 = {
   coldOpen: {
     minutes: 1, shots: [{ cam: 'shopWindows', to: 'shopFloor', look: 'repeatArm', t: 9 }],
     // (what the shop kept of 1999, a residue in its oldest year: the hooded man at the counter, Ezra's echo behind it)
-    year: 'PAST', cast: [{ crew: 'witness', variant: 'hooded', hologram: true, at: 'shopFloor', off: [1.4, 0, 0.4], turn: Math.PI }],
+    year: 'PAST', cast: [{ crew: 'witness', variant: 'hooded', hologram: true, at: 'shopFloor', off: [0.2, 0, 1.2], turn: Math.PI }],
     lines: [N('1999. A man in a hood pays the clockmaker in advance. His wrist is scarred.'), FX(L('WITNESS', 'Set the arm to repeat. He\'ll need to learn it.'), 'echo'),
       FX(EZRA('Repeat for how long?'), 'echo'), FX(L('WITNESS', 'Until he comes. He will be early. He is always early.'), 'echo')],
   },
@@ -533,19 +539,19 @@ export const M06 = {
         { id: 'cellar', kind: 'go', at: 'shopFloor', r: 3.5, goal: 'Up the cellar steps into the shop.', because: 'Somewhere above me, a clock is ticking for me.',
           say: [K('These steps went down to a river once. I turned it.')], hints: M06_HINTS.cellar, minutes: 2 },
         { id: 'ezra', kind: 'talk', npc: 'clockmaker', at: 'shopFloor', after: ['cellar'], goal: 'Talk to the clockmaker.', because: 'He looked up as if I were late.', done: 'ezra_met', hints: M06_HINTS.ezra, minutes: 3 },
-        { id: 'arm', kind: 'scene', scene: 'arm', at: 'repeatArm', after: ['ezra'], spot: { prompt: 'WATCH THE ARM', offset: [-7.6, 0.8, 4], r: 3, model: NO_MODEL },
+        { id: 'arm', kind: 'scene', scene: 'arm', at: 'repeatArm', after: ['ezra'], spot: { prompt: 'WATCH THE ARM', offset: [0, 0.8, 0], r: 4, model: NO_MODEL },
           goal: 'Watch the repeating arm.', because: 'He set it repeating for somebody.', done: 'ev_arm_count', hints: M06_HINTS.arm, minutes: 2 },
         { id: 'windows', kind: 'scene', scene: 'windows', at: 'shopWindows', after: ['ezra'], spot: { prompt: 'THE THREE FACES', offset: [0, 0, 1.6], r: 3, model: NO_MODEL },
           goal: 'Read the three clock faces in the shop window.', because: 'A clockmaker\'s window is his notebook.', done: 'ev_window_faces', hints: M06_HINTS.windows, minutes: 1 },
         // (the closing pass: fifty years of Tuesdays, written down: the appointment he kept for Kai, and who paid for it)
         { id: 'ledger', kind: 'residue', at: 'shopFloor', after: ['ezra'],
           record: { official: 'APPOINTMENTS. TUESDAY, FOUR IN THE AFTERNOON: V. The same line on every page, back to 1999.', echo: 'In 2026, the first page: TUESDAY: V. PAID IN ADVANCE. DO NOT ASK HIS NAME. HE WILL NOT KNOW IT YET.',
-            hint: 'The same appointment, on every page.', after: [K('Every Tuesday for fifty years, he wrote me in.')], prompt: 'THE APPOINTMENT BOOK', offset: [2.6, 1.0, -0.4], kit: 'ledger',
+            hint: 'The same appointment, on every page.', after: [K('Every Tuesday for fifty years, he wrote me in.')], prompt: 'THE APPOINTMENT BOOK', offset: [0.2, 1.0, 0], kit: 'ledger',
             log: 'Ezra\'s appointment book: V., every Tuesday since 1999, paid in advance.' },
           goal: 'The appointment book on the counter.', because: 'A clockmaker writes down who is coming.', ev: 'tuesdays', hints: M06_HINTS.ledger },
         // (the closing pass: Ezra at sixty-five, in 2026, talking to the spot where Kai will stand)
         { id: 'echo26', kind: 'talk', npc: 'ezra_shop26', at: 'shopFloor', after: ['ezra'], goal: 'In 2026 Ezra was sixty-five, and already waiting.', because: 'His echo is still at the counter, talking.', done: 'ev_ezra26', hints: M06_HINTS.echo26 },
-        { id: 'cross', kind: 'go', at: 'galleryLanding', r: 3, after: ['arm'], when: 'ev_arm_count', goal: 'Get past the arm to the stair.', because: 'It sweeps the whole floor. It always comes back.', hints: M06_HINTS.cross, minutes: 3 },
+        { id: 'cross', kind: 'go', at: 'galleryLanding', r: 3, after: ['arm'], when: 'ev_arm_count', goal: 'Get past the arm to the stair.', because: 'It sweeps the floor between the counter and the stair. It always comes back.', hints: M06_HINTS.cross, minutes: 3 },
       ],
       sides: [
         { id: 'gauge', name: 'ROOK\'S GAUGE', giver: 'clockmaker', done: 'ev_rook_gauge', minutes: 2,
@@ -558,8 +564,10 @@ export const M06 = {
       threads: [
         { id: 'boards', kind: 'clue', need: 2, of: ['ev_boards_now', 'ev_boards_then'], after: ['cross'],
           spots: [
-            { id: 'boards_now', scene: 'boards_now', at: 'floorboards', prompt: 'THE WORN BOARDS', offset: [0, 0.6, 1], r: 2.8, model: NO_MODEL, when: '!@PAST' },
-            { id: 'boards_then', scene: 'boards_then', at: 'floorboards', prompt: 'THE BOARDS, 2026', offset: [0, 0.6, 1], r: 2.8, model: NO_MODEL, when: '@PAST' },
+            // (playtest v2.1 F13: read again and again, the boards took the focus from PIECE IT TOGETHER beside them; once
+            // both are read they have said what they have to say)
+            { id: 'boards_now', scene: 'boards_now', at: 'floorboards', prompt: 'THE WORN BOARDS', offset: [0, 0.6, 1], r: 2.8, model: NO_MODEL, when: '!@PAST && !(ev_boards_now && ev_boards_then)' },
+            { id: 'boards_then', scene: 'boards_then', at: 'floorboards', prompt: 'THE BOARDS, 2026', offset: [0, 0.6, 1], r: 2.8, model: NO_MODEL, when: '@PAST && !(ev_boards_now && ev_boards_then)' },
           ],
           goal: 'The gallery floor is worn in a line. Compare it with 2026.', because: 'Nobody wears a path to a wall.', hints: M06_HINTS.boards, minutes: 2 },
         { id: 'stair', kind: 'deduce', deduction: 'stair', at: 'floorboards', after: ['boards'], spotOpts: { offset: [1.4, 0.6, 1], r: 2.8 },
@@ -652,9 +660,12 @@ export const M06 = {
     },
     gauge: { lines: [N('On the 2026 workbench: a brass ring gauge stamped HELIX, tagged for return.'), EZRA('A Dr. Rook. Very polite. Very frightened.')], set: { ev_rook_gauge: true } },
   },
+  spoken: M06_SAY,
   rules: [
     // the three clocks agree: the escapement runs, and the house chimes the three notes
-    { id: 'clocks', when: 'clk_26 && clk_49 && clk_96', set: { clock_set: true }, say: [N('Three clocks, three years. The escapement catches. Every clock agrees.'), N('The house chimes: up, up, and a stop.')], then: 'chime' },
+    // (playtest v2.1 F13: said as the rule fired, these came before Kai's "Noon." and the last clock's own line, which
+    // the same tap queues after them; now they wait for the clock's lines: fx.agree)
+    { id: 'clocks', when: 'clk_26 && clk_49 && clk_96', set: { clock_set: true }, then: 'agree' },
   ],
   fx: {
     chime(rt) {
@@ -662,12 +673,66 @@ export const M06 = {
       if (!a?.ctx) return;
       [392, 523.25, 698.46].forEach((f, i) => a.bell?.(f, a.ctx.currentTime + 0.4 + i * 0.5, 0.05, a.sfx));
     },
+    // the escapement catches once the last clock's lines are over (they are queued by the tap that set the hour)
+    agree(rt) {
+      const g = rt.g, deck = rt.deck;
+      const go = (n = 0) => {
+        if (rt.deck !== deck) return;
+        if ((g.hud.talking || g.menu) && n < 120) return g.after(0.25, () => go(n + 1));
+        g.hud.say(M06_SAY.agree, g.facts);
+        M06.fx.chime(rt);
+      };
+      g.after(0.1, () => go());
+    },
+  },
+  // the brass arm (playtest v2.1 F02, X02): a whoosh as an end of the bar comes round toward Kai, and the first time it
+  // knocks him back, what it was and how to cross it (later, that in 2196 it has rusted still)
+  step(rt) {
+    const g = rt.g, f = g.facts;
+    const h = g.deckWorld.hazards.find((x) => x.hz.lvKit === 'brassArm');
+    if (!h || g.room !== h.hz.room) return;
+    const p = g.player.pos, [px, py, pz] = h.hz.pivot, R = h.hz.radius;
+    const d = Math.hypot(p.x - px, p.z - pz);
+    const feet = p.y - g.player.half.y;
+    if (g.catching && !rt.m06Hit && d < R + 0.8 && feet < py + 0.3 && feet > py - 2) {
+      rt.m06Hit = true;
+      const n = (rt.m06Hits = (rt.m06Hits || 0) + 1);
+      g.after(0.8, () => {
+        if (rt.deck?.key !== 'm06') return;
+        if (!f.get('arm_hit_told')) {
+          f.set('arm_hit_told');
+          g.hud.toast('<small>THE BRASS ARM</small><br>It knocked you back to the counter. Wait at the brass ring until it has passed, then walk in behind it.', 6000);
+          g.hud.say(M06_SAY.armHit, f);
+        } else if (n >= 3 && !f.get('arm_still_told') && g.engine.statesOf(g.room).includes('FUTURE')) {
+          f.set('arm_still_told');
+          g.hud.toast('<small>THE BRASS ARM</small><br>In 2196 it has rusted still.', 5000);
+        }
+      });
+    }
+    if (!g.catching) rt.m06Hit = false;
+    // (a setback on the shop floor puts Kai back by the counter, not at the foot of the cellar steps: X02; on the canal
+    // street, outside the shop door. main.js has just set the quarter's checkpoint, the cellar's; this runs after it)
+    const lm = rt.level?.landmarks;
+    const back = p.x >= 8 && p.x < 24 && p.z >= -32 && p.z < -16 && feet > -0.5 && feet < 3.5 ? lm?.shopReturn
+      : p.z >= -16 && p.z < 16 && feet > -2 && feet < 3.5 ? lm?.streetReturn : null;
+    if (back && (g.player.grounded || g.catching)) g.checkpoint = [back[0], back[1] + 0.86, back[2], back[3]];
+    const turning = !(h.stasisT > 0) && !g.engine.hasIn('timeStop', h.hz.room);
+    if (!turning || d > R + 2.5 || d < 0.3 || feet > py + 0.3) return;
+    // how far the bar still turns before an end points at Kai (its ends are half a turn apart)
+    const a = Math.atan2(-(p.z - pz), p.x - px), dir = g.engine.hasIn('timeReverse', h.hz.room) ? -1 : 1;
+    let left = ((a - h.angle) * dir) % Math.PI;
+    if (left < 0) left += Math.PI;
+    const soon = left < h.hz.speed * 0.7;
+    if (soon && !rt.m06Warned) g.audio?.zap?.();
+    rt.m06Warned = soon;
   },
   overlay(P) {
     // Ezra in 2049; in 2026 his echo at sixty-five (the sheet's rb_ezra/ezra65); in the 2196 ruin, nobody
-    person(P, { id: 'ezra_shop', crew: 'clockmaker', at: 'shopFloor', off: [1.4, 0, -1.6], turn: Math.PI, when: '!t_m06_stair && @PRESENT', prompt: 'TALK TO EZRA MOLL' });
+    // (playtest v2.1 F02: behind his counter, facing the shop and the cellar steps, out of the arm's reach; the arm turns
+    // between the counter and the stair up)
+    person(P, { id: 'ezra_shop', crew: 'clockmaker', at: 'shopFloor', off: [0.2, 0, -1.4], when: '!t_m06_stair && @PRESENT', prompt: 'TALK TO EZRA MOLL' });
     person(P, { id: 'ezra_room', crew: 'clockmaker', at: 'clockRoom', off: [1.2, 0, -1.6], turn: Math.PI, when: 't_m06_stair && @PRESENT', prompt: 'TALK TO EZRA MOLL' });
-    person(P, { id: 'ezra_shop26', crew: 'ezra26', first: 'Ezra Moll', seed: 601, ambient: true, hologram: true, at: 'shopFloor', off: [1.4, 0, -1.6], turn: Math.PI, when: '!t_m06_stair && @PAST', scene: 'ezra_echo', prompt: 'LISTEN TO EZRA\'S ECHO' });
+    person(P, { id: 'ezra_shop26', crew: 'ezra26', first: 'Ezra Moll', seed: 601, ambient: true, hologram: true, at: 'shopFloor', off: [0.2, 0, -1.4], when: '!t_m06_stair && @PAST', scene: 'ezra_echo', prompt: 'LISTEN TO EZRA\'S ECHO' });
     person(P, { id: 'ezra_room26', crew: 'ezra26', first: 'Ezra Moll', seed: 601, ambient: true, hologram: true, at: 'clockRoom', off: [1.2, 0, -1.6], turn: Math.PI, when: 't_m06_stair && @PAST', scene: 'ezra_echo', prompt: 'LISTEN TO EZRA\'S ECHO' });
   },
   hook: { cue: 'cliff', minutes: 1, lines: [FX(L('WITNESS', 'When the child returns, do not let him see the ninth minute.'), 'recording'), K('What is the ninth minute?'),

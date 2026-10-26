@@ -52,16 +52,17 @@ export function m01Shots(rt, which) {
       { cam: [cd[0] + 20, cd[1] + 4.5, cd[2] + 12.5], to: [cd[0] + 16, cd[1] + 3.8, cd[2] + 11], look: [cd[0] - 8, cd[1] + 0.8, cd[2] - 3], t: 6 },
     ];
   }
-  // the woman at the far end, from high over the wreck; then nearer, down the platform through the rain, for Kai's line
-  // (the tour: from the wreck she was a yellow dot thirty metres off). OVERHAUL §9.5 keeps the glimpse distant and in
-  // rain: Dr. Lin wears this face in Mission 2, and Mission 11's reveal that the photograph is Lin must not be given
-  // away here, so the second shot stops about nine metres short of her, at Kai's eye height: a woman in a yellow
-  // raincoat looking back, her face a few pixels under the hood. She stands at the platform's far end
-  // (pl + [1, 0, -30]), turned back toward the wreck
-  const m = [pl[0] + 1, pl[1], pl[2] - 30];
+  // the woman at the far end, from high over the wreck; then nearer, along the platform through the rain, for Kai's
+  // line. OVERHAUL §9.5 keeps the glimpse distant and in rain: Dr. Lin wears this face in Mission 2, and Mission 11's
+  // reveal that the photograph is Lin must not be given away here, so the second shot stops about nine metres short of
+  // her, at Kai's eye height: a woman in a yellow raincoat looking back, her face a few pixels under the hood.
+  // (playtest v2.1 FT-05, VX-02: she stood at the far end of the north platform, behind the 41, and the pursuit began
+  // with her out of sight. She stands at the east end of Kai's own platform now (pl + [30, 0, -4]), in view of the
+  // wreck, and the way she goes, over the barrow crossing beside her, is the first thing he sees her do)
+  const m = [pl[0] + 30, pl[1], pl[2] - 4];
   return [
-    { cam: [cd[0] + 13, cd[1] + 0.8, cd[2] - 7.5], to: [cd[0] + 10, cd[1] + 1, cd[2] - 9], look: [m[0], m[1] + 1.5, m[2]], t: 3.4 },
-    { cam: [m[0] + 2.4, m[1] + 1.7, m[2] + 13], to: [m[0] + 1.6, m[1] + 1.65, m[2] + 9.2], look: [m[0], m[1] + 1.3, m[2]], t: 5 },
+    { cam: [cd[0] + 2, cd[1] + 4.6, cd[2] + 9.5], to: [cd[0] + 5, cd[1] + 3.8, cd[2] + 9], look: [m[0], m[1] + 1.5, m[2]], t: 3.4 },
+    { cam: [m[0] - 13, m[1] + 1.7, m[2] + 2.6], to: [m[0] - 9.2, m[1] + 1.65, m[2] + 1.8], look: [m[0], m[1] + 1.3, m[2]], t: 5 },
   ];
 }
 
@@ -77,6 +78,7 @@ const M01_HINTS = {
   voice: ['Listen.', 'Something is in the speakers.', 'Stay here and listen.'],
   chase: ['Keep her in sight.', 'Down the north stair, through the crowd.', 'Follow her past the bus depot and along the fence to the staff gate.'],
   raincoat: ['She left something.', 'Something yellow on the steps.', 'Pick up the raincoat by the staff gate.'],
+  gate: ['Rook is through the gate.', 'The staff gate. Nobody is checking any more.', 'Walk in through the staff gate.'],
   florist: ['Flowers. Same as every year.', 'The florist on the market lane.', 'Talk to the florist.'],
   booth: ['The photo booth printed something.', 'The booth on the west side of the plaza.', 'Take the strip from the booth.'],
   junHook: ['Jun is talking to an empty carriage.', 'His booth.', 'Talk to Jun.'],
@@ -158,16 +160,20 @@ export const M01 = {
         { id: 'zero', kind: 'cinema', at: 'platform', after: ['checkpoint'], goal: 'Cross the platform to the staff gate.', because: 'The staff gate is past the station. Rook is waiting.', done: 'after_zero', hints: M01_HINTS.zero, minutes: 2 },
         { id: 'rescue', kind: 'tasks', of: ['rescued_a', 'rescued_b'], after: ['zero'], goal: 'Get the trapped people out of the wreck.', because: 'The 41 came in at full speed. The clocks stopped first.', done: 'wrist_cut', hints: M01_HINTS.rescue, minutes: 3 },
         { id: 'voice', kind: 'cinema', after: ['rescue'], goal: 'Listen.', because: 'Every speaker in the station is about to say something.', done: 'voice_heard', hints: M01_HINTS.voice, minutes: 1 },
-        // the pursuit (about 180 m): down the north stair, east across the concourse through the people streaming out of
-        // the station, through the bus depot between its posts, back west along the Helix fence, and into the crowd at
-        // the staff gate, where she is gone (the bible: she vanishes into the crowd). Its fact is mira_gone, so a save from
-        // before the threads (which had mira_gone and no chase) has it done
+        // the pursuit (about 210 m): from the east end of Kai's platform over the barrow crossing, west along the north
+        // platform to its stair, down it, east across the concourse through the people streaming out of the station,
+        // through the bus depot between its posts, back west along the Helix fence, and into the crowd at the staff gate,
+        // where she is gone (the bible: she vanishes into the crowd). Its fact is mira_gone, so a save from before the
+        // threads (which had mira_gone and no chase) has it done. She sets off only once Kai can see her (step)
         { id: 'chase', kind: 'chase', npc: 'mira', after: ['voice'], done: 'mira_gone', leash: 14, ahead: 10, speed: 1.7,
-          path: [[0, 3.4, -186.4], [0, 0.15, -193.8], [16, 0.15, -199], [40, 0.15, -203], [52, 0, -210.5], [80, 0, -210.5], [82, 0, -219], [64, 0, -219.5], [40, 0.15, -219.5], [12, 0.15, -219.5], [1, 0.15, -222.4]],
+          path: [[29.5, 3.4, -163], [29.5, 3.4, -166], [29.5, 2.4, -170.5], [29.5, 2.4, -171.5], [29.5, 3.4, -176], [26, 3.4, -181], [6, 3.4, -183.6], [0, 3.4, -186.4], [0, 0.15, -193.8], [16, 0.15, -199], [40, 0.15, -203], [52, 0, -210.5], [73, 0, -210.5], [74, 0, -219], [64, 0, -219.5], [40, 0.15, -219.5], [12, 0.15, -219.5], [1, 0.15, -222.4]],
           set: { mira_gone: true }, say: [N('By the staff gate the crowd closes round her. When it opens again she is gone. On the wet steps lies a yellow raincoat.')],
           goal: 'Follow the woman with Mira\'s face.', because: 'She has been dead for twenty-three years.', hints: M01_HINTS.chase, minutes: 3 },
         { id: 'raincoat', kind: 'scene', scene: 'raincoat', at: 'staffGate', after: ['chase'], spot: { prompt: 'THE YELLOW RAINCOAT', offset: [-1.0, 1.15, -1.8], r: 2.6, model: makeRaincoat, when: 'mira_gone && !raincoat' },
           goal: 'She left something on the steps.', because: 'The crowd closed round her by the gate. Nobody saw her go.', done: 'raincoat', hints: M01_HINTS.raincoat, minutes: 1 },
+        // (playtest v2.1 FT-15: after the raincoat the objective was the general "The next door is open", with nothing at
+        // the gate to say it was the way: now the gate is the objective, lit and lettered, and opens as Kai reaches it)
+        { id: 'gate', kind: 'go', at: 'staffGate', r: 2.8, after: ['raincoat'], trigWhen: 'raincoat', goal: 'Go in through the staff gate.', because: 'Rook is waiting on the other side. Rook said now.', hints: M01_HINTS.gate, minutes: 1 },
       ],
       sides: [
         { id: 'lasttrain', name: 'LAST TRAIN HOME', giver: 'jun', start: 'quest_jun', done: 'jun_choice', minutes: 6,
@@ -220,9 +226,17 @@ export const M01 = {
     P.npcs.push({ id: 'guard', crew: 'guard', pos: [bx + 5.4, by, bz - 3.0], yaw: 0, prompt: 'TALK TO THE OFFICER', freezeWhen: 'zero_second && !after_zero', room: rid });
     // --- the station --------------------------------------------------------------------
     const [sx, sy, sz] = L('boardSign');
-    P.texts.push({ text: 'LINE 41 - ON TIME - 08:14', pos: [sx, sy + 0.1, sz + 0.08], rotY: 0, size: 0.42, color: '#9fd8ff', when: '!zero_second', room: rid });
-    P.texts.push({ text: 'LINE 41 - ARRIVING - YESTERDAY', pos: [sx, sy + 0.1, sz + 0.08], rotY: 0, size: 0.42, color: '#ffc06a', when: 'zero_second', room: rid });
+    // the departures board under the canopy, lettered on both faces (playtest v2.1 FT-17: its lines faced the plaza stair
+    // only, and from the platform, where the story is told, it was a black slab): on time from the plaza; once Kai is
+    // through the checkpoint, the 41 arriving yesterday, the line Jun is asked about; a lamp over each face
+    const board = (text, when, color, dy = 0.1, size = 0.42) => {
+      P.texts.push({ text, pos: [sx, sy + dy, sz + 0.08], rotY: 0, size, color, when, room: rid });
+      P.texts.push({ text, pos: [sx, sy + dy, sz - 0.12], rotY: Math.PI, size, color, when, room: rid });
+    };
+    board('LINE 41 - ON TIME - 08:14', '!checkpoint_passed', '#9fd8ff');
+    board('LINE 41 - 08:14 - ARRIVING YESTERDAY', 'checkpoint_passed', '#ffc06a');
     P.inter.push({ id: 'board_back', kind: 'scene', scene: 'board', pos: [sx, sy + 0.1, sz - 0.02], r: 0, prompt: '', model: () => makeBoard(5.6, 0.9), room: rid });
+    P.vbox([sx - 2.6, sy + 0.62, sz - 0.5, sx + 2.6, sy + 0.66, sz + 0.4], 'lampGlow');
     const [px, py, pz] = L('platform');
     // the station clock hangs on the canopy's column west of the board
     P.inter.push({ id: 'clock_station', kind: 'scene', scene: 'station_clock', pos: [sx - 13.6, py + 3.4, sz - 0.75], yaw: 0, r: 3.4, prompt: 'LOOK AT THE CLOCK', model: () => makeClock({ mode: 'stopped' }), once: true, when: 'zero_second', room: rid });
@@ -243,7 +257,7 @@ export const M01 = {
     const [gx, gy, gz] = L('maintGate41B');
     box([gx - 0.2, gy, gz - 1.6, gx + 0.2, gy + 3.0, gz + 1.6], { mat: 'door', when: '!jun_line', id: 'door_gate41', lvMat: 'gateSteel' });
     P.texts.push({ text: 'MAINTENANCE GATE 41-B', pos: [gx + 0.25, gy + 3.4, gz], rotY: Math.PI / 2, size: 0.28, color: '#ffc06a', room: rid });
-    P.texts.push({ text: 'LINE 41 - EVACUATION SERVICE - BOARDING', pos: [sx, sy - 0.6, sz + 0.08], rotY: 0, size: 0.32, color: '#7fe0a8', when: 'jun_line', room: rid });
+    board('LINE 41 - EVACUATION SERVICE - BOARDING', 'jun_line', '#7fe0a8', -0.6, 0.32);
     P.texts.push({ text: 'HELIX EVIDENCE TERMINAL - ONLINE', pos: [jx - 0.25, jy + 1.8, jz], rotY: Math.PI / 2, size: 0.22, color: '#7fe0a8', when: 'jun_evidence', room: rid });
     // the 41, after the Zero Second: three carriages, the last one up on the platform (DeckWorld draws them; the edition dresses them)
     const [kx, ky, kz] = L('carriageDoor');
@@ -275,11 +289,16 @@ export const M01 = {
     P.npcs.push({ id: 'trapped_b', crew: 'trapped_b', first: 'Man', seed: 202, ambient: true, pronoun: { their: 'his', them: 'him' }, pos: [kx + 6, ky, kz + 0.9], yaw: Math.PI, when: 'zero_second && !rescued_b', scene: 'rescue_b', prompt: 'PULL HIM FREE', room: rid });
     // the Child in the Station (her side story): only after the clocks stop
     P.npcs.push({ id: 'child', crew: 'child', pos: [px - 31, py, pz - 7], yaw: 0.6, hologram: true, height: 1.22, when: 'zero_second', barks: ['Do you know the song? It goes up and then it goes up again and then it stops.'], room: rid });
-    // the woman with Mira's face, at the far end of the platform by the north stair: she walks to the staff gate
+    // the woman with Mira's face, at the far end of Kai's platform, by the barrow crossing: she walks to the staff gate
     // ahead of Kai (the chase thread), and is gone there
-    // (she has turned: she looks back down the platform at the wreck, and at Kai; 2 m from the canopy's post, not
-    // against it, where it filled her close-up)
-    P.npcs.push({ id: 'mira', crew: 'mira', variant: 'raincoat', pos: [px + 1, py, pz - 30], yaw: 0, silent: true, when: 'voice_heard && !mira_gone', room: rid });
+    // (she has turned: she looks back along the platform at the wreck, and at Kai; playtest v2.1 FT-05: in view of him,
+    // where she stood behind the 41 before)
+    P.npcs.push({ id: 'mira', crew: 'mira', variant: 'raincoat', pos: [px + 30, py, pz - 4], yaw: -Math.PI / 2, silent: true, when: 'voice_heard && !mira_gone', room: rid });
+    // the staff gate, once the raincoat is Kai's (playtest v2.1 FT-15): a lamp over the gate and its name on the
+    // concourse side, until it opens as he reaches it (the gate thread)
+    const [qx, qy, qz] = L('staffGate');
+    box([qx - 3, qy + 3.3, qz + 0.34, qx + 3, qy + 3.42, qz + 0.42], { solid: false, when: 'raincoat && !t_m01_gate', lvMat: 'lampGlow' });
+    P.texts.push({ text: 'STAFF ENTRANCE', pos: [qx, qy + 3.8, qz + 0.5], rotY: 0, size: 0.38, color: '#7fe0a8', when: 'raincoat', room: rid });
     // the Zero Second: a moment after Jun has told Kai about the board (the rule below), or as soon as Kai walks on
     // east along the platform toward the 41's track without asking
     P.triggers.push({ box: [px + 4, py - 1, pz - 14, px + 35, py + 6, pz + 8], set: { zero_second: true }, once: true, when: 'checkpoint_passed && rook_message', room: rid });
@@ -377,7 +396,7 @@ export const M01 = {
   ],
   // the hook (§5 M1): the voicemail stays unheard until Mission 12
   hook: { cue: 'cliff', minutes: 2, lines: [K('She died twenty-three years ago. I was at the funeral. I was twelve.'), N('One voicemail. Received 05:40. Caller unknown.'), K('Not now.'), N('The staff gate is open. Nobody is checking badges any more.')] },
-  done: 'raincoat',
+  done: 't_m01_gate',
   // mission-specific behaviour the runtime calls by name
   fx: {
     // Jun has said the board is wrong: the minute comes
@@ -432,6 +451,24 @@ export const M01 = {
   step(rt, dt) {
     const g = rt.g;
     const f = g.facts;
+    // the pursuit starts only once Kai can see her (playtest v2.1 VX-02: within its 14 m she set off while he stood on
+    // the track bed behind the 41, out of sight): until then the leash is nothing, and she waits, looking back at him
+    const mira = f.get('voice_heard') && !f.get('mira_gone') ? g.deckWorld.npcs.find((n) => n.n.id === 'mira') : null;
+    const ch = mira?.n.chase;
+    if (ch && !ch.started && mira.model.visible) {
+      const eye = (rt.m01Eye ||= g.player.pos.clone()), dir = (rt.m01Dir ||= g.player.pos.clone());
+      eye.copy(g.player.pos);
+      eye.y += 0.7;
+      dir.copy(mira.model.position);
+      dir.y += 1.5;
+      dir.sub(eye);
+      const d = dir.length();
+      dir.divideScalar(d || 1);
+      ch.leash = d < 14 && g.player.rayDistance(eye, dir, d) >= d - 0.4 ? 14 : 0;
+    } else if (ch) ch.leash = 14;
+    // the map's district is named for the quarter Kai is in (playtest v2.1 FT-08: HOME & MARKET at the station too)
+    const q = rt.level?.quarters?.[rt.threads?.here ?? g.campaign?.quarter ?? 0], md = g.minimap?.data;
+    if (q && md === rt.level.map && md.rooms?.[0] && md.rooms[0].name !== q.name) md.rooms[0].name = q.name;
     const plat = rt.level?.landmarks?.platform;
     if (f.get('after_zero') && plat && g.player.pos.z < plat[2] + 10 && g.player.pos.y > plat[1] - 1.5) {
       rt.annT = (rt.annT ?? 38) + dt;
@@ -527,9 +564,11 @@ function helixDarkRooms(P, story, si, rt) {
     R.floor();
     for (const [x, z] of [[-4, -7], [4, -7], [0, -12], [-4, -17], [4, -17]]) R.pillar(x, z, 0.7);
     R.sentinel({ path: [[-6, -4], [6, -4], [6, -20], [-6, -20]], speed: 1.9, range: 8, fov: 0.8 });
-    // the east alcove with cell one
-    R.box([7, 0, -14, 8, 2.4, -10], { mat: 'prop' });
-    R.item({ id: 'cell_1', kind: 'core', pos: [7.5, 2.75, -12], label: 'POWER CELL' });
+    // the east alcove with cell one, on a cabinet at chest height
+    // (playtest v2.1 FT-13: on a 2.4 m box the cell sat 1.2 m over Kai's eye, and its prompt came only with the view
+    // tilted up; at 1.1 m it is in front of him as he walks up)
+    R.box([7, 0, -14, 8, 1.1, -10], { mat: 'prop' });
+    R.item({ id: 'cell_1', kind: 'core', pos: [7.5, 1.45, -12], label: 'POWER CELL' });
     R.text('EMERGENCY LIGHTING - DO NOT RUN', [0, 4.6, -23.9], 0, { size: 0.42, color: '#ff6a48' });
     R.prop('desk', -6.2, -21);
     R.text('DR. LIN', [-6.2, 1.5, -21.5], 0, { size: 0.16, color: '#dfe8f0' });
@@ -537,7 +576,7 @@ function helixDarkRooms(P, story, si, rt) {
     R.checkpoint(0, -2, -1.6);
     land(R, 'westGallery', [0, 0, -12]);
     land(R, 'linDesk', [-6.2, 0.8, -21]);
-    land(R, 'cellA', [7.5, 2.75, -12]);
+    land(R, 'cellA', [7.5, 1.45, -12]);
   });
   // r2 POWER: the plant terrace on the first-floor roof (4.5 m, on the wing's ground storey), open to the storm, its glass
   // over the court: chillers, cable trays, three sockets; Iven Marr under a canopy; a stair back down to the lounge
@@ -551,9 +590,19 @@ function helixDarkRooms(P, story, si, rt) {
     R.text('LIFT POWER  1 / 3', [0, 3.4, -17.9], 0, { size: 0.42, color: '#ffb36b', when: 'cells_1 && !cells_2' });
     R.text('LIFT POWER  2 / 3', [0, 3.4, -17.9], 0, { size: 0.42, color: '#ffb36b', when: 'cells_2 && !lift_powered' });
     R.text('LIFT POWER  3 / 3 - READY', [0, 3.4, -17.9], 0, { size: 0.42, color: '#7fe0a8', when: 'lift_powered' });
-    // a gantry on the west side, up a stair, with cell two
+    // a gantry on the west side, up a stair from the floor, with cell two
+    // (playtest v2.1 FT-02, VX-01: the stair's first three steps stood inside the chiller, so its lowest open step was
+    // above Kai's jump, and its steps were slabs in the air with a sealed gap under them. Now each step is solid down to
+    // the floor, the foot is clear, 4 m west of the way in, and the chiller stands beside the stair against the west
+    // wall, filling the space between them)
     R.ledge(-7, -14, -3.6, -6, 2.6);
-    R.stairs(-5.2, -3.8, -6, 2.6);
+    {
+      const n = Math.ceil(2.6 / 0.34), TREAD = 0.6;
+      for (let i = 0; i < n; i++) {
+        const zz = -6 + (n - i) * TREAD;
+        R.box([-5.2, 0, zz - TREAD, -3.8, ((i + 1) * 2.6) / n, zz], { mat: 'prop' });
+      }
+    }
     R.item({ id: 'cell_2', kind: 'core', pos: [-5.4, 3.05, -11], label: 'POWER CELL' });
     // Iven's locker, east: opens when he gives the code; his post under a canopy
     R.box([5.6, 0, -11, 7, 2.2, -9.4], { mat: 'prop' });
@@ -564,10 +613,10 @@ function helixDarkRooms(P, story, si, rt) {
     R.npc({ id: 'iven', crew: 'iven', pos: [4.6, 0, -7.4], yaw: -Math.PI * 0.7, dialogue: DIALOGUE.iven, barks: ['I signed nothing. Remember that when they ask.'] });
     R.scene('shift_notes', [6.4, 1.1, -5], 'READ THE SHIFT NOTES', { yaw: -Math.PI / 2, model: () => makePanel(0xffb36b), once: true });
     // the chillers and the cable trays of the plant
-    R.box([-6.6, 0, -3.2, -3.8, 1.9, -1.6], { mat: 'tank' });
+    R.box([-7, 0, -6, -5.25, 1.9, -1.4], { mat: 'tank' }); // (beside the gantry stair, never in front of it)
     R.box([-6.6, 0, -17.6, -4.6, 1.6, -15.8], { mat: 'tank' });
     R.box([-7, 2.9, -17, 7, 3.0, -16.6], { mat: 'trimDark', solid: false });
-    R.prop('crate', -5, -3);
+    R.prop('crate', -2.6, -13.2);
     R.checkpoint(0, -2, -1.6);
     land(R, 'plantTerrace', [0, 0, -9]);
     land(R, 'cellB', [-5.4, 3.05, -11]);
