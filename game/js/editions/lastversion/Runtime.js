@@ -1330,7 +1330,7 @@ export class LastVersion {
       if (!g.facts.test(r.when)) continue;
       flags[`rule_${r.id}`] = true;
       if (r.set) for (const [k, v] of Object.entries(r.set)) g.facts.set(k, v);
-      if (r.say) g.hud.say(r.say, g.facts);
+      if (r.say) this.sayRule(r);
       if (r.then) deck.fx?.[r.then]?.(this);
     }
     this.threads.update(); // (a thread that is now done sets its fact, once, with what it carries)
@@ -1358,6 +1358,18 @@ export class LastVersion {
   afterResume(deck) {
     const f = this.g.facts;
     for (const r of deck.resumes || []) if (f.test(r.when) && !f.test(r.until)) deck.fx?.[r.fx]?.(this);
+    // a rule's lines the save cut off are said again (v2.1 playtest: Rook's call, its fact saved, lost to a reload)
+    for (const r of deck.rules || []) if (r.say && this.g.deckWorld.flags[`saying_${r.id}`]) this.sayRule(r);
+  }
+
+  // a rule's lines, marked in the saved flags until their last one is over
+  sayRule(r) {
+    const g = this.g, flags = g.deckWorld.flags, k = `saying_${r.id}`;
+    flags[k] = true;
+    g.hud.say(r.say, g.facts, () => {
+      delete flags[k];
+      g.dirty = true;
+    });
   }
 
   // --- interactions --------------------------------------------------------------------------------

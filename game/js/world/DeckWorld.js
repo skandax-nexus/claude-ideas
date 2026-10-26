@@ -13,6 +13,21 @@ import { buildDecor, RESKIN } from './DeckDecor.js';
 
 const _v = new THREE.Vector3(), _c = new THREE.Color();
 
+// Barks (THE LAST VERSION; DESIGN: Barks): lines said in passing. Only someone a few metres from Kai on his own floor
+// (near; their feet within `rise` of his) says one; one at a time across the place, at most one every `gap` seconds, a
+// person at most one every `person` seconds; a line is not said twice in a row (not for two `lineRest`s), nor again
+// before the rest of the speaker's lines have been heard, nor within `lineRest` seconds of being heard anywhere in
+// the place; someone who has said all theirs is quiet
+// for `personRest` seconds. Never over a story line (nor within `storyQuiet` seconds of one), a staged moment, a menu,
+// a fade or a load (`settle` seconds after a place is built), nor before the voice pack that says it is in: no bark is
+// ever only a caption. (v2.1 playtest: the distance was read from a scratch vector the walk had already overwritten
+// with a unit direction, so every walker barked from anywhere, every 9 s, and tiny pools looped dozens of times.)
+export const BARK = { near: 4.5, rise: 1.8, gap: 30, person: 60, lineRest: 240, personRest: 300, storyQuiet: 6, settle: 8 };
+// Passers-by never fill the screen: one whose body (feet to crown) comes within `near` metres of the camera is not
+// drawn until it is `far` metres clear again (so they do not blink at the edge) (v2.1 playtest: a walker passing under
+// the camera, its head and shoulders across the bottom-left of the screen).
+export const CAMERA_CLEAR = { near: 1.3, far: 1.6 };
+
 // named people who can stand in a generated room (they are not crew): see LevelGen storyRoom
 const GUESTS = {
   juno: { id: 'juno', first: 'Juno', name: 'JUNO HALE', color: '#2f9a64' },
@@ -60,6 +75,11 @@ export class DeckWorld {
     this.npcs = [];
     this.temps = [];
     this.lensT = 0;
+    // barks: what this place has heard, and when (BARK); a new place settles before anyone speaks in passing
+    this.barkHeard = new Map();
+    this.lastBarkText = null;
+    this.barkFrom = null;
+    this.storyT = -99;
     // a memory key the KEY FORGE made real stays real (the flag is saved with the sector)
     for (const it of level.items) if (it.echo && this.flags[`forged_${it.id}`]) it.echo = false;
 
@@ -559,49 +579,139 @@ export class DeckWorld {
         }
       }
     }
+    this.updatePeople(dt, t, g);
+    return event;
+  }
+
+  // the people: walks, turns, poses, the camera kept clear of passers-by, and a line said in passing (BARK)
+  updatePeople(dt, t, g) {
+    const { player } = g;
+    const cam = g.camera?.position;
+    // a story line now (or a moment ago) keeps the crowd quiet; a new place settles first
+    if (g.hud?.storyTalking) this.storyT = t;
+    if (this.barkFrom == null) this.barkFrom = t + BARK.settle;
+    const held = this.barksHeld(g, t);
+    let speaker = null, best = Infinity;
     for (const n of this.npcs) {
       const m = n.model;
       const frozen = this.flags.freeze_people || !!n.freeze(this.ctx(n.n.room));
-      const d = _v.copy(player.pos).sub(m.position);
-      d.y = 0;
-      const near = d.length() < 7;
+      // (the distance as numbers of its own: the walk below reuses the scratch vector)
+      const dx = player.pos.x - m.position.x, dz = player.pos.z - m.position.z;
+      const dist = Math.hypot(dx, dz);
+      const near = dist < 7;
       // someone you can talk to stops and turns to you; passers-by (and silent echoes) keep walking
       const talker = !n.n.silent && !(n.n.ambient && !n.n.lines && !n.n.scene);
       let speed = 0;
       if (talker && near && !frozen) {
-        const yaw = Math.atan2(d.x, d.z);
+        const yaw = Math.atan2(dx, dz);
         m.rotation.y += Math.atan2(Math.sin(yaw - m.rotation.y), Math.cos(yaw - m.rotation.y)) * Math.min(1, dt * 3);
         m.userData.lookAt?.(_v.copy(player.pos).setY(player.pos.y + 0.6));
       } else if (n.n.path && !frozen && m.visible) {
         // walk the loop (WORLD FORGE's cast walk their scenes; THE LAST VERSION's city walks its streets)
         const w = n.n.path[n.wp];
         const to = _v.set(w[0] - m.position.x, 0, w[1] - m.position.z);
-        const dist = to.length();
-        if (dist < 0.25) n.wp = (n.wp + 1) % n.n.path.length;
+        const left = to.length();
+        if (left < 0.25) n.wp = (n.wp + 1) % n.n.path.length;
         else {
           speed = n.n.speed || 0.9;
           const yaw = Math.atan2(to.x, to.z);
           m.rotation.y += Math.atan2(Math.sin(yaw - m.rotation.y), Math.cos(yaw - m.rotation.y)) * Math.min(1, dt * 4);
-          m.position.addScaledVector(to.divideScalar(dist), Math.min(dist, speed * dt));
+          m.position.addScaledVector(to.divideScalar(left), Math.min(left, speed * dt));
         }
         m.userData.lookAt?.(null);
       } else m.userData.lookAt?.(null);
       n.talkT = Math.max(0, n.talkT - dt);
       m.userData.setTalking?.(n.talkT > 0);
+      if (n.camHid && n.camHid.model !== m) this.clearOfCamera(n, false); // (their echo stands in for them now)
       if (!m.visible) continue; // hidden (not here in this state, or their echo stands in): no pose to compute, nothing to say
       if (!frozen) m.userData.animate(dt, speed, t);
-      // a bark: something said in passing, never over a conversation
-      // (one bark at a time across the whole place, each person starting somewhere else in their list)
-      if (n.n.barks?.length && m.visible && !n.isEcho && !frozen && d.length() < 5 && t - n.lastBark > (n.n.barkEvery || 16) && t - (this.lastBarkT ?? -99) > 9 && !g.hud.talking && !g.menu) {
-        n.lastBark = this.lastBarkT = t;
-        n.barkI = n.barkI === undefined ? (n.n.seed || this.npcs.indexOf(n)) % n.n.barks.length : (n.barkI + 1) % n.n.barks.length;
-        const text = n.n.barks[n.barkI];
-        n.talkT = 2.5;
-        const gender = { her: 'f', his: 'm' }[(n.n.pronoun || n.crew.pronoun)?.their] || 'n';
-        g.hud.say([{ who: n.n.voice || n.crew.voice || 'CREW', name: (n.n.first || n.crew.first || '').toUpperCase(), color: n.crew.color, text, voice: n.n.voiceExtra || { gender } }], g.facts);
+      // a passer-by the camera would be inside of is not drawn until it is clear of them
+      if (cam && (n.n.ambient || n.n.path) && !n.n.flicker) {
+        const y0 = m.position.y, y1 = y0 + (n.n.height || 1.75);
+        const dy = cam.y < y0 ? y0 - cam.y : cam.y > y1 ? cam.y - y1 : 0;
+        const inside = Math.hypot(cam.x - m.position.x, cam.z - m.position.z, dy) < (n.camHid ? CAMERA_CLEAR.far : CAMERA_CLEAR.near);
+        if (inside !== !!n.camHid) this.clearOfCamera(n, inside);
+      }
+      // someone a few metres off (where they now stand), on Kai's floor, who may speak in passing: the nearest says it
+      if (!held && n.n.barks?.length && !n.isEcho && !frozen) {
+        const bd = Math.hypot(player.pos.x - m.position.x, player.pos.z - m.position.z);
+        if (bd < BARK.near && bd < best && Math.abs(player.pos.y - (player.half?.y ?? 0.86) - m.position.y) < BARK.rise && this.mayBark(n, t)) {
+          speaker = n;
+          best = bd;
+        }
       }
     }
-    return event;
+    if (speaker) this.bark(speaker, t, g);
+  }
+
+  // not drawn while the camera is inside them (the model stays visible to the game: it walks, and is counted present)
+  clearOfCamera(n, hide) {
+    if (hide) {
+      const shown = n.model.children.filter((c) => c.visible);
+      for (const c of shown) c.visible = false;
+      n.camHid = { model: n.model, shown };
+    } else if (n.camHid) {
+      for (const c of n.camHid.shown) c.visible = true;
+      n.camHid = null;
+    }
+  }
+
+  // nobody speaks in passing now: a line is up (or a story line was, a moment ago), a staged moment, a menu, a fade,
+  // a load, a catch, the last bark too recent, or the voice packs still on their way
+  barksHeld(g, t) {
+    const rt = g.edition;
+    return !!(g.menu || g.hud?.talking || g.transitioning || g.catching || g.player?.cinema || rt?.opening || rt?.cinema?.active || rt?.castWaitFor ||
+      g.hud?.el?.fade?.classList?.contains('on') || t < this.barkFrom || t - (this.lastBarkT ?? -99) < BARK.gap || t - this.storyT < BARK.storyQuiet ||
+      (g.voice?.edn && g.voice.enabled && g.voice.loading < 1));
+  }
+
+  // this person has something left to say: not resting, not too soon after their last line, a line not heard lately
+  mayBark(n, t) {
+    if (t < (n.barkRest || 0) || t - n.lastBark < Math.max(n.n.barkEvery || 0, BARK.person)) return false;
+    return !!this.nextBark(n, t);
+  }
+
+  // which of their lines: the one this place heard longest ago (never heard first; among those, starting somewhere else
+  // in each person's list), never the line just said, never one heard in the last lineRest seconds
+  nextBark(n, t) {
+    const list = n.n.barks;
+    const k0 = (n.n.seed || this.npcs.indexOf(n)) % list.length;
+    const again = t - (this.lastBarkT ?? -99) > 2 * BARK.lineRest; // (the last line said, long enough ago to come round)
+    let pick = null, when = Infinity;
+    for (let i = 0; i < list.length; i++) {
+      const text = list[(k0 + (n.barkN || 0) + i) % list.length];
+      if (!text || (text === this.lastBarkText && !again)) continue;
+      const heard = this.barkHeard?.get(text) ?? -Infinity;
+      if (t - heard < BARK.lineRest) continue;
+      if (heard < when) (pick = text), (when = heard);
+    }
+    return pick;
+  }
+
+  bark(n, t, g) {
+    const text = this.nextBark(n, t);
+    if (!text) return false;
+    const who = n.n.voice || n.crew.voice || 'CREW';
+    const gender = { her: 'f', his: 'm' }[(n.n.pronoun || n.crew.pronoun)?.their] || 'n';
+    const voice = n.n.voiceExtra || { gender };
+    // (a line the packs cannot say is not said at all: no bark is only a caption)
+    const v = g.voice;
+    if (v?.edn && v.enabled && v.plan && !v.plan(text, who, voice)) {
+      this.barkHeard.set(text, t); // (rests like one said, so the next person does not try it every frame)
+      return false;
+    }
+    n.lastBark = this.lastBarkT = t;
+    this.barkHeard.set(text, t);
+    this.lastBarkText = text;
+    // someone who has now said each of their lines rests a while
+    n.barkN = (n.barkN || 0) + 1;
+    if (n.barkN >= n.n.barks.filter(Boolean).length) {
+      n.barkN = 0;
+      n.barkRest = t + BARK.personRest;
+    }
+    n.talkT = 2.5;
+    g.hud.say([{ who, name: (n.n.first || n.crew.first || '').toUpperCase(), color: n.crew.color, text, voice, bark: true }], g.facts);
+    return true;
   }
 
   focusCandidates(g) {

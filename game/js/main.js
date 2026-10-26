@@ -1992,10 +1992,12 @@ class Game {
     }
     // Re-using whatever is talking (or nothing) skips the current line - except the armed
     // machine: "USE AGAIN TO ACTIVATE" means exactly that, even while the warning plays.
+    // A line said in passing (a bark) never stands in the way: a tap on the prompt over one cuts it and is the tap.
     const armedMachine = this.mode === 'station' && f?.id === 'machine' && this.director.armT > 0;
     if (armedMachine && this.hud.talking) this.hud.skipAll?.();
-    else if (this.hud.talking && (!f || f.id === this.lastUse)) return this.hud.skipSub();
+    else if (this.hud.talking && (!f || (f.id === this.lastUse && this.hud.storyTalking))) return this.hud.skipSub();
     if (!f) return;
+    this.hud.hushBarks?.();
     this.lastUse = f.id;
     if (this.mode === 'deck') return this.useDeck(f);
     if (f.id === 'npc:juno') {
@@ -2453,7 +2455,8 @@ class Game {
     this.audio.setDuck(this.hud.talking);
 
     this.focus = this.findFocus();
-    const showFocus = this.focus && !this.hud.talking;
+    // (the prompt is the touch way to act: only a story line or a staged moment hides it, never a line said in passing)
+    const showFocus = this.focus && !this.hud.storyTalking;
     this.hud.prompt(showFocus ? this.focus.prompt : '');
     this.promptPos = showFocus ? this.focus.pos : null; // placed by placeFocus, after the camera moves
     this.promptPerson = !!(showFocus && this.focus.person);

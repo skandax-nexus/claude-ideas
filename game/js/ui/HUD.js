@@ -22,8 +22,10 @@ export class HUD {
   }
 
   // --- subtitles ---------------------------------------------------------
+  // (a line marked `bark` is said in passing, DeckWorld's BARK: anything else said cuts it, and never waits behind it)
   say(lines, facts, done) {
     const filtered = lines.filter((l) => !l.when || facts.test(l.when));
+    if (done || filtered.some((l) => !l.bark)) this.hushBarks();
     for (const l of filtered) this.subs.push({ ...l, dur: this.durFn?.(l) || Math.max(2.2, l.text.length * 0.055) });
     if (done) this.subs.push({ done });
     if (this.subT <= 0) this.nextSub();
@@ -58,8 +60,10 @@ export class HUD {
     this.subSeq = (this.subSeq || 0) + 1;
   }
 
-  // a menu closed over a line: say it again from the start, so voice and text stay together
+  // a menu closed over a line: say it again from the start, so voice and text stay together (a line said in passing is
+  // let go instead)
   replay() {
+    if (this.subT > 0 && this.cur?.bark) return this.hushBarks();
     if (this.subT > 0 && this.cur) {
       this.subs.unshift(this.cur);
       this.nextSub();
@@ -80,6 +84,21 @@ export class HUD {
 
   get talking() {
     return this.subT > 0 || this.subs.length > 0;
+  }
+
+  // a line that is not said in passing is up or waiting: a conversation, a thought, the story (what hides the prompt)
+  get storyTalking() {
+    return (this.subT > 0 && !!this.cur && !this.cur.bark) || this.subs.some((s) => !s.bark);
+  }
+
+  // what is said in passing gives way: the one up is cut (its voice with it), none waits in the queue
+  hushBarks() {
+    if (this.subs.some((s) => s.bark)) this.subs = this.subs.filter((s) => !s.bark);
+    if (this.subT > 0 && this.cur?.bark) {
+      this.onSkip?.();
+      this.subT = 0;
+      this.nextSub();
+    }
   }
 
   // --- small widgets -----------------------------------------------------
