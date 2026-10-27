@@ -1813,6 +1813,7 @@ export class LastVersion {
       if (t.once && flags[`trig_${i}`]) return;
       if (t.room && t.room !== g.room) return;
       if (t.when && !facts.test(t.when, g.engine.state(g.room))) return; // (a trigger may ask for a year: @FUTURE)
+      if (t.unseen && g.deckWorld.sentinels.some((s) => s.mode === 'chase' && s.def.room === g.room)) return; // (a stealth thread's: lose them first)
       const b = t.box;
       if (p.x >= b[0] && p.x < b[3] && p.y >= b[1] && p.y < b[4] && p.z >= b[2] && p.z < b[5]) {
         // an edge that wraps (M19's plain: walk off one side and come back from the other), seamlessly

@@ -471,6 +471,9 @@ function m21Tremor(rt, dt) {
     const a = { pos: l, yaw: l[3] || 0 };
     for (const [x, z] of [[-2.4, -0.6], [2.4, -0.6], [-2.4, 8.4], [2.4, 8.4]]) g.fx?.burst(toWorld(a, [x, 0.2, z]), 0xb8ac98, 14, 1.8);
   }
+  // (and under Kai's own feet, wherever he stands: grit jumping off the deck, seen on a phone's screen)
+  const p = g.player?.pos;
+  if (p) for (const [dx, dz] of [[0, 0], [1.6, 1.2], [-1.4, 1.6]]) g.fx?.burst([p.x + dx, p.y - 0.7, p.z + dz], 0xc8bca8, 16, 2.2);
   g.audio?.land?.();
   g.hud?.flash?.('rgba(255, 214, 170, 0.14)');
   rt.score?.capText?.('the Spire shaking');

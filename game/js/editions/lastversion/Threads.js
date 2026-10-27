@@ -208,7 +208,9 @@ export function placeThreads(deck, level) {
       const when = [t.when, t.trigWhen].filter(Boolean).map((c) => `(${c})`).join(' && ') || undefined;
       // (box: [x0, z0, x1, z1], an area instead of a radius: a line across a whole avenue, the Finale's streets)
       const b = t.box ? [t.box[0], a?.pos[1] - 1.5, t.box[1], t.box[2], a?.pos[1] + 5, t.box[3]] : a && [a.pos[0] - r, a.pos[1] - 1.5, a.pos[2] - r, a.pos[0] + r, a.pos[1] + 5, a.pos[2] + r];
-      if (a) level.triggers.push({ box: b, set: { [factOf(deck, t)]: true }, when: gate(t, when), once: true, room: a.room });
+      // (a stealth crossing counts only unseen: not with a watcher on Kai's heels, Runtime's trigger step; v2.1 playtest
+      // F03, Mission 13's crossing done while the sentry chased him)
+      if (a) level.triggers.push({ box: b, set: { [factOf(deck, t)]: true }, when: gate(t, when), once: true, room: a.room, ...(t.kind === 'stealth' ? { unseen: true } : {}) });
     }
     if (t.kind === 'deduce' && t.at && deck.deductions?.[t.deduction]) own({ id: `deduce_${t.id}`, scene: `deduce:${t.deduction || t.id}`, prompt: t.prompt || 'PIECE IT TOGETHER', ...(t.spotOpts || {}) }, t);
     if (t.kind === 'residue' && t.at && t.record) {

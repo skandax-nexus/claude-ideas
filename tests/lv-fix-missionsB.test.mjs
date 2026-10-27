@@ -274,12 +274,14 @@ function crossing(strategy, phase) {
   for (let t = 0; t < 120; t += dt) {
     const w = route[wi];
     if (w === 'wait' && s.dir.x > 0.5 && s.pos.x < 34) { wi++; continue; } // (it has turned east, away from the gap)
-    if (w !== 'wait') {
+    // (at the gate: it counts once no watcher is on Kai's heels, Runtime's `unseen` trigger; else he stands there)
+    if (wi >= route.length) { if (s.mode !== 'chase') return { through: true, seen }; }
+    else if (w !== 'wait') {
       const dx = w[0] - p.pos.x, dz = w[1] - p.pos.z, d = Math.hypot(dx, dz);
-      if (d < (wi === route.length - 1 ? 4 : 0.6)) { if (++wi >= route.length) return { through: true, seen }; continue; }
+      if (d < (wi === route.length - 1 ? 4 : 0.6)) { wi++; continue; }
       p.H.set(dx / d, 0, dz / d);
     }
-    p.update(dt, { forward: w === 'wait' ? 0 : 1, strafe: 0, run: false, jump: false, slow: false }, cols);
+    p.update(dt, { forward: w === 'wait' || wi >= route.length ? 0 : 1, strafe: 0, run: false, jump: false, slow: false }, cols);
     if (s.update(dt, t, { player: p, here: true }) === 'caught') return { caught: true, seen };
     seen = Math.max(seen, s.suspicion);
   }
@@ -294,6 +296,10 @@ test('F03: the crossing is a stealth beat: walked straight at the gate, the sent
   assert.ok(caught >= 12, `straight at the gate: caught ${caught} times in 25`);
   assert.ok(caught <= 20, `but not a wall: ${25 - caught} of 25 walks get through on the sentry's back`);
   const ok = timed.filter((r) => r.through && r.seen < 1).length;
+  // (a stealth thread's arrival counts unseen: its trigger says so, and Runtime's trigger step holds it while a watcher chases)
+  const trig = M13L.triggers.find((t) => Object.keys(t.set).includes('t_m13_cross'));
+  assert.equal(trig?.unseen, true, 'the crossing\'s arrival is an unseen one');
+  assert.match(fs.readFileSync('game/js/editions/lastversion/Runtime.js', 'utf8'), /if \(t\.unseen && g\.deckWorld\.sentinels\.some\(\(s\) => s\.mode === 'chase' && s\.def\.room === g\.room\)\) return;/);
   assert.ok(ok >= 24, `timed: through ${ok} times in 25: ${JSON.stringify(timed.map((r, i) => [phases[i].toFixed(1), r]).filter(([, r]) => !(r.through && r.seen < 1)))}`);
 });
 
@@ -356,9 +362,9 @@ test('F19: while the arena falls the Spire shakes every few seconds, dust off bo
   const facts = new FactStore();
   facts.set('arena_fallen', true);
   let bursts = 0, thuds = 0;
-  const rt = { g: { facts, fx: { burst: () => bursts++ }, audio: { land: () => thuds++ }, hud: { flash() {} } }, level: { landmarks: { arenaGap1: [0, 10, 0, 0], arenaGap2: [0, 10, 20, 1] } } };
+  const rt = { g: { facts, fx: { burst: () => bursts++ }, audio: { land: () => thuds++ }, hud: { flash() {} }, player: { pos: { x: 0, y: 12.9, z: -68 } } }, level: { landmarks: { arenaGap1: [0, 10, 0, 0], arenaGap2: [0, 10, 20, 1] } } };
   for (let t = 0; t < 20; t += 0.1) M21.step(rt, 0.1);
-  assert.ok(thuds >= 2 && thuds <= 5 && bursts === thuds * 8, `${thuds} tremors, ${bursts} bursts in 20 s`);
+  assert.ok(thuds >= 2 && thuds <= 5 && bursts === thuds * 11, `${thuds} tremors, ${bursts} bursts in 20 s (8 at the gaps, 3 at Kai's feet)`);
   facts.set('t_m21_gapTwo', true);
   const n = thuds;
   for (let t = 0; t < 20; t += 0.1) M21.step(rt, 0.1);

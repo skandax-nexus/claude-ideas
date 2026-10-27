@@ -124,7 +124,7 @@ export default {
       P.box([LINE[0], 0, LINE[1], LINE[2], 1.3, LINE[3]], 'sandbag');
       for (let x = LINE[0] + 8; x < LINE[2]; x += 16) P.box([x - 1, 1.3, LINE[1] + 0.1, x + 1, 1.6, LINE[3] - 0.1], 'sandbag', { solid: false });
       for (const [x, z, ry] of [[40, 40, 0.4], [30, 36, -0.2], [50, 33, 1.3]]) {
-        P.obox(x, 0, z, 2.4, 2.2, 5.6, ry, 'wagonRust', { solid: true });
+        P.obox(x, 0, z, 2.4, 2.2, 5.6, ry, 'containerGrey', { solid: true }); // (corrugated: a bare metal read black against the low sun)
         P.obox(x, 2.2, z, 2.2, 0.5, 2.4, ry, 'ashGround');
       }
       prop(P, 'torch', LINE[0] - 0.6, LINE[1] - 0.8); // (the gap's own flare)
