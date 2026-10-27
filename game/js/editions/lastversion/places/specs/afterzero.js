@@ -22,13 +22,21 @@ export default {
   // (closing: the road carries the people Kai's choices changed, and the Witness and Mira each stand in five places of it,
   // one at a time by the story: its hand-placed entries are not people at once, so the crowd keeps its share within 34)
   people: 34,
-  edges: { N: 'hill', E: 'slope', W: 'slope', S: 'blocks' },
+  // (playtest v2.1 F04: the north edge was the 'hill' edge, rock slabs 12-26 m high just beyond the summit, which stood
+  // black between the ring and the sunrise in the Notch in every shot of the climax and the endings. The hill falls away
+  // to the north now, as it does east and west, and the ring stands on the sky)
+  edges: { N: 'slope', E: 'slope', W: 'slope', S: 'blocks' },
   killY: -4,
   primary: 'originalRing',
   backdrop: { notch: 'clear' },
+  // (playtest v2.1 F04: the summit was a black silhouette against the first sunrise in every shot, the endings' too: the
+  // sun low behind the ring, the ground bounce near black. Four real lights stand on the summit, before the ring and its
+  // stones, warm from the south where Kai comes up the hill and pale violet at the ring's face, each reaching only the hill)
+  // (main.js: intensity x 1.25, falling off with distance, decay 1: a stone 10 m off gets about half of a light of 4)
+  lights: [[0, HILL + 4.2, -138, 0xffd2a8, 5.0, 28], [0, HILL + 8.5, -146, 0xd8c8ff, 3.2, 16], [-11, HILL + 4.5, -145, 0xffc890, 3.6, 20], [11, HILL + 4.5, -145, 0xffc890, 3.6, 20]],
   years: {
     PRESENT: { sky: 'routePreDawn', era: '2049', hour: 5.6, sun: { elev: 1, az: 'notch' }, fog: 0x2a3048, density: 1.0, night: 0.6, weather: 'rain', ibl: 'night', lit: 0.7,
-      hemi: { sky: 0x6a7aa8, ground: 0x181a24, k: 0.8 }, sunColor: 0xffc890, sunK: 0.6, grade: { shadowTint: 0x101a3a, highlightTint: 0xffe0c0, toning: 0.24, contrast: 1.14, saturation: 1.0 } },
+      hemi: { sky: 0x6a7aa8, ground: 0x34303c, k: 0.9 }, sunColor: 0xffc890, sunK: 0.6, grade: { shadowTint: 0x101a3a, highlightTint: 0xffe0c0, toning: 0.24, contrast: 1.14, saturation: 1.0 } },
     PAST: { sky: 'routeDusk', era: '2026', hour: 19.4, sun: { elev: 9.2, az: 'notch' }, fog: 0x4a3a48, density: 1.0, night: 0.4, weather: 'rain', ibl: 'dusk', lit: 0.6,
       hemi: { sky: 0xb8907a, ground: 0x2a2224, k: 0.85 }, sunColor: 0xffb070, sunK: 0.8, grade: { shadowTint: 0x2a1430, highlightTint: 0xffd8b0, toning: 0.24, contrast: 1.12, saturation: 1.04 } },
     FUTURE: { sky: 'firstSunrise', era: '2196', hour: 6.3, sun: { elev: 9.2, az: 'notch' }, fog: 0x5a5068, density: 0.9, night: 0.3, weather: 'motes', ibl: 'dusk', lit: 0.3,
@@ -37,13 +45,15 @@ export default {
   skyFeatures: { all: [
     // the light along the road, by where you stand (Kai walks north, toward the ring)
     { kind: 'route', stops: [[170, 'routeNightRain'], [112, 'routeNightRain'], [96, 'routeDusk'], [44, 'routeDusk'], [30, 'routePreDawn'], [-96, 'routePreDawn'], [-128, 'firstSunrise']] },
-    { kind: 'ringHole', at: [0, -300], elev: 58, r: 11, when: '!ending' },
+    { kind: 'ringHole', at: [0, -300], elev: 58, r: 11, when: '!ending || m23_beat' },
     { kind: 'reverse', box: [-50, -44, 50, -22] },
     // the endings' skies, once the choice is made
-    { kind: 'preset', sky: 'endingClear', when: 'ending == "A"' },
-    { kind: 'preset', sky: 'endingPanes', when: 'ending == "B"' },
-    { kind: 'wedges', n: 7, cols: [0x5a9ae0, 0xffa060, 0x14306e, 0xe8c8d8, 0x1a1428, 0x9aa862, 0xc8e0ff], turn: 0.3, mix: 0.75, when: 'ending == "B"' },
-    { kind: 'preset', sky: 'endingWarm', when: 'ending == "C"' },
+    // (they wait for the choice's own moment, finale.js's m23_beat: the morning comes with the light in A, the sky breaks
+    // into panes as B's narration says it does, the warm light comes as C's ends: playtest v2.1 F05)
+    { kind: 'preset', sky: 'endingClear', when: 'ending == "A" && !m23_beat' },
+    { kind: 'preset', sky: 'endingPanes', when: 'ending == "B" && !m23_beat' },
+    { kind: 'wedges', n: 7, cols: [0x5a9ae0, 0xffa060, 0x14306e, 0xe8c8d8, 0x1a1428, 0x9aa862, 0xc8e0ff], turn: 0.3, mix: 0.75, when: 'ending == "B" && !m23_beat' },
+    { kind: 'preset', sky: 'endingWarm', when: 'ending == "C" && !m23_beat' },
   ] },
   quarters: [
     { name: 'THE OPENING STREETS', area: [-50, 110, 50, 180], spawnAt: 'platform41', threshold: { at: 'seam41', kind: 'seam' } },
@@ -203,8 +213,23 @@ export default {
     terrace(P, [-50, -180, 50, -124], HILL, 'summitGrass', { sides: '' });
     for (const [a, b] of [[-50, -6], [6, 50]]) P.vbox([a, -0.6, -124.5, b, HILL, -124], 'drystone');
     ringStones(P, 0, HILL, -150, 16, 14, 4.2, { band: 'bronzeAged', lintels: true });
-    P.torus(0, HILL + 5.6, -152, 5, 0.55, 'blackRing', { seg: 48 });
-    for (const s of [-1, 1]) P.box([s * 5.2 - 0.5, HILL, -152.6, s * 5.2 + 0.5, HILL + 1.4, -151.4], 'blackRing');
+    // the original Chronolith: still black metal, but drawn in light (playtest v2.1 F04): a fine line of violet light round
+    // each face of the ring and round its inner edge, so it reads as a ring at any quality, lit by the summit's lights
+    // (finale.js: Ending A takes it away; the rings of light it comes apart in are its own effect, stagefx.js)
+    P.W('!(ending == "A") || m23_beat', () => {
+      P.torus(0, HILL + 5.6, -152, 5, 0.55, 'blackRing', { seg: 48 });
+      for (const z of [-151.43, -152.57]) P.torus(0, HILL + 5.6, z, 5, 0.06, 'stormGlow', { seg: 64 });
+      P.torus(0, HILL + 5.6, -152, 4.43, 0.05, 'stormGlow', { seg: 64 });
+      for (const s of [-1, 1]) P.box([s * 5.2 - 0.5, HILL, -152.6, s * 5.2 + 0.5, HILL + 1.4, -151.4], 'blackRing');
+      for (const s of [-1, 1]) P.vbox([s * 5.2 - 0.52, HILL + 1.3, -151.38, s * 5.2 + 0.52, HILL + 1.36, -151.32], 'stormGlow', { noShadow: 1 });
+    });
+    // the way up and the circle, lit: braziers at the head of the ramp and before the ring (their pools and real light at
+    // the quality's lamps), so the summit's stones and the people on it have faces in the dawn
+    for (const [x, z] of [[-4.6, -126.2], [4.6, -126.2], [-5.6, -139.5], [5.6, -139.5]]) {
+      P.cyl(x, HILL, z, 0.32, 0.9, 'ironDark', { seg: 8, solid: true, r2: 0.22 });
+      P.cyl(x, HILL + 0.9, z, 0.36, 0.22, 'fireGlow', { seg: 10 });
+      P.glow(x, HILL + 0.02, z, 3.2, 0xffb070, 3.2);
+    }
     P.land('originalRing', 0, HILL, -152, 0);
     P.land('miraStands', 2.2, HILL, -146, Math.PI);
     P.land('endingChoice', 0, HILL, -142, Math.PI);

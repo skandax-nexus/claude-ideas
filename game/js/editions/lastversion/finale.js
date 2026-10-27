@@ -9,6 +9,7 @@
 import { intent } from './npcs.js';
 import { NO_MODEL } from './processes.js';
 import { L, N, K, REV, FX, C, SAYS, person, scarModel } from './act3.js';
+import { ringsOfLight, skyPanes, paneDoor, anchorLight, goneLight } from './stagefx.js';
 
 // after the epilogue: four clock ticks, then the voice in every speaker (voicelines.js re-exports it)
 export const POSTCREDIT = [{ who: 'VOICE', text: 'Version one hundred and eighteen.', voice: { fx: 'pa' } }];
@@ -85,6 +86,196 @@ function m23Step(rt) {
     f.set('m23_witness_across', true);
     g.hud.say(M23_SAY.across, f);
   }
+}
+
+// the ending choice's three answers: what Kai says (the label), what she answers, and what happens (said by the choice;
+// staged by beat, below)
+const CHOICE = {
+  A: { label: 'Destroy the Chronolith.', lines: [L('MIRA', 'Then let me watch it go. Hold my hand while it does.'),
+    N('The ring comes apart in rings of light. Her hand is in his, and then it is only light, and then it is morning.')] },
+  B: { label: 'Separate the states into independent branches.', lines: [L('MIRA', 'Then I\'ll live in one of them. Write to me. You never write.'),
+    N('The sky breaks into panes, each a different sky. She walks into one of them and turns round to wave.')] },
+  C: { label: 'Become the anchor. Absorb the contradictions.', lines: [L('MIRA', 'Kai, what are you doing?'), K('Counting. You first.'),
+    N('He steps into the ring. Down at the lab gate a man with a scarred wrist looks up, and is not there any more.')] },
+};
+
+// The choice, staged (playtest v2.1 F05: its spectacle was narrated over the game's camera, with the joystick, YEAR and the
+// objective "The next door is open. Keep going." still up). As the choice's lines are said (Runtime.choose), a moment of
+// cinema.js runs over them: letterboxed, the HUD gone, Kai held, its camera a rig that follows the line being said: the two
+// of them at the ring as he says it; her, as she answers; then what the narration says, drawn (stagefx.js): A, the ring
+// turning to light and leaving in rings of light, and then the morning; B, the sky breaking into panes, and a pane by her
+// that she walks into after she waves; C, Kai walking into the ring as it fills with light, and the Witness at the lab gate
+// gone in a column of it. While it plays, m23_beat holds the ending's sky and the ring as they were (afterzero.js), so the
+// morning, the panes and the warm light come when the narration says they do. The ending's own sequence (Runtime.ending)
+// replaces the moment as it starts, so there is no frame of the game's camera between the two.
+const RING_C = [0, 9.6, -152]; // (the original Chronolith's centre: afterzero.js, HILL + 5.6)
+function beat(rt, key) {
+  const g = rt.g, f = g.facts, pl = g.player;
+  const said = [{ who: 'KAI', text: CHOICE[key].label }, ...CHOICE[key].lines];
+  const dur = (l) => g.hud.durFn?.(l) || Math.max(2.2, l.text.length * 0.055);
+  const total = said.reduce((a, l) => a + dur(l), 0) + 3.5;
+  const narr = said.length - 1; // (the last line is the narration)
+  f.set('m23_beat', true);
+  const mira = () => g.deckWorld?.npcs.find((n) => n.n.id === 'mira23')?.model;
+  const v3 = (o) => [o.x, o.y, o.z];
+  const feet = () => [pl.pos.x, pl.pos.y - 0.86, pl.pos.z];
+  const st = { phase: -1, t: 0, shot: null, done: {} };
+  const once = (k, fn) => { if (!st.done[k]) { st.done[k] = true; fn(); } };
+  const settle = () => {
+    if (f.get('m23_beat')) {
+      f.set('m23_beat', false);
+      g.deckWorld?.refresh?.();
+    }
+  };
+  // the shots, built when their line begins (where Kai and Mira stand then)
+  const two = () => { // the two of them, the ring standing behind them
+    const k = feet(), m = mira() ? v3(mira().position) : [k[0] + 2, k[1], k[2] - 3];
+    const mid = [(k[0] + m[0]) / 2, k[1] + 1.55, (k[2] + m[2]) / 2];
+    let ux = mid[0] - RING_C[0], uz = mid[2] - RING_C[2];
+    const d = Math.hypot(ux, uz) || 1;
+    ux /= d;
+    uz /= d;
+    const look = [mid[0] + (RING_C[0] - mid[0]) * 0.25, mid[1] + (RING_C[1] - mid[1]) * 0.22, mid[2] + (RING_C[2] - mid[2]) * 0.25];
+    return { cam: [mid[0] + ux * 5.6 - uz * 1.6, mid[1] + 0.3, mid[2] + uz * 5.6 + ux * 1.6], to: [mid[0] + ux * 4.8 - uz * 1.3, mid[1] + 0.35, mid[2] + uz * 4.8 + ux * 1.3], look };
+  };
+  const her = () => { // her, from just beside him
+    const k = feet(), mm = mira();
+    const m = mm ? v3(mm.position) : [k[0] + 2, k[1], k[2] - 3];
+    let ux = k[0] - m[0], uz = k[2] - m[2];
+    const d = Math.hypot(ux, uz) || 1;
+    ux /= d;
+    uz /= d;
+    const r = Math.min(2.2, d + 0.6);
+    return { cam: [m[0] + ux * r + uz * 0.65, m[1] + 1.5, m[2] + uz * r - ux * 0.65], to: [m[0] + ux * (r - 0.25) + uz * 0.6, m[1] + 1.5, m[2] + uz * (r - 0.25) - ux * 0.6], look: [m[0], m[1] + 1.38, m[2]] };
+  };
+  const him = () => { // him, from just beside her
+    const k = feet(), mm = mira();
+    const m = mm ? v3(mm.position) : [k[0] + 2, k[1], k[2] - 3];
+    let ux = m[0] - k[0], uz = m[2] - k[2];
+    const d = Math.hypot(ux, uz) || 1;
+    ux /= d;
+    uz /= d;
+    const r = Math.min(2.2, d + 0.6);
+    return { cam: [k[0] + ux * r - uz * 0.65, k[1] + 1.55, k[2] + uz * r + ux * 0.65], to: [k[0] + ux * (r - 0.25) - uz * 0.6, k[1] + 1.55, k[2] + uz * (r - 0.25) + ux * 0.6], look: [k[0], k[1] + 1.45, k[2]] };
+  };
+  // (inside the circle of stones, which stood between a camera outside it and the ring)
+  const ringWide = () => ({ cam: [RING_C[0] + 3.2, RING_C[1] - 3.2, RING_C[2] + 12.5], to: [RING_C[0] + 2.2, RING_C[1] - 2.9, RING_C[2] + 14.5], look: [RING_C[0], RING_C[1] + 0.6, RING_C[2]] });
+  const skyUp = () => { const k = feet(); return { cam: [k[0] - 1.4, k[1] + 1.1, k[2] + 2.6], to: [k[0] - 1.8, k[1] + 0.9, k[2] + 3.4], look: [RING_C[0], RING_C[1] + 22, RING_C[2] - 22] }; };
+  const behindToRing = () => ({ cam: [RING_C[0] + 1.5, RING_C[1] - 4.3, RING_C[2] + 9.6], to: [RING_C[0] + 1.0, RING_C[1] - 4.1, RING_C[2] + 8.2], look: [RING_C[0], RING_C[1] - 1.6, RING_C[2]] });
+  const atGate = () => {
+    const w = g.deckWorld?.npcs.find((n) => n.n.id === 'witness_gate')?.model;
+    const p = w ? v3(w.position) : [-2.4, 0, -23.2];
+    // (from the hill's side: he looks up toward it, and the sunrise is on his face)
+    return { cam: [p[0] + 0.9, p[1] + 1.35, p[2] - 3.2], to: [p[0] + 0.7, p[1] + 1.4, p[2] - 2.6], look: [p[0], p[1] + 1.6, p[2]], at: p };
+  };
+  const which = () => { // the line being said, by its text (0 until the first is up; said.length once they are over)
+    const c = g.hud.subT > 0 ? g.hud.cur : null;
+    if (g.hud.talking) st.heard = true;
+    if (!c) return g.hud.talking || !st.heard ? Math.max(0, st.phase) : said.length;
+    const i = said.findIndex((l) => l.text === c.text);
+    return i < 0 ? st.phase : i;
+  };
+  const walk = { from: null, to: null, t: 0 };
+  const rig = (dt) => {
+    const ph = which();
+    if (ph !== st.phase) {
+      st.phase = ph;
+      st.t = 0;
+      st.len = ph < said.length ? dur(said[ph]) : 4;
+      // what each line shows
+      if (ph >= said.length) st.shot = st.cur ? { cam: st.cur, look: st.shot.look, at: st.shot.at } : ringWide(); // (held where it is)
+      else if (ph < narr) {
+        const who = said[ph].who;
+        st.shot = ph === 0 ? two() : who === 'MIRA' ? her() : him();
+      } else if (key === 'A') {
+        st.shot = ringWide();
+        once('rings', () => rt.cinema.addFx(ringsOfLight({ center: RING_C, R: 5, n: 9, every: 0.55, life: 4.4 })));
+      } else if (key === 'B') {
+        st.shot = skyUp();
+        once('panes', () => {
+          settle(); // (the sky breaks into panes now)
+          g.hud.flash('rgba(255,240,220,0.55)');
+          rt.cinema.addFx(skyPanes({ center: [RING_C[0], 4, RING_C[2] + 6], toward: -Math.PI / 2 }));
+        });
+      } else {
+        // C: he is set at the ring's foot and walks into it; it fills with light round him
+        st.shot = behindToRing();
+        once('anchor', () => {
+          st.anchor = rt.cinema.addFx(anchorLight({ center: RING_C, R: 4.4 }));
+          // (he stops short of the ring's own gate, the mission's exit, [-2, 2] m round its foot: walked into, it would end
+          // the mission under the moment; the light takes him there)
+          walk.from = [RING_C[0] + 0.3, pl.pos.y, RING_C[2] + 6.4];
+          walk.to = [RING_C[0], pl.pos.y, RING_C[2] + 2.7];
+          walk.t = 0;
+        });
+      }
+    }
+    st.t += dt;
+    const lineT = st.t, len = st.len || 4;
+    // (while they talk he turns to her, as she does to him: her shot and his reverse see faces)
+    if (ph < narr && mira()) {
+      const m = mira().position, dx = m.x - pl.pos.x, dz = m.z - pl.pos.z, d = Math.hypot(dx, dz);
+      if (d > 0.3) pl.facing?.set(dx / d, 0, dz / d);
+    }
+    // A: then it is only light, and then it is morning (the ring is gone with it, and her hand)
+    if (key === 'A' && ph === narr && lineT > len * 0.6) once('morning', () => {
+      g.hud.flash('rgba(255,255,255,0.95)');
+      f.set('m23_mira_gone', true);
+      settle();
+    });
+    // B: she walks into a pane of another sky, and turns round to wave
+    if (key === 'B' && ph === narr && lineT > len * 0.45) once('door', () => {
+      const m = mira();
+      const at = m ? v3(m.position) : feet();
+      const k = feet();
+      const yaw = Math.atan2(k[0] - at[0], k[2] - at[2]);
+      rt.cinema.addFx(paneDoor({ at: [at[0] - Math.cos(yaw) * 0.2 - Math.sin(yaw) * 0.4, at[1], at[2] + Math.sin(yaw) * 0.2 - Math.cos(yaw) * 0.4], yaw, color: 0xffa060 }));
+      m?.userData.wave?.();
+      st.shot = her();
+      st.t = 0;
+    });
+    if (key === 'B' && ph === narr && lineT > len * 0.5 && st.done.door && st.t > Math.max(1.6, len * 0.4)) once('through', () => {
+      const m = mira();
+      if (m) rt.cinema.addFx(goneLight({ at: v3(m.position), color: 0xffd8b0 }));
+      f.set('m23_mira_gone', true);
+      g.deckWorld?.refresh?.();
+    });
+    // C: the walk into the ring, then the man at the lab gate who is not there any more
+    let hide = false;
+    if (key === 'C' && ph >= narr) {
+      if (walk.from) {
+        walk.t += dt;
+        const u = Math.min(1, walk.t / 2.6);
+        pl.pos.x = walk.from[0] + (walk.to[0] - walk.from[0]) * u;
+        pl.pos.z = walk.from[2] + (walk.to[2] - walk.from[2]) * u;
+        pl.facing?.set(walk.to[0] - walk.from[0], 0, walk.to[2] - walk.from[2]).normalize();
+        pl.speed = u < 1 ? 1.4 : 0; // (his walk, in the model's stride: Player.updateModel)
+        if (u >= 1) once('into', () => {
+          if (st.anchor) st.anchor.flare = 1;
+          g.fx?.burst?.([RING_C[0], RING_C[1] - 3.4, RING_C[2]], 0xe8dcff, 40, 2.2);
+        });
+      }
+      hide = !!st.done.into;
+      if (ph === narr && lineT > len * 0.5) once('gate', () => {
+        st.shot = atGate();
+        st.t = 0;
+      });
+      if (st.done.gate && st.t > 1.6) once('gone', () => {
+        rt.cinema.addFx(goneLight({ at: st.shot.at || [-2.4, 0, -23.2] }));
+        f.set('m23_gone', true);
+        g.deckWorld?.refresh?.();
+      });
+    }
+    if (ph >= said.length) settle(); // (the lines are over: the ending's sky, as the ending begins)
+    const s = st.shot;
+    if (!s) return null;
+    const k = Math.min(1, st.t / Math.max(1, len));
+    const e = k * k * (3 - 2 * k);
+    const cam = s.to ? s.cam.map((v, i) => v + (s.to[i] - v) * e) : s.cam;
+    st.cur = cam;
+    return { cam, look: s.look, hide };
+  };
+  rt.cinema.play({ shots: null, lines: [], total, rig }, settle);
 }
 
 export const M23 = {
@@ -343,16 +534,15 @@ export const M23 = {
       lines: [N('Three things the ring can do, and only one of them.'), N('Orren\'s record: released. Fought over. A person.', 'ev_unwritten_record')],
       choices: [
         // (the closing pass: each choice is seen before the ending: the sky changes with it, and she answers)
-        intent('challenge', 'Destroy the Chronolith.', { set: { ending: 'A' }, ending: 'A', lines: [L('MIRA', 'Then let me watch it go. Hold my hand while it does.'),
-          N('The ring comes apart in rings of light. Her hand is in his, and then it is only light, and then it is morning.')] }),
-        intent('investigate', 'Separate the states into independent branches.', { set: { ending: 'B' }, ending: 'B', lines: [L('MIRA', 'Then I\'ll live in one of them. Write to me. You never write.'),
-          N('The sky breaks into panes, each a different sky. She walks into one of them and turns round to wave.')] }),
-        intent('comfort', 'Become the anchor. Absorb the contradictions.', { set: { ending: 'C' }, ending: 'C', lines: [L('MIRA', 'Kai, what are you doing?'), K('Counting. You first.'),
-          N('He steps into the ring. Down at the lab gate a man with a scarred wrist looks up, and is not there any more.')] }),
+        // (playtest v2.1 F05: and it is staged, then: beat, below: its own camera and what the narration says, drawn)
+        intent('challenge', CHOICE.A.label, { set: { ending: 'A' }, ending: 'A', lines: CHOICE.A.lines, then: 'beatA' }),
+        intent('investigate', CHOICE.B.label, { set: { ending: 'B' }, ending: 'B', lines: CHOICE.B.lines, then: 'beatB' }),
+        intent('comfort', CHOICE.C.label, { set: { ending: 'C' }, ending: 'C', lines: CHOICE.C.lines, then: 'beatC' }),
       ],
     },
   },
   step: m23Step,
+  fx: { beatA: (rt) => beat(rt, 'A'), beatB: (rt) => beat(rt, 'B'), beatC: (rt) => beat(rt, 'C') }, // (the ending choice, staged)
   spoken: M23_SAY, // (what its code says: the Witness crossing)
   // quest chain A's consequence: the passengers Kai got off the 41 clear the opening streets of watchers
   adjust(level, rt) {
@@ -370,7 +560,7 @@ export const M23 = {
     person(P, { id: 'witness_far', crew: 'witness', at: 'settlementBridge', off: [2.6, 0, 8.4], turn: Math.PI, silent: true, when: 'm23_witness_across && !t_m23_lab' });
     // (at the lab gate: he stops, talks, and stays there holding the road while Kai goes on; in Ending C he is not)
     person(P, { id: 'witness_lab', crew: 'witness', at: 'labGate', off: [-2.4, 0, 1.4], turn: Math.PI, prompt: 'TALK TO HIM', when: 't_m23_lab && !m23_farewell' });
-    person(P, { id: 'witness_gate', crew: 'witness', at: 'labGate', off: [-2.4, 0, -1.2], turn: 0, silent: true, when: 'm23_farewell && !(ending == "C")' });
+    person(P, { id: 'witness_gate', crew: 'witness', at: 'labGate', off: [-2.4, 0, -1.2], turn: 0, silent: true, when: 'm23_farewell && (!(ending == "C") || (m23_beat && !m23_gone))' });
     // Mira: down the hill to meet him, then up it beside him
     person(P, { id: 'mira_foot', crew: 'mira', at: 'hillFoot', off: [0, 0, -4], turn: 0, prompt: 'TALK TO MIRA', when: 't_m23_pillarC && !m23_met' });
     person(P, { id: 'mira_walk', crew: 'mira', at: 'hillFoot', off: [0, 0, -5], turn: Math.PI, when: 'm23_met && !t_m23_climb' });
@@ -381,7 +571,7 @@ export const M23 = {
     person(P, { id: 'iven23', crew: 'iven', at: 'ivenStatement', off: [0, 0, 1.6], turn: Math.PI, silent: true, temporal: EVERY });
     person(P, { id: 'sera23', crew: 'sera', at: 'seraGarden', off: [0, 0, 1.6], turn: Math.PI, prompt: 'TALK TO SERA', temporal: EVERY });
     person(P, { id: 'anja23', crew: 'anja', at: 'anja', off: [2.4, 0, 0], turn: -Math.PI / 2, prompt: 'TALK TO ANJA', temporal: EVERY });
-    person(P, { id: 'mira23', crew: 'mira', at: 'miraStands', off: [0, 0, 0], turn: 0, prompt: 'TALK TO MIRA', when: 't_m23_climb' });
+    person(P, { id: 'mira23', crew: 'mira', at: 'miraStands', off: [0, 0, 0], turn: 0, prompt: 'TALK TO MIRA', when: 't_m23_climb && !m23_mira_gone' });
     // the endings' people (Runtime.ending stages them; Kai himself is not on screen): A, Kai under the 41's board; B,
     // Sera at the seam where one world ends, and someone on the other side; C, Mira at a window box in Rain City
     person(P, { id: 'kai_end', crew: 'kai', at: 'board41', silent: true, when: 'ending == "A"', temporal: EVERY });
@@ -418,11 +608,13 @@ export const ENDINGS = {
 
 // the endings, staged (Runtime.ending): one shot for the bible's text, one for each line the ending adds, and one for
 // Kai's quote and the epilogue; Kai himself is never on screen (A has him under the 41's board, in a body of his own)
-const RING = { cam: [9, 9.5, -128], to: [5, 8, -134], look: 'originalRing' };
+// (the ring's shots inside its circle of stones: from outside it the nearest stones and lintels filled the frame, black
+// against the dawn: playtest v2.1 F04/F05)
+const RING = { cam: [6.5, 8.6, -137], to: [4.2, 7.8, -139.5], look: [0, 8.4, -152] };
 const STOP = { cam: [1, 3.2, 151], to: [-1.5, 2.9, 155], look: [-12.2, 2.9, 163.4] }; // (the 41's sign over the shelter)
 export const ENDING_SHOTS = {
   A: [RING, STOP, { cam: [-11.6, 1.75, 162.2], to: [-11.4, 1.7, 162.6], look: [-9.4, 1.62, 163.4] }, { cam: [0, 5, 176], to: [0, 18, 160], look: [0, 3, 110] }],
   B: [RING, { cam: [7, 2.4, 108.5], to: [8.5, 2.9, 108.5], look: [0, 1.4, 108.5] }, { cam: [0, 6, 122], to: [0, 22, 100], look: [0, 0, 60] }],
-  C: [{ cam: [8, 6.5, -132], to: [4, 6, -137], look: 'originalRing' }, STOP, { cam: [-11.4, 1.75, 174.5], to: [-11.7, 1.7, 173], look: [-13.6, 1.3, 169.5] },
+  C: [{ cam: [6.8, 6.6, -137.5], to: [4, 6.2, -140], look: [0, 8.6, -152] }, STOP, { cam: [-11.4, 1.75, 174.5], to: [-11.7, 1.7, 173], look: [-13.6, 1.3, 169.5] },
     { cam: [-12, 1.6, 171.6], to: [-12.2, 1.6, 171.2], look: [-13.3, 1.5, 169.5] }, { cam: [-10, 3, 172], to: [0, 20, 160], look: [0, 2, 120] }],
 };

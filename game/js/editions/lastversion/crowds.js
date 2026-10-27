@@ -173,6 +173,8 @@ export const AMBIENT_CAST = {
   m12_glazier: { model: 'rb_glazier', variant: 'glazier', height: 1.67, pronoun: 'f' },
   m13_listener: { model: 'rb_civ_m1', variant: 'dust', height: 1.78, pronoun: 'm' },
   m13_freed: { model: 'rb_civ_m2', variant: 'detention', height: 1.76, pronoun: 'm' },
+  // (staging, F07) the woman at her stove in M13's frozen block, seen only there and only frozen
+  m13_mother: { model: 'rb_civ_f2', variant: 'sand', height: 1.65, pronoun: 'f' },
   // Act III (U8): Sera's schoolchildren (M14), an Unwritten fighter and a lock-city volunteer at the pylons (M18)
   // (a girl and two boys in two bodies, in 2196's faded clothes: not one boy three times, U8 review)
   m14_pupil: { model: 'rb_child_m2', variant: 'patched2', height: 1.3, pronoun: 'm' },

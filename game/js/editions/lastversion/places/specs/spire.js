@@ -44,6 +44,9 @@ export default {
   killY: -6,
   primary: 'citadelRing',
   backdrop: { kind: 'clouds', skirt: false },
+  // (playtest v2.1 F04: the summit, Chamber One rebuilt, was black slabs and a black ring with no surface on a phone, the
+  // sun behind them. Real light on the summit deck: the ring's face, the console, the stand; each reaches only the summit)
+  lights: [[-50, T3 + 6, -54, 0xffe8d0, 2.0, 22], [-50, T3 + 13, -60.5, 0xcfe0ff, 1.6, 16], [-32, T3 + 3, -60, 0xffd8b0, 1.4, 12], [-64, T3 + 3, -58, 0xd8e4ff, 1.2, 14]],
   years: {
     PRESENT: { sky: 'aboveClouds', era: '2049', hour: 12.6, sun: { elev: 64, az: 190 }, fog: 0xc8dcf4, density: 0.45, night: 0, weather: 'wind', ibl: 'plant', lit: 0,
       hemi: { sky: 0xb8d0f4, ground: 0xe8eef4, k: 1.0 }, sunColor: 0xffffff, sunK: 1.5, grade: { shadowTint: 0x0e2050, highlightTint: 0xffffff, toning: 0.16, contrast: 1.14, saturation: 1.02 } },
@@ -182,9 +185,17 @@ export default {
       ramp(P, [ax - 3, az - 14, ax + 3, az + 1], T3, TA, 'S', 'basaltPave');
       deck(P, [-78, -78, -22, az - 14], T3, { gaps: { S: [[ax - 3, ax + 3]] } });
       P.torus(-50, T3 + 13, -64, 11, 1.1, 'blackRing', { seg: 48 });
+      for (const z of [-62.86, -65.14]) P.torus(-50, T3 + 13, z, 11, 0.09, 'glowAccent', { seg: 72 }); // (its faces drawn in light: F04)
       for (const s of [-1, 1]) P.box([-50 + s * 11 - 1, T3, -65.5, -50 + s * 11 + 1, T3 + 4, -62.5], 'basalt');
+      // (its two basalt feet: a lit line round the head of each and down each corner, so they read as blocks, not holes)
+      for (const s of [-1, 1]) {
+        const x0 = -50 + s * 11 - 1, x1 = -50 + s * 11 + 1;
+        P.vbox([x0 - 0.03, T3 + 3.9, -65.53, x1 + 0.03, T3 + 3.96, -62.47], 'glowAccent', { noShadow: 1 });
+        for (const [x, z] of [[x0, -65.5], [x1, -65.5], [x0, -62.5], [x1, -62.5]]) P.vbox([x - 0.04, T3, z - 0.04, x + 0.04, T3 + 3.9, z + 0.04], 'glowAccent', { noShadow: 1 });
+      }
       P.torus(-50, T3 + 13, -64, 9.6, 0.25, 'glowAccent', { seg: 48 });
       P.box([-34, T3, -68, -30, T3 + 1.1, -64], 'eliteGraphite');
+      P.vbox([-34.02, T3 + 1.06, -64.06, -29.98, T3 + 1.12, -63.94], 'glowAccent', { noShadow: 1 });
     });
     // in 2026 the mast is the roof's tallest mast (above); the landmarks stand in every year
     const [ax, az] = at(225, AR1);

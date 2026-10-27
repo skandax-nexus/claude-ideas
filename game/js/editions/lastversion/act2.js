@@ -13,6 +13,7 @@ import { CAST, intent } from './npcs.js';
 import { makeKit } from './places/kits.js';
 import { NO_MODEL } from './processes.js';
 import { makeScreen, makePhoto, makeLogbook } from './Build.js';
+import { shellHome, posePeople } from './stagefx.js';
 
 const L = (who, text, when) => (when ? { who, text, when } : { who, text });
 const N = (text, when) => L('NONE', text, when);
@@ -605,9 +606,82 @@ export function hazardAt(h, lm, t, out = { pos: [0, 0, 0] }, ends = hazardEnds(h
   return out;
 }
 
+// Ward 32's bed, what the ward32 scene and the hook say is on it (playtest v2.1 F07: a pale box): a mattress, a pillow,
+// a blanket; on the pillow Lin's lanyard, its card turned up; on the blanket a file, open, a photograph clipped to it.
+// Larger than life by a little, so a phone shows them from the foot of the bed
+function ward32Things() {
+  const g = new THREE.Group();
+  const mat = (c, o = {}) => (o.basic ? new THREE.MeshBasicMaterial({ color: c }) : new THREE.MeshStandardMaterial({ color: c, roughness: o.rough ?? 0.85, metalness: 0 }));
+  const box = (w, h, d, c, x, y, z, o = {}) => {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat(c, o));
+    m.position.set(x, y + h / 2, z);
+    if (o.ry) m.rotation.y = o.ry;
+    if (o.rx) m.rotation.x = o.rx;
+    g.add(m);
+    return m;
+  };
+  box(1.05, 0.18, 2.05, 0xeef2f4, 0, 0, 0); // the mattress (head toward -z)
+  box(0.7, 0.12, 0.42, 0xffffff, 0, 0.18, -0.72); // the pillow
+  box(1.1, 0.05, 1.2, 0x7a9ab8, 0, 0.18, 0.42); // the blanket, folded back
+  // Lin's lanyard: the strap in a loop on the pillow, the card on it
+  const strap = new THREE.Mesh(new THREE.TorusGeometry(0.17, 0.014, 6, 24), mat(0x2a6ab8));
+  strap.rotation.x = Math.PI / 2;
+  strap.position.set(-0.08, 0.31, -0.74);
+  g.add(strap);
+  box(0.12, 0.012, 0.17, 0xffffff, 0.07, 0.31, -0.62, { basic: true, ry: 0.3 });
+  box(0.12, 0.013, 0.035, 0x2a6ab8, 0.07, 0.312, -0.69, { basic: true, ry: 0.3 });
+  box(0.045, 0.014, 0.055, 0xc8a890, 0.05, 0.313, -0.6, { basic: true, ry: 0.3 }); // (her photo on the card)
+  // the file, open on the blanket, a photograph clipped to its inside page
+  box(0.36, 0.015, 0.46, 0xd8c08a, 0.12, 0.23, 0.32, { ry: -0.15 });
+  box(0.33, 0.01, 0.42, 0xfbfaf6, 0.14, 0.245, 0.32, { basic: true, ry: -0.15 });
+  for (let i = 0; i < 6; i++) box(0.2, 0.004, 0.012, 0x6a6e74, 0.18, 0.252, 0.22 + i * 0.045, { basic: true, ry: -0.15 });
+  box(0.12, 0.006, 0.15, 0xf6f4ee, 0.05, 0.253, 0.2, { basic: true, ry: -0.15 });
+  box(0.1, 0.006, 0.11, 0x8a7a68, 0.05, 0.257, 0.195, { basic: true, ry: -0.15 });
+  box(0.04, 0.006, 0.05, 0xd8b8a0, 0.05, 0.259, 0.18, { basic: true, ry: -0.15 }); // (a woman's face, thirty-two)
+  return g;
+}
+// the bed's things stand on the ward's bed (hospital.js: its top at 0.7 m, its head to the north), centred here
+const W32 = (lm) => [lm[0], lm[1] + 0.7, lm[2] - 3.4];
+// what the camera shows of them: the bed from its foot as the scene says what is on it; the file and its photograph,
+// close, for the hook ("The photograph is Lin."), then the ward's glass
+function m11WardShots(rt) {
+  const lm = rt.level?.landmarks?.ward32;
+  if (!lm) return null;
+  const [x, y, z] = W32(lm);
+  return [{ cam: [x + 0.7, y + 1.1, z + 2.0], to: [x + 0.45, y + 0.85, z + 1.5], look: [x, y + 0.2, z - 0.2] }];
+}
+function m11HookShots(rt) {
+  const lm = rt.level?.landmarks?.ward32;
+  if (!lm) return null;
+  const [x, y, z] = W32(lm);
+  return [
+    { cam: [x + 0.32, y + 0.62, z + 0.85], to: [x + 0.24, y + 0.5, z + 0.7], look: [x + 0.08, y + 0.25, z + 0.28], t: 9 },
+    { cam: [x + 0.9, y + 1.0, z + 1.6], to: [x + 0.6, y + 1.0, z + 1.2], look: [x, y + 1.1, z - 4.2], t: 6 },
+  ];
+}
+// the lock's four bolts, close: as Kai first comes to it, and as the last one backs out (playtest v2.1 F07: from the
+// game's camera they were small grey dots on a blue slab)
+function m11LockShots(rt, open = false) {
+  const d = rt.level?.landmarks?.ward32Door;
+  if (!d) return null;
+  const s = Math.sin(d[3] || 0), c = Math.cos(d[3] || 0);
+  const at = (lx, ly, lz) => [d[0] + lx * c + lz * s, d[1] + ly, d[2] - lx * s + lz * c];
+  const close = { cam: at(0.32, 1.48, 1.35), to: at(0.22, 1.44, 1.05), look: at(0, 1.4, 0.35), t: open ? 2.0 : 2.6 };
+  return open ? [close, { cam: at(-0.6, 1.7, 3.4), to: at(-0.4, 1.7, 3.0), look: at(0, 1.6, -2.4), t: 2.8 }] : [close];
+}
+
 function m11Step(rt, dt) {
   const g = rt.g, lv = rt.level;
   if (!lv?.landmarks || !g.player) return;
+  // (the Act II payoffs, staged: F07) the bed's things while the ward scene is said; the lock, close, the first time Kai
+  // comes up to it with the lock thread his
+  rt.cinema?.watchShow?.('m11_ward_view', m11WardShots);
+  const door = lv.landmarks.ward32Door;
+  if (door && !rt.m11LockSeen && rt.threads?.current?.()?.id === 'lock' && !rt.cinema?.active && !g.hud.talking && !g.menu
+    && Math.hypot(g.player.pos.x - door[0], g.player.pos.z - door[2]) < 3.2) {
+    rt.m11LockSeen = true;
+    rt.cinema.play({ shots: m11LockShots(rt), lines: [], total: 2.6 });
+  }
   let S = rt.m11;
   if (!S || S.level !== lv) {
     // (each hazard's state, ends and half size, made once for the level and written in place each frame)
@@ -795,7 +869,7 @@ export const M11 = {
     maintTag_no: { lines: [K('A maintenance tag, bleached blank. In 2026 it was new.')] },
     twinLock: { lines: [N(CLUE_TWIN), K('Last in, first out.')], set: { ev_lock_order: true } },
     chime: { lines: [N(CLUE_CHIME), K('Fitted low to high. So they come out high to low.')], then: 'chime' },
-    ward32: { lines: [N('Ward 32. A bed that puts itself back together every morning. On the pillow, Lin\'s lanyard. On the blanket, a file.')], set: { ward32_read: true } },
+    ward32: { lines: [N('Ward 32. A bed that puts itself back together every morning. On the pillow, Lin\'s lanyard. On the blanket, a file.')], set: { ward32_read: true }, show: 'm11_ward_view' },
     board_now: { lines: [N('The family-room board, 2049: a woman of thirty-two in a ward gown.')], set: { ev_board_32: true } },
     board_then: { lines: [N('The same frame, 2026: a girl of nine in yellow boots.')], set: { ev_board_9: true } },
     tape: { when: 'mira_tape == "kept"', lines: [N('Kai plays Mira\'s tape into the ward intercom.'), SAYS('ODILE', 'ODILE', 'I know that voice. She sang on this ward.')], set: { ev_tape_played: true } },
@@ -807,18 +881,25 @@ export const M11 = {
   ],
   fx: {
     unlock: (rt) => rt.inv?.unlock(),
-    lockOpen: (rt) => rt.playNode(rt.deck.scenes.lock, null, 'lock'),
+    // (the lock, close, as its last bolt backs out, and the door going up: F07)
+    lockOpen: (rt) => {
+      const shots = m11LockShots(rt, true);
+      if (shots && rt.cinema && !rt.cinema.active) rt.cinema.play({ shots, lines: [], total: 4.8 });
+      rt.playNode(rt.deck.scenes.lock, null, 'lock');
+    },
     chime: (rt) => rt.inv?.chime(),
   },
   step: m11Step,
   overlay(P) {
+    // Ward 32's bed: the mattress and blanket, Lin's lanyard and the file with her photograph (F07)
+    if (P.landmarks.ward32) P.inter.push({ id: 'ward32_things', kind: 'scene', scene: 'ward32_bed', pos: W32(P.landmarks.ward32), yaw: 0, r: 0, prompt: '', model: () => ward32Things(), room: 'h_ward32' });
     person(P, { id: 'odile', crew: 'odile', at: 'odileStation', off: [0, 0, 1.4], turn: Math.PI, prompt: 'TALK TO ODILE' });
     // (behind the station's counter, facing the ward's door: she stood inside the counter)
     person(P, { id: 'odile_echo', crew: 'odile', at: 'odileStation', off: [1, 0, -3.5], hologram: true, silent: true, when: '!inv_odileEcho_done' });
     person(P, { id: 'kai12', crew: 'kai12', at: 'youngKaiBench', off: [0, 0, 0.4], turn: Math.PI, hologram: true, silent: true, when: '@PRESENT' });
   },
   hook: {
-    cue: 'cliff', minutes: 1,
+    cue: 'cliff', minutes: 1, shots: m11HookShots, // (the file and its photograph, close; then the ward's glass: F07)
     lines: [REV(N('The file: VAREN, M., age 32. The record is twenty-three years old. The death date is blank. The photograph is Lin.')), K('Lin.'), N('The intercom stops repeating.'),
       FX(L('WITNESS', 'Close the file, Kai.'), 'pa'), N('Beyond the ward glass a man walks away, flickering between 2026 and 2049.')],
   },
@@ -1165,8 +1246,50 @@ const M13_PROCESSES = [
 // drops out for a breath when it first comes into view
 const M13_INVERTED = ['m13_warport_q0s0'];
 const _fwd = new THREE.Vector3();
+// the frozen block, staged as its scene is said (F07: a brick box with flat windows): a man in the lobby behind the glass
+// on one knee, tying a shoe; three floors up, the kitchen hanging where it broke away, a woman at her stove, the steam
+// over her kettle standing like glass; then Kai on the street, looking up, for Sera on the radio
+const M13_BLOCK = { man: [66.4, 0, -63.3], kitchen: [66, 10.6, -59.8] };
+function m13BlockShots(rt) {
+  const g = rt.g, k = M13_BLOCK.kitchen, mn = M13_BLOCK.man, p = g.player.pos;
+  const dur = (l) => g.hud.durFn?.(l) || Math.max(2.2, l.text.length * 0.055);
+  const ls = rt.deck.scenes.block.lines;
+  return [
+    // (at the glass, low, in front of him; then the kitchen from its own height, the floor it stands on not in the way)
+    { cam: [mn[0] + 1.3, 1.25, -60.6], to: [mn[0] + 0.8, 1.1, -61.3], look: [mn[0] - 0.1, 0.55, mn[2]], t: dur(ls[0]) },
+    { cam: [k[0] + 1.9, k[1] + 1.4, k[2] + 2.9], to: [k[0] + 1.5, k[1] + 1.3, k[2] + 2.3], look: [k[0] - 0.4, k[1] + 0.95, k[2] + 0.1], t: dur(ls[1]) },
+    { cam: [p.x + 3.2, p.y + 1.6, p.z + 5.2], to: [p.x + 2.6, p.y + 1.5, p.z + 4.4], look: [k[0], k[1] - 2, k[2]] },
+  ];
+}
+// a shell held in flight, going home (F07: a 0.24 m shell nobody could see, the caption doing the work): its arc from
+// where it fell back into the battery that fired it, a burning head and a trail the camera follows, a flash at the gun
+function m13ShellHome(rt, which) {
+  const g = rt.g, L = rt.level?.landmarks;
+  const zone = L?.shellZone, gun = L?.[which === 'A' ? 'batteryA' : 'batteryB'];
+  if (!zone || !gun || !rt.cinema) return;
+  const from = which === 'A' ? [zone[0] - 3, zone[1] + 0.4, zone[2] + 2] : [zone[0] + 3, zone[1] + 0.4, zone[2] - 2];
+  const to = which === 'A' ? [gun[0], gun[1] + 3.0, gun[2] + 3.5] : [gun[0], gun[1] + 3.0, gun[2] - 3.5];
+  const far = Math.hypot(to[0] - from[0], to[2] - from[2]);
+  const fx = rt.cinema.addFx(shellHome({ from, to, apex: Math.max(14, far * 0.2), dur: 3.4, delay: 0.3 }));
+  const dir = [to[0] - from[0], 0, to[2] - from[2]].map((v) => v / (far || 1));
+  const side = [-dir[2], 0, dir[0]];
+  const end = fx.end;
+  const look = [0, 0, 0];
+  rt.cinema.play({ shots: null, lines: [], total: end + 1.1, rig: (dt, t) => {
+    const h = fx.pos(Math.min(t, end - 0.01));
+    if (t < 1.1) return { cam: [from[0] - dir[0] * 7 + side[0] * 3, from[1] + 1.7, from[2] - dir[2] * 7 + side[2] * 3], look: h }; // (from where it fell, up at it)
+    if (t < end - 0.8) { // (alongside it, behind and to one side)
+      for (let i = 0; i < 3; i++) look[i] = h[i];
+      return { cam: [h[0] - dir[0] * 16 + side[0] * 6, h[1] + 4, h[2] - dir[2] * 16 + side[2] * 6], look };
+    }
+    return { cam: [to[0] - dir[0] * 14 + side[0] * 7, to[1] + 3.5, to[2] - dir[2] * 14 + side[2] * 7], look: to }; // (at the gun)
+  } });
+}
+
 function m13Step(rt) {
   const g = rt.g;
+  rt.cinema?.watchShow?.('m13_block_view', m13BlockShots);
+  posePeople(g);
   if (!g.camera || g.engine.state(g.room) !== 'PRESENT') return;
   const S = (rt.m13 ||= { seen: new Set() });
   for (const s of g.deckWorld?.sentinels || []) {
@@ -1309,7 +1432,7 @@ export const M13 = {
         FX(L('SERA', 'She was making tea when the block stopped. She has been making it for nine years. She is my mother.'), 'radio'),
         K('Why didn\'t you tell me?'),
         FX(L('SERA', 'Because you would choose her. Choose the way you would if she was nobody\'s.'), 'radio')],
-      set: { ev_block: true }, log: 'Sera\'s mother is in the frozen block. She has been making tea for nine years.',
+      set: { ev_block: true }, log: 'Sera\'s mother is in the frozen block. She has been making tea for nine years.', show: 'm13_block_view',
     },
     block_no: { lines: [K('In this year the block is whole, or a green mound. It froze in 2049.')] },
     stabilizer: {
@@ -1344,10 +1467,12 @@ export const M13 = {
     listenersRoute(rt) {
       for (const s of rt.g.deckWorld?.sentinels || []) if (/_q0s0$/.test(s.def.id)) { s.lure = { x: -112, z: 30, t: 90 }; s.mode = 'patrol'; s.suspicion = 0; }
     },
+    shellHomeA: (rt) => m13ShellHome(rt, 'A'),
+    shellHomeB: (rt) => m13ShellHome(rt, 'B'),
   },
   rules: [
-    { id: 'shellA', when: 'inv_shellA_done', say: [N('It climbs. Not south. North, over the Continuum line, back into a Continuum gun.')] },
-    { id: 'shellB', when: 'inv_shellB_done', say: [N('It climbs south, over the Unwritten line, back into an Unwritten gun.')] },
+    { id: 'shellA', when: 'inv_shellA_done', say: [N('It climbs. Not south. North, over the Continuum line, back into a Continuum gun.')], then: 'shellHomeA' },
+    { id: 'shellB', when: 'inv_shellB_done', say: [N('It climbs south, over the Unwritten line, back into an Unwritten gun.')], then: 'shellHomeB' },
     { id: 'cap', when: 'inv_cap >= 10', say: [N('REVERSE holds for ten seconds now.')] },
   ],
   overlay(P) {
@@ -1360,6 +1485,21 @@ export const M13 = {
     person(P, { id: 'm13_listener_go', crew: 'm13_listener', first: 'A listener', seed: 1301, ambient: true, at: 'listenersRoute', off: [0, 0, 2], when: 'listeners_route && !t_m13_cross', silent: true,
       path: [[-50, 40], [-50, 30], [-30, 30], [-10, 20], [16, 12]], speed: 1.3 });
     person(P, { id: 'm13_freed', crew: 'm13_freed', first: 'Freed prisoner', seed: 1302, ambient: true, at: 'fieldOrders', off: [1.8, 0, 1.4], turn: Math.PI, silent: true, when: 'prisoners_freed' });
+    // the frozen block, as its scene says (F07): a man on one knee in the lobby, tying a shoe; three floors up the kitchen
+    // that broke away and hangs there, a woman at her stove, the steam over her kettle standing like glass. Frozen while
+    // the block is; freed, the floor comes down (warport.js) and they are among the people who walk out
+    const [mx, , mz] = M13_BLOCK.man, [kx, ky, kz] = M13_BLOCK.kitchen;
+    P.npcs.push({ id: 'm13_shoe', crew: 'm13_listener', first: 'A man', seed: 1304, ambient: true, silent: true, pos: [mx, 0, mz], yaw: 0.2, pose: 'kneel', freezeWhen: 'true', when: '!civilians_freed && @PRESENT', room: P.rid });
+    P.npcs.push({ id: 'm13_mother', crew: 'm13_mother', first: 'A woman', seed: 1303, ambient: true, silent: true, pos: [kx - 0.6, ky + 0.3, kz + 0.2], yaw: Math.PI / 2, freezeWhen: 'true', when: '!civilians_freed && @PRESENT', room: P.rid });
+    P.W('!civilians_freed', () => P.E('PRESENT', () => {
+      P.obox(kx, ky, kz, 5.2, 0.3, 4.4, 0, 'concrete', { rx: -0.05, rz: 0.04, solid: true }); // the floor, broken off (she stands on it)
+      P.obox(kx, ky + 0.3, kz - 2.0, 5.2, 2.2, 0.25, 0, 'rainBrick', { t: 0xc8a890, rz: 0.04 }); // a stub of its wall
+      P.obox(kx + 0.5, ky + 0.3, kz + 0.1, 0.8, 0.9, 0.62, 0, 'steel'); // the stove
+      P.cyl(kx + 0.5, ky + 1.2, kz + 0.1, 0.14, 0.22, 'steel', { seg: 10, r2: 0.1 }); // the kettle
+      for (let i = 0; i < 5; i++) P.sphere(kx + 0.5 + Math.sin(i * 1.7) * 0.12, ky + 1.55 + i * 0.32, kz + 0.1 + Math.cos(i * 1.3) * 0.1, 0.16 + i * 0.07, 'frozenGlass', { noShadow: 1 }); // the steam, stopped
+      P.obox(kx - 1.6, ky + 0.3, kz + 0.6, 1.1, 0.75, 0.8, 0.2, 'wood'); // the table
+      for (const [dx, dz] of [[-2.3, -1.9], [2.3, -1.9], [-2.3, 1.9], [2.3, 1.9]]) P.cyl(kx + dx, ky - 1.6, kz + dz, 0.05, 1.6, 'steel', { seg: 5 }); // its torn rebar
+    }));
   },
   hook: { cue: 'cliff', minutes: 1, lines: [N('The stabilizer\'s last pulse tears a fracture open.'), L('SERA', 'You\'re coming with me.'), K('Where?'), L('SERA', '2196. Where they teach your name.')] },
   done: 't_m13_district',

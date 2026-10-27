@@ -45,11 +45,15 @@ export default {
   killY: -3,
   primary: 'twinChamber',
   backdrop: { notch: 'clear' },
+  // (playtest v2.1 F04: the chamber's machined-black half, the ring and its seals read as flat black shapes, missing
+  // materials, under the eclipse. Real light in the chamber: over the ring, at the seals, and one on each half's wall, each
+  // reaching only the chamber and its walk; the black half's panels carry lit seams, the ring lines of light)
+  lights: [[0, 9.5, -1, 0xd8e4ff, 2.0, 18], [0, 2.6, -8.5, 0xffd8b0, 1.6, 10], [-9, 4.2, 2, 0xffe0c0, 1.3, 14], [9, 4.2, 2, 0xcfe0ff, 1.3, 14]],
   years: {
     PAST: { sky: 'eclipse2026', era: '2026', hour: 16.0, sun: { elev: 34, az: 210 }, fog: 0x4a3a40, density: 0.9, night: 0.3, weather: 'motes', ibl: 'dusk', lit: 0.5,
       hemi: { sky: 0xc89a84, ground: 0x3a2e2c, k: 1.0 }, sunColor: 0xffd8b0, sunK: 0.7, grade: { shadowTint: 0x2a1424, highlightTint: 0xffe0c0, toning: 0.24, contrast: 1.14, saturation: 1.0 } },
     PRESENT: { sky: 'eclipse2049', era: '2049', hour: 5.66, sun: { elev: 40, az: 180 }, fog: 0x1e2638, density: 0.9, night: 0.42, weather: 'motes', ibl: 'night', lit: 0.6,
-      hemi: { sky: 0x8a9ac0, ground: 0x1c2028, k: 0.95 }, sunColor: 0xd8e4ff, sunK: 0.6, grade: { shadowTint: 0x0e1430, highlightTint: 0xd8e4ff, toning: 0.24, contrast: 1.16, saturation: 0.96 } },
+      hemi: { sky: 0x8a9ac0, ground: 0x343844, k: 1.0 }, sunColor: 0xd8e4ff, sunK: 0.6, grade: { shadowTint: 0x0e1430, highlightTint: 0xd8e4ff, toning: 0.24, contrast: 1.16, saturation: 0.96 } },
     FUTURE: { sky: 'eclipse2196', era: '2196', hour: 6.4, sun: { elev: 38, az: 150 }, fog: 0x2a3a34, density: 1.0, night: 0.3, weather: 'motes', ibl: 'dusk', lit: 0.5,
       hemi: { sky: 0x9abaa8, ground: 0x24302a, k: 1.0 }, sunColor: 0xe0ffe8, sunK: 0.65, grade: { shadowTint: 0x0e2018, highlightTint: 0xe0ffe8, toning: 0.24, contrast: 1.12, saturation: 1.0 } },
   },
@@ -90,6 +94,8 @@ export default {
       const m = west ? 'rawConcrete' : 'eliteGraphite';
       P.obox(x, 0, z, 0.7, 2.6, len, ry, m);
       P.col([x - 0.9, 0, z - 0.9, x + 0.9, 3.4, z + 0.9]);
+      // (the machined half: a lit seam along each panel's foot and head, inside and out: F04)
+      if (!west) for (const y of [0.12, 2.48]) P.obox(x, y, z, 0.76, 0.05, len * 0.94, ry, 'glowAccent', { noShadow: 1 });
       // the upper walls: 2026's concrete half stands whole in 2026 and 2049; 2049's black half from 2049 on; 2196 broken
       if (west) P.E(['PAST', 'PRESENT'], () => P.obox(x, 2.6, z, 0.7, 4.4, len, ry, 'rawConcrete'));
       else P.E('PRESENT', () => P.obox(x, 2.6, z, 0.7, 4.4, len, ry, 'eliteGraphite'));
@@ -104,8 +110,11 @@ export default {
     sign(P, '05:40', RC - 0.5, 3.6, 0, -Math.PI / 2, { size: 0.7, color: '#9fd8ff', boardMat: 'eliteGraphite' });
     // the original ring, standing in the middle, the final seals round its foot, the evidence on a table
     P.torus(0, 5.2, -3, 4.6, 0.5, 'blackRing', { seg: 48 });
+    for (const z of [-2.48, -3.52]) P.torus(0, 5.2, z, 4.6, 0.055, 'stormGlow', { seg: 64 });
+    P.torus(0, 5.2, -3, 4.08, 0.045, 'stormGlow', { seg: 64 });
     P.box([-4.8, 0, -3.6, -4, 1.2, -2.4], 'blackRing');
     P.box([4, 0, -3.6, 4.8, 1.2, -2.4], 'blackRing');
+    for (const x of [-4.4, 4.4]) P.vbox([x - 0.42, 1.12, -2.36, x + 0.42, 1.17, -2.32], 'stormGlow', { noShadow: 1 });
     for (const dx of [-2.4, 0, 2.4]) P.cyl(dx, 0, -6.4, 0.5, 1.0, 'sealBronze', { seg: 8, solid: true });
     P.land('twinChamber', 0, 0, 9, Math.PI);
     P.land('finalSeals', 0, 0, -5, 0);

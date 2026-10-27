@@ -11,6 +11,7 @@ import { Deck, makeClock, makeToy, makeScreen, makeCell, makePanel, makeDrawing,
   makePhoto, makePhotoStrip, makeThermos, makePolaroid, makeFootprints, makeRaincoat, makePigeon, makePass, makeCoatPegs, makeNotebook, makeLogbook, makePlaque } from './Build.js';
 import { DIALOGUE, IVEN_HOOK, intent } from './npcs.js';
 import { NO_MODEL } from './processes.js';
+import { trainRush, posePeople } from './stagefx.js';
 
 const L = (who, text, when) => (when ? { who, text, when } : { who, text });
 const N = (text, when) => L('NONE', text, when);
@@ -46,10 +47,14 @@ export function m01Shots(rt, which) {
   const L = rt.level?.landmarks;
   const pl = L?.platform, cd = L?.carriageDoor;
   if (!pl || !cd) return null;
+  // (playtest v2.1 FT-06: the 41 is seen coming: the stopped clock; then from the platform's end down the track as the
+  // 41 comes at the camera at full speed (stagefx.trainRush, M01.fx.zeroSecond) and does not stop; at the impact, 2.9 s
+  // in, with the score's, the wreck from high at the east end, the lead carriage up on the platform)
   if (which === 'zero') {
     return [
-      { cam: [pl[0] - 7, pl[1] + 2.6, pl[2] + 12.5], to: [pl[0] - 9, pl[1] + 2.9, pl[2] + 10], look: [pl[0] - 13.6, pl[1] + 3.5, pl[2] + 6], t: 2.6 },
-      { cam: [cd[0] + 20, cd[1] + 4.5, cd[2] + 12.5], to: [cd[0] + 16, cd[1] + 3.8, cd[2] + 11], look: [cd[0] - 8, cd[1] + 0.8, cd[2] - 3], t: 6 },
+      { cam: [pl[0] - 7, pl[1] + 2.6, pl[2] + 12.5], to: [pl[0] - 8, pl[1] + 2.75, pl[2] + 11], look: [pl[0] - 13.6, pl[1] + 3.5, pl[2] + 6], t: 1.4 },
+      { cam: [cd[0] + 16, cd[1] + 1.3, cd[2] + 1.2], to: [cd[0] + 16.4, cd[1] + 1.35, cd[2] + 1.8], look: [cd[0] - 30, cd[1] + 0.4, cd[2] - 8.3], t: 1.5 },
+      { cam: [cd[0] + 19, cd[1] + 5.6, cd[2] + 10], to: [cd[0] + 16, cd[1] + 5.0, cd[2] + 9.5], look: [cd[0] - 6, cd[1] + 0.4, cd[2] - 4], t: 6 },
     ];
   }
   // the woman at the far end, from high over the wreck; then nearer, along the platform through the rain, for Kai's
@@ -111,7 +116,12 @@ export const M01 = {
     // north edge: the first two shots look at it from high over the plaza and the canal, where the hill is below it;
     // the third finds Kai's door)
     // (timed to the lines: at 9 + 9 s the third shot, Kai's door, came after the narration had ended and was never seen)
-    shots: [{ cam: [0, 20, -104], to: [0, 23, -132], look: [14, 62, -560], t: 4 }, { cam: [-6, 30, -150], to: [-2, 32, -172], look: [12, 66, -560], t: 5 }, { cam: [24, 12, -20], to: [20, 8, -10], look: 'door4B', t: 7 }],
+    // (playtest v2.1 FT-10: the third shot glided from [24, 12, -20] through the block east of Kai's door, its colliders
+    // [14, 3.4, -16]..[46, 23.8, 12], and showed window quads floating on black. It is taken from across the avenue now, at
+    // a passer-by's height: the whole block, its roofline on the sky, the door, and his window on the fourth floor, where
+    // the phone lights the glass (overlay). Kai is not drawn at his door meanwhile: he is upstairs, asleep)
+    shots: [{ cam: [0, 20, -104], to: [0, 23, -132], look: [14, 62, -560], t: 4 }, { cam: [-6, 30, -150], to: [-2, 32, -172], look: [12, 66, -560], t: 5 },
+      { cam: [-8, 2.4, -17], to: [-7, 3.4, -10], look: [14, 10, -2.2], t: 7, hide: true }],
     lines: [N('Rain City. 05:40.'), N('At Helix Temporal Research, a card opens Chamber One. The name on the card is KAI VAREN.'), N('Kai Varen is asleep, four kilometres away. His phone lights once on the table. One voicemail. He does not wake.')],
     title: { lines: [N('08:02.'), K('Twenty-three years today.'), K('I\'ll go after work. I always go after work.'), K('The 41 is late. The 41 is never late.')] },
   },
@@ -196,6 +206,9 @@ export const M01 = {
     // Kai's door
     const [dx, dy, dz] = L('door4B');
     P.texts.push({ text: 'VAREN - 4B', pos: [dx + 1.66, dy + 2.4, dz - 2.6], rotY: -Math.PI / 2, size: 0.3, color: '#ffe0b0', room: rid });
+    // his window on the fourth floor, over the door, while the cold open plays (05:40): the phone's light on the glass,
+    // cold blue among the warm windows of the block (the cold open's third shot looks up at it: FT-10)
+    P.vbox([dx + 1.7, dy + 10.9, dz - 0.95, dx + 1.76, dy + 12.4, dz + 0.45], 'adLit', { w: 'co_m01' });
     // (Rain City's commuters, the queue at the checkpoint and the platform staff are the place's crowds:
     // rain_south's paths, cast by crowds.js. They stop with the clocks at the Zero Second.)
     // --- the anomalies (the puddle, the pigeon and the view from the roof are the anomalies thread's spots) ---------
@@ -259,34 +272,70 @@ export const M01 = {
     P.texts.push({ text: 'MAINTENANCE GATE 41-B', pos: [gx + 0.25, gy + 3.4, gz], rotY: Math.PI / 2, size: 0.28, color: '#ffc06a', room: rid });
     board('LINE 41 - EVACUATION SERVICE - BOARDING', 'jun_line', '#7fe0a8', -0.6, 0.32);
     P.texts.push({ text: 'HELIX EVIDENCE TERMINAL - ONLINE', pos: [jx - 0.25, jy + 1.8, jz], rotY: Math.PI / 2, size: 0.22, color: '#7fe0a8', when: 'jun_evidence', room: rid });
-    // the 41, after the Zero Second: three carriages, the last one up on the platform (DeckWorld draws them; the edition dresses them)
+    // the 41, after the Zero Second: a wreck (playtest v2.1 FT-06: three intact carriages had stood in a row along the
+    // platform under "The 41 comes in at full speed and does not stop"). The last carriage still on its rails but knocked
+    // askew; the middle one jackknifed, its front swung at the platform and rolled onto its side wheels; the lead
+    // carriage up on the platform, slewed across it and leaning over it, its nose dug in, a door burst open on the
+    // platform side where a man's coat is caught; debris and glass on the stones, smoke over the wreck. It is there from
+    // the impact (after_zero: the moving 41 before it is the Zero Second's own effect, M01.fx.zeroSecond)
     const [kx, ky, kz] = L('carriageDoor');
-    // (each a carriage, not a blank box: a dark roof, a band of windows and the line's amber stripe down both sides, and
-    // its doors; the tour found three plain white blocks filling the Zero Second's and the rescue's shots)
-    const carriage = (b) => {
-      box(b, { mat: 'car', when: 'zero_second && !@PAST', lvMat: 'trainBody' });
-      const [x0, y0, z0, x1, y1, z1] = b, h = y1 - y0, len = x1 - x0;
-      const skin = (bb, m) => P.cols.push({ box: bb, mat: 'car', solid: false, room: rid, when: 'zero_second && !@PAST', lvMat: m });
-      for (const [za, zb] of [[z0 - 0.06, z0 + 0.01], [z1 - 0.01, z1 + 0.06]]) {
-        skin([x0 + 0.5, y0 + h * 0.5, za, x1 - 0.5, y0 + h * 0.8, zb], 'carGlass');
-        skin([x0 + 0.1, y0 + h * 0.38, za, x1 - 0.1, y0 + h * 0.45, zb], 'containerOrange');
-        skin([x0 + len * 0.5 - 0.65, y0 + h * 0.12, za - 0.01, x0 + len * 0.5 + 0.65, y0 + h * 0.82, zb + 0.01], 'doorDark');
-      }
-      // (and its ends, which the shots along the track see: a cab window and the stripe; eleven pieces a carriage, 33 draws
-      // once the 41 is in)
-      for (const [xa, xb] of [[x0 - 0.06, x0 + 0.01], [x1 - 0.01, x1 + 0.06]]) {
-        skin([xa, y0 + h * 0.5, z0 + 0.35, xb, y0 + h * 0.8, z1 - 0.35], 'carGlass');
-        skin([xa, y0 + h * 0.38, z0 + 0.1, xb, y0 + h * 0.45, z1 - 0.1], 'containerOrange');
-      }
-      skin([x0 - 0.08, y1, z0 - 0.08, x1 + 0.08, y1 + 0.16, z1 + 0.08], 'roofDark');
+    const WRECK = 'after_zero && !@PAST';
+    // a carriage turned and tilted (YXZ, as Scenery places an obox): its pieces placed in its own frame; colliders a row of
+    // short boxes along it, so a slewed carriage is not one wide invisible wall
+    const rot = ([x, y, z], rx, ry, rz) => {
+      let a = x * Math.cos(rz) - y * Math.sin(rz), b = x * Math.sin(rz) + y * Math.cos(rz), c = z;
+      [b, c] = [b * Math.cos(rx) - c * Math.sin(rx), b * Math.sin(rx) + c * Math.cos(rx)];
+      return [a * Math.cos(ry) + c * Math.sin(ry), b, -a * Math.sin(ry) + c * Math.cos(ry)];
     };
-    carriage([kx - 32, ky - 1, kz - 10.5, kx - 14, ky + 2.4, kz - 6.7]);
-    carriage([kx - 13, ky - 1, kz - 10, kx + 4, ky + 2.4, kz - 6]);
-    carriage([kx - 2, ky + 0.4, kz - 3.2, kx + 14, ky + 3.8, kz + 0.3]);
-    box([kx - 4.5, ky, kz + 1.0, kx - 2.2, ky + 1.1, kz + 2.0], { mat: 'crate', when: 'zero_second && !@PAST', lvMat: 'wood' }); // a bench, thrown
+    const carriage = ({ at, len = 17, w = 3.8, h = 3.4, rx = 0, ry = 0, rz = 0, door = 0, burst = false }) => {
+      const piece = (lx, ly, lz, pw, ph, pd, m) => {
+        const [ox, oy, oz] = rot([lx, ly, lz], rx, ry, rz);
+        P.obox(at[0] + ox, at[1] + oy, at[2] + oz, pw, ph, pd, ry, m, { rx, rz, w: WRECK });
+      };
+      piece(0, 0, 0, len, h, w, 'trainBody');
+      for (const sd of [-1, 1]) {
+        piece(0, h * 0.5, sd * (w / 2 + 0.02), len - 1, h * 0.3, 0.06, 'carGlass');
+        piece(0, h * 0.38, sd * (w / 2 + 0.03), len - 0.2, h * 0.07, 0.07, 'containerOrange');
+        if (!(burst && sd === door)) piece(0, h * 0.12, sd * (w / 2 + 0.04), 1.3, h * 0.7, 0.06, 'doorDark');
+        piece(sd * (len / 2 + 0.02), h * 0.5, 0, 0.06, h * 0.3, w - 0.7, 'carGlass');
+        piece(sd * (len / 2 + 0.03), h * 0.38, 0, 0.07, h * 0.07, w - 0.2, 'containerOrange');
+      }
+      if (burst) { // the door on the platform side, burst open: its leaf hanging out from the frame, glass gone
+        piece(0, h * 0.12, door * (w / 2 + 0.04), 1.3, h * 0.7, 0.04, 'roofDark');
+        piece(0.95, h * 0.1, door * (w / 2 + 0.55), 0.06, h * 0.68, 1.0, 'doorDark');
+      }
+      piece(0, h, 0, len + 0.16, 0.16, w + 0.16, 'roofDark');
+      for (let i = 0; i < 6; i++) { // (its colliders: six short boxes down its length)
+        const [cx, , cz] = rot([(i + 0.5) * (len / 6) - len / 2, 0, 0], rx, ry, rz);
+        const hx = (Math.abs(Math.cos(ry)) * len) / 12 + (Math.abs(Math.sin(ry)) * w) / 2, hz = (Math.abs(Math.sin(ry)) * len) / 12 + (Math.abs(Math.cos(ry)) * w) / 2;
+        P.col([at[0] + cx - hx * 0.9, at[1], at[2] + cz - hz * 0.9, at[0] + cx + hx * 0.9, at[1] + h, at[2] + cz + hz * 0.9], { when: WRECK, mat: 'car' });
+      }
+    };
+    carriage({ at: [kx - 23.5, ky - 1, kz - 8.6], len: 17, ry: 0.035, rx: -0.03 }); // the last: askew on its rails
+    carriage({ at: [kx - 5.2, ky - 0.85, kz - 7.2], len: 17, ry: -0.2, rx: 0.3, rz: 0.03 }); // jackknifed, its front at the platform
+    carriage({ at: [kx + 6.2, ky + 0.12, kz - 1.65], len: 16, ry: -0.24, rx: 0.2, rz: -0.06, door: 1, burst: true }); // up on the platform
+    // the thrown bench, tipped across where the woman lies; glass and debris on the platform; smoke over the wreck
+    // (across her thighs: its seat on its edge on her, its back fallen against the platform, a leg in the air)
+    P.obox(kx - 3.3, ky + 0.16, kz + 2.2, 1.8, 0.08, 0.5, 1.45, 'wood', { rx: 1.2, w: WRECK });
+    P.obox(kx - 3.05, ky + 0.02, kz + 2.12, 1.8, 0.45, 0.06, 1.45, 'wood', { rx: 1.35, w: WRECK });
+    for (const dx of [-0.8, 0.8]) P.obox(kx - 3.3 + dx * Math.cos(1.45), ky + 0.12, kz + 2.2 - dx * Math.sin(1.45), 0.08, 0.42, 0.5, 1.45, 'ironDark', { rx: 1.1, w: WRECK });
+    P.glow(kx - 2.8, ky + 0.02, kz + 2.4, 3.2, 0xffb890); // (and the fire's light on them: a real lamp at the quality's lamps)
+    P.glow(kx + 6, ky + 0.02, kz + 1.8, 3.2, 0xffb890);
+    P.col([kx - 3.75, ky, kz + 1.55, kx - 2.95, ky + 0.45, kz + 2.85], { when: WRECK, mat: 'crate' });
+    for (let i = 0; i < 14; i++) {
+      const dx = -8 + (i * 7.3) % 20, dz = 0.6 + ((i * 3.7) % 4.2);
+      P.obox(kx + dx, ky + 0.01, kz + dz, 0.3 + (i % 4) * 0.25, 0.06 + (i % 3) * 0.08, 0.25 + (i % 3) * 0.2, i * 0.9, i % 3 ? 'concreteStained' : 'carGlass', { rx: (i % 5) * 0.1, w: WRECK, prop: 1 });
+    }
+    for (const [dx, dz, r, hh] of [[1.6, -3.4, 1.4, 9], [-13.5, -8.4, 1.1, 7], [9, -1.2, 0.9, 6]]) P.cyl(kx + dx, ky - 0.6, kz + dz, r, hh, 'smoke', { r2: r * 2.4, seg: 10, w: WRECK, noShadow: 1 });
+    P.cyl(kx + 1.4, ky - 0.4, kz - 3.6, 0.7, 0.5, 'fireGlow', { r2: 0.2, seg: 8, w: WRECK, noShadow: 1 });
     P.glow(kx + 2, ky + 0.02, kz - 2, 4, 0xff6a48);
-    P.npcs.push({ id: 'trapped_a', crew: 'trapped_a', first: 'Woman', seed: 201, ambient: true, pronoun: { their: 'her', them: 'her' }, pos: [kx - 3.2, ky, kz + 2.4], yaw: Math.PI, when: 'zero_second && !rescued_a', scene: 'rescue_a', prompt: 'PULL HER FREE', room: rid });
-    P.npcs.push({ id: 'trapped_b', crew: 'trapped_b', first: 'Man', seed: 202, ambient: true, pronoun: { their: 'his', them: 'him' }, pos: [kx + 6, ky, kz + 0.9], yaw: Math.PI, when: 'zero_second && !rescued_b', scene: 'rescue_b', prompt: 'PULL HIM FREE', room: rid });
+    // the two trapped people, posed where the narration puts them (M01.step): the woman on her back under the thrown
+    // bench, her legs under it; the man on his knees against the leaning carriage, his coat caught in its burst door
+    // (frozen: they do not turn to Kai, nor walk; the scene and the prompt are theirs as before)
+    P.npcs.push({ id: 'trapped_a', crew: 'trapped_a', first: 'Woman', seed: 201, ambient: true, pronoun: { their: 'her', them: 'her' }, pos: [kx - 3.95, ky, kz + 2.2], yaw: -Math.PI / 2, pose: 'pinned', talkAt: [1.2, 0.3, 0], freezeWhen: 'true', when: 'after_zero && !rescued_a', scene: 'rescue_a', prompt: 'PULL HER FREE', room: rid });
+    P.npcs.push({ id: 'trapped_b', crew: 'trapped_b', first: 'Man', seed: 202, ambient: true, pronoun: { their: 'his', them: 'him' }, pos: [kx + 6, ky, kz + 0.95], yaw: -0.24, pose: 'caught', talkAt: [0, 1.6, 0], freezeWhen: 'true', when: 'after_zero && !rescued_b', scene: 'rescue_b', prompt: 'PULL HIM FREE', room: rid });
+    // his coat, caught: from his shoulders back into the burst door
+    P.obox(kx + 6.02, ky + 0.55, kz + 0.7, 0.8, 1.25, 0.05, -0.24, 'linen', { rx: -0.66, w: 'after_zero && !rescued_b && !@PAST' });
     // the Child in the Station (her side story): only after the clocks stop
     P.npcs.push({ id: 'child', crew: 'child', pos: [px - 31, py, pz - 7], yaw: 0.6, hologram: true, height: 1.22, when: 'zero_second', barks: ['Do you know the song? It goes up and then it goes up again and then it stops.'], room: rid });
     // the woman with Mira's face, at the far end of Kai's platform, by the barrow crossing: she walks to the staff gate
@@ -410,17 +459,23 @@ export const M01 = {
       g.deckWorld.flags.freeze_people = true;
       g.deckWorld.refresh();
       g.weather.set(null);
-      // the Zero Second, staged (cinema.js: letterboxed, Kai held): the stopped clock, then the 41 coming up onto the
-      // platform. Its cue (score.js 'zero'): the ticks stop, one second of silence under the narration, the horn, the impact
+      // the Zero Second, staged (cinema.js: letterboxed, Kai held): the stopped clock, then the 41 coming in down the track
+      // at full speed, and the wreck. Its cue (score.js 'zero'): the ticks stop, one second of silence under the narration,
+      // the horn, the brakes, the impact at 2.9 s; the 41 is drawn coming (stagefx.trainRush) and the wreck is there from
+      // the impact (after_zero: the overlay's carriages, and the two people trapped in it)
       rt.cinema.play({ shots: m01Shots(rt, 'zero'), lines: [...M01_SAY.clocks, ...M01_SAY.train], cue: 'zero' });
-      g.after(1.1, () => {
-        g.weather.set('rain');
+      const cd = rt.level?.landmarks?.carriageDoor;
+      let train = null;
+      if (cd && rt.cinema.addFx) g.after(1.0, () => { if (!g.facts.get('after_zero')) train = rt.cinema.addFx(trainRush({ from: [cd[0] - 56, cd[1] - 1, cd[2] - 8.3], dir: 1, speed: 34 })); });
+      g.after(1.1, () => g.weather.set('rain'));
+      g.after(2.9, () => {
+        train?.stop();
         g.audio.caught();
-        g.hud.flash('rgba(255,120,80,0.5)');
-      });
-      g.after(3.4, () => {
+        g.hud.flash('rgba(255,150,110,0.75)');
+        if (cd) g.fx?.burst?.([cd[0] + 4, cd[1] + 1.2, cd[2] - 2], 0xffc8a0, 40, 2.6);
         g.deckWorld.flags.freeze_people = false;
         g.facts.set('after_zero');
+        g.deckWorld.refresh?.();
       });
     },
     // the second rescue: the glass opens Kai's wrist; Rook; the voice in every speaker; the woman with Mira's face.
@@ -451,6 +506,10 @@ export const M01 = {
   step(rt, dt) {
     const g = rt.g;
     const f = g.facts;
+    // the two trapped in the wreck, posed (playtest v2.1 FT-06: both stood upright beside Kai under "A woman pinned under a
+    // thrown bench" and "a man with his coat caught in the door"): she lies on her back, her legs under the bench; he is
+    // on his knees against the leaning carriage, pulling away from the door that has his coat (stagefx.posePeople)
+    if (f.get('after_zero') && !(f.get('rescued_a') && f.get('rescued_b'))) posePeople(g);
     // the pursuit starts only once Kai can see her (playtest v2.1 VX-02: within its 14 m she set off while he stood on
     // the track bed behind the 41, out of sight): until then the leash is nothing, and she waits, looking back at him
     const mira = f.get('voice_heard') && !f.get('mira_gone') ? g.deckWorld.npcs.find((n) => n.n.id === 'mira') : null;
@@ -503,6 +562,27 @@ M01.outro = M01.hook.lines;
 const HELIX_PALETTE = { emergency: 0.45, fog: 0x3a3234, density: 1.2, wall: '#e8ecf0', floor: '#202428', accent: 0xff6a48, accent2: 0xffb36b, light: 0xffc4b4, tint: 0x8a6a6a, night: 0.4, weather: 'storm', sky: 'night', probe: false, ink: 0.85, daylight: 0xc8d8f0, daylightK: 1.8, grade: { shadowTint: 0x2a1418, highlightTint: 0xffd0bc, toning: 0.2, contrast: 1.1, saturation: 0.94 } };
 
 const T0 = 0.4;
+
+// the ring reveal, Mission 2's hook (cinema.js shots, built where Kai stands when it plays): low behind him, the whole ring
+// over him; from beside the ring, back at his face; over his shoulder into the black stone, where his reflection is late.
+// (playtest v2.1 FT-18: the hook kept the game's camera, and Rook's head, behind Kai at the door, filled the bottom of
+// the frame)
+export function m02Reveal(rt) {
+  const ring = rt.level?.landmarks?.chamber, p = rt.g.player.pos;
+  if (!ring) return null;
+  const fy = p.y - 0.86; // (his feet)
+  let ux = ring[0] - p.x, uz = ring[2] - p.z;
+  const d = Math.hypot(ux, uz) || 1;
+  ux /= d;
+  uz /= d;
+  const sx = -uz, sz = ux; // (to his left, facing the ring)
+  const at = (back, side, up) => [p.x - ux * back + sx * side, fy + up, p.z - uz * back + sz * side];
+  return [
+    { cam: at(4.2, 1.8, 0.7), to: at(3.4, 1.4, 0.8), look: [ring[0], ring[1] + 4.0, ring[2]] },
+    { cam: at(-2.6, -1.0, 1.55), to: at(-2.3, -0.8, 1.5), look: [p.x, fy + 1.55, p.z] },
+    { cam: at(1.3, 0.55, 1.75), to: at(1.0, 0.45, 1.7), look: [ring[0], fy + 1.5, ring[2]] },
+  ];
+}
 
 // the three officers' recordings, each in its speaker's own voice through the recording chain, with a hologram
 const REC = {
@@ -858,7 +938,8 @@ export const M02 = {
       g.after(0.6, () => g.deckSetback('caught'));
     },
   },
-  hook: { cue: 'reveal', minutes: 1, lines: [N('A black ring, taller than the room should allow. It is not running. It is waiting.'), K('Mira drew this. Before any of it was built.'), N('In the black stone his reflection arrives half a second late.')] },
+  hook: { cue: 'reveal', minutes: 1, lines: [N('A black ring, taller than the room should allow. It is not running. It is waiting.'), K('Mira drew this. Before any of it was built.'), N('In the black stone his reflection arrives half a second late.')],
+    shots: (rt) => m02Reveal(rt) },
   done: 'chronolith_seen',
 };
 M02.outro = M02.hook.lines;

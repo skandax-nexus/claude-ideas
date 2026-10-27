@@ -1357,6 +1357,53 @@ in 5,143 recordings. Each mission's place is 1.7-6.8 ha (v2.0's generated rooms:
   800x600 window drops touch scrolls that start beyond its edge, which had looked like an unscrollable in-game CASE
   FILES and a MENU tap landing on RESUME.) Not run: the full `tests/lastversion.mjs` (the release step's).
 
+- **v2.1 playtest fixes, unit "staging" (2026-10-27): show, don't narrate** (PLAYTEST-v2.1.md first-time FT-06, FT-10,
+  FT-18; acts-1-2 F07; acts-3 F04, F05). What changed:
+  - The Zero Second (FT-06): the stopped clock; then from the platform's end down the track as the 41 comes at the
+    camera at full speed (`stagefx.trainRush`), the impact at 2.9 s with the score's; then the wreck from high: three
+    carriages off the rails (the lead one up on the platform, its door burst), a bench thrown over, debris, smoke and
+    fire, all solid, none of it in 8:13. The woman lies pinned on her back under the bench and the man kneels with his
+    coat caught in a carriage door (a hand-placed person's `pose`, frozen, `stagefx.posePeople`) until PULL HER FREE /
+    PULL HIM FREE; the conversation's camera finds a face low down (`talkAt`) and looks at it from over them.
+  - The cold open (FT-10): "Kai Varen is asleep" is taken from across the avenue at a passer-by's height (the block,
+    its roofline on the sky, his door, the phone lighting his window), and Kai is not drawn at his door (a shot's
+    `hide`). No frame of it is inside a collider.
+  - Conversations (FT-18): the camera frames whoever speaks (`cinema.talkStep`: the person from beside Kai, Kai's own
+    lines in the reverse shot, a cut when the speaker changes, the way to the camera tested against the place); while
+    people talk the stick, YEAR and the buttons, the objective, the minimap and the top bar stand back, and the bars are
+    the staged moments' black at 9vh. Mission 2's ring reveal is three shots built from where Kai stands when it plays
+    (the ring over him, his face, the black stone): Rook's head no longer fills the frame.
+  - Act II's payoffs (F07), each on screen as its line is said (`cinema.watchShow` on a scene's `show` fact): Ward 32's
+    bed with Lin's lanyard on the pillow and the open file with her photograph, from the bed's foot, then close for the
+    hook ("The photograph is Lin."); the lock's four bolts close as Kai first comes to it, and as the last one backs
+    out; a shell held in flight climbing home into the gun that fired it (`stagefx.shellHome`, the camera after it to
+    the muzzle's flash); the frozen block's man on one knee tying a shoe behind the glass, and three floors up the
+    hanging kitchen, a woman at her stove, the kettle's steam standing like glass.
+  - The climax's places (F04): the original Chronolith's hill without the rock slabs that stood black behind the ring
+    (its north edge a slope), four warm lights and four braziers on the summit, the ring dark metal with lit edges; the
+    first-second chamber and the Spire's summit lit brighter, their rings and the pedestal edged in light. Read at low
+    quality (the default) and at medium.
+  - The ending (F05): the choice plays as a moment of its own, HUD gone: the two of them, her and him in turn as they
+    speak, then A: the ring coming apart in rings of light, then morning; B: the sky breaking into panes of other
+    skies, Mira walking into one and turning round to wave; C: Kai walking into the ring as it fills with light, and the
+    man at the lab gate who is not there any more. Then the ending's shots (A 4, B 3, C 5, as the bot counts them) and
+    its card. Kai stops short of the ring's own gate (walked into under the moment, it ended the mission and opened the
+    CASE FILES over the ending).
+  Outside this unit's files: `crowds.js`, one AMBIENT_CAST entry (`m13_mother`, a look of her own: a returning person
+  may not wear a crowd's). No line added or changed; no voice pack touched.
+  Checked: `tests/lv-fix-staging.test.mjs` (14 tests), `npm test` (247, all passing), `node --check`. In the browser
+  by touch from the testers' saves (scratch `fix/staging/`), at 915x412: Mission 1 from s12, Jun's booth tapped, the
+  Zero Second (the clock, the 41 coming, the wreck), PULL HER FREE and PULL HIM FREE tapped (both rescued); the cold open
+  (0 frames inside a collider; also at 412x915); a conversation at the checkpoint (speaker framed, stick, buttons,
+  objective, minimap and top bar at 0 while it lasts, back after; also at 412x915); Mission 11 from m11f: the lock's
+  close-up as Kai walks up, its opening (the bolt puzzle set done by a helper), THE FILE ON THE BED tapped, the bed and
+  the hook's file close-up; Mission 13 from m13a: a shell aimed at and held with REVERSE, seen climbing into its gun;
+  from m13g: THE FROZEN BLOCK tapped, the man and the kitchen (also at 412x915); the Finale from p34_prechoice, THE
+  ORIGINAL CHRONOLITH tapped and each choice tapped: A, B and C played to their ending cards; the summit, Mission 21's
+  first-second chamber and Mission 22's Spire at low and medium. Not run: the full `tests/lastversion.mjs` (the
+  release step's). Seen, not this unit's: the frozen block's lobby crowd walks behind the frozen glass; the one-time
+  "THE CASE BOARD" tip can show over a staged moment's top.
+
 ## Generated (playable, solvable by construction, not hand-tuned)
 
 - **Nothing of the places since U3.** Every mission and both cases stand in an authored open place;

@@ -1,9 +1,12 @@
 // THE LAST VERSION OF EARTH: staged moments (OVERHAUL.md §8.9): cold opens, hooks, outros and the endings.
 //
-//   play({ shots, lines, cue, letterbox }, then) -> a promise for its end (then() is called at once when it ends)
+//   play({ shots, lines, cue, letterbox, rig }, then) -> a promise for its end (then() is called at once when it ends)
+//   addFx(fx) -> an effect drawn in the world for as long as it lives (stagefx.js: the endings' rings of light, panes of sky);
+//   stepped every frame, staged or not, and let go when a new place loads
 //
-// shots: [{ cam, look, t }] where cam and look are landmark names or [x, y, z] points (t: seconds, else the
-// lines' length shared out); 'default' stages the level's spawn: a wide view behind it easing in, then over
+// shots: [{ cam, to, look, t, hide }] where cam and look are landmark names or [x, y, z] points (t: seconds, else the
+// lines' length shared out; hide: Kai is not drawn in that shot), or a function of the runtime that returns them when the
+// moment plays; 'default' stages the level's spawn: a wide view behind it easing in, then over
 // the shoulder; null keeps the game's camera (letterbox and lines only). The camera runs through the
 // existing Player.cinema hook; Kai is held meanwhile (keys, the touch stick, the actions that act in the world);
 // the lines are said through hud.say (the voice packs). A tap on the view, a click, Space, E, Enter or the SKIP button
@@ -33,6 +36,16 @@ const STYLE = `
   body.lastversion.lvcine #lvSkip { display: block; }
   body.lastversion #lvSkip small { opacity: 0.6; font-size: 10px; margin-left: 4px; }
   body.lastversion.touch #lvSkip small { display: none; }
+  /* a conversation (main.js puts body.talking on while it frames whoever speaks): framed as a staged moment, with the
+     cinematics' black bars, and no stick, YEAR, year pips, objective or map over the speaker; the dock stays, dimmed, for
+     the pause and the case board (playtest v2.1 FT-18: light grey bars, and the stick, YEAR and the objective drawn over
+     the letterboxed frame) */
+  body.lastversion #letterbox i { background: #000; }
+  body.lastversion.talking #letterbox i { height: 9vh; }
+  body.lastversion.talking #buttons, body.lastversion.talking #minimap, body.lastversion.talking #objective, body.lastversion.talking #lvTop,
+  body.lastversion.talking #lvTarget, body.lastversion.talking #eye, body.lastversion.talking #crosshair, body.lastversion.talking #stickzone #stick {
+    opacity: 0 !important; transition: opacity 0.4s; }
+  body.lastversion.talking #buttons, body.lastversion.talking #minimap { pointer-events: none; }
 `;
 
 // the keys that skip a line and its shot (Enter is the SKIP button's); the actions held while a moment plays (use, the year,
@@ -48,6 +61,7 @@ export class Cinema {
     this.rt = rt;
     this.g = rt.g;
     this.active = null;
+    this.fxs = [];
     if (typeof document !== 'undefined' && document.querySelector('#ui') && !document.querySelector('#lvCine')) {
       const st = document.createElement('style');
       st.id = 'lvCine';
@@ -141,26 +155,30 @@ export class Cinema {
   // hidePlayer: Kai is off screen for the whole of it (the endings: in C he was never born). The game camera, which
   // shows him again by its distance, is not run while a shot holds the view, so he is hidden at each step of it and its
   // first shot is taken at once (no frame of the game camera between two such moments)
-  play({ shots = 'default', lines = [], cue = null, letterbox = true, total = null, hidePlayer = false } = {}, then = null) {
+  // rig: the camera as a function of the moment instead of shots: (dt, t) -> { cam, look, hide } each step, for a moment
+  // whose camera follows what happens in it (the Finale's choice: finale.js); it has no shots, and holds no cut of its own
+  play({ shots = 'default', lines = [], cue = null, letterbox = true, total = null, hidePlayer = false, rig = null } = {}, then = null) {
     const g = this.g;
     this.end();
     // (the pointer stays locked: letting it go would open the pause menu on a desktop; held keys are dropped in step)
     if (cue) this.rt.score?.cue(cue);
     this.rt.hushBarks?.(); // (a line said in passing gives way: the Zero Second's clocks were narrated behind a commuter)
     const len = total ?? Math.max(3, (lines || []).reduce((a, l) => a + (g.hud.durFn?.(l) || Math.max(2.2, l.text.length * 0.055)), 0));
+    // (shots may be built when the moment plays, from where Kai stands: a function of the runtime, as Mission 2's hook)
+    if (typeof shots === 'function') shots = shots(this.rt) || null;
     const list = shots === 'default' ? this.defaultShots(len) : Array.isArray(shots) ? shots : null;
     const share = list ? len / Math.max(1, list.length) : 0;
     const p0 = g.player.pos.clone();
     this.active = {
       shots: list ? list.map((s) => {
         const cam = this.point(s.cam, p0.clone().add(_a.set(0, 4, 8)));
-        return { cam, to: s.to ? this.point(s.to, cam) : cam, look: this.point(s.look, p0), t: s.t || share };
+        return { cam, to: s.to ? this.point(s.to, cam) : cam, look: this.point(s.look, p0), t: s.t || share, hide: !!s.hide };
       }) : null,
-      i: 0, t: 0, letterbox, then, hidePlayer: hidePlayer && !!list,
+      i: 0, t: 0, letterbox, then, hidePlayer: hidePlayer && !!list, rig: typeof rig === 'function' ? rig : null,
     };
     if (letterbox && typeof document !== 'undefined') document.body.classList.add('lvcine');
     const mine = this.active;
-    if (mine.shots) this.step(0); // (the first shot at once: no frame of the game camera, nor of Kai round its lens)
+    if (mine.shots || mine.rig) this.step(0); // (the first shot at once: no frame of the game camera, nor of Kai round its lens)
     return new Promise((resolve) => {
       mine.resolve = resolve;
       const done = () => this.active === mine && this.end();
@@ -192,15 +210,99 @@ export class Cinema {
     else if (!more) this.end();
   }
 
+  // a conversation, outside a staged moment (playtest v2.1 FT-18: the game's over-the-shoulder framing showed Kai's back,
+  // large, with the speaker small behind him): the camera frames whoever is speaking. The person Kai talks to, from just
+  // beside Kai (a clean single when they stand apart, Kai's shoulder at the frame's edge when they stand close); Kai's own
+  // lines from beside them, the reverse shot, both from the same side of the line between them; narration keeps the shot
+  // it is in. A change of speaker is a cut; within a line the camera eases. Comfort mode keeps the game's camera (main.js
+  // sets no talkTarget then)
+  talkStep(dt) {
+    const g = this.g, pl = g.player;
+    const tt = pl?.talkTarget;
+    if (!tt || !g.hud?.talking || !pl.rayDistance) {
+      if (this.talk) {
+        this.talk = null;
+        if (pl?.cinema?.talk) pl.cinema = null;
+      }
+      return;
+    }
+    const cur = g.hud.subT > 0 ? g.hud.cur : null;
+    const T = (this.talk ||= { who: 'them', pos: new THREE.Vector3(), look: new THREE.Vector3(), fresh: true });
+    if (cur && !cur.bark && cur.who !== 'NONE') T.who = cur.who === 'KAI' ? 'kai' : 'them';
+    const K = _a.set(pl.pos.x, pl.pos.y + 0.74, pl.pos.z);
+    const N = _b.set(tt[0], tt[1] - 0.05, tt[2]);
+    // (someone not standing, a person posed where the story put them, carries talkAt: where their face is from their
+    // feet; Mission 1's woman pinned on her back, the man on his knees. The game's talkTarget is a standing head)
+    if (T.npcAt !== tt) {
+      T.npcAt = tt;
+      T.npc = (g.deckWorld?.npcs || []).find((n) => n.n.talkAt && Math.hypot(n.model.position.x - tt[0], n.model.position.z - tt[2]) < 0.4) || null;
+    }
+    if (T.npc?.model.visible) {
+      const m = T.npc.model.position, o = T.npc.n.talkAt;
+      N.set(m.x + o[0], m.y + o[1], m.z + o[2]);
+    }
+    const ax = N.x - K.x, az = N.z - K.z, D = Math.hypot(ax, az);
+    const fx = D > 0.3 ? ax / D : pl.facing?.x ?? 0, fz = D > 0.3 ? az / D : pl.facing?.z ?? 1;
+    // (Kai turns to the person he talks to, unless he is walking: the reverse shot sees his face)
+    if (pl.facing && Math.hypot(pl.vel?.x || 0, pl.vel?.z || 0) < 0.3 && D > 0.3) pl.facing.set(fx, 0, fz);
+    const kai = T.who === 'kai';
+    const S = kai ? K : N, sgn = kai ? 1 : -1; // (the subject; the camera stands toward the other one)
+    const R = D >= 2.6 ? 2.0 : D + 0.7;
+    // (a face low down, someone lying or kneeling, is seen from where Kai stands over them, looking down)
+    const feet = pl.pos.y - 0.86, low = !kai && S.y < feet + 0.8;
+    // (the way to the camera is tested from the subject's head, or for someone lying from a metre over the floor: the
+    // camera's ray keeps a margin round every collider, and a face on the stones starts inside the floor's)
+    const O = S.clone();
+    if (low) O.y = Math.max(O.y, feet + 1.1);
+    const shot = (side) => {
+      const c = new THREE.Vector3(S.x + fx * (low ? 2.1 : R) * sgn + fz * side, low ? feet + 1.75 : S.y - 0.02, S.z + fz * (low ? 2.1 : R) * sgn - fx * side);
+      const d = c.clone().sub(O), len = d.length();
+      d.divideScalar(len);
+      const hit = pl.rayDistance(O, d, len);
+      return { c, free: hit >= len - 0.05, at: hit < len - 0.05 ? O.clone().addScaledVector(d, Math.max(0.7, hit - 0.25)) : c };
+    };
+    let pick = shot(0.7);
+    if (!pick.free) {
+      const other = shot(-0.7);
+      pick = other.free || other.at.distanceTo(O) > pick.at.distanceTo(O) ? other : pick;
+    }
+    const want = pick.free ? pick.c : pick.at;
+    const look = new THREE.Vector3(S.x, S.y - 0.16, S.z);
+    const cut = T.fresh || T.shot !== T.who;
+    T.fresh = false;
+    T.shot = T.who;
+    if (cut) {
+      T.pos.copy(want);
+      T.look.copy(look);
+    } else {
+      const k = 1 - Math.exp(-dt * 5);
+      T.pos.lerp(want, k);
+      T.look.lerp(look, k);
+    }
+    pl.cinema = { pos: { x: T.pos.x, y: T.pos.y, z: T.pos.z }, target: { x: T.look.x, y: T.look.y, z: T.look.z }, up: { x: 0, y: 1, z: 0 }, talk: true };
+  }
+
   // each step: the camera along its shot; nothing the player presses walks Kai off his mark meanwhile
   step(dt) {
+    this.stepFx(dt);
     const a = this.active;
-    if (!a) return;
+    if (!a) return this.talkStep(dt);
+    if (this.talk) this.talk = null; // (a staged moment takes the camera; a conversation after it starts with a cut)
     const g = this.g;
     g.input.keys?.clear?.();
     if (g.input.state) g.input.state.jump = false;
     // nobody in the crowd starts a line in passing over a staged moment (DeckWorld waits 9 s after the last one)
     if (g.deckWorld && typeof g.time === 'number') g.deckWorld.lastBarkT = g.time;
+    if (a.rig) {
+      a.t += dt;
+      const r = a.rig(dt, a.t);
+      if (r?.cam && r.look) {
+        a.rigged = true;
+        g.player.cinema = { pos: { x: r.cam[0], y: r.cam[1], z: r.cam[2] }, target: { x: r.look[0], y: r.look[1], z: r.look[2] }, up: { x: 0, y: 1, z: 0 } };
+        if (g.player.model) g.player.model.visible = !r.hide;
+      }
+      return;
+    }
     if (!a.shots) return;
     const s = a.shots[Math.min(a.i, a.shots.length - 1)];
     a.t += dt;
@@ -210,13 +312,15 @@ export class Cinema {
     // a shot whose camera stands where Kai stands (a cold open shot from the spawn: Mission 8's doors, the road's start)
     // is his point of view: he is not drawn round the lens (the inside of his head filled the frame). The game camera
     // shows him again by its distance once the moment ends
+    // (a shot can leave him out on its own, hide: the cold open's "Kai Varen is asleep" looks at his building, not at him
+    // standing at its door; the next shot that does not hide him shows him again)
     const pm = g.player.model;
     if (pm) {
       const p = g.player.pos;
       const inside = Math.hypot(pos.x - p.x, pos.z - p.z) < 0.9 && pos.y > p.y - 1.0 && pos.y < p.y + 1.3;
-      if (a.hidePlayer || inside) pm.visible = false;
+      if (a.hidePlayer || inside || s.hide) pm.visible = false;
       else if (a.pov) pm.visible = true;
-      a.pov = inside && !a.hidePlayer;
+      a.pov = (inside || s.hide) && !a.hidePlayer;
     }
     if (a.t >= s.t && a.i < a.shots.length - 1) {
       a.i++;
@@ -224,13 +328,57 @@ export class Cinema {
     }
   }
 
+  // a scene's own camera for as long as its lines are said (a node's `show` fact is up meanwhile: Runtime.playNode):
+  // called by a mission's step each frame; build: shots, or a function of the runtime that returns them. A moment
+  // already playing is not interrupted (playtest v2.1 F07: Act II's payoffs, the frozen block and Ward 32's bed)
+  watchShow(fact, build) {
+    const on = !!this.g.facts.get(fact), key = `show:${fact}`;
+    this.shown ||= {};
+    if (on && !this.shown[key]) {
+      this.shown[key] = true;
+      if (this.active) return;
+      this.play({ shots: build, lines: [], total: 120 });
+      if (this.active) this.active.tag = key;
+    } else if (!on && this.shown[key]) {
+      this.shown[key] = false;
+      if (this.active?.tag === key) this.end();
+    }
+  }
+
+  // an effect in the world (stagefx.js): { obj, update(dt) -> false once it is over, dispose() }; added to the scene now
+  addFx(fx) {
+    if (!fx) return null;
+    if (fx.obj && this.g.scene) this.g.scene.add(fx.obj);
+    this.fxs.push(fx);
+    return fx;
+  }
+
+  stepFx(dt) {
+    if (!this.fxs.length) return;
+    this.fxs = this.fxs.filter((f) => {
+      if (f.update(dt) !== false) return true;
+      f.obj?.removeFromParent();
+      f.dispose?.();
+      return false;
+    });
+  }
+
+  dropFx() {
+    for (const f of this.fxs) {
+      f.obj?.removeFromParent();
+      f.dispose?.();
+    }
+    this.fxs = [];
+  }
+
   // the moment ends (a new one replacing it ends it too: what waited for it goes on); dropped: a new place
   // is loading, and nothing that waited for it follows
   end(dropped = false) {
+    if (dropped) this.dropFx(); // (a new place: the effects in this one go with it)
     const a = this.active;
     if (!a) return;
     this.active = null;
-    if (a.shots) this.g.player.cinema = null;
+    if (a.shots || a.rigged) this.g.player.cinema = null;
     if (typeof document !== 'undefined') document.body.classList.remove('lvcine');
     if (dropped) return;
     a.then?.(); // (at once, not a microtask later: what follows starts on the same frame)
