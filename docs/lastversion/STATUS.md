@@ -1518,6 +1518,51 @@ in 5,143 recordings. Each mission's place is 1.7-6.8 ha (v2.0's generated rooms:
   placed at the seam regardless); Mission 13's 2026 way round the sandbag line (by design, it costs stability); the
   full `tests/lastversion.mjs` was not run (the release step's).
 
+- **v2.1.1, the release check of the v2.1 playtest fixes (2026-10-27).** An update of v2.1, installed over it with its
+  saves: the same app (`com.afterzero.lastversion.v2_1`), label ("AFTERZERO: Last Version 2.1") and APK name
+  (`AFTERZERO-LastVersion-v2.1.apk`, `VER=2.1` in `android/build-apk.sh`), versionName 2.1.1 and versionCode 211 (2.1
+  was 2.1.0, 210); the title reads "v2.1.1 · The Last Version of Earth". Every finding's status is in PLAYTEST-v2.1.md,
+  "Fix status (v2.1.1)": of 87, 81 fixed, 1 partly (Mission 21's last battle), 4 by design, 1 not reproduced.
+  What the release check changed (its first full bot run failed 6 checks, the units having run only its Prologue):
+  - Mission 6's brass arm (acts-1-2 F02): its first hit's toast now says how to cross as it works: "let an end sweep
+    past you, count two, then follow it across, the way it turns". Its old advice, walk in behind it at once, gets a
+    walker hit near the post (he gains on the bar there), and against its turn near the post nobody gets across (the
+    bar's other half meets him). Measured with the game's Player and the sweeper's own hit test
+    (`tests/lv-fix-release.test.mjs`): following it, a start 1.7-3.1 s after an end passes 1 m from the post, 2.1-2.9 s
+    beside the post, 0.9-3.2 s at the ring's edge.
+  - A finished campaign (the flow unit's X2: CONTINUE opens the ending's card) is only a Finale save with its ending;
+    a save of another chapter carrying the fact plays on with its PREVIOUSLY card (the bot's Act II save, made from a
+    finished one, loaded to the ending card). The slot's name follows the same rule.
+  - Mission 11's lock close-up (the staging unit's F07) plays as Kai first comes up to the lock, and no longer breaks in
+    once he has tried a bolt: held back by a line or a menu as he came up, it played after his first try and took the
+    camera (and the target) from his next.
+  - The Finale past the street that fell: the place a load puts Kai (the flow unit's anchor) held only with the
+    checkpoint it was reached from, and the follow-up made the seam the checkpoint there, so a save past the street
+    loaded 11 m on at the seam; it is now kept with the seam (`tests/lv-fix-flow.mjs` street: back at z 118.96).
+  - The bot (`tests/lastversion.mjs`): Mission 10's trooper check takes the two seconds after a staged moment in which
+    the watchers see nobody (Runtime's `stagedT`, the F04 fix) as over before Kai stands in a cone; Ward 32 is walked
+    into after the lock's opening close-up (it holds Kai on his mark while it plays). DESIGN.md's Barks row gives the
+    bark rules' numbers.
+  Checked, all on the release commit's code: `npm test` 290 of 290 (`tests/lv-fix-release.test.mjs` 5); Station Zero's
+  `tests/smoke.mjs` passed, `qa` 26 of 26, `halcyon` 65 of 65, `vessel` 456 of 456 rooms, `features` 83 of 83, `layout`
+  no overlaps, `forge` 201 of 201, `cradle` 167 of 167 (no shared engine file changed in this step);
+  `tests/lastversion-garments.mjs` all passed; `tests/lastversion.mjs` 373 of 373 in 34.5 minutes (game minutes:
+  Prologue 14.1, Act I 40.5, Act II 43.9, Act III 48.5, Act IV 32.8, the Finale 10.3; 1,657 pairs of views of different
+  places at least 18 bits apart); `tests/lastversion-audio.mjs` 10 of 10, on the dev page and on the built preview;
+  `tests/lv-fix-flow.mjs` 51 of 51. `voice-lv.sh check`: every pack up to date (4,544 lines, 5,353 recordings; the
+  largest file act2's, 3,947,500 bytes; seven packs, 20,554,701 bytes). No line was added or changed in this step.
+  The edition's APK: 48,175,929 bytes (budget 50 MB; 2.1 was 46,447,417), `aapt dump badging`: package
+  `com.afterzero.lastversion.v2_1`, versionCode 211, versionName 2.1.1, label "AFTERZERO: Last Version 2.1";
+  `apksigner verify` passes, signed with the project key (CN=AFTERZERO Debug); its page carries the edition's own
+  description and title. Its web preview (`android/build-lastversion/preview`): 123 files, 65,618,620 bytes, no file
+  over 3.95 MB. Station Zero's APK built too (`AFTERZERO-v1.1.apk`, com.afterzero.v1_1, 1.1.1, its laws description
+  kept; the build removed afterwards). On the built preview, by touch at 915x412, the two blockers and the three highs
+  again by their own repro (PLAYTEST-v2.1.md, "Fix status (v2.1.1)"): Mission 3's anchor, the title's CASE FILES
+  replay and free-roam trip, crowd lines (one in 60 s from 1.68 m standing, three in 180 s 30 s apart walking with the
+  crowd, the prompt shown in 180 of 180 samples and a tap on it during a remark acting), Mission 6's arm (0 hits on the
+  cellar steps, at Ezra's counter and the book; a crossing on the toast's count gets across) and Mission 2's stair (up
+  by the stick, cell 2 taken). Not done: no phone has installed or run it, and no person has played it or listened.
+
 ## Generated (playable, solvable by construction, not hand-tuned)
 
 - **Nothing of the places since U3.** Every mission and both cases stand in an authored open place;
@@ -1586,11 +1631,12 @@ in 5,143 recordings. Each mission's place is 1.7-6.8 ha (v2.0's generated rooms:
   does Mission 18's hold read as a defence and Mission 20's board as an alignment, how long a player takes) has not
   been done; the bot stands in for it.
 - **Device testing** of the Android build on phones has not been done in this session.
-- **The edition's APK and preview are built, not installed.** The release check built both (Built, "The release
-  check": the edition's APK 45,259,406 bytes with its models deflated, within the 50 MB budget; its preview 61,989,159
-  bytes in 121 files, none over 3.8 MB) and played the built preview's page in headless Chromium, but no phone has
-  installed or run the APK, deflated models included, and the preview has not been published again (the release step
-  publishes it; at 62.0 MB it fits one publish's 64 MB).
+- **The edition's APK and preview are built, not installed.** The v2.1.1 release check built both (Built, "v2.1.1":
+  the edition's APK 48,175,929 bytes with its models deflated, within the 50 MB budget; its preview 65,618,620 bytes
+  (62.6 MiB) in 123 files, none over 3.95 MB) and played the built preview's page in headless Chromium, by touch at
+  phone size, but no phone has installed or run the APK, deflated models included, and the preview has not been
+  published again (the release step publishes it at the same link; at 62.6 MiB it is close to one publish's 64 MB, and
+  can go up over two publishes to the same URL if one is refused).
 - **Free roam's limits.** A trip is a mission's place, so a place two missions used is two trips (Helix's three wings
   are three); it arrives at the mission's first quarter's spawn (Mission 6's is its cellar stair); its people say what
   the story left them saying (the story's own conversations are said again without acting, never a new line); it has

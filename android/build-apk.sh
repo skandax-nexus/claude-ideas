@@ -8,8 +8,8 @@
 # the old one, with its own icon and its own saves, instead of replacing it.
 #
 # Editions: EDITION=lastversion bash android/build-apk.sh builds AFTERZERO: THE LAST VERSION
-# OF EARTH as its own app ("AFTERZERO: Last Version 2.1", com.afterzero.lastversion.v2_1, 2.1.0,
-# AFTERZERO-LastVersion-v2.1.apk) from the same sources (v2.0 was com.afterzero.lastversion, "AFTERZERO: Last
+# OF EARTH as its own app ("AFTERZERO: Last Version 2.1", com.afterzero.lastversion.v2_1, 2.1.1 / code 211,
+# AFTERZERO-LastVersion-v2.1.apk; 2.1.1 is an update of 2.1, installed over it with its saves) from the same sources (v2.0 was com.afterzero.lastversion, "AFTERZERO: Last
 # Version": 2.1 installs beside it, with its own saves), with window.AZ_EDITION set in the
 # page. Without EDITION the build is the Station Zero game, unchanged.
 set -euo pipefail
@@ -46,7 +46,7 @@ if [ "$EDITION" = "lastversion" ]; then
   rm -rf "$OUT" && mkdir -p "$OUT/assets" "$OUT/classes" "$OUT/gen"
   # the edition's own manifest: its label, version and code (the id is renamed by aapt below)
   MANIFEST="$OUT/AndroidManifest.xml"
-  sed -e 's/android:versionCode="[0-9]*"/android:versionCode="210"/' -e 's/android:versionName="[^"]*"/android:versionName="2.1.0"/' \
+  sed -e 's/android:versionCode="[0-9]*"/android:versionCode="211"/' -e 's/android:versionName="[^"]*"/android:versionName="2.1.1"/' \
       -e 's/android:label="[^"]*"/android:label="AFTERZERO: Last Version 2.1"/' AndroidManifest.xml > "$MANIFEST"
   # its 51 models deflate by a quarter (their vertex buffers; MainActivity streams an asset either way), which keeps
   # the APK within the edition's 50 MB (OVERHAUL.md §10.2); the voice packs (Opus) stay stored

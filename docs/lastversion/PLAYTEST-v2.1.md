@@ -3,6 +3,8 @@
 Playtested 2026-10-25 on the published v2.1 web build (commit 5108310, the same build as
 [the preview](https://claude.ai/artifact/HsWBbg3ppPShrBPVPaBhaE) and `AFTERZERO-LastVersion-v2.1.apk`).
 
+**Fix status:** v2.1.1 carries the fixes for this report; see [Fix status (v2.1.1)](#fix-status-v211) for every finding.
+
 ## Method
 
 - **Who played:** four AI playtest agents, each with a slice of the game:
@@ -205,6 +207,151 @@ Playtested 2026-10-25 on the published v2.1 web build (commit 5108310, the same 
 - Optional side stories were mostly skipped, and only some choices were tried.
 - The Finale was played on chapter-start facts, so most consequence payoffs showed their empty versions.
 - No real Android device, no APK back button, no iOS, no real GPU frame times, and no listening by ear.
+
+## Fix status (v2.1.1)
+
+v2.1.1 is an update of v2.1 (the same app, `com.afterzero.lastversion.v2_1`, installed over it with its saves;
+versionName 2.1.1, versionCode 211) carrying the fixes for this report. They were made on 2026-10-26 and 2026-10-27 in
+seven units (barks, touch, flow, perf, missionsA, missionsB, staging), each checked by an independent reviewer by touch
+at 915x412 and 412x915, then in a follow-up on what the reviewers found still open, then in the release check
+([STATUS.md](STATUS.md): the "v2.1 playtest fixes" entries and "v2.1.1").
+
+Of the 87 findings: **81 fixed, 1 partly, 0 not fixed, 4 by design** (left as they are) and
+1 not reproduced (unchanged). Partly: Mission 21's last battle (acts-3-finale F19) is still lines and two gaps,
+though the tremors now cost hold time. Still not done anywhere: a real phone, and listening by ear.
+
+**Re-checked on the built v2.1.1 preview** (`android/build-lastversion/preview`, served locally, the same page and packs as
+the APK), by touch at 915x412, 2026-10-27, by each finding's own repro:
+- **FT-01** (blocker), from the tester's s37 (one placement into the CONTROL room, as its verifier did): YEAR to 2026,
+  TAKE KEYCARD tapped; the tip "KEYCARD (2026) comes apart when the year changes. Tap ANCHOR first, then YEAR."; ANCHOR
+  shown at [653,314,60,60] and on top; a drag starting on it turns the view (0.546 rad) and does not anchor; a tap
+  anchors the card; YEAR to 2049 keeps it; the CARD LOCK prompt tapped opens the lock.
+- **acts-3-finale F01** (blocker), the tester's finished save p35 in slot 1, the game's own loop: Title > NEW GAME >
+  CASE FILES > REPLAY THE UNWRITTEN RECORD: no menu left open, "Case fourteen. The Unwritten Record." then the opening
+  ends, the stick walks Kai 15.8 m, the dock's MENU pauses. FREE ROAM > THE FRACTURE 2026: Kai walks 19.4 m in 2026,
+  MENU pauses. No page errors.
+- **FT-03** (high), the tester's s40 (Mission 4), standing 60 s: one remark, from 1.68 m, voiced (the playtest: 7 from
+  3-45 m). Walking with the crowd 180 s: three, 30 s apart, from 1.86-3.17 m, all voiced.
+- **FT-04**, the tester's s7, at the plaza clock: the prompt shown in 180 of 180 samples over 45 s (the playtest: hidden
+  in about half). With a commuter's remark up beside Kai the prompt stays on top; a tap on it cuts the remark and opens
+  the deduction ("KAI: A toy that falls up."); after a wrong answer it is back in 5 s.
+- **acts-1-2 F02 / X02** (high), Act I NEW GAME, a jump to Mission 6: three climbs up the cellar steps, 0 hits ("These
+  steps went down to a river once" said whole); Ezra talked to and 20 s by his counter, 0 hits; the book read, 0 hits.
+  Walking straight into the arm: knocked back to the counter, with the toast and "Go when it has passed." Crossings
+  started as the corrected toast says, from the counter's line 1 m from the post: 2.0 and 2.2 s after an end passed got
+  across; 0.5 s (the first toast's advice) was hit, and so were 2.5 and 2.8 s with the stick pushed part way (a slow
+  count is too late there). In 2196 the arm is still and the stair is walked to with 0 hits.
+- **FT-02** (high), the tester's s22: from the terrace floor up the gantry stair by the stick alone (2.6 m), TAKE POWER
+  CELL tapped, cell 2 held; pushed west into the steps Kai stops at their face (VX-01).
+- Evidence: `fix/release/` in the session's scratch space (logs `rv_*.log`, `barks/*.json`, `missions/logs/rm2.log`,
+  `rm6.log`, `rm6b.log`, screenshots `shots/`).
+
+### First-time player
+
+| ID | Status | What changed |
+| --- | --- | --- |
+| FT-01 | fixed | An ANCHOR touch button beside YEAR (and a tap on the CARRYING label) anchors the held echo item; a tip says to anchor before YEAR. Re-checked on the built preview. |
+| FT-02 | fixed | Each step of the gantry stair reaches the floor and the chiller tank stands beside it; the stair is walked up by the stick. Re-checked on the built preview. |
+| FT-03 | fixed | The bark distance uses its own numbers (not the overwritten `_v`): only within 4.5 m on Kai's floor, at most one a place every 30 s and one a person every 60 s. Re-checked on the built preview. |
+| FT-04 | fixed | Barks and Line 41's PA no longer hide the prompt; a tap on it cuts the bark and acts. Only story lines hide it. Re-checked on the built preview. |
+| FT-05 | fixed | The woman waits at the east end of Kai's own platform, in sight, and sets off only when he is within 14 m and sees her. |
+| FT-06 | fixed | The Zero Second is shown: the 41 rushing at the camera, the wreck, the woman pinned under the bench and the man caught in a door. The impact itself is a flash and a cut. |
+| FT-07 | fixed | The because line is light with a halo on a dark plate. The mission card covering the objective was not reproduced and is unchanged. |
+| FT-08 | fixed | The map names the quarter (LINE 41), draws the platforms, both tracks, the barrow crossing and the stairs, and marks the objective and the quarry. |
+| FT-09 | fixed | Touch hints above the fold, a labelled dock (CASE, MAP, THINK, MENU), one-time tips for THINK and the CASE board. |
+| FT-10 | fixed | The "asleep" shot is taken from across the avenue, outside every facade (0 of 64 frames inside a collider). |
+| FT-11 | by design | Resuming at the quarter checkpoint stays the rule, but a load now puts Kai where the story last moved (the toy, the raincoat), not 110 m back. |
+| FT-12 | fixed | A story line cuts a bark instead of queuing behind it, and a rule's lines cut off by a save are said again after the load. |
+| FT-13 | fixed | Cell one sits on a 1.1 m cabinet, at chest height; its prompt shows at the default view. |
+| FT-14 | fixed | PREVIOUSLY reads "Now Helix has gone dark" (recorded); no Chronolith drain or snap during an opening, a staged moment or a transition. |
+| FT-15 | fixed | After the raincoat the objective is "Go in through the staff gate" with its because line; the gate has a lamp and a STAFF ENTRANCE sign. |
+| FT-16 | fixed | YEAR is greyed with NOT YET until Kai holds the Chronolith. |
+| FT-17 | fixed | The departures board is lettered and lit on its platform face: "LINE 41 - 08:14 - ARRIVING YESTERDAY". |
+| FT-18 | fixed | Conversations frame whoever speaks, hide the HUD and use black bars; the ring reveal is shot from a side with nobody in it. |
+| FT-19 | fixed | The case board opens on WHERE YOU ARE, THE QUESTIONS and EVIDENCE; TRAVEL is one line until a mission is done. |
+| FT-20 | fixed | The prompt keeps its words while it fades; an empty "TAP ·" pill cannot show. |
+| FT-21 | fixed | The edition's APK and preview carry their own description and title; game/index.html stays Station Zero's. |
+| VX-01 | fixed | The stair is solid to the floor; there is no gap under it. |
+| VX-02 | fixed | The chase waits until Kai is within 14 m and has a line of sight to her. |
+
+### Acts I–II
+
+| ID | Status | What changed |
+| --- | --- | --- |
+| F01 | fixed | Same root-cause fix as FT-03 plus rests per line and person. The M11 "Thirty-two isn't missing" repeats were REVERSE replaying the Odile echo, not a bark, and are unchanged. |
+| F02 | fixed | The arm turns on a post between the counter and the stair, 2.3 m each way; Ezra, the counter and the cellar steps are out of its reach; the first hit is explained. v2.1.1: the toast's advice corrected (count two after an end passes, then follow it). Re-checked on the built preview. |
+| F03 | fixed | M13's crossing is a stealth beat: a 1.9 m sandbag line with one gap and a sentry; a catch never counts as crossing. M10's escape is unchanged (its verifier found it already had teeth); M13's way round in 2026 costs stability by design. |
+| F04 | fixed | Story lines Kai started keep new eyes off him while he stays within 4 m; no scene starts mid-chase ("NOT NOW"); the patrol walks 8.5 m from the spot. |
+| F05 | fixed | A save inside a cold open replays the opening and puts every room back in its own year. |
+| F06 | fixed | The charred file counts when watched in sight from within 8 m for 4 s; Sound captions are on by default in this edition. |
+| F07 | fixed | The shell climbs home on camera, the hanging kitchen and the kneeling man are framed, Lin's file and lanyard and the lock's four bolts get close-ups, M6's three faces are shown one by one. v2.1.1: the lock's close-up no longer breaks in once a bolt has been tried. |
+| F08 | fixed | REVERSE (and its label) act on a still tap; a drag that starts on them turns the view. |
+| F09 | fixed | The place label names the quarter Kai is in. |
+| F10 | fixed | The watchers' meter has an eye icon and a word (WATCHER NEAR, NOTICING YOU, SEEN) and sits under the minimap. |
+| F11 | fixed | While a bolt backs out, the chip and label name that bolt. |
+| F12 | fixed | "The guard turns her face to the light." (re-recorded). |
+| F13 | fixed | The escapement's lines wait for the last clock's lines; the floorboard spots stop taking the deduction's focus once read. |
+| F14 | fixed | Kai wakes at the blanket house's door, facing it; the cold open is at night; the talk camera frames the speaker; the prompt keeps clear of a toast. |
+| F15 | fixed | M9's quay patrol walks east of the ferry steps; 200 s at the spawn with no catch. |
+| F16 | fixed | Broad touching stones with round footings and a landing at each end; Rook's office is a room; echoes carry their person's textures. |
+| F17 | fixed | The far bank differs by year (farm, ruin, flood); the gate channel has parapets and a stair out. The Chronolith's drain in other years is by design. |
+| F18 | fixed | The trench gap is clear and lit; the raised bridge is barred and signed to the rail bridge; the quays are railed. |
+| F19 | fixed | No warning for a model fetch the page itself cancels on reload; a real missing file still warns. |
+| F20 | fixed | Not reproduced in the playtest; barks now wait for the voice pack, fades and transitions, and a line the packs cannot say is never shown. |
+| X01 | fixed | The trapped people pace inside a lit lobby behind the frozen glass, and stand still while it is shown. |
+| X02 | fixed | The top of the cellar steps is out of the arm's reach; a hit on the shop floor returns Kai by the counter. Re-checked on the built preview. |
+
+### Acts III–IV, Finale, endings, CASE FILES, free roam
+
+| ID | Status | What changed |
+| --- | --- | --- |
+| F01 | fixed | Title > CASE FILES > REPLAY or a FREE ROAM trip closes the ending menu before the game begins; the case and the trip play. Re-checked on the built preview. |
+| F02 | fixed | A choice header is the node's own header or the last line actually said; a line whose condition failed is never used. |
+| F03 | fixed | Same fix as FT-03, plus a line rests 4 minutes after it is heard and never comes twice in a row; no barks over a story line, cinema, menu or fade. |
+| F04 | fixed | The hilltop is lit (braziers, lights, no black rock slabs) and the rings and chambers carry lit seams. The large faces stay dark at low quality; their outlines carry them. |
+| F05 | fixed | Each choice plays its own staged beat with the HUD hidden before the ending shots. The shared epilogue lines and street are by design. |
+| F06 | fixed | Past the fallen street a snap or a catch puts Kai at the seam; a save made past it loads where he stood (v2.1.1: that place had been lost to the seam checkpoint), an old save at the seam; THINK tells how to cross back. |
+| F07 | fixed | Single-room missions name the current quarter. |
+| F08 | not reproduced | Unchanged: its verifier could not reproduce the camera inside the school's awning. |
+| F09 | fixed | A signed wading crossing in 2196 reaches the lift car without 2049; THINK names the route. |
+| F10 | fixed | THE CASES and BACK TO THE TITLE are pinned at the ending card's foot, in view at 915x412 and upright. |
+| F11 | fixed | REPLAY, tabs, year buttons, TRAVEL, BACK TO THE STORY and TRACK are at least 44 px tall. |
+| F12 | fixed | The prompt acts on a still tap; a drag that starts on it turns the view. |
+| F13 | fixed | A right pick chimes, shows "n / 4 in order" and reopens the next pick at once. |
+| F14 | fixed | The objective sits on a dark plate with a haloed because line; calm mode keeps it at 0.85. |
+| F15 | by design | Chapter-select facts give the Finale's empty payoffs; unchanged. |
+| F16 | fixed | No bark during a fade, a transition or a pack reload; a line the active packs cannot say is never shown. |
+| F17 | fixed | The painted hill crown that made the white bar is gone (the M18 bar was the old watcher meter, restyled). |
+| F18 | fixed | "CASE 14 OF 14" and a voiced "Case fourteen."; the title button after REPLAY says what it starts. |
+| F19 | partly | M21's tremors now cost a held gap 1.5 s and M18 has a patrol between the pylons, but the last battle is still lines and two gaps. |
+| X1 | fixed | Same root cause as FT-03. |
+| X2 | fixed | CONTINUE on a finished save opens the ending card (THE CASES, BACK TO THE TITLE); the slot names the ending. v2.1.1: only a Finale save counts as finished; a save of another chapter plays on. |
+| X3 | fixed | Same fix as F02 (M10's prisoners, M21's soldier). |
+| X4 | fixed | The lift car rests nearly level, 0.2 m above the sidewalk; Kai walks onto it. |
+
+### Systems and phone ergonomics
+
+| ID | Status | What changed |
+| --- | --- | --- |
+| SYS-01 | fixed | Static scenery skips the matrix pass, unseen people sleep, far walkers update every second frame: about 40-59% less CPU per frame at 4x throttle (not measured on a phone). |
+| SYS-02 | fixed | Skeletons and props hung on people are released at a mission change; geometries and textures stay flat from the second lap. |
+| SYS-03 | fixed | Same as FT-07. |
+| SYS-04 | fixed | A compact landscape title: CONTINUE, NEW GAME, LOAD and SETTINGS all in view at 915x412; tall panels show a MORE cue. |
+| SYS-05 | fixed | The prompt is clamped by its measured width and the safe areas; long labels wrap. |
+| SYS-06 | fixed | The checkpoint change autosaves within 3 s, the app going to the background saves, and a load resumes where the story last moved. A manual SAVE GAME still stores the checkpoint (by design). |
+| SYS-07 | fixed | Same as FT-04. |
+| SYS-08 | fixed | Panel headers and their × stay pinned while scrolling; a tap outside a panel closes it. |
+| SYS-09 | fixed | REVERSE is refused until the thread that teaches it, and its zone re-arms. |
+| SYS-10 | fixed | The unlock toast says how (aim, tap REVERSE, tap RELEASE); the label says LIGHT or HEAVY, and HOLDING while held. |
+| SYS-11 | fixed | Same as FT-16. |
+| SYS-12 | fixed | The objective panel and the prompt clamp respect the left safe area. |
+| SYS-13 | fixed | Dock buttons 56x48 and labelled, a column by the right thumb upright that acts on a tap (a drag looks); SKIP 96x48; REVERSE clear of the stick. |
+| SYS-14 | by design | SKIP ends one line or shot; unchanged. |
+| SYS-15 | fixed | Same as F10 (Acts I-II). |
+| SYS-16 | fixed | THINK tiers from M5 on are sentences that go from a nudge to the place to the action (none of three words or fewer from M6 on); recorded. |
+| SYS-17 | by design | Loading from the pause menu goes through the title; unchanged. |
+| SYS-18 | fixed | A passer-by is not drawn within 1.3 m of the camera or while covering more than 8% of the view (an umbrella counted). |
+| X-01 | fixed | The selected Sound captions option is dark with white text. |
 
 ## Appendix A: every finding and its verdict
 

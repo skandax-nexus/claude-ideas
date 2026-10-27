@@ -323,7 +323,7 @@ const title = await az(() => ({
   ver: document.querySelector('#title .ver').textContent, edition: !!AZ.edition, hero: AZ.settings.hero?.id,
 }));
 check(title.h1 === 'AFTERZERO' && title.sub === 'THE LAST VERSION OF EARTH', 'the title reads AFTERZERO / THE LAST VERSION OF EARTH', JSON.stringify(title));
-check(/v2\.1/.test(title.ver) && title.edition && title.hero === 'real_m', 'v2.1, the edition is on, and you are Kai (a realistic man)', JSON.stringify(title));
+check(/v2\.1\.1 /.test(title.ver) && title.edition && title.hero === 'real_m', 'v2.1.1, the edition is on, and you are Kai (a realistic man)', JSON.stringify(title));
 // --- sound: the first tap (Chromium's autoplay policy: no sound before a user gesture) -----------------------
 const before = await az(() => AZ.audio.ctx?.state || 'none');
 await page.mouse.click(480, 120);
@@ -1408,6 +1408,10 @@ await finish();
 const m10 = await az(() => {
   const ws = AZ.edition.watchers.list;
   const models = ws.map((w) => w.current?.actor?.userData.spec?.model || 'drone');
+  // (a staged moment, the cold open just played, is followed by two seconds in which the watchers see nobody: Runtime's
+  // stagedT, the v2.1 playtest's F04 fix. Those two seconds are taken as over here, without moving the patrols on: two
+  // seconds of walking took this one to the guard post, where Kai standing in front of it finished the escape)
+  AZ.edition.stagedT = 0; AZ.edition.graceT = 0;
   const w = ws[0], s = w.s;
   s.mode = 'patrol'; s.suspicion = 0;
   // stand in its cone, four metres ahead of it, and let it look; then let it catch Kai
@@ -1634,6 +1638,9 @@ const opened = await az(() => {
   LVB.talkOut();
   const d = g.deckWorld.dynamic.find((x) => x.el.id === 'door_m11ward32');
   const r = { done: g.facts.get('inv_m11lock_done'), shut: d?.cond(g.deckWorld.ctx(d.el.room)), said: LVB.said.some((l) => l.includes('Nothing pushes it back in.')) };
+  // (the lock, close, as it opens and the door goes up: a staged moment of its own, the v2.1 playtest's F07, which holds
+  // Kai on his mark while it plays; the walk in starts after it)
+  for (let i = 0; i < 100 && g.edition.cinema.active; i++) g.simulate(0.1);
   const p = LVB.proc('m11lock'), w = LVB.lm('ward32');
   LVB.place(p.rec.aim[0], p.rec.aim[2] + 1.8);
   r.left = +LVB.walkTo(w[0], w[2], 12).toFixed(2);

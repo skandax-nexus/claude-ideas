@@ -705,7 +705,12 @@ export const M06 = {
     },
   },
   // the brass arm (playtest v2.1 F02, X02): a whoosh as an end of the bar comes round toward Kai, and the first time it
-  // knocks him back, what it was and how to cross it (later, that in 2196 it has rusted still)
+  // knocks him back, what it was and how to cross it (later, that in 2196 it has rusted still). How: count two after an
+  // end has passed, then follow it, the way it turns. Walking in at once, as the toast first said, a walker gains on the
+  // bar near its post and is hit; against its turn, near the post, the bar's other half meets him (the two halves are
+  // half a turn apart). The safe start following it, walking: 1.7-3.1 s after an end passes 1 m from the post, 2.1-2.9 s
+  // at 0.6 m, the closest the post lets Kai by, 0.9-3.2 s at the ring's edge (v2.1.1 release check;
+  // tests/lv-fix-release.test.mjs)
   step(rt) {
     const g = rt.g, f = g.facts;
     rt.cinema?.watchShow?.('m06_window_view', m06WindowShots);
@@ -723,7 +728,7 @@ export const M06 = {
         if (rt.deck?.key !== 'm06') return;
         if (!f.get('arm_hit_told')) {
           f.set('arm_hit_told');
-          g.hud.toast('<small>THE BRASS ARM</small><br>It knocked you back to the counter. Wait at the brass ring until it has passed, then walk in behind it.', 6000);
+          g.hud.toast('<small>THE BRASS ARM</small><br>It knocked you back to the counter. At the brass ring, let an end sweep past you, count two, then follow it across, the way it turns.', 7000);
           g.hud.say(M06_SAY.armHit, f);
         } else if (n >= 3 && !f.get('arm_still_told') && g.engine.statesOf(g.room).includes('FUTURE')) {
           f.set('arm_still_told');

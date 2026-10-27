@@ -377,7 +377,7 @@ export class LastVersion {
     }
     sub.textContent = this.def.subtitle;
     $('#title .tag').textContent = this.def.tagline;
-    $('#title .ver').textContent = 'v2.1 · The Last Version of Earth';
+    $('#title .ver').textContent = 'v2.1.1 · The Last Version of Earth';
     // the menus opened from the title (the chapters, the saves, the settings, the CASE FILES) stand in front of the
     // title's own backdrop, not of Station Zero's antechamber, which the 3D view keeps drifting round behind the title
     if (!$('#lvTitleMenus')) {
@@ -857,8 +857,10 @@ export class LastVersion {
     }
     this.resumed = true; // (the sector loads where the save was taken, after a PREVIOUSLY card: onSectorLoaded)
     // (a finished campaign, its ending reached, loads to its ending's card: postGame. Not a case replay's save, nor a
-    // trip's, which come after an ending and go on as they were)
-    this.finishedLoad = !['cases', 'roam'].includes(campaign.chapter) && !!this.g.facts.get('ending');
+    // trip's, which come after an ending and go on as they were; and only the Finale's: the ending is reached there, and a
+    // save of another chapter carrying it is not a finished campaign, it plays on with its PREVIOUSLY card. v2.1.1
+    // release check: the bot's Act II save, made from a finished one, loaded to the ending card)
+    this.finishedLoad = campaign.chapter === 'finale' && !!this.g.facts.get('ending');
     this.start(campaign.chapter, campaign);
   }
 
@@ -2709,7 +2711,7 @@ export class LastVersion {
       return { where: m.where, chapter: m.chapter };
     }
     // (a finished campaign is its ending: CONTINUE opens its card, postGame)
-    const end = this.chapter !== 'cases' && this.g.facts.get('ending');
+    const end = this.chapter === 'finale' && this.g.facts.get('ending'); // (as resume's finishedLoad)
     if (end && ENDINGS[end]) return { where: `THE LAST VERSION · ENDING ${end}: ${ENDINGS[end].title}`, chapter: 'The case files and free roam' };
     const q = this.threads.on ? this.level?.quarters?.[this.g.campaign.quarter || 0]?.name : null;
     return { where: `THE LAST VERSION · ${d?.name || ''}`, chapter: `${typeof d?.n === 'number' ? `Mission ${d.n}` : `Case ${d?.no ?? d?.n}`}${q ? ` · ${q}` : d?.sectors > 1 ? ` · ${this.g.campaign.sector + 1}/${d.sectors}` : ''}` };

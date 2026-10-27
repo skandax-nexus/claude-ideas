@@ -81,7 +81,15 @@ function m23Step(rt) {
     // a snap back, a catch or a fall puts Kai at the seam, on ground every year has (the quarter's box behind it, the
     // checkpoint main.stepDeck sets each frame, is the platform's until z 110: this step comes after it)
     const seam = seamSpawn(rt);
-    if (seam && Array.isArray(g.checkpoint) && g.checkpoint[2] > BEHIND_PIT) g.checkpoint = seam;
+    if (seam && Array.isArray(g.checkpoint) && g.checkpoint[2] > BEHIND_PIT) {
+      g.checkpoint = seam;
+      // (the place a load puts Kai, kept as the street's thread was done past the pit (Runtime.markAnchor), was kept
+      // with the platform's checkpoint, the one it was reached from: with the seam the checkpoint now, it held no more,
+      // and a load past the street put him 11 m on, at the seam. It is reached from the seam as well. v2.1.1 release
+      // check, tests/lv-fix-flow.mjs street)
+      const a = g.campaign?.anchor;
+      if (a && a.mkey === (rt.deck?.mkey ?? rt.deck?.key) && a.room === g.room && Array.isArray(a.pos) && a.pos[2] <= BEHIND_PIT) a.cp = seam.slice(0, 3).map((v) => +(+v).toFixed(2));
+    }
     // and a save that has him behind the pit with the street crossed (one from before this, the playtest's own, or one
     // made after walking back) loads him at the seam, not stranded on the platform
     if (seam && rt.pendingResume === rt.deck && !rt.m23Placed && g.player.pos.z > BEHIND_PIT) g.player.place(seam);

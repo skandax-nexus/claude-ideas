@@ -677,6 +677,11 @@ function m11Step(rt, dt) {
   // comes up to it with the lock thread his
   rt.cinema?.watchShow?.('m11_ward_view', m11WardShots);
   const door = lv.landmarks.ward32Door;
+  // (once Kai has tried a bolt the lock is his: its close-up, held back by a line or a menu as he came up, no longer
+  // breaks in after his first try and takes the camera from his next. v2.1.1 release check: the full bot's second bolt
+  // found no target under it)
+  const lp = !rt.m11LockSeen && rt.inv?.procs?.find((x) => x.rec.id === 'm11lock');
+  if (lp && (lp.jamPart >= 0 || lp.partOut.some(Boolean) || rt.inv.active?.p === lp)) rt.m11LockSeen = true;
   if (door && !rt.m11LockSeen && rt.threads?.current?.()?.id === 'lock' && !rt.cinema?.active && !g.hud.talking && !g.menu
     && Math.hypot(g.player.pos.x - door[0], g.player.pos.z - door[2]) < 3.2) {
     rt.m11LockSeen = true;
