@@ -1238,6 +1238,73 @@ in 5,143 recordings. Each mission's place is 1.7-6.8 ha (v2.0's generated rooms:
   96x44; a 44 px left inset moves the objective to x 44. (Harness note: a headless window smaller than the emulated
   portrait page drops touch scrolls below its edge; the checks ran with a 1000x1000 window.)
 
+- **v2.1 playtest fixes, unit "missionsB" (2026-10-27): Act II to the Finale, Missions 9-23** (PLAYTEST-v2.1.md;
+  acts-1-2 F03, F04, X01, F15, F18, F19; acts-3-finale F02, X3, F09, X4, F13, F17, F19; systems SYS-16). What changed:
+  - Choice headers (F02, X3): the panel's header is the last line that was said (`Threads.choiceHeader`, called by
+    `Runtime.playNode`; a node's own `header` wins), never one whose `when` failed: the Finale no longer heads its
+    last decision with Orren's record for a player who never read it, nor Mission 10's prisoners with Rook, nor
+    Mission 21's soldier with a freed district.
+  - Watchers and story lines (F04): while the story's own lines play (not a bark, not a THINK hint) and Kai stands
+    within 4 m of where they began, the watchers do not see him, and for 2 s after (`Runtime.storyHolds`); walking on
+    while they play is walking on. Mission 13's district patrol keeps to the channel side of its street (z -54.5),
+    clear of the frozen block's spot and the roll-call wall it used to walk through.
+  - Watchers turn round (world/DeckWorld.js `Sentinel.turnTo`, shared): a watcher on a two-point beat (24 of the
+    edition's 45, every one in Missions 9-23) never turned at its ends: from exactly the opposite way the blend stayed
+    on its line, and it walked back facing where it had come from, its cone behind it. It now starts the turn a little
+    to one side and faces the way it walks (Station Zero's two-point patrols with it).
+  - Mission 13's crossing (F03): a sandbag line closes the field before the canyon gate but for its gap by the
+    containers, where a sentry walks a 24 m beat; three burnt trucks to wait behind; a checkpoint by the shell zone,
+    so a catch walks Kai back to the shells, not the quay; a stealth thread's arrival counts only with no watcher on
+    his heels (`unseen` triggers, Threads.js and Runtime.js). THINK: the sentry, the gap and when to go. With the
+    game's own Sentinel and Player at 25 phases of the beat, a walk straight at the gate is caught 12-20 times in 25
+    and THINK's timing gets through every time (the unit test). In 2026 and 2196 the line is not there (it is the war's).
+  - Mission 13's frozen block (X01): its ground floor is a lit lobby behind solid frozen glass, its people pacing in it
+    (they paced the street in front). Its routes (F18): the post in front of the trench's gap is gone and flares mark
+    it; the channel's quays are railed but for the two bridges, the raised bridge barred and signed RAIL BRIDGE EAST,
+    the rail bridge under a lit RAIL BRIDGE gantry.
+  - Mission 9 (F15): the quay patrol walks east of the ferry steps, clear of the spawn where Kai watches the street.
+  - Mission 14 (F09, X4): a poled crossing ("SAFE TO WADE") of the line's avenue in 2196 takes a walker from the
+    viaduct's stair to the bank's fallen lift car without 2049; the car lies a step high, walked into, not jumped
+    onto; THINK and the reason name the route and the car.
+  - Mission 22's chain wall (F13): a right pick chimes, counts ("2 / 4 in order") and offers the next at once under
+    the order so far; the last one in plays the re-enactment. A wrong pick is said and closes, as before.
+  - The Finale's sky (F17): the horizon paints no Ring Hill and crown from Afterzero, whose road climbs the real hill
+    (the white bar with a blue dome over it). The white bar over Mission 18 in the playtest was the old watcher meter.
+  - Mission 21 (F19, polish): while the arena falls and the summit stair is not reached, the Spire shakes every 5-8 s:
+    a thud, the light jolting, dust off both gaps' edges and at Kai's feet. With the watchers turning round, the two-
+    point patrols of Missions 18 and 21 look where they walk.
+  - THINK (SYS-16): every tier of Missions 5, 8, 11, 12, 13 and 14 rewritten as sentences that go from a nudge to the
+    place to the action, and every one-word tier from Mission 4 on given its object (act1-4, finale); the packs
+    re-recorded (act1, act2, act3, act4, finale, common, prologue). Mission 1's "Listen." is left (its tiers were the
+    playtest's example of good ones).
+  - "Character xbot could not load" (acts-1-2 F19): the entry is not dead (the clip library and Orren's hologram, in
+    the APK and the preview); the warning came from a page reloaded while it was still loading (the playtest harness
+    reloads at once after opening; the game's own QUIT, NEW GAME and CLEAR can too). `world/Actors.js` no longer warns
+    for a fetch the page cancels as it goes (pagehide).
+  Checked: `tests/lv-fix-missionsB.test.mjs` (14 tests: every choice node of the campaign under every combination of
+  its lines' conditions, the three named; the chain wall's picks; the watchers' shield and its 4 m; the lobby and its
+  glass; the line, its gap, the sentry, the checkpoint and the crossing played 50 times; the trench, railings and
+  signs; Mission 9's spawn; Mission 14's walk in 2196 and into the car; the Finale's horizon; the tremors; THINK's
+  tiers; the about-turn), `npm test` 219/219, `node --check` on every changed file, `voice-lv.sh check` every pack up
+  to date (act2 3.77 MB the largest), Station Zero's smoke (passed) and qa (26/26). In the browser by touch at 915x412 (scratch
+  `fix/missionsB/`, from the testers' saves): Mission 13 after "Neither", straight at the gate after a 6 s pause:
+  seen, chased and caught at the gap (25, 23.8), walked back to the shells (64, 46); from the truck, going as the
+  sentry turned east: through, unseen, the crossing done (THINK's three tiers said, voiced). The frozen block from
+  m13g: the six lines played with no catch, people behind the glass; the patrol put back on its playtested line
+  through the spot: no catch (the shield); that and the shield off: caught during Sera's lines (the playtest's F04).
+  Straight south from the quay through the trench gap (no post); from the crater field straight for the frozen block:
+  stopped at the railing by the raised bridge (no fall), along the quay and over the rail bridge. Mission 9 from Act
+  II's NEW GAME: 180 s at the spawn, two resets, no setback, the nearest watcher 12.2 m. Mission 14 from p04_m14, all
+  in 2196 (stability 1.00 throughout): down the stair, along the sidewalk, over the poled crossing, into the car with
+  the stick alone, REVERSE tapped, up to y 24.6, onto the roof, the thread on to the capacitor. Mission 22's chain
+  wall at 412x915: chimes 1-4, the header "In order so far: ...", the wrong pick said and the panel reopened with the
+  order kept, the re-enactment; the Finale's choice at 412x915 (and 915x412 in the earlier pass): header "Three things
+  the ring can do, and only one of them." Mission 23's road from p33_m23: no bar. Mission 21 from p21_m21: five
+  tremors in 30 s, dust at Kai's feet. THINK at Missions 11, 12, 13 and 14's starts: three tiers each, all voiced. The
+  xbot warning: with the playtested Actors.js a reload during the slowed clip library's fetch warns, with this one not
+  (the fetch is aborted either way, and loads after the reload). Not done: the full `tests/lastversion.mjs` (the
+  release step's); Mission 10's escape (F03's other half, not reproduced by its verifier).
+
 ## Generated (playable, solvable by construction, not hand-tuned)
 
 - **Nothing of the places since U3.** Every mission and both cases stand in an authored open place;
