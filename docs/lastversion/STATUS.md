@@ -1399,7 +1399,7 @@ in 5,143 recordings. Each mission's place is 1.7-6.8 ha (v2.0's generated rooms:
   close-up as Kai walks up, its opening (the bolt puzzle set done by a helper), THE FILE ON THE BED tapped, the bed and
   the hook's file close-up; Mission 13 from m13a: a shell aimed at and held with REVERSE, seen climbing into its gun;
   from m13g: THE FROZEN BLOCK tapped, the man and the kitchen (also at 412x915); the Finale from p34_prechoice, THE
-  ORIGINAL CHRONOLITH tapped and each choice tapped: A, B and C played to their ending cards; the summit, Mission 21's
+  ORIGINAL CHRONOLITH tapped and each choice tapped: A, B and C played to their ending cards (C also at 412x915); the summit, Mission 21's
   first-second chamber and Mission 22's Spire at low and medium. Not run: the full `tests/lastversion.mjs` (the
   release step's). Seen, not this unit's: the frozen block's lobby crowd walks behind the frozen glass; the one-time
   "THE CASE BOARD" tip can show over a staged moment's top.
