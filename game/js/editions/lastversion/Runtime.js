@@ -265,6 +265,7 @@ const EV_LABELS = {
 };
 
 const _v = new THREE.Vector3(), _w1 = new THREE.Vector3(), _w2 = new THREE.Vector3();
+const _fogC = new THREE.Color(), _nightC = new THREE.Color(0x101828); // (a night cold open's air: stateNight)
 // the facts a replay starts from, handed over the page reload (sessionStorage)
 const CASE_FACTS = 'afterzero.lv.caseFacts';
 // after an ending, BACK TO THE STORY on a trip comes back to the CASE FILES (the title opens them once: sessionStorage)
@@ -2210,14 +2211,14 @@ export class LastVersion {
     return h.subs.some((s) => !s.done && !s.bark && !s.ambient && !s.hint);
   }
 
-  // the story's lines play and Kai stands where they began (within 4 m): the watchers keep off him (F04). Called every
-  // step, so where the lines began is forgotten as soon as they are over
   // a watcher of this room chasing Kai
   chased() {
     const g = this.g;
     return !!g.deckWorld?.sentinels?.some((s) => !s.dead && s.mode === 'chase' && s.def.room === g.room);
   }
 
+  // the story's lines play and Kai stands where they began (within 4 m): the watchers keep off him (F04). Called every
+  // step, so where the lines began is forgotten as soon as they are over
   storyHolds(p) {
     if (!this.storyLines()) {
       this.linesAt = null;
@@ -2466,7 +2467,9 @@ export class LastVersion {
   // each year of a place sets its own hour, air and density (its year, through themeFor); these hooks hand
   // main.js the place's own values
   stateNight(state, night) {
-    return night;
+    // (a cold open staged at night, Mission 4's by the ring: night while it plays, co_<mkey>, whatever the year's hour)
+    const co = this.deck?.coldOpen;
+    return co?.night && this.g.facts?.get(coldFact(this.deck)) ? Math.max(night, co.night) : night;
   }
 
   stateFog() {
@@ -2497,6 +2500,10 @@ export class LastVersion {
     pal.fog = y.fog;
     pal.density = 1;
     pal.night = y.night ?? 0;
+    // (a cold open staged at night, stateNight: the air darkens with it, or the far ground and the sky's foot stayed the
+    // afternoon's pale fog under the stars)
+    const co = this.deck?.coldOpen, coNight = co?.night && g.facts.get(coldFact(this.deck)) ? co.night : 0;
+    if (coNight) pal.fog = _fogC.setHex(y.fog).lerp(_nightC, Math.min(1, coNight * 1.2)).getHex();
     if (s !== this.weatherState) {
       const first = this.weatherState === null;
       this.weatherState = s;
@@ -2507,6 +2514,12 @@ export class LastVersion {
       g.postfx.setEnvironment(y.ibl || null);
       const w = y.weather || null;
       if (w !== g.weather.kind) g.weather.set(w);
+    }
+    // (a cold open staged at night, stateNight: the horizon's band, painted in the year's own light, dims with it)
+    const band = this.mounted?.horizon?.mat?.color;
+    if (band) {
+      const want = Math.max(0.05, 1 - coNight * 1.15);
+      if (Math.abs(band.r - want) > 1e-3) band.setScalar(band.r + (want - band.r) * Math.min(1, dt * 2));
     }
     this.mounted?.update(dt);
   }

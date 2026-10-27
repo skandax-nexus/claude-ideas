@@ -707,6 +707,10 @@ export class DeckWorld {
         this.sunAt = sun.target.position;
         const sc = sun.shadow?.camera;
         this.sunBox = sc ? [Math.max(-sc.left, sc.right), Math.max(sc.top, -sc.bottom)] : [VIEW_LOD.shadowBox, VIEW_LOD.shadowBox];
+        // (the ground Kai stands on, which the camera looks at: a shadow from someone up on a ledge falls this far down,
+        // shadowInView; no lower, or a low sun's sweep from everyone on his own ground would reach the view)
+        const pl = g.player;
+        this.lodFloor = pl?.pos ? pl.pos.y - (pl.half?.y ?? 0.85) : cp.y - 1.6;
       }
     }
     for (const n of this.npcs) this.lodOne(n.model, n, t, on, shadows, cp);
@@ -781,9 +785,10 @@ export class DeckWorld {
     const ox = s.center.x - a.x, oy = s.center.y - a.y, oz = s.center.z - a.z;
     if (Math.abs(ox * _sx.x + oy * _sx.y + oz * _sx.z) > bx + r || Math.abs(ox * _sy.x + oy * _sy.y + oz * _sy.z) > by + r) return false;
     // the body swept away from the sun until its top reaches the feet's height (and a quarter more, for ground that
-    // falls away): the sphere round that sweep
-    const up = _sd.y;
-    const L = up < 0.05 ? VIEW_LOD.shadowMax : Math.min(VIEW_LOD.shadowMax, ((s.center.y + s.radius - y0) / up) * 1.25 + 1);
+    // falls away), or, for someone up on a ledge, the ground the camera looks at below them (their shadow falls there;
+    // the follow-up's review): the sphere round that sweep
+    const up = _sd.y, low = Math.min(y0, this.lodFloor ?? y0);
+    const L = up < 0.05 ? VIEW_LOD.shadowMax : Math.min(VIEW_LOD.shadowMax, ((s.center.y + s.radius - low) / up) * 1.25 + 1);
     _sph2.center.copy(s.center).addScaledVector(_sd, -L / 2);
     _sph2.radius = s.radius + L / 2;
     return _fr.intersectsSphere(_sph2);

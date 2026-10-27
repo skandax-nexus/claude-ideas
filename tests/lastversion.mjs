@@ -554,12 +554,17 @@ console.log(`  (Mission 1 walked by the bot: ${m1min} min of game time, lines at
 // (the bot knows every coordinate and reads nothing twice: it is no player. What this guards is the mission itself: a
 // Mission 1 that shrank, a pursuit cut back to a walk, would fall under the nine minutes it measured. Closing: the length
 // model it was once held to overstated a player's time about five times, and is no longer a length claim)
-check(m1min >= 9, `Mission 1, walked: ${m1min} min of game time (nine or more)`, String(m1min));
+// (8.5: it measured 9.0 until the follow-up to the v2.1 playtest, when Line 41's PA stopped hiding the tap prompt
+// (FT-04): the bot had waited up to six seconds of each 8:13 window for REROUTE THE POWER, as a touch player did; 8.9 since)
+check(m1min >= 8.5, `Mission 1, walked: ${m1min} min of game time (eight and a half or more)`, String(m1min));
 // a save and a load: the mission comes back where Kai saved (in LINE 41, its quarter's spawn), after a PREVIOUSLY card
 // (loaded during the mission's outro: a load in the page drops the outro, and the gates must still open after it
 // (U5 review; a player's load reloads the page first: main.begin); the exit below is the proof)
 const outroLoad = await az(() => {
   const q = AZ.campaign.quarter;
+  // (where the story last moved, the raincoat taken: a load puts Kai there, Runtime.markAnchor, the flow unit's FT-11)
+  const anchor = AZ.campaign.anchor?.pos || null;
+  window.__m1anchor = anchor;
   AZ.saveTo(0);
   AZ.edition.exitReached();
   const outro = !!AZ.edition.cinema.active && !!AZ.transitioning;
@@ -582,8 +587,8 @@ const skipTap = await az(() => {
 check(skipTap.shown && skipTap.opening && skipTap.cine && skipTap.talking && skipTap.now && skipTap.now !== skipTap.first,
   'the SKIP button (a tap) skips one line of the PREVIOUSLY card, and the card goes on with its next', JSON.stringify(skipTap));
 await page.waitForFunction(() => { LVB.talkOut(1); return !AZ.edition.opening && !AZ.edition.cinema.active && AZ.voice.loading >= 1; }, null, { timeout: 120000, polling: 250 }).catch(() => {});
-const back = await az(() => { const lm = LVB.lm('platform'); return { quarter: AZ.campaign.quarter, room: AZ.room, at: AZ.player.pos.toArray().map((v) => +v.toFixed(1)), d: Math.hypot(AZ.player.pos.x - lm[0], AZ.player.pos.z - lm[2]), prev: LVB.said.includes('NONE: Rain City, 2049.'), done: !!AZ.deckWorld.flags.beat_done, raincoat: AZ.facts.get('raincoat') }; });
-check(resume === 2 && back.quarter === 2 && back.d < 1 && back.prev && back.done && back.raincoat, 'an M1 save loads where it was taken (LINE 41, its quarter\'s spawn), after a PREVIOUSLY card; its facts and flags kept', JSON.stringify({ resume, back }));
+const back = await az(() => { const lm = window.__m1anchor || LVB.lm('platform'); return { quarter: AZ.campaign.quarter, room: AZ.room, at: AZ.player.pos.toArray().map((v) => +v.toFixed(1)), anchor: window.__m1anchor, d: Math.hypot(AZ.player.pos.x - lm[0], AZ.player.pos.z - lm[2]), prev: LVB.said.includes('NONE: Rain City, 2049.'), done: !!AZ.deckWorld.flags.beat_done, raincoat: AZ.facts.get('raincoat') }; });
+check(resume === 2 && back.quarter === 2 && back.d < 1 && back.prev && back.done && back.raincoat, 'an M1 save loads where it was taken (LINE 41, where the story last moved: the raincoat; else its quarter\'s spawn), after a PREVIOUSLY card; its facts and flags kept', JSON.stringify({ resume, back }));
 await az(() => { LVB.walk([[26, -158], [29.5, -165], [29.5, -177.5], [3, -185], [1, -192], [0.5, -205], [0.5, -225]]); LVB.skip(); }); // (the exit is past the staff gate, z < -222)
 // Mission 2's opening: its cold open plays before its card. One press of Enter (SKIP's key) skips the line being said
 // and nothing more: the cold open goes on, line by line, and then the mission's card is said, line by line (closing:

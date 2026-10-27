@@ -82,7 +82,9 @@ export default {
     for (const sz of [-1, 1]) for (const [z, x] of [[17.15, -0.12], [16.0, 0.14], [14.85, -0.1], [13.7, 0.12], [12.6, 0]]) {
       P.cyl(x, -1.0, sz * z, 0.95, 1.15, 'riverStone', { seg: 14 });
       P.disc(x, 0.16, sz * z, 0.86, 'limestone', { seg: 14, noShadow: 1 });
-      P.col([x - 0.86, -1.0, sz * z - 0.86, x + 0.86, 0.15, sz * z + 0.86]);
+      // (its footing the stone's round, not a square round it: a square's corners stood 0.27 m out over the water on the
+      // diagonals, ground where none shows; three boxes whose corners all lie on the stone's edge, v2.1 playtest review)
+      for (const [hx, hz] of [[0.86, 0.4], [0.4, 0.86], [0.67, 0.67]]) P.col([x - hx, -1.0, sz * z - hz, x + hx, 0.15, sz * z + hz]);
     }
     // (playtest v2.1 F16 review: the last stone met the island's edge only across its own width, so a step off it
     // toward the terminal, diagonally, went into a sliver of water between the stone and the island: a broad stone

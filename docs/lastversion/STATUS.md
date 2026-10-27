@@ -1435,14 +1435,88 @@ in 5,143 recordings. Each mission's place is 1.7-6.8 ha (v2.0's generated rooms:
   and +30 a lap); after, Mission 4 274/144 -> 294/167 -> 294/167 and Mission 8 328/194 -> 328/194 -> 328/194 (flat
   after the first lap fills the shared caches), JS heap 39 MB at the end either way.
   No visual change: at sampled moments in Mission 1 (915x412 and 412x915) and Mission 14 the same frame drawn with the
-  LOD on and then off (everyone woken and recomputed) differs in 0 pixels (over 12 of 255), also after Kai walked by
-  touch on the stick and the view was dragged round by touch (`fix/perf/vis.mjs`).
+  LOD on and then off (everyone woken and recomputed) differs in at most 2 pixels by more than 12 of 255 (at most 1 by
+  more than 24), also after Kai walked by touch on the stick and the view was dragged round by touch
+  (`fix/perf/vis.mjs`). (This entry first said 0 pixels over 12, true of the frames it sampled; the review measured
+  1-2 on alternating frames in Mission 1, where 15 far walkers are recomputed every second frame: under a pixel's
+  movement, not to be seen.)
   Checked: `tests/lv-fix-perf.test.mjs` (11 tests: the frozen statics, the matrix budget's skips and recomputes, the far
   walker's every second frame, skeletons computed once per move, dormancy by view and by shadow and waking posed, the
   contact shadow with the camera inside a person, releaseActor and dispose/freeLeft, main.js's wiring), `npm test` (258,
   all passing), `node --check`; `tests/smoke.mjs` and `tests/qa.mjs` (Station Zero: passed, 26 of 26),
   `tests/lastversion-garments.mjs` (all passed). Not run: the full `tests/lastversion.mjs` (the release step's).
   No line added or changed; no voice pack touched.
+
+- **v2.1 playtest fixes, follow-up (2026-10-27): what the seven units' reviewers found still open or newly broken**
+  (PLAYTEST-v2.1.md; each unit's independent review). What changed:
+  - Crowd lines and the prompt (barks): Line 41's PA is the station's own line (`ambient`): it no longer hides the tap
+    prompt or keeps the watchers off Kai, and a tap that acts cuts it (`HUD.hushBarks(true)`), so REROUTE THE POWER
+    (8:13) can be tapped for all of each window (FT-04). A passer-by is not drawn while the camera is within 1.3 m of
+    them or while the box round them (an umbrella's canopy counted) would cover more than 8% of the view, drawn again
+    under 6% (SYS-18; upright sooner than sideways); people Kai can talk to are never hidden. One bark rule (the HUD's).
+  - Touch: the dock acts on a tap and a drag from it looks round (upright it is a column in the look area); a touch
+    whose end was lost no longer holds a control; SKIP 48 px tall, the case board's play buttons 44; the watchers'
+    meter sits under the minimap, clear of the year card and REVERSE however long the place's name; the case board
+    opens at its top after the map's TRAVEL; the quarter label is found again in each mission; a bolt backing out shows
+    "…"; the prompt is measured again on a rotation.
+  - Flow: past the Finale's fallen street a snap back, a catch or a fall puts Kai at the seam, and a save that has him
+    behind the pit (the playtest's own included) loads him there; on the platform's side THINK says how to cross again
+    (acts-3 F06). Sound captions are on by default in THE LAST VERSION (the music box). The charred file counts as
+    watched only in sight, not through a wall. A page that did not unload after all saves again.
+  - Perf: a prop hung on a person, or a person dressed, is computed by the next matrix pass; a watcher's person is not
+    posed while dormant and is posed for the time missed as it wakes; someone on a ledge whose shadow falls on the
+    ground Kai stands on stays awake (the shadow sweep reaches down to his ground). The perf entry's pixel claim is
+    corrected above.
+  - Missions 1-8 (missionsA): Line 41's full map draws the two tracks, the barrow crossing and the stairs, and marks the
+    objective (a ring) and, in the pursuit, the woman Kai follows (FT-08). The edition's own build writes its own page
+    description and title; game/index.html is Station Zero's again (FT-21). Mission 4's cold open by the ring is staged
+    at night (a starry sky, night light, dark air and horizon), the afternoon back behind the title card; the prompt
+    keeps clear of a toast (F14; the talk camera is the staging unit's). Mission 8: a broad stone landing at each end of
+    the stones, and each stone's footing its round, not a square over the water (F16). Mission 6: WATCH THE ARM from the
+    counter's side and only until watched; on the canal street a setback puts Kai on his own bank where he was, the
+    shop door only in front of the house. Mission 1: the staff gate is the objective until Kai is through it, and taking
+    the raincoat no longer finishes it. An echo never writes or disposes a material the wardrobe caches for everyone.
+  - Missions 9-23 (missionsB): the sandbag line is 1.9 m (no JUMP clears it); a catch in the canyon gate's arrival box
+    is no crossing, and walks Kai back to the shells, not to the gate (F03). No scene or talk starts while a watcher is
+    on Kai's heels ("NOT NOW"), lines Kai started keep only new eyes off him, and narration nobody tapped for is no cloak
+    (F04). The district patrol walks by the quay, 8.5 m from the frozen block's spot. Mission 18's hold has a scavenger
+    walking between the pylons (15 m or more from each); Mission 21's tremors cost a held gap a second and a half of
+    its hold (F19). THINK's tiers in Missions 6-23 are sentences, none of three words or fewer (SYS-16; recorded). A
+    playback's header names each placed piece by its time or first sentence.
+  - Staging: the ring reveal's first shot is taken from a side with nobody in it (Rook at the door, FT-18); the
+    conversation camera keeps out of the leaning wreck (camera blocks round each carriage, PULL HIM FREE's reverse shot
+    shows Kai); the frozen block's lobby stands still while it is shown; Mission 6's three window faces are each shown
+    with their year as the line says them (F07); the summit's second pair of braziers stands out of the endings' ring
+    shots; a moment's facts (a scene's `show`, the ending's `m23_beat`) are never loaded from a save; Ward 32's bed is a
+    prop with no scene.
+  Checked: `tests/lv-fix-followup.test.mjs` (27 tests), `npm test` (285, all passing), `node --check`. In the browser,
+  by touch at 915x412 and 412x915 where the finding is about touch (scratch `fix/followup/`): the 8:13 prompt tappable
+  for the whole window (7 of 7 s, was 0.7) and a tap on it cutting the PA; a walker crossing at 0.9-2.6 m drawn at most
+  4.9% of the screen; look drags from the upright dock turn the view (0.585 rad) and open nothing, taps still open; the
+  meter clear of every HUD box; the board at its top after TRAVEL; the Finale's old save loading at the seam and its
+  snap staying there, THINK's crossing tiers; the music box captioned; the file through a wall not counted; the map's
+  lines and marks; Mission 4's night cold open and the afternoon after it, the Elder framed over Kai's shoulder;
+  Mission 6's canal-street returns (a setback forced at the railing: its 1.6 m guard lets no fall reach the water) and
+  its three faces; the tester's stone route, 12 runs, no fall into the water;
+  the sandbag line jumped at three places and never cleared, a catch in the gate box no crossing; FROZEN BLOCK tapped
+  mid-chase: "NOT NOW", caught 0.25 s later; the block approached, watched and stood at 12 s after with no catch (the
+  patrol never nearer than 13 m); Mission 18's scavenger (Sera's repair set as a helper) never nearer than 16 m to a
+  pylon; a tremor taking the hold;
+  Mission 8's headers "05:33. 05:40. 08:12."; Rook out of the reveal's shot (at the frame's edge sideways, out of it
+  upright); Kai in the wreck's reverse shot; the lobby frozen during the block's shots and walking after; the braziers
+  out of Endings A and C's first ring shot; a save taken inside the block's scene loading without its show fact and the
+  scene replaying with its camera. `tests/smoke.mjs` and `tests/qa.mjs` (Station Zero: passed, 26 of 26),
+  `tests/lastversion-garments.mjs` (all passed), `LV_ONLY=prologue tests/lastversion.mjs` (85 of 85). The edition's
+  APK builds at 48.2 MB with its own page description (the build removed afterwards). Voice: the THINK tiers re-recorded
+  (`voice-lv.sh check`: every pack up to date, the largest act2 at 3.95 MB).
+  Two of the prologue bot's checks changed: Mission 1 now measures 8.9 bot minutes, not 9.0, because the PA no longer
+  hides REROUTE THE POWER (the bot waited up to six seconds of each window for it, as a touch player did), so its floor
+  is 8.5; and an M1 save loads where the story last moved (the raincoat, the flow unit's anchor), which the check had
+  not been told (it failed on the flow unit's commit too).
+  Left as they are: Mission 21's battle is still lines and two gaps (the tremor now costs, it adds no new threat); the
+  Chronolith's 0.6 floor on every load (a trade-off); saves from before the flow unit carry no anchor (the Finale's are
+  placed at the seam regardless); Mission 13's 2026 way round the sandbag line (by design, it costs stability); the
+  full `tests/lastversion.mjs` was not run (the release step's).
 
 ## Generated (playable, solvable by construction, not hand-tuned)
 

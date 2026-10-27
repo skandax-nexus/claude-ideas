@@ -99,9 +99,10 @@ export const M04 = {
     'A bronze band, polished by a thousand years of hands.',
   ]],
   beats: [{ kind: 'custom', goal: 'Find out why the village knows your face.' }],
-  // the cold open, before the title: the villagers' side, at night by the ring
+  // the cold open, before the title: the villagers' side, at night by the ring (stage: while it plays the hill is under
+  // the stars, night its light; behind the title card the afternoon he wakes in comes back, v2.1 playtest F14)
   coldOpen: {
-    first: true, minutes: 2, cue: 'card',
+    first: true, stage: true, night: 0.8, minutes: 2, cue: 'card',
     // (the first shot rises as it backs away from the Elder's seat: at the seat's height it ran into the seat's back wall,
     // which filled the frame while Niko spoke)
     shots: [{ cam: [0, 12.3, -4.2], to: [0, 13.9, 1.6], look: 'ring', t: 9 }, { cam: 'underStair', look: 'ring', t: 8 }],
@@ -733,9 +734,14 @@ export const M06 = {
     if (!g.catching) rt.m06Hit = false;
     // (a setback on the shop floor puts Kai back by the counter, not at the foot of the cellar steps: X02; on the canal
     // street, outside the shop door. main.js has just set the quarter's checkpoint, the cellar's; this runs after it)
+    // (the shop door's spot only for the street in front of the house: further along the canal, the bank Kai was on, where
+    // he was, as the crowd walks it. The band reached the whole canal, and a fall into it 60 m off put him back at the
+    // shop door; v2.1 playtest review)
     const lm = rt.level?.landmarks;
+    const street = p.z >= -16 && p.z < 16 && feet > -2 && feet < 3.5 ? lm?.streetReturn : null;
     const back = p.x >= 8 && p.x < 24 && p.z >= -32 && p.z < -16 && feet > -0.5 && feet < 3.5 ? lm?.shopReturn
-      : p.z >= -16 && p.z < 16 && feet > -2 && feet < 3.5 ? lm?.streetReturn : null;
+      : !street ? null : p.x >= 4 && p.x < 28 && p.z < 0 ? street
+        : [Math.max(-50, Math.min(50, p.x)), 0, p.z < 0 ? -9 : 9, p.z < 0 ? street[3] : street[3] + Math.PI];
     if (back && (g.player.grounded || g.catching)) g.checkpoint = [back[0], back[1] + 0.86, back[2], back[3]];
     const turning = !(h.stasisT > 0) && !g.engine.hasIn('timeStop', h.hz.room);
     if (!turning || d > R + 2.5 || d < 0.3 || feet > py + 0.3) return;

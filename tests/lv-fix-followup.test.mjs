@@ -12,6 +12,8 @@
 //     district patrol off the frozen block's spot, the hold's patrol, the tremor's cost, THINK's tiers (SYS-16)
 //   staging: the ring reveal clear of Rook, the conversation camera out of the wreck, the braziers out of the ending's
 //     shot, a moment's facts never loaded, the frozen block's people stopped while it is shown, the window's faces
+//   the resumed step: Mission 6's canal street puts Kai back on his own bank, Mission 4's cold open at night, the
+//     stepping stones' footing round, a shadow from a ledge
 //   node --test tests/lv-fix-followup.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -34,6 +36,9 @@ import { M23, ENDING_SHOTS } from '../game/js/editions/lastversion/finale.js';
 import { camBlockHit } from '../game/js/editions/lastversion/cinema.js';
 import { attach } from '../game/js/editions/lastversion/wardrobe.js';
 import { Watchers } from '../game/js/editions/lastversion/watchers.js';
+import { M04, M06 } from '../game/js/editions/lastversion/act1.js';
+import { PLACES } from '../game/js/editions/lastversion/places/index.js';
+import { lodBudget } from '../game/js/world/Actors.js';
 
 const read = (p) => fs.readFileSync(new URL(p, import.meta.url), 'utf8');
 const CSS = read('../game/css/style.css');
@@ -485,4 +490,67 @@ test('staging review: a moment\'s facts are never loaded; the frozen block\'s pe
   const years = M6L.texts.filter((t) => ['2026', '2049', '2196'].includes(t.text) && Math.abs(t.pos[2] + 15.68) < 0.05);
   assert.equal(years.length, 3, 'under each face its year');
   assert.match(read('../game/js/editions/lastversion/act1.js'), /rt\.cinema\?\.watchShow\?\.\('m06_window_view', m06WindowShots\);/);
+});
+
+// --- the resumed step --------------------------------------------------------------------------------------------------
+test('M6 review: on the canal street a setback puts Kai on the bank he was on, where he was; in front of the house, at the shop door', () => {
+  const arm = M6L.hazards.find((h) => h.lvKit === 'brassArm');
+  const sr = M6L.landmarks.streetReturn;
+  const at = (x, z, y = 0.86) => {
+    const g = { facts: new FactStore(), room: arm.room, catching: false, checkpoint: [9.8, -3.14, -30.6, Math.PI], deckWorld: { hazards: [{ hz: arm, angle: 0 }] },
+      player: { pos: new THREE.Vector3(x, y, z), half: new THREE.Vector3(0.3, 0.85, 0.3), grounded: true }, engine: { hasIn: () => false, statesOf: () => ['PRESENT'] }, hud: {}, audio: {}, after() {} };
+    M06.step({ g, deck: M06, level: M6L }, 1 / 30);
+    return g.checkpoint.map((v) => +(+v).toFixed(2));
+  };
+  assert.deepEqual(at(-40, -9.5), [-40, 0.86, -9, sr[3]], 'the south bank, 56 m up the street: there, not the shop door');
+  assert.deepEqual(at(-40, 9.5), [-40, 0.86, 9, +(sr[3] + Math.PI).toFixed(2)], 'the north bank: its own side');
+  assert.deepEqual(at(58, -9), [50, 0.86, -9, sr[3]], 'as far as the street goes');
+  assert.deepEqual(at(16, -12), [sr[0], 0.86, sr[2], sr[3]], 'in front of the house: outside the shop door, as before');
+  assert.deepEqual(at(12, -20).slice(0, 3), [M6L.landmarks.shopReturn[0], 0.86, M6L.landmarks.shopReturn[2]], 'the shop floor: by the counter, as before');
+});
+
+test('F14 review: Mission 4\'s cold open by the ring is staged at night (its sky, its light, its air), the afternoon after it', () => {
+  const co = M04.coldOpen;
+  assert.ok(co.stage && co.night >= 0.6 && co.first, 'staged: co_m04 holds from the start, and comes off behind the title card');
+  const f = PLACES.valley_upper.skyFeatures.m04.find((x) => x.kind === 'preset');
+  assert.ok(f && f.when === 'co_m04' && f.sky === 'milkyWay', 'a starry sky while it plays');
+  const facts = new FactStore();
+  const rt = Object.defineProperty(Object.assign(Object.create(LastVersion.prototype), { g: { facts } }), 'deck', { value: M04 });
+  assert.equal(rt.stateNight('PRESENT', 0.05), 0.05, 'the afternoon');
+  facts.set('co_m04', true);
+  assert.equal(rt.stateNight('PRESENT', 0.05), co.night, 'night while it plays');
+  assert.match(RT, /if \(coNight\) pal\.fog = _fogC\.setHex\(y\.fog\)\.lerp\(_nightC, Math\.min\(1, coNight \* 1\.2\)\)\.getHex\(\);/, 'the air darkens with it');
+  assert.match(RT, /const want = Math\.max\(0\.05, 1 - coNight \* 1\.15\);/, 'and the horizon\'s painted band');
+});
+
+test('F16 review: a stepping stone\'s footing is its round, not a square over the water (Mission 8)', () => {
+  const stones = [[17.15, -0.12], [16.0, 0.14], [14.85, -0.1], [13.7, 0.12], [12.6, 0]];
+  for (const sz of [1, -1]) for (const [z, x] of stones) {
+    const cz = sz * z;
+    const cols = M8L.elements.filter((e) => e.solid && e.box[4] === 0.15 && Math.abs((e.box[0] + e.box[3]) / 2 - x) < 0.01 && Math.abs((e.box[2] + e.box[5]) / 2 - cz) < 0.01);
+    assert.equal(cols.length, 3, `stone ${x}, ${cz}`);
+    for (const c of cols) for (const cx of [c.box[0], c.box[3]]) for (const czz of [c.box[2], c.box[5]]) assert.ok(Math.hypot(cx - x, czz - cz) <= 0.951, `a corner ${Math.hypot(cx - x, czz - cz).toFixed(2)} m from the stone's middle (its stone 0.95)`);
+  }
+});
+
+test('perf review: someone up on a ledge, out of view, whose shadow falls on the ground in view, stays awake', () => {
+  const camera = new THREE.PerspectiveCamera(62, 915 / 412, 0.05, 600);
+  camera.position.set(0, 1.6, 0);
+  camera.lookAt(0, 1.6, -10);
+  camera.updateMatrixWorld();
+  const sun = new THREE.DirectionalLight(0xffffff, 3);
+  sun.castShadow = true;
+  sun.position.set(0, 20, 20); // (behind the camera, 45 degrees up: a shadow falls ahead of it)
+  sun.target.position.set(0, 0, 0);
+  Object.assign(sun.shadow.camera, { left: -18, right: 18, top: 18, bottom: -18 });
+  const w = Object.assign(Object.create(DeckWorld.prototype), { root: new THREE.Group(), npcs: [], sentinels: [], lodOn: true });
+  const root = new THREE.Group();
+  root.position.set(0, 20, -4); // (on a ledge 20 m up, 4 m ahead: far above the view; its shadow lands about 25 m ahead)
+  Object.assign(root.userData, { actor: true, model: new THREE.Group(), spec: {}, animate() {} });
+  lodBudget(root, []);
+  w.root.add(root);
+  w.npcs.push({ n: {}, model: root });
+  w.viewLod({ camera, sun, renderer: { shadowMap: { enabled: true } }, time: 1 });
+  assert.equal(root.userData.dormant, false, 'its shadow on the street ahead: kept (the sweep went only to its own feet: it slept, and its shadow popped in)');
+  assert.match(read('../game/js/world/DeckWorld.js'), /const up = _sd\.y, low = Math\.min\(y0, this\.lodFloor \?\? y0\);/);
 });

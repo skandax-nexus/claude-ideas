@@ -21,6 +21,10 @@ export default {
   primary: 'ring',
   ancientYears: ['PRESENT', 'PAST'],
   backdrop: { notch: 'clear', sea: 'S', ridge: 'E' },
+  // while Mission 4's cold open plays (co_m04: the night Kai fell out of the stars, the day before he wakes), a starry
+  // night over the hill (and Runtime.stateNight dims its light): it was staged 'at night by the ring' over the golden
+  // afternoon (v2.1 playtest acts-1-2 F14)
+  skyFeatures: { m04: [{ kind: 'preset', when: 'co_m04', sky: 'milkyWay', rate: 3 }] },
   years: {
     PRESENT: { sky: 'goldenAfternoon', era: 'ancient', hour: 17.4, sun: { elev: 14, az: 262 }, fog: 0xd8c8a8, density: 0.8, night: 0.05, weather: 'pollen', ibl: 'dusk', lit: 0,
       hemi: { sky: 0xb8c8e0, ground: 0x8a7a5a, k: 0.85 }, sunColor: 0xffb870, sunK: 1.15, grade: { shadowTint: 0x3a2a18, highlightTint: 0xfff0d0, toning: 0.18, contrast: 1.08, saturation: 1.08 } },
