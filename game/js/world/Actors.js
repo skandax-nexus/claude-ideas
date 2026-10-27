@@ -528,6 +528,85 @@ function shadeActor(mat, kind) {
   return refresh;
 }
 
+// --- the matrix budget (v2.1 playtest SYS-01) -------------------------------------------------------------------
+// A person is ~95 objects (a Rocketbox skeleton is ~85 bones), and three's per-frame matrix pass recomputes every one
+// of them, hidden or not: in a crowded place that was two thirds of a phone's CPU frame. During the renderer's
+// whole-scene pass (main.js sets ACTOR_LOD.pass around it) a person's bones are left as they are when
+//   - the person is hidden (root not visible), or dormant: neither they nor their shadow can be seen (DeckWorld.viewLod
+//     decides, and hides their body, U.model, so it is not drawn either),
+//   - (people DeckWorld manages, U.lodManaged) nothing moved: no new pose since the bones were last computed and the
+//     root where it was (a pose held by casting.js's animation budget, someone standing still),
+//   - (managed) a far walker holding a pose: their walk is drawn every U.lodEvery frames (beyond 50 m, under a pixel).
+// The first pass after any of these updates the whole person again. Any other call (someone's own
+// updateMatrixWorld(true), as wardrobe.attach and mount.js do) updates everything, as three does.
+// A skeleton's bone matrices are computed only when the bones were (U.mv counts the updates): once per person per
+// frame however many of their meshes share it, and not at all while their bones stand.
+export const ACTOR_LOD = { enabled: true, pass: false };
+const _umw = THREE.Object3D.prototype.updateMatrixWorld;
+const _skelUpdate = THREE.Skeleton.prototype.update;
+function lodMatrixWorld(force) {
+  const U = this.userData;
+  if (ACTOR_LOD.pass && ACTOR_LOD.enabled) {
+    if (this.matrixAutoUpdate) this.updateMatrix();
+    if (this.matrixWorldNeedsUpdate || force) {
+      if (this.matrixWorldAutoUpdate === true) {
+        if (this.parent === null) this.matrixWorld.copy(this.matrix);
+        else this.matrixWorld.multiplyMatrices(this.parent.matrixWorld, this.matrix);
+      }
+      this.matrixWorldNeedsUpdate = false;
+    }
+    if (!this.visible || U.dormant) {
+      U.stale = true; // (nothing of them is drawn; the first pass that draws them updates them all)
+      return;
+    }
+    if (U.lodManaged && !U.stale && !U.posed) {
+      if (U.lastWorld.equals(this.matrixWorld)) return; // the bones stand where they were computed
+      if (U.lodEvery > 1 && ++U.lodTick % U.lodEvery !== 0) return; // a far walker: drawn where it was a frame ago
+    }
+    const ch = this.children;
+    for (let i = 0, l = ch.length; i < l; i++) ch[i].updateMatrixWorld(true);
+  } else _umw.call(this, force);
+  U.lastWorld.copy(this.matrixWorld);
+  U.stale = false;
+  U.posed = false;
+  U.mv++;
+}
+function lodBudget(root, skeletons) {
+  const U = root.userData;
+  Object.assign(U, { mv: 1, stale: true, posed: true, dormant: false, lodManaged: false, lodEvery: 1, lodTick: Math.floor(Math.random() * 3), lastWorld: new THREE.Matrix4(), skeletons });
+  root.updateMatrixWorld = lodMatrixWorld;
+  for (const s of skeletons) {
+    s.update = function () {
+      if (ACTOR_LOD.enabled && this.lodMv === U.mv) return; // the bones have not moved since: the matrices stand
+      this.lodMv = U.mv;
+      _skelUpdate.call(this);
+    };
+  }
+}
+
+// What a person built for a place holds on the GPU once the place goes (DeckWorld.dispose; v2.1 playtest SYS-02):
+// their skeletons' bone textures (made by the renderer on the first frame they are drawn), the contact shadow's plane,
+// and what hangs on their bones (wardrobe and watcher props: geometry made for each person, though marked keep), which
+// goes into `geos` for the caller to free once nothing in the next place uses it. Their bodies' geometry and textures
+// are the loaded model's, shared (DeckWorld.freeLeft frees the textures of the people who left).
+export function releaseActor(root, geos) {
+  const U = root.userData;
+  const sks = new Set(U.skeletons || []);
+  root.traverse((o) => {
+    if (o.isSkinnedMesh && o.skeleton) sks.add(o.skeleton);
+    if (o.userData.ownGeometry && o.geometry) o.geometry.dispose();
+  });
+  for (const s of sks) s.dispose();
+  const onBone = (o) => {
+    for (const c of o.children) {
+      if (c.isBone) onBone(c);
+      else c.traverse((x) => { if (x.isMesh && !x.isSkinnedMesh && x.geometry && !x.userData.ownGeometry && !x.geometry.userData.modelGeo) geos.add(x.geometry); });
+    }
+  };
+  root.traverse((o) => { if (o.isBone && !o.parent?.isBone) onBone(o); });
+  return geos;
+}
+
 let blobTex = null;
 function contactShadow(radius) {
   if (!blobTex) {
@@ -620,6 +699,11 @@ export function makeActor(spec = {}) {
   if (!key) key = ['rb_ren_f', 'ren', 'nova', SOURCE].find((k) => loaded[k]);
   const L = loaded[key];
   const rig = L.def.rig;
+  if (!L.geoMarked) {
+    // (the model's own geometry, shared by every clone: never one person's to free; see releaseActor)
+    L.gltf.scene.traverse((o) => { if (o.geometry) o.geometry.userData.modelGeo = true; });
+    L.geoMarked = true;
+  }
   const root = new THREE.Group();
   const pivot = new THREE.Group(); // scales the model to its height
   root.add(pivot);
@@ -710,7 +794,8 @@ export function makeActor(spec = {}) {
   };
   const blinkM = morph(/Fcl_EYE_Close$/), mouthA = morph(/Fcl_MTH_A$/), mouthO = morph(/Fcl_MTH_O$/), smile = morph(/Fcl_ALL_Joy$/);
 
-  if (!spec.hologram) root.add(contactShadow(height * 0.24));
+  const blob = spec.hologram ? null : contactShadow(height * 0.24);
+  if (blob) root.add(blob);
 
   // animation
   const mixer = new THREE.AnimationMixer(model);
@@ -803,7 +888,7 @@ export function makeActor(spec = {}) {
 
   const U = root.userData;
   Object.assign(U, {
-    model, bones, mixer, handL, handR, head: bones.Head, spec: { ...spec, model: key }, actor: true,
+    model, bones, mixer, handL, handR, head: bones.Head, spec: { ...spec, model: key }, actor: true, blob,
     setTalking(on) { talking = !!on; },
     lookAt(p) { look = p ? p.clone() : null; },
     wave() { waveT = 0; },
@@ -913,8 +998,10 @@ export function makeActor(spec = {}) {
         solveConstraints();
       }
       void up;
+      U.posed = true; // (the bones moved: the next matrix pass computes them; see ACTOR_LOD)
     },
   });
+  lodBudget(root, sks);
   // aliases for older callers
   U.armR = bones.RightArm;
   U.torso = bones.Spine;

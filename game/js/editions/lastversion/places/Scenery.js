@@ -8,6 +8,7 @@
 import * as THREE from '../../../../vendor/three.module.min.js';
 import { compileCondition } from '../../../core/conditions.js';
 import { MATS, surfaceOf, surfaceMaterial, setEraBit, eraDepthMaterial, tickSurfaces } from './materials.js';
+import { freezeStatic } from '../../../world/statics.js';
 
 const _m = new THREE.Matrix4(), _e = new THREE.Euler(), _q = new THREE.Quaternion(), _p = new THREE.Vector3(), _s = new THREE.Vector3(), _c = new THREE.Color(), _t = new THREE.Color();
 const PROP_RANGE = 90;
@@ -290,6 +291,9 @@ export class Scenery {
       this.root.add(inst);
       this.veg.push({ inst, list: list.map((t) => ({ ...t, cond: t.when ? compileCondition(t.when) : null })) });
     }
+    // none of it moves (the years show and hide its groups, the vegetation's instance matrices place its plants):
+    // its matrices are computed once, and the frame's matrix pass skips it (v2.1 playtest SYS-01)
+    freezeStatic(this.root);
   }
 
   // which year: a group shows only in its years, and only while its fact condition holds

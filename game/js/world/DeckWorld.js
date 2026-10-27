@@ -10,6 +10,8 @@ import { TOKENS } from '../core/Laws.js';
 import { compileCondition } from '../core/conditions.js';
 import { mergeVertices } from '../../vendor/addons/utils/BufferGeometryUtils.js';
 import { buildDecor, RESKIN } from './DeckDecor.js';
+import { ACTOR_LOD, releaseActor } from './Actors.js';
+import { freezeStatic } from './statics.js';
 
 const _v = new THREE.Vector3(), _c = new THREE.Color();
 
@@ -28,6 +30,17 @@ export const BARK = { near: 4.5, rise: 1.8, gap: 30, person: 60, lineRest: 240, 
 // drawn until it is `far` metres clear again (so they do not blink at the edge) (v2.1 playtest: a walker passing under
 // the camera, its head and shoulders across the bottom-left of the screen).
 export const CAMERA_CLEAR = { near: 1.3, far: 1.6 };
+// The people nobody can see (v2.1 playtest SYS-01; THE LAST VERSION's places, main.js turns it on with lodOn): just
+// before each frame is drawn (viewLod) a person whose body (a sphere from the feet, a metre up, `body` m round, as
+// mount.js culls them) is outside the camera's view, and whose shadow cannot fall into it either (the body swept
+// along the sun down to their feet, or they stand outside the sun's shadow box), and who is more than `near` m from
+// the camera, is dormant: not posed, their bones' matrices not updated (world/Actors.js ACTOR_LOD), their body not
+// drawn. As they come into view they are posed for the time they missed, before that frame is drawn, so nobody is
+// ever seen in an old pose. Someone in view farther than `far` m who holds a pose (casting.js's budget) has their walk
+// drawn every second frame (a few centimetres, under a pixel there). Someone only their shadow shows is posed and
+// their skeleton computed here (the renderer computes only the skeletons it draws, so their shadow stood still).
+export const VIEW_LOD = { body: 1.6, near: 4, far: 50, shadowMax: 40, shadowBox: 18 };
+const _fr = new THREE.Frustum(), _pv = new THREE.Matrix4(), _sph = new THREE.Sphere(), _sph2 = new THREE.Sphere(), _sd = new THREE.Vector3(), _sx = new THREE.Vector3(), _sy = new THREE.Vector3(), _sp = new THREE.Vector3();
 
 // named people who can stand in a generated room (they are not crew): see LevelGen storyRoom
 const GUESTS = {
@@ -87,6 +100,7 @@ export class DeckWorld {
 
     // static geometry merged per material, conditional pieces kept separate
     const groups = new Map(), dress = new Map();
+    const statics = []; // what never moves: its matrices are computed once (freezeStatic)
     const reskin = RESKIN[level.palette.look] || {};
     for (const el of level.elements) {
       const [x0, y0, z0, x1, y1, z1] = el.box;
@@ -125,6 +139,7 @@ export class DeckWorld {
       const mesh = new THREE.Mesh(mergeGeometries(geos), this.mats[el.mat] || this.mats.wall);
       mesh.receiveShadow = true;
       root.add(mesh);
+      statics.push(mesh);
       geos.forEach((g) => g.dispose());
       this.dynamic.push({ el: { when: el.when, room: el.room, mat: el.mat, solid: false }, kind: null, mesh, box: null, cond: compileCondition(el.when) });
     }
@@ -139,6 +154,7 @@ export class DeckWorld {
       // shadowed or not, so they skip the 16 shadow-map lookups per pixel
       mesh.receiveShadow = !['ceil', 'roots', 'dome'].includes(mat);
       root.add(mesh);
+      statics.push(mesh);
       geos.forEach((g) => g.dispose());
     }
 
@@ -157,13 +173,18 @@ export class DeckWorld {
       mesh.position.set(...t.pos);
       mesh.rotation.y = t.rotY || 0;
       root.add(mesh);
+      statics.push(mesh);
       this.textMeshes.push({ t, mesh, cond: compileCondition(t.when) });
     }
 
     // pools of light under lamps (main.js turns the nearest into real lights)
     this.glows = [...(level.glows || []), ...(this.decor?.glows || [])];
-    if (this.glows.length) root.add(...lightPools(this.glows));
-    if (level.trees?.length || level.rocks?.length) root.add(...forest(level, this.mats));
+    if (this.glows.length) statics.push(...lightPools(this.glows));
+    if (level.trees?.length || level.rocks?.length) statics.push(...forest(level, this.mats));
+    for (const o of statics) {
+      if (!o.parent) root.add(o);
+      freezeStatic(o);
+    }
 
     for (const it of level.interactables) this.buildInteractable(it);
 
@@ -309,11 +330,14 @@ export class DeckWorld {
     // shared cache: those stay on the GPU for the next sector instead of being re-uploaded. Only
     // a character's own contact-shadow plane is freed with it, and its textures are noted for
     // freeLeft(). (Every sprite shares three's one sprite quad, also used outside the sector.)
+    // A character's skeletons' bone textures and the props on its bones (geometry of its own, though marked keep) go
+    // too (releaseActor; v2.1 playtest SYS-02: ~8 bone textures and ~6 prop meshes stayed on the GPU at every change).
     const own = new Set(Object.values(this.mats || {}));
     const left = (this.leftTex ||= new Set());
+    const leftGeo = (this.leftGeo ||= new Set());
     const walk = (o) => {
       if (o.userData.actor) {
-        for (const c of o.children) if (c.userData.ownGeometry) c.geometry.dispose();
+        releaseActor(o, leftGeo);
         texturesOf(o, left);
         return;
       }
@@ -335,6 +359,12 @@ export class DeckWorld {
   // theirs, so only the people in play hold GPU memory (a Rocketbox colour map with its mips is
   // 11-17 MB). Someone who comes back uploads again, behind that sector's fade.
   freeLeft() {
+    if (this.leftGeo) {
+      const used = new Set();
+      this.scene.traverse((o) => { if (o.geometry) used.add(o.geometry); });
+      for (const g of this.leftGeo) if (!used.has(g)) g.dispose();
+      this.leftGeo = null;
+    }
     if (!this.leftTex) return;
     const used = texturesOf(this.scene);
     for (const t of this.leftTex) if (!used.has(t)) t.dispose();
@@ -626,7 +656,10 @@ export class DeckWorld {
       m.userData.setTalking?.(n.talkT > 0);
       if (n.camHid && n.camHid.model !== m) this.clearOfCamera(n, false); // (their echo stands in for them now)
       if (!m.visible) continue; // hidden (not here in this state, or their echo stands in): no pose to compute, nothing to say
-      if (!frozen) m.userData.animate(dt, speed, t);
+      if (frozen) { /* their pose holds */ } else if (m.userData.dormant) {
+        n.lodDt = Math.min(1, (n.lodDt || 0) + dt); // (posed for it as they come into view: viewLod)
+        n.lodSpeed = speed;
+      } else m.userData.animate(dt, speed, t);
       // a passer-by the camera would be inside of is not drawn until it is clear of them
       if (cam && (n.n.ambient || n.n.path) && !n.n.flicker) {
         const y0 = m.position.y, y1 = y0 + (n.n.height || 1.75);
@@ -644,6 +677,101 @@ export class DeckWorld {
       }
     }
     if (speaker) this.bark(speaker, t, g);
+  }
+
+  // VIEW_LOD: who can be seen (or their shadow) this frame; main.js calls it just before the frame is drawn
+  viewLod(g, t = g.time || 0) {
+    if (!this.root) return;
+    const on = !!this.lodOn && ACTOR_LOD.enabled && !!g.camera;
+    let shadows = false, cp = null;
+    if (on) {
+      const cam = g.camera;
+      cam.updateMatrixWorld();
+      _pv.multiplyMatrices(cam.projectionMatrix, cam.matrixWorldInverse);
+      _fr.setFromProjectionMatrix(_pv);
+      cp = _sp.setFromMatrixPosition(cam.matrixWorld);
+      const sun = g.sun;
+      shadows = !!(g.renderer?.shadowMap?.enabled && sun?.castShadow && sun.visible && sun.intensity > 0);
+      if (shadows) {
+        // the sun's shadow camera looks from position to target, up +Y (main.js snaps its box in this basis)
+        _sd.subVectors(sun.position, sun.target.position).normalize(); // toward the sun
+        _sx.set(0, 1, 0).cross(_sd);
+        if (_sx.lengthSq() < 1e-6) _sx.set(1, 0, 0);
+        _sx.normalize();
+        _sy.copy(_sd).cross(_sx);
+        this.sunAt = sun.target.position;
+      }
+    }
+    for (const n of this.npcs) this.lodOne(n.model, n, t, on, shadows, cp);
+    // the watchers' people (inside each sentinel's model): posed by watchers.js every frame, so only drawn and their
+    // matrices computed while they (or their shadows) can be seen
+    for (const sn of this.sentinels || []) for (const c of sn.model?.children || []) if (c.userData.actor) this.lodOne(c, null, t, on, shadows, cp);
+  }
+
+  lodOne(m, n, t, on, shadows, cp) {
+    const U = m.userData;
+    if (!U.actor || !U.lastWorld) return;
+    if (!on) {
+      if (U.lodManaged || U.dormant) this.wake(m, n, t);
+      U.lodManaged = false;
+      return;
+    }
+    U.lodManaged = !!n; // (a watcher is posed every frame by watchers.js: only dormant or not)
+    if (!m.visible) return; // (hidden: nothing to draw; decided again as they appear, before that frame is drawn)
+    m.updateWorldMatrix(true, false);
+    const s = m.matrixWorld.getMaxScaleOnAxis();
+    _sph.center.set(0, 1, 0).applyMatrix4(m.matrixWorld);
+    _sph.radius = VIEW_LOD.body * s;
+    const d = _sph.center.distanceTo(cp);
+    const body = d < VIEW_LOD.near || _fr.intersectsSphere(_sph);
+    let shade = false;
+    if (!body && shadows && !U.spec?.hologram) shade = this.shadowInView(_sph, m.matrixWorld.elements[13]);
+    U.lodEvery = body && d > VIEW_LOD.far ? 2 : 1;
+    if (!body && !shade) {
+      if (!U.dormant) {
+        U.dormant = true;
+        U.model.visible = false;
+        if (U.blob) U.blob.visible = false;
+      }
+      return;
+    }
+    if (U.dormant) this.wake(m, n, t);
+    if (!body) {
+      // only their shadow is in view: posed and their skeleton computed now (the renderer does neither for a body
+      // it does not draw, and the shadow pass draws it as it was last computed)
+      m.updateMatrixWorld(true);
+      for (const k of U.skeletons) k.update();
+    }
+  }
+
+  // a dormant person comes into view: their body drawn again, posed for the time they missed
+  wake(m, n, t) {
+    const U = m.userData;
+    if (U.dormant) {
+      U.dormant = false;
+      U.model.visible = true;
+      if (U.blob && !n?.camHid) U.blob.visible = true;
+    }
+    if (n?.lodDt > 0) {
+      const dt = n.lodDt;
+      n.lodDt = 0;
+      U.animate?.(dt, n.lodSpeed || 0, t);
+    }
+  }
+
+  // can the shadow of a body (sphere s, feet at height y0) fall into the camera's view?
+  shadowInView(s, y0) {
+    // outside the sun's shadow box (VIEW_LOD.shadowBox m each way of its target, across the light): no shadow at all
+    const a = this.sunAt, r = s.radius + 1;
+    const ox = s.center.x - a.x, oy = s.center.y - a.y, oz = s.center.z - a.z;
+    if (Math.abs(ox * _sx.x + oy * _sx.y + oz * _sx.z) > VIEW_LOD.shadowBox + r || Math.abs(ox * _sy.x + oy * _sy.y + oz * _sy.z) > VIEW_LOD.shadowBox + r) return false;
+    // the body swept away from the sun until its top reaches the feet's height (and a quarter more, for ground that
+    // falls away): the sphere round that sweep
+    const up = _sd.y;
+    const L = up < 0.05 ? VIEW_LOD.shadowMax : Math.min(VIEW_LOD.shadowMax, ((s.center.y + s.radius - y0) / up) * 1.25 + 1);
+    _sph2.center.copy(s.center).addScaledVector(_sd, -L / 2);
+    _sph2.radius = s.radius + L / 2;
+    return _fr.intersectsSphere(_sph2);
   }
 
   // not drawn while the camera is inside them (the model stays visible to the game: it walks, and is counted present)

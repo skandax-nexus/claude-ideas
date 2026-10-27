@@ -37,7 +37,7 @@ import { MiniMap } from './ui/MiniMap.js';
 import { Voice } from './audio/Voice.js';
 import { Fx } from './world/Fx.js';
 import { HEROES, OPTIONS, heroSpec, hex } from './ui/Heroes.js';
-import { loadActors, actorsReady, actorLoaded, MODELS, loadErrors, setActorQuality } from './world/Actors.js';
+import { loadActors, actorsReady, actorLoaded, MODELS, loadErrors, setActorQuality, ACTOR_LOD } from './world/Actors.js';
 import { LOOKS, HAIR, TOPS, LOOK_DEFAULT, lookOf, crewModelKey } from './world/People.js';
 import { EDITION, NS } from './core/Edition.js';
 import { LV } from './editions/lastversion/index.js';
@@ -121,6 +121,17 @@ class Game {
     // renders in a frame (ambient occlusion's normal pass, sky PMREM bakes) reuse it
     this.renderer.shadowMap.autoUpdate = false;
     this.scene = new THREE.Scene();
+    // the renderer's matrix pass over the whole scene (in each render): during it, people who are hidden, out of view
+    // or unchanged keep their bones' matrices (world/Actors.js ACTOR_LOD; v2.1 playtest SYS-01)
+    const scenePass = this.scene.updateMatrixWorld;
+    this.scene.updateMatrixWorld = function (force) {
+      ACTOR_LOD.pass = true;
+      try {
+        scenePass.call(this, force);
+      } finally {
+        ACTOR_LOD.pass = false;
+      }
+    };
     this.scene.fog = new THREE.FogExp2(0xe4edf5, 0.012);
     this.scene.background = new THREE.Color(0xe4edf5);
     this.camera = new THREE.PerspectiveCamera(62, 1, 0.05, 600);
@@ -1383,6 +1394,7 @@ class Game {
     }
     this.level = lv;
     this.deckWorld.hero = this.settings.hero; // the Other wears your face
+    this.deckWorld.lodOn = !!c.lv; // THE LAST VERSION's crowds: nobody out of view is posed or drawn (DeckWorld VIEW_LOD)
     // a queued preset change lands here, so the new place compiles once. The new preset's chain
     // takes the new place's sky (not the one being left, which it would otherwise fetch and bake)
     this.postfx.envName = lv.palette.sky || null;
@@ -2343,6 +2355,7 @@ class Game {
     if (active) this.placeFocus();
     this.updateTheme(real);
     if (this.settings.minimap && this.started && !this.menu && ++this.frameN % 3 === 0) this.minimap.drawMini(this.player, this.room, this.mapMarkers());
+    if (this.mode === 'deck') this.deckWorld.viewLod(this); // (with this frame's camera: who can be seen)
     this.postfx.render();
   }
 
@@ -2633,6 +2646,7 @@ class Game {
     if (noRender) return;
     this.updateTheme(dt);
     if (this.settings.minimap && this.started) this.minimap.drawMini(this.player, this.room, this.mapMarkers());
+    if (this.mode === 'deck') this.deckWorld.viewLod(this);
     this.postfx.render();
   }
 
