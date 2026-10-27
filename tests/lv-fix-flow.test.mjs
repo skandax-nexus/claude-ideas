@@ -150,6 +150,27 @@ test('FT-11 / SYS-06: where Kai stood when the story moved is kept, and a load p
   assert.equal(rt.toAnchor(), false, 'another mission');
   assert.equal(placed.length, 0);
 });
+test('FT-11 / SYS-06: a load that finds Kai falling from his anchor puts him at the checkpoint; the watch waits out the card', () => {
+  const { rt, g, placed } = anchorRig();
+  rt.anchorWatch = { y: 1, t: 3 };
+  rt.opening = { previously: true };
+  rt.cinema = { active: true };
+  for (let i = 0; i < 50; i++) rt.anchorStep(0.1); // (5 s of the PREVIOUSLY card: not counted)
+  assert.ok(rt.anchorWatch, 'still watched once the card is over');
+  rt.opening = null;
+  rt.cinema = { active: false };
+  g.player.pos.y = -2; // (the platform he stood on is down again)
+  rt.anchorStep(0.1);
+  assert.deepEqual(placed.pop(), g.checkpoint);
+  assert.equal(rt.anchorWatch, null);
+  // standing: 3 s of play, then no more watching
+  rt.anchorWatch = { y: 1, t: 3 };
+  g.player.pos.y = 1;
+  for (let i = 0; i < 31; i++) rt.anchorStep(0.1);
+  assert.equal(rt.anchorWatch, null);
+  assert.equal(placed.length, 0);
+  assert.match(SRC, /this\.anchorStep\(dt\);\s*this\.watchStep\(dt\);/);
+});
 test('FT-11 / SYS-06: no anchor in the air, during a catch, a transition or an opening', () => {
   for (const [what, set] of [['in the air', (g) => { g.player.grounded = false; }], ['a catch', (g) => { g.catching = true; }], ['a transition', (g) => { g.transitioning = true; }], ['a load restoring', (g) => { g.restoring = true; }], ['an opening', (g, rt) => { rt.opening = {}; }]]) {
     const { rt, g } = anchorRig();
@@ -276,7 +297,10 @@ test('FT-14: Mission 2\'s PREVIOUSLY is the morning of the crash; no snap line o
   for (const l of PREVIOUSLY.m02) assert.ok(!/tonight/i.test(l), l);
   assert.equal(PREVIOUSLY.m02[2], 'Now Helix has gone dark, and Kai Varen is inside it.');
   // the Chronolith does not drain during a staged moment or a transition, and a snap overtaken by either says nothing
-  assert.match(SRC, /const draining = out && this\.unstable && !outdoors && !this\.opening && !this\.cinema\?\.active && !g\.transitioning;/);
+  assert.match(SRC, /const draining = out && this\.unstable && !outdoors && !this\.opening && !this\.cinema\?\.active && !g\.transitioning && !ending;/);
+  // (nor between a mission's end and the exit it takes on its own: Mission 3's fracture leaves the room in 2026)
+  assert.match(SRC, /const ending = this\.deck\?\.autoExit != null && !!g\.deckWorld\.flags\.beat_done;/);
+  assert.ok(MISSIONS.prologue.find((m) => m.key === 'm03').autoExit > 0);
   assert.match(SRC, /if \(this\.deck !== deck \|\| g\.transitioning \|\| !g\.campaign\?\.lv\) \{\s*g\.catching = false;\s*return;\s*\}/);
   assert.match(SRC, /if \(!this\.opening && !this\.cinema\?\.active\) this\.say\(LINES\.snap\);/);
 });

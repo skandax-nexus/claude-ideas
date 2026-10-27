@@ -1305,6 +1305,58 @@ in 5,143 recordings. Each mission's place is 1.7-6.8 ha (v2.0's generated rooms:
   (the fetch is aborted either way, and loads after the reload). Not done: the full `tests/lastversion.mjs` (the
   release step's); Mission 10's escape (F03's other half, not reproduced by its verifier).
 
+- **v2.1 playtest fixes, unit "flow" (2026-10-27): the post-game flow, saves and resume** (PLAYTEST-v2.1.md blocker
+  acts-3 F01; acts-3 X2, F06, F18; acts-1-2 F05, F06; systems SYS-06, SYS-09; first-time FT-11, FT-14). What changed:
+  - The title's CASE FILES (F01, the blocker): REPLAY and a FREE ROAM trip started from the title close the CASE FILES
+    menu before the game starts in the page (`main.frame` steps only with no menu: the case's opening never ended and
+    Kai never moved); `Runtime.start` closes a title menu left open for any other way in. Both now work as they do
+    from the in-game ending card.
+  - CONTINUE on a finished campaign (X2): a save whose ending is set (not a replay's, not a trip's) loads to its
+    ending's card ("The story is over. The cases it walked past, and the places it reached, are still open."), with
+    THE CASES (the CASE FILES and free roam) and BACK TO THE TITLE, never the Finale's hilltop with "The next door is
+    open"; the save then names the ending on the title ("ENDING C: AFTERZERO · The case files and free roam").
+  - A case file by its number (F18): "CASE FILES · CASE 14 OF 14", "Case fourteen. The Unwritten Record." (the
+    common pack re-recorded), the CASE FILES rows numbered 1-14; after REPLAY reloads the page, the title's first
+    button says what it starts ("REPLAY · Case 14 of 14 · THE UNWRITTEN RECORD · Tap to start", not "CONTINUE · Tap to
+    enter"; a chapter's NEW GAME and a LOAD likewise).
+  - A save taken during a mission's opening (acts-1-2 F05: the app sent to the background in Mission 12's 2196 cold
+    open, then QUIT) is marked (`campaign.opening`) and loads with the opening played again, every room back in its
+    own year first: no chase in 2196 with the Chronolith draining.
+  - Where a load puts Kai (FT-11, SYS-06, acts-3 F06): where he last stood when the story moved since his checkpoint
+    (a thread done, evidence or a fragment found: `campaign.anchor`), while the checkpoint and the room's year are the
+    same (else the checkpoint, as before); a fall from it in the first seconds of play goes to the checkpoint. A
+    checkpoint reached is saved at once, and the game saves when the app goes to the background (not while the page
+    unloads, so a LOAD or CLEAR is never written over): no 110 m walk back in Mission 1, no play time lost. A load
+    gives the Chronolith at least 60%: the Finale's save past the fallen street loads past it, in 2026, with time to
+    switch years.
+  - REVERSE when the story reaches it (SYS-09, acts-1-2 F06): Mission 11's unlock waits for its thread ("Watch the
+    file that keeps un-burning", after the courts); reached early (the annex is not locked), the zone and READ THE FILE
+    give nothing and the zone is armed again once the story is there. Watching the file for 4 s from within 8 m counts
+    as reaching it (the zone asked for 1.7 m).
+  - FT-14: Mission 2's PREVIOUSLY says "Now Helix has gone dark, and Kai Varen is inside it." (the morning of 8:14; the
+    common pack re-recorded). The Chronolith does not drain in a staged moment, an outro, the way to the next place, or
+    the second between a mission's end and the exit it takes on its own (Mission 3's fracture leaves the room in 2026
+    for 1.6 s); a snap overtaken by the next place says nothing.
+  Outside this unit's files: `voicelines.js` (the case card's spoken number), the common voice pack, a sentence of
+  DESIGN.md's Runtime row. Not done: the music box's sound clue with Sound captions off by default (acts-1-2 F06's
+  other half; Settings.js and score.js, and its third THINK tier names the way).
+  Checked: `tests/lv-fix-flow.test.mjs` (14 tests), `npm test` (all), `node --check`, `voice-lv.sh check` (every pack
+  up to date). In the browser by touch (`tests/lv-fix-flow.mjs`, 71 checks, all passing; scratch `fix/flow/final/`),
+  each title flow at 915x412 and 412x915: Title > NEW GAME > CASE FILES > REPLAY THE UNWRITTEN RECORD (card CASE 14 OF
+  14, its opening ends on the game's own loop, the stick walks Kai, the dock's MENU pauses); > FREE ROAM > THE FRACTURE
+  2026 (arrives with no menu, walks, pauses); CONTINUE on the playtest's Ending C save (the ending's card, no PREVIOUSLY,
+  THE CASES, REPLAY, the title's REPLAY button, the case starts). At 915x412: Mission 12's cold open, the app sent to
+  the background, QUIT, CONTINUE: the opening again, then 2049 and no drain over 12 s; the Finale's street crossed in
+  2026, background, QUIT, CONTINUE: Kai at z 119 (the playtest: the platform, z 166), no "let go" after; Mission 1:
+  the pigeon found by a tap, background (play time saved), QUIT, CONTINUE at the pigeon (41 m from the door), the
+  plaza's checkpoint saved within 3 s with nothing found there, a reload in the plaza; Mission 11 from the testers'
+  saves: at the file before the boy on the bench no REVERSE (nor by READ THE FILE), given once the story is there;
+  from 6.5 m looking at the file, given (10 m: not). At 412x915 from the first-time tester's own saves: Mission 2's
+  PREVIOUSLY card read, Mission 3's control panel tapped at low stability, its outro and Act I's card with no snap
+  line and no drain. (Harness: the browser window 1000x1000, larger than either page: headless Chromium's default
+  800x600 window drops touch scrolls that start beyond its edge, which had looked like an unscrollable in-game CASE
+  FILES and a MENU tap landing on RESUME.) Not run: the full `tests/lastversion.mjs` (the release step's).
+
 ## Generated (playable, solvable by construction, not hand-tuned)
 
 - **Nothing of the places since U3.** Every mission and both cases stand in an authored open place;

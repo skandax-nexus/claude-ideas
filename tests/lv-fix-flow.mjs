@@ -14,6 +14,8 @@
 //             reached is saved; the app sent to the background saves (FT-11, SYS-06)
 //   reverse   Mission 11: REVERSE is not given before the story reaches the file; watched from 6 m it is (SYS-09, F06)
 //   snap      no "The Chronolith let go of me" inside a staged moment or after the next place's fade began (FT-14)
+//   ft14      the first-time tester's saves: Mission 2's PREVIOUSLY card ("Now Helix has gone dark"), and Mission 3's
+//             control panel into the Act I opening with no snap line (FT-14)
 // LV_FLOW=case,roam,... runs only those (all by default); LV_FLOW_SHOTS=<dir> keeps JPEG screenshots there.
 //   NODE_PATH=$(npm root -g) node tests/lv-fix-flow.mjs
 import { createRequire } from 'node:module';
@@ -36,7 +38,10 @@ const server = http.createServer((req, res) => {
 });
 await new Promise((r) => server.listen(0, r));
 const url = `http://localhost:${server.address().port}/index.html?edition=lastversion`;
-const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--disable-gpu-watchdog', '--autoplay-policy=user-gesture-required'] });
+// (a window larger than either phone page: headless Chromium's default 800x600 window drops touch scrolls that start
+// beyond its edge, x 800 of a 915 px landscape page, y 600 of a 915 px upright one, and sends their touchstart
+// uncancelable; the touch unit's harness note)
+const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--disable-gpu-watchdog', '--autoplay-policy=user-gesture-required', '--window-size=1000,1000'] });
 const SHOTS = process.env.LV_FLOW_SHOTS || null;
 if (SHOTS) fs.mkdirSync(SHOTS, { recursive: true });
 const ONLY = (process.env.LV_FLOW || '').split(',').filter(Boolean);
@@ -90,6 +95,7 @@ async function phone({ w = 915, h = 412, slots = {}, name }) {
   // the element on screen (dragging its panel, or the list it is in, as a thumb would), then a tap at the centre of
   // what shows of it; never a tap that would land on something else
   P.tapSel = async (sel) => {
+    let last = null;
     for (let i = 0; i < 24; i++) {
       const r = await az((s) => {
         const b = document.querySelector(s);
@@ -106,6 +112,7 @@ async function phone({ w = 915, h = 412, slots = {}, name }) {
         return { t: q.top, b: q.bottom, l: q.left, r: q.right, c };
       }, sel);
       if (!r) return { tapped: false, why: `no ${sel}` };
+      last = r;
       const cy = (r.t + r.b) / 2, cx = Math.max(r.l, r.c.l + 2) / 2 + Math.min(r.r, r.c.r - 2) / 2;
       if (cy >= r.c.t + 2 && cy <= r.c.b - 2 && Math.min(r.b, r.c.b) - Math.max(r.t, r.c.t) >= Math.min(16, r.b - r.t)) {
         const y = (Math.max(r.t, r.c.t) + Math.min(r.b, r.c.b)) / 2;
@@ -120,7 +127,7 @@ async function phone({ w = 915, h = 412, slots = {}, name }) {
       const dy = Math.max(-span, Math.min(span, mid - cy));
       await P.drag(Math.max(r.c.l + 20, Math.min(r.c.r - 20, cx)), mid, mid + (Math.abs(dy) < 8 ? -40 : dy));
     }
-    return { tapped: false, why: `${sel} never on screen` };
+    return { tapped: false, why: `${sel} never on screen`, last };
   };
   // the left thumb on the stick: forward for `ms`
   P.stick = async (ms, fx = 0, fy = -1) => {
@@ -130,8 +137,8 @@ async function phone({ w = 915, h = 412, slots = {}, name }) {
     await page.waitForTimeout(ms);
     await touch('touchEnd', []);
   };
-  // the dock's MENU tapped; whether the pause menu opened (and what else the tap did: in headless Chromium at 3-5 fps a
-  // touchstart on the dock can arrive uncancelable, so its click lands on the pause menu's RESUME that opened under it)
+  // the dock's MENU tapped; whether the pause menu opened and stayed open (and what the tap did: with a headless window
+  // smaller than the page, the touchstart arrived uncancelable and its click landed on the pause menu's RESUME)
   P.menuTap = async () => {
     await az(() => {
       window.__mlog = [];
@@ -147,7 +154,7 @@ async function phone({ w = 915, h = 412, slots = {}, name }) {
     const tap = await P.tapSel('#dock [data-act="pause"]');
     await page.waitForTimeout(1500);
     const r = await az(() => ({ menu: AZ.menu, trace: window.__mlog.slice() }));
-    return { tap, opened: r.menu === 'pause' || r.trace.includes('open pause'), ...r };
+    return { tap, opened: r.menu === 'pause', ...r };
   };
   P.shot = async (n) => { if (SHOTS) await page.screenshot({ path: path.join(SHOTS, `${name}_${n}.jpg`), type: 'jpeg', quality: 60 }).catch(() => {}); };
   P.probe = () => az(() => ({
@@ -423,6 +430,8 @@ async function streetFlow(w, h) {
     // (as the bot crosses it: in 2026 the near half stands, the Witness holds the far half; a helper walk)
     const crossed = await P.az(() => {
       const g = AZ, p = g.edition.inv.procs.find((x) => x.rec.id === 'streetCollapse');
+      // (the playtest's save has the street's arrival zone spent with its thread: armed again with the thread undone)
+      g.level.triggers.forEach((z, i) => { if (z.set?.t_m23_street) delete g.deckWorld.flags[`trig_${i}`]; });
       for (let i = 0; i < 40 && p && p.P < 0.98; i++) g.simulate(0.2);
       g.engine.setState(g.room, 'PAST', { force: true });
       g.edition.stability = 1;
@@ -474,10 +483,15 @@ async function anchorFlow(w, h) {
     const walked = await P.az((p) => { FW.walkTo(p[0] + 3, p[2] + 2, 40); return AZ.player.pos.toArray().map((v) => +v.toFixed(1)); }, lm);
     log('walked to the pigeon (helper)', walked);
     await P.page.waitForFunction(() => /PIGEON/i.test(document.querySelector('#prompt')?.innerText || ''), null, { timeout: 20000 }).catch(() => {});
-    log('tap the prompt', await P.tapSel('#prompt'));
-    await P.page.waitForTimeout(1500);
-    await P.az(() => { for (let i = 0; i < 300 && AZ.hud.talking; i++) AZ.simulate(0.1); });
-    const found = await P.az(() => ({ ev: AZ.facts.get('ev_pigeon'), anchor: AZ.campaign.anchor, pos: AZ.player.pos.toArray().map((v) => +v.toFixed(1)) }));
+    log('the prompt', await P.az(() => ({ text: (document.querySelector('#prompt')?.innerText || '').replace(/\s+/g, ' '), focus: AZ.focus?.prompt || null, menu: AZ.menu, opening: !!AZ.edition.opening, talking: !!AZ.hud.talking })));
+    for (let k = 0; k < 3; k++) {
+      log('tap the prompt', await P.tapSel('#prompt'));
+      await P.page.waitForTimeout(1500);
+      await P.az(() => { for (let i = 0; i < 300 && AZ.hud.talking; i++) AZ.simulate(0.1); });
+      if (await P.az(() => !!AZ.facts.get('ev_pigeon'))) break;
+      log('(the tap did not take: again)', await P.az(() => ({ focus: AZ.focus?.prompt || null, prompt: (document.querySelector('#prompt')?.innerText || '').replace(/\s+/g, ' ') })));
+    }
+    const found = await P.az(() => ({ ev: AZ.facts.get('ev_pigeon'), anchor: AZ.campaign.anchor, pos: AZ.player.pos.toArray().map((v) => +v.toFixed(1)), said: FW.said.slice(-4), sets: FW.sets.slice(-4) }));
     check(found.ev && found.anchor, 'the pigeon found by a tap: where Kai stood is kept', JSON.stringify(found));
     // on a few metres, then the app to the background: it saves; then QUIT
     await P.az(() => FW.walkTo(AZ.player.pos.x - 4, AZ.player.pos.z - 4, 6));
@@ -497,17 +511,27 @@ async function anchorFlow(w, h) {
     check(d0 < 1.5 && fromDoor > 20, `the load puts Kai where he found the pigeon (${d0.toFixed(1)} m from it, ${fromDoor.toFixed(0)} m from his door)`, JSON.stringify(r0));
     await P.openingOver(240, true);
     // into the plaza's quarter: its checkpoint is saved within seconds, with nothing found there; then the page dies
-    const plaza = await P.az(() => { for (const [x, z] of [[-10, -29.4], [-9.5, -50], [-6, -66], [0, -74], [-6, -88]]) FW.walkTo(x, z, 25); AZ.simulate(4); return { cp: AZ.checkpoint, pos: AZ.player.pos.toArray().map((v) => +v.toFixed(1)), playTime: Math.round(AZ.playTime) }; });
+    // (cpAt: the play time when the plaza's checkpoint was reached; the autosave runs at most every 3 s)
+    const plaza = await P.az(() => {
+      const cp0 = AZ.checkpoint;
+      let cpAt = null;
+      for (const [x, z] of [[-10, -29.4], [-9.5, -50], [-6, -66], [0, -74], [-6, -88]]) {
+        for (let k = 0; k < 50 && FW.walkTo(x, z, 0.5) > 0.6; k++) if (cpAt === null && AZ.checkpoint !== cp0 && AZ.checkpoint[2] < -60) cpAt = AZ.playTime;
+        if (cpAt === null && AZ.checkpoint !== cp0 && AZ.checkpoint[2] < -60) cpAt = AZ.playTime;
+      }
+      AZ.simulate(4);
+      return { cp: AZ.checkpoint, cpAt: cpAt && +cpAt.toFixed(1), pos: AZ.player.pos.toArray().map((v) => +v.toFixed(1)), playTime: +AZ.playTime.toFixed(1) };
+    });
     const s2 = await slotOf(P, 1);
-    log('in the plaza (helper walk)', plaza, s2?.campaign?.pos);
-    check(s2?.campaign?.pos?.[2] < -60 && Math.abs((s2?.playTime || 0) - plaza.playTime) < 6, 'the plaza\'s checkpoint, reached, is saved (and the play time)', JSON.stringify({ pos: s2?.campaign?.pos, playTime: s2?.playTime }));
+    log('in the plaza (helper walk)', plaza, s2?.campaign?.pos, s2?.playTime);
+    check(plaza.cpAt !== null && s2?.campaign?.pos?.[2] < -60 && (s2?.playTime || 0) >= plaza.cpAt - 0.5, `the plaza's checkpoint, reached at ${plaza.cpAt} s with nothing found there, is saved (saved at ${(s2?.playTime || 0).toFixed(1)} s)`, JSON.stringify({ pos: s2?.campaign?.pos, playTime: s2?.playTime }));
     await P.page.reload();
     await P.title();
     await P.tapXY(w * 0.7, 40);
     log('tap CONTINUE', await P.tapSel('#continue'));
     await P.inPlace();
     const r1 = await P.probe();
-    check(r1.pos[2] < -60 && r1.playTime >= plaza.playTime - 6, `after a reload Kai is in the plaza (z ${r1.pos[2]}), the play time kept (${r1.playTime} s)`, JSON.stringify(r1));
+    check(r1.pos[2] < -60 && r1.playTime >= plaza.cpAt - 1, `after a reload Kai is in the plaza (z ${r1.pos[2]}), the play time kept (${r1.playTime} s)`, JSON.stringify(r1));
     await P.shot('plaza');
     check(!P.errors.length, 'no page errors', P.errors.join(' | '));
   } catch (e) { check(false, 'anchor flow ran', e.message); }
@@ -625,6 +649,82 @@ async function snapFlow(w, h) {
   await P.close();
 }
 
+// FT-14, the tester's own saves (the first-time playtest's states s32 and s38): CONTINUE in Mission 2, its PREVIOUSLY
+// card read; then Mission 3's control panel tapped, its outro and the Act I opening watched for the snap line
+async function ft14Flow(w, h) {
+  console.log(`FT-14: Mission 2's PREVIOUSLY card; Mission 3's end into Act I (${w}x${h})`);
+  let P = await phone({ w, h, slots: { 0: FIX('lv-flow-m02.json') }, name: `ft14a_${w}x${h}` });
+  try {
+    await P.boot();
+    log('tap CONTINUE', await P.tapSel('#continue'));
+    await P.inPlace();
+    await P.az(WALK);
+    const lines = [];
+    const end = Date.now() + 120000;
+    while (Date.now() < end) {
+      const s = await P.az(() => ({ subs: (document.querySelector('#subs')?.innerText || '').replace(/\s+/g, ' '), card: document.querySelector('#card')?.classList.contains('on') ? document.querySelector('#card').innerText.replace(/\s+/g, ' ') : '', o: !!AZ.edition.opening }));
+      if (s.subs && !lines.includes(s.subs)) lines.push(s.subs);
+      if (/inside it\./.test(s.subs)) { await P.shot('previously'); break; }
+      if (!s.o) break;
+      await P.page.waitForTimeout(400);
+    }
+    log('PREVIOUSLY said', lines);
+    const third = lines.find((l) => /Helix has gone dark/.test(l)) || '';
+    const rec = await P.az(() => !!AZ.voice.plan('Now Helix has gone dark, and Kai Varen is inside it.', 'NONE'));
+    check(third === 'Now Helix has gone dark, and Kai Varen is inside it.' && !lines.some((l) => /tonight/i.test(l)) && rec, 'Mission 2\'s PREVIOUSLY card: "Now Helix has gone dark ..." (the morning of 8:14, not "Tonight"), recorded', JSON.stringify({ third, rec }));
+    check(!P.errors.length, 'no page errors', P.errors.join(' | '));
+  } catch (e) { check(false, 'ft14 (PREVIOUSLY) ran', e.message); }
+  await P.close();
+  P = await phone({ w, h, slots: { 0: FIX('lv-flow-m03end.json') }, name: `ft14b_${w}x${h}` });
+  try {
+    await P.boot();
+    log('tap CONTINUE', await P.tapSel('#continue'));
+    await P.inPlace();
+    await P.az(WALK);
+    await P.openingOver(240, true);
+    // (helpers, as the tester's segment did by hand: the control room opened with the 2026 card, Kai at its panel)
+    const at = await P.az(() => {
+      const g = AZ;
+      g.facts.set('open_control', true);
+      g.simulate(0.3);
+      const c = g.deckWorld.focusCandidates(g).find((x) => /CONTROL PANEL/i.test(x.prompt || ''));
+      if (!c) return null;
+      g.player.place([c.pos[0], c.pos[1] - 1.3 + 0.86, c.pos[2] + 1.6, 0]);
+      for (let i = 0; i < 20 && g.focus?.prompt !== c.prompt; i++) g.simulate(0.1);
+      return { prompt: c.prompt, focus: g.focus?.prompt || null, room: g.room, year: g.engine.state(g.room), stability: +g.edition.stability.toFixed(2) };
+    });
+    log('at the panel (helper)', at);
+    await P.page.waitForFunction(() => /CONTROL PANEL/i.test(document.querySelector('#prompt')?.innerText || ''), null, { timeout: 30000 }).catch(() => {});
+    // (low, as the tester's was after the keycard's walk in 2026: without the fix the outro's 2026 drained it to nothing
+    // and the snap's line came in the Act I card)
+    await P.az(() => { FW.said.length = 0; window.__samples = []; AZ.edition.stability = 0.15; return 1; });
+    log('tap the prompt', await P.tapSel('#prompt'));
+    // the outro, the way to Act I and its opening, on the game's simulate (lines shortened), sampled as they go
+    const done = await P.page.waitForFunction(() => {
+      const g = AZ, e = g.edition;
+      g.simulate(0.3);
+      g.hud.subT = Math.min(g.hud.subT, 0.2);
+      const home = e.home?.();
+      __samples.push({ ch: e.chapter, m: e.deck?.mkey, y: g.engine.state(g.room), out: g.engine.state(g.room) !== home, st: +e.stability.toFixed(2), cin: !!e.cinema?.active, tr: !!g.transitioning, op: !!e.opening, catching: !!g.catching });
+      return e.chapter === 'act1' && e.deck?.mkey === 'm04' && !e.opening && !e.cinema?.active && !g.transitioning;
+    }, null, { timeout: 400000, polling: 300 }).then(() => true, () => false);
+    const r = await P.az(() => {
+      const s = __samples;
+      const outInMoment = s.filter((x) => x.out && (x.cin || x.tr || x.op)).length;
+      return { said: FW.said.slice(), n: s.length, outInMoment, minSt: Math.min(...s.map((x) => x.st)), caught: s.some((x) => x.catching), years: [...new Set(s.map((x) => `${x.m}:${x.y}`))], outFree: s.filter((x) => x.out && !x.cin && !x.tr && !x.op) };
+    });
+    log('outro and Act I', { n: r.n, outInMoment: r.outInMoment, minSt: r.minSt, caught: r.caught, years: r.years, outFree: r.outFree });
+    log('said', r.said.filter((l) => /Act One|He fell|let go|Control\. Finally/.test(l)));
+    await P.shot('act1');
+    check(done && r.said.some((l) => /Act One/.test(l)), 'Mission 3 ends, and Act I\'s opening plays', JSON.stringify({ done }));
+    check(!r.said.some((l) => /let go of me/.test(l)) && !r.caught, `no "The Chronolith let go of me" in the outro or the Act I card (stability at least ${r.minSt}; ${r.outInMoment} samples out of the home year inside a staged moment)`, JSON.stringify(r.said.filter((l) => /let go/.test(l))));
+    const held = r.outFree.length ? Math.max(...r.outFree.map((x) => x.st)) - Math.min(...r.outFree.map((x) => x.st)) : 0;
+    check(held < 0.005, `between the fracture (the room left in 2026) and the outro, the Chronolith does not drain (${r.outFree.length} samples, ${held.toFixed(3)} lost)`, JSON.stringify(r.outFree));
+    check(!P.errors.length, 'no page errors', P.errors.join(' | '));
+  } catch (e) { check(false, 'ft14 (Mission 3 into Act I) ran', e.message); }
+  await P.close();
+}
+
 const L = [915, 412], PT = [412, 915];
 if (want('case')) await caseFlow(...L);
 if (want('roam')) await roamFlow(...PT);
@@ -638,6 +738,7 @@ if (want('street')) await streetFlow(...L);
 if (want('anchor')) await anchorFlow(...L);
 if (want('reverse')) await reverseFlow(...L);
 if (want('snap')) await snapFlow(...L);
+if (want('ft14')) await ft14Flow(...PT);
 
 await browser.close();
 server.close();

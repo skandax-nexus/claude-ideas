@@ -870,6 +870,17 @@ export class LastVersion {
     return true;
   }
 
+  // a load at an anchor that is not there any more (a held platform down again, a moving one gone): the checkpoint.
+  // Watched for 3 s of play once the load's card is over (Kai is held, not frozen, under it: a fall shows at once)
+  anchorStep(dt) {
+    const g = this.g, w = this.anchorWatch;
+    if (!w) return;
+    if (g.player.pos.y < w.y - 1.5 && !g.catching) {
+      g.player.place(g.checkpoint);
+      this.anchorWatch = null;
+    } else if (!this.opening && !this.cinema?.active && (w.t -= dt) <= 0) this.anchorWatch = null;
+  }
+
   // the app sent to the background: save now (not while the page unloads, nor between two places)
   saveOnHide() {
     const g = this.g;
@@ -2054,8 +2065,11 @@ export class LastVersion {
     const out = !this.roaming && state !== this.home(); // (a trip costs the Chronolith nothing)
     const outdoors = this.deck?.stableOutdoors && g.room === this.level.outdoorRoom;
     // (a cold open shot in another year costs nothing; nor does a staged moment, a mission's outro, or the way to the
-    // next place: the Chronolith let go of Kai inside the Act I card after Mission 3's outro, v2.1 playtest FT-14)
-    const draining = out && this.unstable && !outdoors && !this.opening && !this.cinema?.active && !g.transitioning;
+    // next place: the Chronolith let go of Kai inside the Act I card after Mission 3's outro, v2.1 playtest FT-14; nor
+    // the second or so between a mission's end and the exit it takes on its own, autoExit: Mission 3's fracture leaves
+    // the control room in 2026 for 1.6 s before its outro)
+    const ending = this.deck?.autoExit != null && !!g.deckWorld.flags.beat_done;
+    const draining = out && this.unstable && !outdoors && !this.opening && !this.cinema?.active && !g.transitioning && !ending;
     const holding = this.unstable && !!this.inv?.active && !this.inv.active.lock;
     if (draining) this.stability = Math.max(0, this.stability - dt * 0.045);
     else if (!out && !holding) this.stability = Math.min(1, this.stability + dt * 0.1);
@@ -2068,13 +2082,7 @@ export class LastVersion {
       if (this.cpSeen !== undefined && !g.catching && !g.transitioning) g.dirty = true;
       this.cpSeen = g.checkpoint;
     }
-    // a load at an anchor that is not there any more (a held platform down again, a moving one gone): the checkpoint
-    if (this.anchorWatch) {
-      if (p.y < this.anchorWatch.y - 1.5 && !g.catching) {
-        g.player.place(g.checkpoint);
-        this.anchorWatch = null;
-      } else if ((this.anchorWatch.t -= dt) <= 0) this.anchorWatch = null;
-    }
+    this.anchorStep(dt);
     this.watchStep(dt);
     // Echo Step cooldown, the afterimage
     this.echoCd = Math.max(0, this.echoCd - dt);
