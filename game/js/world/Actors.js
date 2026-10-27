@@ -571,7 +571,8 @@ function lodMatrixWorld(force) {
   U.posed = false;
   U.mv++;
 }
-function lodBudget(root, skeletons) {
+// (makeActor puts every person on it; exported for the unit tests, tests/lv-fix-perf.test.mjs)
+export function lodBudget(root, skeletons) {
   const U = root.userData;
   Object.assign(U, { mv: 1, stale: true, posed: true, dormant: false, lodManaged: false, lodEvery: 1, lodTick: Math.floor(Math.random() * 3), lastWorld: new THREE.Matrix4(), skeletons });
   root.updateMatrixWorld = lodMatrixWorld;

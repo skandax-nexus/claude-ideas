@@ -39,7 +39,7 @@ export const CAMERA_CLEAR = { near: 1.3, far: 1.6 };
 // ever seen in an old pose. Someone in view farther than `far` m who holds a pose (casting.js's budget) has their walk
 // drawn every second frame (a few centimetres, under a pixel there). Someone only their shadow shows is posed and
 // their skeleton computed here (the renderer computes only the skeletons it draws, so their shadow stood still).
-export const VIEW_LOD = { body: 1.6, near: 4, far: 50, shadowMax: 40, shadowBox: 18 };
+export const VIEW_LOD = { body: 1.6, near: 4, far: 50, shadowMax: 40, shadowBox: 18 }; // (shadowBox: if the sun has no shadow camera)
 const _fr = new THREE.Frustum(), _pv = new THREE.Matrix4(), _sph = new THREE.Sphere(), _sph2 = new THREE.Sphere(), _sd = new THREE.Vector3(), _sx = new THREE.Vector3(), _sy = new THREE.Vector3(), _sp = new THREE.Vector3();
 
 // named people who can stand in a generated room (they are not crew): see LevelGen storyRoom
@@ -700,6 +700,8 @@ export class DeckWorld {
         _sx.normalize();
         _sy.copy(_sd).cross(_sx);
         this.sunAt = sun.target.position;
+        const sc = sun.shadow?.camera;
+        this.sunBox = sc ? [Math.max(-sc.left, sc.right), Math.max(sc.top, -sc.bottom)] : [VIEW_LOD.shadowBox, VIEW_LOD.shadowBox];
       }
     }
     for (const n of this.npcs) this.lodOne(n.model, n, t, on, shadows, cp);
@@ -750,7 +752,10 @@ export class DeckWorld {
     if (U.dormant) {
       U.dormant = false;
       U.model.visible = true;
-      if (U.blob && !n?.camHid) U.blob.visible = true;
+      // (their contact shadow too; while the camera is inside them it comes back with the rest of them, clearOfCamera)
+      if (U.blob && n?.camHid) {
+        if (!n.camHid.shown.includes(U.blob)) n.camHid.shown.push(U.blob);
+      } else if (U.blob) U.blob.visible = true;
     }
     if (n?.lodDt > 0) {
       const dt = n.lodDt;
@@ -761,10 +766,10 @@ export class DeckWorld {
 
   // can the shadow of a body (sphere s, feet at height y0) fall into the camera's view?
   shadowInView(s, y0) {
-    // outside the sun's shadow box (VIEW_LOD.shadowBox m each way of its target, across the light): no shadow at all
-    const a = this.sunAt, r = s.radius + 1;
+    // outside the sun's shadow box (its shadow camera's extent each way of its target, across the light): no shadow
+    const a = this.sunAt, r = s.radius + 1, [bx, by] = this.sunBox;
     const ox = s.center.x - a.x, oy = s.center.y - a.y, oz = s.center.z - a.z;
-    if (Math.abs(ox * _sx.x + oy * _sx.y + oz * _sx.z) > VIEW_LOD.shadowBox + r || Math.abs(ox * _sy.x + oy * _sy.y + oz * _sy.z) > VIEW_LOD.shadowBox + r) return false;
+    if (Math.abs(ox * _sx.x + oy * _sx.y + oz * _sx.z) > bx + r || Math.abs(ox * _sy.x + oy * _sy.y + oz * _sy.z) > by + r) return false;
     // the body swept away from the sun until its top reaches the feet's height (and a quarter more, for ground that
     // falls away): the sphere round that sweep
     const up = _sd.y;
@@ -781,7 +786,8 @@ export class DeckWorld {
       for (const c of shown) c.visible = false;
       n.camHid = { model: n.model, shown };
     } else if (n.camHid) {
-      for (const c of n.camHid.shown) c.visible = true;
+      const U = n.camHid.model.userData;
+      for (const c of n.camHid.shown) c.visible = !(U.dormant && c === U.blob); // (a dormant person's shadow waits for wake)
       n.camHid = null;
     }
   }

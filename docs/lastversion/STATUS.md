@@ -1403,6 +1403,46 @@ in 5,143 recordings. Each mission's place is 1.7-6.8 ha (v2.0's generated rooms:
   first-second chamber and Mission 22's Spire at low and medium. Not run: the full `tests/lastversion.mjs` (the
   release step's). Seen, not this unit's: the frozen block's lobby crowd walks behind the frozen glass; the one-time
   "THE CASE BOARD" tip can show over a staged moment's top.
+- **v2.1 playtest fixes, unit "perf" (2026-10-27): phone performance and memory** (PLAYTEST-v2.1.md systems SYS-01,
+  SYS-02). What changed:
+  - The frame's matrix pass (SYS-01: about two thirds of a phone's CPU frame in a crowd was three.js recomputing every
+    object's world matrix and every skeleton, a person being ~95 objects). Scenery built where it stays (DeckWorld's
+    merged surfaces, plaques, light pools and trees; a place's `Scenery` root) has its matrices computed once and is
+    skipped from then on (`world/statics.js` `freezeStatic`; years still show and hide it, instance matrices still
+    place its plants). The people's matrix budget (`world/Actors.js` `ACTOR_LOD`, during the renderer's whole-scene
+    pass, which main.js marks): a person hidden or dormant is not recomputed; one DeckWorld manages who has no new pose
+    and has not moved keeps their bones as computed (casting.js's held poses, people standing); a far walker (beyond
+    50 m, in view) holding a pose is recomputed every second frame (a few centimetres, under a pixel there); a
+    skeleton's bone matrices are computed only after its bones were. DeckWorld's view LOD (`VIEW_LOD`, `viewLod`, called
+    by main.js just before each frame is drawn, on in THE LAST VERSION only): someone whose body is outside the
+    camera's view and more than 4 m off, and whose shadow cannot fall into it (their body swept away from the sun, or
+    outside the sun's shadow box; holograms cast none), is dormant: not posed, not recomputed, not drawn (nor in the
+    shadow pass). Coming into view they are posed for the time they missed before that frame is drawn. In Station Zero
+    (the view LOD off) only the frozen deck scenery and hidden people's bones not being recomputed differ.
+  - Mission change (SYS-02): DeckWorld.dispose now releases each person's skeletons (their bone textures) and their own
+    geometry, and notes the props on their bones; `freeLeft` frees those the next place does not use
+    (`Actors.releaseActor`). The loaded models' geometry (shared by every clone, `modelGeo`) and the garments' cached
+    geometry stay.
+  Measured (the tester's own measure, `s11_cpuframe.mjs`: `AZ.frame()` timed with the draw replaced by the scene's
+  matrix pass and the skeletons of what is visible, Kai walking, CDP 4x CPU throttle, MEDIUM, smart renderer off; the
+  code before this unit, `f03982f`, served beside the code after, interleaved runs in two rounds, 6 x 90 frames per run
+  after a warm-up sample, 1,080 frames each; scratch `fix/perf/s11ab.mjs`): Mission 1's avenue (10.5, -29.6) mean 15.6
+  -> 6.5 ms (-59%), p50 14.6 -> 6.1, p90 23.7 -> 10.9 (-54%), p99 38.5 -> 17.9; Mission 14 mean 12.4 -> 6.9 ms (-44%),
+  p50 11.9 -> 6.6, p90 17.5 -> 10.6 (-39%), p99 25.4 -> 17.9. At 1x: Mission 1 3.1-3.7 -> 1.7 ms, Mission 14 2.6-2.7 ->
+  1.6-1.8. (This machine was less loaded than the playtest's: its 4x Mission 1 was 25-33 ms.) Memory, 3 laps of Act I
+  (NEW GAME at Act I by touch, Missions 4 to 8 three times, a forced GC after each load; `fix/perf/leak.mjs`), three.js
+  geometries/textures: before, Mission 4 274/144 -> 325/208 -> 352/238 and Mission 8 349/225 -> 376/255 -> 403/285 (+27
+  and +30 a lap); after, Mission 4 274/144 -> 294/167 -> 294/167 and Mission 8 328/194 -> 328/194 -> 328/194 (flat
+  after the first lap fills the shared caches), JS heap 39 MB at the end either way.
+  No visual change: at sampled moments in Mission 1 (915x412 and 412x915) and Mission 14 the same frame drawn with the
+  LOD on and then off (everyone woken and recomputed) differs in 0 pixels (over 12 of 255), also after Kai walked by
+  touch on the stick and the view was dragged round by touch (`fix/perf/vis.mjs`).
+  Checked: `tests/lv-fix-perf.test.mjs` (11 tests: the frozen statics, the matrix budget's skips and recomputes, the far
+  walker's every second frame, skeletons computed once per move, dormancy by view and by shadow and waking posed, the
+  contact shadow with the camera inside a person, releaseActor and dispose/freeLeft, main.js's wiring), `npm test` (258,
+  all passing), `node --check`; `tests/smoke.mjs` and `tests/qa.mjs` (Station Zero: passed, 26 of 26),
+  `tests/lastversion-garments.mjs` (all passed). Not run: the full `tests/lastversion.mjs` (the release step's).
+  No line added or changed; no voice pack touched.
 
 ## Generated (playable, solvable by construction, not hand-tuned)
 
