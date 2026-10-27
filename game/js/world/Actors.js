@@ -109,6 +109,15 @@ async function fetchModel(url) {
   return loader.parseAsync(glb.buffer, '');
 }
 
+// a fetch the page cancels as it goes (a reload while a model is still on its way: NEW GAME from a game, QUIT) is not a
+// model that could not load: no warning for it (THE LAST VERSION v2.1 playtest: "Character xbot could not load" in the
+// console after every such reload)
+let leaving = false;
+if (typeof window !== 'undefined' && window.addEventListener) {
+  window.addEventListener('pagehide', () => { leaving = true; });
+  window.addEventListener('pageshow', () => { leaving = false; });
+}
+
 // Load models (all of them by default). Resolves to true if every one loaded.
 // (Hosts that can't serve .glb get glTF JSON copies: window.AZ_MODEL_EXT = '.json'.)
 export function loadActors(keys = Object.keys(MODELS), dir) {
@@ -130,8 +139,10 @@ export function loadActors(keys = Object.keys(MODELS), dir) {
       loaded[key] = L;
       return true;
     })().catch((e) => {
-      console.warn(`Character ${key} could not load`, e);
-      loadErrors.push(`${key}: ${e?.message || e}`);
+      if (!leaving) {
+        console.warn(`Character ${key} could not load`, e);
+        loadErrors.push(`${key}: ${e?.message || e}`);
+      }
       delete pending[key]; // the next request tries again
       return false;
     });

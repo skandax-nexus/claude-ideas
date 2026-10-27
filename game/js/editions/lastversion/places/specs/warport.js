@@ -9,10 +9,15 @@
 //   Q0 THE BATTLEFIELD     the quay, the canyons, the shell zone (z 12 .. 100)
 //   Q1 THE THREE DEVICES   the rail yard, the dock crane, the crater field (z -48 .. 12)
 //   Q2 THE STABILIZER      the silos and the frozen district, across the channel (z -100 .. -48)
+// (v2.1 playtest fixes: the trench's gap is lit and clear, a sandbag line closes the field before the canyon gate but
+// for one gap a sentry walks, the channel's quays are railed but for the two bridges and the rail bridge is lit, and the
+// frozen block's people are in its ground-floor lobby, behind the glass)
 import { ground, water, railing, block, prop, sign, bridge, stair, container, gantry } from '../archetypes.js';
 
 const CH = [-48, -40]; // the dock channel (z)
 const CRANE_Y = 14; // the crane cab's platform
+const LOBBY = -65.6; // the frozen block's ground floor is a lobby from here to its glass (z -62.4)
+const LINE = [26, 23.4, 120, 24.6]; // the Continuum's sandbag line before the canyon gate: x0, z0, x1, z1 (its gap: x 20 .. 26)
 
 export default {
   key: 'warport', style: 'port', sameAs: null, name: 'THE DELTA PORT',
@@ -38,15 +43,19 @@ export default {
   exits: { m13: 'siloYardN' },
   frags: { m13: [['helmetPile', 'shellZone', 'flagPost'], ['rollCallDoor', 'craterRim', 'wagonDoor']] },
   watch: { m13: [
-    [[[-100, 30], [10, 30]], [[30, 30], [100, 30], [100, 56], [30, 56]]],
+    // (the canyon lane's patrol, walking its round backwards; and a sentry pacing the sandbag line before the canyon gate,
+    // its gap at the west end: slip through behind its back, F03)
+    [[[-100, 30], [10, 30]], [[26, 28], [58, 28]]],
     [[[24, -36], [80, -36], [80, -16], [24, -16]], [[-110, -20], [-70, -20], [-70, 4]]],
     [[[-70, -56], [0, -56]], [[10, -60], [100, -60]], [[-100, -96], [-100, -60], [-80, -60]]],
   ] },
   crowd: [
-    // the people of the frozen block: pacing behind the glass; once the stabilizer is destroyed they stand frozen with it,
-    // once it frees them they walk out past the silos (M13's choice, U7 review)
-    { era: 'present', years: ['PRESENT'], region: 'port', role: 'trapped', path: [[40, -61], [80, -61]], n: 5, when: '!civilians_freed', freezeWhen: 'stabilizer_destroyed',
+    // the people of the frozen block: pacing in its ground-floor lobby, behind the glass (not on the street in front of it:
+    // v2.1 playtest X01); once the stabilizer is destroyed they stand frozen with it, once it frees them they walk out
+    // past the silos (M13's choice, U7 review)
+    { era: 'present', years: ['PRESENT'], region: 'port', role: 'trapped', path: [[59, -64], [83, -64]], n: 4, when: '!civilians_freed', freezeWhen: 'stabilizer_destroyed',
       barks: ['Is it still the same minute out there?'] },
+    { era: 'present', years: ['PRESENT'], region: 'port', role: 'trapped', path: [[23, -64.2], [47, -64.2]], n: 2, when: '!civilians_freed', freezeWhen: 'stabilizer_destroyed', barks: [] },
     { era: 'present', years: ['PRESENT'], region: 'port', role: 'trapped', path: [[60, -58], [30, -54], [6, -54]], n: 6, when: 'civilians_freed',
       barks: ['Two hundred and twelve. We counted ourselves.', 'Is it still the same day?'] },
     { era: 'present', years: ['PAST'], region: 'port', role: 'docker', path: [[-60, 74], [40, 74]], n: 5, barks: ['Crane two is down again. Load by hand.', 'Wind off the delta. Lash everything twice.'] },
@@ -86,7 +95,9 @@ export default {
     P.E('PRESENT', () => {
       // the trench line across the quay: sandbag walls, a gap at the middle
       for (const [x0, x1] of [[-110, -4], [4, 110]]) { P.box([x0, 0, 70, x1, 1.3, 71.6], 'sandbag'); P.box([x0, 0, 86.4, x1, 1.0, 88], 'sandbag'); }
-      for (let x = -100; x <= 100; x += 25) P.box([x - 1, 0, 71.6, x + 1, 1.3, 74], 'sandbag');
+      for (let x = -100; x <= 100; x += 25) if (x) P.box([x - 1, 0, 71.6, x + 1, 1.3, 74], 'sandbag'); // (none in front of the gap)
+      // the gap is the way through: flares burn either side of it, seen from the quay (F18)
+      for (const x of [-4.6, 4.6]) for (const z of [69.6, 72.2]) prop(P, 'torch', x, z);
       // the Unwritten guns on the quay, the Continuum's across the channel, both aimed at their own last attack
       for (const [bx, bz, ry, m] of [[92, 84, Math.PI, 'rustRed'], [-100, -88, 0, 'eliteGraphite']]) {
         P.box([bx - 4, 0, bz - 3, bx + 4, 1.2, bz + 3], 'sandbag');
@@ -102,6 +113,16 @@ export default {
       // the Unwritten's command post behind the trench: a stack of containers, sandbagged
       container(P, 12, 74.8, Math.PI / 2, ['containerGrey', 'containerRed', 'containerGrey'], { n: 3 });
       P.box([5, 0, 76.2, 19, 1.3, 77.4], 'sandbag');
+      // the Continuum's sandbag line across the field before the canyon gate, too high to climb: the way to the gate is
+      // the gap between its west end and the containers, which a sentry paces (or the canyons, past the lane's patrol).
+      // Burnt-out trucks to wait behind and watch it from (F03)
+      P.box([LINE[0], 0, LINE[1], LINE[2], 1.3, LINE[3]], 'sandbag');
+      for (let x = LINE[0] + 8; x < LINE[2]; x += 16) P.box([x - 1, 1.3, LINE[1] + 0.1, x + 1, 1.6, LINE[3] - 0.1], 'sandbag', { solid: false });
+      for (const [x, z, ry] of [[40, 40, 0.4], [30, 36, -0.2], [50, 33, 1.3]]) {
+        P.obox(x, 0, z, 2.4, 2.2, 5.6, ry, 'wagonRust', { solid: true });
+        P.obox(x, 2.2, z, 2.2, 0.5, 2.4, ry, 'ashGround');
+      }
+      prop(P, 'torch', LINE[0] - 0.6, LINE[1] - 0.8); // (the gap's own flare)
     });
     // --- the container canyons (west of the shell zone) ----------------------------------------------------------
     P.land('canyonGate', 22, 0, 10, Math.PI);
@@ -159,6 +180,21 @@ export default {
     });
     for (const s of [-1, 1]) P.box([-20 + s * 4.5 - 1, 0, CH[1] - 1, -20 + s * 4.5 + 1, 5, CH[1] + 1], 'steel');
     bridge(P, 70, CH[1] + 0.4, 70, CH[0] - 0.4, 8, 0.02, 'ballast', { parapetMat: 'rust' });
+    // the quays are railed, but for the two bridges: walking at the channel takes Kai along it to a crossing, not into it;
+    // the lifting bridge is chained off while it stands raised (2049), and the rail bridge is lit and signed (F18)
+    for (const z of [CH[1] + 0.3, CH[0] - 0.3]) railing(P, -120, z, 120, z, 1.1, 'rust', { openings: [[96.4, 103.6], [185.6, 194.4]] });
+    P.E('PRESENT', () => {
+      for (const z of [CH[1] + 0.9, CH[0] - 0.9]) prop(P, 'barrier', -20, z, 0, { w: 7 });
+      sign(P, 'BRIDGE RAISED · RAIL BRIDGE EAST', -20, 2.4, CH[1] + 1.25, 0, { size: 0.3, color: '#ffd27a' });
+      sign(P, 'BRIDGE RAISED · RAIL BRIDGE EAST', -20, 2.4, CH[0] - 1.25, Math.PI, { size: 0.3, color: '#ffd27a' });
+    });
+    for (const [z, ry] of [[CH[1] + 1.2, 0], [CH[0] - 1.2, Math.PI]]) {
+      // (a gantry over each end, lit: its name on it)
+      for (const x of [65.4, 74.6]) P.box([x - 0.15, 0, z - 0.15, x + 0.15, 4.6, z + 0.15], 'rust');
+      P.vbox([65.25, 4.3, z - 0.12, 74.75, 4.6, z + 0.12], 'rust');
+      sign(P, 'RAIL BRIDGE', 70, 3.75, z + (ry ? -0.2 : 0.2), ry, { size: 0.42, color: '#ffe6b0' });
+      for (const x of [64.4, 75.6]) prop(P, 'floodlight', x, z + (ry ? -0.4 : 0.4));
+    }
     // --- Q2: the silos, the stabilizer in their yard, the frozen district ------------------------------------------------
     P.land('silos', -36, 0, -76, 0);
     P.land('stabilizer', -30, 0, -56, 0);
@@ -181,7 +217,20 @@ export default {
     P.land('rollCall', 40, 0, -59.6, 0);
     P.land('rollCallDoor', 50, 0, -59.6, 0);
     for (const [x0, x1, floors] of [[20, 50, 5], [56, 86, 6], [92, 116, 4]]) {
-      P.E(['PRESENT', 'PAST'], () => block(P, { rect: [x0, -96, x1, -62], floors: floors - 2, roof: 'none', facade: 'rainBrick', tint: 0xc8a890, cornice: false }));
+      // (its ground floor a lobby behind the glass, 3.6 m deep, where its people are: the storeys over it, piers at its
+      // ends, a lit floor, ceiling and back wall)
+      const H = (floors - 2) * 3.4;
+      P.E(['PRESENT', 'PAST'], () => {
+        block(P, { rect: [x0, -96, x1, LOBBY], floors: floors - 2, roof: 'none', facade: 'rainBrick', tint: 0xc8a890, cornice: false });
+        P.box([x0, 3.4, LOBBY, x1, H, -62], 'rainBrick', { t: 0xc8a890 });
+        for (const [a, b] of [[x0, x0 + 0.8], [x1 - 0.8, x1]]) P.box([a, 0, LOBBY, b, 3.4, -62], 'rainBrick', { t: 0xc8a890 });
+        P.vbox([x0 + 0.8, 0.01, LOBBY, x1 - 0.8, 0.04, -62.1], 'shopFloor', { noShadow: 1 });
+        P.vbox([x0 + 0.8, 3.28, LOBBY, x1 - 0.8, 3.4, -62], 'shopCeiling', { noShadow: 1 });
+        P.vbox([x0 + 0.8, 0, LOBBY - 0.02, x1 - 0.8, 3.3, LOBBY + 0.04], 'shopBack', { noShadow: 1 });
+        for (let x = x0 + 4; x < x1 - 2; x += 8) P.glow(x, 0.05, (LOBBY - 62) / 2, 2.6, 0xffe0b0, 3.1);
+      });
+      P.blocks.push([x0, LOBBY, x1, -62]);
+      P.reserve(x0, LOBBY, x1, -62);
       P.E('PAST', () => block(P, { rect: [x0, -96, x1, -62], y: (floors - 2) * 3.4, floors: 2, roof: 'flat', facade: 'rainBrick', tint: 0xc8a890, solid: false }));
       // the upper floors hang in the air, broken off and frozen as they fell; freed (civilians_freed, M13's choice) they
       // have come down, rubble along the street, the people out
@@ -197,7 +246,8 @@ export default {
       }));
       P.E('FUTURE', () => P.obox((x0 + x1) / 2, -1, -79, x1 - x0, 6, 30, 0, 'rockGrass', { rx: 0.1, solid: true }));
     }
-    P.W('!civilians_freed', () => P.E('PRESENT', () => P.vbox([20, 0, -62.4, 116, 12, -62.2], 'frozenGlass', { noShadow: 1 })));
+    // (the frozen glass is solid: the lobby and its people are behind it)
+    P.W('!civilians_freed', () => P.E('PRESENT', () => P.box([20, 0, -62.4, 116, 12, -62.2], 'frozenGlass', { noShadow: 1 })));
     P.challenge('drones', [-120, -100, 120, 92], ['PRESENT', 'PAST', 'FUTURE'], null);
   },
 };

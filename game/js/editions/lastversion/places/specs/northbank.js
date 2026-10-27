@@ -59,7 +59,7 @@ export default {
   frags: { m09: [['quayBench', 'loggiaStall', 'marketFountain'], ['funicularTrack', 'midStation', 'skyways']] },
   // the Continuum's patrols walk the lower town (a watcher's eye stays at street level)
   watch: { m09: [
-    [[[-20, 79], [40, 79], [40, 86], [-20, 86]]],
+    [[[12, 78], [50, 78], [50, 86], [12, 86]]], // (clear of the spawn at (0, 87): M9's deck.watch, F15)
     [[[32, 30], [66, 30], [66, 54], [32, 54]], [[-54, 22], [-48, 22], [-48, 58], [-20, 58]]],
     [[[-50, 24], [-12, 24], [-12, 56], [-50, 56]], [[20, 79], [60, 79]]],
   ] },

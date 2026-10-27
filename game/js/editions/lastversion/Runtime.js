@@ -22,7 +22,7 @@ import { Score } from './score.js';
 import { Cinema } from './cinema.js';
 import { VoiceFx } from './voicefx.js';
 import { choiceLine, chapterCardLines, missionCardLines, endingLines, POSTCREDIT } from './voicelines.js';
-import { Threads, placeThreads, isRewritten, sidesOf, sideState, coldFact, threadsOf, factOf, playFact } from './Threads.js';
+import { Threads, placeThreads, isRewritten, sidesOf, sideState, coldFact, threadsOf, factOf, playFact, choiceHeader } from './Threads.js';
 import { QUESTIONS, PREVIOUSLY, CHOSEN } from './ledger.js';
 import { ROAM, reachedPlaces, roamSave, roamMeta, storyFromRoam, finished, roamFree, fragmentFound, placeName, yearName, ROAM_ONLY } from './roam.js';
 
@@ -1574,7 +1574,7 @@ export class LastVersion {
     if (node.show) g.facts.set(node.show, true);
     const after = () => {
       if (node.show) g.facts.set(node.show, false);
-      if (node.choices) this.choose(node.choices, n, node, lines[lines.length - 1]);
+      if (node.choices) this.choose(node.choices, n, node, choiceHeader(node, lines, g.facts)); // (the last line said: F02)
       else {
         this.apply(node, n);
         if (node.after?.length) g.hud.say(this.voiced(node.after, n), g.facts, () => this.applyAfter(node));
@@ -1704,7 +1704,7 @@ export class LastVersion {
     }
     g.facts.inc('hints_used');
     g.audio.blip(988, 0.1);
-    this.say(text);
+    g.hud.say([{ who: 'KAI', text, hint: true }], g.facts); // (marked: a hint does not hide Kai from the watchers)
   }
 
   line(key) {
@@ -1871,8 +1871,13 @@ export class LastVersion {
       if (this.loopT <= 0) this.loopReset();
     }
     // a staged moment (an opening, a cold open, a hook) is not the watchers' business: they walk their rounds, and see
-    // nobody until it is over (nothing walks Kai back to a checkpoint while the camera is not his)
-    if (this.opening || this.cinema?.active) {
+    // nobody until it is over (nothing walks Kai back to a checkpoint while the camera is not his). Nor is a scene or a
+    // conversation while its lines play (v2.1 playtest F04: M13's frozen block, caught mid-line on a patrol's street);
+    // a THINK hint or a line said in passing is not one (a hint asked for would hide Kai)
+    // (and for a breath after: a patrol that walked up during the lines does not catch Kai the moment they end)
+    const staged = this.opening || this.cinema?.active || this.storyLines();
+    this.graceT = staged ? 2 : Math.max(0, (this.graceT || 0) - dt);
+    if (staged || this.graceT > 0) {
       for (const s of g.deckWorld.sentinels) {
         s.suspicion = 0;
         if (s.mode === 'chase') s.mode = 'patrol';
@@ -1901,6 +1906,13 @@ export class LastVersion {
         document.body.style.setProperty('--lv-next', `var(--${String(next).toLowerCase()})`);
       }
     }
+  }
+
+  // the story's own lines are up or waiting: not a bark, not a THINK hint (Runtime.hint marks its line)
+  storyLines() {
+    const h = this.g.hud;
+    if (h.subT > 0 && h.cur && !h.cur.done && !h.cur.bark && !h.cur.hint) return true;
+    return h.subs.some((s) => !s.done && !s.bark && !s.hint);
   }
 
   // --- loops (M9's nine minutes, M15's one day) ------------------------------------------------------------------

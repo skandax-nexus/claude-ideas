@@ -85,8 +85,9 @@ export function horizonFor(key, era, opts = {}) {
     out.push({ kind: 'ridge', b: 200, w: 28, h: 1.6, haze: 0.5 });
     out.push({ kind: 'ridge', b: 120, w: 50, h: 3.5, haze: 0.45 });
   }
-  // the Ring Hill (from anywhere but on it), crowned by whatever stands on it in this era
-  if (!['helix', 'helix_v17', 'valley_upper', 'firstsecond'].includes(key)) {
+  // the Ring Hill (from anywhere but on it), crowned by whatever stands on it in this era (Afterzero's road climbs it to
+  // the original Chronolith: a second hill and crown painted beyond its own floated in its sky as a white bar, v2.1 F17)
+  if (!['helix', 'helix_v17', 'valley_upper', 'firstsecond', 'afterzero'].includes(key)) {
     const f = FEATURES.ringHill, d = dist(at, f.at);
     const b = bearing(at, f.at);
     out.push({ kind: 'hill', b, w: deg(Math.atan2(f.r, d)), h: elevOf(f.h, d), haze: 0.32 });

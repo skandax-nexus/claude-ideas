@@ -60,7 +60,7 @@ const M09_HINTS = {
   transmitter: ['The transmitter.', 'On the headland.', 'Cut the carrier.'],
   rhea: ['Someone is counting.', 'The foot of the tower.', 'Find Rhea.'],
   tower: ['Up the tower.', 'Look across the river.', 'Climb to the top.'],
-  reset: ['08:14.', 'It is coming.', 'Let it come.'],
+  reset: ['It is nearly 08:14.', 'It is coming.', 'Let it come.'],
   warn: ['People head for the tower.', 'The order is wrong.', 'Quote the cancelled order.'],
   child: ['She does not loop.', 'The loop\'s edge.', 'Hum her song.'],
   brask: ['A soldier who remembers.', 'By the funicular station.', 'Talk to the sergeant.'],
@@ -84,7 +84,9 @@ export const M09 = {
   // the loop: every ninety seconds the street goes back to 08:05 (the patrols to their next round, the rain upward for a
   // second); it stops when the carrier is cut
   loop: { period: 90, upward: true, until: 'transmitter_cut', variants: M09_PATROLS.map((watch) => ({ watch })) },
-  watch: [[[[-20, 79], [40, 79], [40, 86], [-20, 86]]], [M09_PATROLS[0].q1s0], [M09_PATROLS[0].q2s0, [[20, 79], [60, 79]]]], // (the quay's promenade, not its houses)
+  // (the quay's promenade, not its houses; east of the ferry steps, so where Kai steps off to watch the street is out of
+  // its sight: v2.1 playtest F15, caught at the spawn while doing as the objective asked)
+  watch: [[[[12, 78], [50, 78], [50, 86], [12, 86]]], [M09_PATROLS[0].q1s0], [M09_PATROLS[0].q2s0, [[20, 79], [60, 79]]]],
   fragSpots: [['quayBench', 'loggiaStall'], ['marketFountain', 'midStation']],
   fragments: [[
     'A clock at nine to zero. Then eight. Then nine again.',
@@ -255,13 +257,13 @@ const M10_HINTS = {
   power: ['Blind them.', 'Two switches, two years.', 'The 2049 run, then the 2026 run.'],
   projector: ['What did they take from me?', 'The testing chamber.', 'Look at the projector.'],
   cross: ['Troopers in the chamber.', 'A step ahead of myself. They follow the copy.', 'Echo Step, then go for the spillway.'],
-  prisoners: ['Twelve people in loops.', 'The loop cells.', 'Decide.'],
+  prisoners: ['Twelve people in loops.', 'The loop cells.', 'Decide what happens to them.'],
   yard: ['Out under the sky.', 'One trooper by the water.', 'Behind him, to Sera\'s skiff.'],
   intake: ['Earlier intakes.', 'The intake desk.', 'Read them.'],
   office: ['The Director\'s office.', 'Up on the crest.', 'Look inside.'],
   interview: ['They interviewed Helix\'s people.', 'A reel on the crest.', 'Play the interview.'],
   looper: ['A prisoner who remembers.', 'The loop cells.', 'Listen through his loops.'],
-  skiff: ['Sera.', 'By the skiff.', 'Talk to her.'],
+  skiff: ['Sera is waiting.', 'By the skiff.', 'Talk to her.'],
   flood: ['A flood pole.', 'On the yard\'s roof.', 'Read it now, then in 2026.'],
 };
 // the prisoner in the loop cells who remembers: four seconds a loop, and a few words in each
@@ -555,21 +557,21 @@ const M11_PROCESSES = [
   },
 ];
 const M11_HINTS = {
-  arrive: ['The intercom.', 'Past the atrium.', 'Go in to triage.'],
-  music: ['A music box.', 'It gets quieter as I get closer.', 'Follow it east, to the quietest point.'],
-  youngKai: ['Someone on the bench.', 'Outside the children\'s wing.', 'Look at him.'],
-  boy: ['He is drawing.', 'On the bench, beside the music box.', 'Sit with him.'],
-  hazards: ['Things go back where they were.', 'Watch the cycle, then cross.', 'Past the IV stand to the records.'],
-  rhythm: ['The file keeps un-burning.', 'The annex desk.', 'Watch the file.'],
-  practise: ['Practise.', 'The tray, the glass, the door.', 'Reverse one of them.'],
-  file: ['Hold the file unburnt.', 'Read it while it holds.', 'Reverse it, then read.'],
-  compare: ['Who was admitted?', 'The ledger, now and in 2026.', 'Read it in both years.'],
-  odile: ['A nurse at the station.', 'The Ward 32 corridor.', 'Talk to Odile.'],
-  lock: ['Four bolts, one order.', 'Tag, twin lock, chime.', 'Last fitted, first out.'],
-  ward: ['Ward 32.', 'The bed.', 'Read the file.'],
-  photo: ['The family-room photos.', 'One face, two years.', 'Look in both years.'],
-  echo: ['Odile\'s echo.', 'Her station.', 'Reverse her echo.'],
-  tape: ['The intercom room.', 'Off the records hall.', 'Play her something.'],
+  arrive: ['Sera\'s readings come from inside the hospital.', 'In through the atrium; triage is past it.', 'Walk in through the atrium to triage.'],
+  music: ['Somewhere a music box is playing her song.', 'It gets quieter as I get closer. It is quietest where it is.', 'Follow the sound east, to where it is quietest.'],
+  youngKai: ['Someone is sitting by the music box.', 'On the bench outside the children\'s wing.', 'Look at the boy on the bench.'],
+  boy: ['The boy is drawing, waiting for a doctor.', 'He is on the bench, beside the music box.', 'Sit with him on the bench.'],
+  hazards: ['Things here go back to where they were, hard.', 'Each one runs on its own cycle. Watch it go and come back, then cross.', 'Cross behind each one as it goes back, past the IV stand, to the records hall.'],
+  rhythm: ['A file in the annex keeps un-burning.', 'It is on the annex desk. Three seconds in ten it is paper.', 'Stand by the annex desk and watch the file.'],
+  practise: ['Something has changed in me: I can hold one thing back.', 'The tray, the glass or the annex door. Any one of them.', 'Aim at the tray, the glass or the door and hold REVERSE.'],
+  file: ['The file is paper for a moment. I can hold it there.', 'Hold it back with REVERSE, and read it while it holds.', 'Aim at the file, hold REVERSE, then read it.'],
+  compare: ['Someone is missing from the medical records.', 'The ledger in the records hall, now and in 2026.', 'Read the ledger, switch to 2026, and read it again.'],
+  odile: ['There is a nurse at the Ward 32 station.', 'Down the Ward 32 corridor, at her station.', 'Talk to Odile at the station.'],
+  lock: ['The lock on Ward 32 comes apart in one order only.', 'The tag, the twin lock next door and the chime all give the order its bolts were fitted in.', 'Last fitted, first out: CRESCENT, then STAR, then BAR, then RING.'],
+  ward: ['The readings come from Ward 32.', 'A file is lying on the bed.', 'Go in and read the file on the bed.'],
+  photo: ['The family-room board has photos of one face.', 'The same board, now and in 2026.', 'Look at the board now, then switch to 2026 and look again.'],
+  echo: ['Odile\'s 2026 echo walks her shift backwards.', 'At her station. A recording runs forwards once.', 'Aim at her echo and hold REVERSE.'],
+  tape: ['The intercom reaches every ward. Odile is still on hers.', 'The intercom room is off the records hall.', 'Play Mira\'s tape on the ward intercom.'],
 };
 // the things in the bright wards that go back where they were, each on its own cycle (6-8 s): a gurney rolls back up
 // the run, an IV stand jumps upright, glass flies up into its window frame. Only the return hits (a setback 'hit').
@@ -828,28 +830,28 @@ M11.outro = M11.hook.lines;
 // Mission 12: THE MAN BEHIND THE GLASS
 // =============================================================================================================
 const M12_HINTS = {
-  chase: ['He is on the roof.', 'He waits at the glass.', 'Keep after him.'],
-  follow: ['He stepped into 2026.', 'The roof\'s edge, by the court.', 'Switch to 2026 at the gangway.'],
-  corridor: ['A corridor that was.', 'The 2026 gangway.', 'Cross it, in 2026.'],
-  ruin: ['2196.', 'East, past the court.', 'Into the ruin.'],
-  panes: ['He stops at glass.', 'The roof, the gangway, his steps.', 'Two of them.'],
-  route: ['His route repeats.', 'In the ruin.', 'Piece it together.'],
-  witnessStair: ['He went down here.', 'The terraces.', 'Watch him.'],
-  stair: ['The stair he dropped.', 'Fallen things rise.', 'REVERSE the stair.'],
-  beam: ['A beam across the way.', 'At the foot of the stair.', 'REVERSE the beam.'],
-  voicemail: ['My phone.', 'It plays by itself.', 'Listen.'],
-  face: ['The second ring.', 'He is waiting.', 'Talk to him.'],
-  escape: ['He is leaving.', 'The fracture.', 'Watch.'],
-  rook: ['Rook, in 2026.', 'The gangway gate.', 'Look at the gate.'],
-  bouquet: ['Florist\'s paper.', 'On the gangway.', 'Look at it.'],
-  whiteboard: ['The lunch room.', 'In 2026.', 'Read the board.'],
-  glazier: ['Somebody is shouting.', 'On the roof\'s edge, where he went through.', 'Her, or him.'],
-  holdGlass: ['The frame fell across her way.', 'Fallen things rise.', 'REVERSE the frame and hold it.'],
-  gangway: ['He stopped on the gangway.', 'In 2026, where the flowers were.', 'Look at him. Look under him.'],
-  camp: ['Where he has been living.', 'In the ruin, by the east wing.', 'The cot, the cup, the wall.'],
-  ring: ['The second ring is humming.', 'Listen to it.', 'Stay.'],
-  practice: ['A tape recorder by his cot.', 'It runs backwards, in 2196.', 'REVERSE it, and listen.'],
-  deck: ['The plant decks on the roof.', 'He ran past one planter he never looks at.', 'Read it now, then in 2026.'],
+  chase: ['The figure is running across the roofs. He has my walk.', 'He waits at the glass when I fall behind. Stay close to him.', 'Keep running after him across the roofs, toward the glass panes.'],
+  follow: ['He stepped off the roof into 2026.', 'In 2026 there was a gangway across, at the roof\'s edge by the court.', 'Go to the roof\'s edge by the court and switch to 2026 there.'],
+  corridor: ['Corridor B only existed in 2026: a gangway across.', 'Stay in 2026 and walk the gangway.', 'Cross the 2026 gangway to its far end, where the flowers are.'],
+  ruin: ['His steps go on in 2196, where the north wing fell.', 'East, past the court, into the ruin.', 'Switch to 2196 and walk east into the ruin.'],
+  panes: ['He stops at glass, the same stop in every year.', 'The glass on the roof, the hoarding on the 2026 gangway, his steps in the ruin.', 'Look at two of them: the roof\'s glass now, the gangway\'s hoarding in 2026.'],
+  route: ['His route repeats. I have seen all of it now.', 'The roof, the gangway, the ruin: the same stops every time.', 'In the ruin, piece his route together.'],
+  witnessStair: ['He went down the terraces, into the hill.', 'It is happening now. Watch where he goes.', 'Stay where you are and watch him go down.'],
+  stair: ['He dropped the stair behind him.', 'A fallen thing rises while I hold it back.', 'Aim at the fallen stair and hold REVERSE, then climb down it while it holds.'],
+  beam: ['A beam has fallen across the chamber\'s way.', 'It is at the foot of the stair. It can be held back like the stair.', 'Aim at the beam, hold REVERSE, and go under it while it holds.'],
+  voicemail: ['My phone is playing something.', 'It plays by itself: a voicemail, received at 05:40.', 'Wait, and listen to the voicemail.'],
+  face: ['He is waiting by the second Chronolith.', 'Down under the hill, at the second ring.', 'Walk to him at the second ring and talk to him.'],
+  escape: ['He is leaving, the way he always does.', 'He steps into the fracture.', 'Stay and watch him go.'],
+  rook: ['Corridor B has a gate, locked in 2026.', 'At the gangway\'s gate, in 2026.', 'Look at the gangway gate in 2026.'],
+  bouquet: ['Something dropped on the gangway: florist\'s paper.', 'He was carrying it. It is on the 2026 gangway.', 'Look at the florist\'s paper on the gangway.'],
+  whiteboard: ['The 2026 site lunch room has a board.', 'The lunch room is off the gangway, in 2026.', 'Read the lunch room\'s board in 2026.'],
+  glazier: ['Somebody is shouting on the roof\'s edge.', 'Where he went through the glass, the roof cracked under her.', 'Go to the roof\'s edge and help her, or keep after him.'],
+  holdGlass: ['A frame fell across her way.', 'A fallen thing rises while I hold it back.', 'Aim at the frame and hold REVERSE until she is clear.'],
+  gangway: ['He has stopped at the far end of the gangway.', 'In 2026, where the flowers were. He is letting me catch up.', 'Walk up to him and look at him. Look under him.'],
+  camp: ['Somebody has been living in the ruin.', 'By the east wing in 2196: a cot, a camp stove, a wall.', 'Look at the cot, the stove and the wall, in 2196.'],
+  ring: ['The second ring is humming. Somebody inside it said my name.', 'It is happening now. Listen to it.', 'Stay by the ring and listen.'],
+  practice: ['A tape recorder by his cot is running backwards.', 'It only runs in 2196. Held back, it plays forwards.', 'Aim at the recorder in 2196, hold REVERSE, and listen.'],
+  deck: ['One planter on the roof he ran past without looking.', 'On the plant decks. It says one thing now and another in 2026.', 'Read the planter now, then switch to 2026 and read it again.'],
 };
 const GLAZIER = AMB('CROWD_F');
 const M12_SAY = {
@@ -1116,19 +1118,19 @@ M12.outro = M12.hook.lines;
 // Mission 13: THE NINE-MINUTE WAR
 // =============================================================================================================
 const M13_HINTS = {
-  cross: ['Through the fire.', 'The gaps between the shells.', 'Reach the canyon gate unseen.'],
-  orders: ['Field orders.', 'By the quay trench.', 'Read them.'],
-  shells: ['A shell in flight.', 'One from each side.', 'REVERSE one shell, then one of the other side\'s.'],
-  first: ['Who started it?', 'The orders, and where each shell went.', 'Nobody. Each answers its own last shot.'],
-  sera: ['Sera is at the gate.', 'The canyon gate.', 'Talk to Sera.'],
-  devices: ['Three devices, three years.', 'Rail yard, crane, crater.', '2026, 2049, 2196.'],
-  stabilizer: ['The stabilizer.', 'In the silos.', 'Decide.'],
-  district: ['The frozen block.', 'Look at it.', 'Watch.'],
-  casing: ['The first device.', 'The rail yard, 2026.', 'Read the casing.'],
-  burial: ['Who buried it?', 'The burial site.', 'REVERSE the soil.'],
-  listeners: ['People who listened.', 'The listeners\' route.', 'Talk to them.'],
-  rollcall: ['The roll-call wall.', 'By the frozen block.', 'Hold the wall up.'],
-  block: ['The frozen block.', 'East of the stabilizer, behind the glass.', 'Look in, in 2049.'],
+  cross: ['A sentry walks the sandbag line in front of the canyon gate.', 'The only gap is at the line\'s west end, by the containers. Wait behind a burnt truck and watch which way it faces.', 'When it walks east, away from the gap, go: through the gap and on to the canyon gate.'],
+  orders: ['Both sides say the other fired first. Their orders will say more.', 'The field orders lie by the quay trench, behind the sandbags.', 'Read the field orders by the quay trench.'],
+  shells: ['A shell is hanging in flight over the field. Where did it come from?', 'Hold one back with REVERSE and watch where it goes. Then one from the other side.', 'At the shell zone, aim at a shell in flight and hold REVERSE. Then the other side\'s.'],
+  first: ['Who fired first? I have both orders and both shells.', 'Each order answers the other. Each shell went home to the gun that fired it.', 'Nobody. Each side answers its own last shot.'],
+  sera: ['Sera is waiting at the canyon gate.', 'At the canyon gate, with the sergeant.', 'Talk to Sera at the canyon gate.'],
+  devices: ['Three devices, each answering in its own year.', 'The rail yard\'s in 2026, the crane cab\'s in 2049, the crater field\'s in 2196.', 'Disable each in its year: rail yard 2026, crane 2049, crater 2196.'],
+  stabilizer: ['The stabilizer is in the silo yard. Both sides want it.', 'It can freeze the war, or free the people in the frozen block. Not both.', 'Go to the stabilizer in the silo yard and decide.'],
+  district: ['The district will remember what I chose.', 'It is happening now, over the frozen block.', 'Stay and watch the district.'],
+  casing: ['The first device has a casing. Somebody made it.', 'At the rail yard\'s wagon, in 2026.', 'Switch to 2026 and read the casing at the wagon.'],
+  burial: ['Somebody buried the first device in 2026.', 'The burial site is by the crater field. Soil runs back too.', 'In 2026, aim at the fresh soil and hold REVERSE.'],
+  listeners: ['Someone from Loop City is waving from the canyons.', 'On the listeners\' route, in the container canyon.', 'Talk to them. They know a way round the guns.'],
+  rollcall: ['A wall is coming down on the roll-call door.', 'By the frozen block. Two hundred and twelve names are on that door.', 'Aim at the falling wall, hold REVERSE, and keep holding.'],
+  block: ['The frozen block: two hundred and twelve people behind glass.', 'East of the stabilizer, across the rail bridge. Look in from the street, in 2049.', 'Stand at the frozen block\'s glass in 2049 and look in.'],
 };
 const M13_PROCESSES = [
   // two shells in flight over the shell zone, each on its own cycle: held, each climbs back into the gun that fired it

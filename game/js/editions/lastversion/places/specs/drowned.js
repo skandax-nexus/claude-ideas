@@ -13,6 +13,7 @@ import { ground, terrace, stair, ramp, railing, block, prop, sign, viaduct, brid
 const VX = 32, VY = 8; // the Line 41 viaduct: its axis (x) and deck height
 const SEA = 0.75; // the lagoon's surface in 2196 (the sidewalks are 0.6 m under it)
 const ROADS = [-60, 0, 60]; // the avenues (both ways), 14 m wide, with 4 m sidewalks
+const XING = [67, 71]; // the crossing of the line's avenue (x 0) in 2196: the bank avenue's north sidewalk, z 67 .. 71
 
 // a tower: a podium in every year (shops lit behind their glass in 2026 and 2049; in 2196 the old shopfronts dark behind
 // rusted shutters, gone green at the waterline); above it glass (2049), glass or a steel frame and a crane (2026), and in
@@ -129,11 +130,26 @@ export default {
       P.plane(-110, -110, 110, 110, SEA, 'lagoonWater', { noShadow: 1 });
       for (let i = 0; i < 40; i++) P.tree('reeds', P.rng.float(-108, 108), P.rng.float(-108, 108), P.rng.float(0.9, 1.4), { y: 0.2, solid: false });
     });
-    // the deep channels (the avenues' carriageways) take you back in 2196
+    // the deep channels (the avenues' carriageways) take you back in 2196; but for one crossing, where the bank's
+    // avenue meets the line's: the old crosswalk, under knee-deep water like the sidewalks, poled by the survivors. It is
+    // how a walker from the platform reaches the bank's fallen lift car in 2196 (v2.1 playtest F09: before, only a dash
+    // through 2049 got there, on a Chronolith that ran out half way)
     for (const r of ROADS) {
-      P.drown([r - 7, -110, r + 7, 110], 1.4, '@FUTURE');
+      if (r === 0) for (const [z0, z1] of [[-110, XING[0]], [XING[1], 110]]) P.drown([r - 7, z0, r + 7, z1], 1.4, '@FUTURE');
+      else P.drown([r - 7, -110, r + 7, 110], 1.4, '@FUTURE');
       P.drown([-110, r - 7, 110, r + 7], 1.4, '@FUTURE');
     }
+    P.E('FUTURE', () => {
+      // the crossing's poles, a rag tied to each, and the rubble the survivors laid along its edges
+      for (let x = -8; x <= 8; x += 4) for (const z of [XING[0] + 0.2, XING[1] - 0.2]) {
+        P.cyl(x, 0.15, z, 0.07, 2.4, 'timber', { seg: 5 });
+        P.obox(x + 0.2, 2.1, z, 0.4, 0.5, 0.04, 0, 'awningRed', { rz: 0.3 });
+      }
+      for (let x = -6; x <= 6; x += 3) for (const z of [XING[0] - 0.3, XING[1] + 0.3]) P.obox(x, 0.1, z, 2.2, 0.5, 0.5, P.rng.float(-0.2, 0.2), 'concreteStained', { rx: P.rng.float(-0.15, 0.15) });
+      // (a board on a post at the crossing's east end, toward the platform the walker comes from)
+      P.cyl(10.6, 0.15, XING[0] + 2, 0.07, 2.0, 'timber', { seg: 5 });
+      sign(P, 'SAFE TO WADE', 10.7, 2.15, XING[0] + 2, Math.PI / 2, { size: 0.26, color: '#f4ead8', boardMat: 'timber' });
+    });
     P.challenge('channels', [-110, -110, 110, 110], ['FUTURE'], ['The avenues are canals. Too deep to wade.', 'The old sidewalks are a step higher: the water only reaches my knees there.', 'Walk the sidewalks along the edges of the blocks, or take the viaduct.'], { optional: true });
     // --- the blocks: towers and podiums, one layout, three years -------------------------------------------------
     const cells = [-110, -49, 11, 71, 110];

@@ -268,18 +268,18 @@ M04.outro = M04.hook.lines;
 // Mission 5: THE VILLAGE THAT NEVER EXISTED
 // =============================================================================================================
 const M05_HINTS = {
-  follows: ['Niko followed me.', 'By the weir.', 'Talk to Niko.'],
-  divert: ['Move the river.', 'Only while it is young.', 'Thriving: lift the head-stone.'],
-  why: ['Why did they leave?', 'Tallies, names, hearths.', 'Read them, abandoned.'],
-  leave: ['The hearths remember.', 'The cold hearths.', 'Watch what they kept.'],
-  wall: ['The wall needs bracing.', 'After the river moved.', 'Brace it, abandoned.'],
-  mural: ['A painted wall.', 'The west end.', 'Look at the mural.'],
-  gate: ['The flood has a gate.', 'The tower, flooded.', 'Climb it. Release it.'],
-  machine: ['The basin is drained.', 'Something hums.', 'Go down.'],
-  bury: ['Niko wants a decision.', 'The cairn stones.', 'Talk to Niko.'],
-  water: ['Tala is in the gorge.', 'Past the weir.', 'Find Tala.'],
-  cliff: ['The cliff was painted over.', 'Read it, and before.', 'Read it thriving.'],
-  gates: ['Three gates, one order.', 'The cliff gives it.', 'Low, high, middle.'],
+  follows: ['Niko came down from the ring after me. He is waiting by the weir.', 'The weir is the low stone dam across the river, east of the village.', 'Walk to Niko at the weir and talk to him.'],
+  divert: ['The river runs where the village will drown. Its head-stone could turn it.', 'The head-stone is by the weir. It only moves while the river is young: THRIVING.', 'Switch to THRIVING, stand at the head-stone and lift it.'],
+  why: ['The village is empty. Something made them leave.', 'Three things kept count: tally marks on a wall, names in the stones, the cold hearths. Read them ABANDONED.', 'Switch to ABANDONED and read the tally marks, the names in the stones and the cold hearth.'],
+  leave: ['The cold hearths kept something of the last night.', 'Go back to the cold hearth while the village is ABANDONED.', 'Stand at the cold hearth in ABANDONED and watch what it kept.'],
+  wall: ['The retaining wall will have to hold the flood back.', 'It is the cracked wall on the river side of the village. It can be braced while it is ABANDONED.', 'Switch to ABANDONED and brace the retaining wall.'],
+  mural: ['Somebody painted the village wall after everyone left.', 'The mural is at the village\'s west end, in ABANDONED.', 'Go to the painted wall in ABANDONED and look at it.'],
+  gate: ['The flood needs a way out. The pressure gate is it.', 'The gate is on top of the tower in the flood. Switch to FLOODED to reach it.', 'In FLOODED, climb the tower and release the pressure gate.'],
+  machine: ['The basin has drained, and something in the mud is humming.', 'The drained basin is south of the village, past the tower.', 'Go down into the basin and look at what hums in the mud.'],
+  bury: ['Niko wants to choose who finds the machine.', 'He is waiting by the cairn stones, on the way down to the basin.', 'Go to Niko at the cairn stones and talk to him.'],
+  water: ['Tala keeps the channel in the upper gorge.', 'The gorge opens upriver, past the weir.', 'Walk up the gorge past the weir and talk to Tala.'],
+  cliff: ['The mural cliff was painted over.', 'While the river was alive it said something else. Read it again THRIVING.', 'Read the mural cliff, then switch to THRIVING and read it again.'],
+  gates: ['Three gates, and the cliff says in which order.', 'First the low stone, then the high, then the middle.', 'Lift the low gate, then the high gate, then the middle one.'],
 };
 const M05_SAY = {
   gateOk: [[N('The lowest gate lifts. Under the water, a low note.')], [N('The highest gate lifts. A higher note.')], [N('The middle gate lifts, and the three notes are a song: up, up, and a stop.')]],
@@ -895,20 +895,20 @@ M07.outro = M07.hook.lines;
 // Mission 8: THE FIRST DEATH
 // =============================================================================================================
 const M08_HINTS = {
-  changed: ['The building is wrong.', 'Court, print case, photo wall.', 'Find three changes.'],
-  records: ['Staff records.', 'By reception.', 'Read the terminal.'],
-  linDesk: ['Lin\'s desk.', 'The north loggia.', 'Look at her desk.'],
-  drive: ['A 2026 server.', 'The east wing.', 'Take the drive in 2026.'],
-  readLog: ['A reader upstairs.', 'The staff stair, or the wall.', 'Read it in the security office.'],
-  rook: ['Rook is in his office.', 'Up the outside stair.', 'Talk to Rook.'],
-  boot: ['Rook said boot prints.', 'The print case.', 'Stand beside it.'],
-  reconstruct: ['Four entries, one order.', 'The echoes walk them.', 'Order them at the island.'],
-  containment: ['Lin is in the cube.', 'Its door is open.', 'Go in to her.'],
-  escape: ['Sealed in.', 'In 2026 there was no cube.', 'Out through 2026, back at the terminal.'],
-  version: ['The terminal names this world.', 'On the island.', 'Read it.'],
-  iven: ['Iven Marr.', 'The east arcade.', 'Talk to him, or play his record.'],
-  door: ['The staff door is locked.', 'An officer who trusts me.', 'Talk to the officer.'],
-  photo: ['The 2026 group photo.', 'The photo wall.', 'Look at it.'],
+  changed: ['I know this building, and it has changed. Find three things that are different.', 'The river court, the boot print\'s glass case and the staff photo wall.', 'Look at the river court, the print case and the photo wall.'],
+  records: ['Reception says there is no Kai Varen. The staff records will say who there is.', 'The records terminal is by reception, in the lobby.', 'Use the staff records terminal by reception.'],
+  linDesk: ['Dr. Lin has not come in since the Zero Second. Her desk is still here.', 'Her desk is in the north loggia, along the court.', 'Walk to the north loggia and look at Lin\'s desk.'],
+  drive: ['The security log was never wiped in 2026. The old server still has it.', 'The server room is in the east wing, and it only stands in 2026.', 'Switch to 2026, go into the east wing\'s server room and take the drive.'],
+  readLog: ['The drive needs a reader. There is one in the security office.', 'The office is up on the balcony: the staff stair, or over the old river wall.', 'Climb to the security office on the balcony and read the drive there.'],
+  rook: ['His order is in the log. Rook has to answer for it.', 'His office is upstairs, at the top of the outside stair.', 'Climb the outside stair to Rook\'s office and talk to him.'],
+  boot: ['Rook said the boot prints are in the clay. The print case.', 'The famous boot print, in its glass case.', 'Stand beside the boot print\'s case and look.'],
+  reconstruct: ['Four entries from that morning, out of order.', 'The echoes walk them once they are in order. The table is on the island.', 'At the island, put the four entries in the order they happened.'],
+  containment: ['Lin is inside the containment cube.', 'Its door is open now.', 'Walk in through the cube\'s open door, to Lin.'],
+  escape: ['The cube has sealed me in.', 'In 2026 there was no cube here, only the floor.', 'Switch to 2026 to step out, then go back to the terminal.'],
+  version: ['The terminal on the island names this world.', 'It is on the island, where the morning was rebuilt.', 'Read the terminal on the island.'],
+  iven: ['Iven Marr was there in 2026. His statement is recorded.', 'His recorder is in the east arcade.', 'Talk to Iven in the east arcade, or play his recorded statement.'],
+  door: ['The staff door is locked.', 'The officer on it might open it for someone they trust.', 'Talk to the officer at the staff door.'],
+  photo: ['A 2026 photo of the junior programme hangs here.', 'It is on the staff photo wall.', 'Look at the 2026 group photo on the wall.'],
 };
 const RECEPTION = (t) => SAYS('RECEPTION', 'RECEPTIONIST', t);
 // the drones of the court's last quarter (the island and its south bank) and the lockdown that sets them hunting

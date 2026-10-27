@@ -59,25 +59,25 @@ export function scarModel() {
 // Mission 14: WELCOME TO 2196
 // =============================================================================================================
 const M14_HINTS = {
-  parts: ['The list.', 'On the platform.', 'Read it.'],
-  lift: ['The bank\'s roof.', 'Its lift car fell. Fallen things rise.', 'Ride the car up by REVERSE, or climb the fallen tower.'],
-  capacitor: ['The capacitor.', 'In the roof garden.', 'Take it.'],
-  stones: ['Stacked stones.', 'On the drowned sidewalks.', 'Find all three.'],
-  warning: ['A notice.', 'Where the street flickers.', 'Read it, then in 2026.'],
-  antenna: ['The antenna.', 'Past the gap in the line.', 'Hold the span up, or cross in 2049.'],
-  memorial: ['The memorial.', 'Stone, flowers, core.', 'All three.'],
-  sera: ['Sera.', 'By the steps.', 'Talk to her.'],
-  beacon: ['Three parts.', 'By the steps.', 'Build it.'],
-  gardener: ['A gardener.', 'By the dry channel.', 'Talk to her.'],
-  culvert: ['The culvert.', 'A street drain in 2049.', 'Clear it in 2049.'],
-  prints: ['Moss prints.', 'They run backwards.', 'REVERSE them.'],
-  scar: ['Where they begin.', 'In the air.', 'Look.'],
-  rhyme: ['A child, reciting.', 'The schoolroom.', 'Listen.'],
-  book: ['A schoolbook.', 'On a desk.', 'Read it.'],
-  warden: ['The warden.', 'Where the street flickers.', 'Talk to him.'],
-  voice: ['Something on the beacon\'s frequency.', 'Listen.', 'Answer it.'],
-  keeper: ['A man on the old platform.', 'He is holding something like a relic.', 'Talk to him.'],
-  departures: ['The 41\'s last board.', 'On the platform.', 'Read it.'],
+  parts: ['The beacon\'s parts list is on this platform.', 'On the case by the signal gantry.', 'Read the parts list.'],
+  lift: ['The capacitor is on the bank\'s roof. Its lift car fell to the street.', 'Down the viaduct stair, west along the north sidewalk, over the poled crossing.', 'Walk into the fallen car, aim at it and hold REVERSE. It carries me up.'],
+  capacitor: ['The capacitor is in the roof garden.', 'At the old weather station, among the beans.', 'Take it from the weather station.'],
+  stones: ['The survivors marked their way with stacked stones.', 'On the drowned sidewalks under the viaduct.', 'Find all three stacks, one of them kicked over.'],
+  warning: ['The warden painted a notice here.', 'In 2026 it said something else.', 'Read it, then read it again in 2026.'],
+  antenna: ['The antenna is past the line\'s fallen span.', 'Hold the span up with REVERSE, or cross in 2049.', 'Hold the span and cross, or walk over in 2049 and switch back.'],
+  memorial: ['The last part is in the memorial\'s foot.', 'Its stone, its flowers, its core.', 'Look at the stone and flowers, then take the core.'],
+  sera: ['Sera saw me read the memorial.', 'She is waiting by the steps.', 'Talk to Sera by the steps.'],
+  beacon: ['I have all three parts.', 'The beacon case is by Sera\'s steps.', 'Build the beacon at the case.'],
+  gardener: ['A gardener is working by the dry channel.', 'In the old street, by the channel.', 'Talk to the gardener.'],
+  culvert: ['The channel\'s culvert is blocked.', 'In 2049 it was a street drain.', 'Clear the culvert in 2049.'],
+  prints: ['Footprints in the moss walk backwards.', 'Held back, they walk forwards once.', 'Aim at the prints and hold REVERSE.'],
+  scar: ['The prints begin in the air.', 'At head height, a tear.', 'Look at the tear in the air.'],
+  rhyme: ['A child is reciting something.', 'In the schoolroom. It has my name in it.', 'Listen to the child.'],
+  book: ['A schoolbook lies open.', 'On a desk in the schoolroom.', 'Read the open schoolbook.'],
+  warden: ['A warden stands where the street flickers.', 'By the shimmering patches near the line.', 'Talk to the warden.'],
+  voice: ['The beacon has found a voice.', 'Listen to the voice.', 'Listen, then answer it.'],
+  keeper: ['A man keeps the old board clean.', 'He holds a ticket as if it might be checked.', 'Talk to the man on the platform.'],
+  departures: ['The 41\'s last board is still here.', 'At the old platform\'s end.', 'Read the last board.'],
 };
 const KEEPER = AMB('CROWD_M');
 // the street's unstable zones: shimmering patches where the street flickers between years (stability drains in them)
@@ -89,7 +89,9 @@ const M14_PROCESSES = [
   {
     id: 'liftCar', kind: 'fall', at: 'liftCar', label: 'THE LIFT CAR', weight: 1, speed: 3, when: '@FUTURE', grain: 'metal', creak: 0.5,
     parts: [
-      { shape: 'box', size: [2.9, 0.4, 2.9], mat: 'steel', at: [0, 23.65, 0], rest: { at: [0, 0.05, 0], rot: [0.05, 0, -0.04] }, solid: true },
+      // (it lies nearly level and low: its floor a step up from the sidewalk, 0.2 m, so Kai walks into it; it stood 0.38 m
+      // proud, and he had to jump: v2.1 playtest X4)
+      { shape: 'box', size: [2.9, 0.4, 2.9], mat: 'steel', at: [0, 23.65, 0], rest: { at: [0, -0.07, 0], rot: [0.03, 0, -0.02] }, solid: true },
       ...[[-1, -1], [1, -1], [-1, 1], [1, 1]].map(([a, b]) => ({ shape: 'box', size: [0.12, 2.4, 0.12], mat: 'metal', at: [a * 1.35, 25.05, b * 1.35], rest: { at: [a * 1.35 + 0.3, 0.3, b * 1.35], rot: [0, 0, 1.45 * a] } })),
       { shape: 'box', size: [2.9, 0.12, 2.9], mat: 'glass', at: [0, 26.3, 0], rest: { at: [2.4, 0.1, 0.6], rot: [0.2, 0.4, 0.1] } },
     ],
@@ -167,7 +169,7 @@ export const M14 = {
       threads: [
         { id: 'parts', kind: 'scene', scene: 'parts', at: 'partsList', spot: { prompt: 'THE PARTS LIST', offset: [0, 1.1, 0.8], r: 2.6, kit: 'beaconCase' },
           goal: 'Read the beacon\'s parts list.', because: 'The Chronolith will not hold me here for long.', done: 'm14_parts', hints: M14_HINTS.parts, minutes: 2 },
-        { id: 'lift', kind: 'go', at: 'roofGarden', r: 6, after: ['parts'], goal: 'Up to the bank\'s roof garden.', because: 'The capacitor is up there. The bank\'s lift fell; the tower that fell beside it is a ramp.', hints: M14_HINTS.lift, minutes: 5 },
+        { id: 'lift', kind: 'go', at: 'roofGarden', r: 6, after: ['parts'], goal: 'Up to the bank\'s roof garden.', because: 'The capacitor is up there. The bank\'s lift car fell to the street, and fallen things rise.', hints: M14_HINTS.lift, minutes: 5 },
         { id: 'capacitor', kind: 'scene', scene: 'capacitor', at: 'roofGarden', after: ['lift'], spot: { prompt: 'THE WEATHER STATION', offset: [0, 1.0, 2], r: 2.8, kit: 'beaconCase' },
           goal: 'Take the capacitor.', because: 'The first of three parts.', done: 'm14_capacitor', hints: M14_HINTS.capacitor, minutes: 1 },
       ],
@@ -359,7 +361,7 @@ const M15_HINTS = {
   mara: ['The archive in the press tower.', 'An archivist keeps it.', 'Talk to Mara.'],
   ink: ['Ink remembers its order.', 'The card, and both archives.', 'REVERSE each one.'],
   anja: ['Anja Vale.', 'Her desk, by the lock\'s console.', 'Talk to her.'],
-  lock: ['The lock\'s console.', 'Stabilize it, or free it.', 'Decide.'],
+  lock: ['The lock\'s console.', 'Stabilize it, or free it.', 'Use the console and decide.'],
   junEcho: ['A driver on the evacuation train.', 'He is an echo.', 'Talk to him.'],
   flaps: ['The departure board\'s flaps run backwards.', 'Run them forwards.', 'REVERSE the board.'],
   carriage: ['The next carriage.', 'The train at the halt.', 'Open it.'],
@@ -571,7 +573,7 @@ const M16_HINTS = {
   photo: ['Behind the waterfall.', 'The deepest cave.', 'The photograph.'],
   catacomb: ['A door behind the falls.', 'Next to the deepest cave.', 'Go in.'],
   names: ['Names on the wall.', 'Three of them I know.', 'Read them.'],
-  choiceCases: ['Cases on the floor.', 'By the lens.', 'Look.'],
+  choiceCases: ['Cases on the floor.', 'By the lens.', 'Look at the cases.'],
   case41: ['A shattered case.', 'In the third cave.', 'REVERSE it.'],
   mara: ['Mara keeps the museum.', 'At the rim gate.', 'Talk to her.'],
 };
@@ -774,7 +776,7 @@ const M17_HINTS = {
   reconstruct: ['The reconstruction.', 'Console, stool, logs.', 'Look at all three.'],
   witness: ['His hologram.', 'In the control hall.', 'Talk to him.'],
   memory: ['The memory.', 'At the console.', 'Play it.'],
-  letter: ['An envelope.', 'On the desk in the hall.', 'Decide.'],
+  letter: ['An envelope.', 'On the desk in the hall.', 'Decide what to do with it.'],
   mimic: ['A mimic.', 'A patrol walks its last seconds back.', 'REVERSE it.'],
   hers: ['The far dishes are tagged too.', 'Eighty-eight, a hundred and two, a hundred and seventeen.', 'Listen to her.'],
   plaque: ['Who paid for all this?', 'The plaque by the cable trenches.', 'Read it now, then in 2026.'],
@@ -1002,12 +1004,12 @@ const M18_HINTS = {
   hold: ['Keep the pylons in phase.', 'When one drifts, go to it in its own year.', 'One in 2026, one in 2049, one here.'],
   slabs: ['The slabs fell from the core.', 'Last fallen, first back. A stair.', 'REVERSE the slabs and climb while they hold.'],
   climb: ['Up the tilted floors.', 'To the tower\'s deck.', 'Keep climbing.'],
-  message: ['A message.', 'On the tower\'s screen.', 'Listen.'],
+  message: ['A message.', 'On the tower\'s screen.', 'Listen to the message.'],
   signal: ['A signal.', 'From a pocket by the coast.', 'Find it.'],
-  iven: ['Iven.', 'In the pocket.', 'Get him out.'],
+  iven: ['Iven is out there.', 'In the pocket.', 'Get him out.'],
   porch: ['The potter\'s porch.', 'It fell over his kiln.', 'REVERSE it.'],
   kiln: ['The kiln.', 'Behind the porch.', 'Open it.'],
-  scavengers: ['A man at the third pylon.', 'He wants one of its cells.', 'Decide.'],
+  scavengers: ['A man at the third pylon.', 'He wants one of its cells.', 'Decide whether he takes it.'],
 };
 const SCAV = AMB('CROWD_M2');
 const M18_PROCESSES = [

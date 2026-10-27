@@ -271,6 +271,19 @@ export function placeThreads(deck, level) {
 // the cold open's people stand while this holds (Runtime.openMission)
 export const coldFact = (m) => `co_${m.mkey || m.key}`;
 
+// the choice panel's header (Runtime.playNode): the node's own `header` if it gives one (null: none), else the last of
+// its lines that was said. A line whose `when` does not hold was not said (HUD.say skips it, by the same test), so it
+// is never the header: the Finale's "Orren's record: released" to a player who never read Orren's record (v2.1
+// playtest F02, X3)
+export function choiceHeader(node, lines, facts) {
+  if (node && node.header !== undefined) return node.header;
+  for (let i = (lines?.length || 0) - 1; i >= 0; i--) {
+    const l = lines[i];
+    if (l && (!l.when || facts.test(l.when))) return l;
+  }
+  return null;
+}
+
 // the room a point stands in (DeckWorld.roomAt's rule: the first room in order whose bounds hold it)
 export function roomAt(level, p) {
   const [x, y, z] = p;
@@ -679,12 +692,15 @@ export class Threads {
     const f = this.g.facts, entries = t.entries || [];
     const n = f.get(placedFact(this.deck, t)) || 0;
     if (n >= entries.length) return this.reenact(t);
-    // every piece not yet placed is offered, in a fixed shuffle; the next one in order goes in, any other stays out
+    // every piece not yet placed is offered, in a fixed shuffle; the next one in order goes in, any other stays out.
+    // One that goes in is seen to (play: a chime, the count) and the next pick is offered at once, its header the order
+    // so far (v2.1 playtest F13: a right pick closed the panel without a sound, and the wall had to be tapped again)
     const rest = entries.map((e, i) => ({ e, i })).filter(({ i }) => i >= n).sort((a, b) => ((a.i * 5 + 2) % 7) - ((b.i * 5 + 2) % 7));
     return {
       lines: n ? t.next || [] : t.question || [],
+      ...(n ? { header: { who: 'NONE', text: `In order so far: ${entries.slice(0, n).map((e) => e.label).join(' ')} What comes next?` } } : {}),
       choices: rest.map(({ e, i }) => (i === n
-        ? { intent: 'investigate', label: e.label, mute: true, lines: e.lines || [], set: { [placedFact(this.deck, t)]: n + 1 }, ...(n + 1 === entries.length ? { playback: id } : {}) }
+        ? { intent: 'investigate', label: e.label, mute: true, lines: e.lines || [], set: { [placedFact(this.deck, t)]: n + 1 }, playback: id }
         : { intent: 'investigate', label: e.label, mute: true, lines: t.wrong || [] })),
     };
   }
@@ -694,9 +710,19 @@ export class Threads {
     return { lines: t.lines || [], show: playFact(this.deck, t), set: { [factOf(this.deck, t)]: true, ...(t.set || {}) } };
   }
 
+  // a piece went in (Runtime.applyAfter, after its lines): the next pick at once, or, the last one in, the re-enactment
   play(id) {
     const t = this.byId[id];
-    if (t?.kind === 'playback') this.rt.playNode(this.reenact(t), null, `playback_${id}`);
+    if (t?.kind !== 'playback') return;
+    const g = this.g, n = g.facts.get(placedFact(this.deck, t)) || 0, all = (t.entries || []).length;
+    if (n < all) {
+      g.audio?.chime?.();
+      g.hud?.toast?.(`<small>${t.prompt || 'IN ORDER'}</small><br>${n} / ${all} in order`, 1800);
+      this.rt.playNode(this.playback(id), null, `playback_${id}`);
+      return;
+    }
+    if (all) g.audio?.chime?.();
+    this.rt.playNode(this.reenact(t), null, `playback_${id}`);
   }
 
   // a record: what it says now; in the past, what it said first (the residue), and the thread is done
