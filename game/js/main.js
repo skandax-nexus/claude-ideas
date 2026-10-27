@@ -581,6 +581,12 @@ class Game {
     if (id === 'laws') this.hud.renderLaws(this); // the draft is kept between visits
     if (id === 'journal') this.hud.renderJournal(this);
     this.hud.show(id);
+    if (id === 'journal') {
+      // (opened at its top, WHERE YOU ARE and THE QUESTIONS: it kept the last scroll, and after the map's TRAVEL, which
+      // scrolls it down to TRAVEL, the next CASE opened there. Once shown: a hidden panel takes no scroll)
+      const panel = typeof document !== 'undefined' && document.querySelector('#journal .panel');
+      if (panel) panel.scrollTop = 0;
+    }
     if (id === 'map') {
       document.querySelector('#mapTitle').textContent = this.mode === 'deck'
         ? (this.campaign.lv ? this.edition.mapTitle()
@@ -1749,6 +1755,7 @@ class Game {
       for (const it of this.level.items) if (this.held !== it.id && !this.deckWorld.flags[`used_${it.id}`]) out.push({ x: it.pos[0], z: it.pos[2], kind: 'item' });
       for (const t of this.level.tokens) if (!this.facts.get(`token_${t.token}`)) out.push({ x: t.pos[0], z: t.pos[2], kind: 'token' });
       for (const it of this.level.interactables) if (it.kind === 'beacon') out.push({ x: it.pos[0], z: it.pos[2], kind: 'beacon' });
+      if (this.edition?.mapMarkers) out.push(...this.edition.mapMarkers()); // (the objective, the quarry: the full map's)
     } else {
       if (this.facts.get('met_juno')) out.push({ x: this.npcs.juno.position.x, z: this.npcs.juno.position.z, kind: 'npc' });
       if (this.facts.get('hall_seen')) out.push({ x: this.observer.pos.x, z: this.observer.pos.z, kind: 'sentinel' });
@@ -2020,7 +2027,7 @@ class Game {
     if (armedMachine && this.hud.talking) this.hud.skipAll?.();
     else if (this.hud.talking && (!f || (f.id === this.lastUse && this.hud.storyTalking))) return this.hud.skipSub();
     if (!f) return;
-    this.hud.hushBarks?.();
+    this.hud.hushBarks?.(true);
     this.lastUse = f.id;
     if (this.mode === 'deck') return this.useDeck(f);
     if (f.id === 'npc:juno') {
@@ -2533,7 +2540,11 @@ class Game {
     const half = Math.min(w / 2, this.hud.promptWidth() / 2 + 8);
     const sa = this.safeArea();
     const x = Math.round(THREE.MathUtils.clamp((v.x * 0.5 + 0.5) * w, half + sa.left, Math.max(half + sa.left, w - half - sa.right)));
-    const y = Math.round(THREE.MathUtils.clamp((-v.y * 0.5 + 0.5) * h, 120, h - 140));
+    let y = Math.round(THREE.MathUtils.clamp((-v.y * 0.5 + 0.5) * h, 120, h - 140));
+    // (and clear of a toast that is up: it sits where the prompt often floats, and covered it. The pill hangs above its
+    // point, translate(-50%, -100%): it spans y - 46 .. y)
+    const tb = this.hud.toastBox?.();
+    if (tb && x + half > tb.left && x - half < tb.right && y - 46 < tb.bottom && y > tb.top) y = Math.min(h - 60, Math.round(tb.bottom + 52));
     if (x === this._promptX && y === this._promptY) return;
     this._promptX = x;
     this._promptY = y;

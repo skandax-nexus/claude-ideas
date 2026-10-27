@@ -353,18 +353,18 @@ M14.outro = M14.hook.lines;
 // Mission 15: THE CITY THAT FORGOT TOMORROW
 // =============================================================================================================
 const M15_HINTS = {
-  announce: ['The station board.', 'On the halt.', 'Read the board.'],
-  station: ['Watch the platform.', 'Noon resets everything.', 'Wait on the halt through one reset.'],
-  register: ['The school register.', 'In the main stand, at the rim.', 'Read the register. Look at the desks.'],
-  flood: ['The market.', 'The silt on the stand. The well.', 'Look at both.'],
-  fourteenth: ['What happened on the fourteenth?', 'The silt line, the well\'s last mark.', 'A flood.'],
-  mara: ['The archive in the press tower.', 'An archivist keeps it.', 'Talk to Mara.'],
-  ink: ['Ink remembers its order.', 'The card, and both archives.', 'REVERSE each one.'],
-  anja: ['Anja Vale.', 'Her desk, by the lock\'s console.', 'Talk to her.'],
-  lock: ['The lock\'s console.', 'Stabilize it, or free it.', 'Use the console and decide.'],
-  junEcho: ['A driver on the evacuation train.', 'He is an echo.', 'Talk to him.'],
-  flaps: ['The departure board\'s flaps run backwards.', 'Run them forwards.', 'REVERSE the board.'],
-  carriage: ['The next carriage.', 'The train at the halt.', 'Open it.'],
+  announce: ['The station is evacuating. It has been evacuating for years.', 'The departure board stands on the halt.', 'Walk onto the halt and read the departure board.'],
+  station: ['Every morning the last train leaves, and every morning it is the first.', 'At noon the whole station resets.', 'Wait on the halt and watch it through one reset.'],
+  register: ['The school relives its last morning. Thirty names, in the same ink every day.', 'The school is in the main stand, up at the rim.', 'Read the register, then look at the desks.'],
+  flood: ['The market relives a disaster nobody wrote down.', 'There is silt on the stand where they stop talking, and there is the well.', 'Look at the silt on the stand, and at the well.'],
+  fourteenth: ['What happened on the fourteenth? The archive and the market disagree.', 'The silt line on the stand, and the last mark in the well.', 'Put them together: it was a flood.'],
+  mara: ['Someone keeps the records of a city that forgets.', 'The archive is in the press tower, and an archivist keeps it.', 'Climb to the archive in the press tower and talk to Mara.'],
+  ink: ['Ink remembers the order it went on. The forgeries went on last.', 'The card, and the records in both archives.', 'Aim at the card and at both archives, and REVERSE each one.'],
+  anja: ['Anja Vale built the lock. She checks it at noon.', 'Her desk is by the lock\'s console.', 'Go to her desk by the console and talk to Anja.'],
+  lock: ['One day, kept forever, or every day after it.', 'The lock\'s console can stabilize the city, or free it.', 'Use the lock\'s console and decide.'],
+  junEcho: ['There is a driver on the evacuation train, with Jun Park\'s face.', 'He is an echo, sitting in the cab.', 'Go to the train\'s cab and talk to the driver.'],
+  flaps: ['The departure board\'s flaps run backwards. It never says where to.', 'Run backwards long enough, they would come round forwards.', 'Aim at the board and REVERSE it.'],
+  carriage: ['Jun can hear people in the next carriage.', 'It is the next carriage of the train at the halt.', 'Go to the next carriage and open it.'],
 };
 const M15_PROCESSES = [
   // card fourteen: CAUSE: HELIX TEST was written over the card; it un-writes first, so it was added last
@@ -563,19 +563,19 @@ M15.outro = M15.hook.lines;
 // Mission 16: THE MUSEUM OF FAILED WORLDS
 // =============================================================================================================
 const M16_HINTS = {
-  hall: ['The entrance hall.', 'On the rim.', 'Read the halls.'],
-  memory1: ['The first memory.', 'In the first cave on the ramp.', 'Play it.'],
+  hall: ['Mara said they keep the failed worlds here.', 'The museum\'s entrance hall is up on the rim.', 'Go into the entrance hall and read the halls\' names.'],
+  memory1: ['Three memories of one event. I should start with the first.', 'It is in the first cave on the spiral ramp.', 'Go into the first cave and play the memory.'],
   memory2: ['A reel running backwards.', 'In the second cave.', 'REVERSE it, and it plays forwards.'],
-  memory3: ['The third memory.', 'Further down.', 'Play it.'],
+  memory3: ['Two versions so far, two people at the console. There is a third.', 'The third memory is further down the ramp.', 'Walk on down the ramp and play the third memory.'],
   compare: ['Cases from this world.', 'The raincoat; the barge in 2049; the pass.', 'Look at two of them.'],
-  descend: ['Down the spiral.', 'To the floor.', 'Follow the ramp.'],
+  descend: ['The Comparison Hall is at the bottom, under the lens.', 'The spiral ramp goes all the way down to the floor.', 'Follow the ramp down to the museum floor.'],
   museum: ['Which version explains this place?', 'Three memories, three versions.', 'None of them alone.'],
-  photo: ['Behind the waterfall.', 'The deepest cave.', 'The photograph.'],
-  catacomb: ['A door behind the falls.', 'Next to the deepest cave.', 'Go in.'],
-  names: ['Names on the wall.', 'Three of them I know.', 'Read them.'],
-  choiceCases: ['Cases on the floor.', 'By the lens.', 'Look at the cases.'],
-  case41: ['A shattered case.', 'In the third cave.', 'REVERSE it.'],
-  mara: ['Mara keeps the museum.', 'At the rim gate.', 'Talk to her.'],
+  photo: ['Mara said someone hung a photograph she did not hang.', 'It is behind the waterfall, in the deepest cave.', 'Go behind the waterfall and look at the photograph.'],
+  catacomb: ['Mara keeps the failed worlds. Who keeps the failed people?', 'There is a door behind the falls, next to the deepest cave.', 'Go through the door behind the falls.'],
+  names: ['There are names cut into the catacomb wall.', 'Three of the names on the wall are ones I know.', 'Read the names on the catacomb wall.'],
+  choiceCases: ['Three cases on the floor are labelled for me. Things I left behind.', 'They stand by the lens, on the museum floor.', 'Walk to the lens and look at the cases.'],
+  case41: ['A case lies shattered, and its label is in the glass.', 'It is in the third cave.', 'Go into the third cave, aim at the case, and REVERSE it.'],
+  mara: ['Mara keeps the museum. She dusts every case and sees who comes.', 'She is waiting at the rim gate.', 'Go to the rim gate and talk to Mara.'],
 };
 const M16_PROCESSES = [
   // memory two runs backwards on its reel: held, it plays forwards once (R5)
@@ -767,18 +767,18 @@ M16.outro = M16.hook.lines;
 // Mission 17: THE WITNESS'S ARCHIVE
 // =============================================================================================================
 const M17_HINTS = {
-  corridor: ['Through the racks.', 'A gap in one year is a wall in another.', 'Switch the year, and walk where the gaps line up.'],
+  corridor: ['The racks stand differently in every year. Somewhere they line up.', 'A gap in one year is a wall in another.', 'Switch the year, and walk where the gaps line up.'],
   recordings: ['Three recordings, on three dishes.', 'Seventeen, twenty-nine, fifty-eight of a hundred and seventeen.', 'Listen to all three.'],
-  match: ['The shelves.', 'One object for each recording.', 'In the order of my age.'],
+  match: ['Each recording has its object on the shelves.', 'There is one object for each recording.', 'Put them on the shelves in the order of my age.'],
   mimics: ['Red copies of me.', 'They walk where I walked.', 'Keep off my own old route. Reverse one if it sees me.'],
-  echoes: ['The earlier rooms.', 'The huts had roofs in 2026.', 'Go in, in 2026.'],
-  shredded: ['Shredded paper.', 'It was one sheet.', 'REVERSE it.'],
-  reconstruct: ['The reconstruction.', 'Console, stool, logs.', 'Look at all three.'],
-  witness: ['His hologram.', 'In the control hall.', 'Talk to him.'],
-  memory: ['The memory.', 'At the console.', 'Play it.'],
-  letter: ['An envelope.', 'On the desk in the hall.', 'Decide what to do with it.'],
+  echoes: ['The array\'s first huts are the earlier rooms.', 'The huts still had roofs in 2026.', 'Switch to 2026 and go into the huts.'],
+  shredded: ['Somebody shredded a sheet on the hut\'s table. They did not want it read.', 'The shreds were all one sheet of paper.', 'Aim at the shredded paper and REVERSE it.'],
+  reconstruct: ['Somebody rebuilt the original experiment, to the millimetre.', 'The console, the stool and the logs are all there.', 'Look at the console, the stool and the logs.'],
+  witness: ['He built this, and he wants me to see it.', 'His hologram stands in the control hall.', 'Go into the control hall and talk to his hologram.'],
+  memory: ['He says I should see the memory once.', 'It plays at the console.', 'Go to the console and play the memory.'],
+  letter: ['There is an envelope in Mira\'s handwriting.', 'It lies on the desk in the hall.', 'Go to the desk and decide what to do with the envelope.'],
   mimic: ['A mimic.', 'A patrol walks its last seconds back.', 'REVERSE it.'],
-  hers: ['The far dishes are tagged too.', 'Eighty-eight, a hundred and two, a hundred and seventeen.', 'Listen to her.'],
+  hers: ['The far dishes are tagged too, with other numbers.', 'Eighty-eight, a hundred and two, a hundred and seventeen.', 'Go to the far dishes and listen to her voice.'],
   plaque: ['Who paid for all this?', 'The plaque by the cable trenches.', 'Read it now, then in 2026.'],
 };
 const M17_ROUTE = { area: [-20, -60, 130, 50] };
@@ -995,20 +995,20 @@ M17.outro = M17.hook.lines;
 // Mission 18: THE FRACTURE
 // =============================================================================================================
 const M18_HINTS = {
-  sera: ['Sera, at the anchor.', 'By the Chronolith bench.', 'Talk to her.'],
-  evacuate: ['Three houses.', 'The water keepers, the potter, the school.', 'Knock at each.'],
-  canyon: ['The canyon.', 'It was a river in 2026, with an arch.', 'Cross in 2026.'],
-  highway: ['The highway.', 'In 2049 it is under water. The storm stands across it in the other years.', 'Walk the lamp-post heads, in 2049.'],
-  plan: ['A floor plan.', 'By the skyscraper\'s stump.', 'Read it.'],
-  repair: ['Sera is at the stabilizer.', 'The tower\'s base.', 'Listen to her.'],
+  sera: ['Sera is at the anchor with a manual. The anchor is failing.', 'She is by the Chronolith bench.', 'Go to the Chronolith bench and talk to Sera.'],
+  evacuate: ['The anchor\'s light is red over every door. Three houses must be emptied.', 'The water keepers\', the potter\'s, and the school.', 'Knock at each of the three houses.'],
+  canyon: ['The canyon exists only in the past.', 'In 2026 it was a river, with a stone arch over it.', 'Switch to 2026 and cross by the stone arch.'],
+  highway: ['The flooded highway is the only way on.', 'In 2049 it is under water. The storm stands across it in the other years.', 'Stay in 2049, and walk the lamp-post heads.'],
+  plan: ['There is a floor plan, and its floors are numbered strangely.', 'It stands by the skyscraper\'s stump.', 'Go to the skyscraper\'s stump and read the floor plan.'],
+  repair: ['Sera can make the Chronolith hold longer.', 'She is at the stabilizer, at the tower\'s base.', 'Go to the stabilizer and listen to Sera.'],
   hold: ['Keep the pylons in phase.', 'When one drifts, go to it in its own year.', 'One in 2026, one in 2049, one here.'],
   slabs: ['The slabs fell from the core.', 'Last fallen, first back. A stair.', 'REVERSE the slabs and climb while they hold.'],
-  climb: ['Up the tilted floors.', 'To the tower\'s deck.', 'Keep climbing.'],
-  message: ['A message.', 'On the tower\'s screen.', 'Listen to the message.'],
-  signal: ['A signal.', 'From a pocket by the coast.', 'Find it.'],
-  iven: ['Iven is out there.', 'In the pocket.', 'Get him out.'],
-  porch: ['The potter\'s porch.', 'It fell over his kiln.', 'REVERSE it.'],
-  kiln: ['The kiln.', 'Behind the porch.', 'Open it.'],
+  climb: ['Something is on the transmission tower\'s screen.', 'The tilted floors climb to the tower\'s deck.', 'Keep climbing the tilted floors to the deck.'],
+  message: ['There is a message, with her face on it.', 'It is on the tower\'s screen.', 'Stand at the screen and listen to the message.'],
+  signal: ['Somebody is calling on an old Helix band.', 'The signal comes from a pocket of time by the coast.', 'Follow the signal to the pocket by the coast.'],
+  iven: ['Iven is out there, calling from 2049.', 'He is in the pocket, and the pocket is collapsing.', 'Go into the pocket and get Iven out.'],
+  porch: ['The potter will not leave without his last pot.', 'His porch fell in over the kiln.', 'Aim at the potter\'s porch and REVERSE it.'],
+  kiln: ['One pot is still in the kiln.', 'The kiln is behind the porch, while the porch holds.', 'While the porch holds, open the kiln.'],
   scavengers: ['A man at the third pylon.', 'He wants one of its cells.', 'Decide whether he takes it.'],
 };
 const SCAV = AMB('CROWD_M2');
@@ -1038,13 +1038,16 @@ const PYLONS = [
 export const M18 = {
   key: 'm18', n: 18, chapter: 'act3', name: 'THE FRACTURE', title: 'The planet, in three states', subtitle: 'Temporal storms. The land changes across the years.',
   logline: 'From the hills to the coast, under a storm of other times.',
-  place: 'fracture', sectors: 1, home: 'FUTURE', states: ['FUTURE', 'PAST', 'PRESENT'], drones: [0, 1, 0, 3], ambience: 'wind', ambient: 'future',
+  place: 'fracture', sectors: 1, home: 'FUTURE', states: ['FUTURE', 'PAST', 'PRESENT'], drones: [0, 1, 0, 4], ambience: 'wind', ambient: 'future',
   motto: 'THE ONE BEFORE YOU TRIED TO SAVE ME', gate: 'THE TRANSMISSION TOWER', crew: C('sera'),
   named: ['sera', 'mira', 'iven'],
   minutes: { main: 32, optional: 8 }, autoExit: 1.2, gateAfter: true,
   // (round the skyscraper, not through it; and wide of the stabilizer's pylons, so a scavenger never walks through a pylon
   // Kai must re-anchor while it drifts: pylon two is at x 30, the east patrol at x 54, U8 review)
-  watch: [[], [[[-30, -96], [30, -96]]], [], [[[-36, 92], [36, 92]], [[-55, 150], [-55, 120]], [[54, 160], [54, 126]]]],
+  // (and while Sera works, one scavenger walks between the pylons, across the way from the first pylon to the third: the
+  // hold has someone to keep clear of, 15 m or more from every pylon, so a re-anchor is never made under its eyes; v2.1
+  // playtest review F19: the hold's patrols never came near the way between them, and nobody was caught in two minutes)
+  watch: [[], [[[-30, -96], [30, -96]]], [], [[[-36, 92], [36, 92]], [[-55, 150], [-55, 120]], [[54, 160], [54, 126]], { path: [[-12, 170], [8, 170]], when: 'm18_repair && !m18_stabilized' }]],
   processes: M18_PROCESSES,
   zones: [{ at: 'towerDeck', box: [-8, -1, -8, 8, 4, 8], set: { m18_on_deck: true }, when: 'm18_stabilized' }],
   fragSpots: [['anchorMast', 'garden'], ['canyonArch', 'highwaySign'], ['verge', 'tollBooth']],

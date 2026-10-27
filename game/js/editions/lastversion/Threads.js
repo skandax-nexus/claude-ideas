@@ -298,6 +298,14 @@ export function roomAt(level, p) {
 
 // =================================================================================================================
 // the runtime side: objective and because, hints, completion, quarters, the chase, staged moments, side tracking
+// a placed piece in a playback's header: its time when it starts with one (05:33.), else its first sentence
+export function shortLabel(label = '') {
+  const t = label.match(/^\d{1,2}:\d{2}\.?/);
+  if (t) return t[0].endsWith('.') ? t[0] : `${t[0]}.`;
+  const first = label.match(/^.*?[.!?](?=\s|$)/);
+  return first ? first[0] : label;
+}
+
 export class Threads {
   constructor(rt) {
     this.rt = rt;
@@ -326,6 +334,7 @@ export class Threads {
     this.playing = null;
     this.chasers = null;
     this.room = null;
+    this.here = null; // (the quarter Kai stands in: found again in this level, never the last mission's)
     // the staged moments already started in this load (kept here, not in the saved flags: a save taken while one
     // plays loads with its thread not done, and the moment plays again)
     this.staged = new Set();
@@ -700,7 +709,9 @@ export class Threads {
     const rest = entries.map((e, i) => ({ e, i })).filter(({ i }) => i >= n).sort((a, b) => ((a.i * 5 + 2) % 7) - ((b.i * 5 + 2) % 7));
     return {
       lines: n ? t.next || [] : t.question || [],
-      ...(n ? { header: { who: 'NONE', text: `In order so far: ${entries.slice(0, n).map((e) => e.label).join(' ')} What comes next?` } } : {}),
+      // (each placed one by its time, or its first sentence: Mission 8's long timestamped labels ran the header to 150
+      // characters by the third pick)
+      ...(n ? { header: { who: 'NONE', text: `In order so far: ${entries.slice(0, n).map((e) => shortLabel(e.label)).join(' ')} What comes next?` } } : {}),
       choices: rest.map(({ e, i }) => (i === n
         ? { intent: 'investigate', label: e.label, mute: true, lines: e.lines || [], set: { [placedFact(this.deck, t)]: n + 1 }, playback: id }
         : { intent: 'investigate', label: e.label, mute: true, lines: t.wrong || [] })),

@@ -62,9 +62,15 @@ fi
 
 # 1. One HTML file with the ES modules bundled in, plus the models and voice pack beside it.
 npx --yes esbuild@0.24.0 ../game/js/main.js --bundle --format=iife --minify --target=es2019 --outfile="$OUT/game.js" --log-level=warning
-node - "$OUT" "$FLAG" <<'JS'
-const fs = require('fs'); const out = process.argv[2]; const flag = process.argv[3] || '';
+node - "$OUT" "$FLAG" "$EDITION" <<'JS'
+const fs = require('fs'); const out = process.argv[2]; const flag = process.argv[3] || ''; const edition = process.argv[4] || '';
 let html = fs.readFileSync('../game/index.html', 'utf8');
+// the page says which game it is: game/index.html is Station Zero's (its laws), THE LAST VERSION's build its own
+// (v2.1 playtest FT-21: both builds came from one page, so one of them always described the other)
+if (edition === 'lastversion') {
+  html = html.replace(/<meta name="description" content="[^"]*">/, '<meta name="description" content="AFTERZERO: The Last Version of Earth - a time-travel mystery in Rain City. One morning the clocks stop at 8:14; switch between the years, run moments backwards and find out who you were.">')
+    .replace(/<title>[^<]*<\/title>/, '<title>AFTERZERO: The Last Version of Earth</title>');
+}
 const css = fs.readFileSync('../game/css/style.css', 'utf8');
 const js = fs.readFileSync(out + '/game.js', 'utf8').replace(/<\/script/gi, '<\\/script');
 html = html.replace(/<link rel="manifest"[^>]*>\n?/, '').replace(/<link rel="icon"[^>]*>\n?/, '')

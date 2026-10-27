@@ -45,6 +45,22 @@ export const CHAPTERS = {
 };
 export const ORDER = ['prologue', 'act1', 'act2', 'act3', 'act4', 'finale'];
 export const MISSIONS = { prologue: PROLOGUE, ...ACTS };
+
+// the facts that hold only while a moment plays: every scene's `show` (Runtime.playNode sets it for its lines) and the
+// ending choice's m23_beat (finale.js beat); never loaded from a save (Runtime.resume)
+let MOMENT_FACTS = null;
+export function momentFacts() {
+  if (MOMENT_FACTS) return MOMENT_FACTS;
+  const out = new Set(['m23_beat']);
+  const walk = (o, depth = 0) => {
+    if (!o || typeof o !== 'object' || depth > 6) return;
+    if (Array.isArray(o)) return o.forEach((x) => walk(x, depth + 1));
+    if (typeof o.show === 'string' && (o.lines || o.choices)) out.add(o.show);
+    for (const v of Object.values(o)) if (v && typeof v === 'object') walk(v, depth + 1);
+  };
+  for (const ms of Object.values(MISSIONS)) for (const m of ms) walk(m.scenes);
+  return (MOMENT_FACTS = out);
+}
 // a chapter's missions: the story's, the CASE FILES', or a trip's (free roam: one roam deck per story mission, roam.js,
 // kept out of MISSIONS so that nothing walks them as the story)
 export const missionsOf = (ch) => (ch === 'roam' ? ROAM : MISSIONS[ch]);
@@ -248,7 +264,7 @@ const EV_LABELS = {
   iven_statement: 'Iven: the ring turned before the button', memory_card: 'Memory three, filed SUBJECTIVE', second_early: 'He turned it a second early', unwritten_record: 'What each ending costs',
 };
 
-const _v = new THREE.Vector3();
+const _v = new THREE.Vector3(), _w1 = new THREE.Vector3(), _w2 = new THREE.Vector3();
 // the facts a replay starts from, handed over the page reload (sessionStorage)
 const CASE_FACTS = 'afterzero.lv.caseFacts';
 // after an ending, BACK TO THE STORY on a trip comes back to the CASE FILES (the title opens them once: sessionStorage)
@@ -312,7 +328,12 @@ export class LastVersion {
     // (not as the page unloads: a reload is a load, a quick load or a CLEAR, and what it asks for must not be written
     // over; v2.1 playtest SYS-06)
     if (typeof window !== 'undefined') {
-      window.addEventListener('beforeunload', () => { this.unloading = true; });
+      // (a page that did not go after all, an unload let go or the page back from the back-forward cache, saves again)
+      window.addEventListener('beforeunload', () => {
+        this.unloading = true;
+        setTimeout(() => { this.unloading = false; }, 1500);
+      });
+      window.addEventListener('pageshow', () => { this.unloading = false; });
       document.addEventListener('visibilitychange', () => document.hidden && this.saveOnHide());
     }
     // a device that cannot decode the recorded voices (an older WebKit without Opus): say so once
@@ -400,6 +421,9 @@ export class LastVersion {
       const el = $(sel);
       if (el) el.style.display = 'none';
     }
+    // (the big map's ring where the objective is, and the diamond of someone Kai follows: the key names them)
+    const legend = $('#map .legend');
+    if (legend && !legend.querySelector('.lvobj')) legend.insertAdjacentHTML('beforeend', '<span class="lg lvobj">Objective</span><span class="lg lvquarry">Followed</span>');
     const vt = $('#verdict .dim');
     if (vt) vt.textContent = '';
     // the people of the chapter most likely to be played next start loading on the title screen, with its voices
@@ -539,14 +563,10 @@ export class LastVersion {
   }
 
   // a line said in passing (a crowd's or a person's bark) gives way to a staged moment: the one being said is cut and
-  // none waits in the queue (a conversation's lines, and what waits on their end, are left to run)
+  // none waits in the queue (a conversation's lines, and what waits on their end, are left to run). Every bark carries
+  // the flag (DeckWorld.bark), so the HUD's own rule is the one rule
   hushBarks() {
-    const hud = this.g.hud;
-    if (!hud?.talking || !this.level?.npcs) return;
-    const barks = new Set(this.level.npcs.flatMap((n) => n.barks || []));
-    if (!barks.size) return;
-    if (Array.isArray(hud.subs)) hud.subs = hud.subs.filter((s) => s.done || !barks.has(s.text));
-    if (hud.subT > 0 && hud.cur && barks.has(hud.cur.text)) hud.skipSub();
+    this.g.hud?.hushBarks?.();
   }
 
   // the crowd's own barks, for the walla under a place (score.js)
@@ -818,6 +838,10 @@ export class LastVersion {
 
   resume(campaign) {
     migrateSave(this.g.engine, campaign, this.def, this.g.facts); // a v2.0 save may stand in an INVERTED room; a pre-U6 one mid-mission restarts it
+    // what holds only while a moment plays (a scene's show fact, cinema.watchShow and the recordings' holograms; the
+    // ending choice's m23_beat): a save taken inside one kept it set, so the scene's next showing had no camera of its
+    // own, and the Finale's hilltop the sky from before the ending (v2.1 playtest review)
+    for (const k of momentFacts()) if (this.g.facts.facts[k]) delete this.g.facts.facts[k];
     if (campaign.restarted) {
       // (its facts stay: what already happened does not happen again)
       const deck = MISSIONS[campaign.chapter]?.[campaign.deck ?? 0];
@@ -936,7 +960,14 @@ export class LastVersion {
     const cam = g.camera.position;
     g.camera.getWorldDirection(_v);
     const dx = lm[0] - cam.x, dy = (lm[1] || 0) + 1 - cam.y, dz = lm[2] - cam.z, d = Math.hypot(dx, dy, dz) || 1;
-    if ((_v.x * dx + _v.y * dy + _v.z * dz) / d < 0.75) {
+    // (looked at, and seen: not through a wall of the room it is in, from Kai's eyes)
+    const seen = () => {
+      if (!g.player.rayDistance) return true;
+      const eye = _w1.set(p.x, p.y + 0.7, p.z), to = _w2.set(lm[0], (lm[1] || 0) + 1, lm[2]).sub(eye);
+      const dv = to.length() || 1;
+      return g.player.rayDistance(eye, to.divideScalar(dv), dv) >= dv - 1.2; // (what it lies on stands round it)
+    };
+    if ((_v.x * dx + _v.y * dy + _v.z * dz) / d < 0.75 || !seen()) {
       this.watchT = Math.max(0, (this.watchT || 0) - dt);
       return;
     }
@@ -1446,7 +1477,12 @@ export class LastVersion {
     if (!deck) return ['', ''];
     if (this.roaming) return this.roamObjective();
     if (this.threads.on) {
-      if (g.deckWorld.flags.beat_done) return [deck.autoExit != null ? '' : LINES.next_open, ''];
+      if (g.deckWorld.flags.beat_done) {
+        // (a thread that is the way out itself, Mission 1's staff gate, is the objective until Kai is through it)
+        const out = this.threads.current();
+        if (out?.exit) return [out.goal || '', out.because || ''];
+        return [deck.autoExit != null ? '' : LINES.next_open, ''];
+      }
       const t = this.threads.current();
       return t ? [t.goal || '', t.because || ''] : ['', ''];
     }
@@ -1615,6 +1651,15 @@ export class LastVersion {
   // --- interactions --------------------------------------------------------------------------------
   useDeck(f) {
     const g = this.g;
+    // a watcher on Kai's heels: no story moment now. A staged scene ends every chase (Runtime.step) and a talk stands
+    // him still in its eyes, so a prompt by a patrol was a way out of being caught (v2.1 follow-up, F04 review: THE
+    // FROZEN BLOCK tapped mid-chase, and the patrol walked past). Lose them first.
+    if ((f.id.startsWith('dnpc:') || f.it?.kind === 'scene') && this.chased()) {
+      g.audio.deny?.();
+      g.hud.toast('<small>NOT NOW</small><br>Someone is after Kai. Lose them first.', 2200);
+      return true;
+    }
+    this.spotT = g.time; // (what it says next was started at a spot: storyHolds)
     if (f.id.startsWith('dnpc:')) {
       this.talk(f.npc);
       return true;
@@ -1871,7 +1916,9 @@ export class LastVersion {
     const deck = this.deck;
     let text;
     let key;
-    const th = this.threads.hint();
+    // (a mission's thought marked `over` comes first: where Kai stands, the current thread's tiers would mislead him)
+    const over = deck?.thoughts?.find((x) => x.over && g.facts.test(x.when || 'true') && (!x.test || x.test(this)));
+    const th = over ? { key: `over:${over.when}`, tiers: over.tiers } : this.threads.hint();
     if (th) {
       key = th.key;
       if (this.hintKey !== key) {
@@ -1883,7 +1930,7 @@ export class LastVersion {
     }
     if (!text && deck.thoughts) {
       // a mission's own thoughts, some only in the room of their landmark
-      const h = deck.thoughts.find((x) => (!x.at || this.level?.anchorsAt?.[x.at]?.room === g.room) && g.facts.test(x.when || 'true'));
+      const h = deck.thoughts.find((x) => !x.over && (!x.at || this.level?.anchorsAt?.[x.at]?.room === g.room) && g.facts.test(x.when || 'true'));
       if (h) {
         key = h.when;
         if (this.hintKey !== key) {
@@ -2036,6 +2083,9 @@ export class LastVersion {
       if (t.room && t.room !== g.room) return;
       if (t.when && !facts.test(t.when, g.engine.state(g.room))) return; // (a trigger may ask for a year: @FUTURE)
       if (t.unseen && g.deckWorld.sentinels.some((s) => s.mode === 'chase' && s.def.room === g.room)) return; // (a stealth thread's: lose them first)
+      // (nor while being caught: the catch drops the chase at once, and the walk back comes 700 ms later, main.js
+      // deckSetback; in between Kai still stands in the arrival box, and the crossing counted, v2.1 playtest review F03)
+      if (t.unseen && g.catching) return;
       const b = t.box;
       if (p.x >= b[0] && p.x < b[3] && p.y >= b[1] && p.y < b[4] && p.z >= b[2] && p.z < b[5]) {
         // an edge that wraps (M19's plain: walk off one side and come back from the other), seamlessly
@@ -2113,11 +2163,16 @@ export class LastVersion {
     // the lines began, though: walking on while they play is walking on, the watchers' business again (a scene tapped
     // is not a cloak to cross a patrol's street in)
     // (and for a breath after: a patrol that walked up during the lines does not catch Kai the moment they end)
+    // (a staged moment ends any chase; lines Kai started at a spot only keep new eyes off him: a chase already under way
+    // when they began goes on, or a story prompt by a patrol was a way out of being chased; v2.1 playtest review)
     const held = this.storyHolds(p);
-    const staged = this.opening || this.cinema?.active || held;
-    this.graceT = staged ? 2 : Math.max(0, (this.graceT || 0) - dt);
-    if (staged || this.graceT > 0) {
+    const staged = this.opening || this.cinema?.active;
+    this.stagedT = staged ? 2 : Math.max(0, (this.stagedT || 0) - dt);
+    this.graceT = staged || held ? 2 : Math.max(0, (this.graceT || 0) - dt);
+    if (this.stagedT > 0 || this.graceT > 0) {
+      const all = this.stagedT > 0;
       for (const s of g.deckWorld.sentinels) {
+        if (!all && s.mode === 'chase') continue;
         s.suspicion = 0;
         if (s.mode === 'chase') s.mode = 'patrol';
       }
@@ -2147,21 +2202,33 @@ export class LastVersion {
     }
   }
 
-  // the story's own lines are up or waiting: not a bark, not a THINK hint (Runtime.hint marks its line)
+  // the story's own lines are up or waiting: not a bark, not a place's ambient line (a PA), not a THINK hint (Runtime.hint
+  // marks its line)
   storyLines() {
     const h = this.g.hud;
-    if (h.subT > 0 && h.cur && !h.cur.done && !h.cur.bark && !h.cur.hint) return true;
-    return h.subs.some((s) => !s.done && !s.bark && !s.hint);
+    if (h.subT > 0 && h.cur && !h.cur.done && !h.cur.bark && !h.cur.ambient && !h.cur.hint) return true;
+    return h.subs.some((s) => !s.done && !s.bark && !s.ambient && !s.hint);
   }
 
   // the story's lines play and Kai stands where they began (within 4 m): the watchers keep off him (F04). Called every
   // step, so where the lines began is forgotten as soon as they are over
+  // a watcher of this room chasing Kai
+  chased() {
+    const g = this.g;
+    return !!g.deckWorld?.sentinels?.some((s) => !s.dead && s.mode === 'chase' && s.def.room === g.room);
+  }
+
   storyHolds(p) {
     if (!this.storyLines()) {
       this.linesAt = null;
       return false;
     }
-    this.linesAt ||= [p.x, p.z];
+    // (only lines the player started at a spot, a scene or a talk tapped (useDeck: spotT): the story's own narration as
+    // Kai walks, a thread's lines or a rule's, is no cloak; v2.1 playtest review)
+    if (!this.linesAt) {
+      if (!(this.g.time - (this.spotT ?? -1e9) < 1.5)) return false;
+      this.linesAt = [p.x, p.z];
+    }
     return Math.hypot(p.x - this.linesAt[0], p.z - this.linesAt[1]) < 4;
   }
 
@@ -2633,6 +2700,35 @@ export class LastVersion {
     if (end && ENDINGS[end]) return { where: `THE LAST VERSION · ENDING ${end}: ${ENDINGS[end].title}`, chapter: 'The case files and free roam' };
     const q = this.threads.on ? this.level?.quarters?.[this.g.campaign.quarter || 0]?.name : null;
     return { where: `THE LAST VERSION · ${d?.name || ''}`, chapter: `${typeof d?.n === 'number' ? `Mission ${d.n}` : `Case ${d?.no ?? d?.n}`}${q ? ` · ${q}` : d?.sectors > 1 ? ` · ${this.g.campaign.sector + 1}/${d.sectors}` : ''}` };
+  }
+
+  // the full map's own marks (playtest v2.1 FT-08): a ring where the current objective is, and in a pursuit the one Kai
+  // is after (main.mapMarkers; MiniMap draws them on the full map only, the corner map stays as it was)
+  mapMarkers() {
+    const out = [], g = this.g, lv = this.level;
+    if (!lv || !this.threads?.on || this.roaming || !g.deckWorld) return out;
+    const t = this.threads.current();
+    if (!t) return out;
+    if (t.kind === 'chase') {
+      for (const n of g.deckWorld.npcs) if (n.n.chase && n.model.visible) out.push({ x: n.model.position.x, z: n.model.position.z, kind: 'quarry' });
+      return out;
+    }
+    const at = this.threadWhere(t);
+    if (at) out.push({ x: at[0], z: at[2], kind: 'objective' });
+    return out;
+  }
+
+  // where a thread is: its area's middle, the person it is with, else its landmark (or its first spot's)
+  threadWhere(t) {
+    const lv = this.level, g = this.g;
+    if (Array.isArray(t.box)) return [(t.box[0] + t.box[2]) / 2, 0, (t.box[1] + t.box[3]) / 2];
+    if (t.npc) {
+      const n = g.deckWorld.npcs.find((x) => x.n.id === t.npc && x.model.visible);
+      if (n) return [n.model.position.x, n.model.position.y, n.model.position.z];
+    }
+    const at = t.at ?? t.spots?.[0]?.at ?? t.spot?.at;
+    if (Array.isArray(at)) return at;
+    return (typeof at === 'string' && (lv.anchorsAt?.[at]?.pos || lv.landmarks?.[at])) || null;
   }
 
   mapTitle() {

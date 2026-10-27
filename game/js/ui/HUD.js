@@ -19,13 +19,17 @@ export class HUD {
     // the states the pips show: key, label and css class (an edition replaces them)
     this.states = [{ key: 'PHYSICAL', label: 'PHYSICAL' }, { key: 'INVERTED', label: 'INVERTED' }, { key: 'ECHO', label: 'ECHO' }];
     this.speakers = {}; // an edition's extra speakers, looked up before the story's
+    // (a rotation or a new text size wraps a long prompt differently: its width is measured again)
+    if (typeof window !== 'undefined') window.addEventListener('resize', () => { this._promptW = 0; this._toastBox = null; });
   }
 
   // --- subtitles ---------------------------------------------------------
-  // (a line marked `bark` is said in passing, DeckWorld's BARK: anything else said cuts it, and never waits behind it)
+  // (a line marked `bark` is said in passing, DeckWorld's BARK: anything else said cuts it, and never waits behind it.
+  // A line marked `ambient` is the place's own, a station's PA: it is not the story either, so it never hides the tap
+  // prompt (storyTalking), but nothing cuts it but a tap that acts or a menu)
   say(lines, facts, done) {
     const filtered = lines.filter((l) => !l.when || facts.test(l.when));
-    if (done || filtered.some((l) => !l.bark)) this.hushBarks();
+    if (done || filtered.some((l) => !l.bark && !l.ambient)) this.hushBarks();
     for (const l of filtered) this.subs.push({ ...l, dur: this.durFn?.(l) || Math.max(2.2, l.text.length * 0.055) });
     if (done) this.subs.push({ done });
     if (this.subT <= 0) this.nextSub();
@@ -86,15 +90,19 @@ export class HUD {
     return this.subT > 0 || this.subs.length > 0;
   }
 
-  // a line that is not said in passing is up or waiting: a conversation, a thought, the story (what hides the prompt)
+  // a line that is not said in passing is up or waiting: a conversation, a thought, the story (what hides the prompt).
+  // Not a bark, nor the place's own ambient line (playtest v2.1 FT-04: Line 41's PA, every 41 s, hid the prompt for 6 of
+  // the 7 seconds that REROUTE THE POWER (8:13) is there)
   get storyTalking() {
-    return (this.subT > 0 && !!this.cur && !this.cur.bark) || this.subs.some((s) => !s.bark);
+    return (this.subT > 0 && !!this.cur && !this.cur.bark && !this.cur.ambient) || this.subs.some((s) => !s.done && !s.bark && !s.ambient);
   }
 
-  // what is said in passing gives way: the one up is cut (its voice with it), none waits in the queue
-  hushBarks() {
-    if (this.subs.some((s) => s.bark)) this.subs = this.subs.filter((s) => !s.bark);
-    if (this.subT > 0 && this.cur?.bark) {
+  // what is said in passing gives way: the one up is cut (its voice with it), none waits in the queue. With `ambient`
+  // (a tap on the prompt that acts, main.js use) the place's ambient line goes too, so the answer is not kept waiting
+  hushBarks(ambient = false) {
+    const passing = (s) => !!s && (s.bark || (ambient && s.ambient));
+    if (this.subs.some(passing)) this.subs = this.subs.filter((s) => !passing(s));
+    if (this.subT > 0 && passing(this.cur)) {
       this.onSkip?.();
       this.subT = 0;
       this.nextSub();
@@ -212,6 +220,18 @@ export class HUD {
     this.el.toast.innerHTML = text;
     this.el.toast.classList.add('on');
     this.toastT = ms / 1000;
+    this._toastBox = null; // (measured again by the next prompt placing: toastBox)
+  }
+
+  // the toast's box while it is up (a layout read once per toast and per resize; main.placePrompt keeps the prompt
+  // clear of it: a toast over the prompt hid the touch way to act, v2.1 playtest acts-1-2 F14)
+  toastBox() {
+    if (!(this.toastT > 0)) return null;
+    if (!this._toastBox) {
+      const r = this.el.toast.getBoundingClientRect?.();
+      this._toastBox = r && r.height > 0 ? { left: r.left, right: r.right, top: r.top, bottom: r.bottom } : null;
+    }
+    return this._toastBox;
   }
 
   eye(v, visible) {

@@ -191,7 +191,20 @@ export class Watchers {
       rec.speed += (Math.min(6, d / Math.max(dt, 1e-3)) - rec.speed) * Math.min(1, dt * 8);
       rec.t += dt;
       const b = rec.current;
-      if (b?.actor) b.actor.userData.animate?.(dt, rec.speed, rec.t);
+      if (b?.actor) {
+        // (out of view, body and shadow: not posed; DeckWorld.wake poses them for the time missed as they come into
+        // view, before that frame is drawn)
+        const U = b.actor.userData;
+        if (U.dormant) {
+          U.lodDt = Math.min(1, (U.lodDt || 0) + dt);
+          U.lodSpeed = rec.speed;
+          U.lodT = rec.t;
+        } else {
+          const late = U.lodDt || 0;
+          U.lodDt = 0;
+          U.animate?.(dt + late, rec.speed, rec.t);
+        }
+      }
       else if (b?.bob) b.body.position.y = b.eyeY + Math.sin(rec.t * 2.1) * 0.06;
     }
   }

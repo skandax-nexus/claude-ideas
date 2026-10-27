@@ -15,23 +15,23 @@ import { ringsOfLight, skyPanes, paneDoor, anchorLight, goneLight } from './stag
 export const POSTCREDIT = [{ who: 'VOICE', text: 'Version one hundred and eighteen.', voice: { fx: 'pa' } }];
 
 const M23_HINTS = {
-  streets: ['The opening streets.', 'Watchers on the avenue, unless Jun\'s passengers cleared it.', 'Get to the fallen street unseen.'],
+  streets: ['The avenue from the first morning is between me and the hill.', 'Watchers on the avenue, unless Jun\'s passengers cleared it.', 'Get to the fallen street without being seen.'],
   street: ['The street has fallen in.', 'He holds the far half. The near half stood in 2026.', 'Switch to 2026, cross, and step onto what he holds.'],
-  settlement: ['The settlement, again.', 'The telling-stone. Tala, if the river was taught to stay.', 'Look at both.'],
+  settlement: ['The settlement again, and Niko\'s stone has a new line on it.', 'The telling-stone. Tala, if the river was taught to stay.', 'Read the telling-stone, and find Tala if the river stayed.'],
   bridge: ['The stream. The bridge has fallen.', 'My turn to hold. He crosses first.', 'REVERSE the bridge, and cross after him.'],
-  lab: ['The Helix lab.', 'Rook\'s transmission, and Iven.', 'Hear them both.'],
-  city: ['The city in 2196.', 'The memorial, Sera, Anja.', 'Two of them.'],
-  mira: ['Mira is at the ring.', 'At the original Chronolith.', 'Ask her.'],
-  choose: ['The ring.', 'Destroy it, split the years, or become the anchor.', 'Choose one.'],
-  gallery: ['The people my choices changed.', 'Along the road.', 'Visit three of them.'],
-  speakers: ['The speakers.', 'Listen to them.', 'Walk north.'],
+  lab: ['Rook left a last transmission at the Helix lab, and Iven is waiting.', 'Rook\'s transmission, and Iven himself.', 'Hear Rook\'s transmission, and hear Iven.'],
+  city: ['The future city is the last stretch before the hill.', 'The memorial, Sera, and Anja are all in 2196.', 'Find two of them: the memorial, Sera or Anja.'],
+  mira: ['Mira is not waiting. She is choosing.', 'She is at the original Chronolith, by the ring.', 'Go to the ring and ask her.'],
+  choose: ['The ring can do three things, and only one of them.', 'Destroy it, split the years, or become the anchor.', 'Stand at the ring and choose one.'],
+  gallery: ['The people my choices changed are standing along the road.', 'They wait at places along the road, all the way to the hill.', 'Visit three of the people along the road.'],
+  speakers: ['There is a voice in every speaker on the platform again.', 'Stand on the platform and listen to the speakers.', 'When they have spoken, walk north.'],
   pillar: ['A storm stood on its end.', 'Something in it is talking backwards.', 'REVERSE it: it runs forwards once.'],
-  farewell: ['The Witness, at the lab gate.', 'He has stopped walking.', 'Talk to him.'],
-  meet: ['Mira, at the foot of the hill.', 'She came down to meet me.', 'Talk to her.'],
-  climb: ['Up the hill with her.', 'She walks at my pace.', 'Walk with her.'],
+  farewell: ['The Witness has stopped at the lab gate. He is not coming any further.', 'He has stopped walking, at the gate.', 'Go to the lab gate and talk to the Witness.'],
+  meet: ['Mira came down the hill to meet me.', 'She is waiting at the foot of the hill.', 'Go to the foot of the hill and talk to Mira.'],
+  climb: ['She wants to walk up the hill with me.', 'She walks at my pace, if I let her.', 'Walk up the hill beside her.'],
   count: ['Count it with her.', 'The ring\'s arm turns on the third count.', 'REVERSE it on the turn.'],
   platform: ['The 41 is at the platform.', 'Its doors are open.', 'Look at who is on it.'],
-  keepsakes: ['Mira, at the top.', 'She wants to see what I carried.', 'Talk to her.'],
+  keepsakes: ['Mira is at the top. I always carry things up hills.', 'She wants to see what I carried.', 'Talk to Mira at the top of the hill.'],
 };
 
 // (the closing pass) three storms stood on their ends along the road, each a world of hers: held, one plays forwards once
@@ -66,9 +66,28 @@ const EVERY = ['PRESENT', 'PAST', 'FUTURE'];
 const M23_SAY = {
   across: [N('The Witness crosses while it holds. He does not look down.')],
 };
+// past the street that fell (t_m23_street, the pit z 120 .. 136): the opening streets' checkpoint, the 41's platform
+// behind the pit, is no way back any more (v2.1 playtest acts-3 F06: the Chronolith let go of Kai in 2026 past the
+// street and put him back on the platform, with the street fallen and the Witness gone to the bridge)
+const BEHIND_PIT = 119;
+function seamSpawn(rt) {
+  const s = rt.level?.landmarks?.seam41;
+  return s ? [s[0], s[1] + 0.86, s[2], s[3] || 0] : null;
+}
 // the two holds: his, while the street is the way; then Kai's, which lets him across
 function m23Step(rt) {
   const g = rt.g, f = g.facts, procs = rt.inv?.procs || [];
+  if (f.get('t_m23_street') && g.room === rt.level?.outdoorRoom) {
+    // a snap back, a catch or a fall puts Kai at the seam, on ground every year has (the quarter's box behind it, the
+    // checkpoint main.stepDeck sets each frame, is the platform's until z 110: this step comes after it)
+    const seam = seamSpawn(rt);
+    if (seam && Array.isArray(g.checkpoint) && g.checkpoint[2] > BEHIND_PIT) g.checkpoint = seam;
+    // and a save that has him behind the pit with the street crossed (one from before this, the playtest's own, or one
+    // made after walking back) loads him at the seam, not stranded on the platform
+    if (seam && rt.pendingResume === rt.deck && !rt.m23Placed && g.player.pos.z > BEHIND_PIT) g.player.place(seam);
+    if (rt.pendingResume === rt.deck) rt.m23Placed = true;
+  }
+  if (rt.pendingResume !== rt.deck) rt.m23Placed = false;
   const street = procs.find((x) => x.rec.id === 'streetCollapse');
   if (street) {
     const holding = f.get('t_m23_streets') && !f.get('t_m23_street');
@@ -542,6 +561,11 @@ export const M23 = {
     },
   },
   step: m23Step,
+  // (THINK on the platform's side of the pit once the street is crossed, walked back over it: the settlement's tiers
+  // would not say how to get across again)
+  hints: [{ over: true, when: 't_m23_street && !t_m23_bridge', test: (rt) => rt.g.room === rt.level?.outdoorRoom && rt.g.player.pos.z > BEHIND_PIT,
+    tiers: ['The street fell in behind him, and I am on the wrong side of it again.', 'The near half still stands in 2026. The far half rises if it is held.',
+      'Switch to 2026, walk the near half, and REVERSE the street to cross the rest.'] }],
   fx: { beatA: (rt) => beat(rt, 'A'), beatB: (rt) => beat(rt, 'B'), beatC: (rt) => beat(rt, 'C') }, // (the ending choice, staged)
   spoken: M23_SAY, // (what its code says: the Witness crossing)
   // quest chain A's consequence: the passengers Kai got off the 41 clear the opening streets of watchers

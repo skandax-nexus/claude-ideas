@@ -26,10 +26,17 @@ const _v = new THREE.Vector3(), _c = new THREE.Color();
 // a caption. (v2.1 playtest: the distance was read from a scratch vector the walk had already overwritten with a unit
 // direction, so every walker barked from anywhere, every 9 s, and tiny pools looped dozens of times.)
 export const BARK = { near: 4.5, rise: 1.8, gap: 30, person: 60, lineRest: 240, personRest: 300, storyQuiet: 6, settle: 8 };
-// Passers-by never fill the screen: one whose body (feet to crown) comes within `near` metres of the camera is not
-// drawn until it is `far` metres clear again (so they do not blink at the edge) (v2.1 playtest: a walker passing under
-// the camera, its head and shoulders across the bottom-left of the screen).
-export const CAMERA_CLEAR = { near: 1.3, far: 1.6 };
+// Passers-by never fill the screen (v2.1 playtest SYS-18: a walker passing under the camera, its head and shoulders
+// across the bottom-left of the screen). A passer-by (not someone Kai can talk to) is not drawn while the camera is
+// within `near` metres of their body, or while, within `within` metres, the box round them (`reach` either side of
+// their feet-to-crown line; an open umbrella adds its canopy, a disc `umbrella` either side, from 0.3 m over the crown
+// and `canopy` deep) covers more than `cover` of the screen as the camera sees it (so a phone held upright, whose
+// narrow view a body fills sooner, hides them further off). They are drawn again once `far` metres clear and under
+// `clear` of the screen (so they do not blink at the edge). (The first rule measured to the body's line alone with
+// near 1.3: a walker 1.3-1.6 m off still covered 9% of a landscape screen and 16% of an upright one, and an
+// umbrella's canopy swept half the screen.)
+export const CAMERA_CLEAR = { near: 1.3, far: 1.6, reach: 0.22, umbrella: 0.6, canopy: 0.3, within: 3.2, cover: 0.08, clear: 0.06 };
+const _cb = new THREE.Vector3(), _parts = [[0, 0, 0], [0, 0, 0]];
 // The people nobody can see (v2.1 playtest SYS-01; THE LAST VERSION's places, main.js turns it on with lodOn): just
 // before each frame is drawn (viewLod) a person whose body (a sphere from the feet, a metre up, `body` m round, as
 // mount.js culls them) is outside the camera's view, and whose shadow cannot fall into it either (the body swept
@@ -660,11 +667,9 @@ export class DeckWorld {
         n.lodDt = Math.min(1, (n.lodDt || 0) + dt); // (posed for it as they come into view: viewLod)
         n.lodSpeed = speed;
       } else m.userData.animate(dt, speed, t);
-      // a passer-by the camera would be inside of is not drawn until it is clear of them
-      if (cam && (n.n.ambient || n.n.path) && !n.n.flicker) {
-        const y0 = m.position.y, y1 = y0 + (n.n.height || 1.75);
-        const dy = cam.y < y0 ? y0 - cam.y : cam.y > y1 ? cam.y - y1 : 0;
-        const inside = Math.hypot(cam.x - m.position.x, cam.z - m.position.z, dy) < (n.camHid ? CAMERA_CLEAR.far : CAMERA_CLEAR.near);
+      // a passer-by the camera would be inside of, or who would fill the screen, is not drawn until clear of it
+      if (cam && !talker && (n.n.ambient || n.n.path) && !n.n.flicker) {
+        const inside = this.fillsCamera(n, m, g.camera, !!n.camHid);
         if (inside !== !!n.camHid) this.clearOfCamera(n, inside);
       }
       // someone a few metres off (where they now stand), on Kai's floor, who may speak in passing: the nearest says it
@@ -761,6 +766,11 @@ export class DeckWorld {
       const dt = n.lodDt;
       n.lodDt = 0;
       U.animate?.(dt, n.lodSpeed || 0, t);
+    } else if (!n && U.lodDt > 0) {
+      // (a watcher's person, whose walk watchers.js keeps: the time missed, in the watcher's own clock)
+      const dt = U.lodDt;
+      U.lodDt = 0;
+      U.animate?.(dt, U.lodSpeed || 0, U.lodT ?? t);
     }
   }
 
@@ -777,6 +787,45 @@ export class DeckWorld {
     _sph2.center.copy(s.center).addScaledVector(_sd, -L / 2);
     _sph2.radius = s.radius + L / 2;
     return _fr.intersectsSphere(_sph2);
+  }
+
+  // CAMERA_CLEAR: is a passer-by too close to the camera, or does the box round them fill too much of its view? (hid:
+  // they are hidden now, so the looser numbers bring them back)
+  fillsCamera(n, m, camera, hid) {
+    const C = CAMERA_CLEAR, cam = camera.position, p = m.position;
+    const top = p.y + (n.n.height || 1.75);
+    // the body (feet to crown), and an open umbrella's canopy over it: a thin disc, not a wall from the feet up
+    const parts = _parts;
+    parts[0][0] = C.reach; parts[0][1] = p.y; parts[0][2] = top + 0.08;
+    const brolly = !!m.userData?.umbrella;
+    if (brolly) { parts[1][0] = C.umbrella; parts[1][1] = top + 0.3; parts[1][2] = top + C.canopy + 0.3; }
+    const count = brolly ? 2 : 1;
+    let dist = Infinity;
+    for (let i = 0; i < count; i++) {
+      const [r, y0, y1] = parts[i];
+      const dy = cam.y < y0 ? y0 - cam.y : cam.y > y1 ? cam.y - y1 : 0;
+      dist = Math.min(dist, Math.hypot(Math.max(0, Math.hypot(cam.x - p.x, cam.z - p.z) - r), dy));
+    }
+    if (dist < (hid ? C.far : C.near)) return true;
+    if (dist > C.within || !camera.projectionMatrix || !camera.matrixWorldInverse) return false;
+    // each box's eight corners as the camera sees them (from its last frame's matrices): the part on screen
+    let cover = 0;
+    for (let i = 0; i < count; i++) {
+      const [r, y0, y1] = parts[i];
+      let x0 = Infinity, x1 = -Infinity, ya = Infinity, yb = -Infinity, behind = 0;
+      for (let k = 0; k < 8; k++) {
+        _cb.set(p.x + (k & 1 ? r : -r), k & 2 ? y1 : y0, p.z + (k & 4 ? r : -r)).applyMatrix4(camera.matrixWorldInverse);
+        if (_cb.z > -0.05) { behind++; continue; }
+        _cb.applyMatrix4(camera.projectionMatrix);
+        x0 = Math.min(x0, _cb.x); x1 = Math.max(x1, _cb.x); ya = Math.min(ya, _cb.y); yb = Math.max(yb, _cb.y);
+      }
+      if (behind === 8) continue; // (all of it behind the camera: nothing to see)
+      // (a box astride the camera's plane, close by: what is in front runs off the screen's edge)
+      if (behind) { if (dist < (C.near + C.within) / 2) return true; continue; }
+      const w = Math.min(1, x1) - Math.max(-1, x0), h = Math.min(1, yb) - Math.max(-1, ya);
+      if (w > 0 && h > 0) cover += (w * h) / 4;
+    }
+    return cover > (hid ? C.clear : C.cover);
   }
 
   // not drawn while the camera is inside them (the model stays visible to the game: it walks, and is counted present)

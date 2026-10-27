@@ -314,7 +314,7 @@ test('layout: the because line, the objective plate and safe area, YEAR greyed, 
   assert.match(CSS, /body\.lastversion\.touch #dock \.d span \{ display: block;/);
   assert.match(CSS, /body\.lastversion\.touch #dock \.d \{[^}]*min-width: 56px; min-height: 48px;/);
   assert.match(CSS, /body\.lastversion\.touch #dock \{ top: auto; left: auto; transform: none; right: max\(10px, env\(safe-area-inset-right\)\);[^}]*flex-direction: column;/);
-  assert.match(CSS, /body\.lastversion\.touch #lvSkip \{ min-height: 44px;/);
+  assert.match(CSS, /body\.lastversion\.touch #lvSkip \{ min-height: 48px;/);
   // SYS-15 / F10: the watchers' meter has an icon and a word
   assert.match(CSS, /body\.lastversion #eye::after \{ content: "WATCHER NEAR";/);
   assert.match(CSS, /body\.lastversion #eye\.alert::after \{ content: "SEEN";/);

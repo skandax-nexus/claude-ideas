@@ -31,8 +31,10 @@ export function defaultSettings(touch) {
     volume: 0.8,
     textSize: 1,
     smart: true, // smart renderer: adapts resolution and effects to stay smooth
-    // THE LAST VERSION: you are Kai Varen, a realistic man in shirtsleeves, until you choose otherwise
-    ...(EDITION === 'lastversion' ? { hero: { id: 'real_m' }, mix: { voice: 1, music: 0.8, sfx: 1, amb: 0.85 }, captions: false } : {}),
+    // THE LAST VERSION: you are Kai Varen, a realistic man in shirtsleeves, until you choose otherwise. Sound captions
+    // are on: a few objectives are sounds (Mission 11's music box, quieter as Kai comes closer; its chime), and with
+    // the sound off or unheard they were not there at all (v2.1 playtest acts-1-2 F06)
+    ...(EDITION === 'lastversion' ? { hero: { id: 'real_m' }, mix: { voice: 1, music: 0.8, sfx: 1, amb: 0.85 }, captions: true } : {}),
   };
 }
 

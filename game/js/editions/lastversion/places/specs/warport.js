@@ -51,16 +51,19 @@ export default {
     [[[-100, 30], [10, 30]], [[22, 29], [46, 29]]],
     [[[24, -36], [80, -36], [80, -16], [24, -16]], [[-110, -20], [-70, -20], [-70, 4]]],
     // (the frozen district's patrol keeps to the channel side of its street: on the glass's side it walked through the
-    // roll-call wall and the spot where Kai looks into the frozen block, F04)
-    [[[-70, -56], [0, -56]], [[10, -54.5], [100, -54.5]], [[-100, -96], [-100, -60], [-80, -60]]],
+    // roll-call wall and the spot where Kai looks into the frozen block, F04; at z -54.5 it still passed 2.8 m from the
+    // spot's reach, so it walks by the quay, 8.5 m from the spot: from there it never has Kai in its cone, though the
+    // way over from the rail bridge still crosses its beat)
+    [[[-70, -56], [0, -56]], [[10, -51], [100, -51]], [[-100, -96], [-100, -60], [-80, -60]]],
   ] },
   crowd: [
     // the people of the frozen block: pacing in its ground-floor lobby, behind the glass (not on the street in front of it:
     // v2.1 playtest X01); once the stabilizer is destroyed they stand frozen with it, once it frees them they walk out
-    // past the silos (M13's choice, U7 review)
-    { era: 'present', years: ['PRESENT'], region: 'port', role: 'trapped', path: [[59, -64], [83, -64]], n: 4, when: '!civilians_freed', freezeWhen: 'stabilizer_destroyed',
+    // past the silos (M13's choice, U7 review). While Kai looks in (THE FROZEN BLOCK's lines: m13_block_view) they stand
+    // as the block does: the shot that says every floor stopped showed two of them walking (v2.1 playtest review F07)
+    { era: 'present', years: ['PRESENT'], region: 'port', role: 'trapped', path: [[59, -64], [83, -64]], n: 4, when: '!civilians_freed', freezeWhen: 'stabilizer_destroyed || m13_block_view',
       barks: ['Is it still the same minute out there?'] },
-    { era: 'present', years: ['PRESENT'], region: 'port', role: 'trapped', path: [[23, -64.2], [47, -64.2]], n: 2, when: '!civilians_freed', freezeWhen: 'stabilizer_destroyed', barks: [] },
+    { era: 'present', years: ['PRESENT'], region: 'port', role: 'trapped', path: [[23, -64.2], [47, -64.2]], n: 2, when: '!civilians_freed', freezeWhen: 'stabilizer_destroyed || m13_block_view', barks: [] },
     { era: 'present', years: ['PRESENT'], region: 'port', role: 'trapped', path: [[60, -58], [30, -54], [6, -54]], n: 6, when: 'civilians_freed',
       barks: ['Two hundred and twelve. We counted ourselves.', 'Is it still the same day?'] },
     { era: 'present', years: ['PAST'], region: 'port', role: 'docker', path: [[-60, 74], [40, 74]], n: 5, barks: ['Crane two is down again. Load by hand.', 'Wind off the delta. Lash everything twice.'] },
@@ -118,11 +121,12 @@ export default {
       // the Unwritten's command post behind the trench: a stack of containers, sandbagged
       container(P, 12, 74.8, Math.PI / 2, ['containerGrey', 'containerRed', 'containerGrey'], { n: 3 });
       P.box([5, 0, 76.2, 19, 1.3, 77.4], 'sandbag');
-      // the Continuum's sandbag line across the field before the canyon gate, too high to climb: the way to the gate is
-      // the gap between its west end and the containers, which a sentry paces (or the canyons, past the lane's patrol).
-      // Burnt-out trucks to wait behind and watch it from (F03)
-      P.box([LINE[0], 0, LINE[1], LINE[2], 1.3, LINE[3]], 'sandbag');
-      for (let x = LINE[0] + 8; x < LINE[2]; x += 16) P.box([x - 1, 1.3, LINE[1] + 0.1, x + 1, 1.6, LINE[3] - 0.1], 'sandbag', { solid: false });
+      // the Continuum's sandbag line across the field before the canyon gate, too high to climb or jump (1.9 m: a jump
+      // lifts Kai's feet 1.37 m, and at 1.3 m one JUMP anywhere cleared it, v2.1 playtest review F03): the way to the
+      // gate is the gap between its west end and the containers, which a sentry paces (or the canyons, past the lane's
+      // patrol). Burnt-out trucks to wait behind and watch it from (F03)
+      P.box([LINE[0], 0, LINE[1], LINE[2], 1.9, LINE[3]], 'sandbag');
+      for (let x = LINE[0] + 8; x < LINE[2]; x += 16) P.box([x - 1, 1.9, LINE[1] + 0.1, x + 1, 2.2, LINE[3] - 0.1], 'sandbag', { solid: false });
       for (const [x, z, ry] of [[40, 40, 0.4], [30, 36, -0.2], [50, 33, 1.3]]) {
         P.obox(x, 0, z, 2.4, 2.2, 5.6, ry, 'containerGrey', { solid: true }); // (corrugated: a bare metal read black against the low sun)
         P.obox(x, 2.2, z, 2.2, 0.5, 2.4, ry, 'ashGround');
@@ -131,7 +135,7 @@ export default {
     });
     // the field's checkpoint: by the shell zone, out of the sentry's sight, facing the gap (the quarter's own covers the
     // quay and the trench: Q0's cp)
-    P.checkpoints.push({ box: [28, -12, 26, 120, 30, 56], spawn: [64, 0.86, 46, Math.atan2(38, 36)], room: P.rid });
+    P.checkpoints.push({ box: [28, -12, 26, 120, 30, 56], spawn: [64, 0.86, 46, Math.atan2(38, 36)], room: P.rid, id: 'shells' });
     // --- the container canyons (west of the shell zone) ----------------------------------------------------------
     P.land('canyonGate', 22, 0, 10, Math.PI);
     P.land('containerCanyon', -46, 0, 32, 0);

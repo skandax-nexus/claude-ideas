@@ -225,7 +225,10 @@ export default {
     });
     // the way up and the circle, lit: braziers at the head of the ramp and before the ring (their pools and real light at
     // the quality's lamps), so the summit's stones and the people on it have faces in the dawn
-    for (const [x, z] of [[-4.6, -126.2], [4.6, -126.2], [-5.6, -139.5], [5.6, -139.5]]) {
+    // (the second pair stands at the summit's edge, behind the endings' ring shots, which come down from 6.5-6.8,
+    // -137 to 4, -140: at 5.6, -139.5 one stood under them and its fire filled the bottom of the frame; v2.1 playtest
+    // review)
+    for (const [x, z] of [[-4.6, -126.2], [4.6, -126.2], [-8.6, -133.5], [8.6, -133.5]]) {
       P.cyl(x, HILL, z, 0.32, 0.9, 'ironDark', { seg: 8, solid: true, r2: 0.22 });
       P.cyl(x, HILL + 0.9, z, 0.36, 0.22, 'fireGlow', { seg: 10 });
       P.glow(x, HILL + 0.02, z, 3.2, 0xffb070, 3.2);

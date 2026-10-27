@@ -52,18 +52,18 @@ function song(rt, gain = 1, kind = 'child') {
 // Mission 9: NINE MINUTES TO ZERO
 // =============================================================================================================
 const M09_HINTS = {
-  loop1: ['Wait. Watch.', 'The street resets.', 'Stay on the quay through one reset.'],
-  loop2: ['Watch it again.', 'The patrol moves each time.', 'Watch the market through a reset.'],
-  clockA: ['The first clock.', 'Under the loggia.', 'Stop the first clock.'],
-  order: ['The order board.', 'By the funicular\'s middle station.', 'Read it now, then in 2026.'],
-  clockB: ['The second clock.', 'On the patrol route.', 'Stop it unseen.'],
-  clockC: ['The third clock.', 'Above the cathedral steps.', 'Stop the third clock.'],
-  transmitter: ['The transmitter.', 'On the headland.', 'Cut the carrier.'],
-  rhea: ['Someone is counting.', 'The foot of the tower.', 'Find Rhea.'],
-  tower: ['Up the tower.', 'Look across the river.', 'Climb to the top.'],
-  reset: ['It is nearly 08:14.', 'It is coming.', 'Let it come.'],
+  loop1: ['Nine minutes, then everything goes back. I should watch it happen once.', 'The whole street resets at the end of the loop. The quay is a safe place to watch from.', 'Stay on the quay and watch the street through one whole reset.'],
+  loop2: ['The patrol walked a different round last time. I should watch again.', 'Each reset moves the market\'s patrol onto a new round.', 'Watch the market\'s patrol through one more reset, and learn its round.'],
+  clockA: ['Three clocks hold the loop to the transmitter. The first one is close.', 'The first clock hangs under the loggia.', 'Go under the loggia and stop the first clock.'],
+  order: ['Everyone is walking the same way, as if somebody told them to.', 'The order board stands by the funicular\'s middle station.', 'Read the order board now, then switch to 2026 and read it again.'],
+  clockB: ['The second clock is where the patrol walks past every forty seconds.', 'It stands right on the patrol\'s route.', 'Wait until the patrol has passed, then stop the second clock unseen.'],
+  clockC: ['The third clock is the one that starts the morning again.', 'It hangs above the cathedral steps.', 'Climb to the cathedral steps and stop the third clock.'],
+  transmitter: ['The three clocks are stopped. Now the loop only has its voice.', 'The transmitter stands out on the headland.', 'Go out to the headland and cut the transmitter\'s carrier.'],
+  rhea: ['Someone at the tower is counting the resets. She was on the radio.', 'She is somewhere at the foot of the tower.', 'Go to the foot of the tower and find Rhea.'],
+  tower: ['From the top of the tower you can see into the chamber.', 'Up there I can look right across the river.', 'Climb the tower all the way to the top.'],
+  reset: ['It is nearly 08:14, and the loop has nothing left to hold it.', 'The last reset is coming, and it will not come round again.', 'Stay where you are and let the last reset come.'],
   warn: ['People head for the tower.', 'The order is wrong.', 'Quote the cancelled order.'],
-  child: ['She does not loop.', 'The loop\'s edge.', 'Hum her song.'],
+  child: ['A girl at the edge of the loop does not reset. Everyone else goes round.', 'She is at the loop\'s edge, where the street stops repeating.', 'Go to the girl and hum her song back to her.'],
   brask: ['A soldier who remembers.', 'By the funicular station.', 'Talk to the sergeant.'],
 };
 const EVAC = AMB('CROWD_F2');
@@ -254,18 +254,18 @@ M09.outro = M09.hook.lines;
 // =============================================================================================================
 const M10_HINTS = {
   escape: ['Out of the cell.', 'Along the gallery, unseen.', 'Reach the guard post.'],
-  sera: ['That guard is watching me.', 'The guard post.', 'Talk to the guard.'],
-  power: ['Blind them.', 'Two switches, two years.', 'The 2049 run, then the 2026 run.'],
-  projector: ['What did they take from me?', 'The testing chamber.', 'Look at the projector.'],
+  sera: ['That guard is watching me, and she has not raised the alarm.', 'She is standing at the guard post.', 'Walk up to the guard post and talk to the guard.'],
+  power: ['The guards\' lamps are fed through both years. I can blind them.', 'There are two switches on the power run, one in each year.', 'Cut the power run in 2049, then switch to 2026 and cut that run too.'],
+  projector: ['What did they take from me? They keep what they capture in one room.', 'Everything they took is in the testing chamber.', 'Go into the testing chamber and look at the projector.'],
   cross: ['Troopers in the chamber.', 'A step ahead of myself. They follow the copy.', 'Echo Step, then go for the spillway.'],
-  prisoners: ['Twelve people in loops.', 'The loop cells.', 'Decide what happens to them.'],
+  prisoners: ['Twelve people are caught in loops of four seconds, over and over.', 'They are all in the loop cells.', 'Go to the loop cells and decide what happens to them.'],
   yard: ['Out under the sky.', 'One trooper by the water.', 'Behind him, to Sera\'s skiff.'],
-  intake: ['Earlier intakes.', 'The intake desk.', 'Read them.'],
-  office: ['The Director\'s office.', 'Up on the crest.', 'Look inside.'],
-  interview: ['They interviewed Helix\'s people.', 'A reel on the crest.', 'Play the interview.'],
-  looper: ['A prisoner who remembers.', 'The loop cells.', 'Listen through his loops.'],
-  skiff: ['Sera is waiting.', 'By the skiff.', 'Talk to her.'],
-  flood: ['A flood pole.', 'On the yard\'s roof.', 'Read it now, then in 2026.'],
+  intake: ['The guard said "again". They have taken a Varen before.', 'The earlier intakes are kept at the intake desk.', 'Go to the intake desk and read the earlier intakes.'],
+  office: ['The Director\'s office is empty, and whoever sits there knows my name.', 'The office is up on the crest.', 'Climb to the crest and look inside the Director\'s office.'],
+  interview: ['They questioned everyone Helix ever paid. There is a recording of it.', 'An interview reel is waiting up on the crest.', 'Climb to the crest and play the interview reel.'],
+  looper: ['A prisoner who remembers is trying to tell me something, four seconds at a time.', 'He is in one of the loop cells.', 'Stand by his cell and listen through his loops.'],
+  skiff: ['Sera took her helmet off. She is waiting for me to say something.', 'She is down by the skiff.', 'Go down to the skiff and talk to Sera.'],
+  flood: ['A flood pole on a roof, with marks higher than any water here.', 'It stands on the yard\'s roof.', 'Read the flood pole now, then switch to 2026 and read it again.'],
 };
 // the prisoner in the loop cells who remembers: four seconds a loop, and a few words in each
 const LOOPER = AMB('CROWD_M2');
@@ -891,8 +891,10 @@ export const M11 = {
   },
   step: m11Step,
   overlay(P) {
-    // Ward 32's bed: the mattress and blanket, Lin's lanyard and the file with her photograph (F07)
-    if (P.landmarks.ward32) P.inter.push({ id: 'ward32_things', kind: 'scene', scene: 'ward32_bed', pos: W32(P.landmarks.ward32), yaw: 0, r: 0, prompt: '', model: () => ward32Things(), room: 'h_ward32' });
+    // Ward 32's bed: the mattress and blanket, Lin's lanyard and the file with her photograph (F07). A prop, the edition's
+    // way (as Threads.placeThreads' props): a model with no reach, so nothing offers it and it plays no scene (the bed's
+    // scene is THE FILE ON THE BED's, ward32)
+    if (P.landmarks.ward32) P.inter.push({ id: 'ward32_things', kind: 'scene', scene: null, pos: W32(P.landmarks.ward32), yaw: 0, r: 0, prompt: '', model: () => ward32Things(), room: 'h_ward32' });
     person(P, { id: 'odile', crew: 'odile', at: 'odileStation', off: [0, 0, 1.4], turn: Math.PI, prompt: 'TALK TO ODILE' });
     // (behind the station's counter, facing the ward's door: she stood inside the counter)
     person(P, { id: 'odile_echo', crew: 'odile', at: 'odileStation', off: [1, 0, -3.5], hologram: true, silent: true, when: '!inv_odileEcho_done' });
@@ -1290,6 +1292,14 @@ function m13Step(rt) {
   const g = rt.g;
   rt.cinema?.watchShow?.('m13_block_view', m13BlockShots);
   posePeople(g);
+  // until the crossing is done, a catch by the canyon gate walks Kai back to the shells, not to the gate: the gate's
+  // arrival box reaches over the line between the battlefield and the next quarter (z 12), whose checkpoint is the gate
+  // itself, so a catch there was the crossing made for him (v2.1 playtest review F03). main.stepDeck has just set it
+  const cp = g.checkpoint, gate = rt.level?.landmarks?.canyonGate;
+  if (gate && Array.isArray(cp) && !g.facts.get('t_m13_cross') && Math.hypot(cp[0] - gate[0], cp[2] - gate[2]) < 1 && g.room === rt.level.outdoorRoom) {
+    const field = rt.level.checkpoints?.find((c) => c.id === 'shells');
+    if (field) g.checkpoint = field.spawn;
+  }
   if (!g.camera || g.engine.state(g.room) !== 'PRESENT') return;
   const S = (rt.m13 ||= { seen: new Set() });
   for (const s of g.deckWorld?.sentinels || []) {

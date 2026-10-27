@@ -206,7 +206,7 @@ test('FT-04/SYS-07/FT-12: a bark never hides the prompt and gives way at once to
   // the game: the prompt is hidden only by a story line; a tap on it over a bark cuts the bark and is the tap
   const src = fs.readFileSync('game/js/main.js', 'utf8');
   assert.match(src, /const showFocus = this\.focus && !this\.hud\.storyTalking;/, 'main.js: only a story line hides the prompt');
-  assert.match(src, /else if \(this\.hud\.talking && \(!f \|\| \(f\.id === this\.lastUse && this\.hud\.storyTalking\)\)\) return this\.hud\.skipSub\(\);\s*if \(!f\) return;\s*this\.hud\.hushBarks\?\.\(\);/, 'main.js: a tap over a bark is the tap');
+  assert.match(src, /else if \(this\.hud\.talking && \(!f \|\| \(f\.id === this\.lastUse && this\.hud\.storyTalking\)\)\) return this\.hud\.skipSub\(\);\s*if \(!f\) return;\s*this\.hud\.hushBarks\?\.\((true)?\);/, 'main.js: a tap over a bark is the tap');
 });
 
 test('FT-12: a rule\'s lines cut off by a reload are said again on load; once said to their end, never again', () => {

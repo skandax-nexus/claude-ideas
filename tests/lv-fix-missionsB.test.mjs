@@ -168,7 +168,7 @@ test('F13: a playback piece that goes in is acknowledged (a chime, the count) an
 // --- F04: the watchers are not the business of a scene's lines ------------------------------------------------------
 test('F04: while the story\'s lines play (not a bark, not a THINK hint) the watchers see nobody, and for a breath after', () => {
   const rt = Object.create(LastVersion.prototype);
-  const lines = (cur, subs = []) => { rt.g = { hud: { subT: cur ? 1 : 0, cur, subs } }; return rt.storyLines(); };
+  const lines = (cur, subs = []) => { rt.g = { time: 10, hud: { subT: cur ? 1 : 0, cur, subs } }; return rt.storyLines(); };
   assert.equal(lines({ who: 'NONE', text: 'Behind the frozen glass...' }), true);
   assert.equal(lines(null, [{ who: 'SERA', text: 'Third floor.' }, { done() {} }]), true);
   assert.equal(lines({ who: 'CREW', text: 'Is it still the same minute out there?', bark: true }), false);
@@ -182,6 +182,10 @@ test('F04: while the story\'s lines play (not a bark, not a THINK hint) the watc
   // only while Kai stays where the lines began: walking on while they play, the watchers see him again
   const at = (x, z) => ({ x, z });
   lines({ who: 'NONE', text: 'Behind the frozen glass...' });
+  // (follow-up review: only lines the player started at a spot, a scene or a talk tapped: the story's own narration as
+  // Kai walks is no cloak)
+  assert.equal(rt.storyHolds(at(70, -57.3)), false, 'narration nobody tapped for: no cloak');
+  rt.spotT = 9.6; // (THE FROZEN BLOCK tapped: useDeck)
   assert.equal(rt.storyHolds(at(70, -57.3)), true, 'standing at the scene');
   assert.equal(rt.storyHolds(at(71.5, -55)), true, 'shuffling about it');
   assert.equal(rt.storyHolds(at(70, -52)), false, 'walked 5 m off: no cloak');
@@ -192,7 +196,7 @@ test('F04: while the story\'s lines play (not a bark, not a THINK hint) the watc
   lines({ who: 'SERA', text: 'Third floor.' });
   assert.equal(rt.storyHolds(at(70, -52)), true, 'the next lines begin where Kai stands now');
   const src = fs.readFileSync('game/js/editions/lastversion/Runtime.js', 'utf8');
-  assert.match(src, /const held = this\.storyHolds\(p\);\s+const staged = this\.opening \|\| this\.cinema\?\.active \|\| held;\s+this\.graceT = staged \? 2 :/, 'the step keeps the watchers off while the lines play, and 2 s after');
+  assert.match(src, /const held = this\.storyHolds\(p\);\s+const staged = this\.opening \|\| this\.cinema\?\.active;\s+this\.stagedT = staged \? 2 :[^\n]*\n\s+this\.graceT = staged \|\| held \? 2 :/, 'the step keeps the watchers off while the lines play, and 2 s after');
 });
 
 // --- Mission 13 -----------------------------------------------------------------------------------------------------------

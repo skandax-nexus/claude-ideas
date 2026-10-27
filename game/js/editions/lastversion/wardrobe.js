@@ -1036,6 +1036,9 @@ export function dress(actor, crew, opts = {}) {
   // an old back (the Elder's): bent forward at the spine after every pose, the head raised again (afterPose)
   U.stoop = v.stoop || 0;
   U.lvVariant = variant;
+  // (what was hung on the bones above is computed by the next matrix pass whatever the person does next: one who
+  // neither moves nor is posed again, frozen or held by the animation budget, kept identity matrices, world/Actors.js)
+  U.stale = true;
   return actor;
 }
 
@@ -1106,6 +1109,7 @@ export function attach(actor, where, obj, offset = [0, 0, 0], upright = false) {
   holder.userData.upright = upright;
   at.add(holder);
   (U.props ||= []).push(holder);
+  U.stale = true; // (the next matrix pass computes the holder, though the person may not move: world/Actors.js ACTOR_LOD)
   return holder;
 }
 

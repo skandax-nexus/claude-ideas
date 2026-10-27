@@ -150,9 +150,11 @@ export default {
     }
     // the shop windows: three clock faces (2026 morning, 2049 evening, 2196 noon)
     P.land('shopWindows', 12, 1.8, -15.6, 0);
-    for (const [x, h] of [[9.7, 2.1], [12.2, 6.6], [20.3, 0.4]]) {
+    for (const [x, h, y] of [[9.7, 2.1, '2026'], [12.2, 6.6, '2049'], [20.3, 0.4, '2196']]) {
       P.cyl(x, 1.9, -15.75, 0.55, 0.06, 'clockFaceWhite', { rx: Math.PI / 2, seg: 20 });
       P.obox(x, 1.9, -15.7, 0.05, 0.42, 0.02, 0, 'ironDark', { rz: (h / 12) * Math.PI * 2 });
+      // (under each its year, as the window's line says: v2.1 playtest F07, the years were only in the caption)
+      P.text(y, [x, 1.2, -15.68], 0, { size: 0.2, color: '#f4ead8' });
     }
     // the door, the shopfront glass
     P.vbox([hx0 + 2, 0.4, hz1 - 0.05, hx0 + 5.4, 3.4, hz1 + 0.02], 'glass');

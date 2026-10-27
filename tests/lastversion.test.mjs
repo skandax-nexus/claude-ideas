@@ -4455,7 +4455,7 @@ test('Acts I and II (U7 review): the escapement, the morning that agrees, the ch
   const st = m('m13').scenes.stabilizer.choices, dist = thr('m13', 'district');
   assert.ok(!st.some((c) => c.lines.some((l) => /war does not|walk out/.test(l.text))) && dist.shots?.length && dist.lines.length === 4 && dist.lines.every((l) => /faction == /.test(l.when)), 'every line of the district answers the choice');
   const w = lv('m13');
-  assert.ok(w.crowd.some((c) => c.when === 'civilians_freed' && c.role === 'trapped') && w.crowd.some((c) => c.freezeWhen === 'stabilizer_destroyed'));
+  assert.ok(w.crowd.some((c) => c.when === 'civilians_freed' && c.role === 'trapped') && w.crowd.some((c) => /^stabilizer_destroyed\b/.test(c.freezeWhen || '')));
   assert.ok(m('m13').fx.listenersRoute && m('m13').talks.m13_listener[0].then === 'listenersRoute', 'the people who listened draw the patrol off');
   // the cold opens: their years and their people
   assert.deepEqual(['m06', 'm07', 'm11', 'm12'].map((k) => m(k).coldOpen.year), ['PAST', 'PAST', 'PAST', 'FUTURE']);
@@ -4557,8 +4557,10 @@ test('tour: a mission opens without the last place\'s bark over its card (a conv
 
 test('tour: a staged moment cuts a line said in passing and holds the crowd\'s off while it plays; a conversation is not cut', () => {
   const COMMUTER = 'Third clock this morning. I stopped checking.';
-  const hud = { subT: 2, cur: { who: 'CROWD_M', text: COMMUTER }, subs: [{ who: 'CROWD_F', text: COMMUTER }], skipped: 0, said: [],
-    get talking() { return this.subT > 0 || this.subs.length > 0; }, skipSub() { this.skipped++; this.subT = 0.01; }, say(lines) { this.said.push(...lines); } };
+  // (a bark carries its flag, DeckWorld.bark; the HUD's own rule cuts it: Runtime.hushBarks hands over to HUD.hushBarks)
+  const hud = { subT: 2, cur: { who: 'CROWD_M', text: COMMUTER, bark: true }, subs: [{ who: 'CROWD_F', text: COMMUTER, bark: true }], skipped: 0, said: [],
+    get talking() { return this.subT > 0 || this.subs.length > 0; }, skipSub() { this.skipped++; this.subT = 0.01; }, say(lines) { this.said.push(...lines); },
+    onSkip() { this.skipped++; }, nextSub() { this.cur = this.subs.shift() || null; this.subT = this.cur ? 2 : 0; }, hushBarks: HUD.prototype.hushBarks };
   const g = { player: { pos: new THREE.Vector3(0, 0.86, 0), H: { x: 0, z: 1 }, model: { visible: true }, cinema: null, rayDistance: (o, d, m) => m },
     input: { keys: new Set(), state: {} }, facts: new FactStore(), hud, after: () => {}, time: 40, deckWorld: { lastBarkT: 0 } };
   const rt = Object.assign(Object.create(LastVersion.prototype), { g, level: { landmarks: {}, npcs: [{ id: 'crowd_1', crowd: true, barks: [COMMUTER] }] } });

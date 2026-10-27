@@ -172,9 +172,16 @@ export class Input {
 
     for (const b of ui.querySelectorAll('[data-act]')) {
       // the floating prompt (and anything else marked data-tap) sits where a right thumb starts to look round: it acts on
-      // a tap, and a drag that starts on it turns the view
-      if (b.hasAttribute('data-tap')) {
-        this.tapOrLook(b, () => this.actions.push(b.dataset.act));
+      // a tap, and a drag that starts on it turns the view. The dock's buttons too: held upright, THE LAST VERSION's dock
+      // is a column at the right edge, in the look area (v2.1 playtest review: a look drag from there opened CASE, MAP
+      // or MENU, or pressed THINK, and turned nothing)
+      if (b.hasAttribute('data-tap') || b.closest('#dock')) {
+        this.tapOrLook(b, () => {
+          const a = b.dataset.act;
+          if (a === 'jump') this.state.jump = true;
+          else if (a === 'run') this.toggleRun();
+          else this.actions.push(a);
+        });
         continue;
       }
       b.addEventListener('touchstart', (e) => {
@@ -203,7 +210,13 @@ export class Input {
       this.activity();
       e.preventDefault();
       e.stopPropagation();
-      if (t0) return;
+      // a second finger while the first is down is not a new tap; but a first touch whose end never came (the system
+      // took the gesture) no longer holds the control: it is let go, or the control would ignore every touch after it
+      if (t0) {
+        const fresh = e.changedTouches?.[0]?.identifier;
+        if (fresh !== t0.id && e.touches && [...e.touches].some((x) => x.identifier === t0.id)) return;
+        t0 = null;
+      }
       const t = pt(e);
       t0 = { id: t.identifier, x: t.clientX, y: t.clientY, lx: t.clientX, ly: t.clientY, drag: false };
       el.classList.add('down');

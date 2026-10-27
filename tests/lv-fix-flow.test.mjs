@@ -194,7 +194,9 @@ test('SYS-06: a checkpoint reached is saved; the app sent to the background save
     assert.equal(r.saveOnHide(), false, what);
   }
   assert.equal(saves, 1);
-  assert.match(SRC, /window\.addEventListener\('beforeunload', \(\) => \{ this\.unloading = true; \}\);/);
+  // (follow-up review: a page that did not go after all saves again, an unload let go or back from the back-forward cache)
+  assert.match(SRC, /window\.addEventListener\('beforeunload', \(\) => \{\s*this\.unloading = true;\s*setTimeout\(\(\) => \{ this\.unloading = false; \}, 1500\);\s*\}\);/);
+  assert.match(SRC, /window\.addEventListener\('pageshow', \(\) => \{ this\.unloading = false; \}\);/);
 });
 test('acts-3 F06: a load gives the Chronolith a moment (stability at least 0.6), and the street\'s save is past it', () => {
   assert.match(SRC, /if \(resumed && !deck\.roam\) this\.stability = c\.stability = Math\.max\(this\.stability, 0\.6\);/);

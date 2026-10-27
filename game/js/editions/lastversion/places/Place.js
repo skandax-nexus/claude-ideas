@@ -63,8 +63,10 @@ export class Place {
     this.hazards = [];
     this.items = [];
     this.checkpoints = [];
+    this.camBlocks = []; // (what the conversation camera may not stand in, though nobody collides with it: cinema.talkStep)
     this.challenges = [];
     this.blocks = [];
+    this.lines = []; // (the map's lines: rails, and the ways over them; MiniMap.drawWorld)
     this.landmarks = {};
     this.sites = {};
     this.crowd = [];
@@ -394,8 +396,8 @@ export function assemble(P, { story, deck, si, beat, years, name, extraRooms = [
     id: `${deck.mkey}_${P.key}_s${si}`, deck: story.decks.indexOf(deck), sector: si, seed: story.seed, deckName: deck.name,
     palette, rooms, order,
     elements: P.cols, texts: P.texts, interactables: P.inter, items: P.items, tokens: [], hazards: P.hazards, sentinels: P.sentinels, npcs: P.npcs,
-    checkpoints: P.checkpoints, triggers: P.triggers,
-    map: { rooms: [{ id: rid, rect: [bx0, bz0, bx1, bz1], name: room.name, kind: 'district' }, ...Object.entries(P.rooms).map(([id, r]) => ({ id, rect: r.rect, name: r.name, kind: 'room' }))], corridors: [], blocks: P.blocks.slice(0, 220), gate: P.exitAt ? [P.exitAt[0], P.exitAt[2]] : undefined },
+    checkpoints: P.checkpoints, triggers: P.triggers, camBlocks: P.camBlocks,
+    map: { rooms: [{ id: rid, rect: [bx0, bz0, bx1, bz1], name: room.name, kind: 'district' }, ...Object.entries(P.rooms).map(([id, r]) => ({ id, rect: r.rect, name: r.name, kind: 'room' }))], corridors: [], blocks: P.blocks.slice(0, 220), lines: P.lines.slice(0, 60), gate: P.exitAt ? [P.exitAt[0], P.exitAt[2]] : undefined },
     trees: [], rocks: [], glows: P.glows, effects: ['echoSolid'],
     exit: P.exit, states: deck.states, unstable: !!deck.unstable, spawn: order[0] === rid ? spawn : rooms[order[0]].spawn, estimateMin: deck.minutes?.main || 25,
     // §3.1

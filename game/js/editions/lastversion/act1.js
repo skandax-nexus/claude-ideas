@@ -483,20 +483,20 @@ function gorgeGate(rt, k) {
 // Mission 6: THE CLOCKMAKER'S HOUSE
 // =============================================================================================================
 const M06_HINTS = {
-  cellar: ['Up to the shop.', 'The stone steps.', 'Climb the cellar steps.'],
-  ezra: ['The clockmaker.', 'By the counter.', 'Talk to Ezra Moll.'],
-  arm: ['The brass arm.', 'It always comes back.', 'Look at the arm, and count.'],
+  cellar: ['Somewhere above me a clock is ticking for me. I should go up.', 'The stone steps at the back of the cellar go up into the shop.', 'Climb the cellar steps into the clockmaker\'s shop.'],
+  ezra: ['The clockmaker looked up as if I were late. He wants a word.', 'He is behind his counter, on the shop floor.', 'Walk up to the counter and talk to Ezra Moll.'],
+  arm: ['That brass arm keeps sweeping the floor. He set it going for somebody.', 'It turns on its post in the front of the shop, and it always comes back.', 'Watch the arm from the counter, and count its sweeps.'],
   cross: ['The stair is past the arm.', 'Go when it has passed.', 'Cross behind the arm.'],
-  windows: ['The shop window.', 'From the street.', 'Look at the three faces.'],
+  windows: ['A clockmaker\'s window is his notebook. His is full of clocks.', 'The shop window looks out onto the canal street.', 'Go out into the street and read the three faces in the window.'],
   boards: ['A worn line in the floor.', 'Now, and in 2026.', 'Look at the boards in both.'],
-  stair: ['The path ends at a wall.', 'What was there in 2026?', 'Piece it together.'],
+  stair: ['The path worn into the boards runs straight into a brick wall.', 'In 2026 the path did not stop there. Something stood at that wall.', 'Compare the boards now and in 2026, then piece the stair together.'],
   clocks: ['Three clocks, three years.', 'Each answers in one year. The window gives the hours.', 'Morning in 2026, evening in 2049, noon in 2196.'],
-  recording: ['Something opened.', 'The case by the wall.', 'Open the case.'],
+  recording: ['Something clicked open when the clocks agreed.', 'A glass case stands by the wall of the clock room.', 'Open the case by the wall and see what it holds.'],
   spring: ['The loop has a spring.', 'On the roof, in 2196.', 'Find it in the ruin.'],
-  debt: ['Ezra owes fifty years.', 'Take him the spring.', 'Talk to Ezra.'],
-  gauge: ['Ezra mended something.', 'The 2026 workbench.', 'Look at the bench.'],
-  ledger: ['His appointment book.', 'On the counter.', 'Read it now, then in 2026.'],
-  echo26: ['Ezra, in 2026.', 'His echo at the counter, in 2026.', 'Listen to him in 2026.'],
+  debt: ['Ezra owes fifty years to somebody. The spring might pay some of it.', 'He is back at his counter, still repeating with the arm.', 'Take the spring to Ezra and talk to him.'],
+  gauge: ['Ezra mended something for Helix once. There may be proof of it here.', 'His workbench is in the shop, the way it stood in 2026.', 'Switch to 2026 and look at the gauge on his workbench.'],
+  ledger: ['A clockmaker writes down who is coming. I want to see that page.', 'His appointment book lies open on the counter.', 'Read the book now, then switch to 2026 and read it again.'],
+  echo26: ['In 2026 Ezra was already waiting for me. His echo is still talking.', 'His echo stands at the counter, but only in 2026.', 'Switch to 2026 and listen to Ezra\'s echo at the counter.'],
 };
 
 // what Mission 6's code says (fx.agree and step; voicelines.js walks them for the packs)
@@ -515,6 +515,17 @@ const clockNode = (year, fact, hour, ok) => ({
   when: `${year} && ev_window_faces && !${fact}`, lines: [N('A brass clock with its hands loose. It waits for an hour.')],
   choices: HOURS.map(([i, label, h]) => intent(i, label, h === hour ? { lines: ok, set: { [fact]: true } } : { lines: CLOCK_SLIP })),
 });
+// the shop window's three faces, one shot each from the street as the line says them: 2026's morning, 2049's evening,
+// 2196's noon, each over its year (places/specs/oldtown.js), then back to Kai
+function m06WindowShots(rt) {
+  const g = rt.g, w = rt.level?.landmarks?.shopWindows, p = g.player.pos;
+  if (!w) return null;
+  const dur = (l) => g.hud.durFn?.(l) || Math.max(2.2, l.text.length * 0.055);
+  const t = dur(rt.deck.scenes.windows.lines[0]) / 3;
+  const face = (x) => ({ cam: [x + 0.3, 1.75, w[2] + 2.3], to: [x + 0.1, 1.72, w[2] + 1.9], look: [x, 1.6, w[2] - 0.15], t });
+  return [face(9.7), face(12.2), face(20.3), { cam: [p.x + 2.2, p.y + 1.2, p.z + 3.2], to: [p.x + 1.8, p.y + 1.1, p.z + 2.6], look: [w[0] + 4, 1.8, w[2]] }];
+}
+
 export const M06 = {
   key: 'm06', n: 6, chapter: 'act1', name: 'THE CLOCKMAKER\'S HOUSE', title: 'A workshop that repeats itself', subtitle: 'The clockmaker says you visited decades ago.',
   logline: 'A clockmaker\'s house on the old canal, in three years.',
@@ -542,7 +553,9 @@ export const M06 = {
         { id: 'cellar', kind: 'go', at: 'shopFloor', r: 3.5, goal: 'Up the cellar steps into the shop.', because: 'Somewhere above me, a clock is ticking for me.',
           say: [K('These steps went down to a river once. I turned it.')], hints: M06_HINTS.cellar, minutes: 2 },
         { id: 'ezra', kind: 'talk', npc: 'clockmaker', at: 'shopFloor', after: ['cellar'], goal: 'Talk to the clockmaker.', because: 'He looked up as if I were late.', done: 'ezra_met', hints: M06_HINTS.ezra, minutes: 3 },
-        { id: 'arm', kind: 'scene', scene: 'arm', at: 'repeatArm', after: ['ezra'], spot: { prompt: 'WATCH THE ARM', offset: [0, 0.8, 0], r: 4, model: NO_MODEL },
+        // (watched from the counter's side, outside the brass ring, and only until it has been: at the arm's post, offered
+        // again after, its prompt floated over the arm all through the crossing and a tap replayed the scene)
+        { id: 'arm', kind: 'scene', scene: 'arm', at: 'repeatArm', after: ['ezra'], spot: { prompt: 'WATCH THE ARM', offset: [-3.4, 0.6, 0], r: 3, model: NO_MODEL, when: '!ev_arm_count' },
           goal: 'Watch the repeating arm.', because: 'He set it repeating for somebody.', done: 'ev_arm_count', hints: M06_HINTS.arm, minutes: 2 },
         { id: 'windows', kind: 'scene', scene: 'windows', at: 'shopWindows', after: ['ezra'], spot: { prompt: 'THE THREE FACES', offset: [0, 0, 1.6], r: 3, model: NO_MODEL },
           goal: 'Read the three clock faces in the shop window.', because: 'A clockmaker\'s window is his notebook.', done: 'ev_window_faces', hints: M06_HINTS.windows, minutes: 1 },
@@ -642,7 +655,9 @@ export const M06 = {
   scenes: {
     arm: { lines: [N('The brass arm sweeps the shop floor, and comes back, and comes back.'), N('Scratched into the floor beside its pivot, a tally: two thousand six hundred and nine.'), K('Fifty years of Tuesdays.')],
       set: { ev_arm_count: true }, log: 'The arm has turned two thousand six hundred and nine times.' },
-    windows: { lines: [N('Three faces in the window: morning, evening, noon. Under each, a year: 2026, 2049, 2196.')], set: { ev_window_faces: true } },
+    // (each face seen as the line names it, from the street: v2.1 playtest F07 named Mission 6's clock faces among the
+    // payoffs only a caption showed; m06WindowShots)
+    windows: { lines: [N('Three faces in the window: morning, evening, noon. Under each, a year: 2026, 2049, 2196.')], set: { ev_window_faces: true }, show: 'm06_window_view' },
     boards_now: { lines: [N('The boards are worn in a path toward the north wall, and stop at brick.')], set: { ev_boards_now: true } },
     boards_then: { lines: [N('In 2026 the path runs on, up a stair later years do not have.')], set: { ev_boards_then: true } },
     clock26: clockNode('@PAST', 'clk_26', 'morning', [N('Morning, as the window says. The clock takes the hour, and holds it.')]),
@@ -692,6 +707,7 @@ export const M06 = {
   // knocks him back, what it was and how to cross it (later, that in 2196 it has rusted still)
   step(rt) {
     const g = rt.g, f = g.facts;
+    rt.cinema?.watchShow?.('m06_window_view', m06WindowShots);
     // (playtest v2.1 F16: Ezra at sixty-five, his own face and his brown hair in the echo, not a white figure)
     lendLooks(g, (n) => /^ezra_/.test(n.id));
     const h = g.deckWorld.hazards.find((x) => x.hz.lvKit === 'brassArm');
@@ -750,7 +766,7 @@ M06.outro = M06.hook.lines;
 // Mission 7: THE BROKEN OBSERVATORY
 // =============================================================================================================
 const M07_HINTS = {
-  guide: ['Niko came up the ridge.', 'Beside where I arrived.', 'Talk to Niko.'],
+  guide: ['Niko came up the ridge with me. He has been waiting to talk.', 'He is beside the place where I arrived.', 'Go back to where I arrived and talk to Niko.'],
   gnomon: ['The first instrument is the sun.', 'The gnomon, at the first sky.', 'Stand at the gnomon at the first sky.'],
   roofs: ['The instruments climb the hill.', 'Over the roofs and the turning platforms.', 'Cross the turntables to the stair.'],
   scav: ['Scavengers camp by the stair.', 'They only watch in front of them.', 'Cross their camp behind their backs.'],
@@ -760,7 +776,7 @@ const M07_HINTS = {
   newstar: ['The third instrument waits for a star.', 'The horizon ring, in 2196.', 'Sight the horizon ring in 2196.'],
   tape: ['Something is buried at the foot of the ring.', 'In 2049, by the outer ring.', 'Dig up the tin at the ring\'s foot.'],
   cache: ['The scavengers keep a cache.', 'East of their camp.', 'Look in the cache.'],
-  extra: ['Niko has more to say about the star.', 'The river taught him.', 'Talk to Niko.'],
+  extra: ['Niko has more to say about the star.', 'The river keepers taught him something.', 'Find Niko and talk to him about the star.'],
   astro: ['The astronomer is still turning the ring.', 'At the first sky, by the horizon ring.', 'Talk to the astronomer at the first sky.'],
 };
 const ASTRO = (t) => SAYS('THE ASTRONOMER', 'CROWD_OLD_M', t);

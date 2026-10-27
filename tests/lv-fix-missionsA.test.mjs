@@ -203,19 +203,30 @@ test('M1 (FT-17, FT-08, FT-15): the board reads from the platform, the map shows
   assert.ok(M1.map.blocks.some((b) => b[0] === -35 && b[1] === -166 && b[2] === 35 && b[3] === -146) && M1.map.blocks.some((b) => b[1] === -186), 'the platforms on the map');
   const gate = threadsOf(M01).find((t) => t.id === 'gate');
   assert.ok(gate && gate.after.includes('raincoat') && /staff gate/.test(gate.goal) && gate.because && gate.hints.length === 3);
-  assert.equal(M01.done, 't_m01_gate');
+  // (follow-up review: the raincoat opens the gate, M01.done, and the gate thread is the objective until Kai is through
+  // it, gate.exit; its own arrival is beyond the gate, so taking the raincoat no longer finishes it: the bot's raincoat
+  // spot, 1.0, -221.4, and the raincoat itself are outside it)
+  assert.equal(M01.done, 'raincoat');
+  assert.ok(gate.exit, 'the staff gate is the objective until Kai is through it');
   const trig = M1.triggers.find((t) => t.set?.t_m01_gate);
   assert.ok(trig && /raincoat/.test(trig.when), 'the gate counts once the raincoat is Kai\'s');
-  // (the bot's raincoat spot, 1.0, -221.4, is inside it: the raincoat taken there, the gate opens)
-  assert.ok(1.0 >= trig.box[0] && 1.0 <= trig.box[3] && -221.4 >= trig.box[2] && -221.4 <= trig.box[5]);
+  const coat = M1.interactables.find((i) => i.id === 'raincoat');
+  for (const [x, z] of [[1.0, -221.4], [coat.pos[0], coat.pos[2]]]) assert.ok(!(x >= trig.box[0] && x <= trig.box[3] && z >= trig.box[2] && z <= trig.box[5]), `${x}, ${z} outside the gate's arrival`);
+  assert.ok(trig.box[5] < M1.exit.box[5] && trig.box[2] >= M1.exit.box[2] - 1, 'its arrival is through the gate, in the way out');
+  assert.ok(coat.pos[2] > M1.exit.box[5], 'the raincoat lies outside the way out: taken, it does not end the mission');
   assert.ok(M1.texts.some((t) => t.text === 'STAFF ENTRANCE' && t.when === 'raincoat'));
   void by;
 });
 
-test('FT-21: the page\'s description is The Last Version of Earth\'s, without the laws', () => {
+test('FT-21: the edition\'s page describes The Last Version of Earth, without the laws; Station Zero\'s keeps its own', () => {
+  // (game/index.html is Station Zero's page and both builds start from it: the edition's build rewrites it)
   const html = fs.readFileSync(new URL('../game/index.html', import.meta.url), 'utf8');
   const d = html.match(/<meta name="description" content="([^"]*)">/)[1];
-  assert.ok(/Last Version of Earth/.test(d) && !/laws/i.test(d), d);
+  assert.ok(/laws/i.test(d) && !/Last Version/.test(d), `Station Zero's page: ${d}`);
+  const sh = fs.readFileSync(new URL('../android/build-apk.sh', import.meta.url), 'utf8');
+  const m = sh.match(/if \(edition === 'lastversion'\) \{\s*html = html\.replace\(\/<meta name="description" content="\[\^"\]\*">\/, '<meta name="description" content="([^"]*)">'\)/);
+  assert.ok(m && /Last Version of Earth/.test(m[1]) && !/laws/i.test(m[1]), 'the edition\'s build writes its own description');
+  assert.match(sh, /node - "\$OUT" "\$FLAG" "\$EDITION" <<'JS'/);
 });
 
 test('M4 (F14): Kai starts at the door of the house he woke in, facing it, the blanket on its rail in view and in reach', () => {

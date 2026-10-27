@@ -54,6 +54,33 @@ const SKIP_KEYS = ['Space', 'KeyE', 'Enter', 'NumpadEnter'];
 const HELD = /^(use|shift|set:|combo|anchor|hint|gear:|rules$)/;
 
 const _a = new THREE.Vector3(), _b = new THREE.Vector3();
+
+// how far a ray goes before one of the level's camera blocks (Place camBlocks: what the conversation camera may not
+// stand in though nobody collides with it, as a leaning wreck's body over its short upright colliders); a block the ray
+// starts in is passed over (a face can be close against what it is caught in)
+export function camBlockHit(level, test, O, d, len) {
+  let best = len;
+  for (const cb of level?.camBlocks || []) {
+    if (cb.when && !test(cb.when)) continue;
+    const b = cb.box;
+    if (O.x >= b[0] && O.x <= b[3] && O.y >= b[1] && O.y <= b[4] && O.z >= b[2] && O.z <= b[5]) continue;
+    let t0 = 0, t1 = best, hit = true;
+    for (let a = 0; a < 3; a++) {
+      const o = O.getComponent(a), dd = d.getComponent(a), mn = b[a], mx = b[a + 3];
+      if (Math.abs(dd) < 1e-8) {
+        if (o < mn || o > mx) { hit = false; break; }
+      } else {
+        let ta = (mn - o) / dd, tb = (mx - o) / dd;
+        if (ta > tb) [ta, tb] = [tb, ta];
+        t0 = Math.max(t0, ta);
+        t1 = Math.min(t1, tb);
+        if (t0 > t1) { hit = false; break; }
+      }
+    }
+    if (hit && t0 < best) best = t0;
+  }
+  return best;
+}
 const ease = (x) => x * x * (3 - 2 * x);
 
 export class Cinema {
@@ -228,7 +255,7 @@ export class Cinema {
     }
     const cur = g.hud.subT > 0 ? g.hud.cur : null;
     const T = (this.talk ||= { who: 'them', pos: new THREE.Vector3(), look: new THREE.Vector3(), fresh: true });
-    if (cur && !cur.bark && cur.who !== 'NONE') T.who = cur.who === 'KAI' ? 'kai' : 'them';
+    if (cur && !cur.bark && !cur.ambient && cur.who !== 'NONE') T.who = cur.who === 'KAI' ? 'kai' : 'them';
     const K = _a.set(pl.pos.x, pl.pos.y + 0.74, pl.pos.z);
     const N = _b.set(tt[0], tt[1] - 0.05, tt[2]);
     // (someone not standing, a person posed where the story put them, carries talkAt: where their face is from their
@@ -258,7 +285,8 @@ export class Cinema {
       const c = new THREE.Vector3(S.x + fx * (low ? 2.1 : R) * sgn + fz * side, low ? feet + 1.75 : S.y - 0.02, S.z + fz * (low ? 2.1 : R) * sgn - fx * side);
       const d = c.clone().sub(O), len = d.length();
       d.divideScalar(len);
-      const hit = pl.rayDistance(O, d, len);
+      // (the colliders, and what the camera may not stand in: a leaning carriage's body, a door's leaf)
+      const hit = Math.min(pl.rayDistance(O, d, len), camBlockHit(this.rt?.level, (w) => g.facts.test(w, g.engine?.state?.(g.room)), O, d, len));
       return { c, free: hit >= len - 0.05, at: hit < len - 0.05 ? O.clone().addScaledVector(d, Math.max(0.7, hit - 0.25)) : c };
     };
     let pick = shot(0.7);
@@ -291,7 +319,7 @@ export class Cinema {
     const g = this.g;
     g.input.keys?.clear?.();
     if (g.input.state) g.input.state.jump = false;
-    // nobody in the crowd starts a line in passing over a staged moment (DeckWorld waits 9 s after the last one)
+    // nobody in the crowd starts a line in passing over a staged moment (DeckWorld's BARK.gap after it ends: 30 s)
     if (g.deckWorld && typeof g.time === 'number') g.deckWorld.lastBarkT = g.time;
     if (a.rig) {
       a.t += dt;

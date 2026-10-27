@@ -7,6 +7,7 @@
 // Each mission is one map with soft quarters, threads and side stories (Threads.js), a cold open and a hook.
 // Lines quoted from the bible are verbatim, with the bible's speakers; the rest follows its voice rules: short in
 // danger, longer in safe places, objects and disagreement instead of speeches, phrases that come back changed.
+import * as THREE from '../../../vendor/three.module.min.js';
 import { Deck, makeClock, makeToy, makeScreen, makeCell, makePanel, makeDrawing, makeChronolith, makeBoard,
   makePhoto, makePhotoStrip, makeThermos, makePolaroid, makeFootprints, makeRaincoat, makePigeon, makePass, makeCoatPegs, makeNotebook, makeLogbook, makePlaque } from './Build.js';
 import { DIALOGUE, IVEN_HOOK, intent } from './npcs.js';
@@ -36,7 +37,8 @@ const M01_SAY = {
   face: [N('A woman in the crowd at the far end turns. For one second she has Mira\'s face.'), K('She has our mother\'s face. She has Mira\'s eyes.')],
   follow: [K('Wait. Please, wait.')],
   // the station announcer, through the platform speakers, after a two-tone chime
-  announcement: [{ who: 'PA', text: 'The 8:14 service to Helix North is now arriving. Yesterday.', voice: { fx: 'pa', cue: 'pa' } }],
+  // (ambient: the station's own voice, not the story's; it never hides the tap prompt, HUD.storyTalking)
+  announcement: [{ who: 'PA', text: 'The 8:14 service to Helix North is now arriving. Yesterday.', voice: { fx: 'pa', cue: 'pa' }, ambient: true }],
 };
 
 // the staged moments of LINE 41's platform (cinema.js shots; the landmarks of rain_south): the Zero Second, first the
@@ -179,11 +181,15 @@ export const M01 = {
           path: [[29.5, 3.4, -163], [29.5, 3.4, -166], [29.5, 2.4, -170.5], [29.5, 2.4, -171.5], [29.5, 3.4, -176], [26, 3.4, -181], [6, 3.4, -183.6], [0, 3.4, -186.4], [0, 0.15, -193.8], [16, 0.15, -199], [40, 0.15, -203], [52, 0, -210.5], [80, 0, -210.5], [82, 0, -219], [64, 0, -219.5], [40, 0.15, -219.5], [12, 0.15, -219.5], [1, 0.15, -222.4]],
           set: { mira_gone: true }, say: [N('By the staff gate the crowd closes round her. When it opens again she is gone. On the wet steps lies a yellow raincoat.')],
           goal: 'Follow the woman with Mira\'s face.', because: 'She has been dead for twenty-three years.', hints: M01_HINTS.chase, minutes: 3 },
-        { id: 'raincoat', kind: 'scene', scene: 'raincoat', at: 'staffGate', after: ['chase'], spot: { prompt: 'THE YELLOW RAINCOAT', offset: [-1.0, 1.15, -1.8], r: 2.6, model: makeRaincoat, when: 'mira_gone && !raincoat' },
+        // (3 m in front of the gate, out of the way on through it: main.js's exit box reaches 2 m out from the gate)
+        { id: 'raincoat', kind: 'scene', scene: 'raincoat', at: 'staffGate', after: ['chase'], spot: { prompt: 'THE YELLOW RAINCOAT', offset: [-1.0, 1.15, -3.0], r: 2.6, model: makeRaincoat, when: 'mira_gone && !raincoat' },
           goal: 'She left something on the steps.', because: 'The crowd closed round her by the gate. Nobody saw her go.', done: 'raincoat', hints: M01_HINTS.raincoat, minutes: 1 },
         // (playtest v2.1 FT-15: after the raincoat the objective was the general "The next door is open", with nothing at
-        // the gate to say it was the way: now the gate is the objective, lit and lettered, and opens as Kai reaches it)
-        { id: 'gate', kind: 'go', at: 'staffGate', r: 2.8, after: ['raincoat'], trigWhen: 'raincoat', goal: 'Go in through the staff gate.', because: 'Rook is waiting on the other side. Rook said now.', hints: M01_HINTS.gate, minutes: 1 },
+        // the gate to say it was the way: now the gate is the objective, lit and lettered, open once the raincoat is his
+        // (M01.done), and the objective until he is through it (exit: Runtime.objectiveParts). Its own arrival is beyond
+        // the gate: a box round the gate that held the raincoat's spot finished it as the raincoat was taken, and the
+        // objective was the general one again)
+        { id: 'gate', kind: 'go', at: 'staffGate', box: [-2.6, -226.6, 2.6, -224.4], exit: true, after: ['raincoat'], trigWhen: 'raincoat', goal: 'Go in through the staff gate.', because: 'Rook is waiting on the other side. Rook said now.', hints: M01_HINTS.gate, minutes: 1 },
       ],
       sides: [
         { id: 'lasttrain', name: 'LAST TRAIN HOME', giver: 'jun', start: 'quest_jun', done: 'jun_choice', minutes: 6,
@@ -305,6 +311,17 @@ export const M01 = {
         piece(0.95, h * 0.1, door * (w / 2 + 0.55), 0.06, h * 0.68, 1.0, 'doorDark');
       }
       piece(0, h, 0, len + 0.16, 0.16, w + 0.16, 'roofDark');
+      // (and the boxes the conversation camera keeps out of, three down its length round the whole leaning body and a
+      // burst door's leaf: the colliders are upright and short, and the reverse shot of PULL HIM FREE stood inside the
+      // leaning carriage, a black slab with Kai not in it; v2.1 playtest review, cinema.talkStep)
+      for (let i = 0; i < 3; i++) {
+        const x0 = -len / 2 + (i * len) / 3, x1 = x0 + len / 3, b = [Infinity, Infinity, Infinity, -Infinity, -Infinity, -Infinity];
+        for (const lx of [x0, x1]) for (const ly of [-h / 2, h / 2 + 0.2]) for (const lz of [-w / 2 - 0.7, w / 2 + 0.7]) {
+          const q = rot([lx, ly + h / 2, lz], rx, ry, rz);
+          for (let k = 0; k < 3; k++) { b[k] = Math.min(b[k], at[k] + q[k]); b[k + 3] = Math.max(b[k + 3], at[k] + q[k]); }
+        }
+        P.camBlocks.push({ box: b.map((v) => +v.toFixed(2)), when: WRECK });
+      }
       for (let i = 0; i < 6; i++) { // (its colliders: six short boxes down its length)
         const [cx, , cz] = rot([(i + 0.5) * (len / 6) - len / 2, 0, 0], rx, ry, rz);
         const hx = (Math.abs(Math.cos(ry)) * len) / 12 + (Math.abs(Math.sin(ry)) * w) / 2, hz = (Math.abs(Math.sin(ry)) * len) / 12 + (Math.abs(Math.cos(ry)) * w) / 2;
@@ -445,7 +462,8 @@ export const M01 = {
   ],
   // the hook (§5 M1): the voicemail stays unheard until Mission 12
   hook: { cue: 'cliff', minutes: 2, lines: [K('She died twenty-three years ago. I was at the funeral. I was twelve.'), N('One voicemail. Received 05:40. Caller unknown.'), K('Not now.'), N('The staff gate is open. Nobody is checking badges any more.')] },
-  done: 't_m01_gate',
+  // (the raincoat opens the staff gate; the gate thread stays the objective until Kai is through it)
+  done: 'raincoat',
   // mission-specific behaviour the runtime calls by name
   fx: {
     // Jun has said the board is wrong: the minute comes
@@ -577,8 +595,36 @@ export function m02Reveal(rt) {
   uz /= d;
   const sx = -uz, sz = ux; // (to his left, facing the ring)
   const at = (back, side, up) => [p.x - ux * back + sx * side, fy + up, p.z - uz * back + sz * side];
+  // the first shot from behind him, on whichever side has nobody in it (playtest v2.1 FT-18 review: 4.2 m behind Kai on
+  // the line back to the door is where Rook stands, and his dark back filled the frame in front of the ring). A person
+  // is in it when they stand by the camera or within 0.9 m of the line from it to the ring (and to Kai)
+  const look0 = [ring[0], ring[1] + 4.0, ring[2]];
+  const people = (rt.g.deckWorld?.npcs || []).filter((n) => n.model?.visible).map((n) => n.model.position);
+  const near = (a, b, q) => {
+    const vx = b[0] - a[0], vy = b[1] - a[1], vz = b[2] - a[2], l2 = vx * vx + vy * vy + vz * vz || 1;
+    let best = Infinity;
+    for (const h of [0.4, 1.1, 1.7]) {
+      const qx = q.x - a[0], qy = q.y + h - a[1], qz = q.z - a[2];
+      const t = Math.max(0, Math.min(1, (qx * vx + qy * vy + qz * vz) / l2));
+      best = Math.min(best, Math.hypot(qx - t * vx, qy - t * vy, qz - t * vz));
+    }
+    return best;
+  };
+  // (and not through a wall: the way from Kai's head to the camera is open)
+  const pl = rt.g.player, head = new THREE.Vector3(p.x, fy + 1.4, p.z), dir = new THREE.Vector3();
+  const open = (cam) => {
+    if (!pl.rayDistance) return true;
+    dir.set(cam[0] - head.x, cam[1] - head.y, cam[2] - head.z);
+    const len = dir.length() || 1;
+    return pl.rayDistance(head, dir.divideScalar(len), len) >= len - 0.05;
+  };
+  const clear = ([b, sd]) => {
+    const cam = at(b, sd, 0.7);
+    return open(cam) && people.every((q) => Math.hypot(q.x - p.x, q.z - p.z) < 0.3 || (near(cam, look0, q) > 0.9 && near(cam, [p.x, fy + 1.2, p.z], q) > 0.9));
+  };
+  const [back0, side0] = [[4.2, 1.8], [4.2, -1.8], [3.4, 3.0], [3.4, -3.0], [2.4, 3.6], [2.4, -3.6]].find(clear) || [4.2, 1.8];
   return [
-    { cam: at(4.2, 1.8, 0.7), to: at(3.4, 1.4, 0.8), look: [ring[0], ring[1] + 4.0, ring[2]] },
+    { cam: at(back0, side0, 0.7), to: at(back0 - 0.8, side0 * 0.78, 0.8), look: look0 },
     { cam: at(-2.6, -1.0, 1.55), to: at(-2.3, -0.8, 1.5), look: [p.x, fy + 1.55, p.z] },
     { cam: at(1.3, 0.55, 1.75), to: at(1.0, 0.45, 1.7), look: [ring[0], fy + 1.5, ring[2]] },
   ];

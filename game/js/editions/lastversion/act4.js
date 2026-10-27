@@ -16,16 +16,16 @@ import { L, N, K, CREW, REV, FX, C, SAYS, AMB, person, song } from './act3.js';
 // Mission 19: THE PLACE OUTSIDE TIME
 // =============================================================================================================
 const M19_HINTS = {
-  marks: ['The clockmaker\'s mark.', 'Chalked where the road is real.', 'On the road, on the gallery in 2026, and where the road ends.'],
-  pattern: ['Stones in a ring, west.', 'The observatory\'s pattern.', 'Look at it.'],
-  badge: ['A badge set in the glass, east.', 'Mine, before the scar.', 'Look at it.'],
+  marks: ['There are no markers here, only symbols. One of them is the clockmaker\'s.', 'His mark is chalked wherever the road is real.', 'Find it on the road, on the gallery in 2026, and where the road ends.'],
+  pattern: ['The second symbol is laid out in stones, in a ring to the west.', 'It is the observatory\'s pattern.', 'Walk west to the ring of stones and look at it.'],
+  badge: ['The third symbol is a badge set in the glass, to the east.', 'It is my Helix badge, from before the scar.', 'Walk east and look at the badge in the glass.'],
   bridge: ['The water shows a bridge. The air does not.', 'When was it there? Or bring the reflection back in step.', 'Cross in 2026, or REVERSE the lag.'],
   doors: ['The same blue door, five times.', 'Look at what the light does at each.', 'Look at two of them.'],
   door: ['Which door is real?', 'The Child had no shadow. Lin had none.', 'The one with no shadow.'],
-  mira: ['Mira is waiting.', 'By the real door.', 'Talk to her.'],
-  orren: ['Orren is still here.', 'He keeps sweeping.', 'Ask him.'],
-  gallery: ['The clockmaker\'s gallery.', 'It stands in 2026 and in 2196.', 'Climb to it.'],
-  arm: ['The brass arm.', 'In the gallery.', 'Read what is cut under the mark.'],
+  mira: ['Mira is waiting, in person. Not a hologram.', 'She is standing by the real door.', 'Go to the real door and talk to Mira.'],
+  orren: ['Orren is still here, sweeping the road. Is he a person, or a pattern?', 'He keeps sweeping the same stretch of road.', 'Walk up to Orren and ask him.'],
+  gallery: ['The clockmaker\'s gallery is floating here, his light well in a sky with no sun.', 'The gallery stands in 2026 and in 2196.', 'Switch to one of its years and climb to the gallery.'],
+  arm: ['The brass arm is in the light well, and something is cut under his mark.', 'The arm hangs in the gallery.', 'Read what is cut under the mark beside the arm.'],
   reflection: ['Someone walks in the water.', 'Only in the reflection, north of the bridge.', 'Follow her to the door.'],
 };
 
@@ -190,15 +190,15 @@ M19.outro = M19.hook.lines;
 // Mission 20: MIRA'S MEMORY
 // =============================================================================================================
 const M20_HINTS = {
-  childhood: ['Her childhood.', 'The fridge, the boots, the hall table. In 2026.', 'Look at all three.'],
-  song: ['Mira, in the garden.', 'She remembers the song.', 'Talk to her.'],
-  experiment: ['The experiment.', 'The console, in the white chamber.', 'Watch it from her side.'],
+  childhood: ['The house with the blue door holds her childhood, on a summer evening.', 'The fridge, the boots and the hall table, in 2026.', 'Switch to 2026 and look at all three.'],
+  song: ['Mira is in the garden, and she remembers the song her way.', 'She is waiting for me in the garden.', 'Go out into the garden and talk to Mira.'],
+  experiment: ['The original experiment can be replayed, from Mira\'s side this time.', 'The console is in the white chamber, by the child-sized chair.', 'Go to the console and watch the experiment from her side.'],
   without: ['The world without me.', 'The 41 stop, a memorial, a garden. In 2196.', 'Look at all three.'],
-  align: ['Three memories.', 'Each keeps its own order. Nothing else has to.', 'Put the six moments on the board.'],
-  child: ['The Child.', 'In the sea garden.', 'Listen to the Child.'],
-  sister: ['Mira is here.', 'In the sea garden.', 'Talk to her.'],
+  align: ['Three memories disagree, and they are all hers.', 'Each one keeps its own order. Nothing else has to.', 'Put the six moments on the board without forcing them into one.'],
+  child: ['The Child has been waiting since the station.', 'She is in the sea garden.', 'Go into the sea garden and listen to the Child.'],
+  sister: ['Every life Mira remembers was real, and she is here.', 'She is in the sea garden.', 'Go to Mira in the sea garden and talk to her.'],
   house: ['A house at the corner.', 'Nobody owns it on record. In 2196.', 'Look at the door, the window, the letterbox.'],
-  note: ['She keeps stopping.', 'Mira, planting, in the world without me.', 'Hum it for her, or let her find it.'],
+  note: ['She keeps stopping at the same place in the song. A note is missing.', 'Mira is planting, in the world without me.', 'Hum the note for her, or let her find it herself.'],
 };
 // R6: nothing here can be reversed; the first try, Mira answers it herself
 const MEMORY = (id, at, label, aim) => ({ id, kind: 'refusal', refuse: 'A MEMORY', at, label, line: 'Don\'t. Let it happen the way it happened.', lineWho: 'MIRA', once: 'm20_refused', aim });
@@ -397,22 +397,22 @@ M20.outro = M20.hook.lines;
 // =============================================================================================================
 const M21_HINTS = {
   elites: ['Elites on the deck.', 'An afterimage throws them back five seconds. REVERSE that, and they are stuck.', 'Echo Step near one, then REVERSE one.'],
-  infiltrate: ['The command halls.', 'Up on the first terrace. The kitchen door, if anyone listened; or the stair alone, west.', 'Get there unseen.'],
-  prisoners: ['The cells.', 'Above the halls, behind glass.', 'Open them.'],
-  arena: ['The arena.', 'Across the bridge from the cells\' terrace.', 'Walk onto the ring.'],
-  gapOne: ['The first gap.', 'The slab fell into the clouds. Fallen things rise.', 'REVERSE the slab and cross while it holds.'],
-  ally: ['Call for help.', 'Someone I earned, or nobody.', 'Choose who to call.'],
-  gapTwo: ['The second gap.', 'An ally holds it, or I do, or in 2196 a girder lies across it.', 'Cross to the summit stair.'],
-  confront: ['The Witness.', 'At the summit, by the ring.', 'Face him.'],
+  infiltrate: ['The command halls are where I have to be.', 'Up on the first terrace. The kitchen door, if anyone listened; or the stair alone, west.', 'Get into the command halls without being seen.'],
+  prisoners: ['The prisoners from the dam are here. They were held.', 'Their cells are above the halls, behind glass.', 'Go up to the cells and open them.'],
+  arena: ['The summit stair is on the far side of the arena ring.', 'The arena is across the bridge from the cells\' terrace.', 'Cross the bridge and walk onto the arena ring.'],
+  gapOne: ['The first gap is open, and the slab is in the clouds.', 'The slab fell into the clouds. Fallen things rise.', 'REVERSE the slab, and cross while it holds.'],
+  ally: ['Somebody could hold the second gap while I cross. I can call for help.', 'It will be someone I earned, or nobody.', 'Choose who to call on.'],
+  gapTwo: ['The second gap is the last way to the summit stair.', 'An ally holds it, or I do, or in 2196 a girder lies across it.', 'Cross the second gap to the summit stair.'],
+  confront: ['The Witness is waiting for me at the citadel\'s ring.', 'He is at the summit, by the ring.', 'Climb to the summit and face the Witness.'],
   office: ['The Director\'s office.', 'A glass corner on the cells\' terrace.', 'Look inside.'],
-  radio: ['A radio.', 'By the light bridge.', 'Listen to the radio.'],
+  radio: ['There is a radio playing on Mara\'s frequency.', 'It stands by the light bridge.', 'Go to the light bridge and listen to the radio.'],
   orders: ['What is the Witness building?', 'The halls, the elite ramps, the Director\'s desk.', 'Read what they left: the wall, the orders, the desk.'],
   plan: ['What is he building up here?', 'A console, a stool, a child\'s chair.', 'Not a timeline. A room.'],
   cellDoor: ['An elite at the cells.', 'It walks across the way to the arena.', 'REVERSE its rewind, and go while it is stuck.'],
   chamber: ['What he built up here.', 'On the summit, before the ring.', 'The console, the stool, the chair.'],
-  mira: ['Mira is here.', 'In the chair he built.', 'Talk to her.'],
-  glazier: ['Someone on the glider deck.', 'In a work uniform, on the west deck.', 'Talk to her.'],
-  brask: ['Brask is here.', 'On the elite ramps.', 'Talk to him.'],
+  mira: ['Mira is here, a light in the chair, not a girl.', 'She is in the chair he built.', 'Go to the chair he built and talk to Mira.'],
+  glazier: ['Someone on the glider deck has a face I know, from a roof.', 'She is in a work uniform, on the west deck.', 'Go out to the west deck and talk to her.'],
+  brask: ['Sergeant Brask is here, and he remembers me. All of me.', 'He is on the elite ramps.', 'Go up the elite ramps and talk to Brask.'],
 };
 const GLAZIER21 = AMB('CROWD_F');
 const M21_SAY = {
@@ -476,7 +476,13 @@ function m21Tremor(rt, dt) {
   if (p) for (const [dx, dz] of [[0, 0], [1.6, 1.2], [-1.4, 1.6]]) g.fx?.burst([p.x + dx, p.y - 0.7, p.z + dz], 0xc8bca8, 16, 2.2);
   g.audio?.land?.();
   g.hud?.flash?.('rgba(255, 214, 170, 0.14)');
-  rt.score?.capText?.('the Spire shaking');
+  // (and it costs: a gap held with REVERSE as the Spire shakes loses a second and a half of its hold, so a crossing is
+  // timed between two tremors, not taken at leisure; v2.1 playtest review F19: the tremor was only to be seen)
+  const inv = rt.inv, a = inv?.active, st = inv?.state;
+  if (a && !a.lock && st && /^arenaGap/.test(a.p?.rec?.id || '')) {
+    st.charge = Math.max(0, st.charge - 1.5 * (a.p.rec.weight || 1));
+    rt.score?.capText?.('the Spire shaking: the hold slips');
+  } else rt.score?.capText?.('the Spire shaking');
 }
 // the ally holds the second gap for thirty seconds (REVERSE, theirs); then it goes
 function m21Step(rt, dt) {
@@ -721,21 +727,21 @@ M21.outro = M21.hook.lines;
 // Mission 22: THE FIRST SECOND
 // =============================================================================================================
 const M22_HINTS = {
-  chain: ['The chain wall.', 'A river, a wall, a gate, a machine. What made what happen?', 'Put them in order: the river first.'],
-  arm: ['The clockmaker\'s arm.', 'It answers only on its counted beat.', 'Count three, and REVERSE on the turn.'],
-  odile: ['Odile\'s echo.', 'At the hospital\'s lock.', 'Listen to her.'],
-  seals: ['The final seals.', 'Last fitted, first out. The chain, backwards.', 'MACHINE, GATE, WALL, RIVER.'],
-  table: ['The evidence table.', 'A statement, and a card from the museum.', 'Read both.'],
-  logs: ['Two sealed logs.', 'A record shows its making when it runs backwards.', 'REVERSE the logs.'],
-  evidence: ['Evidence, or memory?', 'The logs keep seconds. Memories don\'t.', 'It turned before I pressed it.'],
-  reveal: ['The Witness.', 'In the twin chamber.', 'Talk to him.'],
-  chamber: ['The final chamber.', 'Behind the seals.', 'Open it.'],
-  orren: ['Orren is in the court.', 'In the court wedge, 2196.', 'Ask him.'],
-  record: ['The unwritten record.', 'Orren keeps it.', 'Read it.'],
-  microphone: ['The station wedge.', 'The microphone he used.', 'Stand where he stood.'],
-  sign: ['Chamber One\'s log.', 'On the evidence table.', 'Sign it, or leave it.'],
-  herVoice: ['Somebody is beyond the chamber.', 'Listen to her.', 'Go when you\'re ready.'],
-  ezra: ['Ezra\'s echo.', 'By the brass arm.', 'Listen to him.'],
+  chain: ['The chain wall shows the village\'s story out of order.', 'A river, a wall, a gate, a machine. What made what happen?', 'Put them in order on the wall, with the river first.'],
+  arm: ['The clockmaker\'s arm counts the way it did in his light well.', 'It answers only on its counted beat.', 'Count three, and REVERSE on the turn.'],
+  odile: ['Odile\'s echo knew how the ward door undid itself.', 'She stands at the hospital\'s lock.', 'Go to the hospital\'s lock and listen to Odile.'],
+  seals: ['The final seals are the chain, fitted as seals, river first.', 'Last fitted, first out: the chain, backwards.', 'REVERSE them in that order: machine, gate, wall, river.'],
+  table: ['Iven\'s word, a museum\'s memory and two sealed logs are on the table.', 'A statement, and a card from the museum.', 'Go to the evidence table and read both.'],
+  logs: ['In the archive I would not read the two sealed logs.', 'A record shows its making when it runs backwards.', 'Aim at the sealed logs and REVERSE them.'],
+  evidence: ['Which of them keeps the second? Evidence, or memory?', 'The logs keep seconds. Memories don\'t.', 'Say what the logs show: it turned before I pressed it.'],
+  reveal: ['The Witness is here, a second early.', 'He is in the twin chamber.', 'Go into the twin chamber and talk to the Witness.'],
+  chamber: ['The seals are out. The Chronolith\'s final chamber can open.', 'It is behind where the seals were.', 'Go to the final chamber and open it.'],
+  orren: ['Orren is sweeping a Helix court, in the mist.', 'He is in the court wedge, in 2196.', 'Switch to 2196, go into the court wedge and ask Orren.'],
+  record: ['The unwritten record says what each ending costs.', 'Orren keeps it, in the court wedge.', 'Ask Orren for the record, and read it.'],
+  microphone: ['Every warning I ever heard came out of one microphone.', 'It is in the station wedge: the microphone he used.', 'Go into the station wedge and stand where he stood.'],
+  sign: ['Nobody ever signed Chamber One\'s log. The operator\'s line is blank.', 'It lies on the evidence table.', 'Go to the evidence table and sign the log, or leave it.'],
+  herVoice: ['Somebody is beyond the chamber. It is her voice.', 'Stay here and listen to her.', 'Go on through when you\'re ready.'],
+  ezra: ['Ezra\'s echo counted the arm with me, and he has something to say.', 'He stands by the brass arm.', 'Stay by the brass arm and listen to Ezra.'],
 };
 const M22_PROCESSES = [
   // the activation sequence: the arm answers only on its counted beat (Ezra's count)

@@ -84,6 +84,14 @@ export default {
       P.disc(x, 0.16, sz * z, 0.86, 'limestone', { seg: 14, noShadow: 1 });
       P.col([x - 0.86, -1.0, sz * z - 0.86, x + 0.86, 0.15, sz * z + 0.86]);
     }
+    // (playtest v2.1 F16 review: the last stone met the island's edge only across its own width, so a step off it
+    // toward the terminal, diagonally, went into a sliver of water between the stone and the island: a broad stone
+    // landing at each end, a step under the island's edge, as wide as the island's path to the cube)
+    for (const sz of [-1, 1]) {
+      const [z0, z1] = sz > 0 ? [11.9, 13.3] : [-13.3, -11.9];
+      P.box([-3.8, -1.0, z0, 3.8, 0.27, z1], 'quayStone');
+      P.vbox([-3.8, 0.27, z0, 3.8, 0.29, z1], 'limestone', { noShadow: 1 });
+    }
     for (const x of [-30, 30]) bridge(P, x, -6.6, x, 6.6, 4, 0.2, 'quayStone', { parapetMat: 'steel', parapetH: 1.0 });
     P.land('southBridge', 30, 0.2, 12, 0);
     for (const z of [-6.4, 6.4]) for (const [x0, x1] of [[-70, -32], [-28, POND[0]], [POND[2], 28], [32, 70]]) railing(P, x0, z, x1, z, 1.0, 'steel');

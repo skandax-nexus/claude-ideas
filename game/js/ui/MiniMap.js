@@ -6,7 +6,10 @@ const COLORS = {
   room: 'rgba(255,255,255,0.92)', roomEdge: '#9fb3c6', unseen: 'rgba(255,255,255,0.35)', cur: '#d9ecff',
   corridor: 'rgba(255,255,255,0.8)', player: '#ff7a63', npc: '#2f9a64', sentinel: '#4f9fe8', item: '#e0a43a',
   token: '#2fae6a', gate: '#7a5fd0', beacon: '#22aeb9', text: '#4f6170',
+  rail: 'rgba(58,50,44,0.85)', path: 'rgba(255,238,200,0.95)', objective: '#f08a1c', quarry: '#e8b400',
 };
+// (marks an edition puts on the full map only: where the objective is, who Kai is after; the corner map stays sparse)
+const BIG_ONLY = new Set(['objective', 'quarry']);
 
 export class MiniMap {
   constructor(mini, big) {
@@ -74,6 +77,28 @@ export class MiniMap {
       const [a, b] = [P(bk[0], bk[1]), P(bk[2], bk[3])];
       g.fillRect(a[0], a[1], b[0] - a[0], b[1] - a[1]);
     }
+    // lines: rails, and the ways over them (an edition's places: THE LAST VERSION's Line 41)
+    for (const l of map.lines || []) {
+      if (l.rect) {
+        const [a, b] = [P(l.rect[0], l.rect[1]), P(l.rect[2], l.rect[3])];
+        g.fillStyle = COLORS[l.kind] || COLORS.path;
+        g.fillRect(a[0], a[1], Math.max(2, b[0] - a[0]), Math.max(2, b[1] - a[1]));
+        if (labels && l.name) {
+          g.fillStyle = COLORS.text;
+          g.font = '700 9px Inter, sans-serif';
+          g.textAlign = 'center';
+          g.fillText(l.name, (a[0] + b[0]) / 2, Math.min(a[1], b[1]) - 4);
+        }
+      } else if (l.a && l.b) {
+        const [a, b] = [P(l.a[0], l.a[1]), P(l.b[0], l.b[1])];
+        g.strokeStyle = COLORS[l.kind] || COLORS.rail;
+        g.lineWidth = 1.5;
+        g.beginPath();
+        g.moveTo(a[0], a[1]);
+        g.lineTo(b[0], b[1]);
+        g.stroke();
+      }
+    }
     if (map.gate) {
       const [x, y] = P(map.gate[0], map.gate[1]);
       g.fillStyle = COLORS.gate;
@@ -84,11 +109,32 @@ export class MiniMap {
     return P;
   }
 
-  drawMarkers(g, P, markers) {
+  drawMarkers(g, P, markers, big = false) {
     for (const m of markers) {
+      if (!big && BIG_ONLY.has(m.kind)) continue;
       const [x, y] = P(m.x, m.z);
       g.fillStyle = COLORS[m.kind] || '#888';
+      if (m.kind === 'objective') {
+        // a ring with a dot: where the objective is
+        g.strokeStyle = COLORS.objective;
+        g.lineWidth = 3;
+        g.beginPath();
+        g.arc(x, y, 9, 0, Math.PI * 2);
+        g.stroke();
+        g.beginPath();
+        g.arc(x, y, 3.5, 0, Math.PI * 2);
+        g.fill();
+        continue;
+      }
       g.beginPath();
+      if (m.kind === 'quarry') {
+        g.moveTo(x, y - 7); g.lineTo(x + 6, y); g.lineTo(x, y + 7); g.lineTo(x - 6, y); g.closePath();
+        g.fill();
+        g.strokeStyle = '#fff';
+        g.lineWidth = 1.5;
+        g.stroke();
+        continue;
+      }
       if (m.kind === 'sentinel') {
         g.moveTo(x, y - 5); g.lineTo(x + 4, y + 4); g.lineTo(x - 4, y + 4); g.closePath();
       } else g.arc(x, y, m.kind === 'npc' ? 4 : 3, 0, Math.PI * 2);
@@ -150,7 +196,7 @@ export class MiniMap {
     const pad = 28;
     const scale = Math.min((w - pad * 2) / (x1 - x0 || 1), (h - pad * 2) / (z1 - z0 || 1));
     const P = this.drawWorld(g, this.data, cur, scale, (x0 + x1) / 2, (z0 + z1) / 2, w / 2, h / 2, true);
-    this.drawMarkers(g, P, markers);
+    this.drawMarkers(g, P, markers, true);
     this.drawPlayer(g, P, player);
   }
 }

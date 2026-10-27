@@ -39,7 +39,9 @@ export function lendLook(model, crew, height) {
       const ms = [].concat(o.material), rs = [].concat(r0.material);
       ms.forEach((m, k) => {
         const r = rs[k];
-        if (!m?.isMeshStandardMaterial || m.alphaTest > 0 || !r?.map) return;
+        // (a material the wardrobe caches for everyone, a garment's or a hair mass's, marked keep, is never written: it
+        // would change every echo in the session that wears it)
+        if (!m?.isMeshStandardMaterial || m.alphaTest > 0 || !r?.map || m.userData?.keep) return;
         m.map = r.map;
         m.color.set(0xffffff).lerp(glow, 0.3);
         m.emissive.copy(glow);
@@ -49,11 +51,12 @@ export function lendLook(model, crew, height) {
     });
   }
   // (the stand-in's own pieces: its materials are clones, its garments may have geometry of their own; the textures
-  // are the shared, cached ones the echo now wears)
+  // are the shared, cached ones the echo now wears. What the wardrobe caches for everyone, marked keep, is in use by the
+  // living: left alone, or every person wearing it would have its shaders built again)
   ref?.traverse((x) => {
     if (!x.isMesh) return;
-    if (x.userData.ownGeometry) x.geometry.dispose();
-    for (const m of [].concat(x.material)) m?.dispose?.();
+    if (x.userData.ownGeometry && !x.geometry?.userData?.keep) x.geometry.dispose();
+    for (const m of [].concat(x.material)) if (m && !m.userData?.keep) m.dispose?.();
   });
   return same;
 }

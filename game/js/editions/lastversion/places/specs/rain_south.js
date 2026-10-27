@@ -226,6 +226,11 @@ export default {
     // a barrow crossing at the platform end
     ramp(P, [27, -166, 32, -170.5], PLAT, BED, 'N', 'platformTile', { terrain: false });
     ramp(P, [27, -171.5, 32, -176], BED, PLAT, 'N', 'platformTile', { terrain: false });
+    // the map's lines (playtest v2.1 FT-08 review: the full map drew the platforms as bars, with nothing between them):
+    // the two tracks the whole length of the embankment, the barrow crossing over them, and the stairs up from the
+    // forecourt and down to the concourse: the way she goes, and the way to the staff gate
+    for (const z of [-169.5, -172.5]) P.lines.push({ kind: 'rail', a: [-90, z], b: [90, z] });
+    P.lines.push({ kind: 'path', rect: [27, -176, 32, -166], name: 'CROSSING' }, { kind: 'path', rect: [-9, -146.2, 9, -139.5] }, { kind: 'path', rect: [-7, -193.5, 7, -186] });
     P.land('platform', 0, PLAT, -154, Math.PI);
     // the canopy: cast-iron columns and arched ribs, glass between
     const AR = 26, th = Math.asin(18.4 / AR), acy = PLAT + 6 - AR * Math.cos(th);

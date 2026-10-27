@@ -660,7 +660,8 @@ export class Inversion {
     return {
       on: this.unlocked,
       frac: Math.max(0, Math.min(1, st.charge / st.cap)),
-      chip: `⟲ ${chipName}${a?.lock ? '' : chipNum}`, chipName, chipNum: a?.lock ? '' : chipNum,
+      // (a bolt backing out has no count: '…'; upright the chip shows only this, and was blank)
+      chip: `⟲ ${chipName}${a?.lock ? '' : chipNum}`, chipName, chipNum: a?.lock ? '…' : chipNum,
       hold: !!(a && !a.lock),
       warn: !!(a && !a.lock && a.left < 1.5),
       aim: !!t && !a?.lock,
