@@ -1593,7 +1593,7 @@ export class LastVersion {
       else this.g.beatDone();
     }
     if (node.ending) this.ending(node.ending);
-    if (node.playback) this.threads.play(node.playback); // (the last piece is in: the echoes re-enact it)
+    if (node.playback) this.threads.play(node.playback); // (a piece is in: the next pick, or with the last the echoes re-enact it)
   }
 
   apply(node, n) {
@@ -1873,9 +1873,12 @@ export class LastVersion {
     // a staged moment (an opening, a cold open, a hook) is not the watchers' business: they walk their rounds, and see
     // nobody until it is over (nothing walks Kai back to a checkpoint while the camera is not his). Nor is a scene or a
     // conversation while its lines play (v2.1 playtest F04: M13's frozen block, caught mid-line on a patrol's street);
-    // a THINK hint or a line said in passing is not one (a hint asked for would hide Kai)
+    // a THINK hint or a line said in passing is not one (a hint asked for would hide Kai). Only while Kai stays where
+    // the lines began, though: walking on while they play is walking on, the watchers' business again (a scene tapped
+    // is not a cloak to cross a patrol's street in)
     // (and for a breath after: a patrol that walked up during the lines does not catch Kai the moment they end)
-    const staged = this.opening || this.cinema?.active || this.storyLines();
+    const held = this.storyHolds(p);
+    const staged = this.opening || this.cinema?.active || held;
     this.graceT = staged ? 2 : Math.max(0, (this.graceT || 0) - dt);
     if (staged || this.graceT > 0) {
       for (const s of g.deckWorld.sentinels) {
@@ -1913,6 +1916,17 @@ export class LastVersion {
     const h = this.g.hud;
     if (h.subT > 0 && h.cur && !h.cur.done && !h.cur.bark && !h.cur.hint) return true;
     return h.subs.some((s) => !s.done && !s.bark && !s.hint);
+  }
+
+  // the story's lines play and Kai stands where they began (within 4 m): the watchers keep off him (F04). Called every
+  // step, so where the lines began is forgotten as soon as they are over
+  storyHolds(p) {
+    if (!this.storyLines()) {
+      this.linesAt = null;
+      return false;
+    }
+    this.linesAt ||= [p.x, p.z];
+    return Math.hypot(p.x - this.linesAt[0], p.z - this.linesAt[1]) < 4;
   }
 
   // --- loops (M9's nine minutes, M15's one day) ------------------------------------------------------------------

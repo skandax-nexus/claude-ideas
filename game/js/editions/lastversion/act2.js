@@ -1118,7 +1118,7 @@ M12.outro = M12.hook.lines;
 // Mission 13: THE NINE-MINUTE WAR
 // =============================================================================================================
 const M13_HINTS = {
-  cross: ['A sentry walks the sandbag line in front of the canyon gate.', 'The only gap is at the line\'s west end, by the containers. Wait behind a burnt truck and watch which way it faces.', 'When it walks east, away from the gap, go: through the gap and on to the canyon gate.'],
+  cross: ['A sentry walks the sandbag line in front of the canyon gate.', 'The only gap is at the line\'s west end, by the containers. Wait behind a burnt truck and watch which way it faces.', 'As soon as it turns east, away from the gap, go: through the gap and on to the canyon gate.'],
   orders: ['Both sides say the other fired first. Their orders will say more.', 'The field orders lie by the quay trench, behind the sandbags.', 'Read the field orders by the quay trench.'],
   shells: ['A shell is hanging in flight over the field. Where did it come from?', 'Hold one back with REVERSE and watch where it goes. Then one from the other side.', 'At the shell zone, aim at a shell in flight and hold REVERSE. Then the other side\'s.'],
   first: ['Who fired first? I have both orders and both shells.', 'Each order answers the other. Each shell went home to the gun that fired it.', 'Nobody. Each side answers its own last shot.'],
@@ -1218,7 +1218,7 @@ export const M13 = {
           set: { ev_both_sides: true }, say: [K('Both of them go home. Each side is firing at its own last shot.')], hints: M13_HINTS.shells, minutes: 4 },
         { id: 'firstShot', kind: 'deduce', deduction: 'firstShot', at: 'shellZone', after: ['shells'], spotOpts: { offset: [0, 1.2, 6], r: 3 },
           goal: 'Who fired first?', because: 'Two shells, two guns, two sets of orders.', hints: M13_HINTS.first, minutes: 2 },
-        { id: 'cross', kind: 'stealth', at: 'canyonGate', r: 4, after: ['firstShot'], goal: 'Cross the battlefield to the container canyon.', because: 'The fire comes round on a loop. So do the patrols.', hints: M13_HINTS.cross, minutes: 6 },
+        { id: 'cross', kind: 'stealth', at: 'canyonGate', r: 4, after: ['firstShot'], goal: 'Cross the battlefield to the container canyon.', because: 'A sandbag line closes the field. Its one gap is watched, but the sentry walks a loop.', hints: M13_HINTS.cross, minutes: 6 },
       ],
       sides: [
         { id: 'listeners', name: 'THE PEOPLE WHO LISTENED', giver: 'm13_listener', start: 'warned_evacuees', done: 'listeners_route', minutes: 2,

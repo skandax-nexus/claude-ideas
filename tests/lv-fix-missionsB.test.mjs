@@ -20,6 +20,7 @@ import { M23 } from '../game/js/editions/lastversion/finale.js';
 import { horizonFor } from '../game/js/editions/lastversion/places/atlas.js';
 import { underWater } from '../game/js/editions/lastversion/places/Place.js';
 import { Player } from '../game/js/entities/Player.js';
+import { Sentinel } from '../game/js/world/DeckWorld.js';
 
 // a mission's level, built the way the runtime builds it (Runtime.buildLevel with a stand-in game)
 function build(ch, deck) {
@@ -178,8 +179,20 @@ test('F04: while the story\'s lines play (not a bark, not a THINK hint) the watc
   const h = Object.assign(Object.create(LastVersion.prototype), { g: { facts: new FactStore(), audio: { blip() {} }, hud: { say: (l) => said.push(...l) } }, _threads: { hint: () => ({ key: 'k', tiers: ['One.', 'Two.', 'Three.'] }) } });
   h.hint();
   assert.deepEqual(said, [{ who: 'KAI', text: 'One.', hint: true }]);
+  // only while Kai stays where the lines began: walking on while they play, the watchers see him again
+  const at = (x, z) => ({ x, z });
+  lines({ who: 'NONE', text: 'Behind the frozen glass...' });
+  assert.equal(rt.storyHolds(at(70, -57.3)), true, 'standing at the scene');
+  assert.equal(rt.storyHolds(at(71.5, -55)), true, 'shuffling about it');
+  assert.equal(rt.storyHolds(at(70, -52)), false, 'walked 5 m off: no cloak');
+  assert.equal(rt.storyHolds(at(70, -57.3)), true, 'back at the scene while it plays');
+  lines(null, []);
+  assert.equal(rt.storyHolds(at(70, -52)), false, 'the lines over');
+  assert.equal(rt.linesAt, null, 'and where they began forgotten');
+  lines({ who: 'SERA', text: 'Third floor.' });
+  assert.equal(rt.storyHolds(at(70, -52)), true, 'the next lines begin where Kai stands now');
   const src = fs.readFileSync('game/js/editions/lastversion/Runtime.js', 'utf8');
-  assert.match(src, /const staged = this\.opening \|\| this\.cinema\?\.active \|\| this\.storyLines\(\);\s+this\.graceT = staged \? 2 :/, 'the step keeps the watchers off while the lines play, and 2 s after');
+  assert.match(src, /const held = this\.storyHolds\(p\);\s+const staged = this\.opening \|\| this\.cinema\?\.active \|\| held;\s+this\.graceT = staged \? 2 :/, 'the step keeps the watchers off while the lines play, and 2 s after');
 });
 
 // --- Mission 13 -----------------------------------------------------------------------------------------------------------
@@ -196,6 +209,17 @@ test('X01: Mission 13\'s trapped people pace in the frozen block\'s lobby, behin
   const st = walk(M13L, [70, 0, -58], [[70, -64]]);
   assert.ok(st.stuck && st.at[2] > -62.4, `the glass stops Kai on the street: ${JSON.stringify(st.at)}`);
   assert.ok(!walk(M13L, [70, 0, -58], [[70, -64]], { civilians_freed: true }).stuck, 'freed, the lobby is open');
+  // the district's patrol keeps to the channel side of the street: never through the spot Kai looks in from, nor the
+  // roll-call wall (fallen, its slabs reach z -57.4); standing at the block's spot Kai is outside its cone (fov 0.75:
+  // 0.45 rad either side of its heading), so the scene there is not walked through
+  const pat = M13L.sentinels.find((x) => x.id.endsWith('_q2s1'));
+  const blockSpot = [M13L.landmarks.frozenBlock[0] + 10, M13L.landmarks.frozenBlock[2] + 18.5];
+  for (const [what, pt] of [['the frozen block\'s spot', blockSpot], ['the roll-call wall', [40, -57.4]]]) {
+    const d = pathDist(pt, pat.path);
+    assert.ok(d > 2.5, `${what}: ${d.toFixed(1)} m from the patrol's line`);
+  }
+  const off = Math.asin(Math.min(1, pathDist(blockSpot, pat.path) / pat.range)); // (nearest within its range: the angle off its heading)
+  assert.ok(off > pat.fov * 0.6, `the block's spot: within its range ${(off * 57.3).toFixed(0)} deg off its heading, outside its cone`);
 });
 
 test('F03: Mission 13\'s crossing: a sandbag line closes the field before the canyon gate but for one gap, which a sentry paces', () => {
@@ -217,6 +241,60 @@ test('F03: Mission 13\'s crossing: a sandbag line closes the field before the ca
   // somewhere to wait and watch it from, out of its range
   const cover = M13L.elements.filter((e) => e.solid && e.box[4] >= 2 && e.box[0] > 24 && e.box[3] < 56 && e.box[2] > 30 && e.box[5] < 44);
   assert.ok(cover.length >= 2, `${cover.length} burnt trucks to wait behind`);
+  // caught at the line, Kai is walked back to the shell zone (out of the sentry's range, facing the gap), not all the
+  // way to the quay: main.js keeps the last checkpoint whose box he stood in, the last one listed winning
+  const cpAt = (pt, prev = null) => {
+    let cp = prev;
+    for (const c of M13L.checkpoints) if (pt[0] >= c.box[0] && pt[0] < c.box[3] && pt[1] >= c.box[1] && pt[1] < c.box[4] && pt[2] >= c.box[2] && pt[2] < c.box[5]) cp = c.spawn;
+    return cp;
+  };
+  const quay = cpAt([0, 0.86, 80]);
+  assert.deepEqual(quay.slice(0, 3), M13L.landmarks.quayTrench.slice(0, 3).map((v, i) => (i === 1 ? v + 0.86 : v)), 'on the quay: the quay');
+  const field = cpAt([60, 0.86, 44], quay);
+  assert.ok(field !== quay && Math.hypot(field[0] - 60, field[2] - 44) < 6, `by the shells: ${field}`);
+  assert.equal(cpAt([40, 0.86, 25.5], field), field, 'at the sandbag line it stays the shell zone\'s');
+  assert.ok(pathDist([field[0], field[2]], s.path) > s.range + 2, 'out of the sentry\'s range');
+  const H = [-Math.sin(field[3]), -Math.cos(field[3])];
+  assert.ok(H[0] < -0.5 && H[1] < -0.5, `facing the gap (south-west): ${H.map((v) => v.toFixed(2))}`);
+  assert.ok(!walk(M13L, [field[0], 0, field[2]], [[23, 32], [23, 16], gate]).stuck, 'and from there to the gate, through the gap');
+});
+
+// the crossing played with the game's own Sentinel and Player, from the shell zone, at 25 phases of the sentry's beat:
+// straight at the gate (the playtest's walk), or as THINK says (wait clear of the line; as soon as it turns east, go)
+function crossing(strategy, phase) {
+  const cols = solids(M13L).map((e) => ({ min: e.box.slice(0, 3), max: e.box.slice(3) }));
+  const model = { position: new THREE.Vector3(), rotation: { y: 0 }, userData: { eyeMat: { color: { setHex() {} } }, coneMat: { color: { setHex() {} }, opacity: 0 } } };
+  const s = new Sentinel(M13L.sentinels.find((x) => x.id.endsWith('_q0s1')), model);
+  const away = { pos: new THREE.Vector3(999, 0.86, 999), running: false, rayDistance: () => 0 };
+  const dt = 1 / 30;
+  for (let t = 0; t < phase; t += dt) s.update(dt, t, { player: away, here: true });
+  const p = Object.assign(Object.create(Player.prototype), { pos: new THREE.Vector3(60, 0.86, 44), vel: new THREE.Vector3(), H: new THREE.Vector3(0, 0, -1), U: new THREE.Vector3(0, 1, 0), gravity: -1, grounded: false, half: new THREE.Vector3(0.3, 0.85, 0.3), topSpeed: null, stepOff: 0, airT: 0, _canStep: false, comfort: true, pitch: 0, facing: new THREE.Vector3(0, 0, -1), colliders: cols, running: false });
+  const route = strategy === 'straight' ? [[22, 10]] : [[46, 45], 'wait', [23.5, 30], [23, 17], [22, 10]];
+  let wi = 0, seen = 0;
+  for (let t = 0; t < 120; t += dt) {
+    const w = route[wi];
+    if (w === 'wait' && s.dir.x > 0.5 && s.pos.x < 34) { wi++; continue; } // (it has turned east, away from the gap)
+    if (w !== 'wait') {
+      const dx = w[0] - p.pos.x, dz = w[1] - p.pos.z, d = Math.hypot(dx, dz);
+      if (d < (wi === route.length - 1 ? 4 : 0.6)) { if (++wi >= route.length) return { through: true, seen }; continue; }
+      p.H.set(dx / d, 0, dz / d);
+    }
+    p.update(dt, { forward: w === 'wait' ? 0 : 1, strafe: 0, run: false, jump: false, slow: false }, cols);
+    if (s.update(dt, t, { player: p, here: true }) === 'caught') return { caught: true, seen };
+    seen = Math.max(seen, s.suspicion);
+  }
+  return { stuck: true };
+}
+
+test('F03: the crossing is a stealth beat: walked straight at the gate, the sentry catches Kai more often than not; timed as THINK says, he gets through', () => {
+  const phases = [...Array(25).keys()].map((i) => (i * 26) / 25);
+  const straight = phases.map((ph) => crossing('straight', ph)), timed = phases.map((ph) => crossing('timed', ph));
+  const caught = straight.filter((r) => r.caught).length;
+  assert.ok(straight.every((r) => r.caught || r.through), 'every walk ends at the gate or caught');
+  assert.ok(caught >= 12, `straight at the gate: caught ${caught} times in 25`);
+  assert.ok(caught <= 20, `but not a wall: ${25 - caught} of 25 walks get through on the sentry's back`);
+  const ok = timed.filter((r) => r.through && r.seen < 1).length;
+  assert.ok(ok >= 24, `timed: through ${ok} times in 25: ${JSON.stringify(timed.map((r, i) => [phases[i].toFixed(1), r]).filter(([, r]) => !(r.through && r.seen < 1)))}`);
 });
 
 test('F18: Mission 13\'s trench gap is clear and lit, the channel railed but for its bridges, the rail bridge signed', () => {
@@ -306,4 +384,28 @@ test('SYS-16: THINK\'s tiers are sentences that help: none of one word from Miss
   assert.notDeepEqual(hint('m11', 'arrive'), ['The intercom.', 'Past the atrium.', 'Go in to triage.']);
   assert.notDeepEqual(hint('m12', 'chase'), ['He is on the roof.', 'He waits at the glass.', 'Keep after him.']);
   assert.notDeepEqual(hint('m14', 'parts'), ['The list.', 'On the platform.', 'Read it.']);
+});
+
+// --- the watchers' about-turn (world/DeckWorld.js Sentinel.turnTo) ----------------------------------------------------------
+test('F03, F19: a watcher on a two-point beat turns round at its ends and faces the way it walks (it walked back facing where it came from)', () => {
+  const model = { position: new THREE.Vector3(), rotation: { y: 0 }, userData: { eyeMat: { color: { setHex() {} } }, coneMat: { color: { setHex() {} }, opacity: 0 } } };
+  const s = new Sentinel({ path: [[0, 0], [10, 0]], speed: 2, range: 9, fov: 0.75 }, model);
+  const away = { pos: new THREE.Vector3(999, 0.86, 999), running: false, rayDistance: () => 0 };
+  const facing = [];
+  let x0 = s.pos.x;
+  for (let t = 0; t < 22; t += 1 / 30) {
+    s.update(1 / 30, t, { player: away, here: true });
+    const vx = s.pos.x - x0;
+    x0 = s.pos.x;
+    if (Math.abs(vx) > 1e-4 && s.pos.x > 1.5 && s.pos.x < 8.5) facing.push(Math.sign(vx) === Math.sign(s.dir.x) && Math.abs(s.dir.x) > 0.95);
+  }
+  const off = facing.filter((f) => !f).length;
+  assert.ok(facing.length > 200 && off <= facing.length * 0.03, `faces the way it walks, both ways (but for the half second of a turn): ${off} of ${facing.length} steps not`);
+  // and in Mission 13 the sentry at the gap, walking east, looks east (away from the gap)
+  const m = { ...model, userData: { ...model.userData } };
+  const q = new Sentinel(M13L.sentinels.find((x) => x.id.endsWith('_q0s1')), m);
+  for (let t = 0; t < 26 + 2; t += 1 / 30) q.update(1 / 30, t, { player: away, here: true });
+  const before = q.pos.x;
+  q.update(1 / 30, 28, { player: away, here: true });
+  assert.ok(Math.sign(q.pos.x - before) === Math.sign(q.dir.x), 'the sentry, a beat and more later, still faces its way');
 });

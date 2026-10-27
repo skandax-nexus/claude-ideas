@@ -35,7 +35,9 @@ export default {
       hemi: { sky: 0xf0e8c8, ground: 0x8a9050, k: 0.95 }, sunColor: 0xfff0c8, sunK: 1.15, grade: { shadowTint: 0x2a3418, highlightTint: 0xfff4d8, toning: 0.12, contrast: 1.06, saturation: 1.1 } },
   },
   quarters: [
-    { name: 'THE BATTLEFIELD', area: [-120, 12, 120, 100], spawnAt: 'quayTrench', threshold: { at: 'canyonGate', kind: 'gap' } },
+    // (its checkpoint the quay and the trench; the field past the trench has its own, by the shell zone: caught at the
+    // sandbag line, Kai is walked back to the shells, not all the way to the quay, F03)
+    { name: 'THE BATTLEFIELD', area: [-120, 12, 120, 100], cp: [-120, -12, 56, 120, 30, 100], spawnAt: 'quayTrench', threshold: { at: 'canyonGate', kind: 'gap' } },
     { name: 'THE THREE DEVICES', area: [-120, -48, 120, 12], spawnAt: 'canyonGate', threshold: { at: 'liftBridge', kind: 'bridge' } },
     { name: 'THE STABILIZER', area: [-120, -100, 120, -48], spawnAt: 'liftBridgeN', threshold: null },
   ],
@@ -43,11 +45,14 @@ export default {
   exits: { m13: 'siloYardN' },
   frags: { m13: [['helmetPile', 'shellZone', 'flagPost'], ['rollCallDoor', 'craterRim', 'wagonDoor']] },
   watch: { m13: [
-    // (the canyon lane's patrol, walking its round backwards; and a sentry pacing the sandbag line before the canyon gate,
-    // its gap at the west end: slip through behind its back, F03)
-    [[[-100, 30], [10, 30]], [[26, 28], [58, 28]]],
+    // (the canyon lane's patrol, walking its round backwards; and a sentry pacing the sandbag line before the canyon gate
+    // from its gap at the west end: slip through behind its back as it walks east, F03. Its beat is short enough that a
+    // walk straight at the gate meets it more often than not: tests/lv-fix-missionsB.test.mjs plays both)
+    [[[-100, 30], [10, 30]], [[22, 29], [46, 29]]],
     [[[24, -36], [80, -36], [80, -16], [24, -16]], [[-110, -20], [-70, -20], [-70, 4]]],
-    [[[-70, -56], [0, -56]], [[10, -60], [100, -60]], [[-100, -96], [-100, -60], [-80, -60]]],
+    // (the frozen district's patrol keeps to the channel side of its street: on the glass's side it walked through the
+    // roll-call wall and the spot where Kai looks into the frozen block, F04)
+    [[[-70, -56], [0, -56]], [[10, -54.5], [100, -54.5]], [[-100, -96], [-100, -60], [-80, -60]]],
   ] },
   crowd: [
     // the people of the frozen block: pacing in its ground-floor lobby, behind the glass (not on the street in front of it:
@@ -124,6 +129,9 @@ export default {
       }
       prop(P, 'torch', LINE[0] - 0.6, LINE[1] - 0.8); // (the gap's own flare)
     });
+    // the field's checkpoint: by the shell zone, out of the sentry's sight, facing the gap (the quarter's own covers the
+    // quay and the trench: Q0's cp)
+    P.checkpoints.push({ box: [28, -12, 26, 120, 30, 56], spawn: [64, 0.86, 46, Math.atan2(38, 36)], room: P.rid });
     // --- the container canyons (west of the shell zone) ----------------------------------------------------------
     P.land('canyonGate', 22, 0, 10, Math.PI);
     P.land('containerCanyon', -46, 0, 32, 0);

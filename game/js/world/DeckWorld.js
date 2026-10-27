@@ -1022,6 +1022,10 @@ export class Sentinel {
   turnTo(dir, dt) {
     if (dir.lengthSq() < 1e-6) return;
     const want = dir.clone().normalize();
+    // an about-turn (the end of a two-point beat): from exactly the opposite way the blend below never leaves the line
+    // it is on, and the watcher walked its way back facing where it had come from, its cone behind it. Start the turn
+    // a little to one side
+    if (this.dir.dot(want) < -0.999) this.dir.set(this.dir.x - this.dir.z * 0.1, this.dir.y, this.dir.z + this.dir.x * 0.1).normalize();
     this.dir.lerp(want, 1 - Math.exp(-dt * 6)).normalize();
   }
 
