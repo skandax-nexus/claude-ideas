@@ -118,6 +118,9 @@ export const CASE_FILES = [
   { id: 'garden', name: 'THE SURVIVOR\'S GARDEN', where: 'Mission 14', key: 'c_garden', start: 'side_m14_garden', resolved: 'garden_restored', observed: 'garden_restored && (m18_evacuated || ev_sera23)' },
   { id: 'record', name: 'THE UNWRITTEN RECORD', where: 'Mission 22', key: 'c_record', start: 'side_m22_record', resolved: 'ev_unwritten_record', observed: 'ev_unwritten_record && ending' },
 ];
+// each replay's number in the CASE FILES (1-14): what its card, its spoken title and the menus call it ("Case
+// fourteen", CASE 14 OF 14; its letter, n, read as a placeholder: v2.1 playtest F18). n stays the letter (old saves)
+for (const d of CASES) d.no = CASE_FILES.findIndex((c) => c.key === d.key) + 1;
 export const CASE_STATES = { open: 'NOT STARTED', active: 'ACTIVE', resolved: 'RESOLVED', observed: 'CONSEQUENCE OBSERVED' };
 // facts: anything with test(cond)
 export function caseState(facts, c) {

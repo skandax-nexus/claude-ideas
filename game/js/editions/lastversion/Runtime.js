@@ -22,9 +22,12 @@ import { Score } from './score.js';
 import { Cinema } from './cinema.js';
 import { VoiceFx } from './voicefx.js';
 import { choiceLine, chapterCardLines, missionCardLines, endingLines, POSTCREDIT } from './voicelines.js';
-import { Threads, placeThreads, isRewritten, sidesOf, sideState, coldFact, threadsOf, factOf, playFact, choiceHeader } from './Threads.js';
+import { Threads, placeThreads, isRewritten, sidesOf, sideState, coldFact, threadsOf, factOf, playFact, choiceHeader, condIds } from './Threads.js';
 import { QUESTIONS, PREVIOUSLY, CHOSEN } from './ledger.js';
 import { ROAM, reachedPlaces, roamSave, roamMeta, storyFromRoam, finished, roamFree, fragmentFound, placeName, yearName, ROAM_ONLY } from './roam.js';
+
+// text into a page's HTML
+const esc = (t) => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;');
 
 // the edition's voice packs: common to every chapter, then one per chapter (OVERHAUL.md §8.3)
 export const voicePack = (group) => `assets/voice/lv/${group}/`;
@@ -291,7 +294,27 @@ export class LastVersion {
     // a piece of evidence pinned to the case board: a two-note bell and a toast
     game.facts.onChange((k, v) => {
       if (v && k.startsWith('ev_') && game.campaign?.lv && !this.quietPins) this.pin(k.slice(3));
+      // where Kai stood when the story moved (a thread done, evidence found, a fragment read): a load resumes there
+      // (Runtime.markAnchor; v2.1 playtest FT-11, SYS-06)
+      if (v && /^(t_|ev_|fr_)/.test(k) && !k.endsWith('_paid')) this.markAnchor();
     });
+    // REVERSE is the story's to give: it waits for the thread that teaches it (Runtime.reverseOpen; v2.1 playtest
+    // SYS-09: the records annex reached before the boy on the bench gave it out of order)
+    const unlock = this.inv.unlock.bind(this.inv);
+    this.inv.unlock = () => {
+      if (!this.reverseOpen()) {
+        this.reverseHeld = true;
+        return;
+      }
+      unlock();
+    };
+    // the app sent to the background (the home button, a call): the game saves where it stands, its play time with it
+    // (not as the page unloads: a reload is a load, a quick load or a CLEAR, and what it asks for must not be written
+    // over; v2.1 playtest SYS-06)
+    if (typeof window !== 'undefined') {
+      window.addEventListener('beforeunload', () => { this.unloading = true; });
+      document.addEventListener('visibilitychange', () => document.hidden && this.saveOnHide());
+    }
     // a device that cannot decode the recorded voices (an older WebKit without Opus): say so once
     if (game.voice) {
       game.voice.effects = new VoiceFx(game.voice); // what a line sounds like through: pa, radio, recording, echo
@@ -392,6 +415,36 @@ export class LastVersion {
       window.sessionStorage.removeItem(OPEN_CASES);
     } catch { /* storage blocked: the title */ }
     if (cases) setTimeout(() => !this.g.started && this.caseFiles(), 0);
+    // a start asked for before the page reloaded waits on the title's first button (main.js: "CONTINUE · Tap to
+    // enter"): it says what it starts (v2.1 playtest F18: a case replayed from the ending card)
+    setTimeout(() => this.bootLabel(), 0);
+  }
+
+  // the title's first button, when it runs a start asked for before the reload (g.pendingBoot)
+  bootLabel() {
+    const g = this.g, boot = g.pendingBoot, b = typeof document !== 'undefined' && document.querySelector('#continue');
+    if (!boot || !b || g.started) return null;
+    const action = String(boot.action || '');
+    let head = null, info = null;
+    if (action.startsWith('lv:cases/')) {
+      const d = MISSIONS.cases.find((m) => m.key === action.slice(9));
+      head = 'REPLAY';
+      info = d ? `Case ${d.no} of ${CASE_FILES.length} · ${d.name}` : 'A case file';
+    } else if (action.startsWith('lv:') && CHAPTERS[action.slice(3)]) {
+      head = 'NEW GAME';
+      info = CHAPTERS[action.slice(3)].name;
+    } else if (action === 'load') {
+      const s = listSaves().find((x) => x.slot === boot.slot);
+      if (s?.data) {
+        const d = describeSave(s.data);
+        head = 'CONTINUE';
+        info = `${d.title} · ${d.sub}`;
+      }
+    }
+    if (!head) return null;
+    const text = `${head}<small id="continueInfo">${esc(info)} · Tap to start</small>`;
+    b.innerHTML = text;
+    return text;
   }
 
   // --- sound: the score, the first tap, the mix, what each line sounds like (OVERHAUL.md §8.7, §8.9) -----------
@@ -517,7 +570,7 @@ export class LastVersion {
       const last = latestFor(ch);
       const d = last && describeSave(last.data);
       const ms = MISSIONS[ch];
-      const list = ms.map((m) => `${typeof m.n === 'number' ? m.n : 'Case ' + m.n}. ${m.name}`).join(' · ');
+      const list = ms.map((m) => `${typeof m.n === 'number' ? m.n : 'Case ' + (m.no ?? m.n)}. ${m.name}`).join(' · ');
       return `<div class="chapcard"><h3>${c.name}</h3><p>${c.sub}</p><p class="dim" style="font-size:11px">${ch === 'cases' ? `${CASE_FILES.length} stories` : list}</p><div class="acts">
         ${last ? `<button class="cont" data-cont="${last.slot}">CONTINUE<small>${d.title} · ${d.sub}</small></button>` : ''}
         ${ch === 'cases' ? '<button data-casefiles="1">CASE FILES</button>' : `<button data-newch="${ch}">NEW GAME</button>`}</div></div>`;
@@ -557,6 +610,9 @@ export class LastVersion {
 
   start(chapter, saved = null, waited = false) {
     const g = this.g;
+    // (a chapter started from a menu the title had open, the CASE FILES or the chapters, starts with it closed: the game
+    // steps only with no menu open, v2.1 playtest F01)
+    if (!waited && (g.menu === 'ending' || g.menu === 'chapters')) g.menu = null;
     // a story replayed from the CASE FILES screen: 'cases/<key>' (cases.js), with the facts the player had
     const asked = chapter;
     let replay = null;
@@ -648,9 +704,10 @@ export class LastVersion {
       f = new g.facts.constructor();
       f.facts = { ...d };
     }
-    const rows = CASE_FILES.map((c) => {
+    // (numbered as a replay's card names it: CASE 14 OF 14, v2.1 playtest F18)
+    const rows = CASE_FILES.map((c, i) => {
       const st = caseState(f, c);
-      return `<div class="caseFile" data-state="${st}"><b>${c.name}</b><small>${c.where} · ${CASE_STATES[st]}</small>${c.key ? `<button data-case="${c.key}">REPLAY</button>` : '<small class="dim">part of the main story</small>'}</div>`;
+      return `<div class="caseFile" data-state="${st}"><b>${i + 1}. ${c.name}</b><small>${c.where} · ${CASE_STATES[st]}</small>${c.key ? `<button data-case="${c.key}">REPLAY</button>` : '<small class="dim">part of the main story</small>'}</div>`;
     }).join('');
     // FREE ROAM: the places reached (in a game, its own; from the title, the latest save's), each year a trip
     const log = g.campaign?.lv ? g.log : latestSave()?.data?.log || [];
@@ -681,6 +738,10 @@ export class LastVersion {
         try {
           window.sessionStorage.setItem(CASE_FACTS, JSON.stringify(f.facts || {}));
         } catch { /* storage blocked: the replay reads the latest save */ }
+        // (from the title the replay starts in this page, and these CASE FILES are the menu open: it closes first, as
+        // CONTINUE's does, or the game never steps (main.frame steps only with no menu) and the case's opening never
+        // ends: v2.1 playtest F01. In a game, begin() reloads the page first.)
+        if (!g.started) g.menu = null;
         g.begin(`lv:cases/${b.dataset.case}`, null, CASE_SLOT);
       };
     }
@@ -699,6 +760,7 @@ export class LastVersion {
     if (!latest?.data?.campaign?.lv) return false;
     const { data, meta } = roamSave(latest.data, latest.data.meta, { key, year, format: SAVE_FORMAT });
     if (!writeSave(latest.slot, data, meta)) return false;
+    g.menu = null; // (the CASE FILES close as the trip starts in this page: v2.1 playtest F01)
     g.begin('load', latest.slot);
     return true;
   }
@@ -769,7 +831,109 @@ export class LastVersion {
       if ((this.g.facts.get('inv_cap') || 0) < cap) this.g.facts.set('inv_cap', cap);
     }
     this.resumed = true; // (the sector loads where the save was taken, after a PREVIOUSLY card: onSectorLoaded)
+    // (a finished campaign, its ending reached, loads to its ending's card: postGame. Not a case replay's save, nor a
+    // trip's, which come after an ending and go on as they were)
+    this.finishedLoad = !['cases', 'roam'].includes(campaign.chapter) && !!this.g.facts.get('ending');
     this.start(campaign.chapter, campaign);
+  }
+
+  // --- where a load puts Kai (v2.1 playtest FT-11, SYS-06) --------------------------------------------------------
+  // A save keeps Kai's checkpoint (main.snapshot: the spawn of the quarter area he reached), which can be a long walk
+  // back. So each time the story moves (a thread done, evidence found, a fragment read) the place he stands is kept as
+  // well, with the room, its year and the checkpoint it was reached from: a load puts him there when the checkpoint is
+  // still that one and the room is in that year again. Only where he stood on the ground, out of any moment that holds
+  // him; and a load that finds him falling from it (a held platform that is down again) puts him at the checkpoint.
+  markAnchor() {
+    const g = this.g, c = g.campaign, pl = g.player;
+    if (!c?.lv || !this.level || !pl?.pos || !g.room || !Array.isArray(g.checkpoint) || g.restoring || g.transitioning || g.catching || this.opening || this.castWaitFor) return;
+    if (!pl.grounded || pl.gravity === 0) return;
+    const p = pl.pos, h = pl.H;
+    c.anchor = {
+      mkey: this.deck?.mkey, sector: c.sector, room: g.room, year: g.engine.state(g.room),
+      pos: [+p.x.toFixed(2), +p.y.toFixed(2), +p.z.toFixed(2), h ? +Math.atan2(-h.x, -h.z).toFixed(3) : 0],
+      cp: g.checkpoint.slice(0, 3).map((v) => +(+v).toFixed(2)),
+    };
+  }
+
+  // a load: Kai at his anchor, when it still holds (markAnchor)
+  toAnchor() {
+    const g = this.g, c = g.campaign, a = c?.anchor;
+    this.anchorWatch = null;
+    if (!a || a.mkey !== this.deck?.mkey || a.sector !== c.sector || a.room !== g.room || !Array.isArray(a.pos)) return false;
+    const cp = Array.isArray(c.pos) ? c.pos : g.checkpoint;
+    if (!Array.isArray(cp) || a.cp.some((v, i) => Math.abs(v - cp[i]) > 0.05)) return false;
+    if (g.engine.state(a.room) !== a.year) return false;
+    // (a chase starts again from its start: Kai waits for it where the story left him, at the checkpoint)
+    if (this.threads.current()?.kind === 'chase') return false;
+    g.player.place(a.pos);
+    this.anchorWatch = { y: a.pos[1], t: 3 };
+    return true;
+  }
+
+  // the app sent to the background: save now (not while the page unloads, nor between two places)
+  saveOnHide() {
+    const g = this.g;
+    if (this.unloading || !g.started || !g.campaign?.lv || !this.level || g.transitioning || g.catching || this.castWaitFor || g.restoring) return false;
+    return g.saveTo('auto');
+  }
+
+  // --- REVERSE, given when the story reaches it (v2.1 playtest SYS-09, acts-1-2 F06) -------------------------------
+  // the thread that teaches it: done when Kai has it (Mission 11's "Watch the file that keeps un-burning")
+  reverseThread() {
+    const th = this.threads;
+    if (!th.on) return null;
+    if (this.revThread?.list !== th.list) this.revThread = { list: th.list, t: th.list.find((t) => !t.side && t.done === 'has_inversion') || null };
+    return this.revThread.t;
+  }
+
+  // REVERSE may be given now: no thread teaches it here, or the story has reached that thread
+  reverseOpen() {
+    if (this.g.facts.get('has_inversion')) return true;
+    const t = this.reverseThread();
+    return !t || this.threads.ready(t);
+  }
+
+  // watching the thing that teaches REVERSE counts, from where it can be seen: within 8 m of its landmark, in its room,
+  // looking at it for 4 s (the zone around it asked Kai to walk to within 1.7 m: v2.1 playtest acts-1-2 F06). What the
+  // zone sets is then set, as if he had stepped into it
+  watchStep(dt) {
+    const g = this.g;
+    const t = this.reverseThread();
+    const lm = t && typeof t.at === 'string' ? this.level.landmarks?.[t.at] : null;
+    if (!lm || g.facts.get('has_inversion') || !this.threads.ready(t)) {
+      this.watchT = 0;
+      return;
+    }
+    // (the story is there: a zone spent early, unfire, is armed again)
+    const flags = g.deckWorld.flags;
+    for (const k in flags) {
+      if (!k.startsWith('rearm_')) continue;
+      delete flags[`trig_${k.slice(6)}`];
+      delete flags[k];
+    }
+    if (this.opening || this.cinema?.active || g.catching) {
+      this.watchT = 0;
+      return;
+    }
+    const p = g.player.pos;
+    const i = (this.level.triggers || []).findIndex((z) => z.set && z.once && (!z.room || z.room === g.room) && lm[0] >= z.box[0] && lm[0] < z.box[3] && lm[2] >= z.box[2] && lm[2] < z.box[5]);
+    const z = this.level.triggers?.[i];
+    if (!z || g.deckWorld.flags[`trig_${i}`] || (z.when && !g.facts.test(z.when, g.engine.state(g.room))) || Math.hypot(p.x - lm[0], p.z - lm[2]) > 8) {
+      this.watchT = 0;
+      return;
+    }
+    const cam = g.camera.position;
+    g.camera.getWorldDirection(_v);
+    const dx = lm[0] - cam.x, dy = (lm[1] || 0) + 1 - cam.y, dz = lm[2] - cam.z, d = Math.hypot(dx, dy, dz) || 1;
+    if ((_v.x * dx + _v.y * dy + _v.z * dz) / d < 0.75) {
+      this.watchT = Math.max(0, (this.watchT || 0) - dt);
+      return;
+    }
+    this.watchT = (this.watchT || 0) + dt;
+    if (this.watchT < 4) return;
+    this.watchT = 0;
+    g.deckWorld.flags[`trig_${i}`] = true;
+    for (const [k, v] of Object.entries(z.set)) g.facts.set(k, v);
   }
 
   get deck() {
@@ -916,9 +1080,12 @@ export class LastVersion {
     this.anchored = null;
     g.engine.setGlobal('heldPersists', false);
     let opening = false;
+    // (a case file by its number in the CASE FILES, not its letter: "CASE N" read as a placeholder, v2.1 playtest F18)
+    const kicker = `${chapter.name} · ${typeof deck.n === 'number' ? `MISSION ${deck.n}` : `CASE ${deck.no ?? deck.n}${deck.no ? ` OF ${CASE_FILES.length}` : ''}`}${deck.sectors > 1 ? ` · ${c.sector + 1} OF ${deck.sectors}` : ''}`;
     if (intro) {
       g.held = null;
-      const kicker = `${chapter.name} · ${typeof deck.n === 'number' ? `MISSION ${deck.n}` : `CASE ${deck.n}`}${deck.sectors > 1 ? ` · ${c.sector + 1} OF ${deck.sectors}` : ''}`;
+      delete c.opening;
+      delete c.anchor;
       if (c.sector === 0) {
         opening = kicker;
         c.mStart = g.playTime || 0; // (time_<mkey>: how long the mission took, stored when it ends)
@@ -955,6 +1122,23 @@ export class LastVersion {
         g.checkpoint = sp;
       }
     }
+    // a save taken while the mission's opening played (the app sent to the background during a cold open: pause, QUIT)
+    // loads with the opening played again, every room back in its own year first: Mission 12's cold open is shot in
+    // 2196, and a save inside it loaded the chase in 2196 with the Chronolith draining (v2.1 playtest acts-1-2 F05)
+    const cut = resumed && c.opening?.mkey === deck.mkey && !this.finishedLoad ? c.opening : null;
+    delete c.opening;
+    if (cut) {
+      for (const [r, y] of Object.entries(cut.home || {})) if (this.level.rooms[r] && g.engine.statesOf(r).includes(y)) g.engine.setState(r, y, { force: true });
+      g.deckWorld.refresh?.();
+      opening = kicker;
+      this.pendingResume = null;
+    }
+    // else a load puts Kai where he last did something since he reached his checkpoint (markAnchor), when that place
+    // stands as it did then; else at the checkpoint (v2.1 playtest FT-11, SYS-06)
+    else if (resumed && !this.finishedLoad) this.toAnchor();
+    // (and the Chronolith gives a load a moment: a save taken low in another year let go of Kai seconds after loading,
+    // v2.1 playtest F06)
+    if (resumed && !deck.roam) this.stability = c.stability = Math.max(this.stability, 0.6);
     // an open place: its scenery, sky and horizon, in the room's year (instantly: no easing at a load)
     if (this.level.place) {
       this.mounted = this.level.scenery?.(g.deckWorld.root, this) || null;
@@ -981,8 +1165,10 @@ export class LastVersion {
     if (opening) this.openMission(deck, opening);
     else if (deck.roam) this.roamCard(); // (a trip has no opening and no PREVIOUSLY: where it is, and that the story waits)
     else if (resumed && this.backFromRoam) this.backCard();
+    else if (resumed && this.finishedLoad) this.postGame();
     else if (resumed) this.previously();
     this.backFromRoam = false;
+    this.finishedLoad = false;
     // (a trip's fade, travelled to or back from in the page: the new place is up)
     if (this.travelFade) {
       this.travelFade = false;
@@ -1163,6 +1349,10 @@ export class LastVersion {
     // that has it, each room's own put back after it
     const rooms = co?.year ? (this.level?.order || []).filter((r) => g.engine.statesOf(r).includes(co.year)) : [];
     const home = Object.fromEntries(rooms.map((r) => [r, g.engine.state(r)]));
+    // (marked in the save until it is over: a save taken inside it loads with its rooms in their own years and the
+    // opening played again, onSectorLoaded; v2.1 playtest acts-1-2 F05)
+    const camp = g.campaign;
+    camp.opening = { mkey: deck.mkey, home };
     const toYear = (y) => {
       let moved = false;
       for (const r of rooms) {
@@ -1186,6 +1376,7 @@ export class LastVersion {
     const finish = () => {
       this.hideCard();
       this.opening = null;
+      delete camp.opening;
       if (co?.year) toYear(null);
       if (co?.cast || staged) g.facts.set(coldFact(deck), false);
       if (co?.set) for (const [k, v] of Object.entries(co.set)) g.facts.set(k, v);
@@ -1346,7 +1537,9 @@ export class LastVersion {
       flags[`rule_${r.id}`] = true;
       if (r.set) for (const [k, v] of Object.entries(r.set)) g.facts.set(k, v);
       if (r.say) this.sayRule(r);
+      this.reverseHeld = false;
       if (r.then) deck.fx?.[r.then]?.(this);
+      if (this.reverseHeld) this.unfire(r);
     }
     this.threads.update(); // (a thread that is now done sets its fact, once, with what it carries)
     if (deck.done && !flags.beat_done && g.facts.test(deck.done)) g.beatDone();
@@ -1354,6 +1547,24 @@ export class LastVersion {
     g.deckWorld.refresh?.();
     this.mounted?.refresh(); // pieces of the place that wait on a fact (the braced wall, the drained basin)
     this.objective();
+  }
+
+  // a rule that gave REVERSE before the story reached it (inv.unlock, wrapped in the constructor) has not happened: it
+  // waits to fire again, and what a zone set for it (Kai at the charred file early) is unset. The zone stays spent
+  // while Kai stands in it (or it would fire every step) and is armed again, in the saved flags, once the story is
+  // there (watchStep): then stepping into it, or watching the thing, sets it again (v2.1 playtest SYS-09)
+  unfire(r) {
+    const g = this.g, flags = g.deckWorld.flags;
+    this.reverseHeld = false;
+    delete flags[`rule_${r.id}`];
+    const ids = new Set(condIds(r.when));
+    (this.level?.triggers || []).forEach((z, i) => {
+      const keys = Object.keys(z.set || {}).filter((k) => ids.has(k));
+      if (!keys.length) return;
+      flags[`trig_${i}`] = true;
+      flags[`rearm_${i}`] = true;
+      for (const k of keys) g.facts.set(k, false);
+    });
   }
 
   // a mission whose last thread is its end (Helix's chamber, the fracture) goes on without a walk to the gate: once a
@@ -1842,13 +2053,29 @@ export class LastVersion {
     const state = g.engine.state(g.room);
     const out = !this.roaming && state !== this.home(); // (a trip costs the Chronolith nothing)
     const outdoors = this.deck?.stableOutdoors && g.room === this.level.outdoorRoom;
-    const draining = out && this.unstable && !outdoors && !this.opening; // (a cold open shot in another year costs nothing)
+    // (a cold open shot in another year costs nothing; nor does a staged moment, a mission's outro, or the way to the
+    // next place: the Chronolith let go of Kai inside the Act I card after Mission 3's outro, v2.1 playtest FT-14)
+    const draining = out && this.unstable && !outdoors && !this.opening && !this.cinema?.active && !g.transitioning;
     const holding = this.unstable && !!this.inv?.active && !this.inv.active.lock;
     if (draining) this.stability = Math.max(0, this.stability - dt * 0.045);
     else if (!out && !holding) this.stability = Math.min(1, this.stability + dt * 0.1);
     g.hud.setStability(this.stability, !!facts.get('has_chronolith') && (out || this.stability < 1), draining);
     if (draining && this.stability <= 0 && !g.catching) this.snapBack();
     g.campaign.stability = this.stability;
+    // a checkpoint reached is saved (main.stepDeck moves it without a save: a reload went back to the one before,
+    // and the play time with it, v2.1 playtest SYS-06)
+    if (g.checkpoint !== this.cpSeen) {
+      if (this.cpSeen !== undefined && !g.catching && !g.transitioning) g.dirty = true;
+      this.cpSeen = g.checkpoint;
+    }
+    // a load at an anchor that is not there any more (a held platform down again, a moving one gone): the checkpoint
+    if (this.anchorWatch) {
+      if (p.y < this.anchorWatch.y - 1.5 && !g.catching) {
+        g.player.place(g.checkpoint);
+        this.anchorWatch = null;
+      } else if ((this.anchorWatch.t -= dt) <= 0) this.anchorWatch = null;
+    }
+    this.watchStep(dt);
     // Echo Step cooldown, the afterimage
     this.echoCd = Math.max(0, this.echoCd - dt);
     if (this.ghost && (this.ghostT -= dt) <= 0) this.ghost.visible = false;
@@ -2003,19 +2230,25 @@ export class LastVersion {
   }
 
   snapBack() {
-    const g = this.g;
+    const g = this.g, deck = this.deck;
     g.catching = true;
     this.inv?.release('snap');
     g.hud.fade(true);
     g.audio.deny();
     setTimeout(() => {
+      // (the mission ended meanwhile, or the way to the next place began: that has its own fade, and the next card is
+      // not the place for "The Chronolith let go of me", v2.1 playtest FT-14)
+      if (this.deck !== deck || g.transitioning || !g.campaign?.lv) {
+        g.catching = false;
+        return;
+      }
       g.engine.setState(g.room, this.home(), { force: true });
       g.player.place(g.checkpoint);
       this.stability = 0.5;
       g.hud.fade(false);
       g.catching = false;
       g.deckWorld.refresh();
-      this.say(LINES.snap);
+      if (!this.opening && !this.cinema?.active) this.say(LINES.snap);
     }, 700);
   }
 
@@ -2387,8 +2620,11 @@ export class LastVersion {
       const m = roamMeta(this.g.campaign, this.g.engine.state(this.level?.outdoorRoom) || this.g.campaign.roam.year);
       return { where: m.where, chapter: m.chapter };
     }
+    // (a finished campaign is its ending: CONTINUE opens its card, postGame)
+    const end = this.chapter !== 'cases' && this.g.facts.get('ending');
+    if (end && ENDINGS[end]) return { where: `THE LAST VERSION · ENDING ${end}: ${ENDINGS[end].title}`, chapter: 'The case files and free roam' };
     const q = this.threads.on ? this.level?.quarters?.[this.g.campaign.quarter || 0]?.name : null;
-    return { where: `THE LAST VERSION · ${d?.name || ''}`, chapter: `${typeof d?.n === 'number' ? `Mission ${d.n}` : `Case ${d?.n}`}${q ? ` · ${q}` : d?.sectors > 1 ? ` · ${this.g.campaign.sector + 1}/${d.sectors}` : ''}` };
+    return { where: `THE LAST VERSION · ${d?.name || ''}`, chapter: `${typeof d?.n === 'number' ? `Mission ${d.n}` : `Case ${d?.no ?? d?.n}`}${q ? ` · ${q}` : d?.sectors > 1 ? ` · ${this.g.campaign.sector + 1}/${d.sectors}` : ''}` };
   }
 
   mapTitle() {
@@ -2399,31 +2635,58 @@ export class LastVersion {
   }
 
   // --- the ending ---------------------------------------------------------------------------------------------
-  ending(key) {
+  // the ending's card: what it was, the stats, THE CASES (the case files and free roam) and the title. Shown at the end
+  // of the ending's sequence, and again when a finished campaign is loaded (postGame)
+  endingCard(key, again = false) {
     const g = this.g;
     const e = ENDINGS[key];
-    if (!e) return;
-    g.facts.set('ending', key);
+    if (!e || typeof document === 'undefined') return false;
     const mins = Math.round(g.playTime / 60);
     const evs = Object.keys(g.facts.facts).filter((k) => k.startsWith('ev_') && g.facts.facts[k]).length;
     // each chapter's time, from the missions' own (time_<mkey>, stored as each one ended)
     const hm = (sec) => (sec >= 3600 ? `${Math.floor(sec / 3600)} h ${Math.round((sec % 3600) / 60)} min` : `${Math.max(1, Math.round(sec / 60))} min`);
     const times = ORDER.map((ch) => [ch, MISSIONS[ch].reduce((a, m) => a + (g.facts.get(`time_${m.key}`) || 0), 0)]).filter(([, t]) => t > 0)
       .map(([ch, t]) => `<span>${CHAPTERS[ch].name} ${hm(t)}</span>`).join('');
-    const show = () => {
-      const $ = (s) => document.querySelector(s);
-      $('#ending .body').innerHTML = `
-        <h2>ENDING ${key} — ${e.title}</h2>${e.text.map((p, i) => `<p${i === e.text.length - 1 ? ' class="dim"' : ''}>${i === e.text.length - 1 ? `“${p}”` : p}</p>`).join('')}
-        <p class="dim">A post-credit clock begins ticking. A voice confirms: “Version one hundred and eighteen.”</p>
-        <div class="stats"><span>${Math.floor(mins / 60)} h ${mins % 60} min</span><span>${evs} pieces of evidence</span><span>standing: ${g.facts.get('faction') || 'neutral'}</span><span>ally: ${g.facts.get('ally') || 'none'}</span></div>
-        ${times ? `<div class="stats">${times}</div>` : ''}
-        <button class="big" id="lvCases">THE CASES<small>The case files: fourteen stories, each replayed from its place</small></button>
-        <button id="lvTitle">BACK TO THE TITLE</button>`;
-      $('#lvCases').onclick = () => this.caseFiles();
-      $('#lvTitle').onclick = () => location.reload();
-      g.saveTo('auto');
-      g.openMenu('ending');
+    const $ = (s) => document.querySelector(s);
+    $('#ending .body').innerHTML = `
+      <h2>ENDING ${key} — ${e.title}</h2>${again ? '<p class="dim">The story is over. The cases it walked past, and the places it reached, are still open.</p>' : ''}${e.text.map((p, i) => `<p${i === e.text.length - 1 ? ' class="dim"' : ''}>${i === e.text.length - 1 ? `“${p}”` : p}</p>`).join('')}
+      ${again ? '' : '<p class="dim">A post-credit clock begins ticking. A voice confirms: “Version one hundred and eighteen.”</p>'}
+      <div class="stats"><span>${Math.floor(mins / 60)} h ${mins % 60} min</span><span>${evs} pieces of evidence</span><span>standing: ${g.facts.get('faction') || 'neutral'}</span><span>ally: ${g.facts.get('ally') || 'none'}</span></div>
+      ${times ? `<div class="stats">${times}</div>` : ''}
+      <button class="big" id="lvCases">THE CASES<small>The case files: fourteen stories, each replayed from its place, and free roam</small></button>
+      <button id="lvTitle">BACK TO THE TITLE</button>`;
+    $('#lvCases').onclick = () => this.caseFiles();
+    $('#lvTitle').onclick = () => location.reload();
+    g.saveTo('auto');
+    g.openMenu('ending');
+    return true;
+  }
+
+  // a finished campaign loaded (CONTINUE, LOAD GAME or a chapter's CONTINUE on the save its ending wrote): its ending's
+  // card again, with THE CASES and free roam behind it, never the Finale's hilltop with nothing left to do and "The
+  // next door is open" (v2.1 playtest X2). The card opens once begin() is done: a load in this page runs inside it,
+  // and begin() closes every panel when it returns (a card opened before that hid with the game still held under it,
+  // v2.1 playtest F01's softlock)
+  postGame() {
+    const g = this.g, deck = this.deck;
+    this.pendingResume = null;
+    this.hideCard();
+    const open = () => {
+      if (!g.campaign?.lv || this.deck !== deck) return;
+      g.hud.skipAll?.();
+      this.score.cue('title');
+      if (!this.endingCard(g.facts.get('ending'), true)) this.caseFiles();
     };
+    if (typeof queueMicrotask === 'function') queueMicrotask(open);
+    else Promise.resolve().then(open);
+  }
+
+  ending(key) {
+    const g = this.g;
+    const e = ENDINGS[key];
+    if (!e) return;
+    g.facts.set('ending', key);
+    const show = () => this.endingCard(key);
     // a flash, a second of silence, the ending's music; the bible's text, what the ending adds, Kai's quote
     // (C through the echo), the epilogue; four clock ticks; the voice in every speaker; the overlay
     g.hud.flash('rgba(255,255,255,0.9)');

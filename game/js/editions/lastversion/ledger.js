@@ -184,7 +184,8 @@ export const PREVIOUSLY = {
   finale: ['Outside time, Mira walked through a blue door alone.', 'She told him whose idea it was.', 'At the first second, the logs said who was early.'],
   cases: ['The stories the main road walked past.', 'Each one waits in its own place.', 'Some of them are still open.'],
   // a load inside a mission its chapter's recap has fallen behind (the Prologue's starts before the crash): its own
-  m02: ['At 8:14 the 41 came into Line 41 at full speed.', 'Every speaker in the station said his name: Do not build the machine.', 'Tonight Helix has gone dark, and Kai Varen is inside it.'],
+  // (Mission 2 is the same morning as the crash, in the storm: not "tonight", v2.1 playtest FT-14)
+  m02: ['At 8:14 the 41 came into Line 41 at full speed.', 'Every speaker in the station said his name: Do not build the machine.', 'Now Helix has gone dark, and Kai Varen is inside it.'],
   m03: ['Helix went dark, and under it waited the ring Mira drew.', 'Kai touched it, and it let him in.', 'Now the building has three dates, and it is trying all of them.'],
 };
 

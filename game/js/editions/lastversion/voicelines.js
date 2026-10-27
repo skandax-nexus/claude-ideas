@@ -54,7 +54,8 @@ export function chapterCardLines(chapter) {
 
 // a mission's card: "Mission four. The Man from the Last Day." and its logline
 export function missionCardLines(m) {
-  const n = typeof m.n === 'number' ? `Mission ${numberWords(m.n)}` : `Case ${m.n}`;
+  // (a case file by its number in the CASE FILES, cases.js no: "Case N." read as a placeholder, v2.1 playtest F18)
+  const n = typeof m.n === 'number' ? `Mission ${numberWords(m.n)}` : `Case ${m.no ? numberWords(m.no) : m.n}`;
   return [{ who: 'NONE', text: `${n}. ${titleCase(m.name)}.` }, ...((m.logline || m.subtitle) ? [{ who: 'NONE', text: m.logline || m.subtitle }] : [])];
 }
 
