@@ -1055,12 +1055,33 @@ function firstSwitchRooms(P, story, si, rt) {
   });
   // r1 the temporal lab (the east wing's ground floor, glass to the court): the socket was put in in 2026, the switch
   // works in 2049. In 2026 the wing is a bare frame: a gap in the lab's south wall lets Kai out to the court and the dig
-  D.room({ id: 'cable', name: 'TEMPORAL LAB', W: 14, L: 18, H: 6.5, exit: 'W', windows: { S: 'full', E: [[3.8, 9, 1.0, 4.6]] }, gaps: { E: [{ at: [0.8, 3.2], closed: '!@PAST' }] } }, (R) => {
+  // (playtest v2.1.1 L42: from the door the three years looked alike, the same walls, ceiling and consoles under another
+  // floor tint. Now 2026 is a building site under the open sky: no ceiling, the wing's steel frame standing inside its
+  // walls, no desks yet, a builder's lamp, cable drums and sheeting; 2196 has lost its roof too, its panels fallen in, the
+  // desks rusted and ivy down the walls)
+  D.room({ id: 'cable', name: 'TEMPORAL LAB', W: 14, L: 18, H: 6.5, exit: 'W', roof: { PRESENT: 'solid', PAST: 'open', FUTURE: 'open' }, windows: { S: 'full', E: [[3.8, 9, 1.0, 4.6]] }, gaps: { E: [{ at: [0.8, 3.2], closed: '!@PAST' }] } }, (R) => {
     R.floor();
-    R.prop('desk', -4, -5);
-    R.prop('console', 4, -5);
+    R.prop('desk', -4, -5, { when: '!@PAST' });
+    R.prop('console', 4, -5, { when: '!@PAST' });
     // in 2026 the far third of the floor is open framing
     R.box([-7.4, -0.4, -18, 7.4, 0, -12], { mat: 'trimDark', when: '@PAST' });
+    // 2026: the steel frame (columns at the walls, beams across where the ceiling will be), a builder's lamp on a stand,
+    // cable drums and a sheet of plastic over the window wall; a site board on the far wall
+    for (const z of [-0.6, -6.2, -11.8, -17.4]) {
+      for (const x of [-6.75, 6.75]) R.box([x - 0.25, 0, z - 0.25, x + 0.25, 6.5, z + 0.25], { mat: 'trimDark', solid: false, when: '@PAST' });
+      R.box([-7, 5.9, z - 0.2, 7, 6.4, z + 0.2], { mat: 'trimDark', solid: false, when: '@PAST' });
+    }
+    R.box([-7, 6.0, -18, -6.5, 6.4, 0], { mat: 'trimDark', solid: false, when: '@PAST' });
+    R.box([6.5, 6.0, -18, 7, 6.4, 0], { mat: 'trimDark', solid: false, when: '@PAST' });
+    R.box([-2.2, 0, -8.2, -1.9, 2.4, -7.9], { mat: 'trimDark', solid: false, when: '@PAST' });
+    R.box([-2.6, 2.4, -8.4, -1.5, 3.0, -7.7], { mat: 'glow', solid: false, when: '@PAST' });
+    for (const [x, z] of [[-4.2, -4.8], [3.6, -9.6]]) R.box([x - 0.6, 0, z - 0.6, x + 0.6, 1.1, z + 0.6], { mat: 'crate', when: '@PAST' });
+    R.box([-6.9, 0.2, -11, -6.7, 4.8, -2], { mat: 'glass', solid: false, when: '@PAST' });
+    R.text('HELIX EAST WING - STEEL FRAME - 2026', [0, 3.0, -17.9], 0, { size: 0.42, color: '#ffd27a', when: '@PAST' });
+    R.text('HARD HATS BEYOND THIS POINT', [0, 2.4, -17.9], 0, { size: 0.26, color: '#ffd27a', when: '@PAST' });
+    // 2196: the ceiling's panels fallen in across the floor, ivy down the walls
+    for (const [x0, z0, x1, z1, h] of [[-6.6, -9, -1.2, -6.4, 0.5], [1.4, -14.6, 6.6, -11.8, 0.6], [-3, -3.2, 2, -1.6, 0.35]]) R.box([x0, 0, z0, x1, h, z1], { mat: 'industrial', when: '@FUTURE' });
+    for (const [x, z] of [[-6.95, -4], [-6.95, -10], [6.65, -12], [6.65, -16]]) R.box([x, 1.2, z - 1.4, x + 0.3, 6.5, z + 1.4], { mat: 'moss', solid: false, when: '@FUTURE' });
     R.inter({ id: 'cable_socket', kind: 'socket', pos: [6.6, 1.3, -14], yaw: -Math.PI / 2, r: 2.4, prompt: 'CABLE SOCKET (2026)', needs: 'cable', only: 'PAST', no: 'The socket was put in in 2026. In this year it was never installed.' });
     R.text('MAIN FEED - NOT CONNECTED', [6.9, 2.6, -14], -Math.PI / 2, { size: 0.34, color: '#ffd9a0', when: '!cable_connected' });
     R.text('MAIN FEED - CONNECTED', [6.9, 2.6, -14], -Math.PI / 2, { size: 0.34, color: '#7fe0a8', when: 'cable_connected' });

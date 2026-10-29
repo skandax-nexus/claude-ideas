@@ -345,20 +345,21 @@ class Room {
     // lit screen, a shelf uprights and boards and the binders on them: each collides as one box and is drawn in pieces
     if (this.P && ['desk', 'console', 'shelf'].includes(kind)) {
       const wood = o.mat === 'prop2';
-      const v = (b, mat) => this.box(b, { mat, solid: false });
+      const w = o.when ? { when: o.when } : {}; // (a prop of some years only: Mission 3's lab, not yet fitted out in 2026)
+      const v = (b, mat) => this.box(b, { mat, solid: false, ...w });
       if (kind === 'desk') {
-        this.box([x - 0.9, 0, z - 0.5, x + 0.9, 0.78, z + 0.5], { vis: false });
+        this.box([x - 0.9, 0, z - 0.5, x + 0.9, 0.78, z + 0.5], { vis: false, ...w });
         v([x - 0.92, 0.72, z - 0.52, x + 0.92, 0.78, z + 0.52], wood ? 'wood' : 'counterTop');
         for (const s of [-1, 1]) v([x + s * 0.45, 0, z - 0.46, x + s * 0.88, 0.72, z + 0.46], wood ? 'wood' : 'panelGrey');
         if (!wood) { v([x - 0.34, 0.86, z - 0.34, x + 0.34, 1.26, z - 0.3], 'carGlass'); v([x - 0.04, 0.78, z - 0.34, x + 0.04, 0.86, z - 0.28], 'ironDark'); v([x - 0.25, 0.78, z - 0.1, x + 0.25, 0.8, z + 0.08], 'ironDark'); }
       } else if (kind === 'console') {
-        this.box([x - 0.6, 0, z - 0.4, x + 0.6, 1.0, z + 0.4], { vis: false });
+        this.box([x - 0.6, 0, z - 0.4, x + 0.6, 1.0, z + 0.4], { vis: false, ...w });
         v([x - 0.6, 0.1, z - 0.4, x + 0.6, 1.0, z + 0.4], 'panelGrey');
         v([x - 0.56, 0, z - 0.34, x + 0.56, 0.1, z + 0.34], 'ironDark');
         v([x - 0.5, 1.0, z - 0.3, x + 0.5, 1.06, z + 0.3], 'glowAccent');
         v([x - 0.5, 1.06, z - 0.36, x + 0.5, 1.5, z - 0.3], 'carGlass');
       } else {
-        this.box([x - 1.2, 0, z - 0.35, x + 1.2, 2.2, z + 0.35], { vis: false });
+        this.box([x - 1.2, 0, z - 0.35, x + 1.2, 2.2, z + 0.35], { vis: false, ...w });
         for (const s of [-1, 1]) v([x + s * 1.14, 0, z - 0.35, x + s * 1.2, 2.2, z + 0.35], wood ? 'wood' : 'panelGrey');
         v([x - 1.14, 0.05, z + 0.28, x + 1.14, 2.15, z + 0.33], 'shopShelves');
         for (let k = 0; k < 5; k++) v([x - 1.14, 0.08 + k * 0.52, z - 0.33, x + 1.14, 0.12 + k * 0.52, z + 0.33], wood ? 'wood' : 'panelWhite');

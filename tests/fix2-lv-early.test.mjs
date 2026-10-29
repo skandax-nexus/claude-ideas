@@ -226,3 +226,14 @@ test('L20, L34: Mission 8\'s terminal is offered in 2049 only, and the escape co
   M08.step(rt, 1 / 30);
   assert.ok(!facts.get('m08_back49'), 'cleared in 2026');
 });
+
+test('L42: Mission 3\'s lab differs by year from the door: open sky and a steel frame in 2026, fallen panels in 2196', () => {
+  const lab = M3.rooms.cable;
+  assert.ok(lab.sky, 'a roof that differs per year shows the sky where it is open');
+  const els = M3.elements.filter((e) => e.room === 'cable');
+  // the ceiling: solid in 2049 only
+  const ceil = els.filter((e) => e.box[1] >= lab.H - 0.01 + (lab.spawn[1] - 0.86) && e.box[4] - e.box[1] < 0.6);
+  assert.ok(ceil.length && ceil.every((e) => compileCondition(e.when || 'true')({ fact: () => false, state: 'PRESENT' }) && !compileCondition(e.when || 'true')({ fact: () => false, state: 'PAST' })), 'the ceiling stands in 2049 only');
+  const texts = M3.texts.filter((t) => /STEEL FRAME - 2026/.test(t.text));
+  assert.ok(texts.length && texts.every((t) => t.when === '@PAST'), 'a site board in 2026');
+});
