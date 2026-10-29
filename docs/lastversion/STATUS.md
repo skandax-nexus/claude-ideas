@@ -1563,6 +1563,21 @@ in 5,143 recordings. Each mission's place is 1.7-6.8 ha (v2.0's generated rooms:
   cellar steps, at Ezra's counter and the book; a crossing on the toast's count gets across) and Mission 2's stair (up
   by the stick, cell 2 taken). Not done: no phone has installed or run it, and no person has played it or listened.
 
+- **The v2.1.1 deep playtest (2026-10-28): [PLAYTEST-v2.1.1.md](PLAYTEST-v2.1.1.md).** Seven AI testers played the
+  built v2.1.1 preview (`0f3dcc6`) by touch at phone size, by slice: the Prologue as a first-time player, each Act, the
+  post-game and robustness. A separate verifier re-checked each report. Headline numbers:
+  - **Findings:** 140 (124 reported, 16 found by the verifiers); 8 tester error, 13 by design. The rest merge into 98
+    problems: no blockers, 6 high, 23 medium, 45 low, 24 polish.
+  - **The highs:** Mission 12's court dome (not solid, over a hole); Mission 10's hall stair (a hole at its top) and
+    yard checkpoint (on the trooper's line); Mission 7's astronomer talk (the Chronolith snaps Kai off the summit
+    mid-talk); Mission 2's terrace stair (throws Kai back); Mission 16's cave floors (holes).
+  - **The v2.1 findings:** 79 of 87 re-checked; 70 hold, 7 partly, 2 regressed. The regressions are Acts III–IV F08
+    (Mission 15's camera at Tomas's desk, never fixed) and F19 (Mission 18's hold patrol never appears).
+  - **Scores (1–5):** clarity 3.6, fun 3.1, visuals 3.0, audio 3.9 (v2.1: 3.4, 2.8, 2.7, 3.2).
+
+  Station Zero 1.1.1 was played in the same round: [../PLAYTEST-v1.1.1.md](../PLAYTEST-v1.1.1.md) (2 high, 8 medium,
+  16 low, 4 polish). Nothing in the game was changed; still not done: a real phone, an ear check and a human player.
+
 ## Generated (playable, solvable by construction, not hand-tuned)
 
 - **Nothing of the places since U3.** Every mission and both cases stand in an authored open place;
