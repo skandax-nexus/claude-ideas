@@ -51,7 +51,7 @@ const STYLE = `
 // the keys that skip a line and its shot (Enter is the SKIP button's); the actions held while a moment plays (use, the year,
 // REVERSE, echo-step, the anchor, THINK, gear): what acts in the world. Pause, the map, the case board, saves pass.
 const SKIP_KEYS = ['Space', 'KeyE', 'Enter', 'NumpadEnter'];
-const HELD = /^(use|shift|set:|combo|anchor|hint|gear:|rules$)/;
+const HELD = /^(use|shift|year$|set:|combo|anchor|hint|gear:|rules$)/;
 
 const _a = new THREE.Vector3(), _b = new THREE.Vector3();
 

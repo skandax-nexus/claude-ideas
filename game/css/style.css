@@ -684,6 +684,9 @@ body.lastversion.calm #state { opacity: 0.7; }             /*  at 0.38 the year 
 /* YEAR before the Chronolith: greyed and quiet (it still answers: "I can't change the year. Not yet.") */
 body.lastversion.touch.lvnoyear #buttons .b.shift { background: rgba(255, 255, 255, 0.22); color: rgba(255, 255, 255, 0.85); box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.45); opacity: 0.5; text-shadow: var(--halo); }
 body.lastversion.touch.lvnoyear #buttons .b.shift span::after { content: "NOT YET"; display: block; margin-top: 2px; font-size: 8px; letter-spacing: 0.14em; opacity: 0.85; }
+/* a place with one year (Mission 6's cellar and shop): greyed the same way, ONE YEAR under it (v2.1.1 playtest L5) */
+body.lastversion.touch.lvoneyear #buttons .b.shift { background: rgba(255, 255, 255, 0.22); color: rgba(255, 255, 255, 0.85); box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.45); opacity: 0.5; text-shadow: var(--halo); }
+body.lastversion.touch.lvoneyear #buttons .b.shift span::after { content: "ONE YEAR"; display: block; margin-top: 2px; font-size: 8px; letter-spacing: 0.14em; opacity: 0.85; }
 
 /* the causal anchor on a phone: a button beside YEAR while Kai carries something out of another year (Tips.js keeps
    lvcarry / lvanchored), and the CARRYING label, which anchors too */

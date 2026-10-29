@@ -13,6 +13,7 @@ import { ACTS, ENDINGS, CASE_FILES, CASE_STATES, caseState } from './acts.js';
 import { ENDING_SHOTS } from './finale.js';
 import { CAST, DIALOGUE, NPCS, TRUST, KNOWLEDGE, AMBIENT, npcState } from './npcs.js';
 import { Inversion } from './inversion.js';
+import { YearPick } from './yearpick.js';
 import { placeAuthored } from './processes.js';
 import { buildPlace, themeFor as placeTheme, sunDir as placeSun } from './places/index.js';
 import { registerModels, makeDresser, loadCast, castReady, lodUpdate } from './casting.js';
@@ -228,7 +229,7 @@ export const LINES = {
 };
 export const LINE_SPEAKERS = { echo: 'NONE' };
 // shown, never spoken
-const TOASTS = { no_state: 'This place does not have that year.' };
+const TOASTS = { no_state: 'This place does not have that year.', one_year: 'Only one year here: the year cannot change.' };
 
 const EV_LABELS = {
   admitted_by: 'ADMITTED BY: K. VAREN, in an older hand', lock_order: 'The Ward 32 lock went in RING, BAR, STAR, CRESCENT',
@@ -307,6 +308,7 @@ export class LastVersion {
     this.mounted = null; // the open place in the browser: scenery, sky, horizon (places/mount.js)
     this.score = new Score(this); // the music, the cues, the beds, the mix (score.js)
     this.cinema = new Cinema(this); // cold opens, outros, the endings (cinema.js)
+    this.yearPick = new YearPick(this); // YEAR on a phone, in a place with three years: a picker (yearpick.js)
     game.facts.onChange(() => this.onFact());
     // a piece of evidence pinned to the case board: a two-note bell and a toast
     game.facts.onChange((k, v) => {
@@ -413,6 +415,8 @@ export class LastVersion {
     for (const [sel, label] of [['#dock .hint', 'Think'], ['#dock .combo', 'Echo Step'], ['#buttons .combo', 'Echo Step'], ['#buttons .shift', 'Switch year'], ['#dock .journal', 'Case board'], ['#dock .laws', 'Case board']]) {
       for (const el of document.querySelectorAll(sel)) el.setAttribute('aria-label', label);
     }
+    // (the YEAR button asks for the year it means: a picker where a place has three, yearpick.js; Q still steps on)
+    for (const el of document.querySelectorAll('#buttons .shift')) el.dataset.act = 'year';
     const mapLegend = $('#map .legend .npc');
     if (mapLegend) mapLegend.textContent = 'People';
     // (no law tokens and no save beacons here, and the watchers are people and drones: the map's key says so)
@@ -2061,6 +2065,7 @@ export class LastVersion {
     const g = this.g;
     if (!g.campaign?.lv || !this.level) return;
     this.cinema.step(dt);
+    this.yearPick.step(dt);
     this.mounted?.step?.(dt); // (what moves in a place and carries Kai, Mission 7's gangways: every step, drawn or not)
     const facts = g.facts;
     const flags = g.deckWorld.flags;
@@ -2339,6 +2344,14 @@ export class LastVersion {
   }
 
   // --- the verbs -----------------------------------------------------------------------------------------
+  // the YEAR button (touch): where the place has three years, the picker (yearpick.js); else a switch, as Q does
+  yearButton() {
+    const g = this.g;
+    if (g.facts.get('has_chronolith') && !g.engine.locked.has(g.room) && g.engine.statesOf(g.room).length >= 3) return this.yearPick.toggle();
+    this.yearPick.close();
+    return this.shift();
+  }
+
   shift(to) {
     const g = this.g;
     const { engine, facts } = g;
@@ -2362,6 +2375,12 @@ export class LastVersion {
         g.hud.toast(`<small>${this.label(to)}</small><br>${TOASTS.no_state}`, 1800);
         return;
       }
+    }
+    // a place with one year: YEAR is dimmed (Tips.js), and a tap says why (v2.1.1 playtest L5: it only buzzed)
+    if (!to && engine.statesOf(g.room).length < 2) {
+      g.audio.deny();
+      if (!(g.hud.toastT > 0)) g.hud.toast(`<small>${this.label(engine.state(g.room))}</small><br>${TOASTS.one_year}`, 2200);
+      return;
     }
     const ok = to ? engine.setState(g.room, to) : engine.cycle(g.room);
     if (!ok) return g.audio.deny();

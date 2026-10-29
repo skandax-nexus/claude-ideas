@@ -2311,6 +2311,7 @@ class Game {
       else if (a === 'combo') (this.edition ? this.edition.echoStep() : this.nextCombo());
       else if (a === 'anchor') this.edition?.anchor();
       else if (a === 'shift') this.shift();
+      else if (a === 'year') (this.edition?.yearButton ? this.edition.yearButton() : this.shift()); // (the touch YEAR button)
       // (the number keys pick by position: THE LAST VERSION's 1 2 3 4 are 2049, 2026, 2196, INVERTED)
       else if (a.startsWith('set:')) this.shift(this.edition ? String(['PHYSICAL', 'INVERTED', 'ECHO'].indexOf(a.slice(4)) + 1 || a.slice(4)) : a.slice(4));
     }

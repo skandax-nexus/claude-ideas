@@ -5,7 +5,8 @@
 //   - the CASE board: the first time something is pinned to it, once per device.
 // Each is a toast and a glow on the control it names (nothing spoken: no line to record). It also keeps the
 // edition's HUD classes on <body>: lvcarry (an echo thing in hand: the ANCHOR button shows), lvanchored, and
-// lvnoyear (no Chronolith yet: the YEAR button is greyed, not lit).
+// lvnoyear (no Chronolith yet: the YEAR button is greyed, not lit), lvoneyear (a place with one year: greyed too, and a
+// tap says why, Runtime.shift; v2.1.1 playtest L5).
 import { saveSettings } from './Settings.js';
 
 const STUCK_SECS = 45;
@@ -57,6 +58,7 @@ export class Tips {
     const carry = chrono && !!it?.echo;
     const anchored = carry && e.anchored === it.id;
     this.setClass('lvnoyear', lv && !chrono);
+    this.setClass('lvoneyear', chrono && (g.engine?.statesOf?.(g.room)?.length ?? 2) < 2);
     this.setClass('lvcarry', carry);
     this.setClass('lvanchored', anchored);
     for (const sel of Object.keys(this.glows)) if ((this.glows[sel] -= dt) <= 0) this.stopGlow(sel);
