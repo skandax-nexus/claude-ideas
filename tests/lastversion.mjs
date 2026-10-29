@@ -1117,9 +1117,9 @@ const PLAYER = () => {
         const left = B.walkTo(0, 10.6, 6); // (where the door was, between the lens's bollards)
         P.go(P.at(t), 1.6);
         r.out2026 = left < 0.6 && !inCube() && P.placed === s0;
-        g.deckWorld.sentinels.push(...held);
         P.year('PRESENT');
-        g.simulate(0.3);
+        g.simulate(2.3); // (playtest v2.1.1 L34: the terminal counts once Kai has been back in 2049 for a moment)
+        g.deckWorld.sentinels.push(...held);
         window.LVESCAPE = r;
       },
     },

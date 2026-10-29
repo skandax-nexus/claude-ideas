@@ -136,12 +136,13 @@ test('M6 (F02): the first hit is explained, and the shop floor is where a hit pu
   g.catching = true; // (the hit's fade has begun)
   M06.step(rt, 1 / 30);
   timers.splice(0).forEach((fn) => fn());
-  assert.ok(toasts.length === 1 && /BRASS ARM/.test(toasts[0]) && said.includes('Go when it has passed.'), 'the first hit: what it was, and Kai\'s line');
+  assert.ok(toasts.length === 1 && /BRASS ARM/.test(toasts[0]) && said.includes('Too soon. Let an end pass, count two, then follow it across.'), 'the first hit: what it was, and Kai\'s line');
   g.catching = false;
   for (let i = 0; i < 2; i++) { M06.step(rt, 1 / 30); g.catching = true; M06.step(rt, 1 / 30); timers.splice(0).forEach((fn) => fn()); g.catching = false; }
   assert.ok(toasts.some((t) => /2196/.test(t)), 'after the third, that in 2196 it has rusted still');
-  // (Kai's line is already in the act1 pack: the cross thread's second hint)
-  assert.ok(threadsOf(M06).find((t) => t.id === 'cross').hints.includes('Go when it has passed.'));
+  // (Kai's line is among the mission's spoken lines, which the act1 pack records; and, as the toast, it says to count two:
+  // playtest v2.1.1 L16)
+  assert.ok(M06.spoken.armHit.some((l) => /count two/.test(l.text)));
 });
 
 test('M6 (F13): the escapement\'s lines come after the last clock\'s own; the boards give way to the deduction', () => {

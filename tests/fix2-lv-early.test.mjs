@@ -11,6 +11,8 @@ import { compileCondition } from '../game/js/core/conditions.js';
 import { LV } from '../game/js/editions/lastversion/index.js';
 import { LastVersion } from '../game/js/editions/lastversion/Runtime.js';
 import { M03 } from '../game/js/editions/lastversion/prologue.js';
+import { M04, M06, M08 } from '../game/js/editions/lastversion/act1.js';
+import { threadsOf } from '../game/js/editions/lastversion/Threads.js';
 import { Player } from '../game/js/entities/Player.js';
 
 // a mission's level, built the way the runtime builds it (Runtime.buildLevel with a stand-in game)
@@ -23,7 +25,7 @@ function build(ch, deck) {
   return level;
 }
 const MISSIONS = [['prologue', 0], ['prologue', 1], ['prologue', 2], ['act1', 0], ['act1', 1], ['act1', 2], ['act1', 3], ['act1', 4]].map(([ch, d]) => build(ch, d));
-const [, M2, M3, , M5] = MISSIONS;
+const [, M2, M3, , M5, , , M8] = MISSIONS;
 
 const conds = new Map();
 const holds = (when, state, facts) => {
@@ -173,4 +175,54 @@ test('L14: Mission 3\'s hall is crossed on the lift or the far floor, not by lan
   };
   for (const e of debris) assert.equal(crossed(e.box[4]), false, `standing on debris at ${e.box[4]}`);
   assert.equal(crossed(floor), true, 'on the lift, at the hall\'s floor level');
+});
+
+test('P4: Mission 4\'s THINK tiers are full sentences: why, where, what to do', () => {
+  for (const t of threadsOf(M04)) {
+    if (!t.hints) continue;
+    assert.equal(t.hints.length, 3, t.id);
+    for (const h of t.hints) assert.ok(h.split(/\s+/).length >= 6 && /[.!?]$/.test(h) && /^[A-Z]/.test(h), `${t.id}: "${h}"`);
+  }
+});
+
+test('L16: Mission 6\'s THINK and Kai\'s line after a hit give the toast\'s advice (count two), never "go when it has passed"', () => {
+  const cross = threadsOf(M06).find((t) => t.id === 'cross');
+  assert.ok(!cross.hints.some((h) => /when it has passed|behind the arm/i.test(h)), JSON.stringify(cross.hints));
+  assert.ok(cross.hints.slice(1).every((h) => /count two/.test(h)), 'the second and third tiers say to count two');
+  assert.ok(M06.spoken.armHit.every((l) => /count two/.test(l.text) && !/when it has passed/i.test(l.text)), JSON.stringify(M06.spoken.armHit));
+});
+
+test('L20, L34: Mission 8\'s terminal is offered in 2049 only, and the escape counts only after a moment back in 2049', () => {
+  const term = M8.interactables.find((i) => i.scene === 'version');
+  assert.ok(term && /@PRESENT/.test(term.when) && !compileCondition(term.when)({ fact: () => true, state: 'PAST' }), `the terminal's prompt: ${term?.when}`);
+  const trig = M8.triggers.find((t) => Object.keys(t.set || {}).some((k) => /escape/.test(k)));
+  const can = (state, facts) => !!compileCondition(trig.when)({ fact: (k) => facts[k] ?? (k.startsWith('t_m08_') ? true : undefined), state });
+  assert.ok(trig.unseen, 'it is a stealth crossing');
+  assert.equal(can('PAST', { lin_gone: true, m08_back49: true }), false, 'not in 2026');
+  assert.equal(can('PRESENT', { lin_gone: true }), false, 'not the moment Kai is back in 2049');
+  assert.equal(can('PRESENT', { lin_gone: true, m08_back49: true }), true, 'in 2049, after a moment there');
+  // the step: two seconds back in 2049 (not being caught) set it; 2026 clears it; at the terminal's spot in 2026 Kai
+  // says, once a visit, that it is not built yet (a line already in the pack)
+  const facts = new Map([['lin_gone', true]]), said = [];
+  const t = M8.landmarks.versionTerminal;
+  const g = { facts: { get: (k) => facts.get(k), set: (k, v = true) => facts.set(k, v) }, room: 'r', catching: false, engine: { state: () => year },
+    player: { pos: new THREE.Vector3(t[0], 1.26, t[2]) }, hud: { say: (ls) => said.push(...ls.map((l) => l.text)) } };
+  let year = 'PAST';
+  const rt = { g, level: M8 };
+  for (let i = 0; i < 90; i++) M08.step(rt, 1 / 30);
+  assert.deepEqual(said, ['Not built yet, in 2026.'], 'said once in 2026 at the spot');
+  assert.ok(!facts.get('m08_back49'));
+  year = 'PRESENT';
+  for (let i = 0; i < 45; i++) M08.step(rt, 1 / 30);
+  assert.ok(!facts.get('m08_back49'), 'not after 1.5 s');
+  g.catching = true;
+  M08.step(rt, 1 / 30);
+  g.catching = false;
+  for (let i = 0; i < 45; i++) M08.step(rt, 1 / 30);
+  assert.ok(!facts.get('m08_back49'), 'a catch starts the count again');
+  for (let i = 0; i < 20; i++) M08.step(rt, 1 / 30);
+  assert.ok(facts.get('m08_back49'), 'after 2 s back in 2049');
+  year = 'PAST';
+  M08.step(rt, 1 / 30);
+  assert.ok(!facts.get('m08_back49'), 'cleared in 2026');
 });

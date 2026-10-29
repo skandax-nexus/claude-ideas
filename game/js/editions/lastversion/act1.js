@@ -69,18 +69,20 @@ function tin() {
 // =============================================================================================================
 // Mission 4: THE MAN FROM THE LAST DAY
 // =============================================================================================================
+// (playtest v2.1.1 P4: these were fragments, "Whose blanket?", "A log stair."; now each tier is a sentence, as in
+// Missions 5-8: the first says why, the second where, the third what to do)
 const M04_HINTS = {
-  wake: ['Whose blanket?', 'The house I woke in.', 'Look round the house.'],
-  picto: ['The walls have pictures.', 'Fire, wave, circle.', 'Read three carvings.'],
-  telling: ['A stone on a roof.', 'A log stair.', 'Climb up. Read it.'],
-  meal: ['They are cooking.', 'Nobody eats alone here.', 'Sit at the first fire.'],
-  stele: ['Who raised the ring?', 'Carvings keep a residue.', 'Read it before the fire.'],
-  frags: ['One inscription, in three pieces.', 'Lintel, grain store, water steps.', 'The steps piece: before the fire.'],
-  elder: ['She went up to the ring.', 'The stone seat.', 'Talk to the Elder.'],
-  panels: ['Four panels, out of order.', 'The ash keeps the order.', 'Built, plenty, burned, left.'],
-  card: ['Something on the floor.', 'Under the ring.', 'Look down.'],
-  cord: ['A child\'s lost ring.', 'Before the fire, by the ring.', 'Find it. Give it back.'],
-  niko: ['Niko has a question.', 'The water steps.', 'Talk to Niko.'],
+  wake: ['Somebody put a blanket over me. I should look round the house I woke in.', 'The blanket and the cup hang on a rail beside its door.', 'Go to the door of the house and look at the blanket.'],
+  picto: ['They write in pictures here, and I can\'t read a word of it.', 'The pictures are carved on three standing stones round the fire: west, north and east of it.', 'Walk up to the three standing stones and look at each carving.'],
+  telling: ['The children say a stone on a roof tells about me.', 'It stands on the Elder\'s roof, east of the fire. A log stair climbs the west side of her house.', 'Climb the log stair onto the roof and read the telling-stone.'],
+  meal: ['They are cooking at the fire, and nobody here eats alone.', 'The first fire burns in the middle of the lower terrace.', 'Go to the fire and sit down with them.'],
+  stele: ['A carved stone says who raised the ring. Carvings keep what they said before.', 'The stele stands on the high terrace, below the ring.', 'Read the stele, then switch to before the fire and read it again.'],
+  frags: ['The same words are cut in three places, and each piece says only part of them.', 'Over a door on the lower terrace, on the grain store, and in the water steps.', 'Read the lintel and the grain store. The stone in the water steps is there only before the fire.'],
+  elder: ['The Elder went up to the ring. She is waiting for me.', 'Her stone seat is on the summit, inside the ring.', 'Climb up to the ring and talk to the Elder at her seat.'],
+  panels: ['Four carved panels tell the village\'s story, and they are out of order.', 'The ash under the cooking pot kept the order, one layer on another.', 'Put them in the order the ash lay: built, plenty, burned, left.'],
+  card: ['Something lies on the floor of the chamber.', 'It is down here under the ring, near the panels.', 'Look down at the chamber floor and see what lies there.'],
+  cord: ['The girl lost a stone ring before the houses were built.', 'Before the fire the hill is only grass. Her ring lies near the ring stones.', 'Switch to before the fire, find the cord in the grass by the ring, and give it back to her.'],
+  niko: ['Niko keeps the village\'s stories, and he wants mine.', 'He waits down by the water steps, on the west side of the hill.', 'Go to the water steps and talk to Niko.'],
 };
 const GIRL = AMB('CROWD_CHILD');
 
@@ -487,7 +489,8 @@ const M06_HINTS = {
   cellar: ['Somewhere above me a clock is ticking for me. I should go up.', 'The stone steps at the back of the cellar go up into the shop.', 'Climb the cellar steps into the clockmaker\'s shop.'],
   ezra: ['The clockmaker looked up as if I were late. He wants a word.', 'He is behind his counter, on the shop floor.', 'Walk up to the counter and talk to Ezra Moll.'],
   arm: ['That brass arm keeps sweeping the floor. He set it going for somebody.', 'It turns on its post in the front of the shop, and it always comes back.', 'Watch the arm from the counter, and count its sweeps.'],
-  cross: ['The stair is past the arm.', 'Go when it has passed.', 'Cross behind the arm.'],
+  // (playtest v2.1.1 L16: "Go when it has passed" is what gets Kai hit, as the toast after a hit has said since v2.1.1)
+  cross: ['The stair is past the arm, and the arm always comes back.', 'At the brass ring, let an end sweep past me, and count two before I go.', 'Let an end pass, count two, then follow it across, the way it turns.'],
   windows: ['A clockmaker\'s window is his notebook. His is full of clocks.', 'The shop window looks out onto the canal street.', 'Go out into the street and read the three faces in the window.'],
   boards: ['A worn line in the floor.', 'Now, and in 2026.', 'Look at the boards in both.'],
   stair: ['The path worn into the boards runs straight into a brick wall.', 'In 2026 the path did not stop there. Something stood at that wall.', 'Compare the boards now and in 2026, then piece the stair together.'],
@@ -503,8 +506,8 @@ const M06_HINTS = {
 // what Mission 6's code says (fx.agree and step; voicelines.js walks them for the packs)
 const M06_SAY = {
   agree: [N('Three clocks, three years. The escapement catches. Every clock agrees.'), N('The house chimes: up, up, and a stop.')],
-  // (the cross thread's own hint, said when the arm first knocks Kai back: already in the pack)
-  armHit: [K('Go when it has passed.')],
+  // (said when the arm first knocks Kai back, with the toast's advice: playtest v2.1.1 L16)
+  armHit: [K('Too soon. Let an end pass, count two, then follow it across.')],
 };
 // a brass clock of the escapement: in its own year (and once the window has been read), a choice of hour; the right one
 // holds, a wrong one slips back. In another year its hands will not move.
@@ -931,7 +934,7 @@ const M08_HINTS = {
   boot: ['Rook said the boot prints are in the clay. The print case.', 'The famous boot print, in its glass case.', 'Stand beside the boot print\'s case and look.'],
   reconstruct: ['Four entries from that morning, out of order.', 'The echoes walk them once they are in order. The table is on the island.', 'At the island, put the four entries in the order they happened.'],
   containment: ['Lin is inside the containment cube.', 'Its door is open now.', 'Walk in through the cube\'s open door, to Lin.'],
-  escape: ['The cube has sealed me in.', 'In 2026 there was no cube here, only the floor.', 'Switch to 2026 to step out, then go back to the terminal.'],
+  escape: ['The cube has sealed me in.', 'In 2026 there was no cube here, only the floor.', 'Switch to 2026 to step out, then come back to 2049 and reach the terminal before the drone sees me.'],
   version: ['The terminal on the island names this world.', 'It is on the island, where the morning was rebuilt.', 'Read the terminal on the island.'],
   iven: ['Iven Marr was there in 2026. His statement is recorded.', 'His recorder is in the east arcade.', 'Talk to Iven in the east arcade, or play his recorded statement.'],
   door: ['The staff door is locked.', 'The officer on it might open it for someone they trust.', 'Talk to the officer at the staff door.'],
@@ -940,6 +943,7 @@ const M08_HINTS = {
 const RECEPTION = (t) => SAYS('RECEPTION', 'RECEPTIONIST', t);
 // the drones of the court's last quarter (the island and its south bank) and the lockdown that sets them hunting
 const ISLAND = /_q2s\d+$/;
+const ESCAPE_BACK = 2; // (seconds back in 2049 before the terminal counts as reached: the island's drone's moment)
 function lockdown(defs) {
   for (const d of defs) if (ISLAND.test(d.id) && !d.locked) Object.assign(d, { locked: true, range: d.range + 4, speed: d.speed + 0.6 });
 }
@@ -1030,8 +1034,12 @@ export const M08 = {
         { id: 'containment', kind: 'talk', npc: 'researcher', at: 'containmentCube', after: ['reconstruct'], goal: 'Lin is inside the containment cube.', because: 'She was in the reconstruction. She is in there now.', done: 'lin_gone', hints: M08_HINTS.containment, minutes: 3 },
         // (the breach seals the cube with Kai inside it: in 2049 the glass holds; 2026 has no cube, so he walks out
         // through that year and comes back to 2049 at the terminal, past the island's drone; U7 review)
-        { id: 'escape', kind: 'stealth', at: 'versionTerminal', r: 3, after: ['containment'], when: 'lin_gone', goal: 'The cube seals. Get out, and reach the version terminal unseen.', because: 'In 2049 the glass holds. In 2026 there was no glass.', hints: M08_HINTS.escape, minutes: 3 },
-        { id: 'version', kind: 'scene', scene: 'version', at: 'versionTerminal', after: ['escape'], spot: { prompt: 'THE VERSION TERMINAL', offset: [0, 1.2, -1], r: 2.8, model: () => makeScreen(0xd8d4ff) },
+        // (playtest v2.1.1 L34: it counted in any year, so the whole escape was walked in 2026, where there is no drone.
+        // It counts in 2049 only, once Kai has been back in 2049 for a moment (m08_back49, step): switching back at the
+        // terminal itself is not a way past the drone)
+        { id: 'escape', kind: 'stealth', at: 'versionTerminal', r: 3, after: ['containment'], when: 'lin_gone', trigWhen: '@PRESENT && m08_back49', goal: 'The cube seals. Get out, and reach the version terminal unseen.', because: 'In 2049 the glass holds. In 2026 there was no glass.', hints: M08_HINTS.escape, minutes: 3 },
+        // (playtest v2.1.1 L20: the terminal is not built in 2026, so it is offered in 2049 only)
+        { id: 'version', kind: 'scene', scene: 'version', at: 'versionTerminal', after: ['escape'], spot: { prompt: 'THE VERSION TERMINAL', offset: [0, 1.2, -1], r: 2.8, model: () => makeScreen(0xd8d4ff), when: '@PRESENT' },
           goal: 'Read the version terminal.', because: 'Containment, version control. Version of what?', done: 'version_17', hints: M08_HINTS.version, minutes: 1 },
       ],
     },
@@ -1119,8 +1127,20 @@ export const M08 = {
   },
   // (playtest v2.1 F16: Lin in the cube, the morning's two echoes and Rook's 2026 echo wear their own faces and clothes,
   // faint, not one white glow: echoes.js)
-  step(rt) {
+  step(rt, dt = 0) {
     lendLooks(rt.g);
+    // the escape (playtest v2.1.1 L34): back in 2049 for ESCAPE_BACK seconds, unseen, before the terminal counts; in 2026
+    // at the terminal's spot Kai says it is not built yet (once a visit)
+    const g = rt.g, f = g.facts;
+    if (!f?.get('lin_gone') || f.get('t_m08_escape')) return;
+    const year = g.engine.state(g.room);
+    rt.m08Back = year === 'PRESENT' && !g.catching ? (rt.m08Back || 0) + dt : 0;
+    const back = rt.m08Back >= ESCAPE_BACK;
+    if (!!f.get('m08_back49') !== back) f.set('m08_back49', back);
+    const t = rt.level?.landmarks?.versionTerminal, p = g.player?.pos;
+    const at = !!t && !!p && Math.hypot(p.x - t[0], p.z - t[2]) < 3;
+    if (at && year === 'PAST' && !rt.m08Told) g.hud.say(M08.scenes.version_no.lines, f);
+    rt.m08Told = at && year === 'PAST' ? true : at ? rt.m08Told : false;
   },
   overlay(P) {
     // (behind her desk, facing the doors: she stood on the visitors' side with her back to them)
