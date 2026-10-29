@@ -99,7 +99,9 @@ export class Deck {
       name, kind, bounds,
       spawn: [...R.p([0, 0.86, -1.6]).map((v) => Math.round(v * 1000) / 1000), R.th],
       lights: lights || [[...R.p([0, H - 0.8, -L * 0.3]), lv.palette.light, 2.0, Math.max(14, L)], [...R.p([0, H - 0.8, -L * 0.75]), lv.palette.light, 1.8, Math.max(14, L)], [...R.p([W / 2 - 1, 2.2, -L / 2]), lv.palette.accent, 0.8, 10], ...daylight],
-      tint: tint ?? lv.palette.tint, killY: R.y0 - 3, floatY: floatY ?? R.y0 + 1.3, challenges: R.challenges, route: [], exitSide: exit, L, W, H,
+      // (playtest v2.1.1 H5: the fall height is 3 m under the lowest floor the room holds; a stair down to the next
+      // room is the room's own, so at the terrace's height it set Kai back on every walk down to the lounge, or up)
+      tint: tint ?? lv.palette.tint, killY: R.y0 + Math.min(0, corridor?.rise ?? 0) - 3, floatY: floatY ?? R.y0 + 1.3, challenges: R.challenges, route: [], exitSide: exit, L, W, H,
       states: states || lv.states || undefined, interior, sky: sky || (roof === 'solid' ? null : typeof roof === 'string' ? roof : 'year'),
       rect: R.rectXZ(-W / 2, -L, W / 2, 0),
     };

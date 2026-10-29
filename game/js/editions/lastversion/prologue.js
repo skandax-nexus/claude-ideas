@@ -1321,7 +1321,10 @@ export const M03 = {
   },
   step(rt) {
     const g = rt.g;
-    if (g.room === 'collapse' && !g.facts.get('crossed') && g.player.pos.z < g.level.rooms.collapse.bounds[0][2] + 8 + 4 && g.player.grounded) g.facts.set('crossed');
+    // (playtest v2.1.1 L14: at the hall's floor level, on the lift or the far floor; landing on the debris in the pit past
+    // the line is not crossing it)
+    const hall = g.level.rooms.collapse;
+    if (g.room === 'collapse' && !g.facts.get('crossed') && g.player.pos.z < hall.bounds[0][2] + 8 + 4 && g.player.grounded && g.player.pos.y > hall.spawn[1] - 0.5) g.facts.set('crossed');
   },
   done: 'fracture_done',
 };

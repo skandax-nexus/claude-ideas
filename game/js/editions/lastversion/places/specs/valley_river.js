@@ -13,6 +13,7 @@ import { ground, groundHoles, terrace, stair, water, wall, roundhouse, longhouse
 
 const RIVER = [[-100, 0, 48, 14], [48, -30, 62, 14]]; // the channel: west along z 0..14, and down from the gorge
 const BASIN = [-80, 34, -30, 62];
+const BASIN_STAIR = [-47.5, 31.6, -44.5, 34]; // (the stair down into it, where it is cut into the meadow)
 const FLOOD = 4;
 
 export default {
@@ -52,7 +53,7 @@ export default {
 
   build(P) {
     // --- the ground: the river's channel and the basin cut into it; the village terrace at 2 m ----------
-    groundHoles(P, [-100, -40, 100, 70], [...RIVER, BASIN, [-25.5, 14, -20.5, 34]], 0, 'riverMeadow');
+    groundHoles(P, [-100, -40, 100, 70], [...RIVER, BASIN, [-25.5, 14, -20.5, 34], BASIN_STAIR], 0, 'riverMeadow');
     groundHoles(P, [-100, -150, 10, -1], [[-31.6, -7, -28.4, -1]], 2, 'riverMeadow', { depth: 2.6 });
     P.vbox([9.6, -0.6, -150, 10, 2, -1], 'riverStone');
     for (const s of [-1, 1]) P.vbox([-30 + s * 1.6 - 0.2, -0.6, -7, -30 + s * 1.6 + 0.2, 2, -1], 'riverStone');
@@ -66,8 +67,14 @@ export default {
     P.vbox([62, -3.2, -30, 62.4, 0, 14.4], 'riverStone');
     // the basin, sunk 2.5 m, and the channel that feeds it from the river through the pressure gate
     ground(P, BASIN, -2.5, 'basinMud');
-    for (const b of [[BASIN[0], -2.5, BASIN[1], BASIN[2], 0, BASIN[1] + 0.4], [BASIN[0], -2.5, BASIN[3] - 0.4, BASIN[2], 0, BASIN[3]], [BASIN[0], -2.5, BASIN[1], BASIN[0] + 0.4, 0, BASIN[3]], [BASIN[2] - 0.4, -2.5, BASIN[1], BASIN[2], 0, BASIN[3]]]) P.vbox(b, 'riverStone');
+    // (playtest v2.1.1 M5: the rims were drawn but not solid, and the meadow is cut away over the basin, so from the
+    // basin floor Kai walked on under the meadow and out of the world. They are solid now, the north one open where the
+    // stair comes down; and the meadow is cut over the stair too, whose upper steps ran under it, so it is walked up
+    // again, not climbed with a jump)
+    const [sx0, , sx1] = BASIN_STAIR;
+    for (const b of [[BASIN[0], -2.5, BASIN[1], sx0, 0, BASIN[1] + 0.4], [sx1, -2.5, BASIN[1], BASIN[2], 0, BASIN[1] + 0.4], [BASIN[0], -2.5, BASIN[3] - 0.4, BASIN[2], 0, BASIN[3]], [BASIN[0], -2.5, BASIN[1], BASIN[0] + 0.4, 0, BASIN[3]], [BASIN[2] - 0.4, -2.5, BASIN[1], BASIN[2], 0, BASIN[3]]]) P.box(b, 'riverStone');
     stair(P, -46, 31.6, 0, -46, 37.6, -2.5, 3, 'riverStone');
+    for (const x of [sx0 - 0.4, sx1]) P.box([x, -2.8, BASIN_STAIR[1], x + 0.4, 0, BASIN[1]], 'riverStone'); // (the cut's cheeks)
     P.vbox([-25.5, -2.6, 14, -20.5, -2.2, 34], 'riverBed');
     P.col([-25.5, -3, 14, -20.5, -2.2, 34]);
     for (const x of [-26, -20]) P.box([x - 0.5, -2.6, 14, x + 0.5, 0, 34], 'riverStone');

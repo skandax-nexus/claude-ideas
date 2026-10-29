@@ -305,8 +305,12 @@ export default {
       for (const [x, z] of [[-24, 0], [-20, 8], [20, -16], [-14, -24], [26, -2]]) prop(P, 'crate', x, z, 0.4, { m: 'rawConcrete' });
     });
     // the pit's colliders (2026 only): its floor and its walls
+    // (playtest v2.1.1 M4: the walls were drawn but not solid, so from the pit floor Kai walked on under the court's
+    // paving and fell out of the world. The south side, where the timber steps come up, is walled only to the top step)
     P.E('PAST', () => {
       P.col([-6, -3.6, 12, 14, -3, 28]);
+      for (const b of [[-6.4, -3.6, 11.6, -6, 0, 28.4], [14, -3.6, 11.6, 14.4, 0, 28.4], [-6.4, -3.6, 11.6, 14.4, 0, 12]]) P.col(b);
+      P.box([-6.4, -3.4, 28, 14.4, -0.3, 28.4], 'clay');
     });
     // --- 2196: the ruin: fallen slabs, ivy curtains, pools, a broken wing roof ------------------------------
     P.E('FUTURE', () => {
