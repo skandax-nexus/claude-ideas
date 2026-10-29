@@ -3,6 +3,8 @@
 // the ring" were captions over the game's camera). Each is { obj, update(dt) -> false once it is over, dispose() } for
 // Cinema.addFx: unlit light that reads at any quality (or the place's own materials), a few draw calls each, and nothing
 // left behind once it is over.
+// Comfort mode (Cinema.addFx sets fx.calm): no flare and no muzzle flash, nothing that lights up at once (v2.1.1 playtest
+// M3); what grows and fades over seconds (rings, panes, a column of light) stays.
 import * as THREE from '../../../vendor/three.module.min.js';
 import { namedMaterial } from './places/materials.js';
 
@@ -141,7 +143,7 @@ export function anchorLight({ center, R = 4.4, facing = 'z', grow = 2.4, life = 
     flare: 0,
     update(dt) {
       t += dt;
-      this.flare = Math.max(0, this.flare - dt * 0.8);
+      this.flare = this.calm ? 0 : Math.max(0, this.flare - dt * 0.8);
       const k = ease(clamp01(t / grow));
       disc.material.opacity = Math.min(1, k * 0.55 + this.flare * 0.6);
       disc.scale.setScalar(0.2 + 0.8 * k + this.flare * 0.08);
@@ -270,7 +272,7 @@ export function shellHome({ from, to, apex = 30, dur = 3.2, delay = 0.35, color 
         if (m.visible) m.position.set(...at(ui));
       });
       const f = t - delay - dur;
-      flash.material.opacity = f > 0 && f < 0.9 ? (1 - f / 0.9) * 0.9 : 0;
+      flash.material.opacity = f > 0 && f < 0.9 && !this.calm ? (1 - f / 0.9) * 0.9 : 0;
       flash.scale.setScalar(1.5 + Math.max(0, f) * 5);
       return t < delay + dur + 1.2;
     },

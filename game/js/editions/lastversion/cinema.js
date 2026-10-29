@@ -34,23 +34,32 @@ const STYLE = `
     background: rgba(0,0,0,0.42); color: #f4f6f8; border: 1px solid rgba(255,255,255,0.35); border-radius: 999px; padding: 7px 16px;
     font: 600 12px/1 system-ui, sans-serif; letter-spacing: 0.14em; cursor: pointer; }
   body.lastversion.lvcine #lvSkip { display: block; }
+  body.lastversion.menu #lvSkip, body.lastversion.menu #lvPause { display: none !important; } /* (never over a menu: L3) */
+  body.lastversion #lvPause { position: fixed; z-index: 41; display: none; top: max(10px, env(safe-area-inset-top)); right: max(16px, env(safe-area-inset-right));
+    width: 48px; height: 48px; padding: 0; border-radius: 50%; background: rgba(0,0,0,0.42); border: 1px solid rgba(255,255,255,0.35); cursor: pointer;
+    align-items: center; justify-content: center; gap: 5px; }
+  body.lastversion #lvPause i { display: block; width: 5px; height: 16px; border-radius: 2px; background: #f4f6f8; }
+  body.lastversion.lvcine #lvPause, body.lastversion.talking #lvPause { display: flex; }
   body.lastversion #lvSkip small { opacity: 0.6; font-size: 10px; margin-left: 4px; }
   body.lastversion.touch #lvSkip small { display: none; }
   /* a conversation (main.js puts body.talking on while it frames whoever speaks): framed as a staged moment, with the
-     cinematics' black bars, and no stick, YEAR, year pips, objective or map over the speaker; the dock stays, dimmed, for
-     the pause and the case board (playtest v2.1 FT-18: light grey bars, and the stick, YEAR and the objective drawn over
-     the letterboxed frame) */
+     cinematics' black bars, and no stick, YEAR, year pips, objective, map or dock over the speaker; the pause stays, as a
+     small button in the corner, #lvPause (playtest v2.1 FT-18: light grey bars, and the stick, YEAR and the objective
+     drawn over the letterboxed frame; v2.1.1 P2: the dock, kept at 0.2 for the pause, read as a ghost over the shot) */
   body.lastversion #letterbox i { background: #000; }
   body.lastversion.talking #letterbox i { height: 9vh; }
   body.lastversion.talking #buttons, body.lastversion.talking #minimap, body.lastversion.talking #objective, body.lastversion.talking #lvTop,
-  body.lastversion.talking #lvTarget, body.lastversion.talking #eye, body.lastversion.talking #crosshair, body.lastversion.talking #stickzone #stick {
+  body.lastversion.talking #lvTarget, body.lastversion.talking #eye, body.lastversion.talking #crosshair, body.lastversion.talking #stickzone #stick,
+  body.lastversion.talking #dock {
     opacity: 0 !important; transition: opacity 0.4s; }
-  body.lastversion.talking #buttons, body.lastversion.talking #minimap { pointer-events: none; }
+  body.lastversion.talking #buttons, body.lastversion.talking #minimap, body.lastversion.talking #dock { pointer-events: none; }
 `;
 
 // the keys that skip a line and its shot (Enter is the SKIP button's); the actions held while a moment plays (use, the year,
 // REVERSE, echo-step, the anchor, THINK, gear): what acts in the world. Pause, the map, the case board, saves pass.
 const SKIP_KEYS = ['Space', 'KeyE', 'Enter', 'NumpadEnter'];
+// a tap that skips: lifted within this many CSS px of where it landed (Input.TAP_SLOP), and within this many ms
+const TAP_SLOP = 12, TAP_MS = 700;
 const HELD = /^(use|shift|year$|set:|combo|anchor|hint|gear:|rules$)/;
 
 const _a = new THREE.Vector3(), _b = new THREE.Vector3();
@@ -102,25 +111,62 @@ export class Cinema {
       skipBtn.id = 'lvSkip';
       skipBtn.innerHTML = 'SKIP › <small>ENTER</small>';
       skipBtn.setAttribute('aria-label', 'Skip');
+      // (not shown under a menu, body.menu: a tap there is the menu's; v2.1.1 playtest L3, SKIP over QUIT TO TITLE)
       skipBtn.onclick = (e) => {
         e.stopPropagation();
         this.skip();
       };
       document.body.appendChild(skipBtn);
+      // the pause on screen while a moment plays or someone talks (the dock is hidden then, and a phone browser has
+      // no back key: v2.1.1 playtest L4)
+      const pauseBtn = document.createElement('button');
+      pauseBtn.id = 'lvPause';
+      pauseBtn.innerHTML = '<i></i><i></i>';
+      pauseBtn.setAttribute('aria-label', 'Pause');
+      let touchedAt = -1e9;
+      pauseBtn.onclick = (e) => {
+        e.stopPropagation();
+        if (performance.now() - touchedAt < 700) return; // (the click a touch makes after it: one pause, not two)
+        if (!this.g.menu) this.g.input?.actions?.push('pause');
+      };
+      pauseBtn.addEventListener('touchstart', (e) => {
+        if (e.cancelable) e.preventDefault();
+        e.stopPropagation();
+        touchedAt = performance.now();
+        if (!this.g.menu) this.g.input?.actions?.push('pause');
+      }, { passive: false });
+      document.body.appendChild(pauseBtn);
       // a deliberate tap, click or key skips a shot (and the line being said): Space or E, a click, a tap on the
-      // view. Not a movement key, and not the thumb landing on the stick (a player reaching for the controls
-      // as a mission starts would cut its card off line by line)
-      const skip = (e) => {
+      // view. Not a movement key, not the thumb landing on the stick (a player reaching for the controls as a
+      // mission starts would cut its card off line by line), and not a look-drag: a touch skips only when it lifts
+      // where it landed, soon (v2.1.1 playtest M2: the first touch of a drag across the view skipped the line being
+      // said, and cut its voice)
+      const key = (e) => {
         if (!this.active || this.g.menu) return;
-        if (e.type === 'keydown') {
-          if (e.repeat) return; // (a key held down repeats: one press skips one line, not the whole moment)
-          // (Enter is SKIP's key: with the pointer locked, a desktop at play, the button cannot be clicked)
-          if (!SKIP_KEYS.includes(e.code)) return;
-        } else if (e.target?.closest?.('button, input, .overlay, #stickzone, #dock, #buttons, #topbtns')) return;
+        if (e.repeat) return; // (a key held down repeats: one press skips one line, not the whole moment)
+        // (Enter is SKIP's key: with the pointer locked, a desktop at play, the button cannot be clicked)
+        if (!SKIP_KEYS.includes(e.code)) return;
         this.skip();
       };
-      window.addEventListener('pointerdown', skip, true);
-      window.addEventListener('keydown', skip, true);
+      let down = null;
+      window.addEventListener('pointerdown', (e) => {
+        down = null;
+        if (!this.active || this.g.menu) return;
+        if (e.target?.closest?.('button, input, .overlay, #stickzone, #dock, #buttons, #topbtns')) return;
+        down = { id: e.pointerId, x: e.clientX, y: e.clientY, t: performance.now() };
+      }, true);
+      window.addEventListener('pointermove', (e) => {
+        if (down && e.pointerId === down.id && Math.hypot(e.clientX - down.x, e.clientY - down.y) > TAP_SLOP) down = null;
+      }, true);
+      window.addEventListener('pointerup', (e) => {
+        const d = down;
+        down = null;
+        if (!d || e.pointerId !== d.id || !this.active || this.g.menu) return;
+        if (Math.hypot(e.clientX - d.x, e.clientY - d.y) > TAP_SLOP || performance.now() - d.t > TAP_MS) return;
+        this.skip();
+      }, true);
+      window.addEventListener('pointercancel', () => { down = null; }, true);
+      window.addEventListener('keydown', key, true);
     }
     // nothing the player does walks Kai off his mark or acts in the world meanwhile: the movement the input
     // reads (keys, the touch stick, the jump button) is nought, and only the menus' and saves' actions pass
@@ -376,6 +422,7 @@ export class Cinema {
   // an effect in the world (stagefx.js): { obj, update(dt) -> false once it is over, dispose() }; added to the scene now
   addFx(fx) {
     if (!fx) return null;
+    fx.calm = !!this.g.settings?.comfort; // (Comfort mode: an effect's flare or flash is left out, stagefx.js)
     if (fx.obj && this.g.scene) this.g.scene.add(fx.obj);
     this.fxs.push(fx);
     return fx;

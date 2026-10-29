@@ -356,6 +356,10 @@ class Game {
     this.player.cam = { ...CAMERA_PRESETS[s.camera] };
     this.player.zoom = s.zoom;
     this.player.comfort = s.comfort;
+    // Comfort mode: no screen flashes, wherever they come from (the HUD's tint, a storm's lightning in the sky; v2.1.1
+    // playtest M3: the story's own flashes, up to 95% white, did not ask)
+    this.hud.comfort = !!s.comfort;
+    if (this.weather) this.weather.comfort = !!s.comfort;
     this.input.sensitivity = 0.0024 * s.sensitivity;
     this.input.touchSensitivity = 0.0065 * s.sensitivity;
     this.input.invertY = s.invertY;
@@ -575,6 +579,7 @@ class Game {
   openMenu(id) {
     if (id === 'laws' && !this.facts.get('has_device')) return;
     this.menu = id;
+    this.menuOpenT = typeof performance !== 'undefined' ? performance.now() : 0; // (the tap that opened it: see 'pause' below)
     this.voice.stop(); // the subtitle waits under the menu; the line is said again when it closes
     this.input.release();
     this.hud.rulesHide?.(); // the local rules card steps aside for any panel
@@ -2272,6 +2277,9 @@ class Game {
     for (let a of this.input.consumeActions()) {
       this.lastEvent = this.time;
       this.tips?.used(a);
+      // a second tap of the one that opened a panel, a moment later (a double tap, a thumb's bounce), does not close it
+      // again (v2.1.1 playtest P14: CASE tapped twice 80 ms apart opened the case board and closed it)
+      const fresh = this.menu && typeof performance !== 'undefined' && performance.now() - (this.menuOpenT || 0) < 350;
       if (a === 'pause') {
         this.voice.stop();
         if (['saves', 'settings', 'hero', 'chapters', 'studio', 'forge'].includes(this.menu)) {
@@ -2280,13 +2288,13 @@ class Game {
         }
         else if (this.menu === 'ending' && !document.querySelector('#ending .body button')) this.closeMenu(); // an empty card is never a trap
         else if (this.menu === 'ending' || this.menu === 'decision' || this.menu === 'forgechoice') { /* choose; endings are final */ }
-        else if (this.menu) this.closeMenu();
+        else if (this.menu) { if (!fresh) this.closeMenu(); }
         else if (!this.paused) this.openMenu('pause');
         continue;
       }
       if (a === 'laws' && this.edition) a = 'journal'; // no law device in THE LAST VERSION: L opens the case board
       if (a === 'laws' || a === 'journal' || a === 'map') {
-        if (this.menu === a) this.closeMenu();
+        if (this.menu === a) { if (!fresh) this.closeMenu(); }
         else if (!this.paused && (!this.menu || ['laws', 'journal', 'map'].includes(this.menu))) this.openMenu(a);
         continue;
       }

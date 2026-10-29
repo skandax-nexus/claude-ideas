@@ -713,6 +713,10 @@ body.lastversion.calm #dock:has(.lvteach), body.lastversion.calm #buttons .b.lvt
 body.lastversion.touch #dock { gap: 2px; padding: 3px 4px; }
 body.lastversion.touch #dock .d { flex-direction: column; justify-content: center; gap: 3px; min-width: 56px; min-height: 48px; padding: 6px 6px 5px; }
 body.lastversion.touch #dock .d span { display: block; font-size: 9px; letter-spacing: 0.1em; line-height: 1; }
+/* (its words read over a bright facade as over a night street: a denser glass and the ink colour; v2.1.1 playtest P2) */
+body.lastversion.touch #dock { background: rgba(255, 255, 255, 0.78); box-shadow: 0 6px 20px rgba(20, 30, 45, 0.28), 0 0 0 1px rgba(35, 48, 60, 0.12); }
+body.lastversion.touch #dock .d { color: var(--ink); }
+body.lastversion.touch #dock .d.hint { color: #8a5a00; }
 body.lastversion.touch #subs { bottom: 76px; }
 /* SKIP during a staged moment: a thumb's height (cinema.js places it) */
 body.lastversion.touch #lvSkip { min-height: 48px; min-width: 96px; padding: 0 18px; }

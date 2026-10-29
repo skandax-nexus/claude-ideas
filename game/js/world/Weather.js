@@ -128,7 +128,7 @@ export class Weather {
     if (this.kind === 'storm') {
       this.nextBolt -= dt;
       if (this.nextBolt <= 0) {
-        this.flash = 1;
+        this.flash = this.comfort ? 0 : 1; // (Comfort mode: no lightning in the light or the sky; main.applySettings)
         this.nextBolt = 7 + Math.random() * 9;
       }
       this.flash = Math.max(0, this.flash - dt * 3.2);

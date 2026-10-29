@@ -246,7 +246,10 @@ export class HUD {
     this.el.fade.classList.toggle('on', on);
   }
 
+  // a full-screen tint that fades (a year switch, a blow, a white-out). Never in Comfort mode ('no flashes'): every
+  // caller is covered here, the story's own as well (main.applySettings sets comfort)
   flash(color = '#fff') {
+    if (this.comfort) return;
     const t = this.el.tint;
     t.style.background = color;
     t.classList.remove('flash');

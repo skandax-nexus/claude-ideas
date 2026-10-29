@@ -2075,7 +2075,8 @@ export class LastVersion {
     lodUpdate(g.deckWorld.npcs, g.camera.position); // (the watchers' people pose every frame: watchers.update)
     for (const n of g.deckWorld.npcs) {
       if (!n.model.visible) continue;
-      if (n.n.flicker) n.model.userData.setOpacity?.(0.45 + 0.55 * Math.abs(Math.sin(g.time * 7.3) * Math.sin(g.time * 2.9 + n.n.seed)));
+      // (Comfort mode: a steady half-presence, not a flicker; v2.1.1 playtest M3)
+      if (n.n.flicker) n.model.userData.setOpacity?.(g.settings.comfort ? 0.7 : 0.45 + 0.55 * Math.abs(Math.sin(g.time * 7.3) * Math.sin(g.time * 2.9 + n.n.seed)));
       // a crowd's walker keeps to the ground: its height from the two waypoints it walks between (crowds.js groundOf)
       const P = n.n.crowd && n.n.path;
       if (P && P[0].length > 2) {
