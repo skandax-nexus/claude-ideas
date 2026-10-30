@@ -377,11 +377,12 @@ test('L29: the crowds never say a story line before its moment: Brask\'s, the ga
   assert.ok(!AMBIENT.future.barks.some((b) => b && /channel is running again/.test(b)), 'the gardener\'s payoff is hers');
   const brask = L9.npcs.find((n) => n.id === 'brask9');
   assert.ok(brask.barks?.some((b) => /You did that already/.test(b)), 'Brask still says it');
+  // (Mission 1's paramedics, who walk only after the Zero Second, say nothing in passing)
   const M1 = build('prologue', 0);
-  const ems = M1.npcs.filter((n) => n.crowd && /paramedic/i.test(`${n.first} ${n.role} ${n.crewRole || ''}`) || (n.crowd && n.n?.role === 'ems'));
-  const said = M1.npcs.filter((n) => n.crowd && (n.barks || []).some((b) => /Third clock this morning/.test(b)) && /after_zero/.test(n.when || ''));
+  const after = M1.npcs.filter((n) => n.crowd && /after_zero/.test(n.when || ''));
+  assert.ok(after.length >= 2, 'the paramedics are there');
+  const said = after.filter((n) => (n.barks || []).some((b) => /Third clock this morning/.test(b)));
   assert.deepEqual(said.map((n) => n.id), [], 'no one who walks after the Zero Second says it');
-  void ems;
 });
 
 test('L19, L21, L30: used things lose their prompt; the looper waits for his thread; the cap\'s line follows the choice', () => {
@@ -392,6 +393,10 @@ test('L19, L21, L30: used things lose their prompt; the looper waits for his thr
   for (const n of loop.slice(0, 3)) assert.match(n.when, /echo_step/);
   assert.ok(!M13.rules.some((r) => r.id === 'cap'), 'no rule says it the moment the cap rises');
   for (const c of M13.scenes.stabilizer.choices) assert.deepEqual(c.after.map((l) => l.text), ['REVERSE holds for ten seconds now.']);
+  // (Odile's echo is REVERSE's only after her talk: its label stood over TALK TO ODILE and took the tap)
+  assert.deepEqual(T(M11).echoRev.after, ['odile']);
+  const L11 = build('act2', 2);
+  assert.match(L11.processes.find((r) => r.id === 'odileEcho').arm || '', /odile/);
 });
 
 test('L17, P4: Missions 9-11\'s THINK tiers are full sentences, and the hints name the right places', () => {

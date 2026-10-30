@@ -622,7 +622,7 @@ const M11_PROCESSES = [
   // the reversing lock on Ward 32's door: four bolts, RING, BAR, STAR, CRESCENT fitted in that order
   {
     id: 'm11lock', kind: 'lock', at: 'ward32Door', label: 'THE LOCK', weight: 1, grain: 'metal', required: true, bolts: LOCK_ORDER, aim: [0, 1.4, 0.3],
-    hints: ['Only the last bolt fitted comes out.', 'The tag, the twin lock, the chime.', 'CRESCENT, STAR, BAR, RING.'],
+    hints: ['Only the last bolt that went in will come out.', 'The 2026 tag, the twin lock and the chime all give the order the bolts went in.', 'Back them out last first: CRESCENT, then STAR, then BAR, then RING.'],
   },
   // R5: Odile's 2026 echo, walking her shift backwards; held, it runs forwards once and says what it says
   {
@@ -906,8 +906,10 @@ export const M11 = {
           goal: 'Ward 32.', because: 'The readings come from here.', done: 'ward32_read', hints: M11_HINTS.ward, minutes: 2 },
       ],
       sides: [
+        // (after her talk: until then, on a phone, the echo's REVERSE label stood over TALK TO ODILE and took its tap, so
+        // her first words were her echo's, v2.1.1 playtest L21)
         { id: 'echo', name: 'ODILE\'S SHIFT', done: 'inv_odileEcho_done', minutes: 2,
-          threads: [{ id: 'echoRev', kind: 'invert', target: 'odileEcho', at: 'odileStation', goal: 'Odile\'s 2026 echo walks her shift backwards.', because: 'A recording runs forwards once.', hints: M11_HINTS.echo, minutes: 2 }] },
+          threads: [{ id: 'echoRev', kind: 'invert', target: 'odileEcho', at: 'odileStation', after: ['odile'], goal: 'Odile\'s 2026 echo walks her shift backwards.', because: 'A recording runs forwards once.', hints: M11_HINTS.echo, minutes: 2 }] },
       ],
     },
   ],
@@ -1566,9 +1568,9 @@ export const M13 = {
       lines: [N('The stabilizer can freeze the district, and the war with it, or spend itself freeing the two hundred and twelve people locked in the frozen block.')],
       choices: [
         intent('challenge', 'Destroy it. End the loop.', { consequence: true, lines: [N('The stabilizer goes dark. The district stops repeating.'), L('SERA', 'My people will take its coil to your Chronolith. It will hold longer.')],
-          set: { faction: 'unwritten', stabilizer_destroyed: true, inv_cap: 10 }, ev: 'stabilizer', after: [N('REVERSE holds for ten seconds now.')] }),
+          set: { faction: 'unwritten', stabilizer_destroyed: true, inv_cap: 10 }, ev: 'stabilizer', after: [N('REVERSE holds for ten seconds now.', 'inv_cap >= 10')] }),
         intent('comfort', 'Redirect it. Free the people.', { consequence: true, lines: [N('The stabilizer spends itself on the block. The hanging floors come down slowly, like a breath let go.'), L('SERA', 'You chose them. I would have chosen the district. I am glad it was you. Give me your Chronolith a moment.')],
-          set: { faction: 'continuum', civilians_freed: true, inv_cap: 10 }, ev: 'stabilizer', after: [N('REVERSE holds for ten seconds now.')] }),
+          set: { faction: 'continuum', civilians_freed: true, inv_cap: 10 }, ev: 'stabilizer', after: [N('REVERSE holds for ten seconds now.', 'inv_cap >= 10')] }),
       ],
     },
   },
