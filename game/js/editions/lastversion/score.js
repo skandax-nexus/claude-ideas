@@ -752,6 +752,10 @@ export class Score {
   accompany(layers, o) {
     const { t: when, sec, bar, bi, beat, len, barSec, root, dest, v, energy, rev, synth } = o;
     const { bass, up } = this.voicing(bar.chord, root);
+    // a figure's note from the chord, by index (wrapped): a chord of two notes has one above its bass, and the glass's
+    // second note read up[-1], undefined, a non-finite frequency that threw in Act IV (v2.1.1 playtest L45); a chord of
+    // its bass alone plays the figures an octave over it
+    const at = (i) => (up.length ? up[((i % up.length) + up.length) % up.length] : bass + 12);
     const k = bar.len;
     const grow = sec.bloom ? 0.35 + 0.65 * Math.min(1, (bi + 1) / sec.bars.length) : 1; // (strings that slowly widen)
     for (const ins of layers) {
@@ -761,15 +765,15 @@ export class Score {
         case 'choir': if (beat === 0 && bi % 2 === 0) for (const m of up.slice(0, 3)) this.choir(mtof(m), when, barSec * 1.9, 0.0045, dest); break;
         case 'brass': if (beat === 0 && bi % 2 === 0) for (const m of [bass + 12, bass + 19]) this.brass(mtof(m), when, barSec * 1.6, 0.007, dest); break;
         case 'revpad': if (beat === 0 && bi % 2 === 0) for (const m of up) this.a.osc('triangle', mtof(m), when, barSec * 1.9, 0.011, barSec * 1.8, 0.03, dest); break;
-        case 'flute': if (beat === 0 && bi % 2 === 1) this.flute(mtof(up[up.length - 1] + 12), when, barSec * 0.9, 0.018, dest); break;
+        case 'flute': if (beat === 0 && bi % 2 === 1) this.flute(mtof(at(up.length - 1) + 12), when, barSec * 0.9, 0.018, dest); break;
         case 'bass': if (beat === 0 || (beat === 4 && energy > 0.3)) this.a.osc('sine', mtof(bass), when, len * (beat ? 3 : 5), 0.07, 0.04, 0.6, dest); break;
         case 'cello': if (beat === 0) this.cello(mtof(bass + (bass < 40 ? 12 : 0)), when, barSec * 0.97, sec.reduced ? 0.034 : 0.028, dest, rev); break;
         case 'sub': if (beat === 0 && bi % 2 === 0) this.a.osc('sine', mtof(root - 24), when, barSec * 2, 0.06, 1.2, 2.4, dest); break;
-        case 'piano': if (beat === 0 || beat === 3 || beat === 6) this.piano(mtof(up[[0, 1, 2][beat / 3] % up.length] + 12), when, v * 0.55, dest, rev); break;
-        case 'pluck': if ([0, 2, 3, 5, 6].includes(beat)) this.a.pluck(mtof(up[[0, 1, 2, 1, 2][[0, 2, 3, 5, 6].indexOf(beat)] % up.length] + 12), when, 0.032 + energy * 0.012, dest); break;
-        case 'glass': if (beat === 0 || beat === 4) this.glass(mtof(up[up.length - 1 - (beat ? 1 : 0)] + 12), when, 0.014, dest, rev); break;
-        case 'bell': if (beat === 6 && bi % 2 === 1) this.a.bell(mtof(up[1 % up.length] + 24), when, 0.028, dest); break;
-        case 'prepared': if ((beat === 1 || beat === 5) && bi % 2 === 0) { this.piano(mtof(up[up.length - 1] + 12), when, v * 0.4, dest, rev); this.noise(when, 0.05, { type: 'highpass', from: 4000, to: 4000, vol: 0.016 }, dest); } break;
+        case 'piano': if (beat === 0 || beat === 3 || beat === 6) this.piano(mtof(at([0, 1, 2][beat / 3]) + 12), when, v * 0.55, dest, rev); break;
+        case 'pluck': if ([0, 2, 3, 5, 6].includes(beat)) this.a.pluck(mtof(at([0, 1, 2, 1, 2][[0, 2, 3, 5, 6].indexOf(beat)]) + 12), when, 0.032 + energy * 0.012, dest); break;
+        case 'glass': if (beat === 0 || beat === 4) this.glass(mtof(at(up.length - 1 - (beat ? 1 : 0)) + 12), when, 0.014, dest, rev); break;
+        case 'bell': if (beat === 6 && bi % 2 === 1) this.a.bell(mtof(at(1) + 24), when, 0.028, dest); break;
+        case 'prepared': if ((beat === 1 || beat === 5) && bi % 2 === 0) { this.piano(mtof(at(up.length - 1) + 12), when, v * 0.4, dest, rev); this.noise(when, 0.05, { type: 'highpass', from: 4000, to: 4000, vol: 0.016 }, dest); } break;
         case 'musicbox': if (bi % 4 === 2 && beat === 0) MOTIF.forEach((s, i) => this.musicbox(mtof(bass + 36 + s), when + i * len * 2, 0.03, dest)); break;
         case 'pulse': {
           // (the Witness's pulse is irregular: three beats in a bar, never the same two bars running)

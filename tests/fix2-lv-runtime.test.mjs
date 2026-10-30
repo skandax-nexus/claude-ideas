@@ -220,3 +220,34 @@ test('M13: every clue a mission pins (an ev_ fact in its data or its code) has w
   assert.match(evLabel('ash_layers'), /burn/);
   assert.ok(!/nothing/.test(evLabel('ash_layers')));
 });
+
+// --- L45: the score's chords --------------------------------------------------------------------------------------
+test('L45: every theme\'s every chord, under every layer at every beat, asks only finite notes (a two-note chord threw in Act IV)', async () => {
+  const { Score } = await import('../game/js/editions/lastversion/score.js');
+  const { THEMES, section } = await import('../game/js/editions/lastversion/themes.js');
+  const bad = [];
+  const rec = (where) => (...a) => { for (const x of a) if (typeof x === 'number' && !Number.isFinite(x)) bad.push(where); };
+  const sc = Object.create(Score.prototype);
+  Object.defineProperty(sc, 'a', { value: { osc: rec('osc'), pluck: rec('pluck'), bell: rec('bell') } });
+  for (const f of ['strings', 'choir', 'brass', 'flute', 'cello', 'piano', 'glass', 'musicbox', 'noise', 'tick', 'drum', 'metal']) sc[f] = rec(f);
+  sc.rand = () => 0.5;
+  const synth = { osc: rec('synth') };
+  const LAYERS = ['pad', 'strings', 'choir', 'brass', 'revpad', 'flute', 'bass', 'cello', 'sub', 'piano', 'pluck', 'glass', 'bell', 'prepared', 'musicbox',
+    'pulse', 'ticks', 'perc', 'drum', 'ostinato', 'alarm', 'beeps', 'clock', 'metal'];
+  let chords = 0;
+  const roots = [48, 50, 52, 53, 55, 57, 60];
+  for (const [key, th] of Object.entries(THEMES)) for (const sk of Object.keys(th.sections || {})) {
+    const sec = section(key, sk);
+    sec.bars.forEach((bar, bi) => {
+      if (!bar.chord) return;
+      chords++;
+      for (const root of roots) for (let beat = 0; beat < bar.len; beat++) for (const b of [bi, bi + 1]) {
+        sc.accompany(LAYERS, { t: 0, sec, bar, bi: b, beat, len: 0.3, barSec: 2.4, root, dest: null, v: 0.05, energy: 0.5, rev: false, synth, irregular: b % 2 === 0 });
+      }
+    });
+  }
+  assert.ok(chords > 100, `${chords} chords played`);
+  assert.deepEqual([...new Set(bad)], [], 'no non-finite note');
+  // the Unwritten Second's two-note chord is one of them
+  assert.ok(section('unwritten', 'B').bars.some((b) => b.chord?.length === 2));
+});
