@@ -1360,7 +1360,7 @@ function m13BlockShots(rt) {
 // a shell, nose up (+y): a steel body, its brass driving band, an ogive nose
 function shellBody() {
   const g = new THREE.Group();
-  const steel = new THREE.MeshStandardMaterial({ color: 0x5c626a, metalness: 0.7, roughness: 0.35 });
+  const steel = new THREE.MeshStandardMaterial({ color: 0x9aa2aa, metalness: 0.6, roughness: 0.35, emissive: 0x2a2620 });
   const brass = new THREE.MeshStandardMaterial({ color: 0xc8a050, metalness: 0.8, roughness: 0.3 });
   const part = (geo, mat, y) => { const m = new THREE.Mesh(geo, mat); m.position.y = y; g.add(m); };
   part(new THREE.CylinderGeometry(0.17, 0.17, 0.95, 14), steel, 0);
@@ -1381,6 +1381,7 @@ function m13ShellHome(rt, which) {
   // a small one at its tail: as big flat discs the glow and its trail were all a phone showed)
   const fx = rt.cinema.addFx(shellHome({ from, to, apex: Math.max(14, far * 0.2), dur: 3.4, delay: 0.3, size: 0.22 }));
   const body = shellBody(), a = new THREE.Vector3(), b = new THREE.Vector3(), up = new THREE.Vector3(0, 1, 0);
+  body.scale.setScalar(1.6); // (a heavy shell, and big enough to read on a phone from the camera beside it)
   let bt = 0;
   rt.cinema.addFx({ obj: body, update(dt) {
     bt += dt;
@@ -1401,7 +1402,7 @@ function m13ShellHome(rt, which) {
     if (t < 1.1) return { cam: [from[0] - dir[0] * 7 + side[0] * 3, from[1] + 1.7, from[2] - dir[2] * 7 + side[2] * 3], look: h }; // (from where it fell, up at it)
     if (t < end - 0.8) { // (alongside it, behind and to one side)
       for (let i = 0; i < 3; i++) look[i] = h[i];
-      return { cam: [h[0] - dir[0] * 16 + side[0] * 6, h[1] + 4, h[2] - dir[2] * 16 + side[2] * 6], look };
+      return { cam: [h[0] - dir[0] * 10 + side[0] * 4, h[1] + 2.5, h[2] - dir[2] * 10 + side[2] * 4], look };
     }
     return { cam: [to[0] - dir[0] * 14 + side[0] * 7, to[1] + 3.5, to[2] - dir[2] * 14 + side[2] * 7], look: to }; // (at the gun)
   } });
