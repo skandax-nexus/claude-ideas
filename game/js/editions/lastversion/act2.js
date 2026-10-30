@@ -253,7 +253,7 @@ M09.outro = M09.hook.lines;
 // Mission 10: ENEMIES WHO REMEMBER
 // =============================================================================================================
 const M10_HINTS = {
-  escape: ['Out of the cell.', 'Along the gallery, unseen.', 'Reach the guard post.'],
+  escape: ['A trooper on the gallery is watching the way from the cells to the guard post.', 'He only looks one way, toward the cells. The yard on the hall\'s roof runs round behind him.', 'Go south out of the cell into the yard, round behind him, and up to the guard post.'],
   sera: ['That guard is watching me, and she has not raised the alarm.', 'She is standing at the guard post.', 'Walk up to the guard post and talk to the guard.'],
   power: ['The guards\' lamps are fed through both years. I can blind them.', 'There are two switches on the power run, one in each year.', 'Cut the power run in 2049, then switch to 2026 and cut that run too.'],
   projector: ['What did they take from me? They keep what they capture in one room.', 'Everything they took is in the testing chamber.', 'Go into the testing chamber and look at the projector.'],
@@ -273,7 +273,7 @@ const LOOPER = AMB('CROWD_M2');
 export const M10 = {
   key: 'm10', n: 10, chapter: 'act2', name: 'ENEMIES WHO REMEMBER', title: 'The Continuum\'s detention block', subtitle: 'They believe time must be controlled. Sera helps you out.',
   logline: 'A prison in a dam, on a snowy night.',
-  place: 'dam', sectors: 1, states: ['PRESENT', 'PAST'], drones: [2, 2, 2, 1], ambience: 'hum', ambient: 'loop',
+  place: 'dam', sectors: 1, states: ['PRESENT', 'PAST'], drones: [3, 2, 2, 1], ambience: 'hum', ambient: 'loop',
   motto: 'TIME MUST BE CONTROLLED', gate: 'THE SPILLWAY', crew: C('sera'),
   named: ['sera', 'dale', 'rook', 'guard'],
   minutes: { main: 31, optional: 6 }, autoExit: 1.2, gateAfter: true,
@@ -302,7 +302,7 @@ export const M10 = {
     {
       name: 'THE DETENTION BLOCK',
       threads: [
-        { id: 'escape', kind: 'stealth', at: 'guardPost', r: 3, goal: 'Out of the cell, along the gallery, unseen.', because: 'They remember my last attempt.', hints: M10_HINTS.escape, minutes: 6 },
+        { id: 'escape', kind: 'stealth', at: 'guardPost', r: 3, goal: 'Out of the cell to the guard post, unseen.', because: 'They remember my last attempt.', hints: M10_HINTS.escape, minutes: 6 },
         { id: 'sera', kind: 'talk', npc: 'm10_guard', at: 'guardPost', after: ['escape'], goal: 'The guard at the post is watching me.', because: 'She has not raised the alarm.', done: 'sera_met', hints: M10_HINTS.sera, minutes: 3 },
       ],
       sides: [
@@ -461,12 +461,19 @@ M10.outro = M10.hook.lines;
 
 // the watchers the gallery's and the crown's lamps light (quarters 0 and 1): the power cut blinds these
 const LAMPS = /_q[01]s\d+$/;
+// the gallery's lookout (dam.js: a round of one point): he stands looking west along the gallery, at the cells
+const LOOKOUT = /_q0s2$/;
 // the Continuum's watchers remember Kai's last attempt (§5 M10): after each catch (a setback with a watcher at his
 // shoulder) every patrol starts its round further along, and looks a metre further, up to three
 function m10Step(rt) {
   const g = rt.g, f = g.facts, p = g.player?.pos;
   const S = (rt.m10 ||= { catching: false, caught: false });
   if (!p) return;
+  // (the lookout, back at his spot and not looking at anything else: west, along the gallery, v2.1.1 playtest M10)
+  for (const s of g.deckWorld?.sentinels || []) {
+    const w = s.def.path[0];
+    if (LOOKOUT.test(s.def.id) && s.mode === 'patrol' && s.suspicion < 0.3 && Math.hypot(s.pos.x - w[0], s.pos.z - w[1]) < 0.3) s.dir.set(-1, 0, 0);
+  }
   if (g.catching && !S.catching) S.caught = (g.deckWorld?.sentinels || []).some((s) => Math.hypot(s.pos.x - p.x, s.pos.z - p.z) < 1.8);
   const ended = S.catching && !g.catching;
   S.catching = !!g.catching;
@@ -1479,6 +1486,12 @@ export const M13 = {
     },
   },
   step: m13Step,
+  // (v2.1.1 playtest M10: the sentry at the sandbag line's gap looks a little wider and further, 30 degrees each side and
+  // 10 m, so a walk straight at the gate meets its look four times in five; waiting behind a truck until it walks east,
+  // as THINK says, gets through)
+  adjust(level) {
+    for (const s of level.sentinels) if (/_q0s1$/.test(s.id)) Object.assign(s, { range: 10, fov: 1.0 });
+  },
   // (a load while they lead the way: the flare is lit again, its patrol drawn off; a lure is not in the save)
   resumes: [{ when: 'listeners_route', until: 't_m13_cross', fx: 'listenersRoute' }],
   fx: {

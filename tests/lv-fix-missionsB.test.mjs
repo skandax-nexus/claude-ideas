@@ -297,8 +297,10 @@ test('F03: the crossing is a stealth beat: walked straight at the gate, the sent
   const straight = phases.map((ph) => crossing('straight', ph)), timed = phases.map((ph) => crossing('timed', ph));
   const caught = straight.filter((r) => r.caught).length;
   assert.ok(straight.every((r) => r.caught || r.through), 'every walk ends at the gate or caught');
-  assert.ok(caught >= 12, `straight at the gate: caught ${caught} times in 25`);
-  assert.ok(caught <= 20, `but not a wall: ${25 - caught} of 25 walks get through on the sentry's back`);
+  // (v2.1.1 playtest M10: a walk straight at the gate is caught at least three times in four; it was more often than
+  // not, and a straight push slid through on the sentry's back half the time)
+  assert.ok(caught >= 19, `straight at the gate: caught ${caught} times in 25`);
+  assert.ok(caught <= 24, `but not a wall: ${25 - caught} of 25 walks get through on the sentry's back`);
   const ok = timed.filter((r) => r.through && r.seen < 1).length;
   // (a stealth thread's arrival counts unseen: its trigger says so, and Runtime's trigger step holds it while a watcher chases)
   const trig = M13L.triggers.find((t) => Object.keys(t.set).includes('t_m13_cross'));

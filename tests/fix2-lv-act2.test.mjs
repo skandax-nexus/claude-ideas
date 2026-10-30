@@ -279,3 +279,49 @@ test('H3: after a catch (and while Kai is walked back) no watcher sees him for a
 });
 
 void [L9, L13, M09, M11, M13];
+
+// --- Mission 10's escape: real stealth ------------------------------------------------------------------------------
+// Kai walks a route from his cell to the guard post against the gallery's watchers (DeckWorld's sentinels with the
+// edition's limits, the mission's own step each frame: the lookout's facing), the watchers having walked `phase`
+// seconds first
+function escape(level, pts, phase, run = false, facts = {}) {
+  const dt = 1 / 20, goal = [2, -8];
+  const cols = colsOf(level, 'PRESENT', facts);
+  const sents = level.sentinels.filter((d) => /_q[01]s/.test(d.id) && holds(d.when, 'PRESENT', facts)).map((d) => {
+    const m = new THREE.Group();
+    m.userData = { eyeMat: new THREE.MeshBasicMaterial(), coneMat: new THREE.MeshBasicMaterial() };
+    return limitWatcher(new Sentinel(JSON.parse(JSON.stringify(d)), m), () => cols);
+  });
+  const p = Object.assign(Object.create(Player.prototype), { pos: new THREE.Vector3(-24, 0.86, -19.5), vel: new THREE.Vector3(), H: new THREE.Vector3(0, 0, -1), U: new THREE.Vector3(0, 1, 0), gravity: -1, grounded: false, half: new THREE.Vector3(0.3, 0.85, 0.3), topSpeed: null, stepOff: 0, airT: 0, _canStep: false, comfort: true, pitch: 0, facing: new THREE.Vector3(0, 0, -1), colliders: cols, running: false });
+  const g = { facts: { get: () => 0, inc() {} }, catching: false, player: p, deckWorld: { sentinels: sents }, checkpoint: [-24, 0.86, -19.5] };
+  for (let t = 0; t < phase; t += dt) { M10.step({ g, deck: M10 }, dt); for (const s of sents) s.update(dt, t, { player: p, here: true, hidden: true }); }
+  let i = 0;
+  for (let t = 0; t < 90; t += dt) {
+    while (i < pts.length && Math.hypot(pts[i][0] - p.pos.x, pts[i][1] - p.pos.z) < 0.5) i++;
+    const to = pts[Math.min(i, pts.length - 1)], dx = to[0] - p.pos.x, dz = to[1] - p.pos.z, d = Math.hypot(dx, dz) || 1;
+    p.H.set(dx / d, 0, dz / d);
+    p.update(dt, { forward: 1, strafe: 0, run, jump: false, slow: false }, cols);
+    M10.step({ g, deck: M10 }, dt);
+    for (const s of sents) if (s.update(dt, t, { player: p, here: true, hidden: false }) === 'caught') return 'caught';
+    if (Math.hypot(p.pos.x - goal[0], p.pos.z - goal[1]) < 3 && !sents.some((s) => s.mode === 'chase')) return 'through';
+  }
+  return 'timeout';
+}
+
+test('M10: Mission 10\'s escape is not walked or run straight; out through the yard, round behind the gallery\'s lookout, it is', () => {
+  const look = L10.sentinels.find((s) => /_q0s2$/.test(s.id));
+  assert.ok(look && look.path.length === 1 && look.when === '!sera_met', `the lookout: ${JSON.stringify(look)}`);
+  const phases = [...Array(16).keys()].map((k) => k * 5);
+  const straight = phases.map((ph) => escape(L10, [[-24, -15], [2, -8]], ph));
+  const ran = phases.map((ph) => escape(L10, [[-24, -15], [2, -8]], ph, true));
+  assert.deepEqual([straight.filter((r) => r === 'through').length, ran.filter((r) => r === 'through').length], [0, 0], `straight: ${straight} / run: ${ran}`);
+  const yard = phases.map((ph) => escape(L10, [[-24, -14], [-23, -1], [10, -1], [6, -5], [2, -8]], ph));
+  assert.ok(yard.filter((r) => r === 'through').length >= 12, `by the yard, without even watching the yard's patrols: ${yard}`);
+  // (and once Kai has met Sera the lookout is gone: the gallery is the gallery it was, for the power run and back)
+  assert.deepEqual(phases.slice(0, 4).map((ph) => escape(L10, [[-24, -15], [2, -8]], ph, false, { sera_met: true })).filter((r) => r === 'caught').length < 4, true);
+  // THINK says how
+  const t = threadsOf(M10).find((x) => x.id === 'escape');
+  assert.ok(/yard/.test(t.hints[1]) && /yard/.test(t.hints[2]) && !/along the gallery/i.test(t.goal), JSON.stringify(t));
+  // the intake records stand behind him, east of the post
+  assert.ok(L10.landmarks.intakeRecords[0] > look.path[0][0] + 9, 'the intake desk is out of his look');
+});

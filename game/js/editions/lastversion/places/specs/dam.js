@@ -48,8 +48,11 @@ export default {
   frags: { m10: [['cellWall', 'intakeRecords', 'floodPole'], ['switch2026', 'directorOffice', 'crestParapet']] },
   // the guards walk the gallery and the yard on the turbine hall's roof; (U7 review) troopers on the testing chamber's
   // floor, between the projector and the spillway (clear of the turbines), and one on the gorge floor by the skiff
+  // (v2.1.1 playtest M10: and until Kai has met Sera at her post, a trooper who stands on the gallery between the cells
+  // and the post, looking west along it at the cells, act2.js m10Step: the escape is not walked straight past him; round
+  // by the yard behind him, it is)
   watch: { m10: [
-    [[[-60, -10], [60, -10]], [[-20, 6], [20, 6], [20, 20], [-20, 20]]],
+    [[[-60, -10], [60, -10]], [[-20, 6], [20, 6], [20, 20], [-20, 20]], { path: [[-8, -12.5]], when: '!sera_met' }],
     [[[-50, -4], [50, -4], [50, 12], [-50, 12]], [[0, 24], [40, 24]]],
     [{ y: HALL, path: [[14, 4], [48, 4], [48, 24], [14, 24]] }, { y: HALL, path: [[28, 2], [28, 26]] }],
     [{ y: HALL, path: [[-6, 34], [40, 34]] }],
@@ -179,7 +182,7 @@ export default {
     P.land('galleries', 16, 0, -10, Math.PI); // the inspection gallery along the face, east of the guard post
     P.box([-1, 0, -12.5, 5, 2.8, -10.5], 'cellBars');
     P.box([-1.2, 2.8, -12.7, 5.2, 3, -10.3], 'gratingSteel');
-    P.land('intakeRecords', -12, 0, -13, 0);
+    P.land('intakeRecords', 8, 0, -13, 0); // (east of the guard post, behind the gallery's lookout: M10)
     P.land('floodPole', 30, 0, 18, 0);
     // floodlights on the yard: sodium and cold LED in 2049, warm work lights in 2026
     for (const [fx, fz] of [[-56, 26], [-20, 26], [20, 26], [56, 26], [-56, -4], [56, -4]]) {
