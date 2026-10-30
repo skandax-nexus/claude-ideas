@@ -276,7 +276,10 @@ export class Inversion {
       if (this.once('locked', 30)) g.hud.toast('<small>REVERSE</small><br>Not yet. Something in Act II catches the rhythm.', 1800);
       return;
     }
-    const t = this.findTarget();
+    // (a lock's bolts stand 0.68 m apart: the tap acts on the bolt the label names, the one shown under the crosshair
+    // this frame, never another found a moment later; v2.1.1 playtest L25)
+    const shown = this.target;
+    const t = shown?.p.rec.kind === 'lock' && shown.part >= 0 && !shown.p.partOut[shown.part] && !shown.p.hiddenByWhen ? shown : this.findTarget();
     this.target = t;
     if (this.active) {
       const same = t && t.p === this.active.p && t.part === this.active.part;
@@ -340,6 +343,12 @@ export class Inversion {
     if (st.charge < 1 || rt.stability < 0.2) return this.refuseCharge();
     st.charge -= 0.5;
     rt.stability = Math.max(0, rt.stability - (STAB_COST[rec.weight] ?? 0.06));
+    // (in an unstable place a hold costs the Chronolith as well, and nothing said so: the first hold there says it, and
+    // the case board's ABILITIES; v2.1.1 playtest L26)
+    if (rt.unstable && !rt.roaming && !g.facts.get('inv_stab_told')) {
+      g.facts.set('inv_stab_told');
+      g.hud.toast('<small>REVERSE</small><br>In an unstable place a hold drains the Chronolith too: watch its meter.', 3200);
+    }
     this.idleT = 0;
     g.facts.set('inv_used');
     this.snd.start(rec.grain);
@@ -621,7 +630,7 @@ export class Inversion {
       li.push('<li><b>ANCHOR</b> <small>C · ANCHOR</small><br>What you carry out of another year survives the switch while you hold it. The ANCHOR button (or the CARRYING label) shows while you carry one.</li>');
     }
     if (f.get('echo_step')) li.push('<li><b>ECHO STEP</b> <small>X</small><br>An afterimage the watchers follow, and a step forward. It costs stability.</li>');
-    if (this.unlocked) li.push(`<li><b>REVERSE</b> <small>R · 4 · ⟲</small><br>Hold one process backwards while the charge lasts (${this.cap} s).<ul class="rules">${RULES.map(([k, t]) => `<li><b>${k}</b> ${t}</li>`).join('')}</ul></li>`);
+    if (this.unlocked) li.push(`<li><b>REVERSE</b> <small>R · 4 · ⟲</small><br>Hold one process backwards while the charge lasts (${this.cap} s): LIGHT things longer, HEAVY ones shorter. In an unstable place a hold drains the Chronolith too.<ul class="rules">${RULES.map(([k, t]) => `<li><b>${k}</b> ${t}</li>`).join('')}</ul></li>`);
     return li.length ? `<h3>ABILITIES</h3><ul class="board abilities">${li.join('')}</ul>` : '';
   }
 
@@ -643,7 +652,8 @@ export class Inversion {
     const name = (p, part) => (p.rec.kind === 'lock' && part >= 0 ? `${p.rec.label} · ${p.rec.parts[part].name}` : p.rec.label);
     const holdFor = (rec) => Math.floor(Math.min(st.charge / rec.weight, rec.max));
     // (the label says why its seconds are not the chip's: a light thing outlasts the charge, a heavy one does not)
-    const heft = (rec) => (rec.weight < 1 ? 'LIGHT · ' : rec.weight > 1 ? 'HEAVY · ' : '');
+    // (every weight is named: a medium one showed neither, its seconds read as the charge's; v2.1.1 playtest L26)
+    const heft = (rec) => (rec.weight < 1 ? 'LIGHT · ' : rec.weight > 1 ? 'HEAVY · ' : 'MEDIUM · ');
     // the chip: what is held and its seconds left; a bolt backing out (or a recording playing) named until it is done;
     // else the charge (an upright phone leaves the name to the label)
     const chipName = a ? `${name(a.p, a.part)} ` : '';

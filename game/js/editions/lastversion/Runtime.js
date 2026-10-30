@@ -1269,7 +1269,9 @@ export class LastVersion {
     else if (resumed && !this.finishedLoad) this.toAnchor();
     // (and the Chronolith gives a load a moment: a save taken low in another year let go of Kai seconds after loading,
     // v2.1 playtest F06)
-    if (resumed && !deck.roam) this.stability = c.stability = Math.max(this.stability, 0.6);
+    // (in full: a save taken in 2026 at 0.57 loaded with the meter already draining and let go of Kai 10-13 s after
+    // the recap, a forced snap straight after loading; v2.1.1 playtest L9)
+    if (resumed && !deck.roam) this.stability = c.stability = 1;
     // an open place: its scenery, sky and horizon, in the room's year (instantly: no easing at a load)
     if (this.level.place) {
       this.mounted = this.level.scenery?.(g.deckWorld.root, this) || null;
@@ -2097,6 +2099,11 @@ export class LastVersion {
     const c = g.campaign;
     if (this.roaming) return; // (a trip has no way on: BACK TO THE STORY)
     if (!g.deckWorld.flags.beat_done) {
+      // (not where the thing still open is: in Act I the gate sits on the last objective, and "Something here is
+      // unfinished" said there read as if something elsewhere was missed, just as it was about to be done; v2.1.1 L18)
+      const t = this.threads?.on ? this.threads.current() : null;
+      const at = t && this.threadWhere(t), p = g.player?.pos;
+      if (at && p && Math.hypot(at[0] - p.x, at[2] - p.z) < 12) return;
       if (!this.gateWarned) this.say(LINES[this.beat.kind === 'custom' ? 'gate_custom' : 'gate_scene']);
       this.gateWarned = true;
       return;
@@ -2458,12 +2465,38 @@ export class LastVersion {
       }
       g.engine.setState(g.room, this.home(), { force: true });
       g.player.place(g.checkpoint);
+      delete g.campaign.anchor; // (a load starts where the snap left him: L8)
       this.stability = 0.5;
       g.hud.fade(false);
       g.catching = false;
       g.deckWorld.refresh();
       if (!this.opening && !this.cinema?.active) this.say(LINES.snap);
     }, 700);
+  }
+
+  // how far a thing's prompt reaches (main.findFocus): a process REVERSE holds is read from where it is held, not only
+  // from 2.2 m. The charred file, held from 2.6 m, showed no READ THE FILE until Kai stepped to 1.5 m, while REVERSE
+  // reaches it from 14 (v2.1.1 playtest L24)
+  focusReach(c) {
+    const rec = this.inv?.active?.p?.rec;
+    return rec && !this.inv.active.lock && c.id === `deck:p_${rec.id}` ? Math.max(c.r, rec.reach || c.r) : c.r;
+  }
+
+  // what took Kai back, from where it happened (main.deckSetback, before he is put back): deep water, or a fall. A
+  // catch says its own line; a hazard's hit, its mission's. The fall and the drowning returned him with a blip and a
+  // fade, and the player was not told what went wrong (v2.1.1 playtest L11)
+  setbackWhy(kind) {
+    const g = this.g, p = g.player?.pos, lv = this.level;
+    // (and Kai is walked back to his checkpoint: where the story last moved is behind him now, and a load starts where
+    // the setback left him, not where it caught him. Mission 8: caught by the island drone after the lockdown, a load
+    // put him back inside the sealed cube; v2.1.1 playtest L8)
+    if (g.campaign?.lv) delete g.campaign.anchor;
+    if (kind !== 'fall' || !p || !lv || !g.campaign?.lv) return null;
+    const wet = (lv.drowns || []).some((d) => {
+      const b = d.box;
+      return p.x >= b[0] && p.x <= b[3] && p.z >= b[2] && p.z <= b[5] && p.y <= b[4] + 0.5 && (!d.when || g.facts.test(d.when, g.engine.state(d.room || lv.outdoorRoom)));
+    });
+    return wet ? '<small>TOO DEEP</small><br>In this year the water there is over Kai\'s head. Back to the last anchor.' : '<small>A FALL</small><br>Kai fell. Back to the last anchor.';
   }
 
   // the year a mission belongs to (its states' first, when it says so: deck.home): where it starts, where stability

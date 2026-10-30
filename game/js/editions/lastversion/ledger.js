@@ -15,6 +15,7 @@
 // Keep these true: every later edit to a mission updates them, and their tests fail loudly by design (§12 risk 14).
 
 // the campaign's missions in order (the cases are outside it)
+import { RECAPS } from './recaps.js';
 export const MISSION_ORDER = Array.from({ length: 23 }, (_, i) => `m${String(i + 1).padStart(2, '0')}`);
 export const missionIndex = (m) => MISSION_ORDER.indexOf(m);
 
@@ -187,6 +188,8 @@ export const PREVIOUSLY = {
   // (Mission 2 is the same morning as the crash, in the storm: not "tonight", v2.1 playtest FT-14)
   m02: ['At 8:14 the 41 came into Line 41 at full speed.', 'Every speaker in the station said his name: Do not build the machine.', 'Now Helix has gone dark, and Kai Varen is inside it.'],
   m03: ['Helix went dark, and under it waited the ring Mira drew.', 'Kai touched it, and it let him in.', 'Now the building has three dates, and it is trying all of them.'],
+  // (and each mission of Acts I and II its own, for a load: v2.1.1 playtest L10, recaps.js)
+  ...RECAPS,
 };
 
 // --- EPILOGUE (§5 M23): one line per fact the player set, after an ending's quote ------------------------------------

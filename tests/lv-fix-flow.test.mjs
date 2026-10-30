@@ -200,7 +200,8 @@ test('SYS-06: a checkpoint reached is saved; the app sent to the background save
   assert.match(SRC, /window\.addEventListener\('pageshow', \(\) => \{ this\.unloading = false; \}\);/);
 });
 test('acts-3 F06: a load gives the Chronolith a moment (stability at least 0.6), and the street\'s save is past it', () => {
-  assert.match(SRC, /if \(resumed && !deck\.roam\) this\.stability = c\.stability = Math\.max\(this\.stability, 0\.6\);/);
+  // (in full since v2.1.1 playtest L9: a 2026 save at 0.57 still let go of Kai 10-13 s after its recap)
+  assert.match(SRC, /if \(resumed && !deck\.roam\) this\.stability = c\.stability = 1;/);
   // the Finale's 'street' thread ends past the pit (z 104-119; the pit at about 131, the platform at 166)
   const street = MISSIONS.finale[0].quarters[0].threads.find((t) => t.id === 'street');
   assert.ok(street.box[3] <= 119 && street.box[1] >= 104, JSON.stringify(street.box));

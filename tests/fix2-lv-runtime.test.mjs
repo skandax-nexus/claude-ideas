@@ -251,3 +251,82 @@ test('L45: every theme\'s every chord, under every layer at every beat, asks onl
   // the Unwritten Second's two-note chord is one of them
   assert.ok(section('unwritten', 'B').bars.some((b) => b.chord?.length === 2));
 });
+
+// --- saves and resume: L8, L9, L10 --------------------------------------------------------------------------------
+test('L8: a setback (a catch, a fall, deep water) or a snap drops the anchor: a load starts where it left Kai, not where it caught him', () => {
+  const rt = runtime('act1', 4);
+  const g = rt.g;
+  g.campaign.anchor = { mkey: 'm08', sector: 0, room: 'r', year: 'PRESENT', pos: [0, 1.3, 4.8, 0], cp: [30, 1.06, 12] };
+  rt.setbackWhy('caught');
+  assert.equal(g.campaign.anchor, undefined);
+  assert.match(SRC, /g\.player\.place\(g\.checkpoint\);\s*delete g\.campaign\.anchor;/, 'and the Chronolith\'s snap back');
+  assert.match(read('../game/js/main.js'), /const why = this\.edition\?\.setbackWhy\?\.\(kind\) \|\| null;/, 'main asks the edition at every setback');
+});
+
+test('L9: a load gives the Chronolith back in full (a 2026 save at 0.57 let go of Kai 10-13 s after its recap)', () => {
+  assert.match(SRC, /if \(resumed && !deck\.roam\) this\.stability = c\.stability = 1;/);
+});
+
+test('L10: a load inside a mission of Acts I and II recaps that mission (three lines each, said from its chapter\'s pack); a chapter still opens on its act\'s', async () => {
+  const { PREVIOUSLY } = await import('../game/js/editions/lastversion/ledger.js');
+  const { RECAPS } = await import('../game/js/editions/lastversion/recaps.js');
+  const { spokenLines } = await import('../game/js/editions/lastversion/voicelines.js');
+  const spoken = spokenLines();
+  for (const n of [4, 5, 6, 7, 8, 9, 10, 11, 12, 13]) {
+    const mk = `m${String(n).padStart(2, '0')}`;
+    assert.equal(RECAPS[mk]?.length, 3, `${mk}: three lines`);
+    assert.deepEqual(PREVIOUSLY[mk], RECAPS[mk]);
+    const ch = n <= 8 ? 'act1' : 'act2';
+    for (const t of RECAPS[mk]) assert.ok(spoken.some((e) => e.group === ch && e.who === 'NONE' && e.text === t), `${mk} said from ${ch}: ${t}`);
+  }
+  assert.ok(!/village three thousand years old/.test(PREVIOUSLY.m13.join(' ')), 'mid-Mission 13 is not the act\'s opening');
+  // a load picks the mission's own; a chapter's start, its act's
+  assert.match(SRC, /const \[k\] = this\.previouslySteps\(this\.chapter, PREVIOUSLY\[mk\] \? mk : null\);/);
+  assert.match(SRC, /if \(first && this\.chapter !== 'prologue'\) steps\.push\(\.\.\.this\.previouslySteps\(this\.chapter\)\);/);
+});
+
+// --- L11, L18 ------------------------------------------------------------------------------------------------------
+test('L11: a fall and deep water say what took Kai back; L18: the gate says nothing is unfinished when Kai stands at the thing still open', () => {
+  const rt = runtime('act3', 0);
+  const g = rt.g;
+  g.player = { pos: { x: -41, y: 0.5, z: 65 } };
+  Object.defineProperty(rt, 'level', { value: { outdoorRoom: 'r', drowns: [{ box: [-50, -12, 60, -30, 1.2, 70], when: '@FUTURE', room: 'r' }] }, configurable: true });
+  g.engine.setAvailable('r', ['PRESENT', 'PAST', 'FUTURE']);
+  g.engine.setState('r', 'FUTURE', { force: true });
+  assert.match(rt.setbackWhy('fall'), /TOO DEEP/);
+  g.engine.setState('r', 'PRESENT', { force: true });
+  assert.match(rt.setbackWhy('fall'), /A FALL/, 'the same spot in a dry year is a fall');
+  assert.equal(rt.setbackWhy('caught'), null, 'a catch says its own line');
+  assert.equal(rt.setbackWhy('hit'), null);
+  assert.match(SRC, /if \(at && p && Math\.hypot\(at\[0\] - p\.x, at\[2\] - p\.z\) < 12\) return;\s*if \(!this\.gateWarned\) this\.say/);
+});
+
+// --- L24, L25, L26: REVERSE's feedback -------------------------------------------------------------------------------
+test('L24: a thing REVERSE holds is read from where it is held; L25: the tap acts on the bolt the label names; L26: every weight named, the stability cost said', async () => {
+  const { Inversion } = await import('../game/js/editions/lastversion/inversion.js');
+  // L24: the held file's READ prompt reaches as far as the hold does; nothing else does
+  const rt = runtime('act2', 2);
+  const file = { rec: { id: 'charredFile', reach: 14 } };
+  rt.inv = { active: { p: file } };
+  assert.equal(rt.focusReach({ id: 'deck:p_charredFile', r: 2.2 }), 14);
+  assert.equal(rt.focusReach({ id: 'deck:p_other', r: 2.2 }), 2.2);
+  rt.inv = { active: null };
+  assert.equal(rt.focusReach({ id: 'deck:p_charredFile', r: 2.2 }), 2.2, 'not held: as before');
+  assert.match(read('../game/js/main.js'), /if \(d > \(this\.edition\?\.focusReach\?\.\(c\) \?\? c\.r\)\) continue;/);
+  // L25: the shown bolt is the one tapped
+  const lock = { rec: { id: 'm11lock', kind: 'lock', label: 'THE LOCK', weight: 1, max: 8, parts: [{ name: 'BAR', order: 2 }, { name: 'CRESCENT', order: 1 }] }, partOut: [false, false] };
+  let started = null;
+  const inv = Object.assign(Object.create(Inversion.prototype), {
+    g: { started: true, menu: null, paused: false, mode: 'deck', campaign: { lv: true }, facts: { get: (k) => k === 'has_inversion' } }, rt: {}, active: null,
+    target: { p: lock, part: 1, pos: [0, 0, 0] }, findTarget: () => ({ p: lock, part: 0, pos: [0, 0, 0] }), start: (t) => (started = t),
+  });
+  inv.press();
+  assert.equal(started.part, 1, 'CRESCENT, as the label said, not BAR found a moment later');
+  // L26: a medium weight is named; the case board says a hold costs the Chronolith
+  const med = { rec: { id: 'door', label: 'THE ANNEX DOOR', weight: 1, max: 8, aim: [0, 1, 0] } };
+  const inv2 = Object.assign(Object.create(Inversion.prototype), { g: { facts: { get: () => true }, campaign: { inv: { charge: 8, cap: 8 } } }, active: null, target: { p: med, part: -1, pos: [0, 1, 0] } });
+  assert.equal(inv2.hudState().label, '⟲ THE ANNEX DOOR · MEDIUM · 8 s');
+  const INV = read('../game/js/editions/lastversion/inversion.js');
+  assert.match(INV, /In an unstable place a hold drains the Chronolith too: watch its meter\./);
+  assert.match(INV, /In an unstable place a hold drains the Chronolith too\.<ul class="rules">/);
+});

@@ -547,7 +547,7 @@ class Game {
     let ok = false;
     if (action === 'load') ok = this.load(slot);
     else if (['cradle', 'vessel', 'studio'].includes(action)) this.adoptLastEnding();
-    if (ok) this.hud.toast('Memory restored.');
+    if (ok && this.campaign?.chapter !== 'roam') this.hud.toast('Memory restored.'); // (a trip is not a memory: v2.1.1 P19)
     else if (action.startsWith('lv:')) this.edition.start(action.slice(3));
     else if (action === 'vessel') this.startVessel(undefined, null, null, opts?.ending);
     else if (action === 'studio') this.startVessel(opts?.seed, null, opts?.wish, opts?.ending);
@@ -1954,6 +1954,8 @@ class Game {
     this.catching = true;
     if (kind === 'caught') this.audio.caught();
     else this.audio.deny();
+    // (an edition may say what took Kai back, from where it happened: THE LAST VERSION's falls and deep water)
+    const why = this.edition?.setbackWhy?.(kind) || null;
     this.hud.fade(true);
     setTimeout(() => {
       this.player.setGravity(this.engine.gravity(this.room));
@@ -1961,6 +1963,7 @@ class Game {
       for (const s of this.deckWorld.sentinels) s.reset();
       this.hud.fade(false);
       this.catching = false;
+      if (why) this.hud.toast(why, 2600);
       // the 'learned' watchers (after SUSTAINED) keep their own one-time line: a HALCYON drone's catch
       // must not use it up (THE LAST VERSION keeps its key)
       const learned = this.story?.after?.sentinels === 'learned';
@@ -2005,7 +2008,7 @@ class Game {
     for (const c of cands) {
       v.set(...c.pos).sub(eye);
       const d = v.length();
-      if (d > c.r) continue;
+      if (d > (this.edition?.focusReach?.(c) ?? c.r)) continue; // (an edition may reach further: a thing held by REVERSE)
       const dot = v.normalize().dot(fwd);
       if (dot < 0.55 && d > 1.2) continue;
       const s = dot - d * 0.08;

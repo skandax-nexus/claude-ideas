@@ -18,6 +18,7 @@ import { ENDINGS, EPILOGUE, POSTCREDIT } from './acts.js';
 import { NPCS, CAST, DIALOGUE, AMBIENT } from './npcs.js';
 import { INV_LINES, INV_SPEAKERS, RULES } from './inversion.js';
 import { QUESTIONS, PREVIOUSLY } from './ledger.js';
+import { RECAPS } from './recaps.js';
 import { RealityEngine } from '../../core/RealityEngine.js';
 import { FactStore } from '../../core/FactStore.js';
 
@@ -338,7 +339,10 @@ export function spokenLines({ levels = true } = {}) {
   for (const [k, t] of RULES) add('common', `RULES.${k}`, 'NONE', t);
   // the cards: every chapter's, every mission's; what came before (PREVIOUSLY); the case board's questions (▶)
   for (const ch of [...ORDER, 'cases']) lines('common', `card:${ch}`, chapterCardLines(ch));
-  for (const [ch, ls] of Object.entries(PREVIOUSLY)) ls.forEach((t, i) => add('common', `previously:${ch}${i}`, 'NONE', t));
+  // (a mission's own recap, recaps.js, is said from its chapter's pack, loaded with it: the common pack keeps its budget;
+  // Missions 2 and 3's, recorded before, stay in common; v2.1.1 playtest L10)
+  const recapGroup = Object.fromEntries(Object.entries(RECAPS).map(([mk]) => [mk, Object.keys(MISSIONS).find((ch) => MISSIONS[ch].some((m) => m.key === mk)) || 'common']));
+  for (const [ch, ls] of Object.entries(PREVIOUSLY)) ls.forEach((t, i) => add(recapGroup[ch] || 'common', `previously:${ch}${i}`, 'NONE', t));
   for (const q of QUESTIONS) add('common', `question:${q.id}`, 'NONE', q.text);
   for (const ch of Object.keys(MISSIONS)) for (const m of MISSIONS[ch]) lines('common', `card:${m.key}`, missionCardLines(m));
   return out;
