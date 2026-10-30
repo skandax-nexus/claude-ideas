@@ -104,7 +104,7 @@ function M01_PA() {
   return m ? [{ who: 'PA', text: m[1], voice: { fx: 'pa', cue: 'pa' }, ambient: true }] : [];
 }
 
-test('SYS-18: a passer-by who would fill the screen is not drawn, upright sooner than sideways; an umbrella counts; a talker never', () => {
+test('SYS-18: a passer-by who would fill the screen is not drawn, upright sooner than sideways; an umbrella counts; a talker never in a shot or a talk', () => {
   const w = Object.create(DeckWorld.prototype);
   const cam = (aspect) => {
     const c = new THREE.PerspectiveCamera(aspect < 1 ? 96 : 70, aspect, 0.05, 600);
@@ -134,8 +134,9 @@ test('SYS-18: a passer-by who would fill the screen is not drawn, upright sooner
   // a camera with no projection (a test's stand-in) keeps the distance rule
   assert.equal(w.fillsCamera(person(0, -0.8).n, person(0, -0.8).m, { position: new THREE.Vector3(0, 1.6, 0) }, false), true);
   assert.equal(w.fillsCamera(person(0, -5).n, person(0, -5).m, { position: new THREE.Vector3(0, 1.6, 0) }, false), false);
-  // someone Kai can talk to is never hidden by it (the conversation camera stands close to them)
-  assert.match(read('../game/js/world/DeckWorld.js'), /if \(cam && !talker && \(n\.n\.ambient \|\| n\.n\.path\) && !n\.n\.flicker\) \{/);
+  // someone Kai can talk to is hidden by it only while the game's own camera follows him (v2.1.1 playtest P17), never in a
+  // shot or a conversation's framing (the conversation camera stands close to them)
+  assert.match(read('../game/js/world/DeckWorld.js'), /const named = talker && !!g\.edition && !g\.player\?\.cinema;\s*if \(cam && \(\(!talker && \(n\.n\.ambient \|\| n\.n\.path\)\) \|\| named\) && !n\.n\.flicker\) \{/);
 });
 
 // --- touch ---------------------------------------------------------------------------------------------------------------
@@ -197,7 +198,7 @@ test('touch review: the case board opens at its top; the quarter is found again 
   const h = inv.hudState();
   assert.equal(h.chipNum, '…', 'upright the chip shows only this: it was blank');
   assert.equal(h.chip, '⟲ THE LOCK · CRESCENT ', 'the chip\'s key as before');
-  assert.match(read('../game/js/ui/HUD.js'), /window\.addEventListener\('resize', \(\) => \{ this\._promptW = 0; this\._toastBox = null; \}\);/);
+  assert.match(read('../game/js/ui/HUD.js'), /window\.addEventListener\('resize', \(\) => \{ this\._promptW = 0; this\._toastBox = null;[^}]*\}\);/);
 });
 
 // --- flow: acts-3 F06, the street that fell -----------------------------------------------------------------------------

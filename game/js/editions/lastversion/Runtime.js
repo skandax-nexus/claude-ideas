@@ -2403,7 +2403,11 @@ export class LastVersion {
     // a place with one year: YEAR is dimmed (Tips.js), and a tap says why (v2.1.1 playtest L5: it only buzzed)
     if (!to && engine.statesOf(g.room).length < 2) {
       g.audio.deny();
-      if (!(g.hud.toastT > 0)) g.hud.toast(`<small>${this.label(engine.state(g.room))}</small><br>${TOASTS.one_year}`, 2200);
+      // (over whatever toast is up, a trip's 'Memory restored.' as well: the tap asked; not again while it still shows)
+      if (!(g.time - (this.oneYearT ?? -1e9) < 2)) {
+        this.oneYearT = g.time;
+        g.hud.toast(`<small>${this.label(engine.state(g.room))}</small><br>${TOASTS.one_year}`, 2200);
+      }
       return;
     }
     const ok = to ? engine.setState(g.room, to) : engine.cycle(g.room);
