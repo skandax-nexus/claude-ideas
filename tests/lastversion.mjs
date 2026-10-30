@@ -380,7 +380,9 @@ const held = await az(() => {
   r.kept = g.hud.cur?.text === r.line && g.hud.talking;
   r.year = g.engine.state(g.room) === year;
   r.moved = dist();
+  // (a tap: down and up where it landed; a touch that lands and drags is a look and skips nothing, v2.1.1 playtest M2)
   g.canvas.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+  g.canvas.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
   g.simulate(0.2);
   r.tapped = g.hud.cur?.text;
   cine.skipAll();
