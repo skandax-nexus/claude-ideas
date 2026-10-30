@@ -1707,7 +1707,9 @@ in 5,143 recordings. Each mission's place is 1.7-6.8 ha (v2.0's generated rooms:
     the gangway talk saved and loaded at the same spot); `m12-deck.json` and `m10a2.json` recaps; Mission 11 from
     `m11d2.json`/`m11e5.json` (READ at 2.7 m, MEDIUM, the toast, five bolts each acted as labelled); Mission 4 from
     `m04a.json` (the ash toast, the board's clues by name); Mission 7's gate (nothing said); Mission 14's deep water
-    (TOO DEEP); Mission 22 walked 174 s in 2026 with no page error.
+    (TOO DEEP); Mission 22 walked 174 s in 2026 with no page error. At 412x915 by touch: case 12 (both lines, the row in
+    view and marked, a tap where REVERSE was kept the CASE FILES) and the ending killed 10 s in (played again to its
+    card, FINALE 11 min).
 
 - **v2.1.1 playtest fixes, unit "lv-act2" (2026-10-30): Missions 9-13 (Act II)** (PLAYTEST-v2.1.1.md H1, H2, H3, M6,
   M7, M8, M10, M12, M15, L15, L17, L19, L21, L29, L30, L37, P4, P7; lane B: `act2.js`, `watchers.js`, `npcs.js`,
