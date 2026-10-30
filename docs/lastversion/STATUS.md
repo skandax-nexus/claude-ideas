@@ -1578,6 +1578,34 @@ in 5,143 recordings. Each mission's place is 1.7-6.8 ha (v2.0's generated rooms:
   Station Zero 1.1.1 was played in the same round: [../PLAYTEST-v1.1.1.md](../PLAYTEST-v1.1.1.md) (2 high, 8 medium,
   16 low, 4 polish). Nothing in the game was changed; still not done: a real phone, an ear check and a human player.
 
+- **v2.1.1 playtest fixes, Missions 1-8 (lv-early, 2026-10-30).** From [PLAYTEST-v2.1.1.md](PLAYTEST-v2.1.1.md):
+  - **H5, Mission 2's terrace stair:** a room's fall height is now 3 m under the lowest floor it holds, its own stair
+    down to the next room included (`Build.js`), so the plant terrace's stair to the staff lounge is walked down and up
+    with no setback; a unit test checks that no room in Missions 1-8 has a walkable stair or floor under its fall height.
+  - **M4, Mission 3's 2026 dig:** walled on every side (the east wall was missing), its timber steps lead out.
+    **M5, Mission 5's drained basin:** its rims are solid on every side and corner, open where the stair comes down.
+    **L14:** Mission 3's hall counts as crossed only at the far floor's or the lift's height, not after a fall into it.
+  - **L16:** Mission 6's THINK and Kai's line after the arm hits him give the toast's advice (let an end pass, count
+    two, follow it). **P4:** Mission 4's THINK tiers are full sentences (why, where, what to do). **L20:** Mission 8's
+    VERSION terminal is offered only in 2049. **L34:** the escape counts only when Kai reaches the terminal in 2049
+    past the island's drone, having come back to 2049 at least 10 m from it (said once if he switches back beside it).
+  - **Staging:** **L38** the astronomer's reveal (Mission 7) is a staged conversation: letterboxed, HUD hidden, his face
+    in frame over Kai's shoulder; **L39** Mission 8's reconstruction walks with its echoes, the camera off their
+    shoulder, closing in as the ninth minute is said, then on Kai's face; **L33** Mission 7's cold open has a second,
+    close shot of old Niko at the instrument; **P3** the Prologue's card stands over the cold open's first view, not over
+    Kai at his door.
+  - **Looks:** **L32** young Niko's tunic is cut to the knee, his hair short; **L44** Mission 7's 2049 blue hour reads at
+    low quality; **L42** Mission 3's lab differs by year from the door (finished ceiling in 2049, open steel frame and
+    crates in 2026, fallen panels in 2196); **L43** Mission 1's fire escape: the iron back plate is an open frame that
+    stops Kai and the camera; **P5** Mission 6's clocks have dials, hour marks and hands; **P6** Mission 4's first fire
+    is logs, embers and two-colour flames; **P8** the cistern stops Kai at its face and holds water under its lip;
+    **P11** Mission 4's outer ring ends at a field wall, not an invisible one.
+  - **P24 (Mission 6's length):** left as designed: the 12.5 minutes were a script that knew every target; the arm, the
+    stair read from two years and three clocks in three years are not short for a first-time player.
+  - **Checks:** `tests/fix2-lv-early.test.mjs` (19 tests); npm test green but for the voice coverage (39 new or changed
+    THINK and Kai lines in Missions 4, 6 and 8, recorded by the voice step); the bot from NEW GAME to the end of Act I
+    (116 checks, 0 failed); each item by its own repro at 915x412 by touch, and P3, L38, L39 at 412x915.
+
 ## Generated (playable, solvable by construction, not hand-tuned)
 
 - **Nothing of the places since U3.** Every mission and both cases stand in an authored open place;
