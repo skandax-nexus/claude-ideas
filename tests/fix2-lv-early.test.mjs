@@ -192,7 +192,7 @@ test('L16: Mission 6\'s THINK and Kai\'s line after a hit give the toast\'s advi
   assert.ok(M06.spoken.armHit.every((l) => /count two/.test(l.text) && !/when it has passed/i.test(l.text)), JSON.stringify(M06.spoken.armHit));
 });
 
-test('L20, L34: Mission 8\'s terminal is offered in 2049 only, and the escape counts only after a moment back in 2049', () => {
+test('L20, L34: Mission 8\'s terminal is offered in 2049 only, and the escape counts only once Kai has come to it in 2049 past the drone', () => {
   const term = M8.interactables.find((i) => i.scene === 'version');
   assert.ok(term && /@PRESENT/.test(term.when) && !compileCondition(term.when)({ fact: () => true, state: 'PAST' }), `the terminal's prompt: ${term?.when}`);
   const trig = M8.triggers.find((t) => Object.keys(t.set || {}).some((k) => /escape/.test(k)));
@@ -213,8 +213,19 @@ test('L20, L34: Mission 8\'s terminal is offered in 2049 only, and the escape co
   assert.deepEqual(said, ['Not built yet, in 2026.'], 'said once in 2026 at the spot');
   assert.ok(!facts.get('m08_back49'));
   year = 'PRESENT';
+  for (let i = 0; i < 90; i++) M08.step(rt, 1 / 30);
+  assert.ok(!facts.get('m08_back49'), 'not by coming back to 2049 at the terminal itself');
+  assert.deepEqual(said.slice(1), ['Turning up beside it won\'t do. In 2049 I have to reach it past the drone.'], 'said once');
+  for (let i = 0; i < 30; i++) M08.step(rt, 1 / 30);
+  assert.equal(said.length, 2, 'once a visit');
+  // back to 2026, out to the court, back to 2049 there, and in to the terminal
+  year = 'PAST';
+  M08.step(rt, 1 / 30);
+  g.player.pos.set(t[0] - 12, 1.26, t[2] + 4);
+  year = 'PRESENT';
   for (let i = 0; i < 45; i++) M08.step(rt, 1 / 30);
   assert.ok(!facts.get('m08_back49'), 'not after 1.5 s');
+  g.player.pos.set(t[0], 1.26, t[2]);
   g.catching = true;
   M08.step(rt, 1 / 30);
   g.catching = false;

@@ -1011,7 +1011,7 @@ const M08_HINTS = {
   boot: ['Rook said the boot prints are in the clay. The print case.', 'The famous boot print, in its glass case.', 'Stand beside the boot print\'s case and look.'],
   reconstruct: ['Four entries from that morning, out of order.', 'The echoes walk them once they are in order. The table is on the island.', 'At the island, put the four entries in the order they happened.'],
   containment: ['Lin is inside the containment cube.', 'Its door is open now.', 'Walk in through the cube\'s open door, to Lin.'],
-  escape: ['The cube has sealed me in.', 'In 2026 there was no cube here, only the floor.', 'Switch to 2026 to step out, then come back to 2049 and reach the terminal before the drone sees me.'],
+  escape: ['The cube has sealed me in.', 'In 2026 there was no cube here, only the floor.', 'Step out in 2026, come back to 2049 away from the terminal, and reach it past the drone without being seen.'],
   version: ['The terminal on the island names this world.', 'It is on the island, where the morning was rebuilt.', 'Read the terminal on the island.'],
   iven: ['Iven Marr was there in 2026. His statement is recorded.', 'His recorder is in the east arcade.', 'Talk to Iven in the east arcade, or play his recorded statement.'],
   door: ['The staff door is locked.', 'The officer on it might open it for someone they trust.', 'Talk to the officer at the staff door.'],
@@ -1021,6 +1021,7 @@ const RECEPTION = (t) => SAYS('RECEPTION', 'RECEPTIONIST', t);
 // the drones of the court's last quarter (the island and its south bank) and the lockdown that sets them hunting
 const ISLAND = /_q2s\d+$/;
 const ESCAPE_BACK = 2; // (seconds back in 2049 before the terminal counts as reached: the island's drone's moment)
+const ESCAPE_FAR = 10; // (metres from the terminal Kai must have been in 2049 since he came back to it: past the drone)
 function lockdown(defs) {
   for (const d of defs) if (ISLAND.test(d.id) && !d.locked) Object.assign(d, { locked: true, range: d.range + 4, speed: d.speed + 0.6 });
 }
@@ -1177,6 +1178,8 @@ export const M08 = {
     boot: { lines: [N('Kai sets his boot beside the glass. The same tread. The same worn heel.'), REV(K('Three thousand years. It\'s mine.'))], set: { ev_boot_mine: true }, log: 'The Site Zero print is my boot.' },
     version: { when: '@PRESENT', lines: [REV(N('TIMELINE: VERSION 17. PRIOR VERSIONS: NO SURVIVING RECORD.'))], set: { version_17: true, ev_version17: true }, log: 'This is VERSION 17.' },
     version_no: { lines: [K('Not built yet, in 2026.')] },
+    // (L34: back in 2049 at the terminal itself, the drone was never passed)
+    version_near: { lines: [K('Turning up beside it won\'t do. In 2049 I have to reach it past the drone.')] },
     group_photo: { lines: [N('The 2026 junior programme: Mira in yellow boots, a scowling boy of twelve, and a young Elias Rook.'),
       K('I hated that day. I don\'t remember why.')], set: { ev_group_photo: true } },
     iven_record: {
@@ -1214,13 +1217,20 @@ export const M08 = {
     const g = rt.g, f = g.facts;
     if (!f?.get('lin_gone') || f.get('t_m08_escape')) return;
     const year = g.engine.state(g.room);
-    rt.m08Back = year === 'PRESENT' && !g.catching ? (rt.m08Back || 0) + dt : 0;
-    const back = rt.m08Back >= ESCAPE_BACK;
-    if (!!f.get('m08_back49') !== back) f.set('m08_back49', back);
     const t = rt.level?.landmarks?.versionTerminal, p = g.player?.pos;
-    const at = !!t && !!p && Math.hypot(p.x - t[0], p.z - t[2]) < 3;
+    const dist = t && p ? Math.hypot(p.x - t[0], p.z - t[2]) : 99;
+    const at = dist < 3;
+    // (and in 2049 he must have been ESCAPE_FAR from the terminal since he came back, and walked in past the drone: a
+    // switch back to 2049 at the terminal itself was the whole escape walked in 2026)
+    rt.m08Back = year === 'PRESENT' && !g.catching ? (rt.m08Back || 0) + dt : 0;
+    rt.m08Far = year === 'PRESENT' && (rt.m08Far || dist >= ESCAPE_FAR);
+    const back = rt.m08Back >= ESCAPE_BACK && rt.m08Far;
+    if (!!f.get('m08_back49') !== back) f.set('m08_back49', back);
     if (at && year === 'PAST' && !rt.m08Told) g.hud.say(M08.scenes.version_no.lines, f);
     rt.m08Told = at && year === 'PAST' ? true : at ? rt.m08Told : false;
+    const near = at && year === 'PRESENT' && !rt.m08Far && rt.m08Back >= ESCAPE_BACK;
+    if (near && !rt.m08Near) g.hud.say(M08.scenes.version_near.lines, f);
+    rt.m08Near = near ? true : at ? rt.m08Near : false;
   },
   overlay(P) {
     // (behind her desk, facing the doors: she stood on the visitors' side with her back to them)

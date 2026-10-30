@@ -1115,10 +1115,12 @@ const PLAYER = () => {
         P.year('PAST');
         const s0 = P.placed;
         const left = B.walkTo(0, 10.6, 6); // (where the door was, between the lens's bollards)
-        P.go(P.at(t), 1.6);
+        B.walkTo(-6, 10.6, 4); // (playtest v2.1.1 L34: back to 2049 10 m from the terminal, and in to it past the drone)
         r.out2026 = left < 0.6 && !inCube() && P.placed === s0;
         P.year('PRESENT');
-        g.simulate(2.3); // (playtest v2.1.1 L34: the terminal counts once Kai has been back in 2049 for a moment)
+        g.simulate(2.3); // (the terminal counts once Kai has been back in 2049 for a moment)
+        P.go(P.at(t), 1.6);
+        g.simulate(0.5);
         g.deckWorld.sentinels.push(...held);
         window.LVESCAPE = r;
       },
