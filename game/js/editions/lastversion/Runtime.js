@@ -1272,6 +1272,8 @@ export class LastVersion {
     // (in full: a save taken in 2026 at 0.57 loaded with the meter already draining and let go of Kai 10-13 s after
     // the recap, a forced snap straight after loading; v2.1.1 playtest L9)
     if (resumed && !deck.roam) this.stability = c.stability = 1;
+    // (and holds there until he moves or switches the year: a phone picked up again is not already on the clock)
+    this.loadHold = resumed && !deck.roam ? null : false;
     // an open place: its scenery, sky and horizon, in the room's year (instantly: no easing at a load)
     if (this.level.place) {
       this.mounted = this.level.scenery?.(g.deckWorld.root, this) || null;
@@ -2265,7 +2267,10 @@ export class LastVersion {
     // (nor while the story talks to Kai: a conversation, a scene's lines, the story's own narration. Mission 7's
     // astronomer ran 47 s against the meter's 22 and snapped Kai off the summit mid-reveal; the meter holds where it is
     // and runs on when the lines are over. A bark, a PA or a THINK hint is not the story: storyLines; v2.1.1 playtest H4)
-    const draining = out && this.unstable && !outdoors && !this.opening && !this.cinema?.active && !g.transitioning && !ending && !this.storyLines();
+    // (after a load, not until Kai has moved from where it put him: loadHold, set once the load's card is over; L9)
+    if (this.loadHold === null && !this.opening && !g.transitioning) this.loadHold = [p.x, p.z];
+    if (this.loadHold && Math.hypot(p.x - this.loadHold[0], p.z - this.loadHold[1]) > 0.75) this.loadHold = false;
+    const draining = out && this.unstable && !outdoors && !this.opening && !this.cinema?.active && !g.transitioning && !ending && !this.storyLines() && this.loadHold === false;
     const holding = this.unstable && !!this.inv?.active && !this.inv.active.lock;
     if (draining) this.stability = Math.max(0, this.stability - dt * 0.045);
     else if (!out && !holding) this.stability = Math.min(1, this.stability + dt * 0.1);
@@ -2275,7 +2280,13 @@ export class LastVersion {
     // a checkpoint reached is saved (main.stepDeck moves it without a save: a reload went back to the one before,
     // and the play time with it, v2.1 playtest SYS-06)
     if (g.checkpoint !== this.cpSeen) {
-      if (this.cpSeen !== undefined && !g.catching && !g.transitioning) g.dirty = true;
+      // (and where Kai stands as he reaches it is where a load puts him: the place the story last moved was kept with
+      // the checkpoint before, and a load from the new one dropped it, back to a cell in Mission 10, down to the court
+      // under Mission 12's roofs; v2.1.1 playtest L8. A setback that brought him here dropped it already: setbackWhy)
+      if (this.cpSeen !== undefined && !g.catching && !g.transitioning) {
+        this.markAnchor();
+        g.dirty = true;
+      }
       this.cpSeen = g.checkpoint;
     }
     this.anchorStep(dt);
@@ -2538,6 +2549,7 @@ export class LastVersion {
     const { engine, facts } = g;
     // 4 is REVERSE now, not a fourth year
     if (to === '4') return this.inv?.trigger();
+    this.loadHold = false; // (a year switched is play: the meter runs again, L9)
     if (!facts.get('has_chronolith')) {
       g.audio.deny();
       if (!this.noChronoSaid) {

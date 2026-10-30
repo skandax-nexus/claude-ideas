@@ -29,7 +29,7 @@ function runtime(chapter = 'act2', deck = 0, extra = {}) {
 // --- H4: the Chronolith while the story talks ----------------------------------------------------------------------
 test('H4: the Chronolith does not drain while the story talks to Kai (a conversation, a scene, narration); a bark, a PA or a THINK hint is not the story', () => {
   // the drain's condition carries the story's lines (as it carries an opening, a cinema and a transition)
-  assert.match(SRC, /const draining = out && this\.unstable && !outdoors && !this\.opening && !this\.cinema\?\.active && !g\.transitioning && !ending && !this\.storyLines\(\);/);
+  assert.match(SRC, /const draining = out && this\.unstable && !outdoors && !this\.opening && !this\.cinema\?\.active && !g\.transitioning && !ending && !this\.storyLines\(\) && this\.loadHold === false;/);
   // and a snap back is only ever started by the drain
   assert.match(SRC, /if \(draining && this\.stability <= 0 && !g\.catching\) this\.snapBack\(\);/);
   const rt = runtime('act1');
@@ -263,8 +263,14 @@ test('L8: a setback (a catch, a fall, deep water) or a snap drops the anchor: a 
   assert.match(read('../game/js/main.js'), /const why = this\.edition\?\.setbackWhy\?\.\(kind\) \|\| null;/, 'main asks the edition at every setback');
 });
 
-test('L9: a load gives the Chronolith back in full (a 2026 save at 0.57 let go of Kai 10-13 s after its recap)', () => {
-  assert.match(SRC, /if \(resumed && !deck\.roam\) this\.stability = c\.stability = 1;/);
+test('L9: a load gives the Chronolith back in full, and it holds until Kai moves or switches the year (a 2026 save at 0.57 let go of Kai 10-13 s after its recap)', () => {
+  assert.match(SRC, /if \(resumed && !deck\.roam\) this\.stability = c\.stability = 1;\s*\/\/[^\n]*\n\s*this\.loadHold = resumed && !deck\.roam \? null : false;/);
+  assert.match(SRC, /if \(this\.loadHold && Math\.hypot\(p\.x - this\.loadHold\[0\], p\.z - this\.loadHold\[1\]\) > 0\.75\) this\.loadHold = false;/);
+  assert.match(SRC, /this\.loadHold = false; \/\/ \(a year switched is play/);
+});
+
+test('L8: reaching a checkpoint keeps where Kai stands as the place a load puts him (the anchor then matches the save\'s checkpoint)', () => {
+  assert.match(SRC, /if \(this\.cpSeen !== undefined && !g\.catching && !g\.transitioning\) \{\s*this\.markAnchor\(\);\s*g\.dirty = true;\s*\}/);
 });
 
 test('L10: a load inside a mission of Acts I and II recaps that mission (three lines each, said from its chapter\'s pack); a chapter still opens on its act\'s', async () => {

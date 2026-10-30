@@ -183,7 +183,8 @@ test('FT-11 / SYS-06: no anchor in the air, during a catch, a transition or an o
   assert.match(SRC, /if \(v && \/\^\(t_\|ev_\|fr_\)\/\.test\(k\) && !k\.endsWith\('_paid'\)\) this\.markAnchor\(\);/);
 });
 test('SYS-06: a checkpoint reached is saved; the app sent to the background saves, but never while the page unloads', () => {
-  assert.match(SRC, /if \(g\.checkpoint !== this\.cpSeen\) \{\s*if \(this\.cpSeen !== undefined && !g\.catching && !g\.transitioning\) g\.dirty = true;/);
+  // (and, since v2.1.1 playtest L8, keeps where Kai stands as he reaches it: tests/fix2-lv-runtime.test.mjs)
+  assert.match(SRC, /if \(g\.checkpoint !== this\.cpSeen\) \{[\s\S]{0,600}?if \(this\.cpSeen !== undefined && !g\.catching && !g\.transitioning\) \{\s*this\.markAnchor\(\);\s*g\.dirty = true;/);
   const { rt, g } = anchorRig();
   let saves = 0;
   Object.assign(g, { started: true, saveTo: () => (++saves, true) });
@@ -302,7 +303,7 @@ test('FT-14: Mission 2\'s PREVIOUSLY is the morning of the crash; no snap line o
   assert.equal(PREVIOUSLY.m02[2], 'Now Helix has gone dark, and Kai Varen is inside it.');
   // the Chronolith does not drain during a staged moment or a transition, and a snap overtaken by either says nothing
   // (nor while the story talks to Kai: v2.1.1 playtest H4)
-  assert.match(SRC, /const draining = out && this\.unstable && !outdoors && !this\.opening && !this\.cinema\?\.active && !g\.transitioning && !ending && !this\.storyLines\(\);/);
+  assert.match(SRC, /const draining = out && this\.unstable && !outdoors && !this\.opening && !this\.cinema\?\.active && !g\.transitioning && !ending && !this\.storyLines\(\) && this\.loadHold === false;/);
   // (nor between a mission's end and the exit it takes on its own: Mission 3's fracture leaves the room in 2026)
   assert.match(SRC, /const ending = this\.deck\?\.autoExit != null && !!g\.deckWorld\.flags\.beat_done;/);
   assert.ok(MISSIONS.prologue.find((m) => m.key === 'm03').autoExit > 0);
