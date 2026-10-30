@@ -517,10 +517,12 @@ class Room {
     this.box([-W / 2 - T - 0.1, H, -L - T - 0.1, -W / 2 + 0.1, H + 0.35, T + 0.1], { mat: 'trim', solid: false });
     this.box([W / 2 - 0.1, H, -L - T - 0.1, W / 2 + T + 0.1, H + 0.35, T + 0.1], { mat: 'trim', solid: false });
     // what the place builds round: this room (and, below, its corridor), up to their tops
-    const open = typeof this.roof === 'string' ? this.roof !== 'solid' : Object.values(this.roof).some((r) => r !== 'solid');
+    // (openIn: the years its roof is open to the sky; a place builds no storeys over it in those years, and does in the
+    // others: Mission 3's lab is roofless in 2026 and 2196, under the east wing's storeys in 2049)
+    const openIn = Object.keys(roofs).filter((s) => roofs[s] !== 'solid');
     const occ = (this.P.occupied ||= []);
     const rr = this.rectXZ(-W / 2 - T, -L - T, W / 2 + T, T);
-    occ.push({ rect: rr, base: this.y0, top: this.y0 + H + T, open }); // (base: a room raised off the ground stands on the place's own storeys)
+    occ.push({ rect: rr, base: this.y0, top: this.y0 + H + T, open: openIn.length > 0, openIn }); // (base: a room raised off the ground stands on the place's own storeys)
     this.checkpointShell();
     if (this.exit === 'none') return;
     // the corridor to the next room (a stair when the next floor is higher or lower)

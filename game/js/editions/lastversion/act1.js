@@ -810,7 +810,8 @@ const M07_SAY = {
 function astroShots(rt) {
   const n = rt.level?.npcs?.find((x) => x.id === 'm7_astro'), p = rt.g?.player?.pos;
   if (!n || !p) return null;
-  const [x, y, z] = n.pos, head = [x, y + 1.55, z];
+  // (the look point is below his head, so his face sits in the frame's upper half, clear of the captions)
+  const [x, y, z] = n.pos, head = [x, y + 0.95, z];
   const fx = Math.sin(n.yaw || 0), fz = Math.cos(n.yaw || 0); // (the way he faces)
   // over Kai's shoulder: behind him on the line to the astronomer, a little to his right and above his head
   let dx = x - p.x, dz = z - p.z;
@@ -820,7 +821,7 @@ function astroShots(rt) {
   const shoulder = [p.x - dx * 1.7 - dz * 0.7, feet + 2.05, p.z - dz * 1.7 + dx * 0.7];
   return [
     { cam: shoulder, to: [shoulder[0] + dx * 0.4, shoulder[1] - 0.05, shoulder[2] + dz * 0.4], look: head },
-    { cam: [x + fx * 2.3 - fz * 0.8, y + 1.7, z + fz * 2.3 + fx * 0.8], to: [x + fx * 1.9 - fz * 0.6, y + 1.68, z + fz * 1.9 + fx * 0.6], look: head, hide: true },
+    { cam: [x + fx * 2.3 - fz * 0.8, y + 1.7, z + fz * 2.3 + fx * 0.8], to: [x + fx * 1.9 - fz * 0.6, y + 1.68, z + fz * 1.9 + fx * 0.6], look: [x, y + 1.2, z], hide: true },
   ];
 }
 export const M07 = {
@@ -948,6 +949,22 @@ M07.outro = M07.hook.lines;
 // =============================================================================================================
 // Mission 8: THE FIRST DEATH
 // =============================================================================================================
+// Mission 8's reconstruction, staged (playtest v2.1.1 L39: its payoff used the game's camera, the echoes small and
+// walking away). The door and the corridor: from ahead of them as they come up from the door; the ninth minute: low and
+// close by the console as the hooded man reaches it, Lin beside him, the glass behind; Kai's line: on his face
+function m08ReenactShots(rt) {
+  const p = rt.g?.player?.pos;
+  if (!p) return null;
+  const head = [p.x, p.y + 0.5, p.z]; // (below his eyes: his face in the frame's upper half, clear of the captions)
+  let dx = -2 - p.x, dz = 9.4 - p.z;
+  const d = Math.hypot(dx, dz) || 1;
+  dx /= d; dz /= d;
+  return [
+    { cam: [-3.6, 1.8, 6.4], to: [-3.9, 1.75, 6.0], look: [-9.6, 1.0, 4.2] },
+    { cam: [1.6, 1.45, 12.6], to: [1.2, 1.45, 12.2], look: [-3.4, 1.25, 9.0] },
+    { cam: [p.x + dx * 2.1 + dz * 0.5, p.y + 0.82, p.z + dz * 2.1 - dx * 0.5], look: head },
+  ];
+}
 const M08_HINTS = {
   changed: ['I know this building, and it has changed. Find three things that are different.', 'The river court, the boot print\'s glass case and the staff photo wall.', 'Look at the river court, the print case and the photo wall.'],
   records: ['Reception says there is no Kai Varen. The staff records will say who there is.', 'The records terminal is by reception, in the lobby.', 'Use the staff records terminal by reception.'],
@@ -1049,9 +1066,11 @@ export const M08 = {
           ],
           echoes: [
             // (the man at the console, hooded: his face never comes into the light; Mission 12 is where it is seen)
-            { crew: 'witness', variant: 'hooded', offset: [-1.4, 0, 2.6], turn: Math.PI, path: [[-12, 0.4, 4], [-6, 0.4, 9], [-2, 0.4, 9.4]] },
-            { crew: 'researcher', offset: [0.4, 0, 2.6], path: [[-11, 0.4, 3], [-5, 0.4, 8], [-1, 0.4, 8.6]] },
+            // (at a walk's pace, 1.3 m/s, they reach the console as the narration reaches the ninth minute: L39)
+            { crew: 'witness', variant: 'hooded', offset: [-1.4, 0, 2.6], turn: Math.PI, path: [[-12, 0.4, 4], [-6, 0.4, 9], [-2, 0.4, 9.4]], speed: 1.3 },
+            { crew: 'researcher', offset: [0.4, 0, 2.6], path: [[-11, 0.4, 3], [-5, 0.4, 8], [-1, 0.4, 8.6]], speed: 1.3 },
           ],
+          shots: m08ReenactShots,
           lines: [N('The echoes walk it again: the door, the corridor, the console.'), REV(N('At the ninth minute a man turns the ring. His face never comes into the light. Lin stands beside him.')),
             K('She was there. She was there, and she let him.')],
           goal: 'Reconstruct the morning, up to the Zero Second.', because: 'The cube kept it backwards. The log has it forwards.', set: { ev_ninth_minute: true }, log: 'At the ninth minute a man turned the ring. Lin stood beside him.', hints: M08_HINTS.reconstruct, minutes: 6 },

@@ -43,19 +43,26 @@ function wing(P, rect, { court, era = null, frame = false }) {
         }
         continue;
       }
-      if (hit.some((o) => o.open && !o.corridor)) continue; // open to the sky above the room
+      // open to the sky above the room: no storeys, in the years its roof is open (a room open in some years only has
+      // them in the others)
+      const years = (era ? [].concat(era) : ['PRESENT', 'PAST', 'FUTURE']).filter((y) => !hit.some((o) => !o.corridor && (o.openIn ? o.openIn.includes(y) : o.open)));
+      if (!years.length) continue;
       // the storeys over a room stand on its roof, over its footprint only: beside the room the bay is open to the
       // sky (no block hangs over empty ground), and a corridor carries none
-      for (const o of hit) {
-        if (o.corridor) continue;
-        const r = [Math.max(b[0], o.rect[0]), Math.max(b[1], o.rect[1]), Math.min(b[2], o.rect[2]), Math.min(b[3], o.rect[3])];
-        const top = o.top + 0.2;
-        if (r[2] - r[0] < 2 || r[3] - r[1] < 2 || top >= WING_H - 1) continue;
-        P.vbox([r[0], top, r[1], r[2], WING_H, r[3]], 'helixPanel', { t: 0xffffff });
-        P.vbox([r[0] - 0.15, WING_H, r[1] - 0.15, r[2] + 0.15, WING_H + 0.3, r[3] + 0.15], 'roofLight');
-      }
+      if (years.length < (era ? [].concat(era).length : 3)) P.E(years, () => storeys(P, b, hit));
+      else storeys(P, b, hit);
     }
   });
+}
+function storeys(P, b, hit) {
+  for (const o of hit) {
+    if (o.corridor) continue;
+    const r = [Math.max(b[0], o.rect[0]), Math.max(b[1], o.rect[1]), Math.min(b[2], o.rect[2]), Math.min(b[3], o.rect[3])];
+    const top = o.top + 0.2;
+    if (r[2] - r[0] < 2 || r[3] - r[1] < 2 || top >= WING_H - 1) continue;
+    P.vbox([r[0], top, r[1], r[2], WING_H, r[3]], 'helixPanel', { t: 0xffffff });
+    P.vbox([r[0] - 0.15, WING_H, r[1] - 0.15, r[2] + 0.15, WING_H + 0.3, r[3] + 0.15], 'roofLight');
+  }
 }
 
 // Mission 12: the north wing's roofs, the 2026 gangway across the court (Corridor B), and the 2196 sinkhole: the

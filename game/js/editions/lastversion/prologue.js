@@ -524,6 +524,21 @@ export const M01 = {
   step(rt, dt) {
     const g = rt.g;
     const f = g.facts;
+    // (playtest v2.1.1 P3: the Prologue's card was shown over the game's camera, Kai standing at his door at night, seconds
+    // before the cold open says he is asleep four kilometres away. Before the cold open (its stage up: co_m01), while the
+    // card is up and the voices load, the camera holds the cold open's first view, Helix on the skyline over the plaza,
+    // and Kai is not drawn; the cold open takes the camera from there, and the mission's card after it is on him)
+    const card = rt.opening && f.get('co_m01') && !rt.cinema?.active?.shots;
+    if (card) {
+      const { cam: c, look: l } = M01.coldOpen.shots[0];
+      g.player.cinema = { pos: { x: c[0], y: c[1], z: c[2] }, target: { x: l[0], y: l[1], z: l[2] }, up: { x: 0, y: 1, z: 0 } };
+      if (g.player.model) g.player.model.visible = false;
+      rt.m01Card = true;
+    } else if (rt.m01Card) {
+      rt.m01Card = false;
+      if (!rt.cinema?.active?.shots) g.player.cinema = null;
+      if (g.player.model && !rt.cinema?.active?.shots) g.player.model.visible = true;
+    }
     // the two trapped in the wreck, posed (playtest v2.1 FT-06: both stood upright beside Kai under "A woman pinned under a
     // thrown bench" and "a man with his coat caught in the door"): she lies on her back, her legs under the bench; he is
     // on his knees against the leaning carriage, pulling away from the door that has his coat (stagefx.posePeople)

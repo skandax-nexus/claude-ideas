@@ -237,3 +237,147 @@ test('L42: Mission 3\'s lab differs by year from the door: open sky and a steel 
   const texts = M3.texts.filter((t) => /STEEL FRAME - 2026/.test(t.text));
   assert.ok(texts.length && texts.every((t) => t.when === '@PAST'), 'a site board in 2026');
 });
+
+// --- the second half of the unit: staging, people and looks ----------------------------------------------------------
+const [M1, , , M4L, , M6L, M7L] = MISSIONS;
+const visAll = (level, m) => level.vis.filter((v) => v.m === m);
+
+test('L42: the east wing\'s storeys stand over Mission 3\'s lab in 2049, the year its ceiling stands, and not in the roofless years', () => {
+  const lab = M3.rooms.cable.bounds[0];
+  const over = M3.vis.filter((v) => v.m === 'helixPanel' && v.b && v.b[1] > lab[4] - 0.5 && v.b[0] < lab[3] && v.b[3] > lab[0] && v.b[2] < lab[5] && v.b[5] > lab[2]);
+  assert.ok(over.length, 'a storey over the lab');
+  for (const v of over) {
+    const e = [].concat(v.e || ['PRESENT', 'PAST', 'FUTURE']);
+    assert.ok(e.includes('PRESENT') && !e.includes('FUTURE') && !e.includes('PAST'), `over the lab in 2049 only: ${JSON.stringify(v.e)}`);
+  }
+});
+
+test('L38: Mission 7\'s astronomer is a staged conversation: letterboxed, his face in frame from over Kai\'s shoulder, then close', async () => {
+  const { M07 } = await import('../game/js/editions/lastversion/act1.js');
+  assert.equal(M07.scenes.astro.then, 'astroTalk');
+  assert.ok(!M07.scenes.astro.lines, 'its lines are the staged moment\'s');
+  let played = null;
+  const npc = M7L.npcs.find((n) => n.id === 'm7_astro');
+  const rt = { level: M7L, g: { player: { pos: new THREE.Vector3(npc.pos[0] - 1.2, npc.pos[1] + 0.86, npc.pos[2] + 1.6) } }, cinema: { play: (o) => (played = o) } };
+  M07.fx.astroTalk(rt);
+  assert.ok(played && played.lines.length >= 7 && played.letterbox !== false, 'a moment with his lines');
+  const shots = played.shots(rt);
+  assert.equal(shots.length, 2);
+  for (const s of shots) {
+    // the camera looks at him from in front of him or over Kai's shoulder, within 5 m, his head above the look point
+    const d = Math.hypot(s.cam[0] - npc.pos[0], s.cam[2] - npc.pos[2]);
+    assert.ok(d < 5, `within 5 m of him: ${d.toFixed(1)}`);
+    assert.ok(Math.hypot(s.look[0] - npc.pos[0], s.look[2] - npc.pos[2]) < 0.1 && s.look[1] < npc.pos[1] + 1.55, 'looking at him, his face in the upper half');
+  }
+  assert.ok(shots[1].hide, 'close on him: Kai not drawn');
+});
+
+test('L33: Mission 7\'s cold open has a second shot, close on old Niko turned to the low sun', async () => {
+  const { M07 } = await import('../game/js/editions/lastversion/act1.js');
+  const co = M07.coldOpen;
+  assert.equal(co.shots.length, 2);
+  const ring = M7L.landmarks.horizonRing, [cx, , cz] = [ring[0] + -2.2 * Math.cos(ring[3]) + 2 * Math.sin(ring[3]), 0, ring[2] + 2.2 * Math.sin(ring[3]) + 2 * Math.cos(ring[3])];
+  const s = co.shots[1];
+  assert.ok(Math.hypot(s.cam[0] - cx, s.cam[2] - cz) < 4.5, `the second shot within 4.5 m of him: ${Math.hypot(s.cam[0] - cx, s.cam[2] - cz).toFixed(1)}`);
+});
+
+test('L32, L44: young Niko\'s tunic is cut to the knee and straight; Mission 7\'s blue hour is light enough to read at low quality', async () => {
+  const { WARDROBE } = await import('../game/js/editions/lastversion/wardrobe.js');
+  const sk = WARDROBE.rb_niko.niko.garb.skirt;
+  assert.ok(sk.hem >= 0.45 && sk.flare <= 1.05, JSON.stringify(sk));
+  const { default: obs } = await import('../game/js/editions/lastversion/places/specs/observatory.js');
+  const y = obs.years.PRESENT;
+  assert.ok(y.night <= 0.35 && y.hemi.k >= 1.5, JSON.stringify({ night: y.night, hemi: y.hemi }));
+});
+
+test('L39: Mission 8\'s reconstruction is staged: its echoes walk in frame, and what it sets is set when it ends', async () => {
+  const { Threads, playFact, factOf } = await import('../game/js/editions/lastversion/Threads.js');
+  const facts = new FactStore();
+  let played = null, node = null;
+  const rt = { g: { facts, hud: { say() {} }, audio: {}, player: { pos: new THREE.Vector3(-9.6, 1.26, -3.5) } }, cinema: { play: (o, then) => (played = { o, then }) }, playNode: (n) => (node = n) };
+  const th = new Threads(rt);
+  th.attach(M08, { npcs: [], talkGates: {} });
+  const t = th.byId.reconstruct;
+  assert.ok(t.shots, 'it has shots');
+  const r = th.reenact(t);
+  assert.deepEqual(r.lines, [], 'nothing said over the game camera');
+  assert.ok(played && played.o.lines.length === t.lines.length, 'its lines are the staged moment\'s');
+  assert.equal(facts.get(playFact(M08, t)), true, 'the echoes show while it plays');
+  const shots = played.o.shots(rt);
+  assert.equal(shots.length, 3);
+  // the second shot looks at the console end of their walk from within 6 m
+  assert.ok(Math.hypot(shots[1].cam[0] + 2, shots[1].cam[2] - 9.4) < 6 && Math.hypot(shots[1].look[0] + 2, shots[1].look[2] - 9.4) < 2);
+  assert.ok(t.echoes.every((e) => e.speed >= 1.2), 'they walk at a walk');
+  assert.ok(!facts.get(factOf(M08, t)));
+  played.then();
+  assert.equal(facts.get(playFact(M08, t)), false, 'gone when it ends');
+  assert.ok(node.set[factOf(M08, t)] && node.set.ev_ninth_minute, 'the thread is done when it ends');
+});
+
+test('P3: before the Prologue\'s cold open the card is over the cold open\'s first view, Kai not drawn; after it, the game camera', async () => {
+  const { M01 } = await import('../game/js/editions/lastversion/prologue.js');
+  const facts = new FactStore();
+  facts.set('co_m01', true);
+  const model = { visible: true };
+  const g = { facts, player: { pos: new THREE.Vector3(), cinema: null, model }, deckWorld: { npcs: [] }, hud: {} };
+  const rt = { g, opening: {}, cinema: { active: { shots: null } }, level: {} };
+  M01.step(rt, 1 / 30);
+  assert.equal(model.visible, false);
+  assert.deepEqual([g.player.cinema.pos.x, g.player.cinema.pos.y, g.player.cinema.pos.z], M01.coldOpen.shots[0].cam);
+  rt.cinema.active = { shots: [{}] }; // (the cold open's own shots take the camera)
+  M01.step(rt, 1 / 30);
+  assert.ok(g.player.cinema, 'left to the cold open');
+  facts.set('co_m01', false);
+  rt.cinema.active = { shots: null }; // (the mission's card after it: the game camera, on Kai)
+  rt.m01Card = true;
+  M01.step(rt, 1 / 30);
+  assert.equal(g.player.cinema, null);
+  assert.equal(model.visible, true);
+});
+
+test('L43: Mission 1\'s fire escape has no 12 m iron sheet; its street side is an open frame that stops Kai and the camera', () => {
+  assert.ok(!M1.vis.some((v) => v.m === 'ironDark' && v.b && v.b[4] - v.b[1] >= 11 && v.b[5] - v.b[2] > 20), 'no sheet');
+  const col = M1.elements.find((e) => e.solid && e.box[0] <= 44.95 && e.box[3] >= 44.95 && e.box[2] <= -100 && e.box[5] >= -78 && e.box[4] >= 12);
+  assert.ok(col, 'a collider along the frame');
+});
+
+test('P5: Mission 6\'s 2026 and 2049 clocks have a dial, hour marks and hands that hang loose until each is given its hour', () => {
+  for (const [x, fact] of [[10, 'clk_26'], [16, 'clk_49']]) {
+    const at = (v) => v.b && v.b[0] >= x - 0.8 && v.b[3] <= x + 0.8 && v.b[1] >= 16.9 && v.b[4] <= 18.3 && v.b[2] > -31.6;
+    const marks = M6L.vis.filter((v) => v.m === 'ironDark' && at(v) && !v.when);
+    assert.ok(marks.length >= 12, `${x}: ${marks.length} hour marks`);
+    const loose = M6L.vis.filter((v) => at(v) && v.when === `!${fact}`), set = M6L.vis.filter((v) => at(v) && v.when === fact);
+    assert.equal(loose.length, 2);
+    assert.equal(set.length, 2);
+    assert.ok(loose.every((v) => v.b[4] <= 17.61), 'loose hands hang down');
+    assert.ok(set.some((v) => v.b[4] > 18), 'given its hour, the minute hand is up');
+  }
+});
+
+test('P6: a lit fire pit is logs, embers and flames in two colours, not one cone', () => {
+  const near = (v, x, z) => Math.hypot((v.x ?? 0) - x, (v.z ?? 0) - z) < 1.4;
+  const cones = M4L.vis.filter((v) => v.k === 'cyl' && v.r2 === 0 && near(v, 4, 80));
+  assert.ok(cones.filter((v) => v.m === 'fireGlow').length >= 4 && cones.some((v) => v.m === 'flameCore'), 'tongues and a core');
+  assert.ok(M4L.vis.filter((v) => v.k === 'cyl' && v.m === 'timber' && near(v, 4, 80)).length >= 4, 'logs');
+});
+
+test('P8, P11: Mission 4\'s cistern stops Kai at its face and holds water under its lip; its fields end at a field wall', () => {
+  const [cx, cz, R] = [-52, 50, 3.2];
+  const cols = M4L.elements.filter((e) => e.solid && e.box[0] < cx && e.box[3] > cx && e.box[2] < cz && e.box[5] > cz && e.box[4] > 3.5 && e.box[1] < 3.5);
+  for (let a = 0; a < Math.PI * 2; a += Math.PI / 16) {
+    const reach = Math.max(...cols.map((e) => {
+      let r = 0;
+      while (r < 4 && (() => { const x = cx + Math.cos(a) * r, z = cz + Math.sin(a) * r; return x >= e.box[0] && x <= e.box[3] && z >= e.box[2] && z <= e.box[5]; })()) r += 0.05;
+      return r;
+    }));
+    assert.ok(reach >= R - 0.35, `at ${a.toFixed(2)} rad the drum stops Kai at ${reach.toFixed(2)} m`);
+  }
+  const water = M4L.vis.find((v) => v.k === 'disc' && v.m === 'water' && Math.hypot(v.x - cx, v.z - cz) < 0.1);
+  const drum = M4L.vis.find((v) => v.k === 'cyl' && v.m === 'drystone' && Math.hypot(v.x - cx, v.z - cz) < 0.1 && v.r === R);
+  assert.ok(water.y > drum.y + drum.h, 'the water above the drum\'s top');
+  assert.ok(Math.hypot(M4L.landmarks.cistern[0] - cx, M4L.landmarks.cistern[2] - cz) > R + 0.8, 'its fragment by its foot, not on the water');
+  for (const side of ['N', 'S', 'E', 'W']) {
+    const w = M4L.elements.find((e) => e.solid && e.box[4] >= 1 && e.box[4] < 2 && (side === 'N' ? e.box[2] <= -99.3 && e.box[5] >= -99.3 && e.box[3] - e.box[0] > 150 : side === 'S' ? e.box[5] >= 99.3 && e.box[2] <= 99.3 && e.box[3] - e.box[0] > 150 : side === 'W' ? e.box[0] <= -99.3 && e.box[3] >= -99.3 && e.box[5] - e.box[2] > 150 : e.box[3] >= 99.3 && e.box[0] <= 99.3 && e.box[5] - e.box[2] > 150));
+    assert.ok(w, `a field wall on the ${side}`);
+  }
+});
