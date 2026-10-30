@@ -176,7 +176,13 @@ export default {
       P.vbox([45.0, y1 - 0.12, ze - 1.2, 47.5, y1, ze + 1.2], 'fireEscape');
       P.col([45.0, y1 - 0.3, ze - 1.2, 47.5, y1, ze + 1.2]);
     }
-    P.vbox([44.9, 0, -100.5, 45.0, 12, -77.5], 'ironDark', { noShadow: 1 });
+    // (playtest v2.1.1 L43: the stair's street side was a 12 m sheet of dark iron that did not stop the camera. Walked
+    // through from the plaza, or turned at the foot of the first flight, the camera stood behind it and the view was its
+    // black face. It is an open iron frame now, posts and a guard rail at each level, and it stands: Kai goes round its
+    // south end to the first flight, and the camera stays on his side of it)
+    for (let k = 0; k <= 10; k++) P.vbox([44.9, 0, -100.5 + k * 2.3 - 0.05, 45.0, 13, -100.5 + k * 2.3 + 0.05], 'fireEscape', { noShadow: 1 });
+    for (const y of [0, 3, 6, 9, 12]) railing(P, 44.95, -100.5, 44.95, -77.5, 1.0, 'fireEscape', { y, open: true, solid: false });
+    P.col([44.9, 0, -100.5, 45.0, 13.2, -77.5]);
     P.land('roofTerrace', 62, east.h, -90, 0);
     prop(P, 'chiller', 72, -98, 0, { y: east.h + 0.3 });
     // the canal: quays, the towpath ledge on the south side, parapets, the checkpoint bridge

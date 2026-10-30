@@ -116,9 +116,19 @@ export default {
       P.vbox([-46.2, y + 0.02, z, -43.8, y + 0.06, z + 3.1], 'water', { noShadow: 1 });
     }
     P.land('waterSteps', -45, 3, 44, Math.PI / 2);
-    P.land('cistern', -52, 3, 50, 0);
-    P.cyl(-52, 3, 50, 3.2, 1.0, 'drystone', { seg: 16, solid: true });
-    P.disc(-52, 3.9, 50, 2.9, 'water', { noShadow: 1 });
+    // (its fragment's cairn by its foot, north-east: on the drum's top it had Kai standing on the water, P8)
+    P.land('cistern', -49, P.heightAt(-49, 53.6), 53.6, 0);
+    // (playtest v2.1.1 P8: the drum's collider was a square inside it, so Kai stood waist-deep in the stone at 2.75 m
+    // from its middle, and its stone top, above the water, read as cobbles. The drum stops him at its face (eight boxes
+    // that follow the circle, within 0.33 m of it), and its water lies inside a stone lip, under the top of the wall)
+    P.cyl(-52, 3, 50, 3.2, 0.8, 'drystone', { seg: 16 });
+    P.torus(-52, 3.88, 50, 3.04, 0.17, 'drystone', { rx: Math.PI / 2, seg: 32 });
+    P.disc(-52, 3.86, 50, 2.9, 'water', { noShadow: 1 });
+    for (let k = 0; k < 8; k++) {
+      const a = ((k + 0.5) * Math.PI) / 16;
+      const hx = 3.2 * Math.cos(a), hz = 3.2 * Math.sin(a);
+      P.col([-52 - hx, 3, 50 - hz, -52 + hx, 4.0, 50 + hz]);
+    }
     P.land('stele', 14, 6, 20, Math.PI);
     glyphs(P, 14, 6, 20, 2.6, 3.4, 0, { m: 'glyphStone', solid: true });
     P.land('grainStore', 40, 3, 48, Math.PI);
@@ -190,6 +200,15 @@ export default {
     });
     for (const [x, z] of [[-86, 66], [-80, 94], [84, 70], [88, 94], [-92, 30], [92, 24], [-90, -20], [90, -30], [-60, -84], [60, -84], [0, -90]]) P.tree('cypress', x, z, P.rng.float(1.3, 1.8));
     for (const [x, z] of [[-70, 94], [70, 96], [-36, 98], [40, 98]]) P.tree('olive', x, z, 1.4);
+    // (playtest v2.1.1 P11: the place's edge was an invisible wall on open meadow, the grass going on past it. The fields
+    // end at a dry-stone field wall, waist high, thorn scrub along it, where Kai is stopped; the sea and the Ridge show
+    // over it)
+    for (const b of [[-100, 0, -100, 100, 1.1, -99.3], [-100, 0, 99.3, 100, 1.1, 100], [-100, 0, -100, -99.3, 1.1, 100], [99.3, 0, -100, 100, 1.1, 100]]) P.box(b, 'drystone');
+    for (let i = 0; i < 40; i++) {
+      const u = -96 + (i % 10) * 21.3 + 4 * Math.sin(i * 2.7), side = Math.floor(i / 10);
+      const [x, z] = side === 0 ? [u, -97.8] : side === 1 ? [u, 97.8] : side === 2 ? [-97.8, u] : [97.8, u];
+      P.tree(i % 3 ? 'scrub' : 'shrub', x, z, 1.1 + 0.4 * Math.abs(Math.sin(i * 1.9)), { r: i * 0.7, solid: false });
+    }
     void wall;
   },
 };

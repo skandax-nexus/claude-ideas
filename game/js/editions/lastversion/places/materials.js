@@ -60,7 +60,7 @@ export const MATS = {
   muralPaint: D('mural', 0xffffff), tallyMarks: D('tally', 0xe8e0d0),
   // --- light ----------------------------------------------------------------------------------------------
   lampGlow: D('glow', 0xffe0b0, 'modern lamp'), shopLit: D('glow', 0xffd9a8, 'modern neon'), adLit: D('glow', 0xbfe4ff, 'modern neon'), bollardLit: D('glow', 0x9fd8ff, 'modern lamp'),
-  windowWarm: D('glow', 0xffc890), fireGlow: D('glow', 0xff9a40), glowAccent: D('glow', 0x4f9fe8, 'modern'), lightPanel: D('glow', 0xffe8d8, 'modern'), lampGreen: D('glow', 0x7fe0a0, 'modern'),
+  windowWarm: D('glow', 0xffc890), fireGlow: D('glow', 0xff9a40), flameCore: D('glow', 0xffe08a), emberGlow: D('glow', 0xc84a1e), glowAccent: D('glow', 0x4f9fe8, 'modern'), lightPanel: D('glow', 0xffe8d8, 'modern'), lampGreen: D('glow', 0x7fe0a0, 'modern'),
   helixCeil: D('satin', 0xd0d4d8, 'modern'),
   // --- water ------------------------------------------------------------------------------------------------
   water: D('water', 0x5a8aa0), canalWater: D('water', 0x3a4a52), canalGreen: D('water', 0x4a6a5a), riverWater: D('water', 0x4a7a8a), poolWater: D('water', 0x5a7a6a),

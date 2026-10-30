@@ -745,8 +745,23 @@ export function prop(P, kind, x, z, ry = 0, o = {}) {
       break;
     case 'firePit':
       P.cyl(x, y, z, 1.4, 0.35, 'drystone', { seg: 12, prop: 1 });
-      P.cone(x, y + 0.2, z, 0.8, 0.9, o.fire === false ? 'ash' : 'fireGlow', { seg: 8, prop: 1 });
-      if (o.fire !== false) P.glow(x, y + 0.02, z, 5, 0xff9a40);
+      if (o.fire === false) P.cone(x, y + 0.2, z, 0.8, 0.9, 'ash', { seg: 8, prop: 1 });
+      else {
+        // (playtest v2.1.1 P6: a lit fire was one flat orange pyramid. Now a bed of embers, four logs crossed on it, and
+        // flames in two colours, a pale core and orange tongues of different heights leaning out from it)
+        P.cyl(x, y + 0.35, z, 1.0, 0.04, 'ash', { seg: 12, prop: 1 });
+        P.cyl(x, y + 0.38, z, 0.62, 0.05, 'emberGlow', { seg: 10, prop: 1 });
+        for (let i = 0; i < 4; i++) {
+          const a = (i * Math.PI) / 4 + 0.3, l = 0.85;
+          P.cyl(x + l * Math.cos(a), y + 0.42 + (i % 2) * 0.12, z - l * Math.sin(a), 0.08, 2 * l, 'timber', { seg: 6, rz: Math.PI / 2, ry: a, prop: 1 });
+        }
+        P.cone(x, y + 0.45, z, 0.3, 1.15, 'flameCore', { seg: 6, prop: 1 });
+        for (let i = 0; i < 5; i++) {
+          const a = i * 1.257 + 0.4, r = 0.24, h = [0.95, 0.6, 0.8, 0.5, 0.7][i];
+          P.cone(x + r * Math.sin(a), y + 0.42, z + r * Math.cos(a), 0.2, h, 'fireGlow', { seg: 5, rx: 0.22 * Math.cos(a), rz: -0.22 * Math.sin(a), prop: 1 });
+        }
+        P.glow(x, y + 0.02, z, 5, 0xff9a40);
+      }
       C([x - 1.2, y, z - 1.2, x + 1.2, y + 0.4, z + 1.2]);
       break;
     case 'torch':

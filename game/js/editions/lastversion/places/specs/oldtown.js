@@ -183,7 +183,28 @@ export default {
     P.land('clock2026', 10, 17.6, -31.4, 0);
     P.land('clock2049', 16, 17.6, -31.4, 0);
     P.land('clock2196', 22, 17.6, -31.4, 0);
-    for (const x of [10, 16]) P.cyl(x, 17.6, -31.7, 0.8, 0.12, 'brass', { rx: Math.PI / 2, seg: 18 });
+    // (playtest v2.1.1 P5: the 2026 and 2049 clocks were plain brass discs, no face, no hands. Each is a clock now: an
+    // enamel dial in its brass case, its hours marked, its hands hanging loose until it is given its hour from the shop
+    // window, and then showing it: 2026's at nine in the morning, 2049's at six in the evening)
+    const Y = 17.6, F = -31.56;
+    for (const [x, fact, set] of [[10, 'clk_26', 9], [16, 'clk_49', 6]]) {
+      P.cyl(x, Y, -31.7, 0.8, 0.12, 'brass', { rx: Math.PI / 2, seg: 18 });
+      P.cyl(x, Y, -31.58, 0.68, 0.02, 'clockFaceWhite', { rx: Math.PI / 2, seg: 24 });
+      for (let i = 0; i < 12; i++) {
+        const a = (i * Math.PI) / 6, w = i % 3 ? 0.025 : 0.05, cx = x + Math.sin(a) * 0.57, cy = Y + Math.cos(a) * 0.57;
+        P.vbox([cx - w, cy - w, F, cx + w, cy + w, F + 0.015], 'ironDark', { noShadow: 1 });
+      }
+      P.vbox([x - 0.05, Y - 0.05, F, x + 0.05, Y + 0.05, F + 0.05], 'brass', { noShadow: 1 });
+      // the hands: loose, both hanging; then the hour (the hour hand to nine or to six, the minute hand up)
+      P.W(`!${fact}`, () => {
+        P.vbox([x - 0.035, Y - 0.36, F + 0.015, x + 0.035, Y, F + 0.03], 'ironDark', { noShadow: 1 });
+        P.vbox([x - 0.02, Y - 0.52, F + 0.03, x + 0.02, Y, F + 0.045], 'ironDark', { noShadow: 1 });
+      });
+      P.W(fact, () => {
+        P.vbox(set === 9 ? [x - 0.36, Y - 0.035, F + 0.015, x, Y + 0.035, F + 0.03] : [x - 0.035, Y - 0.36, F + 0.015, x + 0.035, Y, F + 0.03], 'ironDark', { noShadow: 1 });
+        P.vbox([x - 0.02, Y, F + 0.03, x + 0.02, Y + 0.52, F + 0.045], 'ironDark', { noShadow: 1 });
+      });
+    }
     P.land('recordingCase', 9.2, 16, -26, Math.PI / 2);
     P.box([8.6, 16, -27, 9.6, 17.4, -25], 'clockCaseWood');
     P.land('shopFloor', 12.4, 0, -18.4, 0);
