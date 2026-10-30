@@ -240,7 +240,7 @@ test('the bible\'s quoted lines are spoken verbatim', () => {
     'The train keeps arriving. Nobody gets on. Nobody gets off. But I can hear them in the next carriage.', 'Then why do I keep apologizing to them?',
     'You ask where the river began. We ask who taught it to stay.', 'Then you have not listened long enough.', 'A clean history is usually a history someone has cleaned.',
     'Start with the question: true for whom?', 'My phone says 8:14. The station board says tomorrow.', 'You wear no dust, but the old story knows your face.',
-    'The channel is running again. Nobody alive remembers who opened it.', 'You did that already. No - you\'re about to do it. I hate that I know the difference.',
+    'The channel is running again. Nobody alive remembers who opened it.', 'You did that already. No—you\'re about to do it. I hate that I know the difference.', // (Brask's own bark; v2.1.1 playtest L29: no longer the Loop City crowd's)
     'Don\'t follow the footsteps. Follow what they refuse to step on.',
   ];
   const missing = quotes.filter((q) => !ALL.includes(q));

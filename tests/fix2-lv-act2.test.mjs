@@ -4,6 +4,7 @@
 // patrols and staging of Missions 9-13 the playtest found wrong. The browser checks of the same items, by touch, are in
 // docs/lastversion/STATUS.md.
 import test from 'node:test';
+import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import * as THREE from '../game/vendor/three.module.min.js';
 import { RealityEngine } from '../game/js/core/RealityEngine.js';
@@ -324,4 +325,89 @@ test('M10: Mission 10\'s escape is not walked or run straight; out through the y
   assert.ok(/yard/.test(t.hints[1]) && /yard/.test(t.hints[2]) && !/along the gallery/i.test(t.goal), JSON.stringify(t));
   // the intake records stand behind him, east of the post
   assert.ok(L10.landmarks.intakeRecords[0] > look.path[0][0] + 9, 'the intake desk is out of his look');
+});
+
+// --- Mission 9 -----------------------------------------------------------------------------------------------------
+import { loopClock } from '../game/js/editions/lastversion/act2.js';
+import { AMBIENT } from '../game/js/editions/lastversion/npcs.js';
+const T = (m) => Object.fromEntries(threadsOf(m).map((t) => [t.id, t]));
+const sentence = (h) => h.split(/\s+/).length >= 6 && /[.!?]$/.test(h) && /^[A-Z]/.test(h);
+
+test('L37: Mission 9\'s loop is a minute, and the year\'s label is its clock, 08:05 to 08:13; the three clocks have faces', () => {
+  assert.equal(M09.loop.period, 60);
+  assert.deepEqual([loopClock(60, 60), loopClock(54, 60), loopClock(30, 60), loopClock(0.5, 60), loopClock(10, 60, true)], ['08:05', '08:05', '08:09', '08:13', '08:13']);
+  // (each face: a dial, its twelve marks and two hands, at clocks A, B and C)
+  const dials = L9.vis.filter((v) => v.m === 'clockFaceWhite' && v.k === 'cyl');
+  for (const name of ['clockA', 'clockB', 'clockC']) {
+    const l = L9.landmarks[name];
+    assert.ok(dials.some((v) => Math.hypot(v.x - l[0], v.z - l[2]) < 5 && v.y > l[1] + 2), `${name}: a dial over it`);
+  }
+  assert.ok(L9.vis.filter((v) => v.m === 'ironDark' && v.k === 'obox').length >= 4 * 14, 'marks and hands on four dials (two at clock A)');
+});
+
+test('M12: Mission 9\'s clock B has its patrol, on the second terrace, turning back at the clock', () => {
+  const s = L9.sentinels.find((x) => /_q2s2$/.test(x.id));
+  const b = L9.landmarks.clockB;
+  assert.ok(s && s.y === 12 && s.path.length === 2, JSON.stringify(s));
+  assert.ok(Math.min(...s.path.map((p) => Math.hypot(p[0] - b[0], p[1] - b[2]))) < 5, 'it turns back at the clock');
+  // (one leg, there and back, about forty seconds at its pace)
+  const leg = Math.hypot(s.path[1][0] - s.path[0][0], s.path[1][1] - s.path[0][1]);
+  assert.ok(Math.abs((2 * leg) / s.speed - 40) < 4, `${((2 * leg) / s.speed).toFixed(1)} s a round`);
+  // Brask, asked to help, has it look the other way until the clock is stopped
+  const facts = new Map([['m09_brask', 'help']]);
+  const sent = { def: { id: s.id }, mode: 'patrol', suspicion: 0.9 };
+  const g = { facts: { get: (k) => facts.get(k) }, deckWorld: { sentinels: [sent] }, hud: null };
+  M09.step({ g, cinema: null, loopT: 30, loopPeriod: () => 60 }, 1 / 30);
+  assert.equal(sent.suspicion, 0);
+  facts.set('clk_b', true); sent.suspicion = 0.9;
+  M09.step({ g, cinema: null, loopT: 30, loopPeriod: () => 60 }, 1 / 30);
+  assert.equal(sent.suspicion, 0.9, 'not once the clock is stopped');
+});
+
+test('M15: Mission 9\'s tower view is staged: the chamber, the console and the man, there while its lines play', () => {
+  assert.equal(M09.scenes.tower.show, 'm09_tower_view');
+  const man = L9.npcs.find((n) => n.id === 'm9_ninth');
+  assert.ok(man && man.crew === 'witness' && man.when === 'm09_tower_view', JSON.stringify(man));
+  const ring = L9.vis.find((v) => v.m === 'blackRing' && v.when === 'm09_tower_view');
+  assert.ok(ring, 'the second ring, only while the view is shown');
+});
+
+test('L29: the crowds never say a story line before its moment: Brask\'s, the gardener\'s payoff, a paramedic\'s commuter line', () => {
+  assert.ok(!AMBIENT.loop.barks.some((b) => b && /You did that already/.test(b)), 'Brask\'s line is his');
+  assert.ok(!AMBIENT.future.barks.some((b) => b && /channel is running again/.test(b)), 'the gardener\'s payoff is hers');
+  const brask = L9.npcs.find((n) => n.id === 'brask9');
+  assert.ok(brask.barks?.some((b) => /You did that already/.test(b)), 'Brask still says it');
+  const M1 = build('prologue', 0);
+  const ems = M1.npcs.filter((n) => n.crowd && /paramedic/i.test(`${n.first} ${n.role} ${n.crewRole || ''}`) || (n.crowd && n.n?.role === 'ems'));
+  const said = M1.npcs.filter((n) => n.crowd && (n.barks || []).some((b) => /Third clock this morning/.test(b)) && /after_zero/.test(n.when || ''));
+  assert.deepEqual(said.map((n) => n.id), [], 'no one who walks after the Zero Second says it');
+  void ems;
+});
+
+test('L19, L21, L30: used things lose their prompt; the looper waits for his thread; the cap\'s line follows the choice', () => {
+  assert.equal(T(M09).transmitter.spot.when, '!transmitter_cut');
+  const sw = Object.fromEntries(T(M10).power.spots.map((s) => [s.id, s.when]));
+  assert.deepEqual(sw, { sw49: '!pw_49', sw26: '!pw_26' });
+  const loop = M10.talks.m10_looper;
+  for (const n of loop.slice(0, 3)) assert.match(n.when, /echo_step/);
+  assert.ok(!M13.rules.some((r) => r.id === 'cap'), 'no rule says it the moment the cap rises');
+  for (const c of M13.scenes.stabilizer.choices) assert.deepEqual(c.after.map((l) => l.text), ['REVERSE holds for ten seconds now.']);
+});
+
+test('L17, P4: Missions 9-11\'s THINK tiers are full sentences, and the hints name the right places', () => {
+  for (const [m, ids] of [[M09, ['brask', 'warnTalk', 'clockB']], [M10, ['escape', 'cross', 'yard']], [M11, ['rhythm']]]) {
+    const t = T(m);
+    for (const id of ids) for (const h of t[id].hints) assert.ok(sentence(h), `${m.key} ${id}: "${h}"`);
+  }
+  for (const p of M11.processes) for (const h of p.hints || []) assert.ok(h.split(/\s+/).length >= 4 && /[.!?]$/.test(h), `${p.id}: "${h}"`);
+  assert.ok(!/spillway/i.test(T(M10).yard.goal) && /south door/.test(T(M10).yard.goal), T(M10).yard.goal);
+  assert.ok(T(M11).rhythm.hints.every((h) => !/\bin the annex\b|the annex desk/.test(h)), JSON.stringify(T(M11).rhythm.hints));
+});
+
+test('P7: Sera\'s plate carrier is curved, with pouches; Mission 11\'s lock has a housing, sockets and the bolts\' names; Mission 13\'s shell has a body', () => {
+  const src = (f) => fs.readFileSync(new URL(f, import.meta.url), 'utf8');
+  assert.match(src('../game/js/editions/lastversion/wardrobe.js'), /vest: \{ at: 'chest', make: \(\) => \{\s*const plate = \(front\) => mesh\(new THREE\.CylinderGeometry/);
+  const L11 = build('act2', 2);
+  for (const name of ['RING', 'BAR', 'STAR', 'CRESCENT']) assert.ok(L11.texts.some((t) => t.text === name && /inv_m11lock_done/.test(t.when || '')), name);
+  assert.match(src('../game/js/editions/lastversion/act2.js'), /const body = shellBody\(\)/);
 });

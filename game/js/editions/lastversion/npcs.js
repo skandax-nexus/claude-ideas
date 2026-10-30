@@ -164,13 +164,17 @@ export const AMBIENT = {
     roles: { evacuee: 'Evacuee', responder: 'Responder', shopper: 'Shopper', prisoner: 'Prisoner', builder: 'Builder', staffEcho: 'Staff', visitor: 'Visitor', trapped: 'Civilian', docker: 'Docker', officer: 'Officer', unwritten: 'Irregular', fan: 'Fan' },
     voices: { f: ['CROWD_F', 'CROWD_F2'], m: ['CROWD_M', 'CROWD_M2'], old_f: ['CROWD_OLD_F'], old_m: ['CROWD_OLD_M'], child: ['CROWD_CHILD'] },
     names: ['Evacuee', 'Responder', 'Soldier', 'Civilian', 'Medic'],
-    barks: ['You did that already. No - you\'re about to do it. I hate that I know the difference.', 'Nine minutes. Then the sirens again. I have counted eleven times.', 'Go left at the clock. Last time you went right and it did not help.', 'If the city resets, do I?'],
+    // (the first is no longer Sergeant Brask's "You did that already...": his to say, as he does by the funicular, never an
+    // evacuee's before Kai has met him (v2.1.1 playtest L29). Its place is kept empty, as the settlement's)
+    barks: [null, 'Nine minutes. Then the sirens again. I have counted eleven times.', 'Go left at the clock. Last time you went right and it did not help.', 'If the city resets, do I?'],
   },
   future: {
     roles: { survivor: 'Survivor', resident: 'Resident', child: 'Child', evacuee: 'Evacuee', walker: 'Walker', visitor: 'Visitor', gardener: 'Gardener', scavenger: 'Scavenger', trader: 'Trader', warden: 'Warden' },
     voices: { f: ['CROWD_F', 'CROWD_F2'], m: ['CROWD_M', 'CROWD_M2'], old_f: ['CROWD_OLD_F'], old_m: ['CROWD_OLD_M'], child: ['CROWD_CHILD'] },
     names: ['Scavenger', 'Warden', 'Gardener', 'Medic', 'Trader', 'Archivist', 'Engineer'],
-    barks: ['The channel is running again. Nobody alive remembers who opened it.', 'Don\'t stand under the tower. It falls on Tuesdays.', 'We trade for batteries. We give water away. That was decided before I was born.', 'The memorial has your face. Please don\'t make me say it twice.'],
+    // (the first is no longer "The channel is running again...": Mission 14's gardener's payoff, said by survivors before the
+    // garden was restored (v2.1.1 playtest L29). Its place is kept empty)
+    barks: [null, 'Don\'t stand under the tower. It falls on Tuesdays.', 'We trade for batteries. We give water away. That was decided before I was born.', 'The memorial has your face. Please don\'t make me say it twice.'],
   },
   liminal: {
     roles: { echo: 'Echo', recording: 'A recording', neighbour: 'A memory' },

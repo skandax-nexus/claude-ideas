@@ -585,11 +585,14 @@ function propKit() {
       v.scale.set(1, 1, 1.12);
       return group(h, v);
     } },
+    // (v2.1.1 playtest P7: its plates were flat boards, a black square on her chest at a phone's distance: now each is
+    // curved round the body, with three magazine pouches across the front)
     vest: { at: 'chest', make: () => {
-      const plate = (z) => mesh(new THREE.BoxGeometry(0.25, 0.27, 0.03), mats.plate, 0, -0.09, z);
+      const plate = (front) => mesh(new THREE.CylinderGeometry(0.2, 0.19, 0.27, 10, 1, true, (front ? 0 : Math.PI) - 0.7, 1.4), mats.plate, 0, -0.09, front ? -0.062 : 0.05);
       const side = (x) => mesh(new THREE.BoxGeometry(0.03, 0.13, 0.25), mats.plate, x, -0.16, -0.005);
       const strap = (x) => mesh(new THREE.TorusGeometry(0.13, 0.014, 4, 12, Math.PI), mats.plate, x, 0.05, -0.005, 0, Math.PI / 2, 0);
-      return group(plate(0.138), plate(-0.15), side(0.165), side(-0.165), strap(0.085), strap(-0.085));
+      const pouch = (x) => mesh(new THREE.BoxGeometry(0.062, 0.08, 0.036), mats.slate, x, -0.17, 0.142);
+      return group(plate(true), plate(false), side(0.165), side(-0.165), strap(0.085), strap(-0.085), pouch(-0.072), pouch(0), pouch(0.072));
     } },
   };
   Object.defineProperty(PROPS, 'shadeMat', { value: mats.shade }); // (a hologram's hood keeps its shadow dark: dress)

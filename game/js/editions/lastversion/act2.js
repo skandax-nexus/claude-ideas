@@ -56,15 +56,15 @@ const M09_HINTS = {
   loop2: ['The patrol walked a different round last time. I should watch again.', 'Each reset moves the market\'s patrol onto a new round.', 'Watch the market\'s patrol through one more reset, and learn its round.'],
   clockA: ['Three clocks hold the loop to the transmitter. The first one is close.', 'The first clock hangs under the loggia.', 'Go under the loggia and stop the first clock.'],
   order: ['Everyone is walking the same way, as if somebody told them to.', 'The order board stands by the funicular\'s middle station.', 'Read the order board now, then switch to 2026 and read it again.'],
-  clockB: ['The second clock is where the patrol walks past every forty seconds.', 'It stands right on the patrol\'s route.', 'Wait until the patrol has passed, then stop the second clock unseen.'],
+  clockB: ['The second clock is where the patrol walks past every forty seconds.', 'It stands at the funicular\'s middle station, where the terrace patrol turns back.', 'Wait until the patrol has passed, then stop the second clock unseen.'],
   clockC: ['The third clock is the one that starts the morning again.', 'It hangs above the cathedral steps.', 'Climb to the cathedral steps and stop the third clock.'],
   transmitter: ['The three clocks are stopped. Now the loop only has its voice.', 'The transmitter stands out on the headland.', 'Go out to the headland and cut the transmitter\'s carrier.'],
   rhea: ['Someone at the tower is counting the resets. She was on the radio.', 'She is somewhere at the foot of the tower.', 'Go to the foot of the tower and find Rhea.'],
   tower: ['From the top of the tower you can see into the chamber.', 'Up there I can look right across the river.', 'Climb the tower all the way to the top.'],
   reset: ['It is nearly 08:14, and the loop has nothing left to hold it.', 'The last reset is coming, and it will not come round again.', 'Stay where you are and let the last reset come.'],
-  warn: ['People head for the tower.', 'The order is wrong.', 'Quote the cancelled order.'],
+  warn: ['The evacuees are climbing toward the tower before 08:12.', 'The board sent them there, and that order was cancelled at 08:09.', 'Talk to the evacuees by the headland stair and quote the cancelled order.'],
   child: ['A girl at the edge of the loop does not reset. Everyone else goes round.', 'She is at the loop\'s edge, where the street stops repeating.', 'Go to the girl and hum her song back to her.'],
-  brask: ['A soldier who remembers.', 'By the funicular station.', 'Talk to the sergeant.'],
+  brask: ['A Continuum sergeant is watching me, not the street. He remembers the loops.', 'He is standing by the funicular station, at the foot of the hill.', 'Go to the funicular station and talk to the sergeant.'],
 };
 const EVAC = AMB('CROWD_F2');
 // each reset moves the patrols (the watchers of quarters 1 and 2: their ids end _q1s0, _q2s0)
@@ -75,19 +75,61 @@ const M09_PATROLS = [
   { q1s0: [[-54, 22], [-48, 22], [-48, 58], [-20, 58]], q2s0: [[32, 44], [62, 44]] },
 ];
 
+// the loop's clock (the year's label): 08:05 at a reset, a minute on every ninth of the loop, 08:13 once the carrier is cut
+export function loopClock(left, period, cut) {
+  if (cut || !(period > 0)) return '08:13';
+  const m = 5 + Math.min(8, Math.max(0, Math.floor(((period - left) / period) * 9)));
+  return `08:${String(m).padStart(2, '0')}`;
+}
+// the chamber across the river, through its skylight (v2.1.1 playtest M15: the tower's payoff was captions over the
+// rooftops): a small set under the market square, there only while the tower's lines play (m09_tower_view): the second
+// ring humming in the dark, a console, and a man at it who looks up. Its centre, the skylight 5 m over it
+const M09_CHAMBER = [-22, -40, 36];
+function m09TowerShots(rt) {
+  const g = rt.g, p = g.player.pos, [cx, cy, cz] = M09_CHAMBER;
+  const dur = (l) => g.hud.durFn?.(l) || Math.max(2.2, l.text.length * 0.055);
+  const ls = rt.deck.scenes.tower.lines;
+  return [
+    // (from the top of the mast, over the quay's roofs and the river, south to the Ring Hill, where the chamber is)
+    { cam: [p.x - 0.5, p.y + 7.5, p.z + 1], to: [p.x - 0.4, p.y + 7.4, p.z + 1.8], look: [p.x + 22, p.y + 4, p.z + 300], t: dur(ls[0]) * 0.4 },
+    // (down through the skylight's ring: the ring, the console, the man turning it; he looks up)
+    { cam: [cx + 0.5, cy + 4.6, cz + 4.8], to: [cx + 0.4, cy + 4.4, cz + 4.4], look: [cx + 0.3, cy + 0.8, cz + 1.4], t: dur(ls[0]) * 0.6 + dur(ls[1]) },
+    // (Kai, close, from in front of him on the gallery, the river behind the camera)
+    { cam: [p.x + 0.9, p.y + 1.0, p.z + 2.2], to: [p.x + 0.7, p.y + 1.0, p.z + 1.8], look: [p.x, p.y + 0.75, p.z] },
+  ];
+}
+// Mission 9 each frame: the loop's clock in the year's label; Brask, asked for help, has clock B's patrol look the other
+// way until the clock is stopped (M12); the tower's view, staged (M15)
+function m09Step(rt) {
+  const g = rt.g, f = g.facts;
+  rt.cinema?.watchShow?.('m09_tower_view', m09TowerShots);
+  const lab = `2049 · ${loopClock(rt.loopT, rt.loopPeriod?.(), f.get('transmitter_cut'))}`;
+  if (g.hud?.states && rt.m09Label !== lab) {
+    rt.m09Label = lab;
+    g.hud.states = g.hud.states.map((st) => (st.key === 'PRESENT' ? { ...st, label: lab } : st)); // (a new list: the HUD draws it again)
+  }
+  if (f.get('m09_brask') === 'help' && !f.get('clk_b')) {
+    for (const s of g.deckWorld?.sentinels || []) if (/_q2s2$/.test(s.def.id) && s.mode !== 'chase') s.suspicion = 0;
+  }
+}
+
 export const M09 = {
   key: 'm09', n: 9, chapter: 'act2', name: 'NINE MINUTES TO ZERO', title: 'Loop City', subtitle: 'The city repeats the same nine minutes. Positions change. You do not.',
   logline: 'Rain City North, 08:05 to 08:14, again and again.',
-  place: 'northbank', sectors: 1, states: ['PRESENT', 'PAST'], drones: [1, 1, 2, 0, 0], ambience: 'rain', ambient: 'loop',
+  place: 'northbank', sectors: 1, states: ['PRESENT', 'PAST'], drones: [1, 1, 3, 0, 0], ambience: 'rain', ambient: 'loop',
   labels: { PRESENT: '2049 · 08:05' }, motto: 'YOU HAVE NINE MINUTES', gate: 'THE TOWER', crew: C('engineer'),
   named: ['engineer', 'soldier', 'child'],
   minutes: { main: 33, optional: 8 }, autoExit: 1.2, gateAfter: true,
-  // the loop: every ninety seconds the street goes back to 08:05 (the patrols to their next round, the rain upward for a
-  // second); it stops when the carrier is cut
-  loop: { period: 90, upward: true, until: 'transmitter_cut', variants: M09_PATROLS.map((watch) => ({ watch })) },
+  // the loop: every minute the street goes back to 08:05 (the patrols to their next round, the rain upward for a second);
+  // it stops when the carrier is cut. The year's label is the loop's clock, 08:05 to 08:13 (m09Step). (v2.1.1 playtest
+  // L37: every ninety seconds, with the label standing at 08:05, the first two objectives were three minutes of
+  // standing still)
+  loop: { period: 60, upward: true, until: 'transmitter_cut', variants: M09_PATROLS.map((watch) => ({ watch })) },
   // (the quay's promenade, not its houses; east of the ferry steps, so where Kai steps off to watch the street is out of
   // its sight: v2.1 playtest F15, caught at the spawn while doing as the objective asked)
-  watch: [[[[12, 78], [50, 78], [50, 86], [12, 86]]], [M09_PATROLS[0].q1s0], [M09_PATROLS[0].q2s0, [[20, 79], [60, 79]]]],
+  // (v2.1.1 playtest M12: and clock B's patrol, on the second terrace at 12 m, turning back at the clock every forty
+  // seconds, as the objective says; Brask, asked to help, has it look the other way, m09Step)
+  watch: [[[[12, 78], [50, 78], [50, 86], [12, 86]]], [M09_PATROLS[0].q1s0], [M09_PATROLS[0].q2s0, [[20, 79], [60, 79]], { y: 12, path: [[22, -18], [69, -18]] }]],
   fragSpots: [['quayBench', 'loggiaStall'], ['marketFountain', 'midStation']],
   fragments: [[
     'A clock at nine to zero. Then eight. Then nine again.',
@@ -145,7 +187,8 @@ export const M09 = {
     {
       name: 'THE CONTROL TOWER',
       threads: [
-        { id: 'transmitter', kind: 'scene', scene: 'transmitter', at: 'transmitter', after: ['clockC'], spot: { prompt: 'THE TRANSMITTER', offset: [0, 1.4, 2.4], r: 3.2, model: NO_MODEL },
+        // (its prompt goes with the carrier: it took the focus at the mast's foot from the tower's, v2.1.1 playtest L19)
+        { id: 'transmitter', kind: 'scene', scene: 'transmitter', at: 'transmitter', after: ['clockC'], spot: { prompt: 'THE TRANSMITTER', offset: [0, 1.4, 2.4], r: 3.2, model: NO_MODEL, when: '!transmitter_cut' },
           goal: 'Cut the transmitter\'s carrier.', because: 'The three clocks are stopped. Now the loop has only its voice.', done: 'transmitter_cut', hints: M09_HINTS.transmitter, minutes: 4 },
         { id: 'rhea', kind: 'talk', npc: 'engineer', at: 'towerBase', after: ['transmitter'], goal: 'Someone at the tower is counting resets.', because: 'She was on the radio.', done: 'rhea_freed', hints: M09_HINTS.rhea, minutes: 3 },
         { id: 'tower', kind: 'scene', scene: 'tower', at: 'towerTop', after: ['rhea'], spot: { prompt: 'LOOK ACROSS THE RIVER', offset: [0, 1.4, 1.2], r: 3.2, model: NO_MODEL },
@@ -210,7 +253,7 @@ export const M09 = {
     tower: {
       lines: [REV(N('Across the river, through the chamber skylight, a man at the console turns the ring. He looks up. He looks at you.')), K('That\'s the ninth minute.'),
         FX(L('WITNESS', 'You have nine minutes.'), 'radio'), K('To do what?'), FX(L('WITNESS', 'To become me.'), 'radio')],
-      set: { ev_ninth_view: true }, log: 'From the tower at 08:13: a man at the console, looking back at me.',
+      set: { ev_ninth_view: true }, log: 'From the tower at 08:13: a man at the console, looking back at me.', show: 'm09_tower_view',
     },
     child_song: {
       lines: [L('CHILD', 'You found my photographs.', 'case_c_child'), L('CHILD', 'Everybody here goes round. I don\'t.', '!case_c_child'), N('Kai hums the three notes. Up, up, and a stop.'),
@@ -243,9 +286,24 @@ export const M09 = {
     person(P, { id: 'm9_evac', crew: 'm9_evac', first: 'Evacuee', seed: 901, ambient: true, at: 'headlandStair', off: [2.2, 0, 2.4], turn: Math.PI, when: '!warned_evacuees', prompt: 'TALK TO THE EVACUEES' });
     person(P, { id: 'm9_evac_safe', crew: 'm9_evac', first: 'Evacuee', seed: 901, ambient: true, at: 'ferryQuay', off: [-6, 0, -2], when: 'warned_evacuees', prompt: 'TALK TO THE EVACUEES' });
     person(P, { id: 'child9', crew: 'child', at: 'loopEdge', off: [0, 0, -0.6], turn: Math.PI, hologram: true, silent: true, when: '!child_step2' });
+    // the chamber across the river, seen from the tower (M15): only while the tower's lines play, under the market square
+    const [cx, cy, cz] = M09_CHAMBER;
+    P.col([cx - 7, cy - 0.4, cz - 7, cx + 7, cy, cz + 7]); // (its floor, under the town: the man stands on it)
+    P.W('m09_tower_view', () => {
+      P.vbox([cx - 7, cy - 0.4, cz - 7, cx + 7, cy, cz + 7], 'rawConcrete');
+      for (const [x0, z0, x1, z1] of [[-7, -7, 7, -6.6], [-7, 6.6, 7, 7], [-7, -7, -6.6, 7], [6.6, -7, 7, 7]]) P.vbox([cx + x0, cy, cz + z0, cx + x1, cy + 5, cz + z1], 'rawConcrete');
+      P.torus(cx, cy + 2.6, cz - 1.6, 2.4, 0.32, 'blackRing', { seg: 36 }); // (the second ring, standing)
+      P.glow(cx, cy + 0.02, cz - 1.6, 3.2, 0xb6a6ff);
+      P.box([cx - 0.9, cy, cz + 0.4, cx + 0.9, cy + 1.0, cz + 1.1], 'steel', { solid: false }); // the console
+      P.vbox([cx - 0.75, cy + 1.0, cz + 0.5, cx + 0.75, cy + 1.04, cz + 1.0], 'ledGlow', { noShadow: 1 });
+      P.torus(cx, cy + 5, cz, 3.2, 0.18, 'oculusRim', { rx: Math.PI / 2, seg: 36 }); // the skylight's ring, over it all
+      P.glow(cx, cy + 0.03, cz + 0.8, 2.2, 0xdce8ff);
+    });
+    P.npcs.push({ id: 'm9_ninth', crew: 'witness', pos: [cx + 0.3, cy, cz + 2.0], yaw: 0.15, silent: true, when: 'm09_tower_view', room: P.rid }); // (turned from the console, up to the skylight)
   },
   hook: { cue: 'cliff', minutes: 1, lines: [N('The city resets. Kai does not.'), K('I remember. I remember all of it.'), SAYS('A SOLDIER', 'CROWD_M2', 'That one didn\'t reset.')] },
   done: 't_m09_reset',
+  step: m09Step,
 };
 M09.outro = M09.hook.lines;
 
@@ -257,9 +315,9 @@ const M10_HINTS = {
   sera: ['That guard is watching me, and she has not raised the alarm.', 'She is standing at the guard post.', 'Walk up to the guard post and talk to the guard.'],
   power: ['The guards\' lamps are fed through both years. I can blind them.', 'There are two switches on the power run, one in each year.', 'Cut the power run in 2049, then switch to 2026 and cut that run too.'],
   projector: ['What did they take from me? They keep what they capture in one room.', 'Everything they took is in the testing chamber.', 'Go into the testing chamber and look at the projector.'],
-  cross: ['Troopers in the chamber.', 'A step ahead of myself. They follow the copy.', 'Echo Step, then go for the spillway.'],
+  cross: ['The testing chamber has troopers of its own, between me and the spillway.', 'Echo Step throws a copy of me a step ahead, and the watchers follow the copy.', 'Use Echo Step where they can see it, then go for the spillway tunnel.'],
   prisoners: ['Twelve people are caught in loops of four seconds, over and over.', 'They are all in the loop cells.', 'Go to the loop cells and decide what happens to them.'],
-  yard: ['Out under the sky.', 'One trooper by the water.', 'Behind him, to Sera\'s skiff.'],
+  yard: ['Sera\'s skiff is down on the river, out under the open sky.', 'One trooper walks the gorge floor between the hall\'s south door and the water.', 'Watch him through the hall\'s windows, then go out of the south door behind his back, to the skiff.'],
   intake: ['The guard said "again". They have taken a Varen before.', 'The earlier intakes are kept at the intake desk.', 'Go to the intake desk and read the earlier intakes.'],
   office: ['The Director\'s office is empty, and whoever sits there knows my name.', 'The office is up on the crest.', 'Climb to the crest and look inside the Director\'s office.'],
   interview: ['They questioned everyone Helix ever paid. There is a recording of it.', 'An interview reel is waiting up on the crest.', 'Climb to the crest and play the interview reel.'],
@@ -316,8 +374,9 @@ export const M10 = {
       threads: [
         { id: 'power', kind: 'tasks', of: ['pw_49', 'pw_26'], after: ['sera'],
           spots: [
-            { id: 'sw49', scene: 'sw49', at: 'switch2049', prompt: 'THE 2049 SWITCH', offset: [0, 1.3, 0.8], r: 2.8, model: NO_MODEL },
-            { id: 'sw26', scene: 'sw26', at: 'switch2026', prompt: 'THE 2026 SWITCH', offset: [0, 1.3, 0.8], r: 2.8, model: NO_MODEL },
+            // (a switch cut offers nothing more: the 2049 one said its line again, v2.1.1 playtest L19)
+            { id: 'sw49', scene: 'sw49', at: 'switch2049', prompt: 'THE 2049 SWITCH', offset: [0, 1.3, 0.8], r: 2.8, model: NO_MODEL, when: '!pw_49' },
+            { id: 'sw26', scene: 'sw26', at: 'switch2026', prompt: 'THE 2026 SWITCH', offset: [0, 1.3, 0.8], r: 2.8, model: NO_MODEL, when: '!pw_26' },
           ],
           goal: 'Cut the power run in 2049 and in 2026.', because: 'Sera says the guards\' lamps are fed through both years.', set: { power_cut: true }, hints: M10_HINTS.power, minutes: 5 },
         // (the closing pass: the Continuum questioned everyone Helix employed after the Zero Second; the woman with no
@@ -355,7 +414,8 @@ export const M10 = {
     {
       name: 'THE YARD',
       threads: [
-        { id: 'yard', kind: 'stealth', at: 'seraSkiff', r: 4, after: ['cross', 'prisoners'], goal: 'Down the spillway to Sera\'s skiff, past the yard\'s trooper.', because: 'Under the open sky, for the first time tonight.', hints: M10_HINTS.yard, minutes: 4 },
+        // (v2.1.1 playtest L17: the way out is the hall's south door; the spillway is walled off from the gorge)
+        { id: 'yard', kind: 'stealth', at: 'seraSkiff', r: 4, after: ['cross', 'prisoners'], goal: 'Out of the hall\'s south door to Sera\'s skiff, past the yard\'s trooper.', because: 'Under the open sky, for the first time tonight.', hints: M10_HINTS.yard, minutes: 4 },
         { id: 'skiff', kind: 'talk', npc: 'sera_skiff', at: 'seraSkiff', after: ['yard'], goal: 'Sera, at the skiff.', because: 'She took her helmet off. She is waiting for me to say something.', done: 'm10_skiff', hints: M10_HINTS.skiff },
       ],
     },
@@ -374,10 +434,12 @@ export const M10 = {
       { when: 'sera_met', lines: [L('SERA', 'Two switches. 2049, then 2026. Go.')] },
     ],
     // (four seconds a loop: each time Kai speaks to him, the loop gives him a few words, then takes him back)
+    // (his first three loops wait for his thread too, which comes after the projector: before it he answered LISTEN three
+    // times and then went quiet, v2.1.1 playtest L21)
     m10_looper: [
-      { when: '!m10_l1', lines: [LOOPER('Four seconds. Listen. Don\'t talk. Every time you talk, I lose one.')], set: { m10_l1: true } },
-      { when: 'm10_l1 && !m10_l2', lines: [LOOPER('A woman. No shadow. They kept her here two nights, then they let her go.')], set: { m10_l2: true } },
-      { when: 'm10_l2 && !m10_l3', lines: [LOOPER('She asked for a hospital. Rain City General. A ward with a number she would not say.')], set: { m10_l3: true } },
+      { when: 'echo_step && !m10_l1', lines: [LOOPER('Four seconds. Listen. Don\'t talk. Every time you talk, I lose one.')], set: { m10_l1: true } },
+      { when: 'echo_step && m10_l1 && !m10_l2', lines: [LOOPER('A woman. No shadow. They kept her here two nights, then they let her go.')], set: { m10_l2: true } },
+      { when: 'echo_step && m10_l2 && !m10_l3', lines: [LOOPER('She asked for a hospital. Rain City General. A ward with a number she would not say.')], set: { m10_l3: true } },
       { when: 'm10_l3 && !m10_l4', lines: [LOOPER('She said: tell the one who comes to stop looking for me where I was.'), K('Where she was. Helix. The cube.'), LOOPER('Four seconds. That is all I get. Let me out, or let me keep them.')], set: { m10_l4: true } },
       { when: 'm10_l4', lines: [LOOPER('Four seconds.')] },
     ],
@@ -517,7 +579,7 @@ const M11_PROCESSES = [
       { shape: 'cyl', size: [0.022, 0.15, 0.022], mat: 'white', at: [0.02, 0.9, -0.11], rot: [0, 0, 1.5708], rest: { at: [-1.12, 0.011, 0.95], rot: [0, 0.8, 1.5708] } },
     ],
     aim: [0, 0.9, 0],
-    hints: ['The tray fell.', 'Fallen things rise, for a while.', 'Aim at the tray. REVERSE.'],
+    hints: ['The tray fell off its trolley, and everything on it.', 'Things that fell rise again, for as long as I hold them back.', 'Aim at the tray and hold REVERSE.'],
   },
   {
     id: 'waterGlass', kind: 'flow', mode: 'spill', at: 'waterGlass', label: 'THE GLASS', weight: 0.5, when: '@PRESENT', grain: 'water',
@@ -528,7 +590,7 @@ const M11_PROCESSES = [
       { shape: 'disc', size: [0.8, 0.006, 0.8], mat: 'water', at: [0.55, 0.004, 0.62] },
     ],
     aim: [0.12, 0.82, 0.02],
-    hints: ['A spilled glass.', 'Water runs back too.', 'Aim at the glass. REVERSE.'],
+    hints: ['A glass of water spilled across the floor.', 'Spilled water runs back into its glass too.', 'Aim at the glass and hold REVERSE.'],
   },
   {
     id: 'burntDoor', kind: 'burn', at: 'burntDoor', label: 'THE ANNEX DOOR', weight: 1, when: '@PRESENT', grain: 'fire',
@@ -539,7 +601,7 @@ const M11_PROCESSES = [
     ],
     parts: [{ shape: 'box', size: [1.0, 2.1, 0.05], mat: 'wood', at: [0, 1.05, 0], rest: { at: [0.15, 0.03, -1.25], rot: [-1.5708, 0, 0.12] } }],
     aim: [0, 1.1, 0],
-    hints: ['The annex door burned.', 'Fire runs backwards.', 'Aim at the door. REVERSE.'],
+    hints: ['The door to the annex burned down.', 'Fire runs backwards here: the door can stand again.', 'Aim at the burnt door and hold REVERSE.'],
   },
   // the file the ward un-burns for three seconds in ten: readable only while Kai holds it
   {
@@ -548,7 +610,7 @@ const M11_PROCESSES = [
     props: [{ box: [-0.6, 0, -0.42, 0.6, 0.76, 0.42], mat: 'prop' }],
     parts: [{ shape: 'sheet', size: [0.34, 0, 0.44], mat: 'paper', at: [0, 0.775, 0], rot: [0, 1.5708, 0], text: ['RAIN CITY GENERAL', 'ADMISSION · WARD 32', '14-03-2026 · 16:40', 'VAREN, M. · AGE 9', '', '~Admitted by: K. Varen'] }],
     aim: [0, 0.8, 0],
-    hints: ['Paper, three seconds in ten.', 'Hold it unburnt.', 'REVERSE the file, then read it.'],
+    hints: ['The file is paper for three seconds in every ten.', 'I can hold it unburnt while I read it.', 'Hold REVERSE on the file, then read it while it holds.'],
   },
   // R6: never a person
   {
@@ -566,7 +628,7 @@ const M11_PROCESSES = [
   {
     id: 'odileEcho', kind: 'recording', at: 'odileStation', label: 'ODILE\'S ECHO', weight: 0.5, grain: 'pen', aim: [1, 1.3, -3.5], // (her echo, behind the counter)
     clip: { who: 'CREW', name: 'ODILE', voice: { id: 'ODILE' }, text: 'Thirty-two isn\'t missing. She\'s early.' },
-    hints: ['Her echo walks backwards.', 'A recording runs forwards once.', 'REVERSE her echo.'],
+    hints: ['Her 2026 echo walks her shift backwards.', 'Held back, a recording runs forwards once.', 'Aim at her echo and hold REVERSE.'],
   },
 ];
 const M11_HINTS = {
@@ -575,7 +637,7 @@ const M11_HINTS = {
   youngKai: ['Someone is sitting by the music box.', 'On the bench outside the children\'s wing.', 'Look at the boy on the bench.'],
   boy: ['The boy is drawing, waiting for a doctor.', 'He is on the bench, beside the music box.', 'Sit with him on the bench.'],
   hazards: ['Things here go back to where they were, hard.', 'Each one runs on its own cycle. Watch it go and come back, then cross.', 'Cross behind each one as it goes back, past the IV stand, to the records hall.'],
-  rhythm: ['A file in the annex keeps un-burning.', 'It is on the annex desk. Three seconds in ten it is paper.', 'Stand by the annex desk and watch the file.'],
+  rhythm: ['A file in the records hall keeps un-burning.', 'It is on a desk by the burnt annex door. Three seconds in ten it is paper.', 'Stand by that desk, beside the annex door, and watch the file.'],
   practise: ['Something has changed in me: I can hold one thing back.', 'The tray, the glass or the annex door. Any one of them.', 'Aim at the tray, the glass or the door and hold REVERSE.'],
   file: ['The file is paper for a moment. I can hold it there.', 'Hold it back with REVERSE, and read it while it holds.', 'Aim at the file, hold REVERSE, then read it.'],
   compare: ['Someone is missing from the medical records.', 'The ledger in the records hall, now and in 2026.', 'Read the ledger, switch to 2026, and read it again.'],
@@ -881,7 +943,7 @@ export const M11 = {
     lock: { when: 'inv_m11lock_done', lines: [N('The last bolt backs out and stays out. Nothing pushes it back in. The door to Ward 32 slides up.')], set: { lock_open: true }, log: 'The lock came apart the way it went together, last bolt first.' },
     lock_no: { lines: [K('Forwards, it only tightens. Last bolt first.')] },
     charredFile: { when: 'rev_charredFile', lines: [N('For as long as Kai holds it, the file is paper. Ward 32, the fourteenth of March 2026. VAREN, M., nine. At the bottom, in an older hand:'), N('ADMITTED BY: K. VAREN.'), K('My name. Not my handwriting. Not yet.')], set: { ev_admitted_by: true }, log: 'Mira, nine, Ward 32. ADMITTED BY: K. VAREN, in an older hand.' },
-    charredFile_no: { lines: [L('NONE', 'Ash on a desk in the annex. For three seconds in every ten it is paper again.', '!has_inversion'), L('KAI', 'It goes back to ash. I have to hold it unburnt, and read it while it holds.', 'has_inversion')], then: 'unlock' },
+    charredFile_no: { lines: [L('NONE', 'Ash on a desk by the annex door. For three seconds in every ten it is paper again.', '!has_inversion'), L('KAI', 'It goes back to ash. I have to hold it unburnt, and read it while it holds.', 'has_inversion')], then: 'unlock' },
     maintTag: { when: '@PAST', lines: [N(CLUE_TAG)], set: { ev_lock_order: true }, log: 'The 2026 tag: RING, BAR, STAR, CRESCENT.' },
     maintTag_no: { lines: [K('A maintenance tag, bleached blank. In 2026 it was new.')] },
     twinLock: { lines: [N(CLUE_TWIN), K('Last in, first out.')], set: { ev_lock_order: true } },
@@ -912,6 +974,19 @@ export const M11 = {
     // way (as Threads.placeThreads' props): a model with no reach, so nothing offers it and it plays no scene (the bed's
     // scene is THE FILE ON THE BED's, ward32)
     if (P.landmarks.ward32) P.inter.push({ id: 'ward32_things', kind: 'scene', scene: null, pos: W32(P.landmarks.ward32), yaw: 0, r: 0, prompt: '', model: () => ward32Things(), room: 'h_ward32' });
+    // the reversing lock's housing on Ward 32's door (v2.1.1 playtest P7: the lock read as a blue slab with four pale dots):
+    // a steel plate with a dark frame, a brass socket round each bolt and its name stamped under it; gone with the door
+    const dr = P.landmarks.ward32Door;
+    if (dr) P.W('!inv_m11lock_done', () => {
+      const [x, y, z] = dr;
+      P.vbox([x - 0.66, y + 0.84, z, x + 0.66, y + 1.96, z + 0.05], 'steel');
+      for (const [x0, y0, x1, y1] of [[-0.7, 0.8, 0.7, 0.86], [-0.7, 1.94, 0.7, 2.0], [-0.7, 0.8, -0.64, 2.0], [0.64, 0.8, 0.7, 2.0]]) P.vbox([x + x0, y + y0, z, x + x1, y + y1, z + 0.08], 'ironDark');
+      LOCK_ORDER.forEach((name, i) => {
+        const bx = x + (i % 2 ? 0.34 : -0.34), by = y + (i < 2 ? 1.66 : 1.14);
+        P.torus(bx, by, z + 0.06, 0.16, 0.025, 'brass', { seg: 24 });
+        P.text(name, [bx, by - 0.22, z + 0.06], 0, { size: 0.055, color: '#1e242c' });
+      });
+    });
     person(P, { id: 'odile', crew: 'odile', at: 'odileStation', off: [0, 0, 1.4], turn: Math.PI, prompt: 'TALK TO ODILE' });
     // (behind the station's counter, facing the ward's door: she stood inside the counter)
     person(P, { id: 'odile_echo', crew: 'odile', at: 'odileStation', off: [1, 0, -3.5], hologram: true, silent: true, when: '!inv_odileEcho_done' });
@@ -1280,6 +1355,17 @@ function m13BlockShots(rt) {
     { cam: [p.x + 3.2, p.y + 1.6, p.z + 5.2], to: [p.x + 2.6, p.y + 1.5, p.z + 4.4], look: [k[0], k[1] - 2, k[2]] },
   ];
 }
+// a shell, nose up (+y): a steel body, its brass driving band, an ogive nose
+function shellBody() {
+  const g = new THREE.Group();
+  const steel = new THREE.MeshStandardMaterial({ color: 0x5c626a, metalness: 0.7, roughness: 0.35 });
+  const brass = new THREE.MeshStandardMaterial({ color: 0xc8a050, metalness: 0.8, roughness: 0.3 });
+  const part = (geo, mat, y) => { const m = new THREE.Mesh(geo, mat); m.position.y = y; g.add(m); };
+  part(new THREE.CylinderGeometry(0.17, 0.17, 0.95, 14), steel, 0);
+  part(new THREE.ConeGeometry(0.17, 0.45, 14), steel, 0.7);
+  part(new THREE.CylinderGeometry(0.18, 0.18, 0.09, 14), brass, -0.32);
+  return g;
+}
 // a shell held in flight, going home (F07: a 0.24 m shell nobody could see, the caption doing the work): its arc from
 // where it fell back into the battery that fired it, a burning head and a trail the camera follows, a flash at the gun
 function m13ShellHome(rt, which) {
@@ -1289,7 +1375,21 @@ function m13ShellHome(rt, which) {
   const from = which === 'A' ? [zone[0] - 3, zone[1] + 0.4, zone[2] + 2] : [zone[0] + 3, zone[1] + 0.4, zone[2] - 2];
   const to = which === 'A' ? [gun[0], gun[1] + 3.0, gun[2] + 3.5] : [gun[0], gun[1] + 3.0, gun[2] - 3.5];
   const far = Math.hypot(to[0] - from[0], to[2] - from[2]);
-  const fx = rt.cinema.addFx(shellHome({ from, to, apex: Math.max(14, far * 0.2), dur: 3.4, delay: 0.3 }));
+  // (v2.1.1 playtest P7: the shell is a shell, steel with a brass band, nose first along its arc; the glow is its tracer,
+  // a small one at its tail: as big flat discs the glow and its trail were all a phone showed)
+  const fx = rt.cinema.addFx(shellHome({ from, to, apex: Math.max(14, far * 0.2), dur: 3.4, delay: 0.3, size: 0.22 }));
+  const body = shellBody(), a = new THREE.Vector3(), b = new THREE.Vector3(), up = new THREE.Vector3(0, 1, 0);
+  let bt = 0;
+  rt.cinema.addFx({ obj: body, update(dt) {
+    bt += dt;
+    if (bt >= fx.end) return false;
+    a.set(...fx.pos(bt + 0.07));
+    b.set(...fx.pos(bt + 0.11)).sub(a);
+    body.visible = bt > 0.3 && b.lengthSq() > 1e-10;
+    body.position.copy(a);
+    if (body.visible) body.quaternion.setFromUnitVectors(up, b.normalize());
+    return true;
+  }, dispose() { body.traverse((o) => { o.geometry?.dispose(); o.material?.dispose?.(); }); } });
   const dir = [to[0] - from[0], 0, to[2] - from[2]].map((v) => v / (far || 1));
   const side = [-dir[2], 0, dir[0]];
   const end = fx.end;
@@ -1466,9 +1566,9 @@ export const M13 = {
       lines: [N('The stabilizer can freeze the district, and the war with it, or spend itself freeing the two hundred and twelve people locked in the frozen block.')],
       choices: [
         intent('challenge', 'Destroy it. End the loop.', { consequence: true, lines: [N('The stabilizer goes dark. The district stops repeating.'), L('SERA', 'My people will take its coil to your Chronolith. It will hold longer.')],
-          set: { faction: 'unwritten', stabilizer_destroyed: true, inv_cap: 10 }, ev: 'stabilizer' }),
+          set: { faction: 'unwritten', stabilizer_destroyed: true, inv_cap: 10 }, ev: 'stabilizer', after: [N('REVERSE holds for ten seconds now.')] }),
         intent('comfort', 'Redirect it. Free the people.', { consequence: true, lines: [N('The stabilizer spends itself on the block. The hanging floors come down slowly, like a breath let go.'), L('SERA', 'You chose them. I would have chosen the district. I am glad it was you. Give me your Chronolith a moment.')],
-          set: { faction: 'continuum', civilians_freed: true, inv_cap: 10 }, ev: 'stabilizer' }),
+          set: { faction: 'continuum', civilians_freed: true, inv_cap: 10 }, ev: 'stabilizer', after: [N('REVERSE holds for ten seconds now.')] }),
       ],
     },
   },
@@ -1506,7 +1606,6 @@ export const M13 = {
   rules: [
     { id: 'shellA', when: 'inv_shellA_done', say: [N('It climbs. Not south. North, over the Continuum line, back into a Continuum gun.')], then: 'shellHomeA' },
     { id: 'shellB', when: 'inv_shellB_done', say: [N('It climbs south, over the Unwritten line, back into an Unwritten gun.')], then: 'shellHomeB' },
-    { id: 'cap', when: 'inv_cap >= 10', say: [N('REVERSE holds for ten seconds now.')] },
   ],
   overlay(P) {
     // Sera came to the war: in person in 2049, where the guns and Brask are; an echo in the port's other two years

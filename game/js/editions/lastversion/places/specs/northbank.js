@@ -19,6 +19,25 @@ const FX0 = 72, FX1 = 76; // the funicular's stair-street; its rails run beside 
 const TOWER = [-78, 46]; // the transmitter on the headland
 const HEAD = 6; // the headland's height
 
+// a clock's face (v2.1.1 playtest L37: the three clocks were blank discs): a white dial in a dark rim, its twelve hour
+// marks, and its hands at 08:05, the loop's first minute; at (x, y, z), facing the way ry turns +z, radius r
+function clockFace(P, x, y, z, ry, r = 0.75) {
+  const c = Math.cos(ry), s = Math.sin(ry);
+  const at = (dx, dy, dz) => [x + dx * c + dz * s, y + dy, z - dx * s + dz * c];
+  P.cyl(...at(0, 0, -0.02), r, 0.06, 'clockFaceWhite', { seg: 28, rx: Math.PI / 2, ry });
+  P.torus(...at(0, 0, 0.02), r, 0.06, 'ironDark', { ry, seg: 32 });
+  for (let i = 0; i < 12; i++) {
+    const a = (i / 12) * Math.PI * 2, big = i % 3 === 0;
+    const [px, py, pz] = at(Math.sin(a) * r * 0.82, Math.cos(a) * r * 0.82, 0.05);
+    P.obox(px, py - (big ? 0.07 : 0.04), pz, big ? 0.05 : 0.03, big ? 0.14 : 0.08, 0.02, ry, 'ironDark', { rz: 0, noShadow: 1 });
+  }
+  // the hands: the hour hand just past 8, the minute hand on 1 (08:05)
+  for (const [ang, len, w] of [[-(8 + 5 / 60) * (Math.PI / 6), r * 0.5, 0.06], [-(5 / 60) * Math.PI * 2, r * 0.75, 0.035]]) {
+    const [hx, hy, hz] = at(-Math.sin(ang) * len * 0.5, Math.cos(ang) * len * 0.5, 0.07);
+    P.obox(hx, hy - len / 2, hz, w, len, 0.02, ry, 'ironDark', { rz: ang, noShadow: 1 });
+  }
+}
+
 // a house: its first `then` floors in both years; in 2049 `now - then` more and their roof, in 2026 a roof on the first
 function house(P, rect, now, then, o = {}) {
   const fh = 3.4;
@@ -124,6 +143,7 @@ export default {
     prop(P, 'clockPost', -8, 40, 0);
     P.cyl(-8, 0, 40, 0.14, 4.6, 'ironDark', { seg: 8, solid: true });
     P.cyl(-8, 4.6, 40, 0.75, 0.25, 'clockFaceWhite', { seg: 20, rx: Math.PI / 2, rz: Math.PI / 2 });
+    for (const ry of [Math.PI / 2, -Math.PI / 2]) clockFace(P, -8 + Math.sin(ry) * 0.13, 4.6, 40 + Math.cos(ry) * 0.13, ry);
     sign(P, 'MARKET', -28, 7.6, 29, Math.PI, { size: 0.5, board: 0, color: '#2e3a34', e: ['PRESENT'] });
     // the square's east side: houses and the street up to the steps
     for (const [z0, z1, now, then, tint] of [[24, 40, 5, 3, 0xe8dccc], [42, 58, 6, 4, 0xd8c4b0]]) house(P, [10, z0, 30, z1], now, then, { tint, roof: 'hip', roofMat: 'copperRoof', shop: { side: 'W', color: 0xffd9a8 } });
@@ -144,6 +164,9 @@ export default {
     ramp(P, [FX0, -85, FX1, -24], 12, 24, 'N', 'stairStone', { terrain: false });
     P.box([FX0 - 4, 23.7, -100, 82, 24, -85], 'stairStone'); // the top station
     P.box([70, 11.7, -24, FX0, 12, -14], 'stairStone'); // onto the second terrace
+    // clock B, on its post at the mid-station, its face to the funicular's stair-street (M9)
+    P.cyl(70.5, 12, -22.6, 0.12, 3.6, 'ironDark', { seg: 8, solid: true });
+    clockFace(P, 70.5, 15.2, -22.45, 0, 0.6);
     // the rails and the car (2049: red; 2026: the old green car at the bottom)
     for (const x of [77.6, 80]) {
       P.obox(x, 6, 16, 0.12, 0.2, 61, 0, 'steel', { rx: Math.atan2(12, 60), noShadow: 1 });
@@ -165,6 +188,9 @@ export default {
     P.land('clockC', 0, 18, -50, 0);
     P.land('loopEdge', -60, 18, -47, Math.PI);
     prop(P, 'clockPost', 4, -50, 0, { y: 18 });
+    // clock C, the trigger: a tall dial on its post, its face down the cathedral steps (M9)
+    P.cyl(4, 18, -50.3, 0.12, 3.8, 'ironDark', { seg: 8, solid: true });
+    clockFace(P, 4, 21.4, -50.15, 0, 0.7);
     // the cathedral: a limestone front with a rose window, a copper dome, two towers
     P.box([-20, 18, -78, 20, 34, -58], 'cathedralStone');
     P.box([-26, 18, -64, -20, 42, -58], 'cathedralStone');

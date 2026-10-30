@@ -53,7 +53,9 @@ export default {
     { era: 'present', years: ['PRESENT', 'PAST'], region: 'rain', role: 'commuter', path: [[11, -8], [11, -66]], n: 4, when: '!co_m01' },
     { era: 'present', years: ['PRESENT', 'PAST'], region: 'rain', role: 'commuter', path: [[0.4, -94.4], [0.4, -98.2]], n: 6, queue: true, when: '!co_m01' },
     { era: 'present', years: ['PRESENT', 'PAST'], region: 'rain', role: 'contractor', path: [[2.6, -96], [2.6, -99.8]], n: 5, queue: true, when: '!co_m01' },
-    { era: 'present', years: ['PRESENT'], region: 'rain', role: 'ems', path: [[-6, -160], [14, -160]], y: 3.4, n: 2, when: 'after_zero' },
+    // (the paramedics work: they say nothing in passing. With no lines of their own they spoke the commuters', "Third clock
+    // this morning. I stopped checking." over the 41's wreck, v2.1.1 playtest L29)
+    { era: 'present', years: ['PRESENT'], region: 'rain', role: 'ems', path: [[-6, -160], [14, -160]], y: 3.4, n: 2, when: 'after_zero', barks: [] },
   ],
 
   build(P, { mission }) {
