@@ -31,7 +31,8 @@
 //   playback echoes re-enact what a place kept (`echoes`: people placed as holograms that show only while it plays,
 //            `lines`): at `at`, a scene `playback:<id>`; with `entries` the recovered pieces are put in order first,
 //            one a use (a wrong one is said and stays out), then the re-enactment plays and the thread is done; with
-//            `shots` (cinema.js: an array, or a function of the runtime) it is staged, letterboxed, the camera on them
+//            `shots` (cinema.js: an array, or a function of the runtime) or `rig` (a function of the runtime that returns
+//            cinema.js's rig, a camera that follows them) it is staged, letterboxed, the camera on them
 //   hold     defend for a time (U8: Mission 18's pylons): `secs` of progress while Kai stays within `r` (30 m) of `at`;
 //            its `posts` (landmarks, each answering in its own `year`) drift out of phase one at a time, every `drift`
 //            seconds, and a drifting post that is not re-anchored (a scene at the post, in its year) within `window`
@@ -725,11 +726,12 @@ export class Threads {
     // (playtest v2.1.1 L39: Mission 8's payoff played on the game's camera, its echoes small and walking away while the
     // narration told what they did. A playback with shots is staged: the echoes walk it in frame, letterboxed, the HUD
     // hidden; what it sets is set when it ends, as a node's would be after its lines)
-    const cin = t.shots && this.rt?.cinema;
+    const cin = (t.shots || t.rig) && this.rt?.cinema;
     if (!cin) return node;
     const g = this.g;
     g.facts.set(node.show, true);
-    cin.play({ shots: t.shots, lines: node.lines }, () => {
+    const rig = t.rig ? t.rig(this.rt) : null;
+    cin.play({ shots: rig ? null : t.shots, rig, lines: node.lines }, () => {
       g.facts.set(node.show, false);
       this.rt.playNode({ set: node.set });
     });

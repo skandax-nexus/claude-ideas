@@ -950,20 +950,56 @@ M07.outro = M07.hook.lines;
 // Mission 8: THE FIRST DEATH
 // =============================================================================================================
 // Mission 8's reconstruction, staged (playtest v2.1.1 L39: its payoff used the game's camera, the echoes small and
-// walking away). The door and the corridor: from ahead of them as they come up from the door; the ninth minute: low and
-// close by the console as the hooded man reaches it, Lin beside him, the glass behind; Kai's line: on his face
-function m08ReenactShots(rt) {
-  const p = rt.g?.player?.pos;
-  if (!p) return null;
-  const head = [p.x, p.y + 0.5, p.z]; // (below his eyes: his face in the frame's upper half, clear of the captions)
-  let dx = -2 - p.x, dz = 9.4 - p.z;
-  const d = Math.hypot(dx, dz) || 1;
-  dx /= d; dz /= d;
-  return [
-    { cam: [-3.6, 1.8, 6.4], to: [-3.9, 1.75, 6.0], look: [-9.6, 1.0, 4.2] },
-    { cam: [1.6, 1.45, 12.6], to: [1.2, 1.45, 12.2], look: [-3.4, 1.25, 9.0] },
-    { cam: [p.x + dx * 2.1 + dz * 0.5, p.y + 0.82, p.z + dz * 2.1 - dx * 0.5], look: head },
-  ];
+// walking away while the narration told what they did). The camera walks with them, a few metres off their shoulder on
+// the side away from the cube, closing in as the ninth minute is said: the hooded man, Lin beside him, to the console;
+// Kai's own line is on his face
+function m08ReenactRig(rt) {
+  const g = rt.g;
+  let cam = null, look = null, phase = null, side = null;
+  const ease = (a, b, k) => a.map((v, i) => v + (b[i] - v) * k);
+  return (dt, t) => {
+    const p = g.player?.pos, ns = g.deckWorld?.npcs || [];
+    const rec = ns.find((n) => n.n.id === 'pb_reconstruct_0'), him = rec?.model, lin = ns.find((n) => n.n.id === 'pb_reconstruct_1')?.model;
+    if (!p) return null;
+    let want, at;
+    const now = g.hud?.cur?.who === 'KAI' || !him ? 'kai' : 'walk';
+    if (now === 'kai') {
+      let dx = -2 - p.x, dz = 9.4 - p.z;
+      const d = Math.hypot(dx, dz) || 1;
+      dx /= d; dz /= d;
+      want = [p.x + dx * 1.7 + dz * 0.45, p.y + 0.82, p.z + dz * 1.7 - dx * 0.45];
+      at = [p.x, p.y + 0.5, p.z];
+    } else {
+      const a = him.position, b = lin?.visible ? lin.position : a;
+      // (his heading: toward the point of his walk he is making for)
+      const w = rec.n?.path?.[rec.wp ?? 0];
+      let hx = w ? w[0] - a.x : Math.sin(him.rotation.y), hz = w ? w[1] - a.z : Math.cos(him.rotation.y);
+      const hl = Math.hypot(hx, hz) || 1;
+      hx /= hl; hz /= hl;
+      const mx = (a.x + b.x) / 2, mz = (a.z + b.z) / 2;
+      // (off their shoulder, ahead of them, nearer as the moment goes on: on the side away from the cube's middle, or the
+      // other side while a post or the glass stands between that one and them; a change of side is a cut)
+      const r = Math.max(2.6, 4.4 - t * 0.14);
+      const sides = [[hz, -hx], [-hz, hx]].map((q) => [mx + q[0] * r + hx * 1.6, a.y + 1.6, mz + q[1] * r + hz * 1.6]);
+      if (Math.hypot(sides[1][0], sides[1][2]) > Math.hypot(sides[0][0], sides[0][2])) sides.reverse();
+      const clear = (c) => {
+        if (!g.player.rayDistance) return true;
+        const [o, d] = (rt.m08Ray ||= [p.clone(), p.clone()]);
+        o.set(mx, a.y + 1.2, mz);
+        d.set(c[0] - mx, c[1] - a.y - 1.2, c[2] - mz);
+        const l = d.length();
+        d.divideScalar(l || 1);
+        return g.player.rayDistance(o, d, l) >= l - 0.3;
+      };
+      if (side === null || !clear(sides[side])) side = clear(sides[0]) || !clear(sides[1]) ? 0 : 1;
+      want = sides[side];
+      at = [mx + hx * 0.6, a.y + 1.05, mz + hz * 0.6];
+    }
+    const k = 1 - Math.exp(-dt * 3);
+    const tag = `${now}${side}`;
+    if (phase !== tag) { cam = want; look = at; phase = tag; } else { cam = ease(cam, want, k); look = ease(look, at, k); }
+    return { cam, look };
+  };
 }
 const M08_HINTS = {
   changed: ['I know this building, and it has changed. Find three things that are different.', 'The river court, the boot print\'s glass case and the staff photo wall.', 'Look at the river court, the print case and the photo wall.'],
@@ -1066,11 +1102,12 @@ export const M08 = {
           ],
           echoes: [
             // (the man at the console, hooded: his face never comes into the light; Mission 12 is where it is seen)
-            // (at a walk's pace, 1.3 m/s, they reach the console as the narration reaches the ninth minute: L39)
-            { crew: 'witness', variant: 'hooded', offset: [-1.4, 0, 2.6], turn: Math.PI, path: [[-12, 0.4, 4], [-6, 0.4, 9], [-2, 0.4, 9.4]], speed: 1.3 },
-            { crew: 'researcher', offset: [0.4, 0, 2.6], path: [[-11, 0.4, 3], [-5, 0.4, 8], [-1, 0.4, 8.6]], speed: 1.3 },
+            // (L39: they come in at the door, west of the cube, and at a brisk walk reach the console as the narration
+            // reaches the ninth minute; they had started inside the cube and walked back out to the door first)
+            { crew: 'witness', variant: 'hooded', offset: [-4.6, 0, -2.2], turn: Math.PI, path: [[-12, 0.4, 4], [-6, 0.4, 9], [-2, 0.4, 9.4]], speed: 1.5 },
+            { crew: 'researcher', offset: [-3.6, 0, -1.2], path: [[-11, 0.4, 3], [-5, 0.4, 8], [-1, 0.4, 8.6]], speed: 1.5 },
           ],
-          shots: m08ReenactShots,
+          rig: m08ReenactRig,
           lines: [N('The echoes walk it again: the door, the corridor, the console.'), REV(N('At the ninth minute a man turns the ring. His face never comes into the light. Lin stands beside him.')),
             K('She was there. She was there, and she let him.')],
           goal: 'Reconstruct the morning, up to the Zero Second.', because: 'The cube kept it backwards. The log has it forwards.', set: { ev_ninth_minute: true }, log: 'At the ninth minute a man turned the ring. Lin stood beside him.', hints: M08_HINTS.reconstruct, minutes: 6 },

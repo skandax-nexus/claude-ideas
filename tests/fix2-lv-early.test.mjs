@@ -298,15 +298,26 @@ test('L39: Mission 8\'s reconstruction is staged: its echoes walk in frame, and 
   const th = new Threads(rt);
   th.attach(M08, { npcs: [], talkGates: {} });
   const t = th.byId.reconstruct;
-  assert.ok(t.shots, 'it has shots');
+  assert.ok(t.rig, 'a camera that walks with them');
+  // (the echoes, where DeckWorld has them: the hooded man and Lin a step behind)
+  const him = { position: new THREE.Vector3(-9, 0.4, 2), rotation: { y: -0.7 }, visible: true }, lin = { position: new THREE.Vector3(-8.4, 0.4, 0.9), rotation: { y: -0.7 }, visible: true };
+  rt.g.deckWorld = { npcs: [{ n: { id: 'pb_reconstruct_0' }, model: him }, { n: { id: 'pb_reconstruct_1' }, model: lin }] };
   const r = th.reenact(t);
   assert.deepEqual(r.lines, [], 'nothing said over the game camera');
-  assert.ok(played && played.o.lines.length === t.lines.length, 'its lines are the staged moment\'s');
+  assert.ok(played && played.o.lines.length === t.lines.length && !played.o.shots && played.o.rig, 'its lines are the staged moment\'s');
   assert.equal(facts.get(playFact(M08, t)), true, 'the echoes show while it plays');
-  const shots = played.o.shots(rt);
-  assert.equal(shots.length, 3);
-  // the second shot looks at the console end of their walk from within 6 m
-  assert.ok(Math.hypot(shots[1].cam[0] + 2, shots[1].cam[2] - 9.4) < 6 && Math.hypot(shots[1].look[0] + 2, shots[1].look[2] - 9.4) < 2);
+  // while the narration is said: within 5 m of them, outside the cube (x, z in -8..8), looking at them
+  for (const tt of [0, 6, 12]) {
+    const f = played.o.rig(0.05, tt);
+    const d = Math.hypot(f.cam[0] - him.position.x, f.cam[2] - him.position.z);
+    assert.ok(d < 5 && d > 1.5, `at ${tt} s: ${d.toFixed(1)} m from him`);
+    assert.ok(!(Math.abs(f.cam[0]) < 8 && Math.abs(f.cam[2]) < 8), `outside the cube: ${f.cam.map((v) => v.toFixed(1))}`);
+    assert.ok(Math.hypot(f.look[0] - him.position.x, f.look[2] - him.position.z) < 1.5);
+  }
+  // Kai's line: on his face
+  rt.g.hud.cur = { who: 'KAI' };
+  const k = played.o.rig(0.05, 14);
+  assert.ok(Math.hypot(k.cam[0] - rt.g.player.pos.x, k.cam[2] - rt.g.player.pos.z) < 2.2 && Math.hypot(k.look[0] - rt.g.player.pos.x, k.look[2] - rt.g.player.pos.z) < 0.1);
   assert.ok(t.echoes.every((e) => e.speed >= 1.2), 'they walk at a walk');
   assert.ok(!facts.get(factOf(M08, t)));
   played.then();
