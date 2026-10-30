@@ -1594,7 +1594,7 @@ in 5,143 recordings. Each mission's place is 1.7-6.8 ha (v2.0's generated rooms:
     shoulder, closing in as the ninth minute is said, then on Kai's face; **L33** Mission 7's cold open has a second,
     close shot of old Niko at the instrument; **P3** the Prologue's card stands over the cold open's first view, not over
     Kai at his door.
-  - **Looks:** **L32** young Niko's tunic is cut to the knee, his hair short; **L44** Mission 7's 2049 blue hour reads at
+  - **Looks:** **L32** young Niko's tunic is cut straight and to the knee over his legs (it read as a long dress); **L44** Mission 7's 2049 blue hour reads at
     low quality; **L42** Mission 3's lab differs by year from the door (finished ceiling in 2049, open steel frame and
     crates in 2026, fallen panels in 2196); **L43** Mission 1's fire escape: the iron back plate is an open frame that
     stops Kai and the camera; **P5** Mission 6's clocks have dials, hour marks and hands; **P6** Mission 4's first fire
