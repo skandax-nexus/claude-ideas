@@ -185,3 +185,38 @@ test('P19: after an ending a trip says the story is over and goes back to the CA
   assert.match(SRC, /this\.storyOver\(\) \? 'BACK TO THE CASE FILES' : 'BACK TO THE STORY'/);
   assert.match(SRC, /The story is over: BACK TO THE CASE FILES on the case board\./);
 });
+
+// --- M13, M14: the case board's clues ------------------------------------------------------------------------------
+test('M13: every clue a mission pins (an ev_ fact in its data or its code) has words on the case board, never its id; M14: the ash says the burn', async () => {
+  const { MISSIONS, evLabel } = await import('../game/js/editions/lastversion/Runtime.js');
+  const ids = new Set();
+  const add = (k) => { if (typeof k === 'string' && k.startsWith('ev_')) ids.add(k.slice(3)); };
+  const node = (n) => {
+    if (!n || typeof n !== 'object') return;
+    Object.keys(n.set || {}).forEach(add);
+    if (n.ev) add(`ev_${n.ev}`);
+    (n.choices || []).forEach(node);
+    (n.answers || []).forEach(node);
+  };
+  for (const list of Object.values(MISSIONS)) for (const d of list) {
+    for (const q of d.quarters || []) for (const t of [...(q.threads || []), ...(q.sides || []).flatMap((s) => s.threads || [])]) {
+      for (const c of String(t.done || '').match(/\bev_\w+/g) || []) add(c);
+      Object.keys(t.set || {}).forEach(add);
+    }
+    Object.values(d.scenes || {}).forEach(node);
+    Object.values(d.talks || {}).forEach((ns) => ns.forEach(node));
+    Object.values(d.deductions || {}).forEach(node);
+    for (const r of [...(d.rules || []), ...(d.zones || [])]) Object.keys(r.set || {}).forEach(add);
+  }
+  for (const f of ['prologue', 'act1', 'act2', 'act3', 'act4', 'finale', 'processes']) for (const m of read(`../game/js/editions/lastversion/${f}.js`).matchAll(/\bev_([a-z0-9_]+)/g)) ids.add(m[1]);
+  assert.ok(ids.size > 190, `${ids.size} clues`);
+  const missing = [...ids].filter((k) => !evLabel(k));
+  assert.deepEqual(missing, [], 'every clue named');
+  for (const k of ids) assert.ok(!/^[a-z0-9_]+$/.test(evLabel(k)), `${k} reads as words`);
+  // the board and the pin toast both read them
+  assert.match(SRC, /const label = \(k\) => evLabel\(k\) \|\| k\.replace\(\/_\/g, ' '\);/);
+  assert.match(SRC, /if \(evLabel\(key\)\) this\.g\.hud\.toast\(`<small>PINNED TO THE CASE BOARD<\/small><br>\$\{evLabel\(key\)\}`, 2600\);/);
+  // M14: the ash clue as the first fire says it (the burn is what tells the right answer, "Built, plenty, burned, left.")
+  assert.match(evLabel('ash_layers'), /burn/);
+  assert.ok(!/nothing/.test(evLabel('ash_layers')));
+});

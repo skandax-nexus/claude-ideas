@@ -25,6 +25,7 @@ import { VoiceFx } from './voicefx.js';
 import { choiceLine, chapterCardLines, missionCardLines, endingLines, POSTCREDIT } from './voicelines.js';
 import { Threads, placeThreads, isRewritten, sidesOf, sideState, coldFact, threadsOf, factOf, playFact, choiceHeader, condIds } from './Threads.js';
 import { QUESTIONS, PREVIOUSLY, CHOSEN } from './ledger.js';
+import { EV_MORE } from './evlabels.js';
 import { ROAM, reachedPlaces, roamSave, roamMeta, storyFromRoam, finished, roamFree, fragmentFound, placeName, yearName, ROAM_ONLY, storyOf } from './roam.js';
 
 // text into a page's HTML
@@ -249,7 +250,7 @@ const EV_LABELS = {
   thermos_er: 'A thermos marked E.R. at the 2026 dig', footprints: 'Two children\'s footprints at the dig, one with a star tread', polaroid: 'The ring, half dug out of the clay',
   plaque2196: 'HELIX. WHERE THE FRACTURE BEGAN. WE REMEMBER.',
   // Acts I and II (U7)
-  he_is_early: 'HE IS NOT LYING. HE IS EARLY.', village_mark: 'My mark is cut over every door', ash_layers: 'The ash: cooking, feasting, nothing, cooking',
+  he_is_early: 'HE IS NOT LYING. HE IS EARLY.', village_mark: 'My mark is cut over every door', ash_layers: 'The ash: cooking, feasting, a black burn, a hearth swept cold', // (as the fire says it: v2.1.1 M14)
   card_ancient: 'My Helix card, three thousand years old', ring_took: 'They left because the ring kept taking people', arm_count: 'The arm has turned 2,609 times',
   rook_gauge: 'Ezra mended a gauge for Dr. Rook', ninth_minute: 'At the ninth minute a man turns the ring', rook_confession: 'Rook moved the test, and signed "fever"',
   river_court: 'Helix was rebuilt round my river', v17_records: 'VAREN, M.: deceased 2026', boot_mine: 'The Site Zero print is my boot', second_late: 'Iven: the ring turned a second early',
@@ -264,6 +265,8 @@ const EV_LABELS = {
   real_door: 'The real door casts no shadow', her_side: 'She asked. I let her.', no_owner: 'A letter to a brother she never had', chain: 'River, wall, gate, machine: every cause was me',
   iven_statement: 'Iven: the ring turned before the button', memory_card: 'Memory three, filed SUBJECTIVE', second_early: 'He turned it a second early', unwritten_record: 'What each ending costs',
 };
+// every clue by its words (evlabels.js has the rest), never its id (v2.1.1 playtest M13)
+export const evLabel = (k) => EV_LABELS[k] || EV_MORE[k] || null;
 
 const _v = new THREE.Vector3(), _w1 = new THREE.Vector3(), _w2 = new THREE.Vector3();
 const _fogC = new THREE.Color(), _nightC = new THREE.Color(0x101828); // (a night cold open's air: stateNight)
@@ -568,7 +571,7 @@ export class LastVersion {
   // a piece of evidence pinned to the case board
   pin(key) {
     this.score.cue('pin');
-    if (EV_LABELS[key]) this.g.hud.toast(`<small>PINNED TO THE CASE BOARD</small><br>${EV_LABELS[key]}`, 2600);
+    if (evLabel(key)) this.g.hud.toast(`<small>PINNED TO THE CASE BOARD</small><br>${evLabel(key)}`, 2600);
   }
 
   // a line said in passing (a crowd's or a person's bark) gives way to a staged moment: the one being said is cut and
@@ -2709,7 +2712,7 @@ export class LastVersion {
     const deck = this.deck;
     const chapter = CHAPTERS[this.chapter] || CHAPTERS.prologue;
     const esc = (t) => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;');
-    const label = (k) => EV_LABELS[k] || k.replace(/_/g, ' ');
+    const label = (k) => evLabel(k) || k.replace(/_/g, ' ');
     const evs = Object.keys(facts.facts).filter((k) => k.startsWith('ev_') && facts.facts[k]).map((k) => `<li><span class="ev">◆</span> ${label(k.slice(3))}</li>`).join('') || '<li class="dim">Nothing pinned yet.</li>';
     // (a standing may be a word, not a number: Mission 14's trust_sera is what Kai told Sera at the memorial, 'accept',
     // 'deny' or 'ask'; from there on TRUST['accept'] had thrown and the case board, TRAVEL with it, would not open)
