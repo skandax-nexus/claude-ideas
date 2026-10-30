@@ -1606,6 +1606,57 @@ in 5,143 recordings. Each mission's place is 1.7-6.8 ha (v2.0's generated rooms:
     THINK and Kai lines in Missions 4, 6 and 8, recorded by the voice step); the bot from NEW GAME to the end of Act I
     (116 checks, 0 failed); each item by its own repro at 915x412 by touch, and P3, L38, L39 at 412x915.
 
+- **v2.1.1 playtest fixes, unit "lv-ui" (2026-10-30): the phone UI, controls and HUD** (PLAYTEST-v2.1.1.md M1, M2, M3,
+  L1-L7, L28, P1, P2, P12-P15, P17; lane A: `ui/`, `world/`, `main.js`, `css/`, the edition's `Runtime.js`, `cinema.js`,
+  `stagefx.js` and a new `yearpick.js`). What changed:
+  - Pick a year by touch (M1): in a place with three years YEAR opens a picker, the three years as 172x52 buttons over
+    YEAR (2026 at the top, the current one marked), and a tap picks one directly; a thumb slid from YEAR onto a year
+    picks it too, and a tap elsewhere or YEAR again closes it. The first time it opens a toast says what it is (once
+    per device). Two-year places keep the one-tap switch; Q and 1/2/3 on a keyboard are unchanged. A place with one
+    year greys YEAR (ONE YEAR) and a tap says why, over any other toast (L5).
+  - A look-drag never skips a line (M2): in a staged moment a touch skips the line only when it lifts within 12 px of
+    where it landed, within 0.7 s; a drag turns the view and the line and its voice go on. SKIP, Enter and Space are
+    unchanged. The bot's staged-moment check now taps (down and up) as a phone does.
+  - Comfort mode stops every flash (M3): `HUD.flash` returns at once in Comfort mode, so every caller, the story's own
+    included, is covered in one place; a storm's lightning lights neither the scene nor the sky; the stage effects
+    leave out their flare and muzzle flash; Ward 32's figure holds at a steady half-presence instead of flickering.
+  - Menus and cinematics (L3, L4, P2, P14): a 48 px pause button shows in the corner during staged moments and
+    conversations (the dock is hidden then, and a phone browser has no back key); SKIP and the pause button are never
+    drawn over a menu; the dock is hidden in conversations and its labels are ink on denser glass; a second toggle of
+    the panel just opened (within 350 ms: a double tap on CASE or MAP) does not close it again.
+  - The HUD (L1, L2, P1, P12, P13, P15): SETTINGS' choices, toggles and sliders are 44 px tall on touch, and upright the
+    sheet takes up to 84% of the screen; the floating prompt is placed below the objective card when it would cover
+    it; the empty year card before the Chronolith stays hidden (the grey pill); REVERSE's target label moves above the
+    use prompt when both point at the same thing (M16's coat case, M17's sheet); the because line is never clamped
+    on a phone (it was cut mid-word); ANCHOR with empty hands says its line once, then only the buzz for 8 s.
+  - Saves and CASE FILES (L6, L7): NEW GAME over a finished campaign's slot scrolls the confirm into view and says what
+    goes ("A finished story. Tap again to replace it: its ending, CASE FILES and free roam are lost."); CASE FILES and
+    FREE ROAM at 915x412 are two compact columns, the years always 2026, 2049, 2196, and the mission's name only where
+    it is not the place's.
+  - The map (L28): a place's deep water is drawn as its year has it (Mission 14's canals in 2196, none in 2049); lines
+    may carry a year and wading ways go under the water, raised ways over it; the key names Deep water, Wading and
+    Raised way only while the open map draws them. Mission 14's viaduct, stairs, wading sidewalks and crossing need
+    their lines in the place's spec (`places/specs/drowned.js`, the other lane's): with them, tried on a copy, the map
+    shows all four. Until then the map shows the water and the crossing as its gap.
+  - Named people clear of the camera (P17): someone Kai can talk to is hidden, like a passer-by, while the game's own
+    camera would be inside them (never in a shot or a conversation's framing, which stand by them on purpose).
+  No line was added or re-recorded. Checked: `tests/fix2-lv-ui.test.mjs` (new), `npm test` (322 of 323: the one
+  failure is the voice coverage of the other unit's new lines, which the voice step records), `node --check` on every
+  changed file, Station Zero's smoke and qa (26/26), `tests/lastversion.mjs` LV_ONLY=prologue (85/85) and
+  LV_ONLY=roam (16/16), `lv-fix-flow.mjs` (every flow passed, run in three parts), `lastversion-audio.mjs` (10/10).
+  In the browser by touch at 915x412 and 412x915 from the testers' saves (scratch `fix2/lv-ui/`): Mission 5's village, YEAR, THRIVING picked from
+  ABANDONED with no flood and 0 setbacks; Mission 12's 2026 gangway end, YEAR, 2049 picked: Kai stays at y 14.35, no
+  fall; the cold open: two look-drags keep "Rain City. 05:40." and its voice, a still tap skips it; the pause button
+  opens the menu and SKIP is hidden under it; flashes counted with Comfort ON and OFF: Mission 14's flicker zone 1
+  called, 0 shown (OFF 1 of 1), Mission 21's tremors 4 called, 0 shown (OFF 3 of 3), the Zero Second 2/0 (OFF 2/2),
+  Ending A 2/0 (OFF 2/2), no sky flash with it on; SETTINGS: 31 controls, none under 44 px, both orientations, Comfort
+  ON/OFF answering a tap; the clock prompt upright at y 193 under the card (102-184); CASE double tapped opens once;
+  the dock at opacity 0 in the florist's talk, back after it; the florist 0.7 m from the camera hidden; six presses
+  of ANCHOR with empty hands, one line; CASE FILES 14 rows, 9-12 in view, 64x44 year buttons in order; the slot
+  warning in view; Mission 16's coat case and Mission 17's sheet: both pills in every view, no overlap; Mission 21's
+  because line whole at both sizes; Mission 14's map in 2196 with 7 water rects and its key, in 2049 none. Not done:
+  Mission 14's map lines (the other lane's place data); a real phone.
+
 ## Generated (playable, solvable by construction, not hand-tuned)
 
 - **Nothing of the places since U3.** Every mission and both cases stand in an authored open place;
