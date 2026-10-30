@@ -1105,7 +1105,7 @@ export const M08 = {
             // (the man at the console, hooded: his face never comes into the light; Mission 12 is where it is seen)
             // (L39: they come in at the door, west of the cube, and at a brisk walk reach the console as the narration
             // reaches the ninth minute; they had started inside the cube and walked back out to the door first)
-            { crew: 'witness', variant: 'hooded', offset: [-4.6, 0, -2.2], turn: Math.PI, path: [[-12, 0.4, 4], [-6, 0.4, 9], [-2, 0.4, 9.4]], speed: 1.5 },
+            { crew: 'witness', variant: 'hooded', offset: [-4.6, 0, -1.6], turn: Math.PI, path: [[-12, 0.4, 4], [-6, 0.4, 9], [-2, 0.4, 9.4]], speed: 1.5 },
             { crew: 'researcher', offset: [-3.6, 0, -1.2], path: [[-11, 0.4, 3], [-5, 0.4, 8], [-1, 0.4, 8.6]], speed: 1.5 },
           ],
           rig: m08ReenactRig,
