@@ -105,6 +105,19 @@ function northRuin(P) {
     for (const [x, z] of [[24, -54], [34, -46], [-20, -54]]) prop(P, 'chiller', x, z, 0, { y: WING_H });
     for (let x = -60; x < 60; x += 3.2) P.vbox([x, WING_H, -38.4, x + 3.0, WING_H + 1.2, -38.3], 'glass', { noShadow: 1 });
   });
+  // (v2.1.1 playtest M7) the way back up to the roofs, in 2049 and 2026 alike: the north wing's fire stair, up its face
+  // from the court's north-east corner to the roof by the glass, a sign at its foot. Before it the only way up was the
+  // 2026 scaffold at the far south end and 110 m of gangway, most of the Chronolith's stability
+  P.land('fireStair', 36, 0, -36.6, -Math.PI / 2);
+  P.E(['PRESENT', 'PAST'], () => {
+    stair(P, 36, -36.6, 0, 14, -36.6, WING_H, 2.4, 'scaffold', { rail: 'steel' });
+    P.box([11.6, WING_H - 0.3, -38.6, 14.2, WING_H, -35.4], 'scaffold'); // (its landing, over the roof's edge)
+    sign(P, 'ROOF ACCESS', 36.4, 3.0, -37.85, 0, { size: 0.36, color: '#ffffff' });
+    P.glow(35, 0.02, -35.6, 3, 0xffe2b8, 3);
+  });
+  // (the gangway over the court is the roofs': a catch or the Chronolith letting go up there puts Kai back on the 2049
+  // roof, at the chase's start, never down on the court; a load as well)
+  P.checkpoints.push({ box: [-3, 10, -38.5, 3, 20, 31], spawn: [-40, WING_H + 0.86, -44, -Math.PI / 2], room: P.rid });
   // 2026: the construction gangway across the court at roof height, from the north wing to a scaffold tower in the south
   P.land('gangway2026', 0, WING_H, -40.5, Math.PI);
   P.land('bouquet', 0.4, WING_H, 0, 0); // (U7: on the gangway itself, which is 2.8 m wide)
@@ -184,8 +197,11 @@ export default {
       },
       quarters: [
         { name: 'THE CHASE — 2049', area: [-70, -90, 70, -38], spawn: [-40, WING_H, -44, -Math.PI / 2], threshold: { at: 'gangway2026', kind: 'gangway' } },
-        { name: 'THE CORRIDOR THAT WAS — 2026', area: [-38, -38, 38, 38], spawn: [0, 0, 26, 3.1416], threshold: { at: 'eastRuin', kind: 'ruin' } },
-        { name: 'THE RUIN — 2196', area: [20, -38, 70, 44], spawn: [30, 0, 4, -0.6], threshold: { at: 'sinkTerraces', kind: 'stair' } },
+        // (v2.1.1 playtest M7, L8: the court's quarters hold the ground only, and Kai at the court's spawn faces the court,
+        // the dome and the north wing's roofs where the story goes on; the gangway over the court is the roofs'
+        // checkpoint: build)
+        { name: 'THE CORRIDOR THAT WAS — 2026', area: [-38, -38, 38, 38], cp: [-38, -12, -38, 38, 8, 38], spawn: [0, 0, 26, 0], threshold: { at: 'eastRuin', kind: 'ruin' } },
+        { name: 'THE RUIN — 2196', area: [20, -38, 70, 44], cp: [20, -12, -38, 70, 8, 44], spawn: [30, 0, 4, -0.6], threshold: { at: 'sinkTerraces', kind: 'stair' } },
         // (the second chamber is the sinkhole under the north wing's roofs: below the court's level, as a box)
         { name: 'THE SECOND CHAMBER', area: [-46, -70, 46, -38], cp: [-46, -14, -70, 46, 2, -36], spawnAt: 'sinkTerraces', threshold: null },
       ],
@@ -203,8 +219,11 @@ export default {
     // --- the court and its apron, with the chamber and its stair beneath (holes in the paving) -------
     const cx0 = CHAMBER.at[0] - CHAMBER.W / 2 - 0.4, cz1 = CHAMBER.at[1] + 0.4;
     const sink = mission === 'm12' ? [[SINK[0], SINK[1], SINK[2], SINK[3]]] : [];
+    // (Mission 12 has no chamber under the court: its hole was a 25 m drop into nothing under the painted court and the
+    // lens, in the objective's way. v2.1.1 playtest H1: the court is paved over it, and the lens is solid, below)
+    const chamber = mission === 'm12' ? [] : [[cx0, cz1 - CHAMBER.L - 0.8, -cx0, cz1]];
     // (the 2026 dig at Site Zero is a real pit in 2026, paved over from 2049 on: Mission 3 walks out to it)
-    groundHoles(P, [-70, -90, 70, 70], [[cx0, cz1 - CHAMBER.L - 0.8, -cx0, cz1], ...holes, ...sink, DIG], 0, 'stoneWet');
+    groundHoles(P, [-70, -90, 70, 70], [...chamber, ...holes, ...sink, DIG], 0, 'stoneWet');
     P.E(['PRESENT', 'FUTURE'], () => ground(P, DIG, 0, 'stoneWet'));
     P.E(['PRESENT', 'FUTURE'], () => P.disc(0, 0.012, 0, COURT_R, 'courtStone', { seg: 48, noShadow: 1 }));
     // 2026: bare earth round the open chamber and the dig (both left open)
@@ -217,7 +236,19 @@ export default {
       P.dome(0, 0.5, 0, 11.2, 2.4, 'oculusGlass', { seg: 28 });
       for (let i = 0; i < 12; i++) P.torus(0, 0.5, 0, 11.2, 0.09, 'steel', { rx: 0, ry: (i / 12) * Math.PI, rz: 0, arc: Math.PI, seg: 16 });
       P.torus(0, 0.55, 0, 11.6, 0.35, 'oculusRim', { rx: Math.PI / 2, seg: 48 });
+      // (Mission 12: the lens and its rim are solid, as glass and steel are: Kai walks round them, not into them. A
+      // stepped disc of colliders, 1.5 m a step, round the rim's outer edge)
+      if (mission === 'm12') {
+        const R = 11.95, n = 16;
+        for (let k = 0; k < n; k++) {
+          const za = -R + (2 * R * k) / n, zb = za + (2 * R) / n, near = za < 0 && zb > 0 ? 0 : Math.min(Math.abs(za), Math.abs(zb));
+          const hx = Math.sqrt(R * R - near * near);
+          P.col([-hx, 0, za, hx, 3.2, zb]);
+        }
+      }
     });
+    // (Mission 12, 2026: the open pit is boarded over, the scaffold round its rim)
+    if (mission === 'm12') P.E('PAST', () => P.plane(-12.4, -12.4, 12.4, 12.4, 0.02, 'timber', { noShadow: 1 }));
     P.E(['FUTURE'], () => {
       // the lens broken; a linden grows up through it
       P.torus(0, 0.55, 0, 11.6, 0.35, 'rust', { rx: Math.PI / 2, seg: 48 });

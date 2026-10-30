@@ -118,6 +118,112 @@ function makeHuman(kind, seed, renderer, hero) {
   return { body: actor, eyeMat, eyeY: 1.6, actor };
 }
 
+// --- what a watcher sees and reaches, up and down (v2.1.1 playtest M8) ------------------------------------------
+// DeckWorld's watcher on the ground (no floor of its own, def.y) is "on Kai's floor" at any height: Mission 12's court
+// drone saw Kai on the 2026 gangway 13.5 m over it and caught him there, measuring the catch flat. In the edition a
+// watcher sees Kai only within a storey of its own floor, and catches him only within reach of it.
+export const SEE_UP = 4, SEE_DOWN = 3, REACH = 2;
+// dy: Kai's feet above the watcher's floor
+export const inSight = (dy) => dy < SEE_UP && dy > -SEE_DOWN;
+export const inReach = (dy) => Math.abs(dy) <= REACH;
+const feetOver = (player, s) => player.pos.y - 0.85 - s.pos.y;
+
+// --- walls (v2.1.1 playtest L15) ---------------------------------------------------------------------------------
+// DeckWorld moves a watcher straight at its target with no collision: a chase that started at Mission 10's hall door
+// went on through the hall's glass and caught Kai inside. In a chase a watcher keeps to the floor it can walk: a step
+// into a wall or a pane is not taken (along the wall, if one way is open); the way it chased is kept, and once it gives
+// up it walks that way back to where the chase began, then on with its round. (Its round itself is not checked: the
+// rounds are laid on open ground, and a prop on one must not stop a patrol for good.)
+const BODY = 0.3, LOW = 0.4, TALL = 1.7;
+// how far a point is from a collider's footprint (0 inside it)
+const gap = (c, x, z) => Math.hypot(Math.max(c.min[0] - x, 0, x - c.max[0]), Math.max(c.min[2] - z, 0, z - c.max[2]));
+// does the line from (x0, z0) to (x1, z1) cross a collider's footprint?
+function crosses(c, x0, z0, x1, z1, pad = 0) {
+  let t0 = 0, t1 = 1;
+  for (const [o, d, mn, mx] of [[x0, x1 - x0, c.min[0] - pad, c.max[0] + pad], [z0, z1 - z0, c.min[2] - pad, c.max[2] + pad]]) {
+    if (Math.abs(d) < 1e-9) { if (o < mn || o > mx) return false; continue; }
+    let ta = (mn - o) / d, tb = (mx - o) / d;
+    if (ta > tb) [ta, tb] = [tb, ta];
+    t0 = Math.max(t0, ta);
+    t1 = Math.min(t1, tb);
+    if (t0 > t1) return false;
+  }
+  return true;
+}
+// does a step from (x0, z0) to (x1, z1), for a body standing on a floor at y, run into one of the colliders
+// ({ min, max })? Into one: closer than the body's half width, and closer than it was (a step away or along is free), or
+// through it (its body's width round it, from outside that). What it can step over (under 0.4 m) or walk under does not
+// hold it
+export function blocked(cols, x0, z0, x1, z1, y) {
+  if (Math.hypot(x1 - x0, z1 - z0) < 1e-6) return false;
+  for (const c of cols) {
+    if (c.max[1] <= y + LOW || c.min[1] >= y + TALL) continue;
+    const g0 = gap(c, x0, z0), g1 = gap(c, x1, z1);
+    if ((g1 < BODY && g1 < g0 - 1e-6) || (g0 > 0 && crosses(c, x0, z0, x1, z1, g0 >= BODY ? BODY : 0))) return true;
+  }
+  return false;
+}
+
+// a catch never chains into another (v2.1.1 playtest H3): while Kai is walked back, and for this long after he is
+// back, no watcher sees him; they go on with their rounds
+export const GRACE = 2.5;
+
+// The edition's limits on one of DeckWorld's sentinels: sight and catch within reach of its floor, walls in a chase.
+// cols(): the colliders standing now
+export function limitWatcher(s, cols) {
+  if (s.lvLimits) return s;
+  s.lvLimits = true;
+  if (s.def.y == null) s.onFloor = (player) => inSight(feetOver(player, s));
+  const update = s.update;
+  const trail = [];
+  let back = null;
+  const stop = (self) => { self.mode = 'chase'; self.suspicion = 1; return null; };
+  s.update = function (dt, t, o) {
+    const x0 = this.pos.x, z0 = this.pos.z, y = this.pos.y, was = this.mode;
+    let r = update.call(this, dt, t, o);
+    const p = o.player.pos;
+    // (out of reach, over its head: it stands under him, still on the chase)
+    if (r === 'caught' && !inReach(feetOver(o.player, this))) r = stop(this);
+    const C = cols?.() || [];
+    if (this.mode === 'chase' || r === 'caught') {
+      back = null;
+      if (was !== 'chase') trail.length = 0;
+      const x1 = this.pos.x, z1 = this.pos.z;
+      if (blocked(C, x0, z0, x1, z1, y)) {
+        // (along the wall, if one way is open; else it stays where it was)
+        if (!blocked(C, x0, z0, x1, z0, y)) this.pos.z = z0;
+        else if (!blocked(C, x0, z0, x0, z1, y)) this.pos.x = x0;
+        else { this.pos.x = x0; this.pos.z = z0; }
+        this.model.position.copy(this.pos);
+        // (no catch through the wall it did not walk through)
+        if (r === 'caught' && Math.hypot(p.x - this.pos.x, p.z - this.pos.z) >= 1.15) r = stop(this);
+      }
+      if (!trail.length) trail.push([x0, z0]);
+      const last = trail[trail.length - 1];
+      if (trail.length < 400 && Math.hypot(this.pos.x - last[0], this.pos.z - last[1]) > 1) trail.push([this.pos.x, this.pos.z]);
+    }
+    if (this.mode !== 'chase' && was === 'chase' && trail.length) {
+      back = trail.reverse().slice();
+      trail.length = 0;
+    }
+    if (back && this.mode !== 'chase') {
+      // the way it chased, walked back, while the straight way on to its round is shut
+      const w = this.lure ? [this.lure.x, this.lure.z] : this.def.path[this.wp];
+      while (back.length && Math.hypot(back[0][0] - x0, back[0][1] - z0) < 0.3) back.shift();
+      if (!back.length || !w || !blocked(C, x0, z0, w[0], w[1], y)) back = null;
+      else {
+        const [bx, bz] = back[0], d = Math.hypot(bx - x0, bz - z0), k = Math.min(1, (this.def.speed * dt) / d);
+        this.pos.x = x0 + (bx - x0) * k;
+        this.pos.z = z0 + (bz - z0) * k;
+        this.turnTo(new THREE.Vector3(bx - x0, 0, bz - z0), dt);
+        this.sync(0, this.def.speed);
+      }
+    }
+    return r;
+  };
+  return s;
+}
+
 // The kind of one sentinel: the mission's, the sentinel's own (the rewinding unit), alternating sides
 export function kindFor(mkey, sd, i, state) {
   const w = WATCHERS[mkey];
@@ -138,7 +244,9 @@ export class Watchers {
 
   mount(deckWorld, mkey, { renderer, hero, stateOf }) {
     this.list = [];
+    this.grace = 0;
     (deckWorld.sentinels || []).forEach((s, i) => {
+      limitWatcher(s, () => deckWorld.colliders);
       const g = s.model;
       // the Observer goes: its parts were made for it alone
       for (const c of [...g.children]) {
@@ -182,6 +290,17 @@ export class Watchers {
 
   // each frame: the year's body, a person's walk from how far the sentinel moved, a drone's hover
   update(dt) {
+    // (a catch's grace: while Kai is walked back and GRACE seconds after, nobody sees him, H3)
+    const g = this.rt?.g;
+    if (g?.catching) this.grace = GRACE;
+    else if (this.grace > 0) this.grace -= dt;
+    if (g?.catching || this.grace > 0) {
+      for (const { s } of this.list) {
+        s.suspicion = 0;
+        s.lostT = 0;
+        if (s.mode === 'chase') s.mode = 'patrol';
+      }
+    }
     for (const rec of this.list) {
       if (rec.byYear) this.show(rec);
       const g = rec.g;

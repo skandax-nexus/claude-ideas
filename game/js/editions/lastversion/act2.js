@@ -474,14 +474,19 @@ function m10Step(rt) {
   S.caught = false;
   f.inc('m10_caught');
   const n = f.get('m10_caught');
+  const cp = Array.isArray(g.checkpoint) ? g.checkpoint : null;
   for (const s of g.deckWorld.sentinels) {
     const path = s.def.path;
     s.def.baseRange ??= s.def.range;
     s.def.range = Math.min(s.def.baseRange + Math.min(3, n), f.get('power_cut') && LAMPS.test(s.def.id) ? 3.5 : Infinity);
     if (path.length < 2) continue;
-    const j = (s.wp + n) % path.length;
-    s.pos.set(path[j][0], s.pos.y, path[j][1]); // (on its own floor: the chamber's troopers stand at -12 m)
-    s.wp = (j + 1) % path.length;
+    // (never onto the place Kai has just been put back at: the yard's trooper, two points on his round, came round to
+    // stand 6 m in front of the checkpoint, facing it, and caught him again as the fade lifted. v2.1.1 playtest H3)
+    const near = (q) => cp && Math.abs(cp[1] - 0.86 - s.pos.y) < 3 && Math.hypot(q[0] - cp[0], q[1] - cp[2]) < s.def.range + 4;
+    const k = [...path.keys()].map((i) => (s.wp + n + i) % path.length).find((i) => !near(path[i]));
+    if (k === undefined) continue;
+    s.pos.set(path[k][0], s.pos.y, path[k][1]); // (on its own floor: the chamber's troopers stand at -12 m)
+    s.wp = (k + 1) % path.length;
   }
   if (n === 1) g.hud.say(rt.deck.spoken.remember, f);
 }
@@ -922,7 +927,7 @@ const M12_HINTS = {
   follow: ['He stepped off the roof into 2026.', 'In 2026 there was a gangway across, at the roof\'s edge by the court.', 'Go to the roof\'s edge by the court and switch to 2026 there.'],
   corridor: ['Corridor B only existed in 2026: a gangway across.', 'Stay in 2026 and walk the gangway.', 'Cross the 2026 gangway to its far end, where the flowers are.'],
   ruin: ['His steps go on in 2196, where the north wing fell.', 'East, past the court, into the ruin.', 'Switch to 2196 and walk east into the ruin.'],
-  panes: ['He stops at glass, the same stop in every year.', 'The glass on the roof, the hoarding on the 2026 gangway, his steps in the ruin.', 'Look at two of them: the roof\'s glass now, the gangway\'s hoarding in 2026.'],
+  panes: ['He stops at glass, the same stop in every year.', 'His steps in the ruin, the roof\'s glass, the 2026 gangway\'s hoarding. The fire stair by the east wing climbs to the roof.', 'REVERSE his footsteps here, then climb the fire stair and look at the roof\'s glass.'],
   route: ['His route repeats. I have seen all of it now.', 'The roof, the gangway, the ruin: the same stops every time.', 'In the ruin, piece his route together.'],
   witnessStair: ['He went down the terraces, into the hill.', 'It is happening now. Watch where he goes.', 'Stay where you are and watch him go down.'],
   stair: ['He dropped the stair behind him.', 'A fallen thing rises while I hold it back.', 'Aim at the fallen stair and hold REVERSE, then climb down it while it holds.'],

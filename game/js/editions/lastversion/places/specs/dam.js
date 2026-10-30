@@ -33,10 +33,15 @@ export default {
   },
   quarters: [
     // (U7: Kai wakes in his cell, its bars bent open: out of the gallery patrol's sight until he steps out)
-    { name: 'THE DETENTION BLOCK', area: [-70, -24, 70, 0], spawn: [-24, 0, -19.5, Math.PI], threshold: { at: 'gallStair', kind: 'stair' } },
+    // (v2.1.1 playtest M6: each quarter's checkpoint box holds its own floor. Without a height a quarter's box ran from
+    // -12 m to 30 m, so the yard on the hall's roof by the flood pole (0 m) set the checkpoint down in the turbine hall,
+    // and the hall's north strip set it up in the cell. The gallery's box takes the roof yard (0 m) as well)
+    { name: 'THE DETENTION BLOCK', area: [-70, -24, 70, 0], cp: [-70, -4, -24, 70, 8, 30], spawn: [-24, 0, -19.5, Math.PI], threshold: { at: 'gallStair', kind: 'stair' } },
     { name: 'POWER SYSTEMS', cp: [-70, 8, -60, 70, 40, -16], area: [-70, -60, 70, -24], spawnAt: 'crownLanding', threshold: { at: 'hallStair', kind: 'stair' } },
-    { name: 'THE TESTING CHAMBER', area: [-60, 0, 60, 30], spawnAt: 'turbineHall', threshold: { at: 'spillwayTunnel', kind: 'tunnel' } },
-    { name: 'THE YARD', area: [-70, 30, 70, 60], spawnAt: 'gorgeFloor', threshold: null },
+    { name: 'THE TESTING CHAMBER', area: [-60, 0, 60, 30], cp: [-60, -16, -6, 60, -4, 30], spawnAt: 'turbineHall', threshold: { at: 'spillwayTunnel', kind: 'tunnel' } },
+    // (v2.1.1 playtest H3: the yard's checkpoint stands at its west end, out of the trooper's sight and reach. At the
+    // gorge floor's middle it was 2 m from his line, and a catch put Kai back in front of him)
+    { name: 'THE YARD', area: [-70, 30, 70, 60], cp: [-70, -16, 30, 70, -4, 60], spawn: [-26, HALL, 33.5, -Math.PI / 2], threshold: null },
   ],
   beatAt: { m10: ['guardPost', 'switch2049', 'loopCells'] },
   exits: { m10: 'seraSkiff' },
@@ -122,7 +127,9 @@ export default {
     for (const x of [-40, 0, 40]) { P.vbox([x - 3, -0.6, 8, x + 3, -0.4, 20], 'lightPanel', { noShadow: 1 }); P.glow(x, HALL + 0.02, 14, 6, 0xdce8ff); }
     // --- the gallery (0 m): the roof of the hall and the bench along the face; the stairwell down into the hall -------
     groundHoles(P, [-70, -16, 70, 30], [[-38.5, 1, -33.5, 23]], 0, 'damConcrete', { depth: 0.6 });
-    stair(P, -36, 2, 0, -36, 22, HALL, 4, 'gratingSteel', { rail: 'steel' });
+    // (v2.1.1 playtest H2: the stair starts where the gallery's floor ends, at z 1. It started at z 2, its first step at
+    // z 1.98: a metre-wide hole across the stairwell's top that dropped Kai 12 m going down and threw him back going up)
+    stair(P, -36, 1, 0, -36, 22, HALL, 4, 'gratingSteel', { rail: 'steel' });
     P.land('hallStair', -36, 0, 0, Math.PI);
     railing(P, -70, 29.7, 70, 29.7, 1.2, 'steel');
     for (const [x0, x1] of [[-39, -39], [-33, -33]]) railing(P, x0, 1, x1, 23, 1.1, 'steel');
