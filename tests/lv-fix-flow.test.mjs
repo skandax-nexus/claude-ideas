@@ -89,7 +89,8 @@ test('X2: a finished campaign loads to its ending\'s card; a case replay\'s save
   const meta = rt.saveMeta();
   assert.match(meta.where, /^THE LAST VERSION · ENDING C: AFTERZERO$/);
   // the card waits for begin() to have closed every panel (a microtask), and the loaded save's PREVIOUSLY is not played
-  assert.match(SRC, /else if \(resumed && this\.finishedLoad\) this\.postGame\(\);\s*else if \(resumed\) this\.previously\(\);/);
+  // (an ending cut before its card plays again instead: v2.1.1 playtest M19, tests/fix2-lv-runtime.test.mjs)
+  assert.match(SRC, /else if \(resumed && this\.finishedLoad\) this\.postGame\(\);\s*else if \(resumed && this\.endingCut\) this\.endingAgain\(this\.endingCut\);\s*else if \(resumed\) this\.previously\(\);/);
   assert.match(SRC, /queueMicrotask\(open\)/);
   // the playtest's finished save is one
   const end = fixture('lv-flow-endC.json');
@@ -103,7 +104,7 @@ test('acts-1-2 F05: an opening marks the save until it is over (with its rooms\'
   assert.equal(MISSIONS.act2.find((m) => m.key === 'm12').coldOpen.year, 'FUTURE');
   assert.match(SRC, /camp\.opening = \{ mkey: deck\.mkey, home \};/);
   assert.match(SRC, /const finish = \(\) => \{\s*this\.hideCard\(\);\s*this\.opening = null;\s*delete camp\.opening;/);
-  assert.match(SRC, /const cut = resumed && c\.opening\?\.mkey === deck\.mkey && !this\.finishedLoad \? c\.opening : null;/);
+  assert.match(SRC, /const cut = resumed && c\.opening\?\.mkey === deck\.mkey && !this\.finishedLoad && !this\.endingCut \? c\.opening : null;/);
   assert.match(SRC, /if \(cut\) \{\s*for \(const \[r, y\] of Object\.entries\(cut\.home \|\| \{\}\)\)/);
   // a new mission starts with no mark and no anchor of the last one
   assert.match(SRC, /if \(intro\) \{\s*g\.held = null;\s*delete c\.opening;\s*delete c\.anchor;/);
@@ -299,7 +300,8 @@ test('FT-14: Mission 2\'s PREVIOUSLY is the morning of the crash; no snap line o
   for (const l of PREVIOUSLY.m02) assert.ok(!/tonight/i.test(l), l);
   assert.equal(PREVIOUSLY.m02[2], 'Now Helix has gone dark, and Kai Varen is inside it.');
   // the Chronolith does not drain during a staged moment or a transition, and a snap overtaken by either says nothing
-  assert.match(SRC, /const draining = out && this\.unstable && !outdoors && !this\.opening && !this\.cinema\?\.active && !g\.transitioning && !ending;/);
+  // (nor while the story talks to Kai: v2.1.1 playtest H4)
+  assert.match(SRC, /const draining = out && this\.unstable && !outdoors && !this\.opening && !this\.cinema\?\.active && !g\.transitioning && !ending && !this\.storyLines\(\);/);
   // (nor between a mission's end and the exit it takes on its own: Mission 3's fracture leaves the room in 2026)
   assert.match(SRC, /const ending = this\.deck\?\.autoExit != null && !!g\.deckWorld\.flags\.beat_done;/);
   assert.ok(MISSIONS.prologue.find((m) => m.key === 'm03').autoExit > 0);

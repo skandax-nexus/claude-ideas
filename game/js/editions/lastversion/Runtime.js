@@ -864,7 +864,9 @@ export class LastVersion {
     // trip's, which come after an ending and go on as they were; and only the Finale's: the ending is reached there, and a
     // save of another chapter carrying it is not a finished campaign, it plays on with its PREVIOUSLY card. v2.1.1
     // release check: the bot's Act II save, made from a finished one, loaded to the ending card)
-    this.finishedLoad = campaign.chapter === 'finale' && !!this.g.facts.get('ending');
+    // (an ending cut before its card, the app killed during its 90 s: the ending again, not its card; v2.1.1 playtest M19)
+    this.endingCut = campaign.chapter === 'finale' && this.g.facts.get('ending') && this.g.facts.get('ending_playing') ? this.g.facts.get('ending') : null;
+    this.finishedLoad = !!this.endingDone(campaign.chapter);
     this.start(campaign.chapter, campaign);
   }
 
@@ -1179,7 +1181,7 @@ export class LastVersion {
     // a save taken while the mission's opening played (the app sent to the background during a cold open: pause, QUIT)
     // loads with the opening played again, every room back in its own year first: Mission 12's cold open is shot in
     // 2196, and a save inside it loaded the chase in 2196 with the Chronolith draining (v2.1 playtest acts-1-2 F05)
-    const cut = resumed && c.opening?.mkey === deck.mkey && !this.finishedLoad ? c.opening : null;
+    const cut = resumed && c.opening?.mkey === deck.mkey && !this.finishedLoad && !this.endingCut ? c.opening : null;
     delete c.opening;
     if (cut) {
       for (const [r, y] of Object.entries(cut.home || {})) if (this.level.rooms[r] && g.engine.statesOf(r).includes(y)) g.engine.setState(r, y, { force: true });
@@ -1220,9 +1222,11 @@ export class LastVersion {
     else if (deck.roam) this.roamCard(); // (a trip has no opening and no PREVIOUSLY: where it is, and that the story waits)
     else if (resumed && this.backFromRoam) this.backCard();
     else if (resumed && this.finishedLoad) this.postGame();
+    else if (resumed && this.endingCut) this.endingAgain(this.endingCut);
     else if (resumed) this.previously();
     this.backFromRoam = false;
     this.finishedLoad = false;
+    this.endingCut = null;
     // (a trip's fade, travelled to or back from in the page: the new place is up)
     if (this.travelFade) {
       this.travelFade = false;
@@ -1887,6 +1891,9 @@ export class LastVersion {
     if (id && node.know) g.facts.set(`know_${id}`, Math.max(g.facts.get(`know_${id}`) ?? 0, node.know));
     if (id && node.quest) g.facts.set(`quest_${id}`, node.quest);
     if (node.log) g.log.push(node.log);
+    // (an ending chosen plays for about 90 s before its card: until then the story is not finished, and a save taken
+    // meanwhile loads to the ending again, endingAgain; the choice's own set has already made it the ending, finale.js)
+    if (node.ending) g.facts.set('ending_playing', node.ending);
     if (node.then) this.deck.fx?.[node.then]?.(this);
   }
 
@@ -2136,7 +2143,10 @@ export class LastVersion {
     // the second or so between a mission's end and the exit it takes on its own, autoExit: Mission 3's fracture leaves
     // the control room in 2026 for 1.6 s before its outro)
     const ending = this.deck?.autoExit != null && !!g.deckWorld.flags.beat_done;
-    const draining = out && this.unstable && !outdoors && !this.opening && !this.cinema?.active && !g.transitioning && !ending;
+    // (nor while the story talks to Kai: a conversation, a scene's lines, the story's own narration. Mission 7's
+    // astronomer ran 47 s against the meter's 22 and snapped Kai off the summit mid-reveal; the meter holds where it is
+    // and runs on when the lines are over. A bark, a PA or a THINK hint is not the story: storyLines; v2.1.1 playtest H4)
+    const draining = out && this.unstable && !outdoors && !this.opening && !this.cinema?.active && !g.transitioning && !ending && !this.storyLines();
     const holding = this.unstable && !!this.inv?.active && !this.inv.active.lock;
     if (draining) this.stability = Math.max(0, this.stability - dt * 0.045);
     else if (!out && !holding) this.stability = Math.min(1, this.stability + dt * 0.1);
@@ -2768,7 +2778,7 @@ export class LastVersion {
       return { where: m.where, chapter: m.chapter };
     }
     // (a finished campaign is its ending: CONTINUE opens its card, postGame)
-    const end = this.chapter === 'finale' && this.g.facts.get('ending'); // (as resume's finishedLoad)
+    const end = this.endingDone(); // (as resume's finishedLoad)
     if (end && ENDINGS[end]) return { where: `THE LAST VERSION · ENDING ${end}: ${ENDINGS[end].title}`, chapter: 'The case files and free roam' };
     const q = this.threads.on ? this.level?.quarters?.[this.g.campaign.quarter || 0]?.name : null;
     return { where: `THE LAST VERSION · ${d?.name || ''}`, chapter: `${typeof d?.n === 'number' ? `Mission ${d.n}` : `Case ${d?.no ?? d?.n}`}${q ? ` · ${q}` : d?.sectors > 1 ? ` · ${this.g.campaign.sector + 1}/${d.sectors}` : ''}` };
@@ -2873,12 +2883,42 @@ export class LastVersion {
     else Promise.resolve().then(open);
   }
 
+  // the ending a finished campaign reached: its card has been shown (an ending still playing is not one yet). In the
+  // Finale's save only (resume, saveMeta)
+  endingDone(chapter = this.chapter) {
+    const f = this.g.facts;
+    return chapter === 'finale' && !f.get('ending_playing') ? f.get('ending') || null : null;
+  }
+
+  // a save taken while the ending played (the app killed, a crash, a reload during its 90 s): the ending again, from
+  // its flash, once begin() is done (as postGame), never its card alone with the rest of it lost (v2.1.1 playtest M19)
+  endingAgain(key) {
+    const g = this.g, deck = this.deck;
+    this.pendingResume = null;
+    this.hideCard();
+    const go = () => {
+      if (!g.campaign?.lv || this.deck !== deck) return;
+      g.hud.skipAll?.();
+      this.ending(key);
+    };
+    if (typeof queueMicrotask === 'function') queueMicrotask(go);
+    else Promise.resolve().then(go);
+  }
+
   ending(key) {
     const g = this.g;
     const e = ENDINGS[key];
     if (!e) return;
     g.facts.set('ending', key);
-    const show = () => this.endingCard(key);
+    g.facts.set('ending_playing', key);
+    // (the Finale's time: it has no gate to store it at, exitReached, so the ending card had no FINALE time; v2.1.1 P20)
+    const c = g.campaign, mk = this.deck?.mkey;
+    if (mk && c?.mStart != null && !g.facts.get(`time_${mk}`)) g.facts.set(`time_${mk}`, Math.max(0, Math.round((g.playTime || 0) - c.mStart)));
+    // (the story is finished once the card is up, the ending seen to its end; endingCard saves it so: v2.1.1 playtest M19)
+    const show = () => {
+      g.facts.set('ending_playing', false);
+      this.endingCard(key);
+    };
     // a flash, a second of silence, the ending's music; the bible's text, what the ending adds, Kai's quote
     // (C through the echo), the epilogue; four clock ticks; the voice in every speaker; the overlay
     g.hud.flash('rgba(255,255,255,0.9)');

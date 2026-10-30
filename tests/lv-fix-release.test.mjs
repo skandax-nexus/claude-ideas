@@ -108,7 +108,8 @@ test('X2 (release check): only a Finale save with its ending loads to the ending
   a2.resume({ lv: true, chapter: 'act2', deck: 0, sector: 0, flags: {}, lvFormat: 24 });
   assert.equal(a2.finishedLoad, false, 'an Act II save plays on');
   const src = read('../game/js/editions/lastversion/Runtime.js');
-  assert.ok(src.includes("const end = this.chapter === 'finale' && this.g.facts.get('ending');"), 'the slot\'s name says the same');
+  // (an ending still playing is not finished yet: v2.1.1 playtest M19)
+  assert.ok(src.includes('const end = this.endingDone();') && src.includes("return chapter === 'finale' && !f.get('ending_playing') ? f.get('ending') || null : null;"), 'the slot\'s name says the same');
 });
 
 // Mission 11's lock close-up (the staging unit's F07) plays the first time Kai comes up to the lock; held back by a line

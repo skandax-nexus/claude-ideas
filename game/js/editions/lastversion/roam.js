@@ -174,7 +174,8 @@ export function stashOf(data) {
 
 // the story a save stands in: the save itself, or (a trip's save) the story kept inside it
 export const storyOf = (data) => (data?.campaign?.chapter === 'roam' ? data.campaign.roam?.back || null : data);
-export const finished = (facts) => !!facts?.ending;
+// (an ending still playing, cut before its card, is not finished yet: Runtime.endingAgain plays it again; v2.1.1 M19)
+export const finished = (facts) => !!facts?.ending && !facts?.ending_playing;
 
 // a trip to mission `key` in `year`, from a save (`base`: the story's, or a trip's) and its meta (where, chapter, run).
 // Returns the save data and meta to write; its campaign starts the trip (Runtime.start('roam', campaign)).
