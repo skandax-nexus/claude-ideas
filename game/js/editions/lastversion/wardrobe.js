@@ -354,9 +354,11 @@ for (const [m, vs] of Object.entries(settlementVariants())) WARDROBE[m] = { ...(
 Object.assign(WARDROBE, {
   rb_niko: {
     // Niko, keeper of the settlement (Male_Adult_09: his own black hair, long and tied back; Male_Adult_15's woven cap
-    // read as a present-day prayer cap and is gone): an undyed linen tunic to the shin, a woad mantle
+    // read as a present-day prayer cap and is gone): an undyed linen tunic, a woad mantle
+    // (playtest v2.1.1 L32: to the shin and flared, with his tied hair, the tunic read at phone distance as a woman's long
+    // dress. It is a young man's working tunic now, cut straight and to the knee over his legs' linen, its belt dark)
     niko: { body: [dyeRule('flax')],
-      garb: { skirt: { dye: D('flax'), stripe: D('walnut'), hem: 0.12, flare: 1.12 }, bodice: { dye: D('flax') }, mantle: { dye: D('woad'), stripe: D('undyed') }, belt: { dye: D('walnut') } } },
+      garb: { skirt: { dye: D('flax'), stripe: D('walnut'), hem: 0.5, flare: 1.03 }, bodice: { dye: D('flax') }, mantle: { dye: D('woad'), stripe: D('undyed') }, belt: { dye: D('walnut') } } },
   },
   rb_niko_old: {
     // Niko, an old man (M7's cold open): the same face aged in his model's own maps (tools/rocketbox-textures.py 'age_m':

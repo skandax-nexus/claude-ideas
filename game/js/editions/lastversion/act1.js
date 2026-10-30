@@ -794,9 +794,38 @@ const M07_HINTS = {
   astro: ['The astronomer is still turning the ring.', 'At the first sky, by the horizon ring.', 'Talk to the astronomer at the first sky.'],
 };
 const ASTRO = (t) => SAYS('THE ASTRONOMER', 'CROWD_OLD_M', t);
+// what Mission 7's code says (fx.astroTalk; voicelines.js walks them for the packs)
+const M07_SAY = {
+  astro: [N('The astronomer does not stop turning the ring. He speaks over his shoulder, as if you were here yesterday.'),
+    ASTRO('You came back with no dust on you. The woman said you would.'), K('What woman?'),
+    ASTRO('She came up the hill in the rain season, in a coat the colour of the river. At noon she had no shadow. We thought she was a spirit, and fed her anyway.'),
+    ASTRO('She would not give us her name. She gave us yours. Cut it where he will stand, she said, so he knows somebody waited.'),
+    K('What did she look like?'),
+    ASTRO('Like you, if you had slept. She laughed at the star tube. She said her brother would look through it the wrong way round.'),
+    N('Beside your name on the outer ring there is a second mark, smaller, cut by another hand: a circle, and inside it the letter M.')],
+};
+// (playtest v2.1.1 L38: his reveal was said over the play camera, the HUD up and the astronomer behind Kai. It is staged as
+// a conversation now (cinema.js: letterboxed, the HUD hidden, Kai held): over Kai's shoulder onto him, then close on him
+// as he turns the ring. A staged moment also rests the Chronolith, which ran out during his lines, H4)
+function astroShots(rt) {
+  const n = rt.level?.npcs?.find((x) => x.id === 'm7_astro'), p = rt.g?.player?.pos;
+  if (!n || !p) return null;
+  const [x, y, z] = n.pos, head = [x, y + 1.55, z];
+  const fx = Math.sin(n.yaw || 0), fz = Math.cos(n.yaw || 0); // (the way he faces)
+  // over Kai's shoulder: behind him on the line to the astronomer, a little to his right and above his head
+  let dx = x - p.x, dz = z - p.z;
+  const d = Math.hypot(dx, dz) || 1;
+  dx /= d; dz /= d;
+  const feet = p.y - 0.86;
+  const shoulder = [p.x - dx * 1.7 - dz * 0.7, feet + 2.05, p.z - dz * 1.7 + dx * 0.7];
+  return [
+    { cam: shoulder, to: [shoulder[0] + dx * 0.4, shoulder[1] - 0.05, shoulder[2] + dz * 0.4], look: head },
+    { cam: [x + fx * 2.3 - fz * 0.8, y + 1.7, z + fz * 2.3 + fx * 0.8], to: [x + fx * 1.9 - fz * 0.6, y + 1.68, z + fz * 1.9 + fx * 0.6], look: head, hide: true },
+  ];
+}
 export const M07 = {
   key: 'm07', n: 7, chapter: 'act1', name: 'THE BROKEN OBSERVATORY', title: 'Bronze rings under an open sky', subtitle: 'An ancient observatory, tracking alignments that include your birth.',
-  logline: 'Bronze rings on the Ridge, aligned to a birth.',
+  logline: 'Bronze rings on the Ridge, aligned to a birth.', spoken: M07_SAY,
   place: 'observatory', sectors: 1, states: ['PAST', 'PRESENT', 'FUTURE'], drones: [0, 1, 2], unstable: true, ambience: 'wind', ambient: 'settlement',
   labels: { PAST: 'THE FIRST SKY' }, motto: 'THEY DID NOT KNOW WHEN. THEY KNEW WHO', gate: 'THE HORIZON RING', crew: C('niko'),
   minutes: { main: 32, optional: 6 }, autoExit: 1.2, gateAfter: true,
@@ -811,8 +840,11 @@ export const M07 = {
   coldOpen: {
     first: true, minutes: 1, cue: 'card',
     // (on the summit drum, at the first sky: the astronomer and Niko, older, under the horizon ring)
-    shots: [{ cam: [74, 29.4, -67.6], to: [74, 29.2, -69.4], look: [74, 29.2, -80.6], t: 8 }],
-    year: 'PAST', cast: [{ crew: 'm7_oldniko', ambient: true, seed: 702, first: 'Niko', at: 'horizonRing', off: [-2.2, 0, 2], turn: Math.PI }],
+    // (playtest v2.1.1 L33: the act's one sight of Niko grown old was a backlit figure 30 px tall beside the astronomer.
+    // He turns toward the Notch and its low sun, and the second shot is close on his lit face as he says his line)
+    shots: [{ cam: [74, 29.4, -67.6], to: [74, 29.2, -69.4], look: [74, 29.2, -80.6], t: 4.5 },
+      { cam: [78.4, 29.1, -81.9], to: [78.1, 29.08, -81.6], look: [76.2, 29.05, -80], t: 6 }],
+    year: 'PAST', cast: [{ crew: 'm7_oldniko', ambient: true, seed: 702, first: 'Niko', at: 'horizonRing', off: [-2.2, 0, 2], turn: -0.86 }],
     lines: [N('Three thousand years ago, an astronomer and an old man turn a bronze ring toward the Notch.'), L('NIKO', 'There. The star that isn\'t up yet.')],
   },
   processes: [
@@ -881,17 +913,8 @@ export const M07 = {
     star_no: { lines: [K('Too bright. Or too early. The blue hour of 2049.')] },
     newstar: { when: '@FUTURE', lines: [N('In 2196 a new star stands over the Notch: the light of the Fracture. The horizon ring was cut for it.'), K('Three instruments. Three years. One line through all of them.')], set: { align_new: true }, then: 'bell3' },
     newstar_no: { lines: [K('Nothing there yet. The star this ring waits for comes later.')] },
-    astro: {
-      when: '@PAST',
-      lines: [N('The astronomer does not stop turning the ring. He speaks over his shoulder, as if you were here yesterday.'),
-        ASTRO('You came back with no dust on you. The woman said you would.'), K('What woman?'),
-        ASTRO('She came up the hill in the rain season, in a coat the colour of the river. At noon she had no shadow. We thought she was a spirit, and fed her anyway.'),
-        ASTRO('She would not give us her name. She gave us yours. Cut it where he will stand, she said, so he knows somebody waited.'),
-        K('What did she look like?'),
-        ASTRO('Like you, if you had slept. She laughed at the star tube. She said her brother would look through it the wrong way round.'),
-        N('Beside your name on the outer ring there is a second mark, smaller, cut by another hand: a circle, and inside it the letter M.')],
-      set: { ev_astro: true }, log: 'At the first sky a woman with no shadow asked them to cut my name. Beside it, an M.',
-    },
+    // (its lines are staged: fx.astroTalk)
+    astro: { when: '@PAST', set: { ev_astro: true }, log: 'At the first sky a woman with no shadow asked them to cut my name. Beside it, an M.', then: 'astroTalk' },
     astro_no: { lines: [K('The ring is still. At the first sky an old man stood here turning it, and he was talking to somebody.')] },
     cache: { lines: [N('Your keys. The florist\'s receipt for 08:04. A yellow button from a raincoat.'), N('A trade tag: FROM A MAN WHO LOOKED LIKE YOU, BUT TIRED.')], set: { ev_cache: true } },
     tape: {
@@ -903,6 +926,7 @@ export const M07 = {
     },
   },
   fx: {
+    astroTalk: (rt) => rt.cinema.play({ shots: astroShots, lines: M07_SAY.astro }),
     bell1: (rt) => rt.g.audio.bell?.(392, rt.g.audio.ctx?.currentTime || 0, 0.06, rt.g.audio.sfx),
     bell2: (rt) => rt.g.audio.bell?.(523.25, rt.g.audio.ctx?.currentTime || 0, 0.06, rt.g.audio.sfx),
     bell3: (rt) => rt.g.audio.bell?.(698.46, rt.g.audio.ctx?.currentTime || 0, 0.06, rt.g.audio.sfx),
