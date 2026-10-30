@@ -416,3 +416,8 @@ test('P7: Sera\'s plate carrier is curved, with pouches; Mission 11\'s lock has 
   for (const name of ['RING', 'BAR', 'STAR', 'CRESCENT']) assert.ok(L11.texts.some((t) => t.text === name && /inv_m11lock_done/.test(t.when || '')), name);
   assert.match(src('../game/js/editions/lastversion/act2.js'), /const body = shellBody\(\)/);
 });
+
+test('M10 (Mission 13): the gap\'s sentry walks its line briskly, looks a little wider and further', () => {
+  const s = L13.sentinels.find((x) => /_q0s1$/.test(x.id));
+  assert.deepEqual([s.range, s.fov, s.speed], [10, 1.0, 2.4]);
+});

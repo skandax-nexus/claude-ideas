@@ -1589,10 +1589,10 @@ export const M13 = {
   },
   step: m13Step,
   // (v2.1.1 playtest M10: the sentry at the sandbag line's gap looks a little wider and further, 30 degrees each side and
-  // 10 m, so a walk straight at the gate meets its look four times in five; waiting behind a truck until it walks east,
-  // as THINK says, gets through)
+  // 10 m, and walks its line briskly, so its back is turned to the gap for less of its round: a walk straight at the gate
+  // meets its look nine times in ten; waiting behind a truck until it walks east, as THINK says, gets through)
   adjust(level) {
-    for (const s of level.sentinels) if (/_q0s1$/.test(s.id)) Object.assign(s, { range: 10, fov: 1.0 });
+    for (const s of level.sentinels) if (/_q0s1$/.test(s.id)) Object.assign(s, { range: 10, fov: 1.0, speed: 2.4 });
   },
   // (a load while they lead the way: the flare is lit again, its patrol drawn off; a lure is not in the save)
   resumes: [{ when: 'listeners_route', until: 't_m13_cross', fx: 'listenersRoute' }],
