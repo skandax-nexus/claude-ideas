@@ -75,6 +75,9 @@ function replay(m, sideId, o) {
     talks, scenes, deductions: pick(m.deductions, used.deduce), rules, fx: m.fx, overlay: m.overlay,
     clear: [...clear].filter((k) => !k.startsWith('t_')).sort(),
     done: side.done,
+    // (its closing beat, Runtime.casesDone: the year its outcome lands in, and where the place shows it, cam and look
+    // from that spot; v2.1.1 playtest L41)
+    close: o.close || null,
   };
 }
 
@@ -93,7 +96,9 @@ const R = {
   names: replay(M16, 'names', { key: 'c_names', n: 'J', title: 'The museum of failed worlds', subtitle: 'The names no world kept.' }),
   debt: replay(M06, 'debt', { key: 'c_debt', n: 'K', title: 'The clockmaker\'s house', subtitle: 'An arm that has turned for fifty years.' }),
   ninth: replay(M13, 'evidence', { key: 'c_ninth', n: 'L', title: 'The nine-minute war', subtitle: 'Who buried the first device?' }),
-  garden: replay(M14, 'garden', { key: 'c_garden', n: 'M', title: 'The 2196 city', subtitle: 'A garden by a dry channel.' }),
+  // (the culvert is cleared in 2049; the water runs in 2196, the lagoon's channel by the garden: drowned.js)
+  garden: replay(M14, 'garden', { key: 'c_garden', n: 'M', title: 'The 2196 city', subtitle: 'A garden by a dry channel.',
+    close: { year: 'FUTURE', at: 'gardenChannel', cam: [6, 7, 9], look: [0, 0, -14], says: 'In 2196 the channel runs' } }),
   record: replay(M22, 'record', { key: 'c_record', n: 'N', title: 'The first second', subtitle: 'What each ending costs.' }),
 };
 

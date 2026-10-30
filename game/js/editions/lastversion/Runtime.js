@@ -6,7 +6,7 @@
 // Kai's verbs are. Three years switch (Q, 1 2 3); nothing flips gravity, and
 // there are no laws.
 import * as THREE from '../../../vendor/three.module.min.js';
-import { setChapters, latestFor, describeSave, listSaves, latestSave, writeSave } from '../../ui/Saves.js';
+import { setChapters, latestFor, describeSave, listSaves, latestSave, writeSave, readSave } from '../../ui/Saves.js';
 import { makeCastModel, setCrewDresser } from '../../world/People.js';
 import { PROLOGUE } from './prologue.js';
 import { ACTS, ENDINGS, CASE_FILES, CASE_STATES, caseState } from './acts.js';
@@ -25,7 +25,7 @@ import { VoiceFx } from './voicefx.js';
 import { choiceLine, chapterCardLines, missionCardLines, endingLines, POSTCREDIT } from './voicelines.js';
 import { Threads, placeThreads, isRewritten, sidesOf, sideState, coldFact, threadsOf, factOf, playFact, choiceHeader, condIds } from './Threads.js';
 import { QUESTIONS, PREVIOUSLY, CHOSEN } from './ledger.js';
-import { ROAM, reachedPlaces, roamSave, roamMeta, storyFromRoam, finished, roamFree, fragmentFound, placeName, yearName, ROAM_ONLY } from './roam.js';
+import { ROAM, reachedPlaces, roamSave, roamMeta, storyFromRoam, finished, roamFree, fragmentFound, placeName, yearName, ROAM_ONLY, storyOf } from './roam.js';
 
 // text into a page's HTML
 const esc = (t) => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;');
@@ -269,6 +269,10 @@ const _v = new THREE.Vector3(), _w1 = new THREE.Vector3(), _w2 = new THREE.Vecto
 const _fogC = new THREE.Color(), _nightC = new THREE.Color(0x101828); // (a night cold open's air: stateNight)
 // the facts a replay starts from, handed over the page reload (sessionStorage)
 const CASE_FACTS = 'afterzero.lv.caseFacts';
+// and the slot of the finished campaign they came from: a replay closed is recorded there (campaign.caseRecord), so the
+// CASE FILES remember it (v2.1.1 playtest M22)
+const CASE_FROM = 'afterzero.lv.caseFrom';
+const CASE_ORDER = ['open', 'active', 'resolved', 'observed'];
 // after an ending, BACK TO THE STORY on a trip comes back to the CASE FILES (the title opens them once: sessionStorage)
 const OPEN_CASES = 'afterzero.lv.openCases';
 // a CASE FILES replay saves in a slot of its own, never listed and never a campaign's (Saves.js keys it like slot N):
@@ -711,15 +715,23 @@ export class LastVersion {
       facts = JSON.parse(window.sessionStorage.getItem(CASE_FACTS) || 'null');
       window.sessionStorage.removeItem(CASE_FACTS);
     } catch { /* storage blocked: the latest save, then */ }
+    let from = null;
+    try {
+      from = JSON.parse(window.sessionStorage.getItem(CASE_FROM) || 'null');
+      window.sessionStorage.removeItem(CASE_FROM);
+    } catch { /* storage blocked: the latest save's slot, then */ }
     if (!facts) facts = latestSave()?.data?.facts?.facts || null;
     if (facts) for (const [k, v] of Object.entries(facts)) g.facts.set(k, v);
+    // (the finished campaign this replay was opened from: its CASE FILES record the replay when it closes, M22)
+    g.facts.set('lv_replay_from', from ?? latestSave()?.slot ?? false);
     for (const k of Object.keys(g.facts.facts)) if (k.startsWith(`t_${deck.key}_`) || k.startsWith(`side_${deck.key}_`) || k === `${deck.key}_done`) g.facts.set(k, false);
     for (const k of deck.clear || []) g.facts.set(k, false);
     g.facts.set('lv_replay', deck.key);
   }
 
   // --- CASE FILES (cases.js): the fourteen stories, their state, a replay of each from its place ------------------
-  caseFiles(facts = null) {
+  // o.focus: the case file just closed (casesDone): the list opens on its row, marked (v2.1.1 playtest L41)
+  caseFiles(facts = null, o = {}) {
     const g = this.g;
     const $ = (sel) => document.querySelector(sel);
     // (in a game, its facts; from the title, the latest save's)
@@ -729,10 +741,13 @@ export class LastVersion {
       f = new g.facts.constructor();
       f.facts = { ...d };
     }
+    // (with what the replays closed since have reached, kept with the finished campaign: caseRecord, M22)
+    const from = this.caseOrigin();
+    const rec = this.caseRecord(from);
     // (numbered as a replay's card names it: CASE 14 OF 14, v2.1 playtest F18)
     const rows = CASE_FILES.map((c, i) => {
-      const st = caseState(f, c);
-      return `<div class="caseFile" data-state="${st}"><b>${i + 1}. ${c.name}</b><small>${c.where} · ${CASE_STATES[st]}</small>${c.key ? `<button data-case="${c.key}">REPLAY</button>` : '<small class="dim">part of the main story</small>'}</div>`;
+      const st = CASE_ORDER[Math.max(CASE_ORDER.indexOf(caseState(f, c)), CASE_ORDER.indexOf(rec[c.id] || 'open'))];
+      return `<div class="caseFile${o.focus === c.id ? ' lvjust' : ''}" data-state="${st}" data-file="${c.id}"><b>${i + 1}. ${c.name}</b><small>${c.where} · ${CASE_STATES[st]}${o.focus === c.id ? ' · JUST PLAYED' : ''}</small>${c.key ? `<button data-case="${c.key}">REPLAY</button>` : '<small class="dim">part of the main story</small>'}</div>`;
     }).join('');
     // FREE ROAM: the places reached (in a game, its own; from the title, the latest save's), each year a trip
     const log = g.campaign?.lv ? g.log : latestSave()?.data?.log || [];
@@ -755,13 +770,14 @@ export class LastVersion {
     if (!$('#lvCaseCss')) {
       const st = document.createElement('style');
       st.id = 'lvCaseCss';
-      st.textContent = '.caseFiles{display:grid;gap:6px;margin:10px 0;max-height:52vh;overflow:auto}.caseFile{display:grid;grid-template-columns:1fr auto;gap:2px 10px;align-items:center;padding:6px 8px;border:1px solid rgba(255,255,255,.12);border-radius:6px;text-align:left}.caseFile b{font-size:13px}.caseFile small{grid-column:1;font-size:11px;opacity:.75}.caseFile button{grid-row:1/span 2;grid-column:2;margin:0;padding:6px 10px;font-size:12px}.caseFile[data-state=open]{opacity:.7}';
+      st.textContent = '.caseFiles{display:grid;gap:6px;margin:10px 0;max-height:52vh;overflow:auto}.caseFile{display:grid;grid-template-columns:1fr auto;gap:2px 10px;align-items:center;padding:6px 8px;border:1px solid rgba(255,255,255,.12);border-radius:6px;text-align:left}.caseFile b{font-size:13px}.caseFile small{grid-column:1;font-size:11px;opacity:.75}.caseFile button{grid-row:1/span 2;grid-column:2;margin:0;padding:6px 10px;font-size:12px}.caseFile[data-state=open]{opacity:.7}.caseFile.lvjust{border-color:var(--coral,#ff7a63);box-shadow:inset 3px 0 0 var(--coral,#ff7a63)}#ending.lvguard{pointer-events:none}';
       document.head.appendChild(st);
     }
     for (const b of document.querySelectorAll('#ending [data-case]')) {
       b.onclick = () => {
         try {
           window.sessionStorage.setItem(CASE_FACTS, JSON.stringify(f.facts || {}));
+          window.sessionStorage.setItem(CASE_FROM, JSON.stringify(from ?? null));
         } catch { /* storage blocked: the replay reads the latest save */ }
         // (from the title the replay starts in this page, and these CASE FILES are the menu open: it closes first, as
         // CONTINUE's does, or the game never steps (main.frame steps only with no menu) and the case's opening never
@@ -770,18 +786,74 @@ export class LastVersion {
         g.begin(`lv:cases/${b.dataset.case}`, null, CASE_SLOT);
       };
     }
+    // (a trip from a replay's CASE FILES goes from the finished campaign's save, as from the title's: a replay has no
+    // travel list of its own, and FREE ROAM's years were dead there, v2.1.1 playtest M23)
     for (const b of document.querySelectorAll('#ending [data-travel]')) {
-      b.onclick = () => (g.started && g.campaign?.lv ? this.travel(b.dataset.travel, b.dataset.year) : this.travelFromTitle(b.dataset.travel, b.dataset.year));
+      b.onclick = () => (g.started && g.campaign?.lv && g.campaign.chapter !== 'cases' ? this.travel(b.dataset.travel, b.dataset.year) : this.travelFromTitle(b.dataset.travel, b.dataset.year, from));
     }
-    $('#lvTitle').onclick = () => location.reload();
+    // (in a game, BACK TO THE TITLE asks for a second tap: at a replay's end it sat under the thumb that was releasing
+    // REVERSE, v2.1.1 playtest M20)
+    $('#lvTitle').onclick = () => {
+      const b = $('#lvTitle');
+      if (g.started && g.confirmTap && !g.confirmTap(b)) {
+        b.textContent = 'TAP AGAIN: BACK TO THE TITLE';
+        return;
+      }
+      location.reload();
+    };
     if (g.campaign?.lv && g.started) g.saveTo('auto');
     g.openMenu('ending');
+    // the case just closed: its row in view (the list opened at row 1, the played case off screen: L41); and the list
+    // takes no tap for a moment, so a thumb still on the game's buttons does not land on it (M20)
+    const row = o.focus && document.querySelector(`#ending .caseFile[data-file="${o.focus}"]`);
+    if (row?.scrollIntoView) row.scrollIntoView({ block: 'center' });
+    if (o.guard) {
+      const el = $('#ending');
+      el?.classList.add('lvguard');
+      setTimeout(() => el?.classList.remove('lvguard'), 900);
+    }
+  }
+
+  // the slot of the finished campaign a CASE FILES screen stands for: in a replay, the one it was opened from; in a
+  // game, its own; from the title, the latest save's
+  caseOrigin() {
+    const g = this.g;
+    if (g.started && g.campaign?.lv) {
+      if (g.campaign.chapter !== 'cases') return g.slot ?? 'auto';
+      const f = g.facts.get('lv_replay_from');
+      return f === false || f == null ? null : f;
+    }
+    return latestSave()?.slot ?? null;
+  }
+
+  // what the replays closed from that campaign reached: { case file id: state } (the story's campaign keeps it, so a
+  // save of it, a trip from it and back, all carry it on)
+  caseRecord(slot) {
+    const g = this.g;
+    if (g.started && g.campaign?.lv && g.campaign.chapter !== 'cases' && g.campaign.chapter !== 'roam') return g.campaign.caseRecord || {};
+    if (slot == null) return {};
+    const d = readSave(slot);
+    return storyOf(d)?.campaign?.caseRecord || {};
+  }
+
+  // a replay closed: what it reached, recorded with the finished campaign it was opened from (the campaign's facts are
+  // left as they were: a replay changes nothing in the story, DESIGN.md CASE FILES) (v2.1.1 playtest M22)
+  recordCase(file, state) {
+    const from = this.caseOrigin();
+    if (!file || from == null || CASE_ORDER.indexOf(state) < 2) return false;
+    const d = readSave(from);
+    const story = storyOf(d);
+    if (!story?.campaign?.lv || !finished(d.facts?.facts)) return false;
+    const rec = story.campaign.caseRecord || {};
+    if (CASE_ORDER.indexOf(state) <= CASE_ORDER.indexOf(rec[file.id] || 'open')) return true;
+    story.campaign.caseRecord = { ...rec, [file.id]: state };
+    return writeSave(from, d, d.meta || {});
   }
 
   // a trip from the title (the CASE FILES opened there): the latest save becomes a trip, in its own slot, and loads
-  travelFromTitle(key, year) {
+  travelFromTitle(key, year, slot = null) {
     const g = this.g;
-    const latest = latestSave();
+    const latest = slot != null ? { slot, data: readSave(slot) } : latestSave();
     if (!latest?.data?.campaign?.lv) return false;
     const { data, meta } = roamSave(latest.data, latest.data.meta, { key, year, format: SAVE_FORMAT });
     if (!writeSave(latest.slot, data, meta)) return false;
@@ -1242,7 +1314,12 @@ export class LastVersion {
   // the card a trip arrives under (shown, not said: a trip is not a cinematic)
   roamCard() {
     const g = this.g, deck = this.deck;
-    g.hud.card('FREE ROAM', placeName(deck), `${yearName(deck, g.engine.state(this.level.outdoorRoom) || g.campaign.roam?.year)} · no story gates · the story waits where you left it`, 4200);
+    g.hud.card('FREE ROAM', placeName(deck), `${yearName(deck, g.engine.state(this.level.outdoorRoom) || g.campaign.roam?.year)} · no story gates · ${this.storyOver() ? 'the story is over' : 'the story waits where you left it'}`, 4200);
+  }
+
+  // a trip taken after an ending: no story waits for it, and its way back is the CASE FILES (leaveRoam; v2.1.1 P19)
+  storyOver() {
+    return this.roaming && finished(this.g.facts.facts);
   }
 
   backCard() {
@@ -1526,7 +1603,7 @@ export class LastVersion {
     const frags = (this.level?.interactables || []).filter((i) => i.kind === 'fragment');
     const found = frags.filter((i) => g.deckWorld.flags[`done_${i.id}`]).length;
     const what = [open ? `${open} side ${open === 1 ? 'story' : 'stories'} still open here` : 'No side story left open here', frags.length ? `${found} of ${frags.length} fragments found` : ''].filter(Boolean).join(' · ');
-    return [`Free roam: ${placeName(deck)}, ${year}.`, `${what}. The story waits where you left it: BACK TO THE STORY on the case board.`];
+    return [`Free roam: ${placeName(deck)}, ${year}.`, this.storyOver() ? `${what}. The story is over: BACK TO THE CASE FILES on the case board.` : `${what}. The story waits where you left it: BACK TO THE STORY on the case board.`];
   }
 
   objectiveText() {
@@ -1640,7 +1717,16 @@ export class LastVersion {
     const g = this.g, deck = this.deck;
     if (deck?.autoExit == null || !g.deckWorld.flags.beat_done || this.autoExited === deck || !g.after) return;
     this.autoExited = deck;
-    g.after(deck.autoExit, () => this.deck === deck && this.exitReached());
+    // (a replay's last thread speaks as it sets the case's end: its reveal is the case's one payoff, and the CASE FILES
+    // opening stopped it, Sera's line in case 12 never heard: a replay waits for the lines and the moment to be over,
+    // v2.1.1 playtest M21)
+    let n = 0;
+    const go = () => {
+      if (this.deck !== deck) return;
+      if (this.chapter === 'cases' && (this.storyLines() || this.cinema?.active) && n++ < 160) return g.after(0.25, go);
+      this.exitReached();
+    };
+    g.after(deck.autoExit, go);
   }
 
   // a load, once its card is over: a moment that runs in callbacks (lines that set their facts as each ends; the
@@ -2070,9 +2156,32 @@ export class LastVersion {
     } else go();
   }
 
-  // a case is closed: back to the CASE FILES, with what it changed
+  // a case is closed: a closing beat (REVERSE let go, the place in the year its outcome shows in, CASE CLOSED and what
+  // the case now is), then the CASE FILES on its row, with what it changed (v2.1.1 playtest M20, M22, L41)
   casesDone() {
-    this.caseFiles();
+    const g = this.g, deck = this.deck;
+    const file = CASE_FILES.find((c) => c.key === deck?.key);
+    if (!file || typeof document === 'undefined') return this.caseFiles();
+    const st = caseState(g.facts, file);
+    this.recordCase(file, st);
+    this.inv?.release?.('done');
+    g.hud.skipAll?.();
+    // (the outcome, where the place can show it: the year it lands in, held on its spot; cases.js close)
+    const close = deck.close;
+    const room = this.level?.outdoorRoom || g.room;
+    if (close?.year && room && g.engine.statesOf(room).includes(close.year) && g.engine.state(room) !== close.year) {
+      g.engine.setState(room, close.year, { force: true });
+      this.mounted?.setYear?.(close.year);
+      g.deckWorld.refresh?.();
+    }
+    const at = close?.at && (this.level?.landmarks?.[close.at] || this.level?.anchorsAt?.[close.at]?.pos);
+    const lk = close?.look || [0, 1, 0];
+    const shots = at && close.cam ? [{ cam: [at[0] + close.cam[0], at[1] + close.cam[1], at[2] + close.cam[2]], look: [at[0] + lk[0], at[1] + lk[1], at[2] + lk[2]], t: 4.2, hide: true }] : null;
+    g.hud.card('CASE CLOSED', file.name, `${CASE_STATES[st]}${close?.says ? ` · ${close.says}` : ''}`, 3800);
+    this.cinema.play({ shots, lines: [], total: 4.2, letterbox: !!shots }, () => {
+      if (this.deck !== deck || this.chapter !== 'cases') return;
+      this.caseFiles(null, { focus: file.id, guard: true });
+    });
   }
 
   // --- each frame ----------------------------------------------------------------------------------------
@@ -2666,8 +2775,8 @@ export class LastVersion {
       document.head.appendChild(st);
     }
     const where = this.roaming
-      ? `<h3>WHERE YOU ARE</h3><p><b>FREE ROAM &middot; ${esc(placeName(deck))}</b><br><span class="dim">${esc(yearName(deck, game.engine.state(game.room)))} &middot; as Mission ${deck.n} left it${quarter ? ` &middot; ${esc(quarter)}` : ''}</span><br><span class="dim">The story waits at ${esc(String(campaign.roam?.meta?.where || '').replace(/^THE LAST VERSION · /, '') || 'its checkpoint')}.</span></p>
-        <button class="lvback" id="lvBack">BACK TO THE STORY</button>`
+      ? `<h3>WHERE YOU ARE</h3><p><b>FREE ROAM &middot; ${esc(placeName(deck))}</b><br><span class="dim">${esc(yearName(deck, game.engine.state(game.room)))} &middot; as Mission ${deck.n} left it${quarter ? ` &middot; ${esc(quarter)}` : ''}</span><br><span class="dim">${this.storyOver() ? `The story is over: ${esc(String(campaign.roam?.meta?.where || '').replace(/^THE LAST VERSION · /, '') || 'its ending')}.` : `The story waits at ${esc(String(campaign.roam?.meta?.where || '').replace(/^THE LAST VERSION · /, '') || 'its checkpoint')}.`}</span></p>
+        <button class="lvback" id="lvBack">${this.storyOver() ? 'BACK TO THE CASE FILES' : 'BACK TO THE STORY'}</button>`
       : `<h3>WHERE YOU ARE</h3><p><b>${chapter.name} &middot; ${deck?.name || ''}</b><br><span class="dim">${deck?.title || ''}${quarter ? ` &middot; ${quarter}` : deck?.sectors > 1 ? ` &middot; part ${campaign.sector + 1} of ${deck.sectors}` : ''} &middot; stability ${Math.round(this.stability * 100)}%</span></p>`;
     // (the questions and what is pinned under them first: on a phone the board opened on free roam's paragraph, about
     // a TRAVEL that Mission 1 cannot use yet. On a trip, TRAVEL stays near the top: it is what a trip is for)
@@ -2718,7 +2827,7 @@ export class LastVersion {
     const g = this.g;
     if (!g.campaign?.lv || g.campaign.chapter === 'cases') return '';
     const list = this.travelList();
-    const intro = 'Free roam: walk a place you have reached, in a year you opened there. No story gates; its side stories and fragments are still there. The story waits where you left it.';
+    const intro = `Free roam: walk a place you have reached, in a year you opened there. No story gates; its side stories and fragments are still there. ${finished(g.facts.facts) ? 'The story is over: a trip comes back to the CASE FILES.' : 'The story waits where you left it.'}`;
     if (!list.length) return '<h3 id="lvTravel">TRAVEL</h3><p class="dim">Free roam opens once a mission is done: then you can walk back to its place.</p>';
     const here = this.roaming ? this.deck.key : null;
     return `<h3 id="lvTravel">TRAVEL</h3><p class="dim">${intro}</p><ul class="board travel">${this.travelRows(list, esc, here, 'li')}</ul>`;

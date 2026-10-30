@@ -203,7 +203,9 @@ export function roamMeta(campaign, year) {
   const r = campaign.roam;
   const m = STORY[campaign.deck];
   const at = r.meta?.where ? r.meta.where.replace(/^THE LAST VERSION · /, '') : '';
-  return { where: `FREE ROAM · ${placeName(m)}`, chapter: `${yearName(m, year || r.year)}${at ? ` · the story waits at ${at}` : ''}`, run: r.meta?.run || 'prologue' };
+  // (after an ending no story waits: the slot says which ending the trip comes back to; v2.1.1 playtest P19)
+  const over = /^ENDING [A-C]\b/.test(at); // (the story's slot names its ending once it is finished: Runtime.saveMeta)
+  return { where: `FREE ROAM · ${placeName(m)}`, chapter: `${yearName(m, year || r.year)}${at ? ` · ${over ? 'after' : 'the story waits at'} ${at}` : ''}`, run: r.meta?.run || 'prologue' };
 }
 
 // the story save a trip returns to: the story as it was kept, with the trip's facts (but its own), case log, timeline
