@@ -49,6 +49,9 @@ export class MiniMap {
       g.fillStyle = COLORS.corridor;
       g.fillRect(a[0], a[1], b[0] - a[0], b[1] - a[1]);
     }
+    // (a map with water draws the rooms' names last, over it: the canals ran through THE OVERGROWN TOWERS' name)
+    const water = typeof map.water === 'function' ? map.water() : map.water;
+    const late = water?.length ? [] : null;
     for (const r of map.rooms) {
       const [a, b] = [P(r.rect[0], r.rect[1]), P(r.rect[2], r.rect[3])];
       const seen = this.visited.has(r.id);
@@ -61,21 +64,12 @@ export class MiniMap {
       if (!seen) g.setLineDash([4, 3]);
       g.stroke();
       g.setLineDash([]);
-      if (labels && seen) {
-        g.fillStyle = COLORS.text;
-        g.font = '600 11px Inter, "Segoe UI", sans-serif';
-        g.textAlign = 'center';
-        g.fillText(r.name, (a[0] + b[0]) / 2, (a[1] + b[1]) / 2 + 4);
-        if (r.kind && r.kind !== 'puzzle' && r.kind !== 'district') {
-          g.font = '600 9px Inter, sans-serif';
-          g.fillStyle = COLORS.gate;
-          g.fillText('★ STORY', (a[0] + b[0]) / 2, (a[1] + b[1]) / 2 + 17);
-        }
-      }
+      if (labels && seen) (late ? late.push([r, a, b]) : this.roomLabel(g, r, a, b));
     }
     // deep water as the year has it (map.water: rects, or a function of now; an edition's places, THE LAST VERSION's
-    // canals): what is left light between it and the buildings is ground, or water shallow enough to wade
-    const water = typeof map.water === 'function' ? map.water() : map.water;
+    // canals): what is left light between it and the buildings is ground, or water shallow enough to wade. A place's
+    // wading ways (lines of kind 'wade') go under it: where a sidewalk crosses a canal, the canal is what is there
+    this.drawLines(g, map, P, labels, true);
     if (water?.length) {
       g.fillStyle = COLORS.water;
       for (const w of water) {
@@ -89,19 +83,36 @@ export class MiniMap {
       const [a, b] = [P(bk[0], bk[1]), P(bk[2], bk[3])];
       g.fillRect(a[0], a[1], b[0] - a[0], b[1] - a[1]);
     }
-    // lines: rails, and the ways over them (an edition's places: THE LAST VERSION's Line 41)
+    this.drawLines(g, map, P, labels, false);
+    for (const [r, a, b] of late || []) this.roomLabel(g, r, a, b);
+    if (map.gate) {
+      const [x, y] = P(map.gate[0], map.gate[1]);
+      g.fillStyle = COLORS.gate;
+      g.beginPath();
+      g.arc(x, y, 5, 0, Math.PI * 2);
+      g.fill();
+    }
+    return P;
+  }
+
+  // lines: rails, and the ways over them (an edition's places: THE LAST VERSION's Line 41); a line with a `when` (a
+  // year's) only while map.shows(when) holds: a span fallen in 2196, a crossing waded only then. wade: the wading ways
+  // (drawn under the water; their names after it, with the rest), or the rest
+  drawLines(g, map, P, labels, wade) {
     for (const l of map.lines || []) {
+      const under = l.kind === 'wade';
+      if ((under && !wade && !(labels && l.name)) || (!under && wade) || (l.when && map.shows && !map.shows(l.when))) continue;
       if (l.rect) {
         const [a, b] = [P(l.rect[0], l.rect[1]), P(l.rect[2], l.rect[3])];
         g.fillStyle = COLORS[l.kind] || COLORS.path;
-        g.fillRect(a[0], a[1], Math.max(2, b[0] - a[0]), Math.max(2, b[1] - a[1]));
-        if (labels && l.name) {
+        if (under === wade) g.fillRect(a[0], a[1], Math.max(2, b[0] - a[0]), Math.max(2, b[1] - a[1]));
+        if (labels && l.name && !wade) {
           g.fillStyle = COLORS.text;
           g.font = '700 9px Inter, sans-serif';
           g.textAlign = 'center';
           g.fillText(l.name, (a[0] + b[0]) / 2, Math.min(a[1], b[1]) - 4);
         }
-      } else if (l.a && l.b) {
+      } else if (l.a && l.b && under === wade) {
         const [a, b] = [P(l.a[0], l.a[1]), P(l.b[0], l.b[1])];
         g.strokeStyle = COLORS[l.kind] || COLORS.rail;
         g.lineWidth = 1.5;
@@ -111,14 +122,18 @@ export class MiniMap {
         g.stroke();
       }
     }
-    if (map.gate) {
-      const [x, y] = P(map.gate[0], map.gate[1]);
+  }
+
+  roomLabel(g, r, a, b) {
+    g.fillStyle = COLORS.text;
+    g.font = '600 11px Inter, "Segoe UI", sans-serif';
+    g.textAlign = 'center';
+    g.fillText(r.name, (a[0] + b[0]) / 2, (a[1] + b[1]) / 2 + 4);
+    if (r.kind && r.kind !== 'puzzle' && r.kind !== 'district') {
+      g.font = '600 9px Inter, sans-serif';
       g.fillStyle = COLORS.gate;
-      g.beginPath();
-      g.arc(x, y, 5, 0, Math.PI * 2);
-      g.fill();
+      g.fillText('★ STORY', (a[0] + b[0]) / 2, (a[1] + b[1]) / 2 + 17);
     }
-    return P;
   }
 
   drawMarkers(g, P, markers, big = false) {

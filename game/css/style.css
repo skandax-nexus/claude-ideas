@@ -247,6 +247,7 @@ body.minimap #held { bottom: 196px; }
 .lg.item::before { background: #e0a43a; } .lg.token::before { background: #2fae6a; } .lg.gate::before { background: #7a5fd0; } .lg.beacon::before { background: #22aeb9; }
 .lg.lvobj::before { background: none; box-shadow: inset 0 0 0 2px #f08a1c; } .lg.lvquarry::before { background: #e8b400; border-radius: 1px; transform: rotate(45deg) scale(0.85); }
 .lg.lvwater::before { background: rgba(58, 128, 200, 0.72); border-radius: 2px; }
+.lg.lvwade::before { background: rgba(150, 205, 235, 0.9); border-radius: 2px; } .lg.lvdeck::before { background: rgba(120, 104, 92, 0.9); border-radius: 2px; }
 #card { position: fixed; inset: 0; display: flex; align-items: flex-start; padding-top: 16vh; justify-content: center; pointer-events: none; z-index: 25; opacity: 0; transition: opacity 0.9s; }
 #card.on { opacity: 1; }
 body.menu #card.on { opacity: 0; } /* never over an open menu */

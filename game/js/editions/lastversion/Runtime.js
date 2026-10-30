@@ -428,7 +428,7 @@ export class LastVersion {
     }
     // (the big map's ring where the objective is, and the diamond of someone Kai follows: the key names them)
     const legend = $('#map .legend');
-    if (legend && !legend.querySelector('.lvobj')) legend.insertAdjacentHTML('beforeend', '<span class="lg lvobj">Objective</span><span class="lg lvquarry">Followed</span><span class="lg lvwater">Deep water</span>');
+    if (legend && !legend.querySelector('.lvobj')) legend.insertAdjacentHTML('beforeend', '<span class="lg lvobj">Objective</span><span class="lg lvquarry">Followed</span><span class="lg lvwater" style="display:none">Deep water</span><span class="lg lvwade" style="display:none">Wading</span><span class="lg lvdeck" style="display:none">Raised way</span>');
     const vt = $('#verdict .dim');
     if (vt) vt.textContent = '';
     // the people of the chapter most likely to be played next start loading on the title screen, with its voices
@@ -1020,6 +1020,8 @@ export class LastVersion {
     // the map draws the place's deep water as the year has it (Mission 14's canals in 2196: the map was a grey grid,
     // and the level's puzzle is which strips can be walked; v2.1.1 playtest L28)
     if (level.map && level.drowns?.length) level.map.water = () => this.mapWater(level);
+    // (and its lines with a year, `when`, only in that year: a span fallen in 2196, a crossing waded only then)
+    if (level.map) level.map.shows = (when) => g.facts.test(when, g.engine.state(level.outdoorRoom || g.room));
     const states = level.states || deck.states || ['PRESENT'];
     for (const id of level.order) {
       const room = level.rooms[id];
@@ -2776,12 +2778,21 @@ export class LastVersion {
   // is after (main.mapMarkers; MiniMap draws them on the full map only, the corner map stays as it was)
   mapMarkers() {
     const out = [], g = this.g, lv = this.level;
-    // (the key names deep water only where the map has some)
-    const wet = !!lv?.map?.water;
-    if (wet !== this.mapWet && typeof document !== 'undefined') {
-      this.mapWet = wet;
-      const k = document.querySelector('#map .legend .lvwater');
-      if (k) k.style.display = wet ? '' : 'none';
+    // (the key names deep water, wading ways and raised ways only while the open map draws some)
+    if (g.menu === 'map' && typeof document !== 'undefined') {
+      const m = lv?.map, kinds = new Set();
+      if (m) {
+        if ((typeof m.water === 'function' ? m.water() : m.water)?.length) kinds.add('water');
+        for (const l of m.lines || []) if (!l.when || !m.shows || m.shows(l.when)) kinds.add(l.kind);
+      }
+      const key = [...kinds].sort().join();
+      if (key !== this.mapKey) {
+        this.mapKey = key;
+        for (const kind of ['water', 'wade', 'deck']) {
+          const k = document.querySelector(`#map .legend .lv${kind}`);
+          if (k) k.style.display = kinds.has(kind) ? '' : 'none';
+        }
+      }
     }
     if (!lv || !this.threads?.on || this.roaming || !g.deckWorld) return out;
     const t = this.threads.current();
