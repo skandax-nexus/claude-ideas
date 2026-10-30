@@ -1,0 +1,378 @@
+// Helix Temporal Research on the Ring Hill (Missions 2, 3 and, from U3, 12; OVERHAUL.md §5 M2, M3).
+// Three wings round Helix Court: west, north and east, three storeys of white composite panels with
+// full-height glass to the court (the crescent, open to the south and the city below). The court is
+// 64 m round, wet stone, a ring of young lindens, and at its centre the oculus, a glass lens over the
+// Chronolith chamber 11.5 m below. A mission's own rooms (Build.js, placed and turned round the
+// court) stand inside the wings; the wings build round them. The north wing and its roofs are here
+// for Mission 12. 2026 is the campus under construction (the east wing a bare frame, a crane over
+// the court, the open dig at Site Zero); 2196 is a ruin (fallen slabs, ivy, pools, a linden through
+// the oculus, the drowned valley and the sea on the horizon).
+import { ground, groundHoles, terrace, stair, water, railing, block, prop, sign, canopy, crane, wall, spiralStair } from '../archetypes.js';
+
+const WING_H = 13.5;
+const SINK = [-30, -62, 30, -38]; // (Mission 12) the north wing's middle, fallen into the hill by 2196
+const COURT_R = 32;
+const DIG = [-6, 12, 14, 28]; // the dig at Site Zero, in the old riverbed at the foot of the chamber
+export const CHAMBER = { at: [0, 12], y: -11.5, W: 24, L: 24, H: 12 };
+
+// a wing: bays along its length; a bay a mission's room stands in is left to the room (only what
+// is above the room's roof is built, over the room), a bay over an open room is left open to the sky
+function wing(P, rect, { court, era = null, frame = false }) {
+  const [x0, z0, x1, z1] = rect;
+  const alongX = x1 - x0 > z1 - z0;
+  const len = alongX ? x1 - x0 : z1 - z0;
+  const n = Math.round(len / 8);
+  const occ = P.occupied || [];
+  P.E(era, () => {
+    for (let i = 0; i < n; i++) {
+      const b = alongX ? [x0 + (len * i) / n, z0, x0 + (len * (i + 1)) / n, z1] : [x0, z0 + (len * i) / n, x1, z0 + (len * (i + 1)) / n];
+      const hit = occ.filter((o) => o.rect[0] < b[2] && o.rect[2] > b[0] && o.rect[1] < b[3] && o.rect[3] > b[1]);
+      if (frame) {
+        // 2026: a bare concrete frame: columns, slabs every storey, no roof
+        for (const [px, pz] of [[b[0], b[1]], [b[2], b[1]], [b[0], b[3]], [b[2], b[3]]]) P.box([px - 0.35, 0, pz - 0.35, px + 0.35, WING_H - 4.5, pz + 0.35], 'rawConcrete');
+        if (!hit.length) for (const y of [4.5, 9]) P.box([b[0], y - 0.3, b[1], b[2], y, b[3]], 'rawConcrete');
+        continue;
+      }
+      if (!hit.length) {
+        block(P, { rect: b, h: WING_H, facade: 'helixPanel', roof: 'flat', roofMat: 'roofLight', parapet: true, units: i % 3 === 1 ? 1 : 0, tint: 0xffffff, trim: 'steel' });
+        // full-height glass to the court
+        if (court) {
+          const g = 0.08;
+          const f = court === 'E' ? [b[2], 0, b[1], b[2] + g, WING_H - 0.5, b[3]] : court === 'W' ? [b[0] - g, 0, b[1], b[0], WING_H - 0.5, b[3]] : court === 'S' ? [b[0], 0, b[3], b[2], WING_H - 0.5, b[3] + g] : [b[0], 0, b[1] - g, b[2], WING_H - 0.5, b[1]];
+          P.vbox(f, 'helixGlass', { noShadow: 1 });
+        }
+        continue;
+      }
+      // open to the sky above the room: no storeys, in the years its roof is open (a room open in some years only has
+      // them in the others)
+      const years = (era ? [].concat(era) : ['PRESENT', 'PAST', 'FUTURE']).filter((y) => !hit.some((o) => !o.corridor && (o.openIn ? o.openIn.includes(y) : o.open)));
+      if (!years.length) continue;
+      // the storeys over a room stand on its roof, over its footprint only: beside the room the bay is open to the
+      // sky (no block hangs over empty ground), and a corridor carries none
+      if (years.length < (era ? [].concat(era).length : 3)) P.E(years, () => storeys(P, b, hit));
+      else storeys(P, b, hit);
+    }
+  });
+}
+function storeys(P, b, hit) {
+  for (const o of hit) {
+    if (o.corridor) continue;
+    const r = [Math.max(b[0], o.rect[0]), Math.max(b[1], o.rect[1]), Math.min(b[2], o.rect[2]), Math.min(b[3], o.rect[3])];
+    const top = o.top + 0.2;
+    if (r[2] - r[0] < 2 || r[3] - r[1] < 2 || top >= WING_H - 1) continue;
+    P.vbox([r[0], top, r[1], r[2], WING_H, r[3]], 'helixPanel', { t: 0xffffff });
+    P.vbox([r[0] - 0.15, WING_H, r[1] - 0.15, r[2] + 0.15, WING_H + 0.3, r[3] + 0.15], 'roofLight');
+  }
+}
+
+// Mission 12: the north wing's roofs, the 2026 gangway across the court (Corridor B), and the 2196 sinkhole: the
+// wing's middle fallen into the hill, overgrown terraces down to the second chamber, a second black ring in a pool
+function northRuin(P) {
+  const [x0, z0, x1, z1] = SINK, FL = -11.5;
+  // the cavern under the wing: a floor and rock walls in every year (in 2049 and 2026 the wing stands over it)
+  ground(P, [x0, z0, x1, z1], FL, 'rockGrass');
+  for (const b of [[x0 - 2, FL, z0 - 2, x1 + 2, 0, z0], [x0 - 2, FL, z0, x0, 0, z1], [x1, FL, z0, x1 + 2, 0, z1]]) P.box(b, 'cliffRock');
+  P.E(['PRESENT', 'PAST'], () => { P.box([x0, -0.6, z0, x1, 0, z1], 'stoneWet'); P.box([x0, FL, z1 - 0.6, x1, -0.6, z1], 'cliffRock'); });
+  P.land('secondRing', 0, FL, -56, Math.PI);
+  P.land('fractureExit', -22, FL, -58, Math.PI / 2);
+  P.land('fallenBeam', 18, FL, -53, -Math.PI / 2);
+  P.land('sinkTerraces', 0, 0, -36.5, 0);
+  P.land('collapsedStair', 12, -6, -46, 0);
+  // the second black ring in a pool of river seepage
+  P.disc(0, FL + 0.05, -55, 8, 'poolWater', { noShadow: 1 });
+  P.torus(0, FL + 5.4, -57, 5.2, 0.55, 'blackRing', { seg: 40 });
+  P.box([-1.2, FL, -57.6, 1.2, FL + 0.4, -56.4], 'blackRing');
+  P.E('FUTURE', () => {
+    // the sinkhole's terraces down from the court, overgrown; the broken stubs of the wing round its rim
+    for (const [i, [za, zb, y]] of [[-42, -38, -3], [-46, -42, -6], [-50, -46, -9]].entries()) {
+      P.box([x0, FL, za, x1, y, zb], 'mossStone');
+      P.setTerrain(x0, za, x1, zb, y);
+      stair(P, -8 + i * 8, zb + 0.01, y + 3, -8 + i * 8, zb - 3.6, y, 3, 'mossStone');
+    }
+    stair(P, 16, -50 + 0.01, -9, 16, -53.6, FL, 3, 'mossStone');
+    for (let i = 0; i < 10; i++) P.obox(x0 + 3 + i * 6, -2, z0 + 1 + (i % 3) * 2, 5, P.rng.float(4, 9), 1.2, P.rng.float(-0.3, 0.3), 'rawConcrete', { rx: P.rng.float(-0.4, 0.4) });
+    for (const x of [-56, -44, 38, 50]) P.box([x - 6, 0, -62, x + 6, P.rng.float(3, 7), -38], 'rawConcrete');
+    for (let i = 0; i < 16; i++) P.tree(i % 3 ? 'fern' : 'birch', P.rng.float(x0 + 2, x1 - 2), P.rng.float(-60, -40), P.rng.float(0.8, 1.4), { y: FL + (i % 4) * 2.5, solid: false });
+    P.vbox([x0, FL, z0 - 0.4, x1, 0, z0], 'ivy', { noShadow: 1 });
+    P.obox(16, FL, -49, 0.8, 0.8, 10, 0.4, 'rust', { rz: 0.5 });
+  });
+  // the roofs (2049): plant decks, the skybridge's north end, glass panes on the roof's edge where he stops
+  P.land('northRoofs', -44, WING_H, -50, Math.PI / 2);
+  P.land('plantDecks', 30, WING_H, -50, 0);
+  P.land('skybridgeN', -10, 8, -38, Math.PI);
+  P.land('glassPanes', 6, WING_H, -39, Math.PI);
+  P.E(['PRESENT', 'PAST'], () => {
+    for (const [x, z] of [[24, -54], [34, -46], [-20, -54]]) prop(P, 'chiller', x, z, 0, { y: WING_H });
+    for (let x = -60; x < 60; x += 3.2) P.vbox([x, WING_H, -38.4, x + 3.0, WING_H + 1.2, -38.3], 'glass', { noShadow: 1 });
+  });
+  // (v2.1.1 playtest M7) the way back up to the roofs, in 2049 and 2026 alike: the north wing's fire stair, up its face
+  // from the court's north-east corner to the roof by the glass, a sign at its foot. Before it the only way up was the
+  // 2026 scaffold at the far south end and 110 m of gangway, most of the Chronolith's stability
+  P.land('fireStair', 36, 0, -36.6, -Math.PI / 2);
+  P.E(['PRESENT', 'PAST'], () => {
+    stair(P, 36, -36.6, 0, 14, -36.6, WING_H, 2.4, 'scaffold', { rail: 'steel' });
+    P.box([11.6, WING_H - 0.3, -38.6, 14.2, WING_H, -35.4], 'scaffold'); // (its landing, over the roof's edge)
+    sign(P, 'ROOF ACCESS', 36.4, 3.0, -37.85, 0, { size: 0.36, color: '#ffffff' });
+    P.glow(35, 0.02, -35.6, 3, 0xffe2b8, 3);
+  });
+  // (the gangway over the court is the roofs': a catch or the Chronolith letting go up there puts Kai back on the 2049
+  // roof, at the chase's start, never down on the court; a load as well)
+  P.checkpoints.push({ box: [-3, 10, -38.5, 3, 20, 31], spawn: [-40, WING_H + 0.86, -44, -Math.PI / 2], room: P.rid });
+  // 2026: the construction gangway across the court at roof height, from the north wing to a scaffold tower in the south
+  P.land('gangway2026', 0, WING_H, -40.5, Math.PI);
+  P.land('bouquet', 0.4, WING_H, 0, 0); // (U7: on the gangway itself, which is 2.8 m wide)
+  P.land('lunchRoom2026', -24, 0, 22, Math.PI / 2);
+  P.land('eastRuin', 31, 0, 10, Math.PI / 2); // (U7: in the court's east side, by the east wing's glass: the wing itself is solid)
+  P.E('PAST', () => {
+    P.box([-1.4, WING_H - 0.3, -38.5, 1.4, WING_H, 30], 'scaffold');
+    for (const sx of [-1.4, 1.4]) P.vbox([sx - 0.04, WING_H, -38.5, sx + 0.04, WING_H + 1.1, 30], 'scaffold', { noShadow: 1 });
+    for (const sx of [-1.45, 1.45]) P.col([sx - 0.1, WING_H, -38.5, sx + 0.1, WING_H + 1.6, 30]);
+    for (let z = -30; z <= 30; z += 10) for (const sx of [-1.6, 1.6]) P.box([sx - 0.1, 0, z - 0.1, sx + 0.1, WING_H - 0.3, z + 0.1], 'scaffold', { solid: false });
+    // the scaffold stair at the south end, down over the campus terrace to the court's edge
+    stair(P, 0, 69, 0, 0, 30.2, WING_H, 2.4, 'scaffold');
+    prop(P, 'siteHut', -24, 22, Math.PI / 2);
+  });
+  void x0;
+}
+
+export default {
+  key: 'helix', style: 'helix', sameAs: ['helix_v17'], name: 'HELIX',
+  bounds: [-70, -90, 70, 70],
+  edges: { N: 'hill', E: 'cliff', W: 'cliff', S: 'cliff' },
+  killY: -16,
+  primary: 'oculus',
+  backdrop: { notch: 'clear', skyline: 'rain2049' },
+  variants: {
+    m02: {
+      primary: 'lobby',
+      years: {
+        // (closing: visuals; readable on a phone: the emergency light a red wash over the storm's grey light through the
+        // windows and the lobby's glass roof, the white walls still white under it. At 0.85 the room had read near black:
+        // the lights all turned red and the exposure dropped by nearly half)
+        PRESENT: { sky: 'stormNight', era: '2049', hour: 22.5, sun: { elev: 40, az: 200 }, fog: 0x242a34, density: 1.2, night: 0.45, weather: 'storm', ibl: 'night', lit: 1, emergency: 0.38,
+          hemi: { sky: 0x6a7488, ground: 0x2a2c32, k: 0.9 }, sunColor: 0xa8b8d8, sunK: 0.35, grade: { shadowTint: 0x2a1418, highlightTint: 0xffd0bc, toning: 0.2, contrast: 1.1, saturation: 0.94 } },
+      },
+      quarters: [
+        { name: 'SECURITY', area: [-70, 14, -20, 70], spawn: [-48, 0, 38.4, 0] },
+        { name: 'THE DARK CORRIDOR', area: [-70, -14, -18, 40], spawn: [-48, 0, 19.6, 0] },
+        { name: 'POWER', area: [-70, -48, -18, 4], spawn: [-48, 4.5, -11.2, 0] }, // (the plant terrace, on the first-floor roof)
+        { name: 'CONDUIT & ARCHIVE', area: [-40, -70, 20, -20], spawn: [-35.6, 0, -46.3, -Math.PI / 2] },
+        { name: 'THE CHAMBER', area: [-26, -26, 26, 26], spawn: [0, -11.5, 10.4, 0] },
+      ],
+      // a cleaner in the lobby (one bark: the ring was humming at five)
+      crowd: [{ era: 'present', years: ['PRESENT'], region: 'helix', role: 'cleaner', path: [[-50, 39], [-50, 32]], n: 1, barks: ['The ring was humming at five. It hums a song.', 'Lockdown. Stay where the lights are.'] }],
+    },
+    m03: {
+      primary: 'controlRoom',
+      years: {
+        PRESENT: { sky: 'washedDawn', era: '2049', hour: 6.1, sun: { elev: 9.6, az: 'notch' }, fog: 0xc8c0bc, density: 1.0, night: 0.1, weather: null, ibl: 'dusk', lit: 0.3,
+          hemi: { sky: 0xb8c8e0, ground: 0x6a7480, k: 0.8 }, sunColor: 0xffcf9a, sunK: 0.9, grade: { shadowTint: 0x2a3a5a, highlightTint: 0xffe0c8, toning: 0.14, contrast: 1.1, saturation: 0.96 } },
+        PAST: { sky: 'hazyNoon', era: '2026', hour: 12.4, sun: { elev: 70, az: 180 }, fog: 0xdfe6ea, density: 1.6, night: 0, weather: 'motes', ibl: 'plant', lit: 0,
+          hemi: { sky: 0xf0f4f6, ground: 0xb0aaa0, k: 0.95 }, sunColor: 0xffffff, sunK: 1.25, grade: { shadowTint: 0x3a3428, highlightTint: 0xfff4e0, toning: 0.12, contrast: 1.12, saturation: 0.86 } },
+        FUTURE: { sky: 'mistGreenDawn', era: '2196', hour: 6.6, sun: { elev: 8, az: 80 }, fog: 0xc8dcc8, density: 2.0, night: 0.05, weather: 'pollen', ibl: 'dusk', lit: 0,
+          hemi: { sky: 0xd8ecd4, ground: 0x6a7c64, k: 0.85 }, sunColor: 0xe6ffe8, sunK: 0.8, grade: { shadowTint: 0x14382a, highlightTint: 0xeaffd8, toning: 0.22, contrast: 1.06, saturation: 1.06 } },
+      },
+      quarters: [
+        { name: 'THE CHAMBER', area: [-26, -26, 26, 26], spawn: [0, -11.5, 10.4, 0] },
+        { name: 'TEMPORAL LAB', area: [26, -36, 70, 26], spawn: [40.4, 0, -9.9, -Math.PI / 2] },
+        { name: 'THE DIG', area: [-30, 8, 30, 60], spawn: [0, 0, 44, Math.PI] },
+        { name: 'MACHINE HALL', area: [20, -70, 70, -20], spawn: [54.7, 0, -23.3, 0] },
+        { name: 'CONTROL', area: [-34, -70, 24, -26], spawn: [9.5, 9, -41.6, Math.PI / 2] }, // (the north wing's top floor)
+      ],
+      // 2026: the builders round the open dig (echoes)
+      crowd: [{ era: 'present', years: ['PAST'], region: 'helix', role: 'builder', path: [[-16, 50], [16, 50]], n: 3, echo: true }],
+    },
+    // Mission 12, THE MAN BEHIND THE GLASS (OVERHAUL.md §5 M12): the north wing and its roofs at sunset; in 2026 the
+    // construction gangway across the court at roof height (Corridor B); in 2196 the wing fallen into a sinkhole, its
+    // overgrown terraces down into the hill to the second chamber, open to the sky, a second black ring in a pool
+    m12: {
+      primary: 'northRoofs',
+      years: {
+        PRESENT: { sky: 'windSunset', era: '2049', hour: 19.4, sun: { elev: 3, az: 262 }, fog: 0x8a5a5a, density: 0.9, night: 0.25, weather: null, ibl: 'dusk', lit: 0.6,
+          hemi: { sky: 0xff9a6a, ground: 0x3a2a30, k: 0.85 }, sunColor: 0xff8a4a, sunK: 1.2, grade: { shadowTint: 0x2a1c40, highlightTint: 0xffc890, toning: 0.24, contrast: 1.14, saturation: 1.06 } },
+        PAST: { sky: 'violetWorklight', era: '2026', hour: 20.4, sun: { elev: -6, az: 280 }, fog: 0x3a3048, density: 1.1, night: 0.6, weather: 'motes', ibl: 'night', lit: 0.9,
+          hemi: { sky: 0x7a5a8a, ground: 0x18141e, k: 0.7 }, sunColor: 0xb090c8, sunK: 0.35, grade: { shadowTint: 0x1e1838, highlightTint: 0xffb060, toning: 0.26, contrast: 1.12, saturation: 1.0 } },
+        FUTURE: { sky: 'greenGoldDusk', era: '2196', hour: 18.9, sun: { elev: 5, az: 255 }, fog: 0x8a9a6a, density: 1.2, night: 0.2, weather: 'fireflies', ibl: 'dusk', lit: 0,
+          hemi: { sky: 0xe8d890, ground: 0x3a4a30, k: 0.85 }, sunColor: 0xffe8a0, sunK: 1.0, grade: { shadowTint: 0x14301c, highlightTint: 0xfff0b0, toning: 0.22, contrast: 1.08, saturation: 1.08 } },
+      },
+      quarters: [
+        { name: 'THE CHASE — 2049', area: [-70, -90, 70, -38], spawn: [-40, WING_H, -44, -Math.PI / 2], threshold: { at: 'gangway2026', kind: 'gangway' } },
+        // (v2.1.1 playtest M7, L8: the court's quarters hold the ground only, and Kai at the court's spawn faces the court,
+        // the dome and the north wing's roofs where the story goes on; the gangway over the court is the roofs'
+        // checkpoint: build)
+        { name: 'THE CORRIDOR THAT WAS — 2026', area: [-38, -38, 38, 38], cp: [-38, -12, -38, 38, 8, 38], spawn: [0, 0, 26, 0], threshold: { at: 'eastRuin', kind: 'ruin' } },
+        { name: 'THE RUIN — 2196', area: [20, -38, 70, 44], cp: [20, -12, -38, 70, 8, 44], spawn: [30, 0, 4, -0.6], threshold: { at: 'sinkTerraces', kind: 'stair' } },
+        // (the second chamber is the sinkhole under the north wing's roofs: below the court's level, as a box)
+        { name: 'THE SECOND CHAMBER', area: [-46, -70, 46, -38], cp: [-46, -14, -70, 46, 2, -36], spawnAt: 'sinkTerraces', threshold: null },
+      ],
+      crowd: [{ era: 'present', years: ['PAST'], region: 'helix', role: 'builder', path: [[-20, -30], [20, -30], [20, -20]], n: 4, echo: true }],
+    },
+  },
+  quarters: [{ name: 'HELIX COURT', area: [-38, -38, 38, 38], spawn: [0, 0, 30, 0] }],
+  beatAt: { m12: ['gangway2026', 'glassPanes', 'secondRing'] },
+  exits: { m12: 'fractureExit' },
+  watch: { m12: [[[[-20, -32], [20, -32], [20, -20], [-20, -20]]], [[[-24, 12], [24, 12]]], []] },
+
+  build(P, { mission }) {
+    const occ = P.occupied || [];
+    const holes = occ.map((o) => o.rect);
+    // --- the court and its apron, with the chamber and its stair beneath (holes in the paving) -------
+    const cx0 = CHAMBER.at[0] - CHAMBER.W / 2 - 0.4, cz1 = CHAMBER.at[1] + 0.4;
+    const sink = mission === 'm12' ? [[SINK[0], SINK[1], SINK[2], SINK[3]]] : [];
+    // (Mission 12 has no chamber under the court: its hole was a 25 m drop into nothing under the painted court and the
+    // lens, in the objective's way. v2.1.1 playtest H1: the court is paved over it, and the lens is solid, below)
+    const chamber = mission === 'm12' ? [] : [[cx0, cz1 - CHAMBER.L - 0.8, -cx0, cz1]];
+    // (the 2026 dig at Site Zero is a real pit in 2026, paved over from 2049 on: Mission 3 walks out to it)
+    groundHoles(P, [-70, -90, 70, 70], [...chamber, ...holes, ...sink, DIG], 0, 'stoneWet');
+    P.E(['PRESENT', 'FUTURE'], () => ground(P, DIG, 0, 'stoneWet'));
+    P.E(['PRESENT', 'FUTURE'], () => P.disc(0, 0.012, 0, COURT_R, 'courtStone', { seg: 48, noShadow: 1 }));
+    // 2026: bare earth round the open chamber and the dig (both left open)
+    P.E('PAST', () => {
+      for (const [x0, z0, x1, z1] of [[-32, -32, 32, -12.4], [-32, -12.4, -12.4, 12.4], [12.4, -12.4, 32, 12.4], [-32, 12.4, -6.4, 32], [14.4, 12.4, 32, 32], [-6.4, 28.4, 14.4, 32]]) P.plane(x0, z0, x1, z1, 0.012, 'dirt', { noShadow: 1 });
+    });
+    // the oculus: a 20 m lens of glass and steel over the chamber, glowing from below
+    P.land('oculus', 0, 0, 0, 0);
+    P.E(['PRESENT'], () => {
+      P.dome(0, 0.5, 0, 11.2, 2.4, 'oculusGlass', { seg: 28 });
+      for (let i = 0; i < 12; i++) P.torus(0, 0.5, 0, 11.2, 0.09, 'steel', { rx: 0, ry: (i / 12) * Math.PI, rz: 0, arc: Math.PI, seg: 16 });
+      P.torus(0, 0.55, 0, 11.6, 0.35, 'oculusRim', { rx: Math.PI / 2, seg: 48 });
+      // (Mission 12: the lens and its rim are solid, as glass and steel are: Kai walks round them, not into them. A
+      // stepped disc of colliders, 1.5 m a step, round the rim's outer edge)
+      if (mission === 'm12') {
+        const R = 11.95, n = 16;
+        for (let k = 0; k < n; k++) {
+          const za = -R + (2 * R * k) / n, zb = za + (2 * R) / n, near = za < 0 && zb > 0 ? 0 : Math.min(Math.abs(za), Math.abs(zb));
+          const hx = Math.sqrt(R * R - near * near);
+          P.col([-hx, 0, za, hx, 3.2, zb]);
+        }
+      }
+    });
+    // (Mission 12, 2026: the open pit is boarded over, the scaffold round its rim)
+    if (mission === 'm12') P.E('PAST', () => P.plane(-12.4, -12.4, 12.4, 12.4, 0.02, 'timber', { noShadow: 1 }));
+    P.E(['FUTURE'], () => {
+      // the lens broken; a linden grows up through it
+      P.torus(0, 0.55, 0, 11.6, 0.35, 'rust', { rx: Math.PI / 2, seg: 48 });
+      for (let i = 0; i < 5; i++) P.torus(0, 0.5, 0, 11.2, 0.09, 'rust', { rx: 0, ry: (i / 5) * Math.PI + 0.3, rz: 0.1 * i, arc: Math.PI * 0.6, seg: 10 });
+      P.tree('linden', 2, -1, 2.6, { y: -11.5, solid: false });
+    });
+    P.E('PAST', () => {
+      // 2026: the chamber is a construction pit, its rim scaffolded
+      for (let i = 0; i < 16; i++) {
+        const a = (i / 16) * Math.PI * 2;
+        P.box([Math.cos(a) * 12.6 - 0.1, 0, Math.sin(a) * 12.6 - 0.1, Math.cos(a) * 12.6 + 0.1, 3.4, Math.sin(a) * 12.6 + 0.1], 'scaffold', { solid: false });
+      }
+      P.torus(0, 1.2, 0, 12.6, 0.06, 'scaffold', { rx: Math.PI / 2, seg: 40 });
+      P.torus(0, 3.2, 0, 12.6, 0.06, 'scaffold', { rx: Math.PI / 2, seg: 40 });
+    });
+    // a ring of young lindens, lit bollards on the court's edge
+    for (let i = 0; i < 12; i++) {
+      const a = (i / 12) * Math.PI * 2 + 0.13;
+      const x = Math.cos(a) * 23, z = Math.sin(a) * 23;
+      if (z > 8 && z < 34 && Math.abs(x) < 16) continue; // the dig takes the south of the court in 2026
+      P.E(['PRESENT'], () => P.tree('linden', x, z, 0.95));
+      P.E(['FUTURE'], () => P.tree('linden', x, z, 1.9));
+    }
+    for (let i = 0; i < 24; i++) {
+      const a = (i / 24) * Math.PI * 2;
+      P.E(['PRESENT'], () => prop(P, 'bollard', Math.cos(a) * 31, Math.sin(a) * 31, 0, { lit: 'bollardLit', solid: false }));
+    }
+    // --- the wings ---------------------------------------------------------------------------------------
+    // a mission's room raised off the ground (Mission 2's plant terrace on the first-floor roof, Mission 3's control
+    // room on the top floor) stands on the wing's lower storeys, solid from the ground to its floor slab
+    for (const o of occ) if (!o.corridor && o.base > 0.5) P.box([o.rect[0], 0, o.rect[1], o.rect[2], o.base - 0.4, o.rect[3]], 'helixPanel', { t: 0xffffff });
+    wing(P, [-62, -38, -38, 44], { court: 'E' });
+    if (mission === 'm12') {
+      // 2049 and 2026: the north wing stands; 2196: it has fallen into the sinkhole (northRuin below)
+      wing(P, [-62, -62, 62, -38], { court: 'S', era: ['PRESENT', 'PAST'] });
+      // the lift's overrun and its water tank on the roof, the chase's first cover (east of where it starts)
+      P.E(['PRESENT', 'PAST'], () => {
+        P.box([-33, WING_H, -51, -26, WING_H + 6.5, -44.5], 'rawConcrete');
+        P.cyl(-29.5, WING_H + 6.5, -47.8, 2.4, 3.2, 'steel', { seg: 14 });
+      });
+      // 2196: of the wing's west end only its stair core still stands, ivied, beside the hole
+      P.E('FUTURE', () => {
+        P.box([-33, 0, -51, -26, WING_H + 10, -44.5], 'rawConcrete');
+        P.obox(-29.5, WING_H + 10, -47.8, 7.4, 1.2, 6.8, 0.2, 'rawConcrete', { rz: 0.18 }); // (its broken head, the tank long gone)
+        // and the piece of roof it still carries, where the chase begins, grown over
+        P.box([-46, WING_H - 0.6, -51, -33, WING_H, -39], 'rawConcrete');
+        for (let i = 0; i < 5; i++) P.tree(i % 2 ? 'shrub' : 'grass', -44 + i * 2.4, -49 + (i % 3) * 3, 1, { y: WING_H, solid: false });
+        for (let k = 0; k < 4; k++) P.vbox([-33.1, 2 + k * 3, -50.5 + k, -32.9, 6 + k * 3.4, -48 + k], 'ivy', { noShadow: 1 });
+      });
+      northRuin(P);
+    } else wing(P, [-62, -62, 62, -38], { court: 'S' });
+    wing(P, [38, -38, 62, 44], { court: 'W', era: ['PRESENT', 'FUTURE'] });
+    wing(P, [38, -38, 62, 44], { court: 'W', era: 'PAST', frame: true });
+    P.land('northWing', 0, WING_H, -50, Math.PI);
+    P.land('northRoofs', -30, WING_H, -50, 0);
+    // the skybridge: 40 m of glass at 8 m over the court's north side, west wing to north wing
+    P.land('skybridgeView', -24, 8, -30, 0);
+    P.E(['PRESENT'], () => {
+      P.obox(-26, 8, -26, 4, 3.2, 40, Math.PI / 4, 'helixGlass', { noShadow: 1 });
+      P.obox(-26, 7.6, -26, 4.4, 0.4, 40, Math.PI / 4, 'steel');
+      P.obox(-26, 11.2, -26, 4.4, 0.3, 40, Math.PI / 4, 'steel');
+    });
+    P.E(['FUTURE'], () => P.obox(-20, 0, -18, 4.4, 1.2, 18, Math.PI / 4 + 0.2, 'rust', { rx: 0.15, solid: true }));
+    // --- the south: the campus terrace and the stair down to the city ----------------------------------------
+    terrace(P, [-38, 44, 38, 70], -0.01, 'terrazzo', { sides: '' });
+    for (const s of [-1, 1]) railing(P, s * 38, 69.6, s * 8, 69.6, 1.0, 'steel');
+    stair(P, 0, 69.5, 0, 0, 76, -2.2, 16, 'terrazzo');
+    sign(P, 'HELIX TEMPORAL RESEARCH', 0, 3.2, 44.2, 0, { size: 0.6, color: '#ffffff', board: 0, e: ['PRESENT'] });
+    P.E(['PRESENT'], () => {
+      for (const x of [-20, -10, 10, 20]) prop(P, 'bollard', x, 52, 0, { lit: 'bollardLit' });
+      P.vbox([-4, 0, 44.6, 4, 2.8, 45.4], 'helixWhite');
+    });
+    // --- 2026: the open dig at Site Zero, the site hut, the crane, the fences -------------------------------
+    P.land('excavationHut', -10, 0, 30, 0);
+    P.land('excavationLog', -10.4, 1.1, 31.2, 0);
+    P.land('thermosER', -8.4, 1.0, 29.4, 0);
+    P.land('footprints', 4, -2.8, 21, 0);
+    P.land('polaroid', -11.6, 1.0, 28.8, 0);
+    P.land('siteZero', 3, -3, 19, 0);
+    P.E('PAST', () => {
+      // the dig: a pit cut in the old riverbed, the ring's upper arc showing in the clay
+      for (const [b, m] of [[[-6, -3.4, 12, 14, -3, 28], 'clay'], [[-6.4, -3.4, 11.6, -6, 0, 28.4], 'clay'], [[14, -3.4, 11.6, 14.4, 0, 28.4], 'clay'], [[-6.4, -3.4, 11.6, 14.4, 0, 12], 'clay']]) P.vbox(b, m);
+      P.torus(4, -3.0, 19.6, 3.6, 0.42, 'blackRing', { rx: 0, ry: 0.3, arc: Math.PI * 0.9, rz: 0.15, seg: 24 });
+      // (timber steps down into the pit, a step the engine walks: 0.3 m a rise)
+      for (let i = 0; i < 9; i++) P.box([-5.6 + i * 0.6, -3 + i * 0.3 - 0.3, 26, -5.0 + i * 0.6, -3 + i * 0.3 + 0.3, 28], 'timber');
+      prop(P, 'siteHut', -10, 31, 0);
+      prop(P, 'tarp', 8, 30, 0.2, { w: 5, d: 3 });
+      prop(P, 'floodlight', 15, 30, 0);
+      prop(P, 'floodlight', -7, 10, 0);
+      crane(P, 24, 12, 34, 34, -Math.PI * 0.75);
+      for (let x = -30; x <= 30; x += 6) P.vbox([x - 3, 0, 36.9, x + 3, 2.0, 37.1], 'siteFence', { prop: 1 });
+      for (const [x, z] of [[-24, 0], [-20, 8], [20, -16], [-14, -24], [26, -2]]) prop(P, 'crate', x, z, 0.4, { m: 'rawConcrete' });
+    });
+    // the pit's colliders (2026 only): its floor and its walls
+    // (playtest v2.1.1 M4: the walls were drawn but not solid, so from the pit floor Kai walked on under the court's
+    // paving and fell out of the world. The south side, where the timber steps come up, is walled only to the top step)
+    P.E('PAST', () => {
+      P.col([-6, -3.6, 12, 14, -3, 28]);
+      for (const b of [[-6.4, -3.6, 11.6, -6, 0, 28.4], [14, -3.6, 11.6, 14.4, 0, 28.4], [-6.4, -3.6, 11.6, 14.4, 0, 12]]) P.col(b);
+      P.box([-6.4, -3.4, 28, 14.4, -0.3, 28.4], 'clay');
+    });
+    // --- 2196: the ruin: fallen slabs, ivy curtains, pools, a broken wing roof ------------------------------
+    P.E('FUTURE', () => {
+      for (const [x, z, ry, w, d] of [[-30, 14, 0.4, 10, 6], [24, -26, -0.3, 9, 7], [-8, -30, 0.8, 12, 5], [30, 20, 1.2, 8, 6], [-26, -20, -0.6, 7, 7]]) P.obox(x, 0, z, w, 0.8, d, ry, 'rawConcrete', { rx: 0.12, solid: true });
+      for (const [x0, z0, x1, z1] of [[-37.9, -30, -37.8, 30], [-30, -37.9, 30, -37.8], [37.8, -30, 37.9, 30]]) for (let i = 0; i < 9; i++) {
+        const f = (i + 0.5) / 9, x = x0 + (x1 - x0) * f, z = z0 + (z1 - z0) * f;
+        P.vbox([x - (x0 === x1 ? 0.05 : 1.6), WING_H - P.rng.float(4, 11), z - (z0 === z1 ? 0.05 : 1.6), x + (x0 === x1 ? 0.05 : 1.6), WING_H, z + (z0 === z1 ? 0.05 : 1.6)], 'ivy', { noShadow: 1 });
+      }
+      for (const [x, z, r] of [[-18, 18, 5], [16, -12, 4], [20, 22, 3.5]]) P.disc(x, 0.06, z, r, 'poolWater', { noShadow: 1 });
+      for (const [x, z] of [[-14, 26], [12, 28], [-26, -8], [6, -26], [28, 6], [-22, 30]]) P.tree('birch', x, z, 1.3);
+      P.plane(-37, -37, 37, 37, 0.03, 'moss', { noShadow: 1 });
+    });
+    // --- the service yard north, against the hillside ------------------------------------------------------
+    terrace(P, [10, -90, 70, -62], -0.01, 'rawConcrete', { sides: '' });
+    P.land('serviceYardOut', 40, 0, -76, 0);
+    for (const [x, z, ry] of [[22, -72, 0], [30, -72, 0], [52, -80, Math.PI / 2]]) prop(P, 'chiller', x, z, ry);
+    canopy(P, { rect: [56, -88, 68, -66], h: 5, roof: 'corrugated', span: 6 });
+    P.E(['PRESENT', 'PAST'], () => {
+      for (const [x, z] of [[36, -84], [44, -84]]) P.box([x - 1.2, 0, z - 3, x + 1.2, 2.6, z + 3], 'containerBlue');
+    });
+    // the hillside behind
+    for (const [x, z, w] of [[-40, -82, 34], [-6, -86, 26]]) P.obox(x, 0, z, w, 6, 10, 0.1, 'rockGrass', { solid: true });
+    void mission;
+    void water;
+    void wall;
+  },
+};

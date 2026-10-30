@@ -1,1 +1,301 @@
-# claude-ideas
+# AFTERZERO
+
+**A sci-fi thriller in which you don't just solve puzzles inside the world — you discover, test and rewrite the laws that govern it.**
+
+You wake in a sealed room with a floating object and no instructions. Touch it and gravity lets go. Touch it again and the room turns over, and a door appears where a wall used to be. The object becomes a device that changes the state of whatever room you stand in (**PHYSICAL**, **INVERTED**, **ECHO**). Then you find out that the device runs on *laws*, and that you can rewrite them.
+
+This repository contains:
+
+- **`unity/AfterZero/` - the Unity 6 (URP) version** with a stronger story, 11 characters, 8 zones (~245 m × 60 m), three adrenaline chase set-pieces, a hint companion, New Game+ and Android touch controls. Start with [`docs/unity/UNITY_GUIDE.md`](docs/unity/UNITY_GUIDE.md).
+- **`game/` - the browser game** (Three.js): the two-hour prologue (Station Zero and the open districts of HALCYON), THE CRADLE beneath it, and the generated vessel campaign, for desktop and Android browsers.
+- **`docs/`** - the design for the full game. The whole story, level by level, is in [`docs/STORY.md`](docs/STORY.md).
+
+## Versions
+
+Each version is kept separately. It has its own git commit, its own Android app and its own web preview. A new version installs beside the old one, with its own icon and its own saves, and does not replace it.
+
+| Version | Status | Commit | Android app | Web preview |
+| --- | --- | --- | --- | --- |
+| **v2.1** | 2.1.1 update (the v2.1 playtest's fixes: the Prologue finishable by touch, the CASE FILES from the title, crowd lines said in passing, a phone-sized HUD, staged big moments; installed over 2.1 with its saves) of the overhaul from player feedback: open places under a real sky, REVERSE instead of laws and inverted gravity, people cast by role, era and age, longer chapters, a stronger story, no repeated places, every line voiced; separate edition | this branch | `AFTERZERO-LastVersion-v2.1.apk`, app "AFTERZERO: Last Version 2.1" (`com.afterzero.lastversion.v2_1`, versionName 2.1.1); build with `EDITION=lastversion bash android/build-apk.sh` | [claude.ai/artifact/HsWBbg3ppPShrBPVPaBhaE](https://claude.ai/artifact/HsWBbg3ppPShrBPVPaBhaE) |
+| **v2.0** | saved (the first Last Version edition, before the overhaul) | `f551c14` | `AFTERZERO-LastVersion-v2.0.apk`, app "AFTERZERO: Last Version" (`com.afterzero.lastversion`) | [claude.ai/artifact/GDpG6YCybK2cj8P3gPXRrr](https://claude.ai/artifact/GDpG6YCybK2cj8P3gPXRrr) |
+| **v1.1** | 1.1.1 update (smoother play, full game check) | this branch | `AFTERZERO-v1.1.apk`, app "AFTERZERO 1.1" (`com.afterzero.v1_1`) | [claude.ai/artifact/UoHrkWc9QD6USztzpRLcSg](https://claude.ai/artifact/UoHrkWc9QD6USztzpRLcSg) |
+| **v1.0** | saved | `c6b8682` (tag `v1.0.0`) | `AFTERZERO-v1.0.apk`, app "AFTERZERO 1.0" (`com.afterzero.v1_0`) | [claude.ai/artifact/8Vz91NGuA5NzYydryybv8q](https://claude.ai/artifact/8Vz91NGuA5NzYydryybv8q) |
+| **v0.9** | saved | `293d857` (tag `v0.9.0`) | `AFTERZERO-v0.9.apk`, app "AFTERZERO" (`com.afterzero.preview`) | [claude.ai/artifact/6m2ucDKS4hUW5bE818FZQz](https://claude.ai/artifact/6m2ucDKS4hUW5bE818FZQz) |
+
+`android/build-apk.sh` takes the version from `versionName` in `android/AndroidManifest.xml`. To start a new version, raise `versionCode` and `versionName` and change the app label there. The script then names the APK and the app id from it. It signs every APK with one key kept outside the checkout (`~/.afterzero/debug.keystore`, or `AZ_KEYSTORE`), so a new build installs as an update over the old one and keeps the player's saves; it stops if the key is missing instead of making a new one (`AZ_NEW_KEY=1` makes one on purpose).
+
+To rebuild a saved version, check out its commit and run the script.
+
+**v2.0 and v2.1 are "AFTERZERO: The Last Version of Earth"**, a separate edition built from the same sources: Kai Varen, the Chronolith, three years of one world (2026, 2049, 2196) and, from Mission 11, REVERSE (the bible's inversion: hold one process backwards for a few seconds), the Witness, Mira, 23 missions and three endings, from the creator's gameplay bible in [`docs/lastversion/`](docs/lastversion/). `EDITION=lastversion bash android/build-apk.sh` builds it as its own app with its own saves (v2.1: `com.afterzero.lastversion.v2_1`, installed beside v2.0's `com.afterzero.lastversion`; since the 2.1.1 update versionName 2.1.1, versionCode 211, which installs over 2.1 and keeps its saves); without `EDITION` the script builds the Station Zero game exactly as before. In a browser, `index.html?edition=lastversion` opens it. How the bible maps onto the engine: [`docs/lastversion/DESIGN.md`](docs/lastversion/DESIGN.md); what is built, generated and planned: [`docs/lastversion/STATUS.md`](docs/lastversion/STATUS.md).
+
+**The v2.1 overhaul** ([`docs/lastversion/OVERHAUL.md`](docs/lastversion/OVERHAUL.md), units U1–U8; released as v2.1, its own app beside v2.0) rebuilt the edition from player feedback: every mission stands in its own authored open place under a real sky, with three years on one layout (U2, U3); the bible's inversion is REVERSE, a local verb that holds one process backwards while the Chronolith's charge lasts (U1); 47 Rocketbox-based people of its own (and 4 models shared with Station Zero) are cast by role, era and age, with crowds and watchers per place (U4 and the casting closing pass); every line is spoken from the edition's own recorded packs, with a score and staged cinematics (U5; since the closing pass the score plays written themes, a theme per act and per character, all grown from the bible's three-note motif); and all 23 missions are written by hand as one map each with soft quarters, main threads and side stories, a cold open and a hook (U6–U8), with the campaign's questions, clues and consequences held to the missions by tests. After an ending, THE CASES opens the CASE FILES: fourteen stories, each replayable from its place with the facts the player had. Since the closing pass, free roam: once a mission is done its place can be travelled to (TRAVEL on the case board or the map, and the CASE FILES after an ending), in any year opened there, and walked with no story gates, its side stories and fragments still there, while the story waits where it was left. How long it is, measured (the release check, 2026-10-24): the bot plays the campaign in 201 minutes of game time (the Prologue 13.3, Act I 44.1, Act II 44.8, Act III 52.2, Act IV 35.0, the Finale 11.7), against the bible's 22.2 hours of mission targets; every mission is below its target, and no player's time has been measured. The 23 missions say 19,995 words of their own, 114 minutes of recorded speech. (The earlier "length model" of about 15 hours was its authors' weights, never measured, and is no longer given.) `npm test` runs the unit tests (174 in all, 146 of them the edition's); `NODE_PATH=$(npm root -g) node tests/lastversion.mjs` plays the whole campaign from NEW GAME to Ending C, Endings A and B in real time, free roam's trips and the CASE FILES in headless Chromium (373 of 373 checks, 36.6 minutes, in the v2.1 release run); `node tests/lastversion-audio.mjs` checks in real time that the cards, the cold open and a conversation are heard from the packs (`LV_ROOT=android/build-lastversion/preview` plays the built web preview). Every line is recorded: 5,143 recordings, 149 minutes of speech, 19.1 MB in seven packs (the eighth, the cases', is empty), the largest file 3.4 MB. Measured for the v2.1 release (2026-10-25, after the casting passes): the APK is 46.4 MB (budget 50), its web preview 63.8 MB in 123 files with no file over 3.8 MB; every suite of both games passed on the release commit (npm test 174 of 174, the bot 373 of 373, the audio check 10 of 10, smoke, qa, halcyon, vessel, features, layout, forge, cradle and the garments check); neither build has been run on a phone. What is built and measured: [`docs/lastversion/STATUS.md`](docs/lastversion/STATUS.md). **The 2.1.1 update** (2026-10-27) carries the fixes for the v2.1 playtest ([`docs/lastversion/PLAYTEST-v2.1.md`](docs/lastversion/PLAYTEST-v2.1.md), its "Fix status (v2.1.1)"): of its 87 findings 81 are fixed, one partly (Mission 21's last battle is still lines and two gaps), four are by design and one did not reproduce; among them both blockers (Mission 3's causal anchor now has a touch button, and the title's CASE FILES start their replays and trips) and the crowd's remarks, said only in passing and never over the tap prompt. Measured for 2.1.1: the APK is 48.2 MB, its web preview 65.6 MB in 123 files; every suite of both games passed (npm test 290 of 290, the bot 373 of 373 in 34.5 minutes, the audio check 10 of 10 on the dev page and the built preview, the flow check 51 of 51, smoke, qa, halcyon, vessel, features, layout, forge, cradle and the garments check); 5,353 recordings in seven packs, 20.6 MB. It is still untested on a phone.
+
+## v1.1: WORLD FORGE
+
+v1.1 is the version this branch builds (`AFTERZERO-v1.1.apk`). It adds a sixth chapter card and the play-test fixes made on top of v1.0.
+
+- **WORLD FORGE, "build your own game"** ([`docs/FORGE.md`](docs/FORGE.md)): a sixth chapter card. The Forge is an offline, deterministic engine (a Forge number plus your choices always builds the same game): you choose a genre (thriller, horror, mystery, adventure, heist, survival), a title and a hero's name, 3 to 8 locations from the thirteen the engine renders (five open districts, eight decks) with a name and local rules for each (gravity NORMAL / INVERTED / ZERO, echoes HIDDEN / VISIBLE / SOLID, time NORMAL / SWEEPERS, watchers NONE / PATROL / HUNT, light DAY / NIGHT / EMERGENCY, and a NULL FIELD where no law and no gear works), up to eight cast members with roles, and a four-slot kit of gear (reality tools, not weapons: STASIS PULSE, GRAPPLE LINE, ECHO LENS, LIGHT RIG, SIGNAL FLARE, KEY FORGE), and the length (SHORT, FULL, EPIC). The genre drives the cast's moods, the plot grammar (setup, complications, twist, finale with a last decision), the weather and film grade, the watchers and the threat music. Each act shows a LOCAL RULES card on arrival; the rules decide which gear works there; every puzzle is planned so it can be solved under its act's rules; the cast speak 3-6 lines per act from the genre's line banks and offer two-option choices that change later lines and the ending. Ten save slots, CONTINUE on the card. The Forge adds about 150 fixed lines to the voice pack; lines with typed names use the device voice.
+
+### The 1.1 update (1.1.1): smoother play and a full game check
+
+It installs over AFTERZERO 1.1 and keeps its saves (same app, same signing key, `versionCode` 11).
+
+- **Smoother on phones.** A phone-sized benchmark (`tests/perf.mjs`) timed every kind of scene and found four causes of stutter; 22 fixes address them.
+  - **No freezes after a load:** the optional character looks load one at a time in the background instead of in blocking chunks.
+  - **No shader stalls mid-play:** auto-quality changes wait for a menu, a loading fade or 45 s, settle instead of flip-flopping resolution, and remember their level after a reload. Pickups, flares and holograms are compiled before you tap them.
+  - **Less work per frame:** the HUD is no longer rebuilt every frame; the sun's shadow is drawn once; Medium does bloom and the film grade in one pass; hidden scenery and people stop animating; switched-off lights and useless shadow lookups are skipped; character textures stay loaded between sectors; settings changes no longer leak GPU memory.
+  - **Steadier motion:** frames are timed from the screen's refresh (120 Hz phones run at an even 60 fps) and the GPU rests behind menus; shadows snap to their texels and stop crawling; street lamps stop blinking; the camera blends instead of cutting; weather stops jumping; feet stop sliding; the touch stick's speed follows how far you push; kerbs up to 35 cm can be stepped up.
+  - Measured against 1.1: high-quality draw calls 10-17% lower, render CPU time up to 35% lower, frames over 33 ms on the Cradle walk down from 59 to 21.
+- **A complete game check.** Six testers checked 1.1 and everything both editions share: 84 findings, each reproduced before it was fixed, 80 fixed.
+  - **Critical:** an ending panel that nothing could close (Vessel, Story Studio, WORLD FORGE); Android 15 and newer refusing the APK (it now targets API 24); WORLD FORGE zero-gravity districts and decks that could not be finished.
+  - **Major:** updates that would have wiped saves (every build now uses one signing key); rotating, folding or a theme change restarting the app; comfort mode still flashing; title cards that never showed; the prologue's final choice reachable too early; STAY ON THE BRIDGE doing nothing; sentinels catching you on the ceiling; a TICK hint that failed; missing recordings; mute not muting everything; Juno contradicting herself; and more.
+  - Two are left for later: a cutout mode for phones with a notch, and splitting the voice pack per edition.
+
+## v1.0: one story, THE CRADLE, and a Vessel that remembers your choice
+
+The prologue, HALCYON and the Vessel are now one story with one truth. The whole of it, level by level, is in [`docs/STORY.md`](docs/STORY.md).
+
+- **The truth, said out loud.**
+  - The brain in the machine is the first Ren, Dr. Ilse Varga's son, and you are the forty-second Ren the field has grown from him.
+  - The "her" the Custodian saw you carry is Juno: on the night of the Zero Event the first Ren carried her out of the flooded reactor, and he did not survive it.
+  - The R. VARGA-ZERO badge was his, and the reactor's doors, keyed to the name VARGA, opened for him at 03:04.
+  - The core's first law takes a key and a pair of hands. He wrote the key so the fold has to be chosen again every cycle; whoever puts their hands on the law at 03:12 is that cycle's culprit. So every story number still has its own culprit.
+- **THE CRADLE, a new chapter** ([`docs/CRADLE.md`](docs/CRADLE.md)) between the prologue and the Vessel.
+  - Three districts of sleeping pods beneath Station Zero, under the roots of the Glass Forest, about 25 minutes: Varga's last log, the sleep registry (where Juno finally confesses), and row one, where you meet Varga.
+  - It is told four ways: after SEVERED (the lids stand open, Varga is awake, the drones stand dark and still), after SUSTAINED (Varga's dream, drones that hunt with what you taught the Observer), after OBSERVED (Varga awake, violet drones that only watch) and before the choice.
+  - The prologue's end screen now offers **GO BENEATH** or **SKIP TO THE VESSEL**, and the Cradle's last gate, NIGHT WATCH - FORWARD DECKS, leads into the Vessel. The chapter menu has a fifth card, THE CRADLE, with its own CONTINUE.
+- **The Vessel after each ending.** The ending you chose at the machine changes how Deck 1 opens, the watchers (still, learned or kin), the windows (stars, or black glass after SEVERED), the light (emergency light after SEVERED), who is aboard (Juno on the Bridge after SEVERED, the Other hanging from the ceiling after SUSTAINED), the last scene on the Bridge and the replay button (CYCLE 43, TELL IT AGAIN or FOLD AGAIN). A story number still deals the same crew and the same truth whatever you chose. The game remembers your last ending on the device, so chapters started from the menu play in that world (their cards say "After SEVERED", and so on).
+- **Plot holes fixed.** Kade's eighteen years; two drones in Neon Meridian; the Observer's drones (not the Observer) at the tower; Juno is the last one awake "down here"; Varga speaks in her own voice everywhere; HALCYON's screens correct Varga's record and Juno's lines after them now play; the journal and map speak of districts in HALCYON; the victim always fits the twist and motive; alibis are "on the radio", so nobody is in two places at once; the twists and motives no longer contradict the machine's one occupant; the SUBJECT HOLDING sign remembers CYCLE 42 in ECHO.
+- **Laws you push, combos, ten slots.**
+  - A law written in LAWS runs only when you press its **ACTIVATE** button; until then the panel says it is not running yet, and the old law keeps running. An unsent draft stays in the panel when you close it.
+  - **Law combos:** save the running laws under a name (up to eight combos) and switch a whole set at once with **X**, the **COMBO** button in the dock, or the COMBO button on phones.
+  - **Ten save slots** (they were three).
+- **Voice.** About 340 new recordings (the voice pack grows from 1681 to 1946 unique pieces): the Cradle, the Vessel's openings and Bridge scenes for each ending, the watchers' hints, Varga's re-voiced logs, the "It might be ..." lines recorded whole, and the Other in your own (male or female) voice.
+- **Tests:** `node tests/cradle.mjs` plays the Cradle's three districts after every ending and walks into the Vessel, and plays the Bridge's last scene for each ending; `tests/vessel.mjs` replays the watched decks after each ending; `npm test` checks every ending against 200 story numbers and keeps HALCYON's twelve districts unchanged.
+
+## v0.9: chapters, save slots, Story Studio, smart renderer
+
+- **NEW GAME asks for a chapter:** **Prologue**, **HALCYON**, **The Vessel** or **Story Studio**.
+  - Each chapter card has its own **CONTINUE** button, which resumes that chapter's latest save.
+- **Save slots:**
+  - A new game asks for one of three slots and autosaves there as you play.
+  - A slot that is already in use asks before it is replaced.
+  - **DELETE** removes a save after a second tap ("SURE?").
+- **Story Studio:** describe the vessel story you want and the game builds it on the device, with no connection.
+  - **What you can set:** a title, a mood (thriller, horror, mystery, hopeful), why the time loop exists, the final twist, your crew's names and a story number.
+  - **How it is built:**
+    - The crew, clues, rooms and culprit are generated around your choices.
+    - The same number and choices always tell the same story.
+    - It is a rule-based story generator, not a chat AI: it recombines hand-written story parts and does not write new prose.
+- **Smart renderer:** the game watches its real frame rate while you play and keeps it smooth on its own.
+  - **When it slows:** it first lowers the resolution (down to 60%), then the effects.
+  - **When there is headroom:** it raises them again, but never above the quality you chose in Settings.
+  - On by default; switch it off in Settings.
+
+## v0.8: HALCYON - a two-hour prologue with open districts
+
+Station Zero turns out to be the basement of **HALCYON**, a city-sized arcology. Varga's vault recording sends Ren up the long way. Four open districts, each a different kind of film, sit between the vault and the machine, and the prologue now runs about two hours. See [docs/HALCYON.md](docs/HALCYON.md).
+
+| Chapter | Feel | Districts | Who you meet |
+| --- | --- | --- | --- |
+| **Neon Meridian** | Rain-soaked noir city under a glass sky, drones on the streets | Meridian Square, The Overpass, Night Station | Kade, who fixes the neon |
+| **The Drowned Reactor** | Industrial horror, black water, orange alarms | Turbine Floor, The Sump, Control Deck | Chief Osei's echo |
+| **The Glass Forest** | Glowing forest under a dome, quiet and eerie | The Canopy, The Still Pond, The Cabin Road | Theo, who kept the garden |
+| **The Signal Tower** | Storm and lightning, the Observer hunting | Storm Deck, Antenna Field, Last Landing | Varga's echo |
+
+- **Open maps:** each district is one big open space (68 × 108 m) of streets, buildings, water, trees or masts. Every obstacle has more than one answer:
+  - Fall up to the glass dome (INVERTED), walk across it, then drop onto a roof or past the water.
+  - The old stairs and bridges are memories: ECHOES SOLIDIFY IN ECHO.
+  - Float up in zero gravity, or freeze the drones with a law.
+- **Atmosphere:** lit windows and neon, wet roads that catch the light, rain, steam, fireflies, lightning.
+- **Real-world look:**
+  - CC0 photo-scanned surfaces from ambientCG and Poly Haven: asphalt, paving, concrete, rusty metal, bark, moss and rock (`game/assets/textures`).
+  - Lighting and reflections from real sky photos.
+  - A film grade for each chapter, smoother edges, and bloom only on real light sources.
+  - Street lamps with pools of light, sidewalks, road markings, cars, rooftop equipment, and real trees in the forest.
+- **Controls:** one **WALK/RUN** button (Z on desktop), and running is faster.
+- **Characters:** smoother, rim-lit and grounded. Every model can be Ren's look (17 in all), each with its portrait.
+- **Story:** 229 new voiced lines, from the same neural voices.
+- **Test:** `npm run halcyon` plays all 12 districts through and checks the alternative solutions.
+
+## v0.7: you hear every line, a cleaner screen, one Ren with many looks
+
+- **Voiced dialogue that always plays**
+  - Every line is spoken with natural neural voices (Kokoro TTS), recorded into a voice pack (`game/assets/voice`, built by `tools/voice-pack.mjs` + `tools/voice-pack.py`).
+  - Scripted lines are recorded whole. Generated vessel lines are spliced from recorded phrases plus every crew name, place and deck, so the crew of any seed can speak.
+  - It plays through the game's own audio, so it works wherever the music does (the old build relied on the device's text-to-speech, which many phones and the app's WebView don't have). Device speech remains the fallback.
+- **Transparent captions:** dialogue, toasts, the objective and the in-world log screens float over the scene as light text with a soft dark outline, with no cards behind them.
+- **Nothing overlaps:** the dock moved to the bottom centre, the objective sits under the room state, and the minimap sits in the top corner on phones. `npm run layout` checks every HUD piece against every other on desktop, laptop, three phone sizes and a tablet.
+- **One character, many looks:** you are always Ren; the character screen changes how Ren looks.
+  - **Nova:** an anime-style VRM avatar with blinking eyes, a mouth that moves while talking, and hair and outfit colour choices.
+  - **Street** (Michelle), **Flight suit** and **Spacesuit**. Ren's voice follows the look.
+  - Each look's button shows its portrait (`game/assets/looks`, rendered by `tools/look-thumbs.mjs`).
+  - Models are plain glTF (no WebAssembly decoders), so they load on hosts that forbid WebAssembly; `tools/unpack-meshopt.mjs` unpacks meshopt-compressed downloads.
+- **New cast** (`game/js/world/Actors.js`, `People.js`):
+  - The crew and Juno are modelled people in everyday and work clothes (Quaternius, CC0); echoes are holograms of them.
+  - All rigs (Mixamo, VRM, Quaternius) map onto one skeleton. Walk and run speeds are measured from each clip's feet, so steps match movement.
+  - Credits are in `game/assets/characters/CREDITS.md`.
+- **APK:** the game is served from inside the APK at `https://afterzero.app/`, so it can load the models and the voice pack offline.
+
+## v0.4: choose your character, voiced interactions, controls that stay out of the way
+
+- **Character select:** six heroes (Ren the explorer, Kai the pilot, Asha the engineer, Mira the medic, Leo from security, Noor the scientist), each with adjustable skin tone, hair colour, hairstyle and suit colour.
+  - The choice is previewed live in 3D and can be changed any time from the title or pause menu.
+- **Voiced dialogue**
+  - Every line can be spoken aloud: through the browser's speech engine on the web, or Android's own text-to-speech in the APK.
+  - Each character gets their own voice, including a generated voice for every crew member, and the music ducks under speech.
+  - The videos are voiced offline with the Kokoro neural TTS (`tools/voice-lines.py`).
+- **Interactions you can see and hear**
+  - **Prompts:** the use prompt floats over the object itself, with a soft ring marking it (tap it on touch screens).
+  - **Conversations:** the camera eases into an over-the-shoulder shot, with a soft letterbox.
+  - **Logs:** they play on hologram screens.
+  - **Doors** glide open. Pickups, tokens, saves and records sparkle.
+  - **Sounds:** each action has its own sound — terminals, doors, key and core inserts, beacons, tokens, greetings, jumps, landings and menus.
+- **Zoom by touch:** pinch on phones and the mouse wheel on desktop. Double-tap the look area to reset. There are no zoom buttons.
+- **Integrated controls**
+  - **Joystick:** appears under your left thumb anywhere on the left side.
+  - **Buttons:** a slim jump button and a SHIFT button that shows the current state.
+  - **The dock:** one quiet strip of icons for laws, log, map, TICK and the menu, with key hints on desktop.
+  - **Calm HUD:** dims while you play and brightens when something happens.
+
+## v0.3: the vessel (about 5½ hours of play)
+
+The browser game is now a full campaign: the 35-minute **Station Zero** prologue, then **the vessel** — 8 generated decks with 4 sectors each, about 5 hours of play. See [docs/VESSEL.md](docs/VESSEL.md).
+
+- **Generated levels.** Every room is built from a seed, out of the following parts:
+  - **Pits**, crossed on the ceiling, on an echo bridge, on hard light, or in zero-g.
+  - **Ledges** reached by stairs or zero-g, and **doors on the ceiling**.
+  - **Locks** opened with **memory keys** and **power-core sockets**.
+  - **Time sweepers** and **watched halls** with sentinels.
+
+  Every room can be solved within the device's three law slots. A QA bot plays every generated room with real physics to prove it.
+- **A generated story.** Seven crew members (names, roles, faces, personalities), one of whom started the loop.
+  - Each deck has logs, a record whose official version and **echo** version disagree, and an encounter.
+  - A suspects board in your log, and a final **verdict** on the bridge with a twist that differs from seed to seed.
+- **Two new laws.** `TIME FREEZES IN ...` stops sweepers. `HARD LIGHT SOLIDIFY IN ...` makes gold outlines walkable.
+- **Real-proportion humans** in futuristic costumes (explorer, engineer, scientist, security, pilot, medic, robe), with faces, blinking, talking, looking at you and waving. Holograms are used for echoes.
+- **Comfort and controls**
+  - **Camera:** zoom with the wheel, a pinch or the +/- buttons; four views (close, standard, far, overview), cycled with V.
+  - **Comfort mode:** instant gravity flips and a steadier camera.
+  - **Settings:** field of view, look sensitivity and invert Y.
+- **Saving:** three save slots plus an autosave, F5/F9 quick save and load, and memory beacons that save in story rooms.
+- **Maps:** a minimap and a full map (M) for both the station and every generated sector.
+- **Graphics presets:** ambient occlusion (HIGH), soft bloom (MEDIUM and HIGH), image-based lighting, and bump-mapped panels. LOW is picked automatically on software renderers.
+
+| | Desktop | Android |
+|---|---|---|
+| Zoom / camera view | mouse wheel, V | pinch, double-tap to reset |
+| Map / save / load | M, F5, F9, pause menu | dock MAP or tap the minimap, pause menu |
+
+## v0.2: calm redesign
+
+Third-person camera, a bright low-contrast look that's easy on the eyes, a new melodic soundtrack in place of the horror drones, Juno and TICK as on-screen characters, a friendlier Observer, and gameplay and character videos. See [docs/ART_AND_AUDIO.md](docs/ART_AND_AUDIO.md).
+
+## Unity version
+
+> The v0.3 features (generated vessel, new humans, saves, maps, camera zoom) are in the browser game, which is also what the Android APK wraps. The Unity project is still at v0.2.
+
+| Doc | What's in it |
+|---|---|
+| [UNITY_GUIDE.md](docs/unity/UNITY_GUIDE.md) | Status, 5-minute setup, architecture, art pipeline, Android build |
+| [STORY_BIBLE.md](docs/unity/STORY_BIBLE.md) | The rebuilt story: cast, three acts, twist ladder, choices, four endings |
+| [WORLD_MAPS.md](docs/unity/WORLD_MAPS.md) | Every zone, with plans rendered from the actual level data |
+| [PLAYER_EXPERIENCE.md](docs/unity/PLAYER_EXPERIENCE.md) | Smoothness, adrenaline, player-friendliness, and ethical engagement |
+
+```bash
+cd unity/Tests && dotnet test     # 17 tests over the core systems and all story/level content
+```
+
+## Play
+
+```bash
+npm start            # serves game/ on http://localhost:8080
+```
+
+Or serve the `game/` folder with any static web server (it's plain ES modules, so there's no build step). On Android, open the URL in Chrome in landscape and use *Add to Home screen* to install it as a full-screen app.
+
+| | Desktop | Android |
+|---|---|---|
+| Move / look | WASD + mouse | left stick + right-side drag |
+| Use / skip line | E or left-click | USE |
+| Shift the room | Q or right-click; 1 / 2 / 3 to choose | SHIFT |
+| Jump / run | Space / Shift | JUMP / push the stick fully |
+| Walk or run (stays on) | Z or Caps Lock | WALK/RUN |
+| Device laws | L or Tab | LAWS |
+| Next law combo | X | COMBO (dock or phone button) |
+| Log (theory log, questions, Observer) | J | LOG |
+| Map | M | MAP, or tap the minimap |
+| Camera view / zoom | V / mouse wheel or + - | pinch, double-tap to reset |
+| Ask TICK | H | TICK |
+| WORLD FORGE: local rules / gear 1-4 | K / 5 6 7 8 | RULES / the gear buttons in the dock |
+| Quick save / quick load | F5 / F9 | pause menu |
+| Menu | Esc | MENU |
+
+The game gives you no tutorial on purpose. Look closer.
+
+## What's in the slice
+
+- **The five systems from the design, all working together:**
+  1. *Programmable reality*: per-room states plus a law language (`GRAVITY INVERTS IN INVERTED`, `HELD MATTER PERSISTS THROUGH PHYSICAL`, `ECHOES SOLIDIFY IN ECHO`, …) that you compose from tokens you find.
+  2. *The Observer*: an adaptive entity that learns your hiding spots, aisles, ceiling-walking, running and the laws you use on it, and tells you when it has learned something.
+  3. *Discoveries change earlier events*: recordings gain sentences, signs change, and the lab turns into a spaceship.
+  4. *Contradictions*: carry a memory into reality to change what the archive believes.
+  5. *A hidden objective* that is rewritten as the evidence changes.
+- **Four locations:** Antechamber → Laboratory (the hub, which changes meaning five times) → Observation Hall → Archive & Vault, plus a hidden passage.
+- **Five characters:** you, Dr. Ilse Varga, the Observer, the Custodian, the Other.
+- **Three endings**, autosave, procedural audio, and a built-in **playtest report** that includes the three post-demo questions.
+
+## Repository
+
+```
+game/                    the browser game (Three.js r169, vendored; no build step)
+  index.html css/        the page and its styles
+  js/main.js             modes, menus, saves, chapters and the main loop
+  js/core/               pure, unit-tested systems: conditions, laws, reality engine,
+                         facts & rules, Observer brain, objectives, editions, smart renderer
+  js/gen/                generators: the vessel's story and sectors, the districts of
+                         HALCYON and THE CRADLE, WORLD FORGE
+  js/world/              Station Zero (maps, story, director), the decks and districts,
+                         characters, post FX, materials, weather, effects
+  js/entities/           player controller (gravity + camera roll), Observer
+  js/ui/                 HUD and law editor, input (keys, touch), ten save slots,
+                         settings, minimap, looks
+  js/audio/              procedural music and sound, the voice pack player
+  js/editions/           v2.0, THE LAST VERSION OF EARTH
+  assets/                character models, look portraits, photo textures, voice pack
+android/                 the APK host (MainActivity) and build-apk.sh
+tools/                   asset tools: voice pack, look portraits, textures, models, videos
+docs/
+  STORY.md               the canon: the whole story, level by level
+  HALCYON.md CRADLE.md   the open districts and the chapter beneath them
+  VESSEL.md FORGE.md     the generated vessel and WORLD FORGE
+  GDD.md                 the first vertical slice's design document (pre-v1.0)
+  MAPS.md                level designs for the slice and the full campaign
+  CHARACTERS.md          the slice's cast (pre-v1.0; the canon is STORY.md)
+  REALITY_ENGINE.md      engine spec: law language, conditions, Observer AI, UE5 port
+  ART_AND_AUDIO.md       the calm look and the soundtrack (v0.2)
+  PRODUCTION.md          phases, Android test checklist, team, risks
+  lastversion/ unity/    v2.0's bible, the v2.1 overhaul spec, design and status; the Unity version
+tests/
+  *.test.mjs             unit tests: core systems, generators, the Forge, v2.0 (npm test)
+  smoke.mjs qa.mjs ...   headless browser playthroughs (see Tests)
+  perf.mjs               frame times on an emulated phone
+```
+
+## Tests
+
+```bash
+npm test                                   # core systems + generator invariants over many seeds (Node 20+)
+NODE_PATH=$(npm root -g) npm run smoke     # full prologue playthrough in headless Chromium (needs playwright)
+NODE_PATH=$(npm root -g) npm run qa        # replays the bugs play-testers found, through real input
+NODE_PATH=$(npm root -g) npm run vessel    # QA bot plays every generated room of 2 seeds (pass a seed count to test more)
+NODE_PATH=$(npm root -g) npm run features  # features on desktop and a touch phone: chapters, slots, Story Studio, smart renderer, looks, voice pack, zoom, stick
+NODE_PATH=$(npm root -g) npm run layout    # no HUD piece overlaps another, on nine screen sizes
+NODE_PATH=$(npm root -g) npm run halcyon   # plays HALCYON's 12 open districts and the lift home
+NODE_PATH=$(npm root -g) npm run cradle    # THE CRADLE after every ending, into the Vessel
+NODE_PATH=$(npm root -g) npm run forge     # WORLD FORGE: forges a game of every genre through the panel and plays it to an ending
+```
+
+## Design principle
+
+> Make the player feel that every discovery changes not only what they know, but what they can do.

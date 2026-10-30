@@ -1,0 +1,73 @@
+// THE LAST VERSION OF EARTH: an echo who looks like somebody (playtest v2.1 F16).
+// A hologram person (Actors.js) wears one flat glow on every surface, and in the pale glows of Helix's people (crewGlow:
+// their colour lifted toward white) Lin in the containment cube, the morning's echoes and Ezra at sixty-five read as white
+// mannequins. A mission that wants its echoes known lends each one the textures of the same person in the flesh, dressed
+// the same way (People.makeCrewModel through the edition's dresser), under a faint tint of the glow: a translucent face,
+// hair and clothes. The hologram's transparency, its fade and its cut-out hair stay as they were.
+import * as THREE from '../../../vendor/three.module.min.js';
+import { makeCrewModel } from '../../world/People.js';
+
+const meshes = (root) => {
+  const out = [];
+  root.traverse((o) => { if (o.isMesh) out.push(o); });
+  return out;
+};
+
+// one model (a hologram's root, as DeckWorld built it for this crew); once
+export function lendLook(model, crew, height) {
+  const U = model?.userData;
+  if (!U || U.lvLook) return false;
+  U.lvLook = true; // (once, whatever comes of it)
+  if (!U.spec?.hologram || !crew) return false;
+  let ref;
+  try {
+    ref = makeCrewModel(crew, { hologram: false, height: height || U.spec.height });
+  } catch {
+    return false;
+  }
+  // (the two are not built alike: a hologram carries depth-pass copies of its meshes, the person in the flesh garments
+  // of their own; the body's meshes are paired by name, in order, and the rest left as they are)
+  const a = meshes(model).filter((o) => o.name !== 'holodepth'), b = ref ? meshes(ref) : [];
+  const same = ref?.userData?.spec?.model === U.spec.model;
+  if (same) {
+    const glow = new THREE.Color(U.spec.glow ?? 0x8fe0ff);
+    const byName = new Map();
+    for (const o of b) byName.set(o.name, [...(byName.get(o.name) || []), o]);
+    a.forEach((o) => {
+      const r0 = byName.get(o.name)?.shift();
+      if (!r0) return;
+      const ms = [].concat(o.material), rs = [].concat(r0.material);
+      ms.forEach((m, k) => {
+        const r = rs[k];
+        // (a material the wardrobe caches for everyone, a garment's or a hair mass's, marked keep, is never written: it
+        // would change every echo in the session that wears it)
+        if (!m?.isMeshStandardMaterial || m.alphaTest > 0 || !r?.map || m.userData?.keep) return;
+        m.map = r.map;
+        m.color.set(0xffffff).lerp(glow, 0.3);
+        m.emissive.copy(glow);
+        m.emissiveIntensity = 0.16;
+        m.needsUpdate = true;
+      });
+    });
+  }
+  // (the stand-in's own pieces: its materials are clones, its garments may have geometry of their own; the textures
+  // are the shared, cached ones the echo now wears. What the wardrobe caches for everyone, marked keep, is in use by the
+  // living: left alone, or every person wearing it would have its shaders built again)
+  ref?.traverse((x) => {
+    if (!x.isMesh) return;
+    if (x.userData.ownGeometry && !x.geometry?.userData?.keep) x.geometry.dispose();
+    for (const m of [].concat(x.material)) if (m && !m.userData?.keep) m.dispose?.();
+  });
+  return same;
+}
+
+// every echo of a mission's people that is a hologram (its own body, or the echo a temporal person leaves in other
+// years), as it first comes into view: one person's textures at a time, never a whole place's at its first frame
+export function lendLooks(g, filter = () => true) {
+  for (const e of g.deckWorld?.npcs || []) {
+    if (!filter(e.n)) continue;
+    if (e.n.hologram && e.model?.visible && !e.model.userData?.lvLook) return lendLook(e.model, e.crew, e.n.height);
+    if (e.echo?.visible && !e.echo.userData?.lvLook) return lendLook(e.echo, e.crew, e.n.height);
+  }
+  return false;
+}
