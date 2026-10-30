@@ -844,7 +844,7 @@ export const M07 = {
     // (playtest v2.1.1 L33: the act's one sight of Niko grown old was a backlit figure 30 px tall beside the astronomer.
     // He turns toward the Notch and its low sun, and the second shot is close on his lit face as he says his line)
     shots: [{ cam: [74, 29.4, -67.6], to: [74, 29.2, -69.4], look: [74, 29.2, -80.6], t: 4.5 },
-      { cam: [78.4, 29.1, -81.9], to: [78.1, 29.08, -81.6], look: [76.2, 29.05, -80], t: 6 }],
+      { cam: [78.4, 30.0, -81.9], to: [78.1, 29.95, -81.6], look: [76.2, 29.15, -80], t: 6 }],
     year: 'PAST', cast: [{ crew: 'm7_oldniko', ambient: true, seed: 702, first: 'Niko', at: 'horizonRing', off: [-2.2, 0, 2], turn: -0.86 }],
     lines: [N('Three thousand years ago, an astronomer and an old man turn a bronze ring toward the Notch.'), L('NIKO', 'There. The star that isn\'t up yet.')],
   },
