@@ -849,9 +849,25 @@ class ReverseUI {
       const v = _p.set(...h.pos).project(g.camera);
       const W = window.innerWidth, H = window.innerHeight;
       // (the whole label on screen: its centre clamped by half its width, as main.js does for the prompt)
-      if (!this.labelW) this.labelW = this.label.offsetWidth || 0;
+      if (!this.labelW) {
+        this.labelW = this.label.offsetWidth || 0;
+        this.labelH = this.label.offsetHeight || 0;
+      }
       const half = Math.min(W / 2, this.labelW / 2 + 8);
-      const x = Math.round(Math.max(half, Math.min(W - half, ((v.x + 1) / 2) * W))), y = Math.round(((1 - v.y) / 2) * H);
+      const x = Math.round(Math.max(half, Math.min(W - half, ((v.x + 1) / 2) * W)));
+      let y = Math.round(((1 - v.y) / 2) * H);
+      // (and clear of the use prompt when the thing to use stands on the process, as M16's coat case on the reel: the
+      // label goes just above the pill, or under its point when there is no room above; v2.1.1 playtest P12)
+      const pr = g.hud?.el?.prompt;
+      if (pr?.classList?.contains('on') && !pr.classList.contains('behind') && g._promptX != null) {
+        const pw = g.hud.promptWidth?.() || 0, ph = 46, lh = this.labelH || 30;
+        const px = g._promptX, py = g._promptY;
+        const lTop = y - 1.5 * lh, lBot = y - 0.5 * lh; // (the label hangs at translate(-50%, -150%) from its point)
+        if (Math.abs(x - px) < (this.labelW + pw) / 2 && lBot > py - ph && lTop < py) {
+          y = py - ph - 6 + Math.round(0.5 * lh);
+          if (y - 1.5 * lh < 8) y = Math.round(py + 6 + 1.5 * lh);
+        }
+      }
       this.set('lpos', `${x},${y},${v.z < 1}`, () => {
         this.label.style.left = `${x}px`;
         this.label.style.top = `${y}px`;

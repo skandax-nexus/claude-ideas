@@ -667,11 +667,14 @@ export class DeckWorld {
         n.lodDt = Math.min(1, (n.lodDt || 0) + dt); // (posed for it as they come into view: viewLod)
         n.lodSpeed = speed;
       } else m.userData.animate(dt, speed, t);
-      // a passer-by the camera would be inside of, or who would fill the screen, is not drawn until clear of it
-      if (cam && !talker && (n.n.ambient || n.n.path) && !n.n.flicker) {
+      // a passer-by the camera would be inside of, or who would fill the screen, is not drawn until clear of it; in an
+      // edition's places, someone Kai can talk to as well while the game's own camera follows him (v2.1.1 playtest P17:
+      // the florist drawn 0.54 m from the lens), never in a shot or a conversation's framing, which stand by them on purpose
+      const named = talker && !!g.edition && !g.player?.cinema;
+      if (cam && ((!talker && (n.n.ambient || n.n.path)) || named) && !n.n.flicker) {
         const inside = this.fillsCamera(n, m, g.camera, !!n.camHid);
         if (inside !== !!n.camHid) this.clearOfCamera(n, inside);
-      }
+      } else if (talker && n.camHid) this.clearOfCamera(n, false); // (a shot or a conversation begins: they are drawn)
       // someone a few metres off (where they now stand), on Kai's floor, who may speak in passing: the nearest says it
       if (!held && n.n.barks?.length && !n.isEcho && !frozen) {
         const bd = Math.hypot(player.pos.x - m.position.x, player.pos.z - m.position.z);

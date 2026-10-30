@@ -20,7 +20,7 @@ export class HUD {
     this.states = [{ key: 'PHYSICAL', label: 'PHYSICAL' }, { key: 'INVERTED', label: 'INVERTED' }, { key: 'ECHO', label: 'ECHO' }];
     this.speakers = {}; // an edition's extra speakers, looked up before the story's
     // (a rotation or a new text size wraps a long prompt differently: its width is measured again)
-    if (typeof window !== 'undefined') window.addEventListener('resize', () => { this._promptW = 0; this._toastBox = null; });
+    if (typeof window !== 'undefined') window.addEventListener('resize', () => { this._promptW = 0; this._toastBox = null; this._objBox = null; });
   }
 
   // --- subtitles ---------------------------------------------------------
@@ -174,6 +174,7 @@ export class HUD {
 
   objective(text, animate = true) {
     const el = this.el.objective;
+    this._objBox = null; // (measured again by the next prompt placing: objectiveBox)
     if (!text) {
       el.classList.remove('on');
       return;
@@ -204,6 +205,7 @@ export class HUD {
         clearInterval(this._glitch);
         out.textContent = text;
         el.classList.remove('rewrite');
+        this._objBox = null;
       }
     }, 45);
   }
@@ -232,6 +234,23 @@ export class HUD {
       this._toastBox = r && r.height > 0 ? { left: r.left, right: r.right, top: r.top, bottom: r.bottom } : null;
     }
     return this._toastBox;
+  }
+
+  // the objective card's box while it shows (a layout read once per change of its words and per resize: objective(),
+  // and an edition that adds lines under it calls objectiveChanged). main.placePrompt keeps the prompt clear of it:
+  // upright, the prompt for something high in the view was drawn over CURRENT UNDERSTANDING (v2.1.1 playtest L2)
+  objectiveBox() {
+    const el = this.el.objective;
+    if (!el?.classList?.contains('on')) return null;
+    if (!this._objBox) {
+      const r = el.getBoundingClientRect?.();
+      this._objBox = r && r.height > 0 ? { left: r.left, right: r.right, top: r.top, bottom: r.bottom } : null;
+    }
+    return this._objBox;
+  }
+
+  objectiveChanged() {
+    this._objBox = null;
   }
 
   eye(v, visible) {

@@ -791,7 +791,11 @@ class Game {
           // a used slot needs a second tap: it will be overwritten
           if (!b.classList.contains('empty') && !this.confirmTap(b)) {
             b.classList.add('sure');
-            b.querySelector('small').textContent = 'Tap again to replace this save with a new game';
+            // (what is lost, said: a finished story's ending, CASE FILES and free roam go with it; and in view: on a
+            // short screen the row sat under the panel's MORE fade; v2.1.1 playtest L6)
+            const data = listSaves().find((x) => String(x.slot) === b.dataset.slot)?.data;
+            b.querySelector('small').textContent = this.edition?.slotLoss?.(data) || 'Tap again to replace this save with a new game';
+            b.scrollIntoView?.({ block: 'center', behavior: 'smooth' });
             return;
           }
           this.menu = null;
@@ -2552,6 +2556,9 @@ class Game {
     let y = Math.round(THREE.MathUtils.clamp((-v.y * 0.5 + 0.5) * h, 120, h - 140));
     // (and clear of a toast that is up: it sits where the prompt often floats, and covered it. The pill hangs above its
     // point, translate(-50%, -100%): it spans y - 46 .. y)
+    // (nor on the objective card: below it; v2.1.1 playtest L2)
+    const ob = this.hud.objectiveBox?.();
+    if (ob && x + half > ob.left && x - half < ob.right && y - 46 < ob.bottom && y > ob.top) y = Math.min(h - 60, Math.round(ob.bottom + 52));
     const tb = this.hud.toastBox?.();
     if (tb && x + half > tb.left && x - half < tb.right && y - 46 < tb.bottom && y > tb.top) y = Math.min(h - 60, Math.round(tb.bottom + 52));
     if (x === this._promptX && y === this._promptY) return;

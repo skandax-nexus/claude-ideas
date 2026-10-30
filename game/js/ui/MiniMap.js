@@ -7,6 +7,8 @@ const COLORS = {
   corridor: 'rgba(255,255,255,0.8)', player: '#ff7a63', npc: '#2f9a64', sentinel: '#4f9fe8', item: '#e0a43a',
   token: '#2fae6a', gate: '#7a5fd0', beacon: '#22aeb9', text: '#4f6170',
   rail: 'rgba(58,50,44,0.85)', path: 'rgba(255,238,200,0.95)', objective: '#f08a1c', quarry: '#e8b400',
+  // (an edition's places: deep water this year, and the raised ways over it; v2.1.1 playtest L28)
+  water: 'rgba(58,128,200,0.72)', deck: 'rgba(120,104,92,0.9)', wade: 'rgba(150,205,235,0.9)',
 };
 // (marks an edition puts on the full map only: where the objective is, who Kai is after; the corner map stays sparse)
 const BIG_ONLY = new Set(['objective', 'quarry']);
@@ -69,6 +71,16 @@ export class MiniMap {
           g.fillStyle = COLORS.gate;
           g.fillText('★ STORY', (a[0] + b[0]) / 2, (a[1] + b[1]) / 2 + 17);
         }
+      }
+    }
+    // deep water as the year has it (map.water: rects, or a function of now; an edition's places, THE LAST VERSION's
+    // canals): what is left light between it and the buildings is ground, or water shallow enough to wade
+    const water = typeof map.water === 'function' ? map.water() : map.water;
+    if (water?.length) {
+      g.fillStyle = COLORS.water;
+      for (const w of water) {
+        const [a, b] = [P(w[0], w[1]), P(w[2], w[3])];
+        g.fillRect(a[0], a[1], b[0] - a[0], b[1] - a[1]);
       }
     }
     // open districts: the buildings

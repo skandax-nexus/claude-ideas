@@ -428,7 +428,7 @@ export class LastVersion {
     }
     // (the big map's ring where the objective is, and the diamond of someone Kai follows: the key names them)
     const legend = $('#map .legend');
-    if (legend && !legend.querySelector('.lvobj')) legend.insertAdjacentHTML('beforeend', '<span class="lg lvobj">Objective</span><span class="lg lvquarry">Followed</span>');
+    if (legend && !legend.querySelector('.lvobj')) legend.insertAdjacentHTML('beforeend', '<span class="lg lvobj">Objective</span><span class="lg lvquarry">Followed</span><span class="lg lvwater">Deep water</span>');
     const vt = $('#verdict .dim');
     if (vt) vt.textContent = '';
     // the people of the chapter most likely to be played next start loading on the title screen, with its voices
@@ -1017,6 +1017,9 @@ export class LastVersion {
       level.elements = level.elements.filter((e) => !/^gate_/.test(e.id || ''));
       if (level.map) level.map.gate = undefined;
     }
+    // the map draws the place's deep water as the year has it (Mission 14's canals in 2196: the map was a grey grid,
+    // and the level's puzzle is which strips can be walked; v2.1.1 playtest L28)
+    if (level.map && level.drowns?.length) level.map.water = () => this.mapWater(level);
     const states = level.states || deck.states || ['PRESENT'];
     for (const id of level.order) {
       const room = level.rooms[id];
@@ -1564,10 +1567,13 @@ export class LastVersion {
         body.lastversion #objective .lvside { font-size: 11.5px; font-weight: 500; margin-top: 7px; color: #fff; text-shadow: var(--halo); }
         body.lastversion #objective .lvside small { display: block; font-size: 9.5px; letter-spacing: 0.16em; color: #ffd27a; }
         body.lastversion #objective .lvwhy:empty, body.lastversion #objective .lvside:empty { display: none; }
-        body.lastversion.touch #objective .lvwhy { font-size: 11.5px; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        body.lastversion.touch #objective .lvwhy { font-size: 11.5px; line-height: 1.3; }
         @media (orientation: portrait) { body.lastversion.touch #objective { top: calc(max(14px, env(safe-area-inset-top)) + 88px); } }`; // (upright, under the year card: the dock is by the right thumb now, style.css)
       document.head.appendChild(st);
     }
+    // (the reason is shown whole on a phone too: clamped at two lines it was cut mid-word, "the Director's de...";
+    // v2.1.1 playtest P13. The longest is three lines)
+    this.g.hud.objectiveChanged?.();
     const part = (cls) => el.querySelector(`.${cls}`) || el.appendChild(Object.assign(document.createElement('div'), { className: cls }));
     part('lvwhy').textContent = because || '';
     const side = part('lvside');
@@ -2345,6 +2351,23 @@ export class LastVersion {
   }
 
   // --- the verbs -----------------------------------------------------------------------------------------
+  // the deep water of a place now (level.drowns, in the year its room is in), as the map's rects [x0, z0, x1, z1]
+  mapWater(level = this.level) {
+    const g = this.g;
+    const out = [];
+    for (const d of level?.drowns || []) {
+      if (d.when && !g.facts.test(d.when, g.engine.state(d.room || level.outdoorRoom))) continue;
+      out.push([d.box[0], d.box[2], d.box[3], d.box[5]]);
+    }
+    return out;
+  }
+
+  // what a new game over a slot loses, said by its confirm (main.openSaves; v2.1.1 playtest L6: the only finished
+  // campaign, its CASE FILES and free roam, replaced by a second tap that did not say so)
+  slotLoss(data) {
+    return finished(data?.facts?.facts) ? 'A finished story. Tap again to replace it: its ending, CASE FILES and free roam are lost.' : null;
+  }
+
   // the YEAR button (touch): where the place has three years, the picker (yearpick.js); else a switch, as Q does
   yearButton() {
     const g = this.g;
@@ -2452,7 +2475,12 @@ export class LastVersion {
     const it = g.heldItem();
     if (!it) {
       g.audio.deny();
-      this.say(LINES.empty_hands);
+      // (said once, then only the buzz for a while: six presses of C queued six of the same line, 12 s of it; v2.1.1
+      // playtest P15)
+      if (!(g.time - (this.emptyHandsT ?? -1e9) < 8)) {
+        this.emptyHandsT = g.time;
+        this.say(LINES.empty_hands);
+      }
       return;
     }
     if (this.anchored === it.id) {
@@ -2681,9 +2709,12 @@ export class LastVersion {
   }
 
   // the travel list's rows (the case board's list items; the CASE FILES' cards, which are not case files: roamFile)
+  // (the years in one order everywhere, 2026, 2049, 2196, and the mission's name only where it is not the place's:
+  // v2.1.1 playtest L7, THE FRACTURE listed 2196 2026 2049 and read 'THE FRACTURE Mission 18 · THE FRACTURE')
   travelRows(list, esc = (t) => String(t), here = null, tag = 'li') {
-    return list.map((e) => `<${tag} class="${tag === 'li' ? '' : 'roamFile '}${e.key === here ? 'here' : ''}"><span><b>${esc(e.placeName)}</b> <small>Mission ${e.n} &middot; ${esc(e.mission)}${e.sides ? ` &middot; ${e.open ? `${e.open} side ${e.open === 1 ? 'story' : 'stories'} open` : 'side stories resolved'}` : ''}${e.fragments ? ` &middot; fragments ${e.found}/${e.fragments}` : ''}</small></span>`
-      + `<span class="yrs">${e.years.map((y) => `<button class="lvgo" data-travel="${e.key}" data-year="${y}">${esc(e.names[y] || y)}</button>`).join('')}</span></${tag}>`).join('');
+    const Y = ['PAST', 'PRESENT', 'FUTURE'], yi = (y) => (Y.includes(y) ? Y.indexOf(y) : 9);
+    return list.map((e) => `<${tag} class="${tag === 'li' ? '' : 'roamFile '}${e.key === here ? 'here' : ''}"><span><b>${esc(e.placeName)}</b> <small>Mission ${e.n}${e.mission && e.mission.toUpperCase() !== String(e.placeName).toUpperCase() ? ` &middot; ${esc(e.mission)}` : ''}${e.sides ? ` &middot; ${e.open ? `${e.open} side ${e.open === 1 ? 'story' : 'stories'} open` : 'side stories resolved'}` : ''}${e.fragments ? ` &middot; fragments ${e.found}/${e.fragments}` : ''}</small></span>`
+      + `<span class="yrs">${[...e.years].sort((a, b) => yi(a) - yi(b)).map((y) => `<button class="lvgo" data-travel="${e.key}" data-year="${y}">${esc(e.names[y] || y)}</button>`).join('')}</span></${tag}>`).join('');
   }
 
   travelCss() {
@@ -2741,6 +2772,13 @@ export class LastVersion {
   // is after (main.mapMarkers; MiniMap draws them on the full map only, the corner map stays as it was)
   mapMarkers() {
     const out = [], g = this.g, lv = this.level;
+    // (the key names deep water only where the map has some)
+    const wet = !!lv?.map?.water;
+    if (wet !== this.mapWet && typeof document !== 'undefined') {
+      this.mapWet = wet;
+      const k = document.querySelector('#map .legend .lvwater');
+      if (k) k.style.display = wet ? '' : 'none';
+    }
     if (!lv || !this.threads?.on || this.roaming || !g.deckWorld) return out;
     const t = this.threads.current();
     if (!t) return out;
