@@ -1657,6 +1657,58 @@ in 5,143 recordings. Each mission's place is 1.7-6.8 ha (v2.0's generated rooms:
   because line whole at both sizes; Mission 14's map in 2196 with 7 water rects and its key, in 2049 none. Not done:
   Mission 14's map lines (the other lane's place data); a real phone.
 
+- **v2.1.1 playtest fixes, unit "lv-runtime" (2026-10-30): the Chronolith, saves and resume, the case board, the
+  post-game, REVERSE's feedback and the score** (PLAYTEST-v2.1.1.md H4, M13, M14, M19-M23, L8-L11, L18, L24-L27, L41,
+  L45, P19, P20, P22; lane A: the edition's `Runtime.js`, `roam.js`, `cases.js`, `score.js`, `inversion.js`,
+  `ledger.js`, `voicelines.js`, `main.js`, and new `evlabels.js` and `recaps.js`). What changed:
+  - **The Chronolith (H4, L9):** it does not drain while the story talks to Kai (a conversation, a scene's lines,
+    narration; a bark, a PA or a THINK hint still drains), so it can no longer snap him away mid-line; it holds where it
+    is and runs on when the lines are over. A load gives it back in full and holds it there until Kai moves or switches
+    the year (a 2026 save at 0.57 let go of him 10-13 s after its recap).
+  - **The ending (M19, P20):** the ending is finished once its card is up, not when the choice is tapped
+    (`ending_playing` from the tap to the card); a save taken while it plays is not a finished story (slot, title,
+    NEW GAME's warning) and loads to the ending again, from its flash to its card. The Finale's time is stored when its
+    ending begins, so the card shows FINALE.
+  - **Case replays (M20-M23, L41):** a replay waits for its closing lines and moment before it closes (Sera's "Somebody
+    with your name did." was never heard); REVERSE is let go, a CASE CLOSED beat names the case and what it now is
+    (the garden's closes on 2196's channel running, `cases.js` close), then the CASE FILES open on the case just played,
+    marked JUST PLAYED, taking no tap for 0.9 s; in a game BACK TO THE TITLE asks for a second tap. A closed replay is
+    recorded with the finished campaign it was opened from (`campaign.caseRecord`, the campaign's facts untouched), so
+    the CASE FILES show it after the next CONTINUE, a trip and back. FREE ROAM from a replay's CASE FILES travels from
+    the finished campaign's save.
+  - **The post-game (P19):** a trip after an ending says the story is over (its card, objective, board and slot), its
+    button reads BACK TO THE CASE FILES, and a trip's load shows no "Memory restored.".
+  - **The case board (M13, M14):** every clue a mission pins has words (`evlabels.js`, 114 more; a test walks every
+    `ev_` fact in the missions' data and code), and each is pinned with its toast. Mission 4's ash says the burn: "The
+    ash: cooking, feasting, a black burn, a hearth swept cold".
+  - **Saves and resume (L8, L10):** a setback (a catch, a fall, deep water) or a snap drops the resume anchor, so a load
+    starts where the setback left Kai (Mission 8's sealed cube); reaching a checkpoint keeps where Kai stands, so a load
+    puts him there, not at a spawn behind or under him (Mission 12's roofs; Mission 10's cell also needs the other
+    lane's checkpoint boxes, M6). A load inside a mission of Acts I and II recaps that mission (`recaps.js`, three
+    narrator lines each, said from the chapter's pack); a chapter still opens on its act's lines.
+  - **Feedback (L11, L18):** a fall or deep water says what took Kai back (A FALL / TOO DEEP: "In this year the water
+    there is over Kai's head."); the gate says nothing is unfinished when Kai stands at the thing still open (Act I's
+    gates sit on their last objective).
+  - **REVERSE (L24-L26):** a held thing's READ prompt reaches as far as the hold (the charred file from 2.7 m); a tap
+    acts on the bolt the label names; every weight is named (LIGHT, MEDIUM, HEAVY); the first hold in an unstable place
+    says it drains the Chronolith, and the case board's ABILITIES say so.
+  - **The score (L45):** a chord's figures pick notes the chord has (a two-note chord's glass read a note that was not
+    there and threw in Act IV); a test plays every theme's chords under every layer.
+  - **Left to the other lane:** L27 (Mission 11's monitor, `act2.js`: its line "Not a person." should say what NOT A
+    PROCESS says, a new line for the voice step) and P22 (Orren's pre-choice question in `act4.js` should wait on
+    `!ending`; after an ending his second line, "The record is beside me.", already recorded).
+  - **Checks:** `tests/fix2-lv-runtime.test.mjs` (16 tests); npm test green but for the voice coverage (the 30 recap
+    lines, recorded by the voice step, and the other units' new lines); smoke and qa pass. In the browser at 915x412 by
+    touch, each by its own repro from the testers' saves: Mission 7's summit from `m07e1.json` (the meter held through
+    the astronomer and the horizon ring's lines, no snap); the ending killed 10 s in from `s21_m23_prechoice.json`
+    (CONTINUE played it again to its card, which then loaded as the finished story, FINALE 11 min); cases 12, 5 and 13
+    from a finished save (both reveal lines heard, REVERSE let go, the row marked and kept after CONTINUE and after a
+    trip, FREE ROAM working, the garden's 2196 channel); Mission 12 from `m12-deck.json` (meter held 16 s on loading,
+    the gangway talk saved and loaded at the same spot); `m12-deck.json` and `m10a2.json` recaps; Mission 11 from
+    `m11d2.json`/`m11e5.json` (READ at 2.7 m, MEDIUM, the toast, five bolts each acted as labelled); Mission 4 from
+    `m04a.json` (the ash toast, the board's clues by name); Mission 7's gate (nothing said); Mission 14's deep water
+    (TOO DEEP); Mission 22 walked 174 s in 2026 with no page error.
+
 ## Generated (playable, solvable by construction, not hand-tuned)
 
 - **Nothing of the places since U3.** Every mission and both cases stand in an authored open place;
