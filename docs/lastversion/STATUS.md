@@ -1709,6 +1709,63 @@ in 5,143 recordings. Each mission's place is 1.7-6.8 ha (v2.0's generated rooms:
     `m04a.json` (the ash toast, the board's clues by name); Mission 7's gate (nothing said); Mission 14's deep water
     (TOO DEEP); Mission 22 walked 174 s in 2026 with no page error.
 
+- **v2.1.1 playtest fixes, unit "lv-act2" (2026-10-30): Missions 9-13 (Act II)** (PLAYTEST-v2.1.1.md H1, H2, H3, M6,
+  M7, M8, M10, M12, M15, L15, L17, L19, L21, L29, L30, L37, P4, P7; lane B: `act2.js`, `watchers.js`, `npcs.js`,
+  `wardrobe.js` and the place specs `helix.js`, `dam.js`, `northbank.js`, `rain_south.js`). What changed:
+  - **Mission 12's court (H1, M7, M8):** M12 has no chamber under the court, so the court is paved over the old 25 m
+    hole and the lens and its rim are solid (a stepped disc of colliders: Kai walks round them); in 2026 the pit is
+    boarded over. The north wing has a fire stair in 2049 and 2026, from the court's north-east corner to the roof by
+    the glass, with a ROOF ACCESS sign at its foot, and THINK on "panes" names it. A catch or a snap on the 2026
+    gangway puts Kai back on the 2049 roof at the chase's start, not down on the court; the court's checkpoints hold
+    the ground only, and its spawn faces the court. A watcher sees Kai only within -3..+4 m of its own floor and
+    catches him only within 2 m of it (`watchers.js`), so the court drone no longer catches him on the gangway.
+  - **Mission 10's dam (H2, H3, M6, L15):** the hall stair starts where the gallery floor ends (z 1), so it can be
+    walked down and up. Each quarter's checkpoint box now has a height: the roof yard by the flood pole belongs to the
+    gallery, and the hall's north strip to the hall. The yard's checkpoint is at the gorge floor's west end (-26, 33.5),
+    facing east, out of the trooper's sight and reach. After a catch the "they remember" step never moves a patrol near
+    the checkpoint, and for 2.5 s after any catch (and while Kai is walked back) no watcher sees him. In a chase a
+    watcher does not step into walls or glass: it slides along them, and when it gives up it walks back the way it came.
+  - **Stealth (M10):** until Kai meets Sera, a lookout stands on the gallery between the cells and the guard post,
+    looking west at the cells. Walking straight at the post is seen, while the way out through the yard and round
+    behind him is not, and THINK explains this. The intake desk moved east of the post. Mission 13's gap sentry looks
+    30 degrees each side and 10 m and walks its line at 2.4 m/s: in a simulation, 4 of 40 straight walks got through
+    against 38 of 40 waits behind a truck.
+  - **Mission 9 (M12, M15, L37):** clock B has its patrol on the second terrace, turning back at the clock every
+    forty seconds. Brask, asked to help, has it look the other way. The loop is a minute, and the year's label is its
+    clock (08:05 to 08:13). The three clocks have dials, hour marks and hands. The tower's LOOK ACROSS THE RIVER is a
+    staged shot: from the mast over the river, down through the chamber's skylight onto the ring, the console and the
+    man who looks up, then Kai close. The set is built from existing assets and is there only while its lines play.
+  - **Hints and prompts (L17, L19, L21, L30, P4):** M10's yard objective and THINK name the hall's south door, and M11's
+    THINK puts the file on a desk by the annex door in the records hall. M9's transmitter and M10's 2049 switch lose
+    their prompt once used. M10's looper waits for his thread. Odile's echo can be REVERSEd only after her talk, so its
+    label no longer takes TALK TO ODILE's tap. "REVERSE holds for ten seconds now." follows the stabilizer choice and
+    Sera's line, as narration, not a toast. The THINK tiers of Missions 9-11 (Brask, the warning, the escape, the
+    crossing, the yard, the file, the lock and the M11 process hints) are full sentences.
+  - **Crowds (L29):** Brask's "You did that already..." is no longer in the Loop City crowd's pool, the gardener's
+    "The channel is running again..." is no longer in the 2196 survivors' pool, and Mission 1's paramedics no longer
+    speak the commuters' lines over the wreck.
+  - **Looks (P7):** Sera's plate carrier is curved round her, with three pouches. Mission 11's lock has a steel housing,
+    a brass socket for each bolt and each bolt's name. Mission 13's shell going home has a steel body, a brass band and
+    a nose, at 1.6 times its old size, with the camera beside it closer.
+  - **Checks:** `tests/fix2-lv-act2.test.mjs` (19 tests); `lv-fix-missionsB.test.mjs`'s Mission 13 bound tightened
+    (caught 19-24 times in 25 walks straight at the gate). npm test passes except the voice coverage: 39 new or changed
+    THINK and narration lines in Missions 9-13, which the voice step records, plus the other units' lines. The bot's
+    survey of Missions 9-13 (LV_ONLY=places, 20/20). In the browser at 915x412 by touch, each item by its own repro
+    from the testers' saves (scratch `fix2/lv-act2/h/logs`):
+    - Mission 12: a snap on the gangway lands on the 2049 roof. Pushed north from (0, 0.9, 26), Kai stops at the rim
+      (z 12.25) with no fall; 2196 crosses the old hole. The fire stair was climbed by touch in 2049 with stability at
+      1.00 throughout. With the drone under the gangway: suspicion 0, no catch.
+    - Mission 10: walking straight was caught 10 times; the yard route got through unseen on the first try. The hall
+      stair was walked down to its foot and back up. A roof save loads on the gallery. After a yard catch Kai was put
+      back 60 m from the trooper and stood 60 s with no catch, then the yard was crossed with no catch. The chase came
+      into the hall only through the door. The 2049 switch's prompt went once it was used.
+    - Mission 9: the label counted 08:05 to 08:13 in a 60 s loop, and no crowd member said Brask's line. Clock B's
+      patrol caught Kai standing at the clock, saw nothing when he waited, and looked away after Brask's help. The
+      tower shot was also checked at 412x915.
+    - Mission 11: Odile's tester route was played at both sizes, and the lock was seen close up.
+    - Mission 13: walking straight at the gate got through unseen 0 times in 6, and the careful way crossed. The cap
+      line came after the choice's lines with no toast, and the shell and Sera's vest were seen in the browser.
+
 ## Generated (playable, solvable by construction, not hand-tuned)
 
 - **Nothing of the places since U3.** Every mission and both cases stand in an authored open place;
